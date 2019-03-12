@@ -1,0 +1,28 @@
+
+get:
+  description: Get all configured loggers
+  is: [ secured ]
+  responses:
+    200:
+      description: All loggers in the system
+      body:
+        application/json:
+          type: logging.Loggers
+
+post:
+  description: Update a specific logger level
+  is: [ secured ]
+  body:
+    application/json:
+      type: logging.LoggerChange
+  responses:
+    200:
+      description: logger changed to the given logging level
+      body:
+        application/json:
+          type: logging.LoggerChange
+    422:
+      description: request not understood
+
+
+

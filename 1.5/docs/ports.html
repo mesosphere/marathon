@@ -309,11 +309,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -380,15 +380,14 @@
 
 <p>Host mode is enabled by default for containers. If you wish to be explicit, you can also specify it manually through the <code class="highlighter-rouge">network</code> property:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HOST"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HOST"</span><span class="w">
     </span><span class="p">}</span><span class="w">
-  </span><span class="p">}</span><span class="err">,</span><span class="w">
-</span></code></pre>
-</div>
+  </span><span class="p">},</span><span class="w">
+</span></code></pre></div></div>
 
 <p>For non-Docker applications, you don’t need to specify anything.</p>
 
@@ -396,37 +395,33 @@
 
 <p>You can specify the ports that are available through the <code class="highlighter-rouge">ports</code> array:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"ports"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="s2">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
         </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">0</span><span class="w">
-    </span><span class="p">]</span><span class="err">,</span><span class="w">
-</span></code></pre>
-</div>
+    </span><span class="p">],</span><span class="w">
+</span></code></pre></div></div>
 
 <p>Or through the <code class="highlighter-rouge">portDefinitions</code> array:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"portDefinitions"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-      </span><span class="p">{</span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">}</span><span class="w">
-    </span><span class="p">]</span><span class="err">,</span><span class="w">
-</span></code></pre>
-</div>
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="s2">"portDefinitions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="s2">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="s2">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="s2">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">}</span><span class="w">
+    </span><span class="p">],</span><span class="w">
+</span></code></pre></div></div>
 
 <p>In this example, we specify three randomly assigned host ports which would then be available to our command via the environment variables <code class="highlighter-rouge">$PORT0</code>, <code class="highlighter-rouge">$PORT1</code> and <code class="highlighter-rouge">$PORT2</code>. Marathon will also randomly assign three service posts in addition to these three host ports.</p>
 
 <p>You can also specify specific service ports:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"ports"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="s2">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
         </span><span class="mi">2001</span><span class="p">,</span><span class="w"> </span><span class="mi">2002</span><span class="p">,</span><span class="w"> </span><span class="mi">3000</span><span class="w">
-    </span><span class="p">]</span><span class="err">,</span><span class="w">
-</span></code></pre>
-</div>
+    </span><span class="p">],</span><span class="w">
+</span></code></pre></div></div>
 
 <p>Or:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"portDefinitions"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-        </span><span class="p">{</span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">2001</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">2002</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">3000</span><span class="p">}</span><span class="w">
-    </span><span class="p">]</span><span class="err">,</span><span class="w">
-</span></code></pre>
-</div>
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="s2">"portDefinitions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="s2">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">2001</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="s2">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">2002</span><span class="p">},</span><span class="w"> </span><span class="p">{</span><span class="s2">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">3000</span><span class="p">}</span><span class="w">
+    </span><span class="p">],</span><span class="w">
+</span></code></pre></div></div>
 
 <p>In this case, host ports <code class="highlighter-rouge">$PORT0</code>, <code class="highlighter-rouge">$PORT1</code> and <code class="highlighter-rouge">$PORT3</code> remain randomly assigned. However, the three service ports for this application are now <code class="highlighter-rouge">2001</code>, <code class="highlighter-rouge">2002</code> and <code class="highlighter-rouge">3000</code>.</p>
 
@@ -434,12 +429,11 @@
 
 <p>If you want the applications service ports to be equal to its host ports, you can set <code class="highlighter-rouge">requirePorts</code> to <code class="highlighter-rouge">true</code> (<code class="highlighter-rouge">requirePorts</code> is <code class="highlighter-rouge">false</code> by default). This will tell Marathon to only schedule this application on agents which have these ports available:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"ports"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="s2">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
         </span><span class="mi">2001</span><span class="p">,</span><span class="w"> </span><span class="mi">2002</span><span class="p">,</span><span class="w"> </span><span class="mi">3000</span><span class="w">
-    </span><span class="p">]</span><span class="err">,</span><span class="w">
-    </span><span class="s2">"requirePorts"</span><span class="w"> </span><span class="err">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
-</span></code></pre>
-</div>
+    </span><span class="p">],</span><span class="w">
+    </span><span class="s2">"requirePorts"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+</span></code></pre></div></div>
 
 <p>The service and host ports (including the environment variables <code class="highlighter-rouge">$PORT0</code>, <code class="highlighter-rouge">$PORT1</code>, and <code class="highlighter-rouge">$PORT2</code>), are both now <code class="highlighter-rouge">2001</code>, <code class="highlighter-rouge">2002</code> and <code class="highlighter-rouge">3000</code>.</p>
 
@@ -451,16 +445,15 @@ task. Custom network discovery solutions can consume this field.</p>
 
 <p>Example port definition requesting a dynamic <code class="highlighter-rouge">tcp</code> port named <code class="highlighter-rouge">http</code> with the label <code class="highlighter-rouge">VIP_0</code> set to <code class="highlighter-rouge">10.0.0.1:80</code>:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"portDefinitions"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="s2">"portDefinitions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
         </span><span class="p">{</span><span class="w">
-            </span><span class="nt">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http"</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="nt">"VIP_0"</span><span class="p">:</span><span class="w"> </span><span class="s2">"10.0.0.1:80"</span><span class="p">}</span><span class="w">
+            </span><span class="s2">"port"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+            </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="p">,</span><span class="w">
+            </span><span class="s2">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http"</span><span class="p">,</span><span class="w">
+            </span><span class="s2">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="s2">"VIP_0"</span><span class="p">:</span><span class="w"> </span><span class="s2">"10.0.0.1:80"</span><span class="p">}</span><span class="w">
         </span><span class="p">}</span><span class="w">
-    </span><span class="p">]</span><span class="err">,</span><span class="w">
-</span></code></pre>
-</div>
+    </span><span class="p">],</span><span class="w">
+</span></code></pre></div></div>
 
 <p>The <code class="highlighter-rouge">port</code> field is mandatory. The <code class="highlighter-rouge">protocol</code>, <code class="highlighter-rouge">name</code> and <code class="highlighter-rouge">labels</code> fields are optional. A port definition in which only
 the <code class="highlighter-rouge">port</code> field is set is equivalent to an element of the <code class="highlighter-rouge">ports</code> array.</p>
@@ -472,15 +465,13 @@ elements are equivalent.</p>
 
 <p>You can reference host ports in the Dockerfile for our fictitious app as follows:</p>
 
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code>CMD ./my-app --http-port<span class="o">=</span><span class="nv">$PORT0</span> --https-port<span class="o">=</span><span class="nv">$PORT1</span> --monitoring-port<span class="o">=</span><span class="nv">$PORT2</span>
-</code></pre>
-</div>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CMD ./my-app <span class="nt">--http-port</span><span class="o">=</span><span class="nv">$PORT0</span> <span class="nt">--https-port</span><span class="o">=</span><span class="nv">$PORT1</span> <span class="nt">--monitoring-port</span><span class="o">=</span><span class="nv">$PORT2</span>
+</code></pre></div></div>
 
 <p>Alternatively, if you aren’t using Docker or had specified a <code class="highlighter-rouge">cmd</code> in your Marathon application definition, it works in the same way:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"cmd"</span><span class="err">:</span><span class="w"> </span><span class="s2">"./my-app --http-port=$PORT0 --https-port=$PORT1 --monitoring-port=$PORT2"</span><span class="w">
-</span></code></pre>
-</div>
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./my-app --http-port=$PORT0 --https-port=$PORT1 --monitoring-port=$PORT2"</span><span class="w">
+</span></code></pre></div></div>
 
 <h3 id="bridge-mode">Bridge Mode</h3>
 
@@ -490,32 +481,30 @@ elements are equivalent.</p>
 
 <p>You need to specify bridge mode through the <code class="highlighter-rouge">network</code> property:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="w">
     </span><span class="p">}</span><span class="w">
-  </span><span class="p">}</span><span class="err">,</span><span class="w">
-</span></code></pre>
-</div>
+  </span><span class="p">},</span><span class="w">
+</span></code></pre></div></div>
 
 <h4 id="enabling-user-mode">Enabling User Mode</h4>
 
 <p>You need to specify user mode through the <code class="highlighter-rouge">network</code> property:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"USER"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"USER"</span><span class="w">
     </span><span class="p">}</span><span class="w">
-  </span><span class="p">}</span><span class="err">,</span><span class="w">
-  </span><span class="s2">"ipAddress"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"networkName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"someUserNetwork"</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+  </span><span class="s2">"ipAddress"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"networkName"</span><span class="p">:</span><span class="w"> </span><span class="s2">"someUserNetwork"</span><span class="w">
   </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <h4 id="specifying-ports-1">Specifying Ports</h4>
 
@@ -523,39 +512,37 @@ elements are equivalent.</p>
 
 <p>Port mappings are specified inside the <code class="highlighter-rouge">portMappings</code> object for a <code class="highlighter-rouge">container</code>:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span><span class="w">
-        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span><span class="w">
-        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">}</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">}</span><span class="w">
       </span><span class="p">]</span><span class="w">
     </span><span class="p">}</span><span class="w">
-  </span><span class="p">}</span><span class="err">,</span><span class="w">
-</span></code></pre>
-</div>
+  </span><span class="p">},</span><span class="w">
+</span></code></pre></div></div>
 
 <p>In this example, we specify 3 mappings. A value of 0 will ask Marathon to randomly assign a value for <code class="highlighter-rouge">hostPort</code>. In this case, setting <code class="highlighter-rouge">containerPort</code> to 0 will cause it to have the same value as <code class="highlighter-rouge">hostPort</code>. These values are available inside the container as <code class="highlighter-rouge">$PORT0</code>, <code class="highlighter-rouge">$PORT1</code> and <code class="highlighter-rouge">$PORT2</code> respectively.</p>
 
 <p>Alternatively, if our process running in the container had fixed ports, we might do something like the following:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span><span class="w">
-        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">443</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span><span class="w">
-        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">}</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">443</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">}</span><span class="w">
       </span><span class="p">]</span><span class="w">
     </span><span class="p">}</span><span class="w">
-  </span><span class="p">}</span><span class="err">,</span><span class="w">
-</span></code></pre>
-</div>
+  </span><span class="p">},</span><span class="w">
+</span></code></pre></div></div>
 
 <p>In this case, Marathon will randomly allocate host ports and map these to ports <code class="highlighter-rouge">80</code>, <code class="highlighter-rouge">443</code> and <code class="highlighter-rouge">4000</code> respectively. It’s important to note that the <code class="highlighter-rouge">$PORT</code> variables refer to the host ports. In this case, <code class="highlighter-rouge">$PORT0</code> will be set to the value of <code class="highlighter-rouge">hostPort</code> for the first mapping and so on.</p>
 
@@ -563,39 +550,37 @@ elements are equivalent.</p>
 
 <p>You can also specify the protocol for these port mappings. The default is <code class="highlighter-rouge">tcp</code>:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="w"> </span><span class="p">},</span><span class="w">
-        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">443</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="w"> </span><span class="p">},</span><span class="w">
-        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"udp"</span><span class="w"> </span><span class="p">}</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">443</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"udp"</span><span class="w"> </span><span class="p">}</span><span class="w">
       </span><span class="p">]</span><span class="w">
     </span><span class="p">}</span><span class="w">
-  </span><span class="p">}</span><span class="err">,</span><span class="w">
-</span></code></pre>
-</div>
+  </span><span class="p">},</span><span class="w">
+</span></code></pre></div></div>
 
 <h5 id="specifying-service-ports">Specifying Service Ports</h5>
 
 <p>By default, Marathon will be creating service ports for each of these ports and assigning them random values. Service ports are used by service discovery solutions and it is often desirable to set these to well known values. You can do this by setting a <code class="highlighter-rouge">servicePort</code> for each mapping:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="p">,</span><span class="w"> </span><span class="nt">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="w"> </span><span class="p">},</span><span class="w">
-        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">443</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="p">,</span><span class="w"> </span><span class="nt">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">2001</span><span class="w"> </span><span class="p">},</span><span class="w">
-        </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"udp"</span><span class="p">,</span><span class="w"> </span><span class="nt">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">3000</span><span class="p">}</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">  </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BRIDGE"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">443</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">2001</span><span class="w"> </span><span class="p">},</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"udp"</span><span class="p">,</span><span class="w"> </span><span class="s2">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">3000</span><span class="p">}</span><span class="w">
       </span><span class="p">]</span><span class="w">
     </span><span class="p">}</span><span class="w">
-  </span><span class="p">}</span><span class="err">,</span><span class="w">
-</span></code></pre>
-</div>
+  </span><span class="p">},</span><span class="w">
+</span></code></pre></div></div>
 
 <p>In this example, the host ports <code class="highlighter-rouge">$PORT0</code>, <code class="highlighter-rouge">$PORT1</code> and <code class="highlighter-rouge">$PORT3</code> remain randomly assigned. However, the service ports for this application are now <code class="highlighter-rouge">2001</code>, <code class="highlighter-rouge">2002</code> and <code class="highlighter-rouge">3000</code>. An external proxy, like HAProxy, should be configured to route from the service ports to the host ports.</p>
 
@@ -603,27 +588,23 @@ elements are equivalent.</p>
 
 <p>If you set <code class="highlighter-rouge">containerPort</code> to 0, then you should specify ports in the Dockerfile for our fictitious app as follows:</p>
 
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code>CMD ./my-app --http-port<span class="o">=</span><span class="nv">$PORT0</span> --https-port<span class="o">=</span><span class="nv">$PORT1</span> --monitoring-port<span class="o">=</span><span class="nv">$PORT2</span>
-</code></pre>
-</div>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CMD ./my-app <span class="nt">--http-port</span><span class="o">=</span><span class="nv">$PORT0</span> <span class="nt">--https-port</span><span class="o">=</span><span class="nv">$PORT1</span> <span class="nt">--monitoring-port</span><span class="o">=</span><span class="nv">$PORT2</span>
+</code></pre></div></div>
 
 <p>However, if you’ve specified <code class="highlighter-rouge">containerPort</code> values, you simply use the same values in the Dockerfile:</p>
 
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code>CMD ./my-app --http-port<span class="o">=</span>80 --https-port<span class="o">=</span>443 --monitoring-port<span class="o">=</span>4000
-</code></pre>
-</div>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CMD ./my-app <span class="nt">--http-port</span><span class="o">=</span>80 <span class="nt">--https-port</span><span class="o">=</span>443 <span class="nt">--monitoring-port</span><span class="o">=</span>4000
+</code></pre></div></div>
 
 <p>Alternatively, you can specify a <code class="highlighter-rouge">cmd</code> in your Marathon application definition, it works in the same way as before:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"cmd"</span><span class="err">:</span><span class="w"> </span><span class="s2">"./my-app --http-port=$PORT0 --https-port=$PORT1 --monitoring-port=$PORT2"</span><span class="w">
-</span></code></pre>
-</div>
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./my-app --http-port=$PORT0 --https-port=$PORT1 --monitoring-port=$PORT2"</span><span class="w">
+</span></code></pre></div></div>
 
 <p>Or, if you’ve used fixed values:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">    </span><span class="s2">"cmd"</span><span class="err">:</span><span class="w"> </span><span class="s2">"./my-app --http-port=80 --https-port=443 --monitoring-port=4000"</span><span class="w">
-</span></code></pre>
-</div>
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./my-app --http-port=80 --https-port=443 --monitoring-port=4000"</span><span class="w">
+</span></code></pre></div></div>
 
     </div>
 </div>

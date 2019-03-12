@@ -309,11 +309,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -338,13 +338,12 @@ services, as you would do it in a traditional static cluster environment.</p>
 
 <p>Request an IP-per-task with default settings by adding the following to your application definition:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/i-have-my-own-ip"</span><span class="p">,</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/i-have-my-own-ip"</span><span class="p">,</span><span class="w">
   </span><span class="err">//</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="err">more</span><span class="w"> </span><span class="err">settings</span><span class="w"> </span><span class="err">...</span><span class="w">
-  </span><span class="nt">"ipAddress"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w">
+  </span><span class="s2">"ipAddress"</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>Marathon passes down the request for the IP to Mesos. You have to make sure that you installed and configured
 the appropriate
@@ -361,18 +360,17 @@ aspects of the API and we appreciate your feedback.</p>
 <p>If your IP Access Manager (IPAM) supports it, you can refine your IP configuration using network security
 groups and labels:</p>
 
-<div class="language-javascript highlighter-rouge"><pre class="highlight"><code><span class="p">{</span>
-  <span class="s2">"id"</span><span class="err">:</span> <span class="s2">"/i-have-my-own-ip"</span><span class="p">,</span>
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
+  <span class="s2">"id"</span><span class="p">:</span> <span class="s2">"/i-have-my-own-ip"</span><span class="p">,</span>
   <span class="c1">// ... more settings ...</span>
-  <span class="s2">"ipAddress"</span><span class="err">:</span> <span class="p">{</span>
-    <span class="s2">"groups"</span><span class="err">:</span> <span class="p">[</span><span class="s2">"production"</span><span class="p">],</span>
-    <span class="s2">"labels"</span><span class="err">:</span> <span class="p">{</span>
-      <span class="s2">"some-meaningful-config"</span><span class="err">:</span> <span class="s2">"potentially interpreted by the IPAM"</span>
+  <span class="s2">"ipAddress"</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">"groups"</span><span class="p">:</span> <span class="p">[</span><span class="s2">"production"</span><span class="p">],</span>
+    <span class="s2">"labels"</span><span class="p">:</span> <span class="p">{</span>
+      <span class="s2">"some-meaningful-config"</span><span class="p">:</span> <span class="s2">"potentially interpreted by the IPAM"</span>
     <span class="p">}</span>
   <span class="p">}</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Network security groups only allow network traffic between tasks that have at least one of their configured
 groups in common. This makes it easy to disallow your staging environment to interfere with production
@@ -382,15 +380,14 @@ traffic.</p>
 
 <p>If your IPAM supports it, you can instruct Mesos to associate your application’s containers with a specific named network:</p>
 
-<div class="language-javascript highlighter-rouge"><pre class="highlight"><code><span class="p">{</span>
-  <span class="s2">"id"</span><span class="err">:</span> <span class="s2">"/task-assigned-to-named-network"</span><span class="p">,</span>
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
+  <span class="s2">"id"</span><span class="p">:</span> <span class="s2">"/task-assigned-to-named-network"</span><span class="p">,</span>
   <span class="p">...</span>
-  <span class="s2">"ipAddress"</span><span class="err">:</span> <span class="p">{</span>
-    <span class="s2">"networkName"</span><span class="err">:</span> <span class="s2">"devops"</span>
+  <span class="s2">"ipAddress"</span><span class="p">:</span> <span class="p">{</span>
+    <span class="s2">"networkName"</span><span class="p">:</span> <span class="s2">"devops"</span>
   <span class="p">}</span>
 <span class="p">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Applications that specify a named network are automatically assigned an IP address, for each task, by the currently configured IPAM.
 Named network assignment is influenced by the <code class="highlighter-rouge">--default_network_name</code> flag: if a default network name has been configured then:</p>
@@ -407,20 +404,19 @@ Named network assignment is influenced by the <code class="highlighter-rouge">--
 
 <p>While an application that requires IP-per-task cannot request that ports be allocated in the agent node, you can still specify the ports that the application’s tasks expose:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/i-have-my-own-ip"</span><span class="p">,</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/i-have-my-own-ip"</span><span class="p">,</span><span class="w">
   </span><span class="err">//</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="err">more</span><span class="w"> </span><span class="err">settings</span><span class="w"> </span><span class="err">...</span><span class="w">
-  </span><span class="nt">"ipAddress"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"discovery"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-        </span><span class="p">{</span><span class="w"> </span><span class="nt">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http"</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="w"> </span><span class="p">}</span><span class="w">
+  </span><span class="s2">"ipAddress"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"discovery"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w"> </span><span class="s2">"number"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="s2">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http"</span><span class="p">,</span><span class="w"> </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="w"> </span><span class="p">}</span><span class="w">
       </span><span class="p">]</span><span class="w">
     </span><span class="p">}</span><span class="w">
       </span><span class="err">//</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="err">more</span><span class="w"> </span><span class="err">settings</span><span class="w"> </span><span class="err">...</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>Marathon will pass this information to Mesos (inside the DiscoveryInfo message) when starting new tasks. <a href="https://github.com/mesosphere/mesos-dns">Mesos-DNS</a> will then expose this information through IN SRV records.</p>
 

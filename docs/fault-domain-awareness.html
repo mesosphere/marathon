@@ -217,6 +217,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/deprecated-metrics.html">
+                    Deprecated Metrics
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/readiness-checks.html">
                     Readiness Checks
                 </a>
@@ -299,6 +304,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +344,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -424,32 +434,30 @@
 
 <h4 id="specify-only-a-remote-region">Specify only a remote region</h4>
 
-<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">[</span><span class="s2">"@region"</span><span class="p">,</span><span class="w"> </span><span class="s2">"IS"</span><span class="p">,</span><span class="w"> </span><span class="s2">"aws-us-east1"</span><span class="p">]</span><span class="w">
-  </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
+  "instances": 5,
+  "constraints": [
+    ["@region", "IS", "aws-us-east1"]
+  ]
+}
+</code></pre></div></div>
 
 <ul>
   <li>No instance will launch in the local region.</li>
   <li>All of the 5 instances will be launched in the <code class="highlighter-rouge">aws-us-east1</code> region.</li>
 </ul>
 
-<h4 id="balanced-placement-for-a-single-region----add-to-constraints-page--hostname--">Balanced Placement for a Single Region <!-- add to constraints page , @hostname--></h4>
+<h4 id="balanced-placement-for-a-single-region-">Balanced Placement for a Single Region <!-- add to constraints page , @hostname--></h4>
 
-<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-   </span><span class="err">...</span><span class="w">
-  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-    </span><span class="p">[</span><span class="s2">"@region"</span><span class="p">,</span><span class="w"> </span><span class="s2">"IS"</span><span class="p">,</span><span class="w"> </span><span class="s2">"aws-us-east1"</span><span class="p">],</span><span class="w">
-    </span><span class="p">[</span><span class="s2">"@zone"</span><span class="p">,</span><span class="w"> </span><span class="s2">"GROUP_BY"</span><span class="p">,</span><span class="w"> </span><span class="s2">"4"</span><span class="p">]</span><span class="w">
-  </span><span class="p">]</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
+   ...
+  "instances": 6,
+  "constraints": [
+    ["@region", "IS", "aws-us-east1"],
+    ["@zone", "GROUP_BY", "4"]
+  ]
+}
+</code></pre></div></div>
 
 <ul>
   <li>Instances will all be launched in the <code class="highlighter-rouge">aws-us-east1</code> region and evenly divided between <code class="highlighter-rouge">aws-us-east1</code>‘s zones <code class="highlighter-rouge">a</code>,<code class="highlighter-rouge">b</code>,<code class="highlighter-rouge">c</code>,<code class="highlighter-rouge">d</code>.</li>

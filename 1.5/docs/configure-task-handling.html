@@ -309,11 +309,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -323,12 +323,11 @@
 
 <p>You can configure Marathon’s actions on unreachable tasks. The <code class="highlighter-rouge">unreachableStrategy</code> parameter of your app or pod definition allows you to configure this in two ways: by defining when a new task instance should be launched, and by defining when a task instance should be expunged.</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="s2">"unreachableStrategy"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"inactiveAfterSeconds"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;integer&gt;"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"expungeAfterSeconds"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;integer&gt;"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"unreachableStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"inactiveAfterSeconds"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;integer&gt;"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"expungeAfterSeconds"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;integer&gt;"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <h2 id="unreachablestrategy-configuration-options"><code class="highlighter-rouge">unreachableStrategy</code> Configuration Options</h2>
 
@@ -343,13 +342,12 @@
 
 <p>You can use <code class="highlighter-rouge">inactiveAfterSeconds</code> and <code class="highlighter-rouge">expungeAfterSeconds</code> in conjunction with one another. For example, if you configure <code class="highlighter-rouge">inactiveAfterSeconds = 60</code> and <code class="highlighter-rouge">expungeAfterSeconds = 120</code>, a task instance will be expunged if it has been unreachable for more than 120 seconds and a second instance will be started if it has been unreachable for more than 60 seconds.</p>
 
-<p>You can configure <code class="highlighter-rouge">unreachableStrategy</code> to replace unreachable apps or pods as soon as Marathon is aware of them. To enable this behavior, configure your app or pod as shown below:
-<code class="highlighter-rouge">
- unreachableStrategy: {
+<p>You can configure <code class="highlighter-rouge">unreachableStrategy</code> to replace unreachable apps or pods as soon as Marathon is aware of them. To enable this behavior, configure your app or pod as shown below:</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> unreachableStrategy: {
      "inactiveAfterSeconds": 0,
      "expunceAfterSeconds": 0
  }
-</code></p>
+</code></pre></div></div>
 
 <h2 id="mesos-configuration">Mesos configuration</h2>
 
@@ -360,11 +358,10 @@
 
 <p>Add the <code class="highlighter-rouge">killSelection</code> parameter to your app definition, or to the <code class="highlighter-rouge">PodSchedulingPolicy</code> parameter of your pod definition.</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-    </span><span class="nt">"killSelection"</span><span class="p">:</span><span class="w"> </span><span class="s2">"YoungestFirst"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="s2">"killSelection"</span><span class="p">:</span><span class="w"> </span><span class="s2">"YoungestFirst"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <h2 id="persistent-volumes">Persistent Volumes</h2>
 

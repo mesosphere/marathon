@@ -299,6 +299,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/1.6/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +339,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -389,9 +394,8 @@ If a an app or pod has a health check, deployment does not complete until the he
     <p><code class="highlighter-rouge">docker pull</code> is failing.
 If your app runs in a Docker image, the Mesos agent node will first have to pull the Docker image. If this fails, your app could get stuck in a “deploying” state. The Mesos agent logs (<code class="highlighter-rouge">&lt;dcos-url&gt;/mesos/#/agents/</code>) will contain this information. You will see an error in the log similar to the following.</p>
 
-    <div class="highlighter-rouge"><pre class="highlight"><code>6b50d4f5-05d6-4b99-bb63-115d5acd2aca-0000 failed to start: Failed to run 'docker -H unix:///var/run/docker.sock pull /mybadimage/fakeimage:latest': exited with status 1; stderr='Error parsing reference: "/mybadimage/fakeimage:latest" is not a valid repository/tag
-</code></pre>
-    </div>
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>6b50d4f5-05d6-4b99-bb63-115d5acd2aca-0000 failed to start: Failed to run 'docker -H unix:///var/run/docker.sock pull /mybadimage/fakeimage:latest': exited with status 1; stderr='Error parsing reference: "/mybadimage/fakeimage:latest" is not a valid repository/tag
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Your application, application group, or pod definition is otherwise badly configured.

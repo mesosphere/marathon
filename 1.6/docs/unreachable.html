@@ -299,6 +299,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/1.6/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +339,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -432,12 +437,11 @@ the other as a major improvement (<a href="https://issues.apache.org/jira/browse
 
 <p>Marathon has configuration options for working with unreachable tasks by setting the unreachable strategy for a Marathon application as part of the app definition:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="err">unreachableStrategy:</span><span class="w"> </span><span class="p">{</span><span class="w">
-  </span><span class="nt">"inactiveAfterSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"expungeAfterSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="err">unreachableStrategy</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="s2">"inactiveAfterSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"expungeAfterSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>In order for this to take effect it is necessary to get a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update from Mesos Master. The above
 <code class="highlighter-rouge">unreachableStrategy</code> configuration for the app definition specifies how to respond to these <code class="highlighter-rouge">TASK_UNREACHABLE</code> events,
@@ -458,7 +462,7 @@ than Marathon will report 2 of 1 for the number of tasks running for that app.  
 expires the task will be killed. If the original task becomes reachable sometime after the <code class="highlighter-rouge">expungeAfterSeconds</code> time
 it will be killed immediately.</p>
 
-<p>When the unreachable strategy is <code class="highlighter-rouge"><span class="p">{</span><span class="err">0,</span><span class="w"> </span><span class="err">0</span><span class="p">}</span></code>, the replacement is nearly immediate, with a replacement commonly occurring
+<p>When the unreachable strategy is <code class="highlighter-rouge">{0, 0}</code>, the replacement is nearly immediate, with a replacement commonly occurring
 (for our test app) within roughly 3 seconds, and the expunge happening within 8-11 seconds. When we include this with
 the Mesos details described above for the loss of 1 agent, it means that Marathon will replace a task as soon as it is
 notified that the task is unreachable (which happens when the Mesos Master marks an agent as inactive), and it will
@@ -479,7 +483,7 @@ effect on the expunging of a task.</p>
 assumes that there are resources with required constraints available in the cluster for the replacement task. All marked
 time references are from the actual loss of an agent from the cluster.</p>
 
-<h3 id="scenario-1-unreachablestrategy-0-0-1-agent-becomes-unresponsive-for-4-minutes">Scenario 1: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">0,</span><span class="w"> </span><span class="err">0</span><span class="p">}</span></code>, 1 agent becomes unresponsive for 4 minutes</h3>
+<h3 id="scenario-1-unreachablestrategy-0-0-1-agent-becomes-unresponsive-for-4-minutes">Scenario 1: UnreachableStrategy <code class="highlighter-rouge">{0, 0}</code>, 1 agent becomes unresponsive for 4 minutes</h3>
 
 <ul>
   <li>12:00:00 - Agent 1 stops responding due to a network partition (and is running one task).</li>
@@ -489,7 +493,7 @@ time references are from the actual loss of an agent from the cluster.</p>
 <p>At a task level, Marathon is not made aware that the agent was momentarily not responding; Mesos Master does not report the
 task as unreachable because agent_ping_timeout * max_ping_timeout (15 seconds * 20 = 5 minutes) is not elapsed</p>
 
-<h3 id="scenario-2-unreachablestrategy-0-0-1-agent-becomes-unresponsive-for-6-minutes">Scenario 2: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">0,</span><span class="w"> </span><span class="err">0</span><span class="p">}</span></code>, 1 agent becomes unresponsive for 6 minutes</h3>
+<h3 id="scenario-2-unreachablestrategy-0-0-1-agent-becomes-unresponsive-for-6-minutes">Scenario 2: UnreachableStrategy <code class="highlighter-rouge">{0, 0}</code>, 1 agent becomes unresponsive for 6 minutes</h3>
 
 <ul>
   <li>12:00:00 - Agent 1 stops responding due to a network partition (and is running one task).</li>
@@ -499,7 +503,7 @@ task as unreachable because agent_ping_timeout * max_ping_timeout (15 seconds * 
   <li>12:06:03 - Marathon kills the previously unreachable task kill.</li>
 </ul>
 
-<h3 id="scenario-3-unreachablestrategy-0-300-lose-1-agent-for-5-minutes-agent-becomes-reachable-after-6-minutes-of-original-event">Scenario 3: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">0,</span><span class="w"> </span><span class="err">300</span><span class="p">}</span></code>, lose 1 agent for 5 minutes; agent becomes reachable after 6 minutes of original event.</h3>
+<h3 id="scenario-3-unreachablestrategy-0-300-lose-1-agent-for-5-minutes-agent-becomes-reachable-after-6-minutes-of-original-event">Scenario 3: UnreachableStrategy <code class="highlighter-rouge">{0, 300}</code>, lose 1 agent for 5 minutes; agent becomes reachable after 6 minutes of original event.</h3>
 
 <ul>
   <li>12:00:00 - Agent 1 becomes unreachable due to a network partition (and is running 1 task).</li>
@@ -515,7 +519,7 @@ application with a target instance count of 1.</li>
 event is the 10 minute mark.  It is possible that the reconciliation internal just happened prior to the 10 minute mark
 and the next time to expunge is the next reconciliation time which is at the 20 minute mark.</p>
 
-<h3 id="scenario-4-unreachablestrategy-0-0-lose-4-nodes-for-hours-the-task-node-is-last">Scenario 4: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">0,</span><span class="w"> </span><span class="err">0</span><span class="p">}</span></code>, Lose 4 nodes for hours, the task node is last.</h3>
+<h3 id="scenario-4-unreachablestrategy-0-0-lose-4-nodes-for-hours-the-task-node-is-last">Scenario 4: UnreachableStrategy <code class="highlighter-rouge">{0, 0}</code>, Lose 4 nodes for hours, the task node is last.</h3>
 
 <ul>
   <li>12:00:00 - 4 nodes are lost</li>
@@ -526,7 +530,7 @@ and the next time to expunge is the next reconciliation time which is at the 20 
   <li>13:05:03 - Shortly after, Marathon will replace the task for which the <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update was received.</li>
 </ul>
 
-<h3 id="scenario-5-unreachablestrategy-300-300-lose-4-nodes-for-hours-the-task-node-is-last">Scenario 5: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">300,</span><span class="w"> </span><span class="err">300</span><span class="p">}</span></code>, lose 4 nodes for hours, the task node is last.</h3>
+<h3 id="scenario-5-unreachablestrategy-300-300-lose-4-nodes-for-hours-the-task-node-is-last">Scenario 5: UnreachableStrategy <code class="highlighter-rouge">{300, 300}</code>, lose 4 nodes for hours, the task node is last.</h3>
 
 <ul>
   <li>12:00:00 - 4 nodes are lost</li>
@@ -537,7 +541,7 @@ and the next time to expunge is the next reconciliation time which is at the 20 
   <li>Between 13:10:00 and 13:20:00 - Marathon will launch a replacement task for the task that was running on node 4.</li>
 </ul>
 
-<h3 id="scenario-6-unreachablestrategy-0-0-lose-1-nodeno-task-for-5-minutes-and-returns-at-6-minute-mark-lose-task-node-for-an-undefined-amount-of-time">Scenario 6: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">0,</span><span class="w"> </span><span class="err">0</span><span class="p">}</span></code>, lose 1 node(no task) for 5 minutes and returns at 6 minute mark; lose task node for an undefined amount of time.</h3>
+<h3 id="scenario-6-unreachablestrategy-0-0-lose-1-nodeno-task-for-5-minutes-and-returns-at-6-minute-mark-lose-task-node-for-an-undefined-amount-of-time">Scenario 6: UnreachableStrategy <code class="highlighter-rouge">{0, 0}</code>, lose 1 node(no task) for 5 minutes and returns at 6 minute mark; lose task node for an undefined amount of time.</h3>
 
 <ul>
   <li>12:00:00 - Node 1 goes offline.</li>
@@ -551,7 +555,7 @@ and the next time to expunge is the next reconciliation time which is at the 20 
 <p><strong>Note:</strong> Normally Marathon would get a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status for an inactive agent in 5 mins.  In this case, another
 agent went inactive and changed the notification time based on the agent rate limiter.</p>
 
-<h3 id="scenario-7-unreachablestrategy-86400-86400-lose-1-node-for-25-hours">Scenario 7: UnreachableStrategy <code class="highlighter-rouge"><span class="p">{</span><span class="err">86400,</span><span class="w"> </span><span class="err">86400</span><span class="p">}</span></code>, Lose 1 node for 25 hours</h3>
+<h3 id="scenario-7-unreachablestrategy-86400-86400-lose-1-node-for-25-hours">Scenario 7: UnreachableStrategy <code class="highlighter-rouge">{86400, 86400}</code>, Lose 1 node for 25 hours</h3>
 
 <ul>
   <li>2018-03-01 12:00:00 - Node 1 goes off-line.</li>
@@ -569,7 +573,7 @@ The final window is expunging an unreachable task that has become reachable agai
 <div class="footnotes">
   <ol>
     <li id="fn:1">
-      <p>This has been confirmed in a test where a 5 private agent cluster had a task on 1 agent. The processes on each  node were shutdown with the node hosting the task being shutdown last. The amount of time that lapsed prior to Marathon receiving a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update was &gt; 1.25 hours. <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
+      <p>This has been confirmed in a test where a 5 private agent cluster had a task on 1 agent. The processes on each  node were shutdown with the node hosting the task being shutdown last. The amount of time that lapsed prior to Marathon receiving a <code class="highlighter-rouge">TASK_UNREACHABLE</code> status update was &gt; 1.25 hours. <a href="#fnref:1" class="reversefootnote">&#8617;</a></p>
     </li>
   </ol>
 </div>

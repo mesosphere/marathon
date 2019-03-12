@@ -217,6 +217,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/deprecated-metrics.html">
+                    Deprecated Metrics
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/readiness-checks.html">
                     Readiness Checks
                 </a>
@@ -299,6 +304,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +344,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -360,12 +370,11 @@ Events are published on <code class="highlighter-rouge">/v2/events</code> endpoi
 Any SSE-compatible client can subscribe.
 Example subscription using <code class="highlighter-rouge">curl</code>:</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl -H <span class="s2">"Accept: text/event-stream"</span>  &lt;MARATHON_HOST&gt;:&lt;MARATHON_PORT&gt;/v2/events
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-H</span> <span class="s2">"Accept: text/event-stream"</span>  &lt;MARATHON_HOST&gt;:&lt;MARATHON_PORT&gt;/v2/events
 
 event: event_stream_attached
 data: <span class="o">{</span><span class="s2">"remoteAddress"</span>:<span class="s2">"127.0.0.1"</span>,<span class="s2">"eventType"</span>:<span class="s2">"event_stream_attached"</span>,<span class="s2">"timestamp"</span>:<span class="s2">"2017-02-18T19:12:00.102Z"</span><span class="o">}</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h3 id="filtering-the-event-stream">Filtering the Event Stream</h3>
 
@@ -379,9 +388,8 @@ parameter to <code class="highlighter-rouge">/v2/events</code> request.</p>
 <p>The following example only subscribes to events involving a new client
 attaching to or detaching from the event stream.</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code>curl -H <span class="s2">"Accept: text/event-stream"</span>  &lt;MARATHON_HOST&gt;:&lt;MARATHON_PORT&gt;/v2/events?event_type<span class="o">=</span>event_stream_detached<span class="se">\&amp;</span><span class="nv">event_type</span><span class="o">=</span>event_stream_attached
-</code></pre>
-</div>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-H</span> <span class="s2">"Accept: text/event-stream"</span>  &lt;MARATHON_HOST&gt;:&lt;MARATHON_PORT&gt;/v2/events?event_type<span class="o">=</span>event_stream_detached<span class="se">\&amp;</span><span class="nv">event_type</span><span class="o">=</span>event_stream_attached
+</code></pre></div></div>
 
 <h2 id="event-types">Event Types</h2>
 
@@ -391,86 +399,81 @@ attaching to or detaching from the event stream.</p>
 
 <p>Fired every time Marathon receives an API request that modifies an app (create, update, delete):</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"api_post_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0:0:0:0:0:0:0:1"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/v2/apps/my-app"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"appDefinition"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-    </span><span class="nt">"backoffFactor"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.15</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"backoffSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 30"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-    </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-    </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
-    </span><span class="nt">"executor"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10001</span><span class="p">],</span><span class="w">
-    </span><span class="nt">"requirePorts"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"api_post_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0:0:0:0:0:0:0:1"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/v2/apps/my-app"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"appDefinition"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+    </span><span class="s2">"backoffFactor"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.15</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"backoffSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 30"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+    </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+    </span><span class="s2">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+    </span><span class="s2">"executor"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10001</span><span class="p">],</span><span class="w">
+    </span><span class="s2">"requirePorts"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="s2">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-    </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
+    </span><span class="s2">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+    </span><span class="s2">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>Pod-related events:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0:0:0:0:0:0:0:1"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/v2/pods/my-pod"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pod_created_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0:0:0:0:0:0:0:1"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/v2/pods/my-pod"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pod_created_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0:0:0:0:0:0:0:1"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/v2/pods/my-pod"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pod_updated_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0:0:0:0:0:0:0:1"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/v2/pods/my-pod"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pod_updated_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0:0:0:0:0:0:0:1"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/v2/pods/my-pod"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pod_deleted_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0:0:0:0:0:0:0:1"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/v2/pods/my-pod"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pod_deleted_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <h3 id="status-update">Status Update</h3>
 
 <p>Fired every time the status of a task changes:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"status_update_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"slaveId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"20140909-054127-177048842-5050-1494-0"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"taskId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app_0-1396592784349"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"taskStatus"</span><span class="p">:</span><span class="w"> </span><span class="s2">"TASK_RUNNING"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"slave-1234.acme.org"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">31372</span><span class="p">],</span><span class="w">
-  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-04-04T06:26:23.051Z"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"status_update_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"slaveId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"20140909-054127-177048842-5050-1494-0"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"taskId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app_0-1396592784349"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"taskStatus"</span><span class="p">:</span><span class="w"> </span><span class="s2">"TASK_RUNNING"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"slave-1234.acme.org"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">31372</span><span class="p">],</span><span class="w">
+  </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-04-04T06:26:23.051Z"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>The possible values for <code class="highlighter-rouge">taskStatus</code> are:</p>
 
@@ -487,26 +490,24 @@ attaching to or detaching from the event stream.</p>
 
 <p>where the last four states are terminal.</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"app_terminated_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"app_terminated_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
- </span><span class="nt">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
- </span><span class="nt">"condition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Running"</span><span class="p">,</span><span class="w">
- </span><span class="nt">"runSpecId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/app-id"</span><span class="p">,</span><span class="w">
- </span><span class="nt">"agentId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"20140909-054127-177048842-5050-1494-0"</span><span class="p">,</span><span class="w">
- </span><span class="nt">"host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"slave-1234.acme.org"</span><span class="p">,</span><span class="w">
- </span><span class="nt">"runSpecVersion"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
- </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
- </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"instance_changed_event"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+ </span><span class="s2">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
+ </span><span class="s2">"condition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Running"</span><span class="p">,</span><span class="w">
+ </span><span class="s2">"runSpecId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/app-id"</span><span class="p">,</span><span class="w">
+ </span><span class="s2">"agentId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"20140909-054127-177048842-5050-1494-0"</span><span class="p">,</span><span class="w">
+ </span><span class="s2">"host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"slave-1234.acme.org"</span><span class="p">,</span><span class="w">
+ </span><span class="s2">"runSpecVersion"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+ </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+ </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"instance_changed_event"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>The possible values for <code class="highlighter-rouge">condition</code> are:</p>
 
@@ -526,402 +527,382 @@ attaching to or detaching from the event stream.</p>
   <li><code class="highlighter-rouge">Unknown</code></li>
 </ul>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"runSpecId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/app-id"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"condition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Running"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unknown_instance_terminated_event"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"runSpecId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/app-id"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"condition"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Running"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unknown_instance_terminated_event"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"runSpecVersion"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"healthy"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"runSpecId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/app-id"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"instance_health_changed_event"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"runSpecVersion"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"healthy"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"runSpecId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/app-id"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"instance_health_changed_event"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <h3 id="framework-message">Framework Message</h3>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"framework_message_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"slaveId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"20140909-054127-177048842-5050-1494-0"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"executorId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.3f80d17a-37e6-11e4-b05e-56847afe9799"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"aGVsbG8gd29ybGQh"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"framework_message_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"slaveId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"20140909-054127-177048842-5050-1494-0"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"executorId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.3f80d17a-37e6-11e4-b05e-56847afe9799"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"aGVsbG8gd29ybGQh"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <h3 id="event-subscription">Event Subscription</h3>
 
 <p>Fired when a new http callback subscriber is added or removed:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"subscribe_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.3.4"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"callbackUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://subscriber.acme.org/callbacks"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"subscribe_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.3.4"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"callbackUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://subscriber.acme.org/callbacks"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unsubscribe_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.3.4"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"callbackUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://subscriber.acme.org/callbacks"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unsubscribe_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.3.4"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"callbackUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://subscriber.acme.org/callbacks"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"event_stream_attached"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.3.4"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"callbackUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://subscriber.acme.org/callbacks"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"event_stream_attached"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.3.4"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"callbackUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://subscriber.acme.org/callbacks"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"event_stream_detached"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.3.4"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"callbackUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://subscriber.acme.org/callbacks"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"event_stream_detached"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"clientIp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"1.2.3.4"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"callbackUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"http://subscriber.acme.org/callbacks"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <h3 id="health-checks">Health Checks</h3>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"add_health_check_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"healthCheck"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/health"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"add_health_check_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"healthCheck"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/health"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"remove_health_check_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"healthCheck"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/health"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"remove_health_check_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"healthCheck"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/health"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"failed_health_check_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"taskId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app_0-1396592784349"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"healthCheck"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/health"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"failed_health_check_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"taskId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app_0-1396592784349"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"healthCheck"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/health"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"health_status_changed_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-04-04T06:26:23.051Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"alive"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"health_status_changed_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-04-04T06:26:23.051Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"alive"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"taskId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app_0-1396592784349"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2016-03-16T13:05:00.590Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"500 Internal Server Error"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"localhost"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"slaveId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4fb620fa-ba8d-4eb0-8ae3-f2912aaf015c-S0"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unhealthy_task_kill_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2016-03-21T09:15:10.764Z"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"taskId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app_0-1396592784349"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2016-03-16T13:05:00.590Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"500 Internal Server Error"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"localhost"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"slaveId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4fb620fa-ba8d-4eb0-8ae3-f2912aaf015c-S0"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unhealthy_task_kill_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2016-03-21T09:15:10.764Z"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"taskId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app_0-1396592784349"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2016-03-16T13:05:00.590Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"500 Internal Server Error"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"localhost"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"slaveId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4fb620fa-ba8d-4eb0-8ae3-f2912aaf015c-S0"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unhealthy_instance_kill_event"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2016-03-21T09:15:10.764Z"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"appId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"taskId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app_0-1396592784349"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"instanceId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-app.instance-c7c311a4-b669-11e6-a48f-0ea4f4b1778c"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2016-03-16T13:05:00.590Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">"500 Internal Server Error"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"host"</span><span class="p">:</span><span class="w"> </span><span class="s2">"localhost"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"slaveId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"4fb620fa-ba8d-4eb0-8ae3-f2912aaf015c-S0"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"unhealthy_instance_kill_event"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2016-03-21T09:15:10.764Z"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <h3 id="deployments">Deployments</h3>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"group_change_success"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"groupId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product-a/backend"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-04-04T06:26:23.051Z"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"group_change_success"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"groupId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product-a/backend"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-04-04T06:26:23.051Z"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"group_change_failed"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"groupId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product-a/backend"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-04-04T06:26:23.051Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"group_change_failed"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"groupId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product-a/backend"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-04-04T06:26:23.051Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"reason"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deployment_success"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"867ed450-f6a8-4d33-9b0e-e11c5513990b"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deployment_success"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"867ed450-f6a8-4d33-9b0e-e11c5513990b"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deployment_failed"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"867ed450-f6a8-4d33-9b0e-e11c5513990b"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deployment_failed"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"867ed450-f6a8-4d33-9b0e-e11c5513990b"</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deployment_info"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"plan"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"867ed450-f6a8-4d33-9b0e-e11c5513990b"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"original"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T06:30:49.667Z"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deployment_info"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"plan"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"867ed450-f6a8-4d33-9b0e-e11c5513990b"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"original"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T06:30:49.667Z"</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"target"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
         </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"backoffFactor"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.15</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"backoffSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 30"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
-          </span><span class="nt">"executor"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10001</span><span class="p">],</span><span class="w">
-          </span><span class="nt">"requirePorts"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-              </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="w">
+          </span><span class="s2">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"backoffFactor"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.15</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"backoffSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 30"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+          </span><span class="s2">"executor"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10001</span><span class="p">],</span><span class="w">
+          </span><span class="s2">"requirePorts"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+              </span><span class="s2">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="w">
           </span><span class="p">},</span><span class="w">
-          </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
+          </span><span class="s2">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
         </span><span class="p">}</span><span class="w">
       </span><span class="p">],</span><span class="w">
-      </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
+      </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
       </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ScaleApplication"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"app"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
+        </span><span class="s2">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ScaleApplication"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"app"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
       </span><span class="p">}</span><span class="w">
     </span><span class="p">],</span><span class="w">
-    </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:24:14.846Z"</span><span class="w">
+    </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:24:14.846Z"</span><span class="w">
   </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"currentStep"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+  </span><span class="s2">"currentStep"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
       </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ScaleApplication"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"app"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
+        </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ScaleApplication"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"app"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
       </span><span class="p">}</span><span class="w">
     </span><span class="p">]</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deployment_step_success"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"plan"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"867ed450-f6a8-4d33-9b0e-e11c5513990b"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"original"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T06:30:49.667Z"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deployment_step_success"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"plan"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"867ed450-f6a8-4d33-9b0e-e11c5513990b"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"original"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T06:30:49.667Z"</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"target"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
         </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"backoffFactor"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.15</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"backoffSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 30"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
-          </span><span class="nt">"executor"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10001</span><span class="p">],</span><span class="w">
-          </span><span class="nt">"requirePorts"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-              </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="w">
+          </span><span class="s2">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"backoffFactor"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.15</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"backoffSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 30"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+          </span><span class="s2">"executor"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10001</span><span class="p">],</span><span class="w">
+          </span><span class="s2">"requirePorts"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+              </span><span class="s2">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="w">
           </span><span class="p">},</span><span class="w">
-          </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
+          </span><span class="s2">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
         </span><span class="p">}</span><span class="w">
       </span><span class="p">],</span><span class="w">
-      </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
+      </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
       </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ScaleApplication"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"app"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
+        </span><span class="s2">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ScaleApplication"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"app"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
       </span><span class="p">}</span><span class="w">
     </span><span class="p">],</span><span class="w">
-    </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:24:14.846Z"</span><span class="w">
+    </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:24:14.846Z"</span><span class="w">
   </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"currentStep"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+  </span><span class="s2">"currentStep"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
       </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ScaleApplication"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"app"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
+        </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ScaleApplication"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"app"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
       </span><span class="p">}</span><span class="w">
     </span><span class="p">]</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deployment_step_failure"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"plan"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"867ed450-f6a8-4d33-9b0e-e11c5513990b"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"original"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T06:30:49.667Z"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"eventType"</span><span class="p">:</span><span class="w"> </span><span class="s2">"deployment_step_failure"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timestamp"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:29:30.158Z"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"plan"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"867ed450-f6a8-4d33-9b0e-e11c5513990b"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"original"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T06:30:49.667Z"</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"target"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"target"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
         </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"backoffFactor"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.15</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"backoffSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 30"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
-          </span><span class="nt">"executor"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10001</span><span class="p">],</span><span class="w">
-          </span><span class="nt">"requirePorts"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-              </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="w">
+          </span><span class="s2">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"backoffFactor"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.15</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"backoffSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 30"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"constraints"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"env"</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span><span class="w">
+          </span><span class="s2">"executor"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"ports"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">10001</span><span class="p">],</span><span class="w">
+          </span><span class="s2">"requirePorts"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+              </span><span class="s2">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mf">1.0</span><span class="w">
           </span><span class="p">},</span><span class="w">
-          </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-          </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
+          </span><span class="s2">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+          </span><span class="s2">"user"</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
         </span><span class="p">}</span><span class="w">
       </span><span class="p">],</span><span class="w">
-      </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
-      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
+      </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[],</span><span class="w">
+      </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-09-09T05:57:50.866Z"</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"steps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
       </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ScaleApplication"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"app"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
+        </span><span class="s2">"action"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ScaleApplication"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"app"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
       </span><span class="p">}</span><span class="w">
     </span><span class="p">],</span><span class="w">
-    </span><span class="nt">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:24:14.846Z"</span><span class="w">
+    </span><span class="s2">"version"</span><span class="p">:</span><span class="w"> </span><span class="s2">"2014-03-01T23:24:14.846Z"</span><span class="w">
   </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"currentStep"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+  </span><span class="s2">"currentStep"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"actions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
       </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ScaleApplication"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"app"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
+        </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ScaleApplication"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"app"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/my-app"</span><span class="w">
       </span><span class="p">}</span><span class="w">
     </span><span class="p">]</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
     </div>
 </div>

@@ -217,6 +217,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/deprecated-metrics.html">
+                    Deprecated Metrics
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/readiness-checks.html">
                     Readiness Checks
                 </a>
@@ -299,6 +304,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +344,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -356,40 +366,37 @@ If you intend to use a service discovery mechanism, you should not put dots in y
 Mesos-DNS will append a random 9-character long string to your service name. This means that your service name length 
 must be less than or equal to 54 characters in order to have SRV records generated correctly.</p>
 
-<p>To check that your SRV records were successfully generated, you can use <code class="highlighter-rouge">dig</code> command, for example:
-<code class="highlighter-rouge">text
-dig _nginx-12345._tcp.marathon.mesos SRV
-</code>
-Correct output will look like this:
-```text
-;; QUESTION SECTION:
-;_nginx-12345._tcp.marathon.mesos. IN SRV</p>
+<p>To check that your SRV records were successfully generated, you can use <code class="highlighter-rouge">dig</code> command, for example:</p>
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dig _nginx-12345._tcp.marathon.mesos SRV
+</code></pre></div></div>
+<p>Correct output will look like this:</p>
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>;; QUESTION SECTION:
+;_nginx-12345._tcp.marathon.mesos. IN SRV
 
-<p>;; ANSWER SECTION:
+;; ANSWER SECTION:
 _nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-eq1m3-s1.marathon.mesos.
 _nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-9umtc-s1.marathon.mesos.
-_nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-4c3em-s1.marathon.mesos.</p>
+_nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-4c3em-s1.marathon.mesos.
 
-<p>;; ADDITIONAL SECTION:
+;; ADDITIONAL SECTION:
 nginx-12345-9umtc-s1.marathon.mesos. 60 IN A 10.0.6.43
 nginx-12345-4c3em-s1.marathon.mesos. 60 IN A 10.0.6.43
 nginx-12345-eq1m3-s1.marathon.mesos. 60 IN A 10.0.6.43
-```</p>
+</code></pre></div></div>
 
 <h2 id="hello-marathon-an-inline-shell-script">Hello Marathon: An Inline Shell Script</h2>
 
 <p>Let’s start with a simple example: an app that prints <code class="highlighter-rouge">Hello Marathon</code> to stdout and then sleeps for 5 sec, in an endless loop.
 You would use the following JSON application definition to describe the application:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-0"</span><span class="p">,</span><span class="w"> 
-    </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"while [ true ] ; do echo 'Hello Marathon' ; sleep 5 ; done"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-0"</span><span class="p">,</span><span class="w"> 
+    </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"while [ true ] ; do echo 'Hello Marathon' ; sleep 5 ; done"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>Note that <code class="highlighter-rouge">cmd</code> in the above example is the command that gets executed. Its value is wrapped by the underlying Mesos executor via <code class="highlighter-rouge">/bin/sh -c ${cmd}</code>.</p>
 
@@ -407,21 +414,20 @@ to do the legwork in terms of downloading (and potentially) extracting resources
 
 <p>Before we dive into this topic, let’s have a look at an example:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-1"</span><span class="p">,</span><span class="w"> 
-    </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"`./cool-script.sh`"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-1"</span><span class="p">,</span><span class="w"> 
+    </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"`./cool-script.sh`"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
         </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://example.com/app/cool-script.sh"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"executable"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+          </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://example.com/app/cool-script.sh"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"executable"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
         </span><span class="p">}</span><span class="w">
     </span><span class="p">]</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>What the example above does: before executing the <code class="highlighter-rouge">cmd</code>, download the resource <code class="highlighter-rouge">https://example.com/app/cool-script.sh</code> 
 (via Mesos) and make it available in the application task’s sandbox. You can check that these have been downloaded by 
@@ -450,20 +456,19 @@ first attempt to unpack/extract resources with the following file extensions:</p
 <p>And how this looks in practice shows you the following example: let’s assume you have an application executable in a zip
  file at <code class="highlighter-rouge">https://example.com/app.zip</code>. This zip file contains the script <code class="highlighter-rouge">cool-script.sh</code> and that’s what you want to execute. Here’s how:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-2"</span><span class="p">,</span><span class="w"> 
-    </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"app/cool-script.sh"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-2"</span><span class="p">,</span><span class="w"> 
+    </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"app/cool-script.sh"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
         </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://example.com/app.zip"</span><span class="w">
+          </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://example.com/app.zip"</span><span class="w">
         </span><span class="p">}</span><span class="w">
     </span><span class="p">]</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>Note that in contrast to the example <code class="highlighter-rouge">basic-1</code> we now have a <code class="highlighter-rouge">cmd</code> that looks as follows: <code class="highlighter-rouge">app/cool-script.sh</code>. This stems from the fact that when the zip file gets downloaded and extracted, a directory <code class="highlighter-rouge">app</code> according to the file name <code class="highlighter-rouge">app.zip</code> is created where the content of the zip file is extracted into.</p>
 
@@ -473,67 +478,64 @@ from there. If the same URI is encountered again, and a corresponding cache file
 still en route into the cache, then downloading is omitted and the fetcher proceeds directly to copying from the cache.
 Caching is working locally on every agent, so if the task is restarted on a different node, resources will be fetched again.</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-3"</span><span class="p">,</span><span class="w"> 
-    </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"app/cool-script.sh"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-3"</span><span class="p">,</span><span class="w"> 
+    </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"app/cool-script.sh"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
         </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://example.com/app.zip"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"cache"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+          </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://example.com/app.zip"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"cache"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
         </span><span class="p">}</span><span class="w">
     </span><span class="p">]</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>It’s also possible to specify path and name of the destination where the fetched resource will be stored:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-4"</span><span class="p">,</span><span class="w"> 
-    </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./cool-script.sh"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-4"</span><span class="p">,</span><span class="w"> 
+    </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"./cool-script.sh"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">10.0</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
         </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://example.com/some-script.sh"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"destPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cool-script.sh"</span><span class="w">
+          </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://example.com/some-script.sh"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"destPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"cool-script.sh"</span><span class="w">
         </span><span class="p">}</span><span class="w">
     </span><span class="p">]</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>Note also that you can specify many resources, not just one. So, for example, you could provide a git repository
  and some resources from a CDN as follows:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
     </span><span class="err">...</span><span class="w">
-    </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
         </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://git.example.com/repo-app.zip"</span><span class="w">
+          </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://git.example.com/repo-app.zip"</span><span class="w">
         </span><span class="p">},</span><span class="w">
         </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://git.example.com/docs-bundle.zip"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"extract"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+          </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://git.example.com/docs-bundle.zip"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"extract"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
         </span><span class="p">},</span><span class="w">
         </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://cdn.example.net/my-file.jpg"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"cache"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+          </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://cdn.example.net/my-file.jpg"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"cache"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
         </span><span class="p">},</span><span class="w">
         </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://cdn.example.net/my-other-file.css"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"cache"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+          </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://cdn.example.net/my-other-file.css"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"cache"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
         </span><span class="p">}</span><span class="w">
           
     </span><span class="p">]</span><span class="w">
     </span><span class="err">...</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>A typical pattern in the development and deployment cycle is to have your automated build system place the app binary in a location that’s downloadable via an URI. Marathon can download resources from a number of sources, supporting the following <a href="http://tools.ietf.org/html/rfc3986#section-3.1">URI schemes</a>:</p>
 
@@ -555,30 +557,28 @@ Caching is working locally on every agent, so if the task is restarted on a diff
 
 <p>In the following example application definition, we will focus on a simple Docker app: a Python-based web server using the image <a href="https://registry.hub.docker.com/_/python/">python:3</a>. Inside the container, the web server runs on port <code class="highlighter-rouge">8080</code> (the value of <code class="highlighter-rouge">containerPort</code>). <code class="highlighter-rouge">hostPort</code> is set to <code class="highlighter-rouge">0</code> so that Marathon assigns a random port on the Mesos agent, which is mapped to port 8080 inside the container.</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-3"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python3 -m http.server 8080"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container/bridge"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
-  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python:3"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"basic-3"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python3 -m http.server 8080"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container/bridge"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
+  </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python:3"</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-      </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">8080</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">}</span><span class="w">
+    </span><span class="s2">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">8080</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w"> </span><span class="p">}</span><span class="w">
     </span><span class="p">]</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>In this example, we are going to use the <a href="/marathon/docs/rest-api.html">HTTP API</a> to deploy the app <code class="highlighter-rouge">basic-3</code>:</p>
 
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code>curl -X POST http://10.141.141.10:8080/v2/apps -d @basic-3.json -H <span class="s2">"Content-type: application/json"</span>
-</code></pre>
-</div>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="nt">-X</span> POST http://10.141.141.10:8080/v2/apps <span class="nt">-d</span> @basic-3.json <span class="nt">-H</span> <span class="s2">"Content-type: application/json"</span>
+</code></pre></div></div>
 
 <p>This assumes that you’ve pasted the example JSON into a file called <code class="highlighter-rouge">basic-3.json</code> and you’re using <a href="https://github.com/mesosphere/playa-mesos">playa-mesos</a>, a Mesos sandbox environment based on Vagrant, for testing out the deployment. When you submit the above application definition to Marathon you should see something like the following in the <a href="/marathon/docs/marathon-ui.html">Marathon UI</a> (for the tasks and configuration tabs, respectively):</p>
 

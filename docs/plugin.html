@@ -217,6 +217,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/deprecated-metrics.html">
+                    Deprecated Metrics
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/readiness-checks.html">
                     Readiness Checks
                 </a>
@@ -299,6 +304,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +344,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -371,28 +381,25 @@ The plugin mechanism has the following components:</p>
 
 <p>A separate Marathon plugin interface jar is published in the following Maven repository with every Marathon release:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>http://downloads.mesosphere.com/maven
-</code></pre>
-</div>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>http://downloads.mesosphere.com/maven
+</code></pre></div></div>
 
 <p>with following dependency:</p>
 
 <p>SBT:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>"mesosphere.marathon" %% "plugin-interface" % "x.x.x" % "provided"
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>"mesosphere.marathon" %% "plugin-interface" % "x.x.x" % "provided"
 
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Maven:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>&lt;dependency&gt;
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;dependency&gt;
     &lt;groupId&gt;mesosphere.marathon&lt;/groupId&gt;
     &lt;artifactId&gt;plugin-interface_2.11&lt;/artifactId&gt;
     &lt;version&gt;x.x.x&lt;/version&gt;
 &lt;/dependency&gt;
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Be sure to always use the same version of the plugin interface as the version of Marathon in production.</p>
 
@@ -453,27 +460,27 @@ Marathon will load this descriptor with all defined plugins during startup.</p>
 
 <p>Example:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"plugins"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"authorizer"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"plugin"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere.marathon.plugin.auth.Authorizer"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"implementation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my.company.ExampleAuthorizer"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"some"</span><span class="p">,</span><span class="w"> </span><span class="s2">"tag"</span><span class="p">],</span><span class="w">
-      </span><span class="nt">"info"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"some"</span><span class="p">:</span><span class="w"> </span><span class="s2">"info"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"plugins"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"authorizer"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"plugin"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere.marathon.plugin.auth.Authorizer"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"implementation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my.company.ExampleAuthorizer"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"tags"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"some"</span><span class="p">,</span><span class="w"> </span><span class="s2">"tag"</span><span class="p">],</span><span class="w">
+      </span><span class="s2">"info"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="s2">"some"</span><span class="p">:</span><span class="w"> </span><span class="s2">"info"</span><span class="w">
       </span><span class="p">}</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"authenticator"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"plugin"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere.marathon.plugin.auth.Authenticator"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"implementation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my.company.ExampleAuthenticator"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"enabled"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"configuration"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"users"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"authenticator"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"plugin"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere.marathon.plugin.auth.Authenticator"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"implementation"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my.company.ExampleAuthenticator"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"enabled"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"configuration"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="s2">"users"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
           </span><span class="p">{</span><span class="w">
-            </span><span class="nt">"user"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ernie"</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"password"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"ernie"</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-              </span><span class="p">{</span><span class="w"> </span><span class="nt">"allowed"</span><span class="p">:</span><span class="w"> </span><span class="s2">"create"</span><span class="p">,</span><span class="w"> </span><span class="nt">"on"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/dev/"</span><span class="w"> </span><span class="p">}</span><span class="w">
+            </span><span class="s2">"user"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ernie"</span><span class="p">,</span><span class="w">
+            </span><span class="s2">"password"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"ernie"</span><span class="p">,</span><span class="w">
+            </span><span class="s2">"permissions"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+              </span><span class="p">{</span><span class="w"> </span><span class="s2">"allowed"</span><span class="p">:</span><span class="w"> </span><span class="s2">"create"</span><span class="p">,</span><span class="w"> </span><span class="s2">"on"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/dev/"</span><span class="w"> </span><span class="p">}</span><span class="w">
             </span><span class="p">]</span><span class="w">
           </span><span class="p">}</span><span class="w">
         </span><span class="p">]</span><span class="w">
@@ -481,8 +488,7 @@ Marathon will load this descriptor with all defined plugins during startup.</p>
     </span><span class="p">}</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>The configuration attribute is optional. If you provide it, the JSON object will be passed to the plugin as-is.</p>
 
@@ -538,11 +544,13 @@ Please see the <a href="https://github.com/mesosphere/marathon/blob/master/plugi
 
 <h4 id="mesospheremarathonpluginschedulerschedulerplugin">mesosphere.marathon.plugin.scheduler.SchedulerPlugin</h4>
 
-<p>This plugin allows to reject offers. Possible use-cases are:
-* Maintenance. Mark agent as going to maintenance and reject new offers from it.
-* Analytics. If task fails, for example, 5 times for 5 minutes, we can assume that it will fail again and reject new offers for it.
-* Binding to agents. For example, agents can be marked as included into primary or secondary group. Task can be marked with group name.
- Plugin can schedule task deployment to primary agents. If all primary agents are busy, task can be scheduled to secondary agents</p>
+<p>This plugin allows to reject offers. Possible use-cases are:</p>
+<ul>
+  <li>Maintenance. Mark agent as going to maintenance and reject new offers from it.</li>
+  <li>Analytics. If task fails, for example, 5 times for 5 minutes, we can assume that it will fail again and reject new offers for it.</li>
+  <li>Binding to agents. For example, agents can be marked as included into primary or secondary group. Task can be marked with group name.
+ Plugin can schedule task deployment to primary agents. If all primary agents are busy, task can be scheduled to secondary agents</li>
+</ul>
 
 <h2 id="notes-on-plugins">Notes on Plugins</h2>
 

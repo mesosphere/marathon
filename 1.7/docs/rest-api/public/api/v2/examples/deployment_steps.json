@@ -1,0 +1,20 @@
+{
+  "steps": [
+    {
+      "actions": [
+        {
+          "action": "StartApplication",
+          "app": "/tools/oauth-server"
+        }
+      ]
+    },
+    {
+      "actions": [
+        {
+          "action": "ScaleApplication",
+          "app": "/tools/oauth-server"
+        }
+      ]
+    }
+  ]
+}

@@ -217,6 +217,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/deprecated-metrics.html">
+                    Deprecated Metrics
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/readiness-checks.html">
                     Readiness Checks
                 </a>
@@ -299,6 +304,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +344,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -356,22 +366,20 @@ transmitted unencrypted and easily read by unintended parties.</p>
 <p>If you already have a Java keystore, pass it to Marathon along with the
 keystore’s password:</p>
 
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span><span class="nb">cd</span> /path/to/marathon
-<span class="gp">$ </span>./bin/start --master zk://localhost:2181/mesos <span class="se">\</span>
-                  --zk zk://localhost:2181/marathon <span class="se">\</span>
-       --ssl_keystore_path marathon.jks <span class="se">\</span>
-   --ssl_keystore_password <span class="nv">$MARATHON_JKS_PASSWORD</span>
-</code></pre>
-</div>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cd</span> /path/to/marathon
+<span class="nv">$ </span>./bin/start <span class="nt">--master</span> zk://localhost:2181/mesos <span class="se">\</span>
+                  <span class="nt">--zk</span> zk://localhost:2181/marathon <span class="se">\</span>
+       <span class="nt">--ssl_keystore_path</span> marathon.jks <span class="se">\</span>
+   <span class="nt">--ssl_keystore_password</span> <span class="nv">$MARATHON_JKS_PASSWORD</span>
+</code></pre></div></div>
 
 <p>By default, Marathon serves SSL requests on port 8443 (this port can be changed with
 the <code class="highlighter-rouge">--https_port</code>
 <a href="/marathon/docs/command-line-flags.html">command line flag</a>). Once
   Marathon is running, access its API and UI via its HTTPS port:</p>
 
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl https://localhost:8443/v2/apps
-</code></pre>
-</div>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl https://localhost:8443/v2/apps
+</code></pre></div></div>
 
 <p>Note that by default when a request is proxied to the leading Marathon instance, the hostname of the leader is checked against the certificate. If you don’t provide proper CN values in the certificates, proxying will fail. In this case, you can skip the hostname check by passing <code class="highlighter-rouge">--leader_proxy_ssl_ignore_hostname</code> to Marathon.</p>
 
@@ -392,10 +400,9 @@ the <code class="highlighter-rouge">--https_port</code>
     <p>Generate an RSA private key with
 <a href="https://www.openssl.org/docs/apps/genrsa.html">OpenSSL</a>.</p>
 
-    <p><code class="highlighter-rouge">sh
- # Set key password to env variable `MARATHON_KEY_PASSWORD`
- $ openssl genrsa -des3 -out marathon.key -passout "env:MARATHON_KEY_PASSWORD"
-</code></p>
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="c"># Set key password to env variable `MARATHON_KEY_PASSWORD`</span>
+ <span class="nv">$ </span>openssl genrsa <span class="nt">-des3</span> <span class="nt">-out</span> marathon.key <span class="nt">-passout</span> <span class="s2">"env:MARATHON_KEY_PASSWORD"</span>
+</code></pre></div>    </div>
   </li>
   <li>Acquire a certificate for the key by one of the following methods:
     <ul>
@@ -407,12 +414,11 @@ the <code class="highlighter-rouge">--https_port</code>
  information to secure the keystore. The “Common Name” must be the
  fully-qualified hostname of where you intend to use the certificate.</p>
 
-        <p><code class="highlighter-rouge">sh
- # Read key password from env env variable `MARATHON_KEY_PASSWORD`
- $ openssl req -new -x509 -key marathon.key \
-                       -passin "env:MARATHON_KEY_PASSWORD" \
-                          -out self-signed-marathon.pem
-</code></p>
+        <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="c"># Read key password from env env variable `MARATHON_KEY_PASSWORD`</span>
+ <span class="nv">$ </span>openssl req <span class="nt">-new</span> <span class="nt">-x509</span> <span class="nt">-key</span> marathon.key <span class="se">\</span>
+                       <span class="nt">-passin</span> <span class="s2">"env:MARATHON_KEY_PASSWORD"</span> <span class="se">\</span>
+                          <span class="nt">-out</span> self-signed-marathon.pem
+</code></pre></div>        </div>
       </li>
     </ul>
   </li>
@@ -423,43 +429,40 @@ used by the Java keystore. If the certificate you received is not in the
 <a href="http://www.eclipse.org/jetty/documentation/current/configuring-ssl.html#loading-keys-and-certificates">Jetty SSL configuration</a>
 docs to learn how to convert it.</p>
 
-    <p><code class="highlighter-rouge">sh
- # Read key password from env variable `MARATHON_KEY_PASSWORD`
- # Set PKCS password to env variable `MARATHON_PKCS_PASSWORD`
- $ openssl pkcs12 -inkey marathon.key \
-                 -passin "env:MARATHON_KEY_PASSWORD" \
-                   -name marathon \
-                     -in trusted.pem \
-               -password "env:MARATHON_PKCS_PASSWORD" \
-          -chain -CAfile "trustedCA.crt" \
-            -export -out marathon.pkcs12
-</code></p>
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="c"># Read key password from env variable `MARATHON_KEY_PASSWORD`</span>
+ <span class="c"># Set PKCS password to env variable `MARATHON_PKCS_PASSWORD`</span>
+ <span class="nv">$ </span>openssl pkcs12 <span class="nt">-inkey</span> marathon.key <span class="se">\</span>
+                 <span class="nt">-passin</span> <span class="s2">"env:MARATHON_KEY_PASSWORD"</span> <span class="se">\</span>
+                   <span class="nt">-name</span> marathon <span class="se">\</span>
+                     <span class="nt">-in</span> trusted.pem <span class="se">\</span>
+               <span class="nt">-password</span> <span class="s2">"env:MARATHON_PKCS_PASSWORD"</span> <span class="se">\</span>
+          <span class="nt">-chain</span> <span class="nt">-CAfile</span> <span class="s2">"trustedCA.crt"</span> <span class="se">\</span>
+            <span class="nt">-export</span> <span class="nt">-out</span> marathon.pkcs12
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Import the keystore.</p>
 
-    <p><code class="highlighter-rouge">sh
- # Read PKCS password from env variable `MARATHON_PKCS_PASSWORD`
- # Set JKS password to env variable `MARATHON_JKS_PASSWORD`
- $ keytool -importkeystore -srckeystore marathon.pkcs12 \
-                              -srcalias marathon \
-                          -srcstorepass $MARATHON_PKCS_PASSWORD \
-                          -srcstoretype PKCS12 \
-                          -destkeystore marathon.jks \
-                         -deststorepass $MARATHON_JKS_PASSWORD
-</code></p>
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="c"># Read PKCS password from env variable `MARATHON_PKCS_PASSWORD`</span>
+ <span class="c"># Set JKS password to env variable `MARATHON_JKS_PASSWORD`</span>
+ <span class="nv">$ </span>keytool <span class="nt">-importkeystore</span> <span class="nt">-srckeystore</span> marathon.pkcs12 <span class="se">\</span>
+                              <span class="nt">-srcalias</span> marathon <span class="se">\</span>
+                          <span class="nt">-srcstorepass</span> <span class="nv">$MARATHON_PKCS_PASSWORD</span> <span class="se">\</span>
+                          <span class="nt">-srcstoretype</span> PKCS12 <span class="se">\</span>
+                          <span class="nt">-destkeystore</span> marathon.jks <span class="se">\</span>
+                         <span class="nt">-deststorepass</span> <span class="nv">$MARATHON_JKS_PASSWORD</span>
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Start Marathon with the keystore and the password you chose when creating the
 keystore.</p>
 
-    <p><code class="highlighter-rouge">sh
- # Read JKS password from env variable `MARATHON_JKS_PASSWORD`
- $ ./bin/start --master zk://localhost:2181/mesos \
-                   --zk zk://localhost:2181/marathon \
-        --ssl_keystore_path marathon.jks \
-    --ssl_keystore_password $MARATHON_JKS_PASSWORD
-</code></p>
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="c"># Read JKS password from env variable `MARATHON_JKS_PASSWORD`</span>
+ <span class="nv">$ </span>./bin/start <span class="nt">--master</span> zk://localhost:2181/mesos <span class="se">\</span>
+                   <span class="nt">--zk</span> zk://localhost:2181/marathon <span class="se">\</span>
+        <span class="nt">--ssl_keystore_path</span> marathon.jks <span class="se">\</span>
+    <span class="nt">--ssl_keystore_password</span> <span class="nv">$MARATHON_JKS_PASSWORD</span>
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Access the Marathon API and UI via its HTTPS port (default 8443).</p>
@@ -481,14 +484,13 @@ keystore.</p>
 <code class="highlighter-rouge">--http_credentials</code> command line flag. <em>Note:
 The username cannot contain a colon.</em></p>
 
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span><span class="nb">cd</span> /path/to/marathon
-<span class="gp">$ </span>./bin/start --master zk://localhost:2181/mesos <span class="se">\</span>
-                  --zk zk://localhost:2181/marathon <span class="se">\</span>
-        --http_credentials <span class="s1">'cptPicard:topSecretPa$$word'</span> <span class="se">\</span>
-       --ssl_keystore_path /path/to/marathon.jks <span class="se">\</span>
-   --ssl_keystore_password <span class="nv">$MARATHON_JKS_PASSWORD</span>
-</code></pre>
-</div>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cd</span> /path/to/marathon
+<span class="nv">$ </span>./bin/start <span class="nt">--master</span> zk://localhost:2181/mesos <span class="se">\</span>
+                  <span class="nt">--zk</span> zk://localhost:2181/marathon <span class="se">\</span>
+        <span class="nt">--http_credentials</span> <span class="s1">'cptPicard:topSecretPa$$word'</span> <span class="se">\</span>
+       <span class="nt">--ssl_keystore_path</span> /path/to/marathon.jks <span class="se">\</span>
+   <span class="nt">--ssl_keystore_password</span> <span class="nv">$MARATHON_JKS_PASSWORD</span>
+</code></pre></div></div>
 
     </div>
 </div>

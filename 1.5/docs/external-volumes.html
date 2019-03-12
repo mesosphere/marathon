@@ -309,11 +309,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -337,34 +337,33 @@
 
 <p>The <code class="highlighter-rouge">cmd</code> in this app definition appends the output of the <code class="highlighter-rouge">date</code> command to <code class="highlighter-rouge">test.txt</code>. You can verify that the external volume is being used correctly if you see that the logs of successive runs of the application show more and more lines of <code class="highlighter-rouge">date</code> output.</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"hello"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">32</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date &gt;&gt; test-rexray-volume/test.txt; cat test-rexray-volume/test.txt"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MESOS"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-      </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"test-rexray-volume"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"external"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"size"</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-test-vol"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"provider"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dvdi"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"options"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"dvdi/driver"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rexray"</span><span class="w"> </span><span class="p">}</span><span class="w">
-          </span><span class="p">},</span><span class="w">
-        </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="w">
-      </span><span class="p">}</span><span class="w">
-    </span><span class="p">]</span><span class="w">
-  </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"maximumOverCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
-  </span><span class="p">}</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
+  "id": "hello",
+  "instances": 1,
+  "cpus": 0.1,
+  "mem": 32,
+  "cmd": "date &gt;&gt; test-rexray-volume/test.txt; cat test-rexray-volume/test.txt",
+  "container": {
+    "type": "MESOS",
+    "volumes": [
+      {
+        "containerPath": "test-rexray-volume",
+        "external": {
+          "size": 100,
+          "name": "my-test-vol",
+          "provider": "dvdi",
+          "options": { "dvdi/driver": "rexray" }
+          },
+        "mode": "RW"
+      }
+    ]
+  },
+  "upgradeStrategy": {
+    "minimumHealthCapacity": 0,
+    "maximumOverCapacity": 0
+  }
+}
+</code></pre></div></div>
 
 <p>In the app definition above:</p>
 
@@ -391,50 +390,49 @@
   </li>
 </ul>
 
-<p><a name="docker-extvol"></a>
-### Using a Docker Container</p>
+<p><a name="docker-extvol"></a></p>
+<h3 id="using-a-docker-container">Using a Docker Container</h3>
 
 <p>Below is a sample app definition that uses a Docker container and specifies first an external volume, second a sandbox-relative host-volume.</p>
 
 <p>The <code class="highlighter-rouge">cmd</code> in this app definition appends the output of the <code class="highlighter-rouge">date</code> command to <code class="highlighter-rouge">test.txt</code>. You can verify that the external volume is being used correctly if you see that the logs of successive runs of the application show more and more lines of <code class="highlighter-rouge">date</code> output.</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/test-docker"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">32</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"date &gt;&gt; /data/test-rexray-volume/test.txt; cat /data/test-rexray-volume/test.txt"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"alpine:3.1"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HOST"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"forcePullImage"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
-    </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-      </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/data/test-rexray-volume"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"external"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-test-vol"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"provider"</span><span class="p">:</span><span class="w"> </span><span class="s2">"dvdi"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"options"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"dvdi/driver"</span><span class="p">:</span><span class="w"> </span><span class="s2">"rexray"</span><span class="w"> </span><span class="p">}</span><span class="w">
-        </span><span class="p">},</span><span class="w">
-        </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="w">
-      </span><span class="p">},</span><span class="w">
-      </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"hostPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"var-log"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/var/log/myapp"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="w">
-      </span><span class="p">}</span><span class="w">
-    </span><span class="p">]</span><span class="w">
-  </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"upgradeStrategy"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"minimumHealthCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"maximumOverCapacity"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
-  </span><span class="p">}</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
+  "id": "/test-docker",
+  "instances": 1,
+  "cpus": 0.1,
+  "mem": 32,
+  "cmd": "date &gt;&gt; /data/test-rexray-volume/test.txt; cat /data/test-rexray-volume/test.txt",
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "alpine:3.1",
+      "network": "HOST",
+      "forcePullImage": true
+    },
+    "volumes": [
+      {
+        "containerPath": "/data/test-rexray-volume",
+        "external": {
+          "name": "my-test-vol",
+          "provider": "dvdi",
+          "options": { "dvdi/driver": "rexray" }
+        },
+        "mode": "RW"
+      },
+      {
+        "hostPath": "var-log",
+        "containerPath": "/var/log/myapp",
+        "mode": "RW"
+      }
+    ]
+  },
+  "upgradeStrategy": {
+    "minimumHealthCapacity": 0,
+    "maximumOverCapacity": 0
+  }
+}
+</code></pre></div></div>
 
 <p><strong>Important:</strong> Refer to the <a href="https://rexray.readthedocs.io/en/v0.3.3/user-guide/schedulers/#docker-containerizer-with-marathon">REX-Ray documentation</a> to learn which versions of Docker are compatible with the REX-Ray volume driver.</p>
 

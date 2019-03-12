@@ -309,11 +309,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -325,7 +325,7 @@
 (<code class="highlighter-rouge">--ssl_keystore_password $MARATHON_JKS_PASSWORD --ssl_keystore_path /my/path/to/marathon.jks --https_port 8080 --disable_http</code>)
 and your certificate is not signed by a public CA:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>WARN /v2/deployments (org.eclipse.jetty.servlet.ServletHandler:563)
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>WARN /v2/deployments (org.eclipse.jetty.servlet.ServletHandler:563)
 java.lang.RuntimeException: while proxying
   at mesosphere.marathon.api.LeaderProxyFilter.doFilter(LeaderProxyFilter.scala:147)
   [...]
@@ -333,14 +333,12 @@ Caused by: javax.net.ssl.SSLHandshakeException: sun.security.validator.Validator
   [...]
 Caused by: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
   [...]
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>In this case, make sure that your local CA is included in your keystore by executing something like:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>keytool -import -trustcacerts -file ./cacert.cer -alias yourca --keystore /my/path/to/marathon.jks
-</code></pre>
-</div>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>keytool -import -trustcacerts -file ./cacert.cer -alias yourca --keystore /my/path/to/marathon.jks
+</code></pre></div></div>
 
 
     </div>

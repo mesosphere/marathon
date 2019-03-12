@@ -299,6 +299,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/1.6/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +339,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -356,9 +361,8 @@
 
 <p>Each Marathon instance must be launched with the same ZooKeeper quorum specified. For example, if your quorum is <code class="highlighter-rouge">zk://1.2.3.4:2181,2.3.4.5:2181,3.4.5.6:2181/marathon</code> then launch each instance in the normal way with the argument:</p>
 
-<div class="language-sh highlighter-rouge"><pre class="highlight"><code>--zk zk://1.2.3.4:2181,2.3.4.5:2181,3.4.5.6:2181/marathon
-</code></pre>
-</div>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">--zk</span> zk://1.2.3.4:2181,2.3.4.5:2181,3.4.5.6:2181/marathon
+</code></pre></div></div>
 
 <h2 id="proxying">Proxying</h2>
 

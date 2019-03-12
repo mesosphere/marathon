@@ -299,6 +299,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/1.6/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +339,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -346,7 +351,9 @@
     <div class="col-sm-9">
         <h1 id="troubleshooting">Troubleshooting</h1>
 
-<h2 id="an-app-stays-in-waiting-forever">An app stays in “Waiting” forever</h2>
+<h2 id="app-troubles">App troubles</h2>
+
+<h3 id="an-app-stays-in-waiting-forever">An app stays in “Waiting” forever</h3>
 
 <p>This means that Marathon does not receive “Resource Offers” from Mesos that allow it to start tasks of
 this application. The simplest failure is that there are not sufficient resources available in the cluster or another
@@ -373,13 +380,15 @@ ports from 1 to 65000 available to the mesos agent by using <code class="highlig
 tasks scheduled by Mesos use ports in the specified range! You can find the relevant configuration options for the Mesos
 agent <a href="http://mesos.apache.org/documentation/attributes-resources/">here</a>.</p>
 
-<h2 id="using-https-with-a-local-ca-certificate">Using HTTPS with a local CA certificate</h2>
+<h2 id="marathon-troubles">Marathon troubles</h2>
+
+<h3 id="using-https-with-a-local-ca-certificate">Using HTTPS with a local CA certificate</h3>
 
 <p>You might get errors like the following in the Marathon log if you are running Marathon with only HTTPS enabled
 (<code class="highlighter-rouge">--ssl_keystore_password $MARATHON_JKS_PASSWORD --ssl_keystore_path /my/path/to/marathon.jks --https_port 8080 --disable_http</code>)
 and your certificate is not signed by a public CA:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>WARN /v2/deployments (org.eclipse.jetty.servlet.ServletHandler:563)
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>WARN /v2/deployments (org.eclipse.jetty.servlet.ServletHandler:563)
 java.lang.RuntimeException: while proxying
   at mesosphere.marathon.api.LeaderProxyFilter.doFilter(LeaderProxyFilter.scala:147)
   [...]
@@ -387,18 +396,20 @@ Caused by: javax.net.ssl.SSLHandshakeException: sun.security.validator.Validator
   [...]
 Caused by: sun.security.validator.ValidatorException: PKIX path building failed: sun.security.provider.certpath.SunCertPathBuilderException: unable to find valid certification path to requested target
   [...]
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>In this case, make sure that your local CA is included in your keystore by executing something like:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>keytool -import -trustcacerts -file ./cacert.cer -alias yourca --keystore /my/path/to/marathon.jks
-</code></pre>
-</div>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>keytool -import -trustcacerts -file ./cacert.cer -alias yourca --keystore /my/path/to/marathon.jks
+</code></pre></div></div>
 
-<h2 id="error-reading-authentication-secret-from-file">Error reading authentication secret from file</h2>
+<h3 id="error-reading-authentication-secret-from-file">Error reading authentication secret from file</h3>
 
 <p>When using framework-authentication on the master, be sure to set a secret that has a minimum of eight characters. Secrets shorter than that length may not be accepted by Marathon.</p>
+
+<h3 id="using-firewalls">Using firewalls</h3>
+
+<p>If you have a firewall, you may want to disable dynamic assignment of the port which is used by marathon to talk to Mesos. Marathon uses mesos v0 API through a native scheduler driver. The driver itself uses a <code class="highlighter-rouge">libmesos</code> library which opens a connection to the mesos master. By default, <code class="highlighter-rouge">libmesos</code> will use any available port from the ephemeral range, but that can be changed by setting <code class="highlighter-rouge">LIBPROCESS_PORT</code> environment variable.</p>
 
     </div>
 </div>

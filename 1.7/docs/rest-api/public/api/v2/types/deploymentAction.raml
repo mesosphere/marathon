@@ -1,0 +1,43 @@
+#%RAML 1.0 Library
+uses:
+  strings: stringTypes.raml
+  readinessCheck: readinessCheck.raml
+
+types:
+  DeploymentActionName:
+    type: string
+    description: |
+      * StartApplication: starts an application, which is currently not running.
+      * StopApplication: stops an already running application.
+      * ScaleApplication: changes the number of instances of an application and allows to kill specified instances while scaling.
+      * RestartApplication: upgrades an already deployed application with a new version.
+      * StartPod: starts a pod, which is currently not running.
+      * StopPod: stops an already running pod.
+      * ScalePod: changes the number of instances of an pod and allows to kill specified instances while scaling.
+      * RestartPod: upgrades an already deployed pod with a new version.
+      * ResolveArtifacts: Resolve all artifacts of an application
+    enum:
+      - StartApplication
+      - StopApplication
+      - ScaleApplication
+      - RestartApplication
+      - StartPod
+      - StopPod
+      - ScalePod
+      - RestartPod
+      - ResolveArtifacts
+
+  DeploymentAction:
+    type: object
+    description: An action in the deployment step
+    properties:
+      action:
+        type: DeploymentActionName
+        description: The name of the action being executed
+      app?:
+        type: strings.PathId
+        description: The application ID affected by this deployment
+      pod?:
+        type: strings.PathId
+        description: The pod ID af8fected by this deployment
+

@@ -309,11 +309,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -352,30 +352,29 @@
 
 <p><code class="highlighter-rouge">credential</code>, with a <code class="highlighter-rouge">principal</code> and an optional <code class="highlighter-rouge">secret</code> field to authenticate when downloading the Docker image.</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">  
-   </span><span class="nt">"id"</span><span class="p">:</span><span class="s2">"mesos-docker"</span><span class="p">,</span><span class="w">
-   </span><span class="nt">"container"</span><span class="p">:{</span><span class="w">  
-      </span><span class="nt">"docker"</span><span class="p">:{</span><span class="w">  
-         </span><span class="nt">"image"</span><span class="p">:</span><span class="s2">"mesosphere/inky"</span><span class="p">,</span><span class="w">
-         </span><span class="nt">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-                </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">  
+   </span><span class="s2">"id"</span><span class="p">:</span><span class="s2">"mesos-docker"</span><span class="p">,</span><span class="w">
+   </span><span class="s2">"container"</span><span class="p">:{</span><span class="w">  
+      </span><span class="s2">"docker"</span><span class="p">:{</span><span class="w">  
+         </span><span class="s2">"image"</span><span class="p">:</span><span class="s2">"mesosphere/inky"</span><span class="p">,</span><span class="w">
+         </span><span class="s2">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="s2">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
           </span><span class="p">}</span><span class="w">
       </span><span class="p">},</span><span class="w">
-      </span><span class="nt">"type"</span><span class="p">:</span><span class="s2">"MESOS"</span><span class="w">
+      </span><span class="s2">"type"</span><span class="p">:</span><span class="s2">"MESOS"</span><span class="w">
    </span><span class="p">},</span><span class="w">
-   </span><span class="nt">"secrets"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-            </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mesos-docker/pullConfig"</span><span class="w">
+   </span><span class="s2">"secrets"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="s2">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="s2">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mesos-docker/pullConfig"</span><span class="w">
         </span><span class="p">}</span><span class="w">
-   </span><span class="s2">"args"</span><span class="err">:</span><span class="p">[</span><span class="w">  
+   </span><span class="s2">"args"</span><span class="p">:[</span><span class="w">  
       </span><span class="s2">"&lt;my-arg&gt;"</span><span class="w">
    </span><span class="p">],</span><span class="w">
-   </span><span class="nt">"cpus"</span><span class="p">:</span><span class="mf">0.2</span><span class="p">,</span><span class="w">
-   </span><span class="nt">"mem"</span><span class="p">:</span><span class="mf">16.0</span><span class="p">,</span><span class="w">
-   </span><span class="nt">"instances"</span><span class="p">:</span><span class="mi">1</span><span class="w">
+   </span><span class="s2">"cpus"</span><span class="p">:</span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+   </span><span class="s2">"mem"</span><span class="p">:</span><span class="mf">16.0</span><span class="p">,</span><span class="w">
+   </span><span class="s2">"instances"</span><span class="p">:</span><span class="mi">1</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p><strong>Important:</strong> If you leave the <code class="highlighter-rouge">args</code> field empty, the default entry point will be the launch command for the container. If your container does not have a default entry point, you must specify a command in the <code class="highlighter-rouge">args</code> field. If you do not, your app will fail to deploy.</p>
 
@@ -418,19 +417,17 @@ DC/OS users do not need to follow the configuration steps below.</p>
     the task.
   </div>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>```bash
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>```bash
 $ echo 'docker,mesos' &gt; /etc/mesos-slave/containerizers
 ```
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <ol>
   <li>
     <p>Increase the executor timeout to account for the potential delay pulling a Docker image to the agent node.</p>
 
-    <p><code class="highlighter-rouge">bash
- $ echo '10mins' &gt; /etc/mesos-slave/executor_registration_timeout
-</code></p>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="nv">$ </span><span class="nb">echo</span> <span class="s1">'10mins'</span> <span class="o">&gt;</span> /etc/mesos-slave/executor_registration_timeout
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Restart the agent process to load the new configuration.</p>
@@ -449,29 +446,28 @@ you set on your agent nodes in the previous step.</p>
 <p>To use the native container support, add a <code class="highlighter-rouge">container</code> field to your
 app definition JSON:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HOST"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"group/image"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HOST"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"group/image"</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    </span><span class="s2">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
       </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/etc/a"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"hostPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/var/data/a"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RO"</span><span class="w">
+        </span><span class="s2">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/etc/a"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"hostPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/var/data/a"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RO"</span><span class="w">
       </span><span class="p">},</span><span class="w">
       </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/etc/b"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"hostPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/var/data/b"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="w">
+        </span><span class="s2">"containerPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/etc/b"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"hostPath"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/var/data/b"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"RW"</span><span class="w">
       </span><span class="p">}</span><span class="w">
     </span><span class="p">]</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>where <code class="highlighter-rouge">volumes</code> and <code class="highlighter-rouge">type</code> are optional (the default type is <code class="highlighter-rouge">DOCKER</code>).  More
 container types may be added later.</p>
@@ -485,20 +481,19 @@ environment as <code class="highlighter-rouge">$MESOS_SANDBOX</code>.</p>
 inside the sandbox, and it’s unaffected by the Docker log driver. One way to do it is to provide Docker logging driver 
 parameters in the app definition:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"foo"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"parameters"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"foo"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"parameters"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
       </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"log-driver"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="w">
+        </span><span class="s2">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"log-driver"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"none"</span><span class="w">
       </span><span class="p">}</span><span class="w">
     </span><span class="p">]</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <h3 id="bridged-networking-mode">Bridged Networking Mode</h3>
 
@@ -513,36 +508,35 @@ by Docker.</p>
 
 <p>Let’s begin by taking an example app definition:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bridged-webapp"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python3 -m http.server 8080"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">64.0</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container/bridge"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
-  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python:3"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bridged-webapp"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python3 -m http.server 8080"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.5</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">64.0</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container/bridge"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
+  </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"python:3"</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-      </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">8080</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">9000</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="w"> </span><span class="p">},</span><span class="w">
-      </span><span class="p">{</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">161</span><span class="p">,</span><span class="w"> </span><span class="nt">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"udp"</span><span class="p">}</span><span class="w">
+    </span><span class="s2">"portMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+      </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">8080</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="s2">"servicePort"</span><span class="p">:</span><span class="w"> </span><span class="mi">9000</span><span class="p">,</span><span class="w"> </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"tcp"</span><span class="w"> </span><span class="p">},</span><span class="w">
+      </span><span class="p">{</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">161</span><span class="p">,</span><span class="w"> </span><span class="s2">"hostPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"udp"</span><span class="p">}</span><span class="w">
     </span><span class="p">]</span><span class="w">
   </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+  </span><span class="s2">"healthChecks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
     </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
+      </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
     </span><span class="p">}</span><span class="w">
   </span><span class="p">]</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>Here <code class="highlighter-rouge">"hostPort": 0</code> retains the traditional meaning in Marathon, which is “a
 random port from the range included in the Mesos resource offer”. The resulting
@@ -580,9 +574,8 @@ The Mesos agent node announces port resources in the range <code class="highligh
 default. This can be overridden; for example to also expose ports in the range
 <code class="highlighter-rouge">[8000-9000]</code>:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>--resources="ports(*):[8000-9000, 31000-32000]"
-</code></pre>
-</div>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>--resources="ports(*):[8000-9000, 31000-32000]"
+</code></pre></div></div>
 
 <p>See the <a href="https://docs.docker.com/engine/userguide/networking/">network configuration</a>
 documentation for more details on how Docker handles networking.</p>
@@ -600,15 +593,14 @@ using Marathon.</p>
 <p>Marathon 0.8.2 with Mesos 0.22.0 supports an option to force Docker to pull
 the image before launching each task.</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"group/image"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"forcePullImage"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"group/image"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"forcePullImage"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <h4 id="command-vs-args">Command vs Args</h4>
 
@@ -621,44 +613,41 @@ is as in previous releases (the value is wrapped by Mesos via
 containerizer features like custom Docker <code class="highlighter-rouge">ENTRYPOINT</code>s.  For example, given
 the following Dockerfile with an <code class="highlighter-rouge">ENTRYPOINT</code> defined:</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code>FROM busybox
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>FROM busybox
 MAINTAINER support@mesosphere.io
 
 CMD <span class="o">[</span><span class="s2">"inky"</span><span class="o">]</span>
 ENTRYPOINT <span class="o">[</span><span class="s2">"echo"</span><span class="o">]</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Supplying the following app definition will download the public
 <a href="https://registry.hub.docker.com/u/mesosphere/inky/">“mesosphere/inky” Docker container</a>
 and execute <code class="highlighter-rouge">echo hello</code>:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"inky"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-            </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere/inky"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"inky"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere/inky"</span><span class="w">
         </span><span class="p">},</span><span class="w">
-        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+        </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"hello"</span><span class="p">],</span><span class="w">
-    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+    </span><span class="s2">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"hello"</span><span class="p">],</span><span class="w">
+    </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>Named arguments can be passed as an array of consecutive <code class="highlighter-rouge">argc, argv</code> tuples,
 e.g.:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">   </span><span class="s2">"args"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">   </span><span class="s2">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
       </span><span class="s2">"--name"</span><span class="p">,</span><span class="w"> </span><span class="s2">"etcd0"</span><span class="p">,</span><span class="w">
       </span><span class="s2">"--initial-cluster-state"</span><span class="p">,</span><span class="w"> </span><span class="s2">"new"</span><span class="w">
     </span><span class="p">]</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <h4 id="privileged-mode-and-arbitrary-docker-options">Privileged Mode and Arbitrary Docker Options</h4>
 
@@ -670,28 +659,27 @@ for the <code class="highlighter-rouge">docker run</code> command executed by th
 any parameters passed in this manner are not guaranteed to be supported in
 the future, as Mesos may not always interact with Docker via the CLI.</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-    </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"privileged-job"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-            </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere/inky"</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"privileged"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
-            </span><span class="nt">"parameters"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-                </span><span class="p">{</span><span class="w"> </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"hostname"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a.corp.org"</span><span class="w"> </span><span class="p">},</span><span class="w">
-                </span><span class="p">{</span><span class="w"> </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"volumes-from"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"another-container"</span><span class="w"> </span><span class="p">},</span><span class="w">
-                </span><span class="p">{</span><span class="w"> </span><span class="nt">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"lxc-conf"</span><span class="p">,</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="w"> </span><span class="p">}</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"privileged-job"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+            </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere/inky"</span><span class="p">,</span><span class="w">
+            </span><span class="s2">"privileged"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+            </span><span class="s2">"parameters"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+                </span><span class="p">{</span><span class="w"> </span><span class="s2">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"hostname"</span><span class="p">,</span><span class="w"> </span><span class="s2">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"a.corp.org"</span><span class="w"> </span><span class="p">},</span><span class="w">
+                </span><span class="p">{</span><span class="w"> </span><span class="s2">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"volumes-from"</span><span class="p">,</span><span class="w"> </span><span class="s2">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"another-container"</span><span class="w"> </span><span class="p">},</span><span class="w">
+                </span><span class="p">{</span><span class="w"> </span><span class="s2">"key"</span><span class="p">:</span><span class="w"> </span><span class="s2">"lxc-conf"</span><span class="p">,</span><span class="w"> </span><span class="s2">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"..."</span><span class="w"> </span><span class="p">}</span><span class="w">
             </span><span class="p">]</span><span class="w">
         </span><span class="p">},</span><span class="w">
-        </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
+        </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"volumes"</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"hello"</span><span class="p">],</span><span class="w">
-    </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+    </span><span class="s2">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"hello"</span><span class="p">],</span><span class="w">
+    </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">32.0</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <h1 id="resources">Resources</h1>
 

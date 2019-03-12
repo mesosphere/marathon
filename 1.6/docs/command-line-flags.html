@@ -299,6 +299,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/1.6/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +339,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -403,7 +408,7 @@
   </li>
   <li><span class="label label-default">v1.6.488</span> <code class="highlighter-rouge">--deprecated_features</code> (Optional. Default: None):
   Comma-delimited list indicating which Marathon deprecated features should continue to be enabled. Read more about
-  <a href="deprecation.html">Deprecation</a>.
+  <a href="/marathon/1.6/docs/deprecation.html">Deprecation</a>.
   Example: <code class="highlighter-rouge">--deprecated_features feature_one,feature_two,feature_three</code></li>
   <li><code class="highlighter-rouge">--executor</code> (Optional. Default: “//cmd”): Executor to use when none is
   specified.</li>
@@ -639,7 +644,7 @@ in your cluster. You should only need to reduce it if you use <code class="highl
     <p><code class="highlighter-rouge">--decline_offer_duration</code> (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default.</p>
   </li>
   <li>
-    <p><span class="label label-default">v1.6.x</span> <code class="highlighter-rouge">--gpu_scheduling_behavior</code> (Default: undefined) Defines how offered GPU resources should be treated. Possible settings are <code class="highlighter-rouge">undefined</code>, <code class="highlighter-rouge">restricted</code> and <code class="highlighter-rouge">unrestricted</code>. Read more about <a href="preferential-gpu-scheduling.html">Preferential GPU scheduling</a>.</p>
+    <p><span class="label label-default">v1.6.x</span> <code class="highlighter-rouge">--gpu_scheduling_behavior</code> (Default: undefined) Defines how offered GPU resources should be treated. Possible settings are <code class="highlighter-rouge">undefined</code>, <code class="highlighter-rouge">restricted</code> and <code class="highlighter-rouge">unrestricted</code>. Read more about <a href="/marathon/1.6/docs/preferential-gpu-scheduling.html">Preferential GPU scheduling</a>.</p>
   </li>
 </ul>
 
@@ -713,6 +718,9 @@ max_tasks_per_offer == max_tasks_per_offer_cycle </code>. E.g. in a cluster of 2
   <li><code class="highlighter-rouge">--leader_proxy_ssl_ignore_hostname</code> (Optional. Default: false): Do not
   verify that the hostname of the Marathon leader matches the one in the SSL
   certificate when proxying API requests to the current leader.</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--leader_proxy_max_open_connections</code> (Optional. Default: 64):
+  Specifies the number of maximum, concurrent open HTTP connections allowed when proxying from the standby to the
+  current leader. Does not apply when using the deprecated sync proxy.</li>
   <li><code class="highlighter-rouge">--[disable_]http_compression</code> (Optional. Default: enabled): Specifies whether Marathon should compress HTTP responses
   for clients that support it. Disabling will reduce the CPU burden on Marathon to service API requests.</li>
   <li><span class="label label-default">v0.10.0</span> <code class="highlighter-rouge">--http_max_concurrent_requests</code> (Optional.): the maximum number of

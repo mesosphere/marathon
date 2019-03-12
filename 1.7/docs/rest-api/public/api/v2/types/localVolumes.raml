@@ -1,0 +1,14 @@
+#%RAML 1.0 Library
+uses:
+  strings: stringTypes.raml
+
+types:
+
+  LocalVolumeId:
+    type: object
+    properties:
+      runSpecId: strings.PathId
+      containerPath: string
+      uuid: string
+      persistenceId: strings.PersistenceId
+

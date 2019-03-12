@@ -217,6 +217,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/deprecated-metrics.html">
+                    Deprecated Metrics
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/readiness-checks.html">
                     Readiness Checks
                 </a>
@@ -299,6 +304,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +344,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -368,7 +378,7 @@
 
 <p>All Marathon operators are supported when the field name is an attribute.</p>
 
-<p>Marathon supports text, scalar, range, and set attribute values. For scalars, ranges, and sets Marathon will perform a string comparison on the formatted values. The format matches that of the Mesos attribute formatting. For ranges and sets, the format is <code class="highlighter-rouge">[begin-end,...]</code> and <code class="highlighter-rouge"><span class="p">{</span><span class="err">item,...</span><span class="p">}</span></code> respectively. For example, you might have a range formatted as <code class="highlighter-rouge">[100-200]</code> and a set formatted as <code class="highlighter-rouge"><span class="p">{</span><span class="err">a,b,c</span><span class="p">}</span></code>.</p>
+<p>Marathon supports text, scalar, range, and set attribute values. For scalars, ranges, and sets Marathon will perform a string comparison on the formatted values. The format matches that of the Mesos attribute formatting. For ranges and sets, the format is <code class="highlighter-rouge">[begin-end,...]</code> and <code class="highlighter-rouge">{item,...}</code> respectively. For example, you might have a range formatted as <code class="highlighter-rouge">[100-200]</code> and a set formatted as <code class="highlighter-rouge">{a,b,c}</code>.</p>
 
 <p>Regex is allowed for LIKE and UNLIKE operators; to match ANY value, use the string <code class="highlighter-rouge">.*</code>.</p>
 
@@ -381,72 +391,71 @@ When a value is specified, tasks are launched on agent nodes with an attribute w
 <p><code class="highlighter-rouge">CLUSTER</code> allows you to run all of your app’s tasks on agent nodes that share a certain attribute.
 This is useful, for example, if you have apps with special hardware needs, or if you want to run them on the same rack for low latency.</p>
 
-<p>Naming the field name <code class="highlighter-rouge">hostname</code> tells Marathon that the launched tasks of the app or pod should be launched together on the same agent:
-* When a value for <code class="highlighter-rouge">hostname</code> is specified, tasks are launched on the agent whose hostname matches the value.
-* When the <code class="highlighter-rouge">hostname</code> value is empty or unspecified, the first instance is launched on <strong>any</strong> agent node and the remaining tasks are launched alongside it on the same agent.</p>
+<p>Naming the field name <code class="highlighter-rouge">hostname</code> tells Marathon that the launched tasks of the app or pod should be launched together on the same agent:</p>
+<ul>
+  <li>When a value for <code class="highlighter-rouge">hostname</code> is specified, tasks are launched on the agent whose hostname matches the value.</li>
+  <li>When the <code class="highlighter-rouge">hostname</code> value is empty or unspecified, the first instance is launched on <strong>any</strong> agent node and the remaining tasks are launched alongside it on the same agent.</li>
+</ul>
 
-<p>When the field name is an attribute, Marathon handles tasks differently:
-* When a value is specified, tasks are launched on any agent with an attribute named according the field <strong>and</strong> with a value matching that of the constraint.
-* When the value is empty or unspecified, the first instance is launched on any agent with an attribute named according to the field; the value of the attribute on that agent is used for future constraint matches.</p>
+<p>When the field name is an attribute, Marathon handles tasks differently:</p>
+<ul>
+  <li>When a value is specified, tasks are launched on any agent with an attribute named according the field <strong>and</strong> with a value matching that of the constraint.</li>
+  <li>When the value is empty or unspecified, the first instance is launched on any agent with an attribute named according to the field; the value of the attribute on that agent is used for future constraint matches.</li>
+</ul>
 
 <h2 id="examples">Examples</h2>
 <p>The example below specifies the exact rack on which to run app tasks:</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl -X POST -H <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps -d <span class="s1">'{
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-X</span> POST <span class="nt">-H</span> <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps <span class="nt">-d</span> <span class="s1">'{
     "id": "sleep-cluster",
     "cmd": "sleep 60",
     "instances": 3,
     "constraints": [["rack_id", "CLUSTER", "rack-1"]]
   }'</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>This example leaves the value field empty. This tells Marathon that all of the app tasks should run on the same rack, but does not specify which.</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl -X POST -H <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps -d <span class="s1">'{
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-X</span> POST <span class="nt">-H</span> <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps <span class="nt">-d</span> <span class="s1">'{
     "id": "sleep-cluster",
     "cmd": "sleep 60",
     "instances": 3,
     "constraints": [["rack_id", "CLUSTER"]]
   }'</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>This example uses the specified <code class="highlighter-rouge">hostname</code>, which means an app must run on a specific node.</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl -X POST -H <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps -d <span class="s1">'{
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-X</span> POST <span class="nt">-H</span> <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps <span class="nt">-d</span> <span class="s1">'{
     "id": "sleep-cluster",
     "cmd": "sleep 60",
     "instances": 3,
     "constraints": [["hostname", "CLUSTER", "a.specific.node.com"]]
   }'</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>Below, the field is named <code class="highlighter-rouge">hostname</code>, but the value is empty. This tells Marathon that all app tasks must run on the same node, but does not specify which.</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl -X POST -H <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps -d <span class="s1">'{
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-X</span> POST <span class="nt">-H</span> <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps <span class="nt">-d</span> <span class="s1">'{
     "id": "sleep-cluster",
     "cmd": "sleep 60",
     "instances": 3,
     "constraints": [["hostname", "CLUSTER"]]
   }'</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h3 id="like-operator">LIKE operator</h3>
 <p><strong>Value</strong> (required): A regular expression for the value of the attribute.</p>
 
 <p><code class="highlighter-rouge">LIKE</code> accepts a regular expression as parameter and allows you to run your tasks only on the agent nodes whose field values match the regular expression.</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl -X POST -H <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps -d <span class="s1">'{
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-X</span> POST <span class="nt">-H</span> <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps <span class="nt">-d</span> <span class="s1">'{
     "id": "sleep-group-by",
     "cmd": "sleep 60",
     "instances": 3,
     "constraints": [["rack_id", "LIKE", "rack-[1-3]"]]
   }'</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p><strong>Note:</strong> if the attribute in question is a scalar, it is rounded to the nearest thousandth using the half-even rounding strategy; zeroes after the decimal are dropped.</p>
 
@@ -455,44 +464,41 @@ This is useful, for example, if you have apps with special hardware needs, or if
 
 <p>Just like <code class="highlighter-rouge">LIKE</code> operator, but only run tasks on agent nodes whose field values don’t match the regular expression.</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl -X POST -H <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps -d <span class="s1">'{
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-X</span> POST <span class="nt">-H</span> <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps <span class="nt">-d</span> <span class="s1">'{
     "id": "sleep-group-by",
     "cmd": "sleep 60",
     "instances": 3,
     "constraints": [["rack_id", "UNLIKE", "rack-[7-9]"]]
   }'</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
-<h3 id="maxper-operator">MAX_PER operator</h3>
+<h3 id="max_per-operator">MAX_PER operator</h3>
 <p><strong>Value</strong> (required): An integer, for example <code class="highlighter-rouge">"2"</code>.</p>
 
 <p><code class="highlighter-rouge">MAX_PER</code> accepts a number as parameter which specifies the maximum size of each group. It can be used to limit tasks across racks or datacenters.</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl -X POST -H <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps -d <span class="s1">'{
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-X</span> POST <span class="nt">-H</span> <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps <span class="nt">-d</span> <span class="s1">'{
     "id": "sleep-group-by",
     "cmd": "sleep 60",
     "instances": 3,
     "constraints": [["rack_id", "MAX_PER", "2"]]
   }'</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h3 id="unique-operator">UNIQUE operator</h3>
 <p><code class="highlighter-rouge">UNIQUE</code> does not accept a value.</p>
 
 <p><code class="highlighter-rouge">UNIQUE</code> tells Marathon to enforce uniqueness of the attribute across all of an app’s tasks. For example the following constraint ensures that there is only one app task running on each host.</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl -X POST -H <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps -d <span class="s1">'{
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-X</span> POST <span class="nt">-H</span> <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps <span class="nt">-d</span> <span class="s1">'{
     "id": "sleep-unique",
     "cmd": "sleep 60",
     "instances": 3,
     "constraints": [["hostname", "UNIQUE"]]
   }'</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
-<h3 id="groupby-operator">GROUP_BY operator</h3>
+<h3 id="group_by-operator">GROUP_BY operator</h3>
 <p><strong>value</strong> (optional): An integer, indicating how many distinct values can be expected for the given <code class="highlighter-rouge">fieldName</code>, for example <code class="highlighter-rouge">"3"</code>.</p>
 
 <p><code class="highlighter-rouge">GROUP_BY</code> can be used to distribute tasks evenly across racks or datacenters for high availability. Be aware that not specifying a value for this operator will lead to non-deterministic results based on the order of offers that Marathon receives. This is because Marathon will only discover distinct values of the provided <code class="highlighter-rouge">fieldName</code> when it receives offers.</p>
@@ -505,42 +511,39 @@ This is useful, for example, if you have apps with special hardware needs, or if
   <li>Specifying a value <code class="highlighter-rouge">"3"</code> when there’s actually 5 racks will not prevent Marathon from placing tasks on additional racks. It only means that Marathon will distribute evenly across at least 3 racks.</li>
 </ol>
 
-<p>Example:
-<code class="highlighter-rouge">bash
-$ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
+<p>Example:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-X</span> POST <span class="nt">-H</span> <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps <span class="nt">-d</span> <span class="s1">'{
     "id": "sleep-group-by",
     "cmd": "sleep 60",
     "instances": 3,
     "constraints": [["rack_id", "GROUP_BY", "3"]]
-  }'
-</code></p>
+  }'</span>
+</code></pre></div></div>
 
 <h3 id="is-operator">IS operator</h3>
 
 <p><strong>Value</strong> (required): A Mesos Scalar or Text value, as specified by the <a href="http://mesos.apache.org/documentation/latest/attributes-resources/#types">Mesos Attributes and Resources Type Specification</a>:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>scalar : floatValue
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>scalar : floatValue
 
 floatValue : ( intValue ( "." intValue )? ) | ...
 
 intValue : [0-9]+
 
 text : [a-zA-Z0-9_/.-]
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h4 id="comparing-text-values">Comparing text values</h4>
 
 <p>When an <code class="highlighter-rouge">IS</code> constraint is specified, a task is only launched on nodes that have the specified value.</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl -X POST -H <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps -d <span class="s1">'{
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-X</span> POST <span class="nt">-H</span> <span class="s2">"Content-type: application/json"</span> localhost:8080/v2/apps <span class="nt">-d</span> <span class="s1">'{
     "id": "sleep-cluster",
     "cmd": "sleep 60",
     "instances": 3,
     "constraints": [["", "IS", "rack-1"]]
   }'</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h4 id="comparing-scalar-values">Comparing scalar values</h4>
 
@@ -548,13 +551,12 @@ text : [a-zA-Z0-9_/.-]
 
 <p>Given a node with attribute “level:0.8”, the following constraints would match:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">[[</span><span class="s2">"level"</span><span class="p">,</span><span class="w"> </span><span class="s2">"IS"</span><span class="p">,</span><span class="w"> </span><span class="s2">"0.8"</span><span class="p">]]</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[[</span><span class="s2">"level"</span><span class="p">,</span><span class="w"> </span><span class="s2">"IS"</span><span class="p">,</span><span class="w"> </span><span class="s2">"0.8"</span><span class="p">]]</span><span class="w">
 
 </span><span class="p">[[</span><span class="s2">"level"</span><span class="p">,</span><span class="w"> </span><span class="s2">"IS"</span><span class="p">,</span><span class="w"> </span><span class="s2">"0.80"</span><span class="p">]]</span><span class="w">
 
 </span><span class="p">[[</span><span class="s2">"level"</span><span class="p">,</span><span class="w"> </span><span class="s2">"IS"</span><span class="p">,</span><span class="w"> </span><span class="s2">"0.8001"</span><span class="p">]]</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
     </div>
 </div>

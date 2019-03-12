@@ -1,0 +1,9 @@
+
+get:
+  description: Get metrics data from this Marathon instance
+  responses:
+    200:
+      description: All aggregated runtime metrics for this Marathon instance.
+      body:
+        application/json:
+          type: metrics.Metrics

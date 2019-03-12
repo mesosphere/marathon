@@ -1,0 +1,872 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "additionalProperties": false,
+  "definitions": {
+    "pathType": {
+      "type": "string",
+      "pattern": "^(\\/?((\\.{2})|([a-z0-9][a-z0-9\\-.]*[a-z0-9]+)|([a-z0-9]*))($|\\/))+$",
+      "minLength": 1
+    },
+    "containerPortMappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "containerPort": {
+            "type": "integer",
+            "description": "Refers to the port the application listens to inside of the container. It is optional and defaults to 0. For each containerPort with a value of 0 Marathon assigns the containerPort the same value as the assigned hostPort. This is especially useful for apps that advertise the port they are listening on to the outside world for P2P communication. Without containerPort: 0 they would erroneously advertise their private container port which is usually not the same as the externally visible host port.",
+            "maximum": 65535,
+            "minimum": 0
+          },
+          "hostPort": {
+            "type": "integer",
+            "description": "Retains the traditional meaning in Marathon, which is a random port from the range included in the Mesos resource offer. The resulting host ports for each task are exposed via the task details in the REST API and the Marathon web UI. hostPort is optional. In BRIDGE mode it defaults to 0 if left unspecified. In USER mode an unspecified hostPort does not allocate a port from a Mesos offer.",
+            "maximum": 65535,
+            "minimum": 0
+          },
+          "labels": {
+            "type": "object",
+            "description": "This can be used to add metadata to be interpreted by external applications such as firewalls.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the service hosted on this port. If provided, it must be unique over all port mappings.",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "networkNames": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "List of the container networks associated with this mapping. If absent, then this mapping is associated with all defined container networks (for this application). A single item list is mandatory when `hostPort` is specified and multiple container networks are defined.",
+              "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?$",
+              "minLength": 1,
+              "maxLength": 63
+            }
+          },
+          "protocol": {
+            "type": "string",
+            "enum": [
+              "tcp",
+              "udp",
+              "udp,tcp"
+            ],
+            "description": "Protocol of the port (one of ['tcp', 'udp'] or 'udp,tcp' for both). Defaults to 'tcp'."
+          },
+          "servicePort": {
+            "type": "integer",
+            "description": "Is a helper port intended for doing service discovery using a well-known port per service. The assigned servicePort value is not used/interpreted by Marathon itself but supposed to be used by the load balancer infrastructure. See Service Discovery Load Balancing doc page. The servicePort parameter is optional and defaults to 0. Like hostPort, If the value is 0, a random port will be assigned. If a servicePort value is assigned by Marathon then Marathon guarantees that its value is unique across the cluster. The values for random service ports are in the range [local_port_min, local_port_max] where local_port_min and local_port_max are command line options with default values of 10000 and 20000, respectively.",
+            "maximum": 65535,
+            "minimum": 0
+          }
+        }
+      }
+    }
+  },
+  "not": {
+    "allOf": [
+      {
+        "required": [
+          "cmd"
+        ]
+      },
+      {
+        "required": [
+          "args"
+        ]
+      }
+    ]
+  },
+  "properties": {
+    "acceptedResourceRoles": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array",
+      "description": "Optional. A list of resource roles. Marathon considers only resource offers with roles in this list for launching tasks of this app. If you do not specify this, Marathon considers all resource offers with roles that have been configured by the `--default_accepted_resource_roles` command line flag. If no `--default_accepted_resource_roles` was given on startup, Marathon considers all resource offers. To register Marathon for a role, you need to specify the `--mesos_role` command line flag on startup. If you want to assign all resources of a slave to a role, you can use the `--default_role` argument when starting up the slave. If you need a more fine-grained configuration, you can use the `--resources` argument to specify resource shares per role. See [the Mesos attribute and resources documentation](http://mesos.apache.org/documentation/latest/attributes-resources/) for details."
+    },
+    "args": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array",
+      "description": "An array of strings that represents an alternative mode of specifying the command to run. This was motivated by safe usage of containerizer features like a custom Docker ENTRYPOINT. This args field may be used in place of cmd even when using the default command executor. This change mirrors API and semantics changes in the Mesos CommandInfo protobuf message starting with version `0.20.0`.  Either `cmd` or `args` must be supplied. It is invalid to supply both `cmd` and `args` in the same app."
+    },
+    "backoffFactor": {
+      "minimum": 1.0,
+      "type": "number",
+      "description": "Configures exponential backoff behavior when launching potentially sick apps. This prevents sandboxes associated with consecutively failing tasks from filling up the hard disk on Mesos slaves. The backoff period is multiplied by the factor for each consecutive failure until it reaches maxLaunchDelaySeconds. This applies also to tasks that are killed due to failing too many health checks."
+    },
+    "backoffSeconds": {
+      "description": "Configures exponential backoff behavior when launching potentially sick apps. This prevents sandboxes associated with consecutively failing tasks from filling up the hard disk on Mesos slaves. The backoff period is multiplied by the factor for each consecutive failure until it reaches maxLaunchDelaySeconds. This applies also to tasks that are killed due to failing too many health checks.",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "cmd": {
+      "description": "The command that is executed.  This value is wrapped by Mesos via `/bin/sh -c ${app.cmd}`.  Either `cmd` or `args` must be supplied. It is invalid to supply both `cmd` and `args` in the same app.",
+      "type": "string",
+      "minLength": 1
+    },
+    "constraints": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "string",
+            "enum": ["UNIQUE", "CLUSTER", "GROUP_BY", "LIKE", "UNLIKE", "MAX_PER"]
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "minItems": 2,
+        "additionalItems": false
+      },
+      "description": "Valid constraint operators are one of UNIQUE, CLUSTER, GROUP_BY, LIKE, UNLIKE, MAX_PER."
+    },
+    "container": {
+      "additionalProperties": false,
+      "properties": {
+        "docker": {
+          "additionalProperties": false,
+          "properties": {
+            "credential": {
+              "type": "object",
+              "description": "DEPRECATED since Marathon v1.5. Credential to authenticate with the docker registry.",
+              "additionalProperties": false,
+              "properties": {
+                "principal": {
+                  "type": "string",
+                  "description": "Principal to authenticate with the docker registry."
+                },
+                "secret": {
+                  "type": "string",
+                  "description": "Secret to authenticate with the docker registry."
+                }
+              },
+              "required": [ "principal" ]
+            },
+            "pullConfig": {
+              "type": "object",
+              "description": "Docker's config.json",
+              "additionalProperties": false,
+              "properties": {
+                "secret" : {
+                  "type": "string",
+                  "description": "A secret whose value is a stringified JSON object in a Secret Store.",
+                  "minLength": 1
+                }
+              },
+              "required": [ "secret" ]
+            },
+            "forcePullImage": {
+              "type": "boolean",
+              "description": "The container will be pulled, regardless if it is already available on the local system."
+            },
+            "image": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the docker image to use."
+            },
+            "network": {
+              "type": "string",
+              "description": "DEPRECATED. The networking mode, this container should operate in. One of BRIDGE|HOST|NONE|USER",
+              "enum": ["BRIDGE", "HOST", "NONE", "USER"]
+            },
+            "parameters": {
+              "type": "array",
+              "description": "Allowing arbitrary parameters to be passed to docker CLI. Note that anything passed to this field is not guaranteed to be supported moving forward, as we might move away from the docker CLI.",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "key": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Key of this parameter"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Value of this parameter"
+                  }
+                },
+                "required": [ "key", "value" ]
+              }
+            },
+            "portMappings": {
+              "$ref": "#/definitions/containerPortMappings",
+              "description": "DEPRECATED in favor of /container/portMappings"
+            },
+            "privileged": {
+              "type": "boolean",
+              "description": "Run this docker image in privileged mode."
+            }
+          },
+          "required": [
+            "image"
+          ],
+          "type": "object"
+        },
+        "appc": {
+          "additionalProperties": false,
+          "properties": {
+            "image": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The name of the AppC image to use."
+            },
+            "id": {
+              "type": "string",
+              "minLength": 7,
+              "description": "An image ID is a string of the format 'hash-value', where 'hash' is the hash algorithm used and 'value' is the hex-encoded digest. Currently the only permitted hash algorithm is sha512."
+            },
+            "labels": {
+              "type": "object",
+              "description": "Optional labels. Suggested labels: 'version', 'os', and 'arch'.",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "forcePullImage": {
+              "type": "boolean",
+              "description": "The container will be pulled, regardless if it is already available on the local system."
+            }
+          },
+          "required": [ "image" ],
+          "type": "object"
+        },
+        "type": {
+          "type": "string",
+          "description": "Container engine type. Supported engine types at the moment are DOCKER and MESOS.",
+          "enum": ["MESOS", "DOCKER"],
+          "default": "DOCKER"
+        },
+        "portMappings": {
+          "$ref": "#/definitions/containerPortMappings",
+          "description": "Defines port usage for container and bridge networking. Use /portDefinitions for host networking."
+        },
+        "volumes": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "containerPath": {
+                "type": "string",
+                "description": "The path of the volume in the container",
+                "minLength": 1
+              },
+              "hostPath": {
+                "type": "string",
+                "description": "The path of the volume on the host",
+                "minLength": 1
+              },
+              "persistent": {
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "description": "The type of mesos disk resource to use; defaults to root",
+                    "enum": ["root", "path", "mount"]
+                  },
+                  "size": {
+                    "type": "integer",
+                    "description": "The size of the persistent volume in MiB",
+                    "minimum": 0
+                  },
+                  "maxSize": {
+                    "type": "integer",
+                    "description": "Optional maximum size of an exclusive mount-disk resource to consider; does not apply to root or path disk resource types",
+                    "minimum": 0
+                  },
+                  "profileName": {
+                    "type": "string",
+                    "description": "The storage volume profile. Only volumes with the specified profile are used to launch an application. It this option is not given, any volume (with or without a profile) will be used for launching.",
+                    "minLength": 1
+                  },
+                  "constraints": {
+                    "type": "array",
+                    "items": {
+                      "type": "array",
+                      "items": [
+                        {
+                          "type": "string",
+                          "enum": ["path"]
+                        },
+                        {
+                          "type": "string",
+                          "enum": ["LIKE"]
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ],
+                      "minItems": 3,
+                      "additionalItems": false
+                    },
+                    "description": "List of persistent volume constraints"
+                  }
+                },
+                "type": "object",
+                "required": ["size"]
+              },
+              "external": {
+                "additionalProperties": false,
+                "properties": {
+                  "size": {
+                    "type": "integer",
+                    "description": "The size of the external volume in MiB",
+                    "minimum": 0
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "The name of the volume"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "description": "The name of the volume provider"
+                  },
+                  "options": {
+                    "type": "object",
+                    "description": "Provider-specific volume configuration options"
+                  }
+                },
+                "type": "object"
+              },
+              "mode": {
+                "type": "string",
+                "description": "Possible values are RO for ReadOnly and RW for Read/Write",
+                "enum": ["RO", "RW"]
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "cpus": {
+      "type": "number",
+      "description": "The number of CPU shares this application needs per instance. This number does not have to be integer, but can be a fraction.",
+      "minimum": 0
+    },
+    "dependencies": {
+      "type": "array",
+      "description": "A list of services upon which this application depends. An order is derived from the dependencies for performing start/stop and upgrade of the application. For example, an application /a relies on the services /b which itself relies on /c. To start all 3 applications, first /c is started than /b than /a.",
+      "items": {
+        "$ref": "#/definitions/pathType"
+      }
+    },
+    "disk": {
+      "type": "number",
+      "description": "How much disk space in MB is needed for this application. This number does not have to be an integer, but can be a fraction.",
+      "minimum": 0
+    },
+    "env": {
+      "patternProperties": {
+        ".*": {
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "object",
+              "description": "An environment variable set to a secret.",
+              "properties": {
+                "secret": {
+                  "type": "string",
+                  "description": "The key of the secret to be used as a value.",
+                  "minLength": 1
+                }
+              },
+              "required": [ "secret" ],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "type": "object"
+    },
+    "executor": {
+      "type": "string",
+      "description": "The executor to use to launch this application. Different executors are available. The simplest one (and the default if none is given) is //cmd, which takes the cmd and executes that on the shell level.",
+      "pattern": "^(|\\/\\/cmd|\\/?[^\\/]+(\\/[^\\/]+)*)$"
+    },
+    "executorResources": {
+      "type": "object",
+      "cpus": {
+        "type": "number",
+        "description": "The number of CPU shares this executor needs per instance. This number does not have to be integer, but can be a fraction.",
+        "minimum": 0
+      },
+      "mem": {
+        "type": "number",
+        "description": "The amount of memory in MB that is needed for the executor per instance.",
+        "minimum": 0
+      },
+      "disk": {
+        "type": "number",
+        "description": "How much disk space in MB is needed for the executor. This number does not have to be an integer, but can be a fraction.",
+        "minimum": 0
+      }
+    },
+    "fetch": {
+      "type": "array",
+      "description": "Provided URIs are passed to Mesos fetcher module and resolved in runtime.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "uri": {
+            "type": "string",
+            "description": "URI to be fetched by Mesos fetcher module"
+          },
+          "executable": {
+            "type": "boolean",
+            "description": "Set fetched artifact as executable",
+            "default": false
+          },
+          "extract": {
+            "type": "boolean",
+            "description": "Extract fetched artifact if supported by Mesos fetcher module",
+            "default": true
+          },
+          "cache": {
+            "type": "boolean",
+            "description": "Cache fetched artifact if supported by Mesos fetcher module",
+            "default": false
+          },
+          "destPath": {
+            "type": "string",
+            "description": "Rename fetched artifact with the given name"
+          }
+        },
+        "required": [ "uri" ]
+      }
+    },
+    "healthChecks": {
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "command": {
+            "type": "object",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": "string",
+                  "description": "The health check command to execute."
+                }
+              }
+            }
+          },
+          "gracePeriodSeconds": {
+            "type": "integer",
+            "description": "Health check failures are ignored within this number of seconds of the task being started or until the task becomes healthy for the first time.",
+            "minimum": 0
+          },
+          "ignoreHttp1xx": {
+            "type": "boolean",
+            "description": "Ignore HTTP 1xx responses."
+          },
+          "intervalSeconds": {
+            "type": "integer",
+            "description": "Number of seconds to wait between health checks.",
+            "minimum": 0
+          },
+          "maxConsecutiveFailures": {
+            "type": "integer",
+            "description": "Number of consecutive health check failures after which the unhealthy task should be killed.",
+            "minimum": 0
+          },
+          "path": {
+            "type": "string",
+            "description": "Path to endpoint exposed by the task that will provide health status. Example: /path/to/health. Note: only used if protocol == HTTP[S]."
+          },
+          "port": {
+            "type": "integer",
+            "description": "The specific port to connect to. In case of dynamic ports, see portIndex.",
+            "maximum": 65535,
+            "minimum": 0
+          },
+          "portIndex": {
+            "type": "integer",
+            "description": "Index in this app's ports array to be used for health requests. An index is used so the app can use random ports, like [0, 0, 0] for example, and tasks could be started with port environment variables like $PORT1.",
+            "minimum": 0
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS, TCP, COMMAND, MESOS_HTTP, MESOS_HTTPS or MESOS_TCP.",
+            "enum": ["HTTP", "HTTPS", "TCP", "COMMAND", "MESOS_HTTP", "MESOS_HTTPS", "MESOS_TCP"]
+          },
+          "ipProtocol": {
+            "type": "string",
+            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS, TCP, COMMAND, MESOS_HTTP, MESOS_HTTPS or MESOS_TCP.",
+            "enum": ["IPv4", "IPv6"]
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "description": "Number of seconds after which a health check is considered a failure regardless of the response.",
+            "minimum": 0
+          },
+          "delaySeconds": {
+            "type": "integer",
+            "description": "Defaults to 15 seconds. Only applicable to mesos based health checks. Number of seconds after which a health check is started, when the task has been started.",
+            "minimum": 0,
+            "default": 15
+          }
+        }
+      },
+      "type": "array"
+    },
+    "id": {
+      "$ref": "#/definitions/pathType",
+      "description": "Unique identifier for the app consisting of a series of names separated by slashes. Each name must be at least 1 character and may only contain digits (`0-9`), dashes (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash."
+    },
+    "instances": {
+      "type": "integer",
+      "description": "The number of instances of this application to start. Please note: this number can be changed any time as needed to scale the application.",
+      "minimum": 0
+    },
+    "labels": {
+      "type": "object",
+      "description": "Attaching metadata to apps can be useful to expose additional information to other services, so we added the ability to place labels on apps (for example, you could label apps staging and production to mark services by their position in the pipeline).",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "maxLaunchDelaySeconds": {
+      "type": "integer",
+      "description": "Configures exponential backoff behavior when launching potentially sick apps. This prevents sandboxes associated with consecutively failing tasks from filling up the hard disk on Mesos slaves. The backoff period is multiplied by the factor for each consecutive failure until it reaches maxLaunchDelaySeconds. This applies also to tasks that are killed due to failing too many health checks.",
+      "minimum": 0
+    },
+    "mem": {
+      "type": "number",
+      "description": "The amount of memory in MB that is needed for the application per instance.",
+      "minimum": 0
+    },
+    "gpus": {
+     "type": "integer",
+     "description": "The amount of GPU cores that is needed for the application per instance.",
+     "minimum": 0
+    },
+    "networks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "container",
+              "container/bridge",
+              "host"
+            ],
+            "default": "container"
+          },
+          "labels": {
+            "type": "object",
+            "description": "Key value pair for meta data on that network interface.",
+            "properties": {},
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "ipAddress": {
+      "type": "object",
+      "description": "DEPRECATED. If an application definition includes the 'ipAddress' field, then Marathon will request a per-task IP from Mesos. A separate ports/portMappings configuration is then disallowed.",
+      "properties": {
+        "discovery": {
+          "type": "object",
+          "description": "DEPRECATED. Information useful for service discovery.",
+          "properties": {
+            "ports": {
+              "type": "array",
+              "description": "Array of objects describing the ports exposed by each task.",
+              "items": {
+                "type": "object",
+                "description": "Port",
+                "properties": {
+                  "number": {
+                    "maximum": 65535,
+                    "minimum": 0,
+                    "type": "integer",
+                    "description": "The port number."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Name of the port.",
+                    "pattern": "^[a-z][a-z0-9-]*$"
+                  },
+                  "protocol": {
+                    "enum": ["tcp", "udp"],
+                    "description": "Protocol of the port (one of ['tcp', 'udp'])."
+                  },
+                  "labels": {
+                    "type": "object",
+                    "description": "This can be used to add metadata to be interpreted by external applications such as firewalls.",
+                    "additionalProperties": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "groups": {
+          "type": "array",
+          "description": "IGNORED BY MARATHON",
+          "items": {
+            "type": "string",
+            "description": "The name of the network group."
+          }
+        },
+        "labels": {
+          "type": "object",
+          "description": "Key value pair for meta data on that network interface.",
+          "properties": {},
+          "additionalProperties": true
+        },
+        "networkName": {
+          "type": "string",
+          "description": "If present, declares the name of the network that the container should join. In practice it is up to the IPAM to decide how to interpret this field."
+        }
+      }
+    },
+    "ports": {
+      "type": "array",
+      "description": "DEPRECATED in favor of /portDefinitions. An array of required port resources on the agent host. The number of items in the array determines how many dynamic ports are allocated for every task. For every port that is zero, a globally unique (cluster-wide) port is assigned and provided as part of the app definition to be used in load balancing definitions.",
+      "items": {
+        "maximum": 65535,
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "portDefinitions": {
+      "type": "array",
+      "description": "An array of required port resources on the agent host. The number of items in the array determines how many dynamic ports are allocated for every task. For every port definition with port number zero, a globally unique (cluster-wide) service port is assigned and provided as part of the app definition to be used in load balancing definitions.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "port": {
+            "type": "integer",
+            "description": "if requirePorts is set to true, then this port number will be used on the agent host Otherwise if the requirePorts is set to false and this port number is not zero, then it will be used as a service port and a dynamic port will be used on the agent host. If it is set to zero, a dynamic port will be used on the host and a unique service port will be assigned by Marathon.",
+            "maximum": 65535,
+            "minimum": 0
+          },
+          "labels": {
+            "type": "object",
+            "description": "This can be used to add metadata to be interpreted by external applications such as firewalls.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string",
+            "description": "Name of the service hosted on this port. If provided, it must be unique over all port definitions.",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "protocol": {
+            "type": "string",
+            "enum": ["tcp", "udp"],
+            "description": "Protocol of the port (one of ['tcp', 'udp']). Defaults to 'tcp'."
+          }
+        }
+      }
+    },
+    "readinessChecks": {
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Query these readiness checks to determine if a task is ready to serve requests.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "The name used to identify this readiness check."
+          },
+          "protocol": {
+            "type": "string",
+            "description": "Protocol of the requests to be performed. One of HTTP, HTTPS.",
+            "enum": ["HTTP", "HTTPS"]
+          },
+          "path": {
+            "type": "string",
+            "description": "Path to endpoint exposed by the task that will provide readiness status. Example: /path/to/health."
+          },
+          "portName": {
+            "type": "string",
+            "description": "Name of the port to query as described in the portDefinitions. Example: http-api.",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "intervalSeconds": {
+            "type": "integer",
+            "description": "Number of seconds to wait between readiness checks. Defaults to 30 seconds",
+            "minimum": 0
+          },
+          "timeoutSeconds": {
+            "type": "integer",
+            "description": "Number of seconds after which a health check is considered a failure regardless of the response. Must be smaller than intervalSeconds. Defaults to 10 seconds.",
+            "minimum": 0
+          },
+          "httpStatusCodesForReady": {
+            "items": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 999
+            },
+            "description": "The HTTP(s) status code to treat as 'ready'.",
+            "type": "array"
+          },
+          "preserveLastResponse": {
+            "type": "boolean",
+            "description": "If and only if true, preserve the last readiness check responses and expose them in the API as part of a deployment.."
+          }
+        }
+      },
+      "type": "array"
+    },
+    "residency": {
+      "type": "object",
+      "description": "When using local persistent volumes that pin tasks onto agents, these values define how Marathon handles terminal states of these tasks.",
+      "properties": {
+        "relaunchEscalationTimeoutSeconds": {
+          "type": "integer",
+          "description": "When a task using persistent local volumes cannot be restarted on the agent it's been pinned to, Marathon will try to launch this task on another node after this timeout. Defaults to 3600 (one hour).",
+          "minimum": 0,
+          "additionalProperties": false
+        },
+        "taskLostBehavior": {
+          "type": "string",
+          "description": "When Marathon receives a TASK_LOST status update indicating that the agent running the task is gone, this property defines whether Marathon will launch the task on another node or not. Defaults to WAIT_FOREVER",
+          "enum": ["WAIT_FOREVER", "RELAUNCH_AFTER_TIMEOUT"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "requirePorts": {
+      "type": "boolean",
+      "description": "Normally, the host ports of your tasks are automatically assigned. This corresponds to the requirePorts value false which is the default. If you need more control and want to specify your host ports in advance, you can set requirePorts to true. This way the ports you have specified are used as host ports. That also means that Marathon can schedule the associated tasks only on hosts that have the specified ports available."
+    },
+    "secrets": {
+      "type": "object",
+      "description": "A map with named secret declarations. The key is used to reference the values from other places in the app definition.",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "description": "A secret declaration.",
+          "properties": {
+            "source": {
+              "type": "string",
+              "description": "The source of the secret's value. The format depends on the secret store used by Mesos.",
+              "minLength": 1
+            }
+          },
+          "required": [ "source" ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "taskKillGracePeriodSeconds": {
+      "type": "integer",
+      "description": "Configures the number of seconds between escalating from SIGTERM to SIGKILL when signalling tasks to terminate. Using this grace period, tasks should perform orderly shut down immediately upon receiving SIGTERM.",
+      "minimum": 0
+    },
+    "upgradeStrategy": {
+      "type": "object",
+      "description": "During an upgrade all instances of an application get replaced by a new version. The upgradeStrategy controls how Marathon stops old versions and launches new versions.",
+      "additionalProperties": false,
+      "properties": {
+        "maximumOverCapacity": {
+          "type": "number",
+          "description": "A number between 0 and 1 which is multiplied with the instance count. This is the maximum number of additional instances launched at any point of time during the upgrade process.",
+          "maximum": 1.0,
+          "minimum": 0.0
+        },
+        "minimumHealthCapacity": {
+          "type": "number",
+          "description": "A number between 0 and 1 that is multiplied with the instance count. This is the minimum number of healthy nodes that do not sacrifice overall application purpose. Marathon will make sure, during the upgrade process, that at any point of time this number of healthy instances are up.",
+          "maximum": 1.0,
+          "minimum": 0.0
+        }
+      }
+    },
+    "uris": {
+      "type": "array",
+      "description": "DEPRECATED in favor of /fetch. URIs defined here are resolved, before the application gets started. If the application has external dependencies, they should be defined here.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "user": {
+      "type": "string",
+      "description": "The user to use to run the tasks on the agent."
+    },
+    "version": {
+      "type": "string",
+      "description": "The version of this definition.",
+      "format": "date-time"
+    },
+    "versionInfo": {
+      "type": "object",
+      "description": "Detailed version information.",
+      "additionalProperties": false,
+      "properties": {
+        "lastScalingAt": {
+          "type": "string",
+          "description": "Contains the time stamp of the last change to this app which was not simply a scaling or a restarting configuration.",
+          "format": "date-time"
+        },
+        "lastConfigChangeAt": {
+          "type": "string",
+          "description": "Contains the time stamp of the last change including changes like scaling or restarting the app. Since our versions are time based, this is currently equal to version.",
+          "format": "date-time"
+        }
+      }
+    },
+    "killSelection": {
+      "type": "string",
+      "enum": ["YOUNGEST_FIRST", "OLDEST_FIRST"],
+      "default": "YOUNGEST_FIRST",
+      "description": "Defines which instance should be killed first in case of e.g. rescaling."
+    },
+    "unreachableStrategy": {
+      "oneOf": [
+        {"type": "string", "enum": ["disabled"]},
+        {
+
+          "type": "object",
+          "description": "Define handling for unreachable instances. Given `inactiveAfter = 60` and `expungeAfter = 120`, an instance will be expunged if it has been unreachable for more than 120 seconds or a second instance is started if it has been unreachable for more than 60 seconds.",
+          "additionalProperties": false,
+          "properties": {
+            "inactiveAfterSeconds": {
+              "type": "integer",
+              "description": "If an instance is unreachable for longer than inactiveAfter seconds it is marked as inactive. This will trigger a new instance launch. The original task is not expunged yet. Must be less than or equal to expungeAfterSeconds.",
+              "minimum": 0
+            },
+            "expungeAfterSeconds": {
+              "type": "number",
+              "description": "If an instance is unreachable for longer than expungeAfterSeconds it will be expunged.  That means it will be killed if it ever comes back. Instances are usually marked as unreachable before they are expunged but they don't have to. This value is required to be greater than inactiveAfterSeconds unless both are zero.\n\nIf the instance has any persistent volumes associated with it, then they will be destroyed and associated data will be deleted.\n\nDefault is 0 seconds.",
+              "minimum": 0
+            }
+          }
+        }
+      ]
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "type": "object"
+}

@@ -1,0 +1,19 @@
+#%RAML 1.0 Library
+
+uses:
+  pragma: pragma.raml
+
+types:
+  RuntimeConfiguration:
+    type: object
+    (pragma.internal): Used to store config in zk. Not available in the API.
+    description: Configuration that is collected during runtime and stored in zk.
+    properties:
+      backup?:
+        type: string
+        description: URI to backup zk state.
+        example: file:///var/backup/marathon/backup
+      restore?:
+        type: string
+        description: URI to restore zk state.
+        example: file:///var/backup/marathon/backup

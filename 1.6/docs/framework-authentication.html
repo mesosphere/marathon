@@ -299,6 +299,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/1.6/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +339,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -364,70 +369,65 @@
   <li>Create an ACL. Create a file called <code class="highlighter-rouge">acls</code> in <code class="highlighter-rouge">/tmp/mesos/config/</code> with the following content:</li>
 </ol>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="w">        </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"run_tasks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">        </span><span class="p">{</span><span class="w">
+          </span><span class="s2">"run_tasks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
             </span><span class="p">{</span><span class="w">
-              </span><span class="nt">"principals"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-                </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ANY"</span><span class="w">
+              </span><span class="s2">"principals"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ANY"</span><span class="w">
               </span><span class="p">},</span><span class="w">
-              </span><span class="nt">"users"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-                </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ANY"</span><span class="w">
+              </span><span class="s2">"users"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ANY"</span><span class="w">
               </span><span class="p">}</span><span class="w">
             </span><span class="p">}</span><span class="w">
           </span><span class="p">],</span><span class="w">
-          </span><span class="nt">"register_frameworks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+          </span><span class="s2">"register_frameworks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
             </span><span class="p">{</span><span class="w">
-              </span><span class="nt">"principals"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-                </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ANY"</span><span class="w">
+              </span><span class="s2">"principals"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ANY"</span><span class="w">
               </span><span class="p">},</span><span class="w">
-              </span><span class="nt">"roles"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-                </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ANY"</span><span class="w">
+              </span><span class="s2">"roles"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+                </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ANY"</span><span class="w">
               </span><span class="p">}</span><span class="w">
             </span><span class="p">}</span><span class="w">
           </span><span class="p">]</span><span class="w">
         </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <ol>
   <li>
     <p>Define framework principals and their secrets. Create a file called <code class="highlighter-rouge">credentials</code> in <code class="highlighter-rouge">/tmp/mesos/config/</code> with the following content:</p>
 
-    <div class="highlighter-rouge"><pre class="highlight"><code><span class="w"> </span><span class="p">{</span><span class="w">
-     </span><span class="nt">"credentials"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-         </span><span class="p">{</span><span class="w">
-         </span><span class="nt">"principal"</span><span class="p">:</span><span class="w"> </span><span class="s2">"marathon"</span><span class="p">,</span><span class="w">
-         </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"marathonsecret"</span><span class="w">
-         </span><span class="p">}</span><span class="w">
-     </span><span class="p">]</span><span class="w">
- </span><span class="p">}</span><span class="w">
-</span></code></pre>
-    </div>
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> {
+     "credentials": [
+         {
+         "principal": "marathon",
+         "secret": "marathonsecret"
+         }
+     ]
+ }
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Create a file called <code class="highlighter-rouge">marathon.secret</code> with the secret for <code class="highlighter-rouge">marathon</code> in <code class="highlighter-rouge">/tmp/mesos/config/</code>:</p>
 
-    <div class="highlighter-rouge"><pre class="highlight"><code> marathonsecret
-</code></pre>
-    </div>
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> marathonsecret
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Start the Mesos master process with the following arguments:</p>
 
-    <div class="highlighter-rouge"><pre class="highlight"><code> --acls=file:///tmp/mesos/config/acls
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> --acls=file:///tmp/mesos/config/acls
  --credentials=file:///tmp/mesos/config/credentials
-</code></pre>
-    </div>
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Start Marathon using the following command line arguments</p>
 
-    <div class="highlighter-rouge"><pre class="highlight"><code> --mesos_authentication
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> --mesos_authentication
  --mesos_authentication_principal marathon
  --mesos_authentication_secret_file /tmp/mesos/config/marathon.secret
  --mesos_role foo
-</code></pre>
-    </div>
+</code></pre></div>    </div>
   </li>
 </ol>
 
@@ -435,7 +435,7 @@
 
 <p>When Marathon is successfully authenticated, you should see lines similar to the following in the Marathon log:</p>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>    I0126 17:49:22.245414 571383808 sched.cpp:318] Authenticating with master master@127.0.0.1:5050
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    I0126 17:49:22.245414 571383808 sched.cpp:318] Authenticating with master master@127.0.0.1:5050
     I0126 17:49:22.245434 571383808 sched.cpp:325] Using default CRAM-MD5 authenticatee
     I0126 17:49:22.245774 506134528 authenticatee.cpp:91] Initializing client SASL
     I0126 17:49:22.254290 506134528 authenticatee.cpp:115] Creating new client SASL connection
@@ -445,8 +445,7 @@
     I0126 17:49:22.257164 512196608 authenticatee.cpp:292] Authentication success
     I0126 17:49:22.257333 530903040 sched.cpp:407] Successfully authenticated with master master@127.0.0.1:5050
     I0126 17:49:22.258972 506134528 sched.cpp:640] Framework registered with 20160126-165754-16777343-5050-35782-0000
-</code></pre>
-</div>
+</code></pre></div></div>
 
     </div>
 </div>

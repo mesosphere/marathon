@@ -309,11 +309,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -483,87 +483,81 @@ discarded and the health status of the task remains unchanged.</li>
 
 <p>HTTP:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/api/health"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"ignoreHttp1xx"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/api/health"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTP"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"ignoreHttp1xx"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>or Mesos HTTP:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/api/health"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MESOS_HTTP"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/api/health"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MESOS_HTTP"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>or secure HTTP:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/api/health"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTPS"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"ignoreHttp1xx"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/api/health"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HTTPS"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"ignoreHttp1xx"</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p><em>Note:</em> HTTPS health checks do not verify the SSL certificate.</p>
 
 <p>or TCP:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"TCP"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"portIndex"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"TCP"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p>or COMMAND:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"COMMAND"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"curl -f -X GET http://$HOST:$PORT0/health"</span><span class="w"> </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"COMMAND"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"command"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"curl -f -X GET http://$HOST:$PORT0/health"</span><span class="w"> </span><span class="p">},</span><span class="w">
+  </span><span class="s2">"gracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"intervalSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"timeoutSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"maxConsecutiveFailures"</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"COMMAND"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/bin/bash -c \\\"&lt;/dev/tcp/$HOST/$PORT0\\\""</span><span class="w"> </span><span class="p">}</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="s2">"COMMAND"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"command"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"value"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/bin/bash -c </span><span class="se">\\\"</span><span class="s2">&lt;/dev/tcp/$HOST/$PORT0</span><span class="se">\\\"</span><span class="s2">"</span><span class="w"> </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
-<p><a name="task-termination"></a>
-# Task Termination</p>
+<p><a name="task-termination"></a></p>
+<h1 id="task-termination">Task Termination</h1>
 
-<h2 id="taskkilling">TASK_KILLING</h2>
+<h2 id="task_killing">TASK_KILLING</h2>
 
 <p>TASK_KILLING is a task state that signals that a task has received a kill request and is in the grace period. Other tools, for instance a load balancer or service discovery tool, should not route traffic to tasks in that state.</p>
 
@@ -577,7 +571,7 @@ discarded and the health status of the task remains unchanged.</li>
 
 <p>The following long-running service needs a grace period of at least 6 seconds:</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c">#!/bin/bash</span>
 
 <span class="c"># A signal handler to shut down cleanly.</span>
 <span class="c"># Shutdown takes at least 6 seconds! The grace period should be set higher than this.</span>
@@ -594,29 +588,27 @@ discarded and the health status of the task remains unchanged.</li>
 <span class="nb">trap </span>terminate SIGTERM
 
 <span class="nb">echo</span> <span class="k">$(</span>date<span class="k">)</span> Long-running service running, pid <span class="nv">$$</span>
-<span class="k">while </span><span class="nb">true</span>; <span class="k">do
+<span class="k">while </span><span class="nb">true</span><span class="p">;</span> <span class="k">do
   </span>sleep 1
 <span class="k">done</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>To set the necessary grace period, add the <code class="highlighter-rouge">taskKillGracePeriodSeconds</code> field to your application definition:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/foo"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 1000"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"owner"</span><span class="p">:</span><span class="w"> </span><span class="s2">"zeus"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"note"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Away from olympus"</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/foo"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 1000"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"disk"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"labels"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"owner"</span><span class="p">:</span><span class="w"> </span><span class="s2">"zeus"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"note"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Away from olympus"</span><span class="w">
   </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"taskKillGracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="w">
+  </span><span class="s2">"taskKillGracePeriodSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">30</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
     </div>
 </div>

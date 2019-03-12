@@ -309,11 +309,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -330,27 +330,26 @@ Application Groups are used to partition multiple applications into manageable s
 
 <p>The definition could look like this:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"groups"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
     </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product/database"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-         </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product/database/mongo"</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="err">}</span><span class="p">,</span><span class="w">
-         </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product/database/mysql"</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="err">}</span><span class="w">
+      </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product/database"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+         </span><span class="p">{</span><span class="w"> </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product/database/mongo"</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">},</span><span class="w">
+         </span><span class="p">{</span><span class="w"> </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product/database/mysql"</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">}</span><span class="w">
        </span><span class="p">]</span><span class="w">
     </span><span class="p">},{</span><span class="w">
-      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product/service"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"/product/database"</span><span class="p">],</span><span class="w">
-      </span><span class="nt">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
-         </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product/service/rails-app"</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="err">}</span><span class="p">,</span><span class="w">
-         </span><span class="p">{</span><span class="w"> </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product/service/play-app"</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="err">}</span><span class="w">
+      </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product/service"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"/product/database"</span><span class="p">],</span><span class="w">
+      </span><span class="s2">"apps"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+         </span><span class="p">{</span><span class="w"> </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product/service/rails-app"</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">},</span><span class="w">
+         </span><span class="p">{</span><span class="w"> </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/product/service/play-app"</span><span class="p">,</span><span class="w"> </span><span class="err">...</span><span class="w"> </span><span class="p">}</span><span class="w">
       </span><span class="p">]</span><span class="w">
     </span><span class="p">}</span><span class="w">
   </span><span class="p">]</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-</div>
+</span></code></pre></div></div>
 
 <p><strong>Note:</strong> Deploy an application group through a <code class="highlighter-rouge">POST</code> to the <code class="highlighter-rouge">/v2/groups</code> REST API endpoint.</p>
 
@@ -368,28 +367,26 @@ If a dependency is expressed on the level of groups, this dependency is inherite
 <p>Example:
 If defined on the application group service, all 3 definitions have the same meaning:</p>
 
-<div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
   </span><span class="err">...</span><span class="w">
-  </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"/product/database"</span><span class="p">],</span><span class="w">
-  </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"../database"</span><span class="p">],</span><span class="w">
-  </span><span class="nt">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"specific/../../database"</span><span class="p">],</span><span class="w">
+  </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"/product/database"</span><span class="p">],</span><span class="w">
+  </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"../database"</span><span class="p">],</span><span class="w">
+  </span><span class="s2">"dependencies"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"specific/../../database"</span><span class="p">],</span><span class="w">
   </span><span class="err">...</span><span class="w">
-</span><span class="err">}</span><span class="w">  
-</span></code></pre>
-</div>
+</span><span class="p">}</span><span class="w">  
+</span></code></pre></div></div>
 
 <h2 id="group-scaling">Group scaling</h2>
 
 <p>A whole group can be scaled.
 The instance count of all transitive applications is changed accordingly.</p>
 
-<div class="language-http highlighter-rouge"><pre class="highlight"><code><span class="nf">PUT</span> <span class="nn">/v2/groups/product</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<div class="language-http highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">PUT</span> <span class="nn">/v2/groups/product</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
 <span class="na">Content-Length</span><span class="p">:</span> <span class="s">21</span>
 <span class="na">Host</span><span class="p">:</span> <span class="s">localhost:8080</span>
 <span class="na">User-Agent</span><span class="p">:</span> <span class="s">HTTPie/0.7.2</span>
 <span class="s">{ "scaleBy": 2 }</span>
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <p>The instance count of each application is doubled after that operation.</p>
 

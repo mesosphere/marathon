@@ -217,6 +217,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/deprecated-metrics.html">
+                    Deprecated Metrics
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/readiness-checks.html">
                     Readiness Checks
                 </a>
@@ -299,6 +304,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +344,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -369,31 +379,27 @@
   <li>
     <p>Launch the new version of the app on Marathon. Add a unique ID to the app name, such as the Git commit ID. In this example, we ID the new version of the app by adding <code class="highlighter-rouge">GREEN</code> to its name.</p>
 
-    <p><code class="highlighter-rouge">sh
- # launch green
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="c"># launch green</span>
  dcos marathon app add green-myapp.json
-</code>
-<strong>Note:</strong> If you were using the API instead of the DC/OS CLI, the command above would be much longer:</p>
+</code></pre></div>    </div>
+    <p><strong>Note:</strong> If you were using the API instead of the DC/OS CLI, the command above would be much longer:</p>
 
-    <p><code class="highlighter-rouge">sh
- curl -H "Content-Type: application/json" -X POST -d @green-myapp.json &lt;hosturl&gt;/marathon/v2/apps
-</code></p>
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code> curl <span class="nt">-H</span> <span class="s2">"Content-Type: application/json"</span> <span class="nt">-X</span> POST <span class="nt">-d</span> @green-myapp.json &lt;hosturl&gt;/marathon/v2/apps
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Scale GREEN app instances by 1 or more. Initially (starting from 0 instances), set the number of app instances to the minimum required to serve traffic. Remember, no traffic will arrive yet: we haven’t registered at the load balancer.</p>
 
-    <p><code class="highlighter-rouge">sh
- # scale green
- dcos marathon app update /green-myapp instances=1
-</code></p>
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="c"># scale green</span>
+ dcos marathon app update /green-myapp <span class="nv">instances</span><span class="o">=</span>1
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Wait until all tasks from the GREEN app have passed health checks. This step requires <a href="https://stedolan.github.io/jq/">jq</a>.</p>
 
-    <p><code class="highlighter-rouge">sh
- # wait until healthy
- dcos marathon app show /green-myapp | jq '.tasks[].healthCheckResults[] | select (.alive == false)'
-</code></p>
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="c"># wait until healthy</span>
+ dcos marathon app show /green-myapp | jq <span class="s1">'.tasks[].healthCheckResults[] | select (.alive == false)'</span>
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Use the code snippet above to check that all instances of GREEN are still healthy. Abort the deployment and begin rollback if you see unexpected behavior.</p>
@@ -404,10 +410,9 @@
   <li>
     <p>Pick one or more task instances from the current (BLUE) version of the app.</p>
 
-    <p><code class="highlighter-rouge">sh
- # pick tasks from blue
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="c"># pick tasks from blue</span>
  dcos marathon task list /blue-myapp
-</code></p>
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Update the load balancer configuration to remove the task instances above from the BLUE app pool.</p>
@@ -418,10 +423,9 @@
   <li>
     <p>Once all operations are complete from the BLUE tasks, kill and scale the BLUE app using <a href="https://mesosphere.github.io/marathon/docs/rest-api.html#post-v2-tasks-delete">the API</a>. In the snippet below, <code class="highlighter-rouge">&lt;hosturl&gt;</code> is the hostname of your master node prefixed with <code class="highlighter-rouge">http://</code>.</p>
 
-    <p><code class="highlighter-rouge">sh
- # kill and scale blue tasks
- echo "{\"ids\":[\"&lt;task_id&gt;\"]}" | curl -H "Content-Type: application/json" -X POST -d @- &lt;hosturl&gt;/marathon/v2/tasks/delete?scale=true
-</code></p>
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="c"># kill and scale blue tasks</span>
+ <span class="nb">echo</span> <span class="s2">"{</span><span class="se">\"</span><span class="s2">ids</span><span class="se">\"</span><span class="s2">:[</span><span class="se">\"</span><span class="s2">&lt;task_id&gt;</span><span class="se">\"</span><span class="s2">]}"</span> | curl <span class="nt">-H</span> <span class="s2">"Content-Type: application/json"</span> <span class="nt">-X</span> POST <span class="nt">-d</span> @- &lt;hosturl&gt;/marathon/v2/tasks/delete?scale<span class="o">=</span><span class="nb">true</span>
+</code></pre></div>    </div>
 
     <p>This Marathon operation will remove specific instances (the ones with 0 pending operations) and prevent them from being restarted.</p>
   </li>
@@ -431,10 +435,9 @@
   <li>
     <p>Remove the BLUE app from Marathon.</p>
 
-    <div class="language-sh highlighter-rouge"><pre class="highlight"><code><span class="c"># remove blue</span>
+    <div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># remove blue</span>
 dcos marathon app remove /blue-myapp
-</code></pre>
-    </div>
+</code></pre></div>    </div>
   </li>
 </ol>
 

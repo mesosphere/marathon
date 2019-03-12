@@ -299,6 +299,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/1.6/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +339,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -354,33 +359,30 @@
   <li>
     <p>Log in to your private registry manually. This will create a <code class="highlighter-rouge">~/.docker</code> directory and a <code class="highlighter-rouge">~/.docker/config.json</code> file.</p>
 
-    <div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>docker login some.docker.host.com
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>docker login some.docker.host.com
 Username: foo
 Password:
 Email: foo@bar.com
-</code></pre>
-    </div>
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Check that you have the <code class="highlighter-rouge">~/.docker/config.json</code> file.</p>
 
-    <div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>ls ~/.docker
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">ls</span> ~/.docker
 config.json
-</code></pre>
-    </div>
+</code></pre></div>    </div>
 
     <p>Your <code class="highlighter-rouge">config.json</code> file should look like this, where value of <code class="highlighter-rouge">auth</code> is a based64-encoded <code class="highlighter-rouge">username:password</code> string.</p>
 
-    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"auths"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"https://index.docker.io/v1/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"auth"</span><span class="p">:</span><span class="w"> </span><span class="s2">"XXXXX"</span><span class="p">,</span><span class="w">
-          </span><span class="nt">"email"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;your-email&gt;"</span><span class="w">
+    <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"auths"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"https://index.docker.io/v1/"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="s2">"auth"</span><span class="p">:</span><span class="w"> </span><span class="s2">"XXXXX"</span><span class="p">,</span><span class="w">
+          </span><span class="s2">"email"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;your-email&gt;"</span><span class="w">
       </span><span class="p">}</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-    </div>
+</span></code></pre></div>    </div>
   </li>
   <li>
     <p>Add the <code class="highlighter-rouge">config.json</code> file to a secret store. If you are using Enterprise DC/OS, <a href="https://docs.mesosphere.com/latest/security/ent/secrets/create-secrets/#creating-secrets">follow these instructions to add the file to the DC/OS secret store</a>.</p>
@@ -397,54 +399,51 @@ config.json
   <li>
     <p>A location for the secret in the <code class="highlighter-rouge">secrets</code> parameter:</p>
 
-    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="s2">"secrets"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-  </span><span class="nt">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mesos-docker/pullConfig"</span><span class="w">
+    <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"secrets"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="s2">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mesos-docker/pullConfig"</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-    </div>
+</span></code></pre></div>    </div>
   </li>
   <li>
     <p>A reference to the secret in the <code class="highlighter-rouge">docker.pullConfig</code> parameter:</p>
 
-    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="s2">"docker"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-  </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere/inky"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
+    <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere/inky"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-    </div>
+</span></code></pre></div>    </div>
 
     <p><strong>Note:</strong> This functionality is <em>only</em> supported with the Mesos containerizer: <code class="highlighter-rouge">container.type</code> must be <code class="highlighter-rouge">MESOS</code>.</p>
   </li>
   <li>
     <p>A complete example:</p>
 
-    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mesos-docker"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"your/private/image"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
+    <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mesos-docker"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"your/private/image"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="s2">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
       </span><span class="p">}</span><span class="w">
     </span><span class="p">},</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MESOS"</span><span class="w">
+    </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MESOS"</span><span class="w">
   </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"secrets"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mesos-docker/pullConfig"</span><span class="w">
+  </span><span class="s2">"secrets"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/mesos-docker/pullConfig"</span><span class="w">
     </span><span class="p">}</span><span class="w">
   </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"hello"</span><span class="p">],</span><span class="w">
-  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">16.0</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
+  </span><span class="s2">"args"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"hello"</span><span class="p">],</span><span class="w">
+  </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.2</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mf">16.0</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-    </div>
+</span></code></pre></div>    </div>
   </li>
   <li>
     <p>The Docker image will now pull using the provided security credentials given.</p>
@@ -459,60 +458,57 @@ config.json
   <li>
     <p>A location for the secret in the <code class="highlighter-rouge">secrets</code> parameter:</p>
 
-    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="s2">"secrets"</span><span class="err">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-  </span><span class="nt">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/pod/pullConfig"</span><span class="w">
+    <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"secrets"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="s2">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/pod/pullConfig"</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-    </div>
+</span></code></pre></div>    </div>
   </li>
   <li>
     <p>A reference to the secret in the <code class="highlighter-rouge">containers.image.pullConfig</code> parameter:</p>
 
-    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="s2">"containers"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"containers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
   </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nginx"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
+    </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nginx"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="s2">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
       </span><span class="p">},</span><span class="w">
-      </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="w">
+      </span><span class="s2">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="w">
     </span><span class="p">}</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">]</span><span class="w">
-</span></code></pre>
-    </div>
+</span></code></pre></div>    </div>
 
     <p><strong>Note:</strong> This functionality is only supported if <code class="highlighter-rouge">image.kind</code> is set to <code class="highlighter-rouge">DOCKER</code>.</p>
   </li>
   <li>
     <p>A complete example:</p>
 
-    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">
-  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/pod"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"scaling"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fixed"</span><span class="p">,</span><span class="w"> </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"containers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/pod"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"scaling"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"fixed"</span><span class="p">,</span><span class="w"> </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="p">},</span><span class="w">
+  </span><span class="s2">"containers"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
     </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep1"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"exec"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"command"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"shell"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 1000"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span><span class="w">
-      </span><span class="nt">"resources"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">32</span><span class="w"> </span><span class="p">},</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-        </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nginx"</span><span class="p">,</span><span class="w">
-        </span><span class="nt">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-          </span><span class="nt">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
+      </span><span class="s2">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep1"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"exec"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"command"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"shell"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 1000"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">},</span><span class="w">
+      </span><span class="s2">"resources"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.1</span><span class="p">,</span><span class="w"> </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">32</span><span class="w"> </span><span class="p">},</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+        </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"nginx"</span><span class="p">,</span><span class="w">
+        </span><span class="s2">"pullConfig"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+          </span><span class="s2">"secret"</span><span class="p">:</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="w">
         </span><span class="p">},</span><span class="w">
-        </span><span class="nt">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="w">
+        </span><span class="s2">"kind"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="w">
       </span><span class="p">},</span><span class="w">
-      </span><span class="nt">"endpoints"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web"</span><span class="p">,</span><span class="w"> </span><span class="nt">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="nt">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">"http"</span><span class="w"> </span><span class="p">]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
-      </span><span class="nt">"healthCheck"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"http"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"endpoint"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web"</span><span class="p">,</span><span class="w"> </span><span class="nt">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/ping"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w">
+      </span><span class="s2">"endpoints"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web"</span><span class="p">,</span><span class="w"> </span><span class="s2">"containerPort"</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span><span class="w"> </span><span class="s2">"protocol"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">"http"</span><span class="w"> </span><span class="p">]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
+      </span><span class="s2">"healthCheck"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"http"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"endpoint"</span><span class="p">:</span><span class="w"> </span><span class="s2">"web"</span><span class="p">,</span><span class="w"> </span><span class="s2">"path"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/ping"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w">
     </span><span class="p">}</span><span class="w">
   </span><span class="p">],</span><span class="w">
-  </span><span class="nt">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container"</span><span class="p">,</span><span class="w"> </span><span class="nt">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-virtual-network-name"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
-  </span><span class="nt">"secrets"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/pod/pullConfig"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w">
+  </span><span class="s2">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"container"</span><span class="p">,</span><span class="w"> </span><span class="s2">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-virtual-network-name"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
+  </span><span class="s2">"secrets"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"pullConfigSecret"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"source"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/pod/pullConfig"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-    </div>
+</span></code></pre></div>    </div>
   </li>
 </ol>
 
@@ -541,40 +537,36 @@ the <code class="highlighter-rouge">uris</code> field of your app. The <code cla
   <strong>Info:</strong> Executing <code>docker login</code> will append credentials to the file and won't replace the old ones. Credentialas will be stored unencrypted.
 </div>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>```bash
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>```bash
 $ docker login some.docker.host.com
   Username: foo
   Password:
   Email: foo@bar.com
 ```
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <ol>
   <li>
     <p>Compress the <code class="highlighter-rouge">~/.docker</code> directory and its contents.</p>
 
-    <div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span><span class="nb">cd</span> ~
-<span class="gp">$ </span>tar -czf docker.tar.gz .docker
-</code></pre>
-    </div>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cd</span> ~
+<span class="nv">$ </span><span class="nb">tar</span> <span class="nt">-czf</span> docker.tar.gz .docker
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Verify that both files are in the archive.</p>
 
-    <div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>tar -tvf ~/docker.tar.gz
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">tar</span> <span class="nt">-tvf</span> ~/docker.tar.gz
 
   drwx------ root/root         0 2015-07-28 02:54 .docker/
-  -rw------- root/root       114 2015-07-28 01:31 .docker/config.json
-</code></pre>
-    </div>
+  <span class="nt">-rw-------</span> root/root       114 2015-07-28 01:31 .docker/config.json
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Put the archive file in a location that is accessible to your application definition.</p>
 
-    <div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>cp docker.tar.gz /etc/
-</code></pre>
-    </div>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>cp docker.tar.gz /etc/
+</code></pre></div>    </div>
 
     <p><strong>Note:</strong>
  The URI must be accessible by all nodes that will start your application.
@@ -593,37 +585,35 @@ $ docker login some.docker.host.com
   <li>
     <p>Add the path to the archive file login credentials to the <code class="highlighter-rouge">fetch</code> parameter of your app definition.</p>
 
-    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="s2">"fetch"</span><span class="err">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+    <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
   </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file:///etc/docker.tar.gz"</span><span class="w">
+    </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file:///etc/docker.tar.gz"</span><span class="w">
   </span><span class="p">}</span><span class="w">
 </span><span class="p">]</span><span class="w">
-</span></code></pre>
-    </div>
+</span></code></pre></div>    </div>
   </li>
   <li>
     <p>For example:</p>
 
-    <div class="language-json highlighter-rouge"><pre class="highlight"><code><span class="p">{</span><span class="w">  
-  </span><span class="nt">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/some/name/or/id"</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
-  </span><span class="nt">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-    </span><span class="nt">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
-    </span><span class="nt">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"some.docker.host.com/namespace/repo"</span><span class="p">,</span><span class="w">
-      </span><span class="nt">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HOST"</span><span class="w">
+    <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">  
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/some/name/or/id"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"some.docker.host.com/namespace/repo"</span><span class="p">,</span><span class="w">
+      </span><span class="s2">"network"</span><span class="p">:</span><span class="w"> </span><span class="s2">"HOST"</span><span class="w">
     </span><span class="p">}</span><span class="w">
   </span><span class="p">},</span><span class="w">
-  </span><span class="nt">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
+  </span><span class="s2">"fetch"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w">
     </span><span class="p">{</span><span class="w">
-      </span><span class="nt">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file:///etc/docker.tar.gz"</span><span class="w">
+      </span><span class="s2">"uri"</span><span class="p">:</span><span class="w"> </span><span class="s2">"file:///etc/docker.tar.gz"</span><span class="w">
     </span><span class="p">}</span><span class="w">
   </span><span class="p">]</span><span class="w">
 </span><span class="p">}</span><span class="w">
-</span></code></pre>
-    </div>
+</span></code></pre></div>    </div>
   </li>
   <li>
     <p>The Docker image will now pull using the provided security credentials given.</p>

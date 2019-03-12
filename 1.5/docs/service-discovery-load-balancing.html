@@ -309,11 +309,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -356,25 +356,23 @@ If you intend to use a service discovery mechanism, you should not put dots in y
 Mesos-DNS will append a random 9-character long string to your service name. This means that your service name length 
 must be less than or equal to 54 characters in order to have SRV records generated correctly.</p>
 
-<p>To check that your SRV records were successfully generated, you can use <code class="highlighter-rouge">dig</code> command, for example:
-<code class="highlighter-rouge">text
-dig _nginx-12345._tcp.marathon.mesos SRV
-</code>
-Correct output will look like this:
-```text
-;; QUESTION SECTION:
-;_nginx-12345._tcp.marathon.mesos. IN SRV</p>
+<p>To check that your SRV records were successfully generated, you can use <code class="highlighter-rouge">dig</code> command, for example:</p>
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>dig _nginx-12345._tcp.marathon.mesos SRV
+</code></pre></div></div>
+<p>Correct output will look like this:</p>
+<div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>;; QUESTION SECTION:
+;_nginx-12345._tcp.marathon.mesos. IN SRV
 
-<p>;; ANSWER SECTION:
+;; ANSWER SECTION:
 _nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-eq1m3-s1.marathon.mesos.
 _nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-9umtc-s1.marathon.mesos.
-_nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-4c3em-s1.marathon.mesos.</p>
+_nginx-12345._tcp.marathon.mesos. 60 IN SRV 0 0 80 nginx-12345-4c3em-s1.marathon.mesos.
 
-<p>;; ADDITIONAL SECTION:
+;; ADDITIONAL SECTION:
 nginx-12345-9umtc-s1.marathon.mesos. 60 IN A 10.0.6.43
 nginx-12345-4c3em-s1.marathon.mesos. 60 IN A 10.0.6.43
 nginx-12345-eq1m3-s1.marathon.mesos. 60 IN A 10.0.6.43
-```</p>
+</code></pre></div></div>
 
 <h2 id="marathon-lb">Marathon-lb</h2>
 

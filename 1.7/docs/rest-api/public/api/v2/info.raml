@@ -1,0 +1,10 @@
+
+get:
+  description: Get info about the Marathon Instance
+  responses:
+    200:
+      description: General configuration and runtime information about this Marathon instance.
+      body:
+        application/json:
+          type: info.MarathonInfo
+          example: !include examples/info.json

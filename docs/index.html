@@ -217,6 +217,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/deprecated-metrics.html">
+                    Deprecated Metrics
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/readiness-checks.html">
                     Readiness Checks
                 </a>
@@ -299,6 +304,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +344,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -371,16 +381,15 @@ for details. Running <code class="highlighter-rouge">make install</code> will in
 
 <h4 id="through-your-package-manager">Through your Package Manager</h4>
 
-<p>Marathon packages are available from Mesosphere’s <a href="http://mesosphere.com/2014/07/17/mesosphere-package-repositories/">repositories</a>.</p>
+<p>Please see the documentation on <a href="native-packages.html">Marathon native package repositories</a>.</p>
 
 <h4 id="from-a-tarball">From a Tarball</h4>
 
 <p>Download and unpack the latest Marathon release.</p>
 
-<div class="language-bash highlighter-rouge"><pre class="highlight"><code><span class="gp">$ </span>curl -O http://downloads.mesosphere.com/marathon/v1.5.1/marathon-1.5.1.tgz
-<span class="gp">$ </span>tar xzf marathon-1.5.1.tgz
-</code></pre>
-</div>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl <span class="nt">-O</span> http://downloads.mesosphere.com/marathon/v1.5.1/marathon-1.5.1.tgz
+<span class="nv">$ </span><span class="nb">tar </span>xzf marathon-1.5.1.tgz
+</code></pre></div></div>
 
 <p>SHA-256 checksums are available by appending <code class="highlighter-rouge">.sha256</code> to the URLs.</p>
 
@@ -395,9 +404,8 @@ for details. Running <code class="highlighter-rouge">make install</code> will in
 <p>Point your web browser to
 <code class="highlighter-rouge">localhost:8080</code> and you should see the <a href="/marathon/docs/marathon-ui.html">Marathon UI</a>.</p>
 
-<div class="language-console highlighter-rouge"><pre class="highlight"><code><span class="w">$ </span><span class="nc">./bin/start</span><span class="kv"> --master zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos --zk zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
-</span></code></pre>
-</div>
+<div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gp">$</span> ./bin/start <span class="nt">--master</span> zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos <span class="nt">--zk</span> zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
+</code></pre></div></div>
 
 <p>Marathon uses <code class="highlighter-rouge">--master</code> to find the Mesos masters, and <code class="highlighter-rouge">--zk</code> to find ZooKeepers
 for storing state. They are separate options because Mesos masters can also be
@@ -414,9 +422,8 @@ library lives elsewhere in your configuration, set the environment variable
 
 <p>For example:</p>
 
-<div class="language-console highlighter-rouge"><pre class="highlight"><code><span class="w">$ </span><span class="nc">MESOS_NATIVE_JAVA_LIBRARY=/Users/bob/libmesos.dylib</span><span class="kv"> ./bin/start --master local --zk zk://localhost:2181/marathon
-</span></code></pre>
-</div>
+<div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gp">$</span> <span class="nv">MESOS_NATIVE_JAVA_LIBRARY</span><span class="o">=</span>/Users/bob/libmesos.dylib ./bin/start <span class="nt">--master</span> <span class="nb">local</span> <span class="nt">--zk</span> zk://localhost:2181/marathon
+</code></pre></div></div>
 
 <h3 id="launch-an-application">Launch an Application</h3>
 

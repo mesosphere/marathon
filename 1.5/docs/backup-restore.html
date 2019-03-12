@@ -309,11 +309,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -370,19 +370,20 @@ Only use this method if there is no Marathon instance running.</p>
   </li>
 </ul>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>$&gt; marathon -main mesosphere.marathon.core.storage.backup.Backup --help
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$&gt; marathon -main mesosphere.marathon.core.storage.backup.Backup --help
 $&gt; marathon -main mesosphere.marathon.core.storage.backup.Backup --backup_location {backup_uri} --zk {zk_uri}
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h2 id="restore">Restore</h2>
 
 <p>You can restore Marathon to a backup you have created.</p>
 
-<p>Every restore operation will perform the following steps:
-- Remove the current state in ZooKeeper under the defined path.
-- Restore the state from the backup to the defined ZooKeeper path.
-- The next Marathon leader migrates this state to the current version.</p>
+<p>Every restore operation will perform the following steps:</p>
+<ul>
+  <li>Remove the current state in ZooKeeper under the defined path.</li>
+  <li>Restore the state from the backup to the defined ZooKeeper path.</li>
+  <li>The next Marathon leader migrates this state to the current version.</li>
+</ul>
 
 <h3 id="options-to-restore-from-a-backup">Options to restore from a backup</h3>
 
@@ -404,10 +405,9 @@ Only use this method if there is no Marathon instance running.</p>
   </li>
 </ul>
 
-<div class="highlighter-rouge"><pre class="highlight"><code>$&gt; marathon -main mesosphere.marathon.core.storage.backup.Restore --help
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$&gt; marathon -main mesosphere.marathon.core.storage.backup.Restore --help
 $&gt; marathon -main mesosphere.marathon.core.storage.backup.Restore --backup_location {backup_uri} --zk {zk_uri}
-</code></pre>
-</div>
+</code></pre></div></div>
 
 <h2 id="backup-storage-provider">Backup Storage Provider</h2>
 
@@ -431,11 +431,13 @@ Define an S3 location with the following URI syntax. See <a href="http://s3tools
 
 <p>Example: <code class="highlighter-rouge">s3://bucket-name/key/in/bucket</code></p>
 
-<p>The following query parameters are supported:
-- <code class="highlighter-rouge">region</code> - the s3 region. Defaults to <code class="highlighter-rouge">us-east-1</code>
-- <code class="highlighter-rouge">access_key</code> and <code class="highlighter-rouge">secret_key</code> - to define the s3 credentials in the URI.
-  Only define these parameters in a fully secured environment: they will be stored in ZooKeeper and also visible in the logs.
-  See the provider chain to make credentials available without defining them in the URI.</p>
+<p>The following query parameters are supported:</p>
+<ul>
+  <li><code class="highlighter-rouge">region</code> - the s3 region. Defaults to <code class="highlighter-rouge">us-east-1</code></li>
+  <li><code class="highlighter-rouge">access_key</code> and <code class="highlighter-rouge">secret_key</code> - to define the s3 credentials in the URI.
+Only define these parameters in a fully secured environment: they will be stored in ZooKeeper and also visible in the logs.
+See the provider chain to make credentials available without defining them in the URI.</li>
+</ul>
 
 <p>Provider chain:</p>
 

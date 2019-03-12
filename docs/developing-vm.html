@@ -217,6 +217,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/deprecated-metrics.html">
+                    Deprecated Metrics
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/readiness-checks.html">
                     Readiness Checks
                 </a>
@@ -299,6 +304,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +344,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -352,9 +362,8 @@
   <li>
     <p>Ensure your local Marathon has been compiled and assembled. In the <code class="highlighter-rouge">marathon</code> directory:</p>
 
-    <p><code class="highlighter-rouge">
- sbt package
-</code></p>
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code> sbt package
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Does your local Marathon have custom Javascript changes that you expect to see?
@@ -369,56 +378,49 @@ If so you’ll need to compile the assets. Here is a guide to working on assets:
 
     <p>Open <code class="highlighter-rouge">playa-mesos/Vagrantfile</code> and edit the <code class="highlighter-rouge">override.vm.synced_folder</code> setting:</p>
 
-    <div class="highlighter-rouge"><pre class="highlight"><code>config.vm.synced_folder '&lt;/path/to/marathon/parent&gt;', '/vagrant'
-</code></pre>
-    </div>
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>config.vm.synced_folder '&lt;/path/to/marathon/parent&gt;', '/vagrant'
+</code></pre></div>    </div>
     <p>Here <code class="highlighter-rouge">&lt;/path/to/marathon/parent&gt;</code> is the absolute path to the folder containing Marathon.</p>
   </li>
   <li>
     <p>SSH into your Vagrant image</p>
 
-    <p><code class="highlighter-rouge">console
- $ vagrant up # if not already running otherwise `vagrant reload`
- $ vagrant ssh
-</code></p>
+    <div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gp"> $</span> vagrant up <span class="c"># if not already running otherwise `vagrant reload`</span>
+<span class="gp"> $</span> vagrant ssh
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Check that your folders are synced correctly</p>
 
-    <div class="language-console highlighter-rouge"><pre class="highlight"><code><span class="w">$ </span><span class="nc">cd</span><span class="kv"> /vagrant/
-</span><span class="w">$ </span><span class="nc">ls</span><span class="kv">
-</span>marathon playa-mesos ...
-</code></pre>
-    </div>
+    <div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gp">$</span> <span class="nb">cd</span> /vagrant/
+<span class="gp">$</span> <span class="nb">ls</span>
+<span class="go">marathon playa-mesos ...
+</span></code></pre></div>    </div>
   </li>
   <li>
     <p>Stop the Marathon that is pre-configured in the Vagrant image</p>
 
-    <p><code class="highlighter-rouge">console
- $ sudo stop marathon
-</code></p>
+    <div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gp"> $</span> <span class="nb">sudo </span>stop marathon
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Add <code class="highlighter-rouge">start-marathon</code> alias to start your own version of Marathon</p>
 
-    <p><code class="highlighter-rouge">console
- $ nano ~/.bash_aliases
-</code></p>
+    <div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gp"> $</span> nano ~/.bash_aliases
+</code></pre></div>    </div>
 
     <p>add the following in the top of that file and save it:</p>
 
-    <p><code class="highlighter-rouge">bash
- # setup marathon easy run
- alias 'start-marathon'='/vagrant/marathon/bin/start --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon --assets_path src/main/resources/assets'
-</code></p>
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="c"># setup marathon easy run</span>
+ <span class="nb">alias</span> <span class="s1">'start-marathon'</span><span class="o">=</span><span class="s1">'/vagrant/marathon/bin/start --master zk://localhost:2181/mesos --zk zk://localhost:2181/marathon --assets_path src/main/resources/assets'</span>
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Refresh the terminal and run the <code class="highlighter-rouge">start-marathon</code> command in the marathon folder</p>
 
-    <div class="language-console highlighter-rouge"><pre class="highlight"><code><span class="w">$ </span><span class="nc">.</span><span class="kv"> ~/.bashrc
-</span><span class="w">$ </span><span class="nc">start-marathon</span><span class="kv">
-</span></code></pre>
-    </div>
+    <div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gp">$</span> <span class="nb">.</span> ~/.bashrc
+<span class="gp">$</span> start-marathon
+</code></pre></div>    </div>
   </li>
   <li>
     <p>Load the <a href="/marathon/docs/marathon-ui.html">Marathon UI</a> in your browser: http://10.141.141.10:8080</p>

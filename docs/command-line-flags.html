@@ -217,6 +217,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/deprecated-metrics.html">
+                    Deprecated Metrics
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/readiness-checks.html">
                     Readiness Checks
                 </a>
@@ -299,6 +304,11 @@
                     Slow Docker apps and deployments
                 </a>
             </li>
+            <li>
+                <a href="/marathon/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
         </ul>
 
         <h5>Development</h5>
@@ -334,11 +344,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
             <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
-            
-            <li><a href="/marathon/1.4/docs">Version 1.4.x</a></li>
             
         </ul>
     </div>
@@ -403,7 +413,7 @@
   </li>
   <li><span class="label label-default">v1.6.488</span> <code class="highlighter-rouge">--deprecated_features</code> (Optional. Default: None):
   Comma-delimited list indicating which Marathon deprecated features should continue to be enabled. Read more about
-  <a href="deprecation.html">Deprecation</a>.
+  <a href="/marathon/docs/deprecation.html">Deprecation</a>.
   Example: <code class="highlighter-rouge">--deprecated_features feature_one,feature_two,feature_three</code></li>
   <li><code class="highlighter-rouge">--executor</code> (Optional. Default: “//cmd”): Executor to use when none is
   specified.</li>
@@ -439,10 +449,8 @@
   service ports to apps. If you assign your service port statically in your app definition, it does
   not have to be in this range.</li>
   <li><code class="highlighter-rouge">--mesos_role</code> (Optional. Default: None): Mesos role for this framework. If set, Marathon receives resource offers
-  for the specified role in addition to resources with the role designation ‘*’. This parameter is only applied the 
-  first time the framework registers with Mesos. If you change this parameter to another value later, or leave it out, 
-  this will not have an effect on the role for which Marathon is registered. Please note that Marathon currently 
-  supports only one Mesos role, support for multiple roles will be added in the future releases.</li>
+  for the specified role in addition to resources with the role designation ‘*’. Marathon currently 
+  supports only one Mesos role. Support for multiple roles will be added in the future. <em>Note: When using Mesos prior to version 1.3, this parameter is applied when the framework registers with Mesos for the first time, and changing it after that has no effect if the framework is re-registered.</em></li>
   <li><span class="label label-default">v0.9.0</span> <code class="highlighter-rouge">--default_accepted_resource_roles</code> (Optional. Default: all roles):
   Default for the <code class="highlighter-rouge">"acceptedResourceRoles"</code>
   attribute as a comma-separated list of strings. All app definitions which do not specify this attribute explicitly
@@ -543,15 +551,16 @@ If not provided, the <a href="http://docs.aws.amazon.com/sdk-for-java/v1/develop
     </ul>
   </li>
   <li><span class="label label-default">v1.6.0</span><code class="highlighter-rouge">--draining_seconds</code> (Optional. Default: 0):
-  Time (in seconds) when marathon will start declining offers before a <a href="http://mesos.apache.org/documentation/latest/maintenance/">maintenance window</a> start time.
-  <strong>Note:</strong> In order to activate the <code class="highlighter-rouge">--draining_seconds</code> configuration, you must add <code class="highlighter-rouge">maintenance_mode</code> to the set of <code class="highlighter-rouge">--enable_features</code>.</li>
+  Time (in seconds) when Marathon will start declining offers before a <a href="http://mesos.apache.org/documentation/latest/maintenance/">maintenance window</a> start time.
+  <strong>Note:</strong> This flag has no effect if <code class="highlighter-rouge">--disable_maintenance_mode</code> is specified.</li>
   <li><span class="label label-default">&gt; v1.6.352</span><code class="highlighter-rouge">--max_running_deployments</code> (Optional. Default: 100):
   Maximum number of concurrently running deployments. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message.</li>
   <li><code class="highlighter-rouge">--[disable_]suppress_offers</code> (Optional. Default: disabled)
   Controls whether or not Marathon will suppress offers if there is nothing to launch. Enabling helps the performance
-  of Mesos in larger clusters, but enabling this flag will cause Marathon to more slowly release
-  reservations. Additionally, enabling this when using Mesos 1.4.x or newer can lead to scenarios in which Marathon is
-  unable to relaunch resident tasks.</li>
+  of Mesos in larger clusters, but enabling this flag will cause Marathon to more slowly release reservations.</li>
+  <li><span class="label label-default">v1.6.0</span><code class="highlighter-rouge">--[disable]_maintenance_mode</code> (Optional. Default: enabled) Specifies
+  if Marathon should enable maintenance mode support. See the <a href="./maintenance-mode.html">maintenance mode docs</a> for
+  more information.</li>
 </ul>
 
 <h2 id="tuning-flags-for-offer-matchinglaunching-tasks">Tuning Flags for Offer Matching/Launching Tasks</h2>
@@ -639,7 +648,7 @@ in your cluster. You should only need to reduce it if you use <code class="highl
     <p><code class="highlighter-rouge">--decline_offer_duration</code> (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default.</p>
   </li>
   <li>
-    <p><span class="label label-default">v1.6.x</span> <code class="highlighter-rouge">--gpu_scheduling_behavior</code> (Default: undefined) Defines how offered GPU resources should be treated. Possible settings are <code class="highlighter-rouge">undefined</code>, <code class="highlighter-rouge">restricted</code> and <code class="highlighter-rouge">unrestricted</code>. Read more about <a href="preferential-gpu-scheduling.html">Preferential GPU scheduling</a>.</p>
+    <p><span class="label label-default">v1.6.x</span> <code class="highlighter-rouge">--gpu_scheduling_behavior</code> (Default: undefined) Defines how offered GPU resources should be treated. Possible settings are <code class="highlighter-rouge">undefined</code>, <code class="highlighter-rouge">restricted</code> and <code class="highlighter-rouge">unrestricted</code>. Read more about <a href="/marathon/docs/preferential-gpu-scheduling.html">Preferential GPU scheduling</a>.</p>
   </li>
 </ul>
 
@@ -713,6 +722,9 @@ max_tasks_per_offer == max_tasks_per_offer_cycle </code>. E.g. in a cluster of 2
   <li><code class="highlighter-rouge">--leader_proxy_ssl_ignore_hostname</code> (Optional. Default: false): Do not
   verify that the hostname of the Marathon leader matches the one in the SSL
   certificate when proxying API requests to the current leader.</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--leader_proxy_max_open_connections</code> (Optional. Default: 64):
+  Specifies the number of maximum, concurrent open HTTP connections allowed when proxying from the standby to the
+  current leader. Does not apply when using the deprecated sync proxy.</li>
   <li><code class="highlighter-rouge">--[disable_]http_compression</code> (Optional. Default: enabled): Specifies whether Marathon should compress HTTP responses
   for clients that support it. Disabling will reduce the CPU burden on Marathon to service API requests.</li>
   <li><span class="label label-default">v0.10.0</span> <code class="highlighter-rouge">--http_max_concurrent_requests</code> (Optional.): the maximum number of
@@ -723,15 +735,53 @@ max_tasks_per_offer == max_tasks_per_offer_cycle </code>. E.g. in a cluster of 2
 <h3 id="metrics-flags">Metrics Flags</h3>
 
 <ul>
-  <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--[disable_]metrics</code> (Optional. Default: enabled):
-  Expose the execution time per method via the metrics endpoint (/metrics) using code instrumentation.
-  Enabling this might noticeably degrade performance but it helps finding performance problems.
-  These measurements can be disabled with –disable_metrics. Other metrics are not affected.</li>
-  <li><span class="label label-default">v1.6.0</span> <code class="highlighter-rouge">--metrics_averaging_window</code> (Optional. Default: 30 seconds):
-  Configure the size of the sliding average window that is used to compute the values for the <code class="highlighter-rouge">/metrics</code> endpoint. Note that this value
-  should be at least double the value of the <code class="highlighter-rouge">kamon.metric.tick-interval</code> parameter, that is 1 second by default.</li>
-  <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--reporter_graphite</code> (Optional. Default: disabled):
-  Report metrics to <a href="http://graphite.wikidot.com">Graphite</a> (StatsD) as defined by the given URL.
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_name_prefix</code>:
+  Configure the prefix that is used when constructing metric names (default: marathon).</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_prometheus</code>:
+  Enable the StatsD reporter. Once enabled, metrics in the Prometheus
+  format are available at <code class="highlighter-rouge">/metrics/prometheus</code>.</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_statsd</code>:
+  Enable the StatsD reporter.</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_statsd_host</code>:
+  Specify the host to push metrics to in the StatsD format.</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_statsd_port</code>:
+  Specify the port to push metrics to in the StatsD format.</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_statsd_transmission_interval_ms</code>:
+  Specify how often to push metrics to a StatsD endpoint (in milliseconds).</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_datadog</code>:
+  Enable the DataDog reporter.</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_datadog_host</code>:
+  Specify the host to push metrics to in the DataDog format.</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_datadog_port</code>:
+  Specify the port to push metrics to in the DataDog format.</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_datadog_protocol</code>:
+  Specify a protocol to use with the DataDog reporter: <code class="highlighter-rouge">udp</code> to send
+  them over UDP to a DataDog agent, or <code class="highlighter-rouge">api</code> to send them directly to
+  DataDog cloud using HTTP API (default: <code class="highlighter-rouge">udp</code>).</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_datadog_transmission_interval_ms</code>:
+  Specify how often to push metrics to a DataDog endpoint (in milliseconds).</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_histogram_reservoir_significant_digits</code>:
+  The number of significant decimal digits to which histograms and
+  timers will maintain value resolution and separation (default: 4).</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_histogram_reservoir_reset_periodically</code>:
+  Clear histograms and timers fully according to the given interval
+  (default: true).</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_histogram_reservoir_resetting_interval_ms</code>:
+  A histogram resetting interval in milliseconds (default: 5000).</li>
+  <li><span class="label label-default">v1.7.0</span> <code class="highlighter-rouge">--metrics_histogram_reservoir_resetting_chunks</code>:
+  Histogram reservoirs are divided into this number of chunks, and one
+  chunk is cleared after each (resetting interval / number of chunks)
+  elapsed (default: 0). Increasing this will increase Marathon RAM
+  footprint substantially (approximately a couple of hundred MB per
+  chunk).</li>
+  <li><span class="label label-default">v1.6.0 (deprecated since 1.7.0)</span> <code class="highlighter-rouge">--metrics_averaging_window</code> (Optional. Default: 30 seconds):
+  Configure the size of the sliding average window that is used to compute
+  the values for the <code class="highlighter-rouge">/metrics</code> endpoint when using the deprecated metrics.
+  Note that this value should be at least double the value of the
+  <code class="highlighter-rouge">kamon.metric.tick-interval</code> parameter, that is 1 second by default.</li>
+  <li><span class="label label-default">v0.13.0 (deprecated since 1.7.0)</span> <code class="highlighter-rouge">--reporter_graphite</code> (Optional. Default: disabled):
+  Report metrics to <a href="http://graphite.wikidot.com">Graphite</a> (StatsD) as
+  defined by the given URL when using the deprecated metrics.
   Example: <code class="highlighter-rouge">udp://localhost:2003?prefix=marathon-test&amp;interval=10</code>
   The URL can have several parameters to refine the functionality.
     <ul>
@@ -739,14 +789,15 @@ max_tasks_per_offer == max_tasks_per_offer_cycle </code>. E.g. in a cluster of 2
       <li>interval: (Default: 10) the interval to report to graphite in seconds</li>
     </ul>
   </li>
-  <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--reporter_datadog</code> (Optional. Default: disabled):
-  Report metrics to <a href="https://www.datadoghq.com">Datadog</a> as defined by the given URL.
-  Either use UDP to talk to a datadog agent or HTTP to talk directly to DatadogHQ.
+  <li><span class="label label-default">v0.13.0 (deprecated since 1.7.0)</span> <code class="highlighter-rouge">--reporter_datadog</code> (Optional. Default: disabled):
+  Report metrics to <a href="https://www.datadoghq.com">DataDog</a> as defined by
+  the given URL when using the deprecated metrics. Either use UDP to
+  talk to a DataDog agent or HTTP to talk directly to DataDogHQ.
   Example (UDP to agent): <code class="highlighter-rouge">udp://localhost:8125?prefix=marathon-test&amp;tags=marathon&amp;interval=10</code>
   Example (HTTP to DataDogHQ): <code class="highlighter-rouge">http://datadog?apiKey=abc&amp;prefix=marathon-test&amp;tags=marathon&amp;interval=10</code>
   The URL can have several parameters to refine the functionality.
     <ul>
-      <li>expansions: (Default: all) which metric data should be expanded. can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999</li>
+      <li>expansions: (Default: all) which metric data should be expanded. It can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999</li>
       <li>interval: (Default: 10) the interval in seconds to report to Datadog</li>
       <li>prefix: (Default: marathon_test) the prefix is prepended to all metric names</li>
       <li>tags: (Default: empty) the tags to send with each metric. Can be either simple value like <code class="highlighter-rouge">foo</code> or key value like <code class="highlighter-rouge">foo:bla</code></li>
