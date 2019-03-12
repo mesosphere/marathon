@@ -39,7 +39,7 @@ object PortReference {
 
   def fromProto(pb: Protos.CheckDefinition): Option[PortReference] =
     if (pb.hasPortIndex) Some(ByIndex(pb.getPortIndex))
-    else if (!pb.hasPort) Some(ByIndex(0)) // backward compatibility, this used to be the default value in marathon.proto
+    else if (!pb.hasPort) Some(ByIndex(0))
     else None
 }
 

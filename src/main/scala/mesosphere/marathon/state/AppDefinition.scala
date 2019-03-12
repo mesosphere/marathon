@@ -22,6 +22,8 @@ import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{Resource, ScalarResource}
 import org.apache.mesos.{Protos => mesos}
+import mesosphere.marathon.core.health.{PortReference => HealthPortReference}
+import mesosphere.marathon.core.check.{PortReference => CheckPortReference}
 
 import scala.concurrent.duration._
 
@@ -604,8 +606,8 @@ object AppDefinition extends GeneralPurposeCombinators {
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") {
       case hc: HealthCheckWithPort =>
         hc.portIndex match {
-          case Some(mesosphere.marathon.core.health.PortReference.ByIndex(idx)) => hostPortsIndices.contains(idx)
-          case Some(mesosphere.marathon.core.health.PortReference.ByName(name)) => false // TODO(jdef) support port name as an index
+          case Some(HealthPortReference.ByIndex(idx)) => hostPortsIndices.contains(idx)
+          case Some(HealthPortReference.ByName(name)) => false // TODO(jdef) support port name as an index
           case None => hc.port.nonEmpty || (hostPortsIndices.length == 1 && hostPortsIndices.head == 0)
         }
       case _ => true
@@ -615,7 +617,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     isTrue("check port index must address an element of the ports array or container port mappings.") {
       case c: CheckWithPort =>
         c.portIndex match {
-          case Some(mesosphere.marathon.core.check.PortReference.ByIndex(idx)) => hostPortsIndices.contains(idx)
+          case Some(CheckPortReference.ByIndex(idx)) => hostPortsIndices.contains(idx)
           case None => c.port.nonEmpty || (hostPortsIndices.length == 1 && hostPortsIndices.head == 0)
         }
       case _ => true
