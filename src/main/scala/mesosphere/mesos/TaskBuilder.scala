@@ -108,13 +108,13 @@ class TaskBuilder(
           s"$numUnusedChecks of its defined health checks."
       )
     }
+
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
 
     val mesosCheck = runSpec.check.collect {
-      case mesosCheck: MesosCheck =>
-        mesosCheck.toMesos(portAssignments)
+      case mesosCheck: MesosCheck => mesosCheck.toMesos()
     }.flatten
-    mesosCheck.headOption.foreach(builder.setCheck)
+    mesosCheck.foreach(builder.setCheck)
 
     // invoke builder plugins
     runSpecTaskProc.taskInfo(runSpec, builder)

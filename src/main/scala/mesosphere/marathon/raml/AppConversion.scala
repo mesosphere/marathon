@@ -8,7 +8,7 @@ import mesosphere.mesos.protos.Implicits._
 
 import scala.concurrent.duration._
 
-trait AppConversion extends DefaultConversions with ConstraintConversion with EnvVarConversion with HealthCheckConversion
+trait AppConversion extends DefaultConversions with CheckConversion with ConstraintConversion with EnvVarConversion with HealthCheckConversion
   with NetworkConversion with ReadinessConversions with SecretConversion with VolumeConversion
   with UnreachableStrategyConversion with KillSelectionConversion {
 
@@ -152,6 +152,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       backoffStrategy = backoffStrategy,
       container = app.container.map(Raml.fromRaml(_)),
       healthChecks = app.healthChecks.map(Raml.fromRaml(_)),
+      check = app.check.map(Raml.fromRaml(_)),
       readinessChecks = app.readinessChecks.map(Raml.fromRaml(_)),
       taskKillGracePeriod = app.taskKillGracePeriodSeconds.map(_.second),
       dependencies = app.dependencies.map(PathId(_))(collection.breakOut),
