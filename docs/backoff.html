@@ -4,7 +4,7 @@
     
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Marathon: Deprecated Metrics</title>
+    <title>Marathon: No new instances of a service are starting, it is in 'delayed' mode</title>
     <link rel="icon" type="image/x-icon" href="/marathon/img/marathon-favicon.ico">
     <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="/marathon/css/style.css" rel="stylesheet">
@@ -285,6 +285,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/backoff.html">
+                    No new instances are starting
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/host-port.html">
                     An App Requires a Specific Host Port
                 </a>
@@ -354,139 +359,52 @@
     </div>
 
     <div class="col-sm-9">
-        <h1 id="deprecated-metrics">Deprecated Metrics</h1>
+        <h1 id="new-instances-of-service-are-not-starting-because-it-is-delayed">New instances of service are not starting because it is delayed</h1>
 
-<p>When the deprecated metrics are enabled, Marathon uses <a href="http://kamon.io/">Kamon.io</a>
-for its metrics. You can query the metrics via the <code class="highlighter-rouge">/metrics</code> HTTP endpoint or
-configure the metrics to report periodically to:</p>
+<p>If your deployment is not finishing and/or your instances appear to start very slowly, your service may be delayed.</p>
 
-<ul>
-  <li>graphite via <code class="highlighter-rouge">--reporter_graphite</code>.</li>
-  <li>datadog via <code class="highlighter-rouge">--reporter_datadog</code>.</li>
-  <li>statsd via <code class="highlighter-rouge">--reporter_datadog</code> (datadog reporter supports statsd).</li>
-</ul>
+<p>In order to protect the cluster from being overloaded with launch requests, Marathon will slow down the launch rate of services that crash loop / fail frequently via a mechanism known as “backoff delay”.
+Were it not for this protective measure, Marathon could cause cluster-wide agents due to disks filling up on Mesos Agents with sandboxes created for the frequently-launched-and-failing failing tasks.</p>
 
-<p>For the specific syntax see the
-<a href="/marathon/docs/command-line-flags.html#metrics-flags">metrics command-line flags</a> section.</p>
+<h2 id="how-do-i-find-out-if-my-service-is-being-delayed">How do I find out if my service is being delayed?</h2>
 
-<h2 id="stability-of-metric-names">Stability of metric names</h2>
+<p>There are a number of <a href="waiting.html">reasons for application instances not being started</a>.
+To find out if the backoff delay might be causing your instances not to be launched you need to:</p>
 
-<p>Although we try to prevent unnecessary disruptions, we do not provide stability guarantees for metric names between major and minor releases.</p>
+<ol>
+  <li>Query the <code class="highlighter-rouge">v2/queue</code> endpoint.</li>
+  <li>Find an item where <code class="highlighter-rouge">service.id</code> equals id of your application or pod.</li>
+  <li>Read the property <code class="highlighter-rouge">delay.timeLeftSeconds</code>; if it is higher than 0, then your service is delayed.</li>
+</ol>
 
-<p>We will not change the name of a metric non-method-call (see below) metric in a patch release if this is not required to fix a production issue, which is very unusual.</p>
+<h2 id="how-do-i-configure-the-backoff-delay">How do I configure the backoff delay?</h2>
 
-<h2 id="metric-names">Metric names</h2>
-
-<p>All metric names have to be prefixed by a prefix that you specify and are subject to modification by graphite, datadog, or statsd. For example, if we write that the name of a metric is <code class="highlighter-rouge">service.mesosphere.marathon.uptime</code>, it might be available under <code class="highlighter-rouge">stats.gauges.marathon_test.service.mesosphere.marathon.uptime</code> in your configuration.</p>
-
-<h2 id="important-metrics">Important metrics</h2>
-
-<p><code class="highlighter-rouge">service.mesosphere.marathon.uptime</code> (gauge) - The uptime of the reporting Marathon process in milliseconds. This is helpful to diagnose stability problems that cause Marathon to restart.</p>
-
-<p><code class="highlighter-rouge">service.mesosphere.marathon.leaderDuration</code> (gauge) - The duration since the last leader election happened
-in milliseconds. This is helpful to diagnose stability problems and how often leader election happens.</p>
-
-<h3 id="app-group-and-task-counts">App, group, and task counts</h3>
-
-<p><code class="highlighter-rouge">service.mesosphere.marathon.app.count</code> (gauge) - The number of defined apps. Be advised that high app number may lead to a degraded performance.</p>
-
-<p><code class="highlighter-rouge">service.mesosphere.marathon.group.count</code> (gauge) - The number of defined groups. This number influences the performance of Marathon: if you have a high number of groups, your performance will be lower than for a low number of groups. Note that each term between the slashes in your an ID corresponds to a group. The app <code class="highlighter-rouge">/shop/frontend</code> is in the <code class="highlighter-rouge">frontend</code> group, which is in the <code class="highlighter-rouge">shop</code> group, which is in the root group.</p>
-
-<p><span class="label label-default">v0.15</span>
-<code class="highlighter-rouge">service.mesosphere.marathon.task.running.count</code> (gauge) - The number of tasks that are
-currently running.</p>
-
-<p><span class="label label-default">v0.15</span> 
-<code class="highlighter-rouge">service.mesosphere.marathon.task.staged.count</code> (gauge) - The number of tasks that are
-currently staged. Tasks enter staging state after they are launched. A consistently high number of staged tasks indicates that a lot of tasks are stopping and being restarted. Either you have many app updates/manual restarts or some of your apps have stability problems and are automatically restarted frequently.</p>
-
-<h3 id="task-update-processing">Task update processing</h3>
-
-<p><span class="label label-default">v0.15</span>
-<code class="highlighter-rouge">service.mesosphere.marathon.core.task.update.impl.ThrottlingTaskStatusUpdateProcessor.queued</code> (gauge) - The number of queued status updates.</p>
-
-<p><span class="label label-default">v0.15</span>
-<code class="highlighter-rouge">service.mesosphere.marathon.core.task.update.impl.ThrottlingTaskStatusUpdateProcessor.processing</code> (gauge) - The number of status updates currently being processed.</p>
-
-<p><span class="label label-default">v0.15</span>
- <code class="highlighter-rouge">service.mesosphere.marathon.core.task.update.impl.TaskStatusUpdateProcessorImpl.publishFuture</code> (timer) - This metric calculates how long it takes Marathon to process status updates.</p>
-
-<p><span class="label label-default">v0.15</span>
-<code class="highlighter-rouge">service.mesosphere.marathon.core.task.update.impl.TaskStatusUpdateProcessorImpl.publishFuture</code> (timer) - This metric calculates how long it takes Marathon to process status updates.</p>
-
-<h3 id="configuration-update-processing">Configuration update processing</h3>
-
-<p><span class="label label-default">v0.15</span>
-<code class="highlighter-rouge">service.mesosphere.marathon.state.GroupManager.queued</code> (gauge) - The number of app configuration updates in the queue. Use <code class="highlighter-rouge">--max_queued_root_group_updates</code> to configure the maximum.</p>
-
-<p><span class="label label-default">v0.15</span>
-<code class="highlighter-rouge">service.mesosphere.marathon.state.GroupManager.processing</code> (gauge) - The number of currently processed app configuration updates. Since we serialize these updates, this is either 0 or 1.</p>
-
-<h3 id="repositories">Repositories</h3>
-
-<p>Marathon stores its permanent state in “repositories.” The important ones are:</p>
+<p>The backoff delay length and rate can be configured per service. For apps, the <a href="https://github.com/mesosphere/marathon/blob/master/docs/docs/rest-api/public/api/v2/types/app.raml">Application definition</a> has the properties <code class="highlighter-rouge">backoffFactor</code>, <code class="highlighter-rouge">maxLaunchDelaySeconds</code> and <code class="highlighter-rouge">backoffSeconds</code>. For pods, the <a href="https://github.com/mesosphere/marathon/blob/master/docs/docs/rest-api/public/api/v2/types/pod.raml#L35">Pod definition</a> has a <code class="highlighter-rouge">backoff</code> object with the properties <code class="highlighter-rouge">backoff</code>, <code class="highlighter-rouge">backoffFactor</code> and <code class="highlighter-rouge">maxLaunchDelay</code>.</p>
 
 <ul>
-  <li><code class="highlighter-rouge">GroupRepository</code> for app configurations and groups.</li>
-  <li><code class="highlighter-rouge">TaskRepository</code> for the last known task state. This is the repository with the largest data churn.</li>
+  <li><code class="highlighter-rouge">backoffSeconds</code> - The initial delay applied to a service that has failed for the first time.</li>
+  <li><code class="highlighter-rouge">backoffFactor</code> - Controls the rate at which the backoff delay grows; a value of 1.05 would result in a 5% slower launch rate after each failure.</li>
+  <li><code class="highlighter-rouge">maxLaunchDelaySeconds</code> - The largest delay allowed (default: 5 minutes).</li>
 </ul>
 
-<p>Other repositories include:</p>
+<p>When deploying a new service or a new version of existing service, the delay value for that application is reset to <code class="highlighter-rouge">delaySeconds</code>.
+Every time an instance of this application fails, the current value of delay is multiplied by the <code class="highlighter-rouge">backoffFactor</code> up until <code class="highlighter-rouge">maxLaunchDelaySeconds</code> is reached.</p>
+
+<p>The delay is increased also when task fails or exits with exit code 0 (<code class="highlighter-rouge">TASK_FAILED</code> and <code class="highlighter-rouge">TASK_FINISHED</code> in Mesos).</p>
+
+<p>The delay is NOT increased when task is killed (<code class="highlighter-rouge">TASK_KILLED</code> in Mesos).</p>
+
+<h2 id="when-is-the-delay-reset-to-default">When is the delay reset to default?</h2>
 
 <ul>
-  <li><code class="highlighter-rouge">AppRepository</code> for versioned app configuration.</li>
-  <li><code class="highlighter-rouge">DeploymentRepository</code> for currently running deployments.</li>
-  <li><code class="highlighter-rouge">TaskFailureRepository</code> for the last failure for every application.</li>
+  <li>When a new version of a service is deployed</li>
+  <li>When <code class="highlighter-rouge">DELETE /v2/queue/{app.id}/delay</code> HTTP API request is issued</li>
+  <li>When there are no failing tasks for the value of current delay + maxLaunchDelay</li>
 </ul>
 
-<p>We have statistics about read and write requests for each repository. To access them, substitute <code class="highlighter-rouge">*</code> with the name of a repository:</p>
+<h2 id="how-do-i-reset-the-delay">How do I reset the delay?</h2>
 
-<p><code class="highlighter-rouge">service.mesosphere.marathon.state.*.read-request-time.count</code> - The number of read requests.</p>
-
-<p><code class="highlighter-rouge">service.mesosphere.marathon.state.*.read-request-time.mean</code> - The exponential weighted average of the read request times.</p>
-
-<p><code class="highlighter-rouge">service.mesosphere.marathon.state.*.write-request-time.count</code> - The number of write requests.</p>
-
-<p><code class="highlighter-rouge">service.mesosphere.marathon.state.*.write-request-time.mean</code> - The <a href="https://dropwizard.github.io/metrics/3.1.0/manual/core/#exponentially-decaying-reservoirs">exponential weighted average</a> of the write request times.</p>
-
-<p><strong>Note:</strong> Many of the repository metrics were not measured correctly prior to <span class="label label-default">v0.15</span>.</p>
-
-<h3 id="requests">Requests</h3>
-
-<p><code class="highlighter-rouge">org.eclipse.jetty.servlet.ServletContextHandler.dispatches</code> (timer) - The
-number of HTTP requests received by Marathon is available under <code class="highlighter-rouge">.count</code>.
-There are more metrics around HTTP requests under the
-<code class="highlighter-rouge">org.eclipse.jetty.servlet.ServletContextHandler</code> prefix.
-For more information, consult <a href="https://github.com/dropwizard/metrics/blob/796663609f310888240cc8afb58f75396f8391d2/metrics-jetty9/src/main/java/io/dropwizard/metrics/jetty9/InstrumentedHandler.java#L41-L42">the code</a>.</p>
-
-<h3 id="jvm">JVM</h3>
-
-<p><code class="highlighter-rouge">jvm.threads.count</code> (meter) - The total number of threads. This number should be below 500.</p>
-
-<p><code class="highlighter-rouge">jvm.memory.total.used</code> (meter) - The total number of bytes used by the Marathon JVM.</p>
-
-<h2 id="instrumented-method-calls">Instrumented method calls</h2>
-
-<p>These metrics are created automatically by instrumenting certain classes in our code base.</p>
-
-<p>You can disable these instrumented metrics with <code class="highlighter-rouge">--disable_metrics</code>. This flag will only disable this code instrumentation, not all metrics.</p>
-
-<p>These timers can be very valuable in diagnosing problems, but they require detailed knowledge of the inner workings of Marathon. They can also degrade performance noticeably.</p>
-
-<p>Since these metric names directly correspond to class and method names in our code base,
-expect the names of these metrics to change if the affected code changes.</p>
-
-<h2 id="potential-pitfalls">Potential pitfalls</h2>
-
-<h3 id="derived-metrics-mean-p99-">Derived metrics (mean, p99, …)</h3>
-
-<p>Our metrics library calculates derived metrics like “mean” and “p99” using a sliding average window algorithm. This means that every time you fetch the <code class="highlighter-rouge">/metrics</code> endpoint you are looking at the average of the last N seconds. By default the length of the window is 30 seconds, but this can be configured with the <code class="highlighter-rouge">--metrics_averaging_window</code> flag.</p>
-
-<p>For getting the most accurate results it is recommended to configure your polling interval to the size of the sliding average window.</p>
-
-<h3 id="statsd-and-derived-statistics">Statsd and derived statistics</h3>
-
-<p>Statsd typically creates derived statistics (mean, p99) from mean values Marathon reports. Our metrics package also reports derived statistics. To avoid accidentally aggregating statistics multiple times, be sure you know where you are reporting and computing mean values.</p>
+<p>By issuing a request to <code class="highlighter-rouge">DELETE /v2/queue/{service.id}/delay</code>.</p>
 
     </div>
 </div>

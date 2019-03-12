@@ -285,6 +285,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/backoff.html">
+                    No new instances are starting
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/host-port.html">
                     An App Requires a Specific Host Port
                 </a>
@@ -402,6 +407,9 @@ health checks consecutively, that <a href="#task-termination">task is terminated
   </li>
   <li>
     <p>If Marathon is managing a large number of tasks, performing health checks for every task can cause scheduler performance issues.</p>
+  </li>
+  <li>
+    <p>Marathon-level health checks can’t be used with pods.</p>
   </li>
 </ul>
 

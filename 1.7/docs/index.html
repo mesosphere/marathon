@@ -285,6 +285,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/1.7/docs/backoff.html">
+                    No new instances are starting
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/1.7/docs/host-port.html">
                     An App Requires a Specific Host Port
                 </a>
@@ -404,7 +409,7 @@ for details. Running <code class="highlighter-rouge">make install</code> will in
 <p>Point your web browser to
 <code class="highlighter-rouge">localhost:8080</code> and you should see the <a href="/marathon/1.7/docs/marathon-ui.html">Marathon UI</a>.</p>
 
-<div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gp">$</span> ./bin/start <span class="nt">--master</span> zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos <span class="nt">--zk</span> zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
+<div class="language-console highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gp">$</span> ./bin/marathon <span class="nt">--master</span> zk://zk1.foo.bar:2181,zk2.foo.bar:2181/mesos <span class="nt">--zk</span> zk://zk1.foo.bar:2181,zk2.foo.bar:2181/marathon
 </code></pre></div></div>
 
 <p>Marathon uses <code class="highlighter-rouge">--master</code> to find the Mesos masters, and <code class="highlighter-rouge">--zk</code> to find ZooKeepers
@@ -415,7 +420,7 @@ discovered in other ways.</p>
 
 <h3 id="mesos-library">Mesos Library</h3>
 
-<p><code class="highlighter-rouge">MESOS_NATIVE_JAVA_LIBRARY</code>: <code class="highlighter-rouge">bin/start</code> searches the common installation paths,
+<p><code class="highlighter-rouge">MESOS_NATIVE_JAVA_LIBRARY</code>: <code class="highlighter-rouge">bin/marathon</code> searches the common installation paths,
 <code class="highlighter-rouge">/usr/lib</code> and <code class="highlighter-rouge">/usr/local/lib</code>, for the Mesos native library. If the
 library lives elsewhere in your configuration, set the environment variable
 <code class="highlighter-rouge">MESOS_NATIVE_JAVA_LIBRARY</code> to its full path.</p>

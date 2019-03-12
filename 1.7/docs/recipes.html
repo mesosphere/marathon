@@ -285,6 +285,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/1.7/docs/backoff.html">
+                    No new instances are starting
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/1.7/docs/host-port.html">
                     An App Requires a Specific Host Port
                 </a>
@@ -368,6 +373,7 @@
 <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
     </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"simple-docker"</span><span class="p">,</span><span class="w">
     </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"type"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
       </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"busybox"</span><span class="w">
       </span><span class="p">}</span><span class="w">
@@ -384,6 +390,7 @@
 <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
     </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"simple-docker"</span><span class="p">,</span><span class="w">
     </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"type"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"DOCKER"</span><span class="p">,</span><span class="w">
       </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
         </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesosphere/inky"</span><span class="w">
       </span><span class="p">}</span><span class="w">
@@ -509,7 +516,7 @@ ENTRYPOINT ["echo"]
 
 <h3 id="command-executor-health-checks">Command (executor) health checks</h3>
 
-<p>Command health checks are executed on the slave where the task is running.
+<p>Command health checks are executed on the agent where the task is running.
 To enable this feature for marathon versions prior to <code class="highlighter-rouge">0.7.4</code>, start Marathon with the <code class="highlighter-rouge">--executor_health_checks</code> flag (not required/allowed since <code class="highlighter-rouge">0.7.4</code>). Requires Mesos version <code class="highlighter-rouge">0.20.0</code> or later.</p>
 
 <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">

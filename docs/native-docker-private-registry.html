@@ -285,6 +285,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/backoff.html">
+                    No new instances are starting
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/host-port.html">
                     An App Requires a Specific Host Port
                 </a>
@@ -377,7 +382,7 @@ Email: foo@bar.com
 config.json
 </code></pre></div>    </div>
 
-    <p>Your <code class="highlighter-rouge">config.json</code> file should look like this, where value of <code class="highlighter-rouge">auth</code> is a based64-encoded <code class="highlighter-rouge">username:password</code> string.</p>
+    <p>Your <code class="highlighter-rouge">config.json</code> file should look like this, where value of <code class="highlighter-rouge">auth</code> is a based64-encoded <code class="highlighter-rouge">username:password</code> string. You can generate it using <code class="highlighter-rouge">echo -n 'username:password' | base64</code>.</p>
 
     <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
   </span><span class="s2">"auths"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
@@ -522,6 +527,7 @@ config.json
 <h2 id="use-a-private-docker-registry-with-the-docker-containerizer">Use a Private Docker Registry with the Docker Containerizer</h2>
 
 <h3 id="registry--10---docker-pre-16">Registry  1.0 - Docker pre 1.6</h3>
+
 <p>To supply credentials to pull from a private registry, add a <code class="highlighter-rouge">.dockercfg</code> to
 the <code class="highlighter-rouge">uris</code> field of your app. The <code class="highlighter-rouge">$HOME</code> environment variable will then be set
 to the same value as <code class="highlighter-rouge">$MESOS_SANDBOX</code> so Docker can automatically pick up the
@@ -535,22 +541,29 @@ the <code class="highlighter-rouge">uris</code> field of your app. The <code cla
 <h4 id="step-1-compress-docker-credentials">Step 1: Compress Docker credentials</h4>
 
 <ol>
-  <li>Log in to the private registry manually. Login creates a <code class="highlighter-rouge">~/.docker</code> directory and a <code class="highlighter-rouge">~/.docker/config.json</code> file in your home directory.</li>
-</ol>
+  <li>
+    <p>Log in to the private registry manually. Login creates a <code class="highlighter-rouge">~/.docker</code> directory and a <code class="highlighter-rouge">~/.docker/config.json</code> file in your home directory.</p>
 
-<div class="alert alert-info">
-  <strong>Info:</strong> Executing <code>docker login</code> will append credentials to the file and won't replace the old ones. Credentialas will be stored unencrypted.
+    <div class="alert alert-info">
+<strong>Info:</strong> Executing <code>docker login</code> will append credentials to the file and won't replace the old ones. Credentialas will be stored unencrypted.
 </div>
 
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>```bash
-$ docker login some.docker.host.com
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>docker login some.docker.host.com
   Username: foo
   Password:
   Email: foo@bar.com
-```
-</code></pre></div></div>
+</code></pre></div>    </div>
 
-<ol>
+    <p>Also note that by default, the credentials are not stored in the file, but rather in key store managed by the OS (e.g. <code class="highlighter-rouge">oskeychain</code> for OSX, <code class="highlighter-rouge">pass</code> for Linux).
+Make sure the credentials are stored in the file. The new authentication should look like this:</p>
+    <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="s2">"https://some.docker.host.com"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"auth"</span><span class="p">:</span><span class="w"> </span><span class="s2">"XXXXX"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"email"</span><span class="p">:</span><span class="w"> </span><span class="s2">"&lt;your-email&gt;"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div>    </div>
+
+    <p>Where value of <code class="highlighter-rouge">auth</code> is a based64-encoded <code class="highlighter-rouge">username:password</code> string. You can generate it using <code class="highlighter-rouge">echo -n 'username:password' | base64</code>.</p>
+  </li>
   <li>
     <p>Compress the <code class="highlighter-rouge">~/.docker</code> directory and its contents.</p>
 
