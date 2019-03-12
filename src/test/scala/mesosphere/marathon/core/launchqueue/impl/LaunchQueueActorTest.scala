@@ -58,6 +58,7 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
       val app = AppDefinition(PathId("/foo"))
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
+      @volatile
       val instanceTracker = mock[InstanceTracker]
       instanceTracker.instancesBySpec().returns(Future.successful(InstanceTracker.InstancesBySpec.empty))
       val instanceUpdate = InstanceUpdated(instance, None, Seq.empty)
