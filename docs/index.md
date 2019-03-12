@@ -8,18 +8,18 @@ title: A container orchestration platform for Mesos and DC/OS
     A container orchestration platform for Mesos and DC/OS
   </p>
   <p>
-    <a href="https://downloads.mesosphere.com/marathon/releases/1.6.322/marathon-1.6.322-2bf46b341.tgz"
+    <a href="https://downloads.mesosphere.io/marathon/builds/1.7.189-48bfd6000/marathon-1.7.189-48bfd6000.tgz"
         class="btn btn-lg btn-primary">
-      Download Marathon v1.6.322
+      Download Marathon v1.7.189
     </a>
   </p>
   <a class="btn btn-link"
-      href="https://downloads.mesosphere.com/marathon/releases/1.6.322/marathon-1.6.322-2bf46b341.tgz.sha1">
-    v1.6.322 SHA Checksum
+      href="https://downloads.mesosphere.io/marathon/builds/1.7.189-48bfd6000/marathon-1.7.189-48bfd6000.tgz.sha1">
+    v1.7.189 SHA Checksum
   </a> &middot;
   <a class="btn btn-link"
-      href="https://github.com/mesosphere/marathon/releases/tag/v1.6.322">
-    v1.6.322 Release Notes
+      href="https://github.com/mesosphere/marathon/releases/tag/v1.7.189">
+    v1.7.189 Release Notes
   </a>
 </div>
 
@@ -58,7 +58,7 @@ Marathon is the first framework to be launched, running directly alongside Mesos
 
 Marathon is a powerful way to run other Mesos frameworks: in this case, [Chronos](https://github.com/mesos/chronos). Marathon launches two instances of the Chronos scheduler using the Docker image `mesosphere/chronos`. The Chronos instances appear in orange on the top row.
 
-If either of the two Chronos containers fails for any reason, then Marathon will restart them on another slave. This approach ensures that two Chronos processes are always running.
+If either of the two Chronos containers fails for any reason, then Marathon will restart them on another agent. This approach ensures that two Chronos processes are always running.
 
 Since Chronos itself is a framework and receives resource offers, it can start tasks on Mesos.
 In the use case below, Chronos is running two scheduled jobs, shown in blue. One dumps a production MySQL database to S3, while another sends an email newsletter to all customers via Rake.
