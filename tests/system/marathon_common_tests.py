@@ -840,8 +840,8 @@ def test_app_update_rollback():
     deployment_wait(service_id=app_id)
 
     # update to 1 instance is rollback to 2
-    tasks = client.get_tasks(app_id)
-    assert len(tasks) == 2, "The number of tasks is {} after rollback, but 2 was expected".format(len(tasks))
+    assert_that(lambda: client.get_tasks(app_id),
+                eventually(has_len(equal_to(2)), max_attempts=30))
 
 
 def test_unhealthy_app_can_be_rolled_back():
