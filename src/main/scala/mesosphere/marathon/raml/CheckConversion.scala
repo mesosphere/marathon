@@ -120,6 +120,8 @@ trait CheckConversion {
 
     check match {
       case httpCheck: MesosHttpCheck =>
+        val portIndex  = httpCheck.portIndex.collect { case index: PortReference.ByIndex => index.value}
+
         AppCheck(
           intervalSeconds = check.interval.toSeconds.toInt,
           timeoutSeconds = check.timeout.toSeconds.toInt,
@@ -128,11 +130,12 @@ trait CheckConversion {
             path = httpCheck.path,
             scheme = Raml.toRaml(httpCheck.protocol),
             port = httpCheck.port,
-            // TODO: fix portindex
-            portIndex = None)),
+            portIndex = portIndex)),
           tcp = None,
           exec = None)
       case tcpCheck: MesosTcpCheck =>
+        val portIndex  = tcpCheck.portIndex.collect { case index: PortReference.ByIndex => index.value}
+
         AppCheck(
           intervalSeconds = check.interval.toSeconds.toInt,
           timeoutSeconds = check.timeout.toSeconds.toInt,
@@ -140,8 +143,7 @@ trait CheckConversion {
           http = None,
           tcp = Some(AppTcpCheck(
             port = tcpCheck.port,
-            // TODO: fix portindex
-            portIndex = None)),
+            portIndex = portIndex)),
           exec = None)
       case cmdCheck: MesosCommandCheck =>
         AppCheck(
