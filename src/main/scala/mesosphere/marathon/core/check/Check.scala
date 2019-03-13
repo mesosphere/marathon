@@ -77,7 +77,7 @@ sealed trait MesosCheck extends Check {
   override protected def protoBuilder: Protos.CheckDefinition.Builder =
     super.protoBuilder.setDelaySeconds(delay.toSeconds.toInt)
 
-  def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): Option[MesosProtos.CheckInfo]
+  def toMesos(portAssignments: Seq[PortAssignment]): Option[MesosProtos.CheckInfo]
 }
 
 sealed trait MesosCheckWithPorts extends CheckWithPort { this: Check =>
@@ -148,7 +148,7 @@ case class MesosHttpCheck(
     builder.build
   }
 
-  override def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): Option[MesosProtos.CheckInfo] = {
+  override def toMesos(portAssignments: Seq[PortAssignment]): Option[MesosProtos.CheckInfo] = {
     val port = effectivePort(portAssignments)
     port.map { checkPort =>
       val httpInfoBuilder = MesosProtos.CheckInfo.Http.newBuilder()
@@ -201,7 +201,7 @@ case class MesosTcpCheck(
     builder.build
   }
 
-  override def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): Option[MesosProtos.CheckInfo] = {
+  override def toMesos(portAssignments: Seq[PortAssignment]): Option[MesosProtos.CheckInfo] = {
     val port = effectivePort(portAssignments)
     port.map { checkPort =>
       val tcpInfoBuilder = MesosProtos.CheckInfo.Tcp.newBuilder().setPort(checkPort)

@@ -112,7 +112,7 @@ class TaskBuilder(
     mesosHealthChecks.headOption.foreach(builder.setHealthCheck)
 
     val mesosCheck = runSpec.check.collect {
-      case mesosCheck: MesosCheck => mesosCheck.toMesos()
+      case mesosCheck: MesosCheck => mesosCheck.toMesos(portAssignments)
     }.flatten
     mesosCheck.foreach(builder.setCheck)
 
