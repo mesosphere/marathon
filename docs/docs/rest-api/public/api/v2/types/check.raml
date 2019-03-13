@@ -57,6 +57,11 @@ types:
           An index is used so the app can use random ports,
           like [0, 0, 0] for example, and tasks could be started with
           port environment variables like $PORT1.
+      port?:
+        type: numbers.AnyPort
+        description: |
+          The specific port to connect to.
+          In case of dynamic ports, see portIndex.
 
   Check:
     type: object

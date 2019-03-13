@@ -2,13 +2,16 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.Protos.CheckDefinition
-import mesosphere.marathon.core.check._
-import mesosphere.marathon.core.check.PortReference
+import mesosphere.marathon.core.check.{Check => CoreCheck, _}
 import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.duration._
 
 trait CheckConversion {
+
+  implicit val commandCheckWrites: Writes[state.Executable, CommandCheck] = Writes {
+    case state.Command(value) => CommandCheck(ShellCommand(value))
+  }
 
   implicit val httpCheckSchemeRamlReader: Reads[HttpScheme, CheckDefinition.Protocol] = Reads {
     case HttpScheme.Http => CheckDefinition.Protocol.HTTP
@@ -20,6 +23,9 @@ trait CheckConversion {
   }
 
 
+  /*
+  Used for pods checks
+   */
   implicit val checkRamlReader: Reads[Check, MesosCheck] = Reads {
     case Check(Some(httpCheck), None, None, interval, timeout, delay) =>
 //      val portIndex = httpCheck.portIndex.collect{ case index: PortReference.ByIndex => index.value }
@@ -50,6 +56,9 @@ trait CheckConversion {
       throw new IllegalStateException("illegal RAML Check: expected one of http, tcp or exec checks")
   }
 
+  /*
+  Used for app checks
+   */
   implicit val appCheckRamlReader: Reads[AppCheck, MesosCheck] = Reads {
     case AppCheck(Some(httpCheck), None, None, interval, timeout, delay) =>
       //      val portIndex = httpCheck.portIndex.collect{ case index: PortReference.ByIndex => index.value }
@@ -59,6 +68,7 @@ trait CheckConversion {
         path = httpCheck.path,
         protocol = Raml.fromRaml[HttpScheme, CheckDefinition.Protocol](httpCheck.scheme),
         //        portIndex = Some(PortReference(httpCheck.portIndex)),
+        port = httpCheck.port,
         delay = delay.seconds,
       )
     case AppCheck(None, Some(tcpCheck),  None, interval, timeout, delay) =>
@@ -66,6 +76,7 @@ trait CheckConversion {
         interval = interval.seconds,
         timeout = timeout.seconds,
         delay = delay.seconds,
+        port = tcpCheck.port,
         //        portIndex = Some(PortReference(tcpCheck.portIndex))
       )
     case AppCheck(None, None, Some(execCheck), interval, timeout, delay) =>
@@ -79,7 +90,10 @@ trait CheckConversion {
       throw new IllegalStateException("illegal RAML Check: expected one of http, tcp or exec checks")
   }
 
-  implicit val checkStatusRamlWriter: Writes[MesosProtos.CheckStatusInfo, CheckStatus]= Writes { checkStatus =>
+  /*
+  Used for App CheckResult writing
+   */
+  implicit val checkStatusRamlWriter: Writes[MesosProtos.CheckStatusInfo, CheckStatus] = Writes { checkStatus =>
     CheckStatus.apply()
     val commandCheckStatus: Option[CommandCheckStatus] = if (checkStatus.hasCommand && checkStatus.getCommand.hasExitCode)
       Some(CommandCheckStatus(checkStatus.getCommand.getExitCode))
@@ -99,43 +113,68 @@ trait CheckConversion {
     CheckStatus(httpCheckStatus, tcpCheckStatus, commandCheckStatus)
   }
 
-  implicit val checkRamlWriter: Writes[MesosCheck, Check] = Writes { check =>
-    def requiredField[T](msg: String): T = throw new IllegalStateException(msg)
-    def requireEndpoint(portIndex: Option[PortReference]): String = portIndex.fold(
-      requiredField[String]("portIndex undefined for check")
-    ) {
-//      case byName: PortReference.ByName => byName.value
-      case index => throw new IllegalStateException(s"unsupported type of port-index for $index")
-    }
+  implicit val checkRamlWriter: Writes[CoreCheck, AppCheck] = Writes {  check =>
 
-    val partialCheck = Check(
-      intervalSeconds = check.interval.toSeconds.toInt,
-      timeoutSeconds = check.timeout.toSeconds.toInt,
-      delaySeconds = check.delay.toSeconds.toInt
-    )
     check match {
       case httpCheck: MesosHttpCheck =>
-        partialCheck.copy(
-          http = Some(HttpCheck(
-            endpoint = requireEndpoint(httpCheck.portIndex),
+        AppCheck(
+          intervalSeconds = check.interval.toSeconds.toInt,
+          timeoutSeconds = check.timeout.toSeconds.toInt,
+          delaySeconds = check.delay.toSeconds.toInt,
+          http = Some(AppHttpCheck(
             path = httpCheck.path,
-            scheme = Raml.toRaml(httpCheck.protocol)))
-        )
+            scheme = Raml.toRaml(httpCheck.protocol),
+            port = httpCheck.port,
+            // TODO: fix portindex
+            portIndex = None)),
+          tcp = None,
+          exec = None)
       case tcpCheck: MesosTcpCheck =>
-        partialCheck.copy(
-          tcp = Some(TcpCheck(
-            endpoint = requireEndpoint(tcpCheck.portIndex)
-          ))
-        )
+        AppCheck(
+          intervalSeconds = check.interval.toSeconds.toInt,
+          timeoutSeconds = check.timeout.toSeconds.toInt,
+          delaySeconds = check.delay.toSeconds.toInt,
+          http = None,
+          tcp = Some(AppTcpCheck(
+            port = tcpCheck.port,
+            // TODO: fix portindex
+            portIndex = None)),
+          exec = None)
       case cmdCheck: MesosCommandCheck =>
-        partialCheck.copy(
-          exec = Some(CommandCheck(
-            command = cmdCheck.command match {
-              case cmd: state.Command => ShellCommand(cmd.value)
-              case argv: state.ArgvList => ArgvCommand(argv.value)
-            }
-          ))
+        AppCheck(
+          intervalSeconds = check.interval.toSeconds.toInt,
+          timeoutSeconds = check.timeout.toSeconds.toInt,
+          delaySeconds = check.delay.toSeconds.toInt,
+          http = None,
+          tcp = None,
+          exec = Some(Raml.toRaml(cmdCheck.command))
         )
+    }
+  }
+
+  implicit val checkProtoRamlWriter: Writes[Protos.CheckDefinition, AppCheck] = Writes { check =>
+
+    val prototype = AppCheck(
+      intervalSeconds = if (check.hasIntervalSeconds) check.getIntervalSeconds else AppCheck.DefaultIntervalSeconds,
+      timeoutSeconds = if (check.hasTimeoutSeconds) check.getTimeoutSeconds else AppCheck.DefaultTimeoutSeconds,
+      delaySeconds = if (check.hasDelaySeconds) check.getDelaySeconds else AppCheck.DefaultDelaySeconds
+    )
+
+    check.getProtocol match {
+      case CheckDefinition.Protocol.COMMAND => prototype.copy(
+        exec = Some(CommandCheck(ShellCommand(check.getCommand.getValue)))
+      )
+      case CheckDefinition.Protocol.HTTP => prototype.copy(
+        http = Some(AppHttpCheck(
+          portIndex = if (check.hasPortIndex) Some(check.getPortIndex) else None,
+          port = if (check.hasPort) Some(check.getPort) else None,
+          path = if (check.hasPath) Some(check.getPath) else None))
+      )
+      case CheckDefinition.Protocol.TCP => prototype.copy(
+        tcp = Some(AppTcpCheck(
+          portIndex = if (check.hasPortIndex) Some(check.getPortIndex) else None,
+          port = if (check.hasPort) Some(check.getPort) else None))
+      )
     }
   }
 }
