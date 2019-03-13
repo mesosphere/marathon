@@ -61,6 +61,7 @@ async def sse_events():
     url = dcos_url_path('service/marathon/v2/events')
     headers = {'Authorization': 'token={}'.format(dcos_acs_token()),
                'Accept': 'text/event-stream'}
+    logger.info('Fetching events from %s', url)
 
     ssl_context = get_ssl_context()
     verify_ssl = ssl_context is not None

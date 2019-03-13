@@ -91,7 +91,7 @@ def teardown_module(module):
 @masters(3)
 def test_marathon_delete_leader(marathon_service_name):
     original_leader = marathon_leader_ip()
-    print('leader: {}'.format(original_leader))
+    logger.info('leader: %s', original_leader)
     common.abdicate_marathon_leader()
 
     wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
@@ -102,7 +102,7 @@ def test_marathon_delete_leader(marathon_service_name):
 @masters(3)
 def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     original_leader = marathon_leader_ip()
-    print('leader: {}'.format(original_leader))
+    logger.info('leader: %s', original_leader)
 
     app_def = apps.sleep_app()
     app_id = app_def['id']
@@ -318,9 +318,9 @@ def test_marathon_backup_and_restore_leader(marathon_service_name):
 
     # Abdicate the leader with backup and restore
     original_leader = marathon_leader_ip()
-    print('leader: {}'.format(original_leader))
+    logger.info('leader: %s', original_leader)
     params = '?backup={}&restore={}'.format(backup_url, backup_url)
-    print('DELETE /v2/leader{}'.format(params))
+    logger.info('DELETE /v2/leader%s', params)
     common.abdicate_marathon_leader(params)
 
     # Wait for new leader (but same master server) to be up and ready
@@ -353,7 +353,7 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
     backup_url2 = 'file://{}/{}'.format(backup_dir, backup_file2)
 
     original_leader = marathon_leader_ip()
-    print('leader: {}'.format(original_leader))
+    logger.info('leader: %s', original_leader)
 
     app_def = apps.sleep_app()
     app_id = app_def['id']
@@ -404,9 +404,9 @@ def test_marathon_backup_and_check_apps(marathon_service_name):
 
     # Abdicate the leader with backup
     original_leader = marathon_leader_ip()
-    print('leader: {}'.format(original_leader))
+    logger.info('leader: %s', original_leader)
     params = '?backup={}'.format(backup_url2)
-    print('DELETE /v2/leader{}'.format(params))
+    logger.info('DELETE /v2/leader%s', params)
     common.abdicate_marathon_leader(params)
 
     wait_for_service_endpoint(marathon_service_name, timedelta(minutes=5).total_seconds(), path="ping")
@@ -601,7 +601,7 @@ def test_app_inaccessible_secret_env_var():
     with pytest.raises(requests.HTTPError) as excinfo:
         client.add_app(app_def)
 
-    print('An app with an inaccessible secret could not be deployed because: {}'.format(excinfo.value))
+    logger.info('An app with an inaccessible secret could not be deployed because: %s', excinfo.value)
     assert excinfo.value.response.status_code == 422
     assert 'Secret {} is not accessible'.format(secret_name) in excinfo.value.response.text
 
@@ -647,7 +647,7 @@ def test_pod_inaccessible_secret_env_var():
     with pytest.raises(requests.HTTPError) as excinfo:
         client.add_pod(pod_def)
 
-    print('A pod with an inaccessible secret could not be deployed because: {}'.format(excinfo.value))
+    logger.info('A pod with an inaccessible secret could not be deployed because: %s', excinfo.value)
     assert excinfo.value.response.status_code == 422
     assert 'Secret {} is not accessible'.format(secret_name) in excinfo.value.response.text
 
