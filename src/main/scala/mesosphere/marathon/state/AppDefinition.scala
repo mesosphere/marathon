@@ -490,6 +490,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     validator[AppDefinition] { app =>
       app.id is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
       app.dependencies is every(PathId.pathIdValidator)
+
     } and validBasicAppDefinition(enabledFeatures) and pluginValidators
 
   private def pluginValidators(implicit pluginManager: PluginManager): Validator[AppDefinition] =
@@ -509,6 +510,16 @@ object AppDefinition extends GeneralPurposeCombinators {
         case _ => false
       }
       (cmd ^ args) || (!(cmd && args) && container)
+    }
+
+  private val containsNoChecksWithDocker: Validator[AppDefinition] =
+    isTrue("AppDefinition must not use 'checks' if using docker") { app =>
+      val dockerContainer = app.container.exists {
+        case _: Container.Docker => true
+        case _ => false
+      }
+      val check = app.check.isDefined
+      !(check && dockerContainer)
     }
 
   private val complyWithMigrationAPI: Validator[AppDefinition] =
@@ -575,6 +586,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef must containsCmdArgsOrContainer
+    appDef must containsNoChecksWithDocker
     appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
     appDef must haveAtMostOneMesosHealthCheck
     if (appDef.check.isDefined) {
