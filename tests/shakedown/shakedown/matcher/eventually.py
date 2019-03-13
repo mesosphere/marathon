@@ -9,6 +9,7 @@ class Eventually(Matcher):
         self._matcher = matcher
         self._wait_fixed = wait_fixed
         self._max_attempts = max_attempts
+        self._last_result = None
 
     def match(self, item):
         assert callable(item), "The actual value is not callable."
@@ -17,12 +18,16 @@ class Eventually(Matcher):
                retry=(retry_if_result(lambda r: r.is_match is not True) | retry_if_exception_type()))
         def try_match():
             actual = item()
-            return self._matcher.match(actual)
+            self._last_result = self._matcher.match(actual)
+            return stop_after_attempt
 
         try:
             return try_match()
         except RetryError as e:
-            explanation = "after {} retries {}".format(e.last_attempt.attempt_number, "fix me")
+            if self._last_result is not None:
+                explanation = "after {} retries {}".format(e.last_attempt.attempt_number, self._last_result.explanation)
+            else:
+                explanation = "after {} retries {}".format(e.last_attempt.attempt_number, e)
             return unmatched(explanation)
 
     def describe(self):

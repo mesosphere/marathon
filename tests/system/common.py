@@ -667,7 +667,6 @@ def agent_hostname_by_id(agent_id):
     return None
 
 
-@retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
 def __marathon_leadership_changed_in_mesosDNS(original_leader):
     """ This method uses mesosDNS to verify that the leadership changed.
         We have to retry because mesosDNS checks for changes only every 30s.
@@ -681,7 +680,6 @@ def __marathon_leadership_changed_in_mesosDNS(original_leader):
     return current_leader
 
 
-@retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
 def __marathon_leadership_changed_in_marathon_api(original_leader):
     """ This method uses Marathon API to figure out that leadership changed.
         We have to retry here because leader election takes time and what might happen is that some nodes might
@@ -694,7 +692,7 @@ def __marathon_leadership_changed_in_marathon_api(original_leader):
     return current_leader
 
 
-@retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
+@retry(wait=wait_fixed(1), stop=stop_after_attempt(300))
 def assert_marathon_leadership_changed(original_leader):
     """ Verifies leadership changed both by reading v2/leader as well as mesosDNS.
     """
