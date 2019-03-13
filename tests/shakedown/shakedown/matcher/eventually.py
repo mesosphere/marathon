@@ -19,7 +19,7 @@ class Eventually(Matcher):
         def try_match():
             actual = item()
             self._last_result = self._matcher.match(actual)
-            return stop_after_attempt
+            return self._last_result
 
         try:
             return try_match()
