@@ -121,4 +121,4 @@ def archive_sandboxes():
         if status:
             copy_file_from_agent(agent, file_name)
         else:
-            logger.warning('Failed to tarball the sandbox from the agent={}, output={}'.format(agent, output))
+            logger.warning('Failed to tarball the sandbox from the agent=%s, output=%s', agent, output)
