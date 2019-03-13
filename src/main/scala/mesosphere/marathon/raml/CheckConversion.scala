@@ -169,14 +169,14 @@ trait CheckConversion {
       )
       case CheckDefinition.Protocol.HTTP => prototype.copy(
         http = Some(AppHttpCheck(
-          portIndex = if (check.hasPortIndex) Some(check.getPortIndex) else None,
-          port = if (check.hasPort) Some(check.getPort) else None,
-          path = if (check.hasPath) Some(check.getPath) else None))
+          portIndex = if (check.hasPortIndex) Some(check.getPortIndex) else CheckWithPort.DefaultPortIndex,
+          port = if (check.hasPort) Some(check.getPort) else CheckWithPort.DefaultPort,
+          path = if (check.hasPath) Some(check.getPath) else MesosHttpCheck.DefaultPath))
       )
       case CheckDefinition.Protocol.TCP => prototype.copy(
         tcp = Some(AppTcpCheck(
-          portIndex = if (check.hasPortIndex) Some(check.getPortIndex) else None,
-          port = if (check.hasPort) Some(check.getPort) else None))
+          portIndex = if (check.hasPortIndex) Some(check.getPortIndex) else CheckWithPort.DefaultPortIndex,
+          port = if (check.hasPort) Some(check.getPort) else CheckWithPort.DefaultPort))
       )
     }
   }

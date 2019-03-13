@@ -179,7 +179,7 @@ object MesosHttpCheck {
       path = if (proto.hasPath) Some(proto.getPath) else DefaultPath,
       portIndex = PortReference.fromProto(proto),
       port = if (proto.hasPort) Some(proto.getPort) else CheckWithPort.DefaultPort,
-      protocol = if( proto.hasProtocol) proto.getProtocol else DefaultProtocol
+      protocol = if (proto.hasProtocol) proto.getProtocol else DefaultProtocol
     )
 }
 
