@@ -70,7 +70,7 @@ trait CheckConversion {
         timeout = timeout.seconds,
         path = httpCheck.path,
         protocol = Raml.fromRaml[HttpScheme, CheckDefinition.Protocol](httpCheck.scheme),
-        //        portIndex = Some(PortReference(httpCheck.portIndex)),
+        portIndex = httpCheck.portIndex.map(PortReference(_)),
         port = httpCheck.port,
         delay = delay.seconds,
       )
@@ -80,7 +80,7 @@ trait CheckConversion {
         timeout = timeout.seconds,
         delay = delay.seconds,
         port = tcpCheck.port,
-        //        portIndex = Some(PortReference(tcpCheck.portIndex))
+        portIndex = tcpCheck.portIndex.map(PortReference(_))
       )
     case AppCheck(None, None, Some(execCheck), interval, timeout, delay) =>
       MesosCommandCheck(
