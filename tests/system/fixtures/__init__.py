@@ -56,7 +56,6 @@ def parent_group(request):
 
 
 @pytest.fixture
-@retry(before=before_log(logger, logging.DEBUG))
 async def sse_events():
     url = dcos_url_path('service/marathon/v2/events')
     headers = {'Authorization': 'token={}'.format(dcos_acs_token()),
