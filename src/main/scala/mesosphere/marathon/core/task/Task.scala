@@ -115,7 +115,6 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
       // case 4: health or state updated
       case _ =>
         // TODO(PODS): strange to use Condition here
-        //        newMesosStatus.hasReason for checks
         updatedHealthOrState(status.mesosStatus, newMesosStatus).map { newTaskStatus =>
           val updatedNetworkInfo = status.networkInfo.update(newMesosStatus)
           val updatedStatus = status.copy(

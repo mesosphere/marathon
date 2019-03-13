@@ -9,6 +9,15 @@ import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.duration._
 
+/**
+  * Check is a Type to help with type conversions to and from different protos.
+  * It mirrors closely to HealthCheck which does the same thing.
+  * Check is the most abstract Check.   The appDef works with MesosChecks.
+  *
+  * toProto takes this data structure into the CheckDefinition proto defined in Marathon used for storage.
+  * toMesos takes this data structure into Mesos CheckInfo for working with TaskBuilder
+  * Conversations to and from raml is in CheckConversion class.
+  */
 sealed trait Check {
   def delay: FiniteDuration
   def interval: FiniteDuration
@@ -167,10 +176,10 @@ object MesosHttpCheck {
       timeout = proto.getTimeoutSeconds.seconds,
       interval = proto.getIntervalSeconds.seconds,
       delay = proto.getDelaySeconds.seconds,
-      path = if (proto.hasPath) Some(proto.getPath) else None,
+      path = if (proto.hasPath) Some(proto.getPath) else DefaultPath,
       portIndex = PortReference.fromProto(proto),
-      port = if (proto.hasPort) Some(proto.getPort) else None,
-      protocol = proto.getProtocol
+      port = if (proto.hasPort) Some(proto.getPort) else CheckWithPort.DefaultPort,
+      protocol = if( proto.hasProtocol) proto.getProtocol else DefaultProtocol
     )
 }
 

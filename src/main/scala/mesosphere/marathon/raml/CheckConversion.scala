@@ -7,6 +7,9 @@ import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.duration._
 
+/**
+  * Trait used to provide conversion from raml to Check or MesosCheck type (which is used to convert to protobuf)
+  */
 trait CheckConversion {
 
   implicit val commandCheckWrites: Writes[state.Executable, CommandCheck] = Writes {
