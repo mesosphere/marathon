@@ -2,11 +2,12 @@ package mesosphere.marathon
 package api.v2.json
 
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.api.v2.{AppNormalization, AppHelpers}
+import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
+import mesosphere.marathon.core.check.MesosCommandCheck
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
-import mesosphere.marathon.raml.{Raml, Resources, SecretDef}
+import mesosphere.marathon.raml.{Raml, Resources, SecretDef, ShellCommand}
 import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
@@ -213,6 +214,20 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       )
 
       validator(app) shouldNot haveViolations("/" -> "GPU resources only work with the Mesos containerizer")
+
+      app = correct.copy(
+        check = Some(MesosCommandCheck(command = Command("foo"))),
+        container = Some(Container.Docker()))
+
+      validator(app) should haveViolations("/" -> "AppDefinition must not use 'checks' if using docker")
+
+      app = correct.copy(
+        cmd = Some("cmd"),
+        check = Some(MesosCommandCheck(command = Command("foo"))),
+        container = Some(Container.Mesos())
+      )
+
+      validator(app) shouldNot haveViolations("/" -> "Validation succeeded, had no violations")
     }
 
     "SerializationRoundtrip empty" in {
@@ -249,6 +264,32 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         readResult2)
     }
 
+    "Reading app definition with command check" in {
+      val json2 =
+        """
+      {
+        "id": "toggle",
+        "cmd": "python toggle.py $PORT0",
+        "cpus": 0.2,
+        "disk": 0.0,
+        "check": {
+          "exec": {
+            "command": {
+              "shell": "ls"
+            }
+          }
+        },
+        "instances": 2,
+        "mem": 32.0,
+        "ports": [0],
+        "uris": ["http://downloads.mesosphere.com/misc/toggle.tgz"]
+      }
+      """
+      val readResult = fromJson(json2)
+      assert(readResult.check.nonEmpty, readResult)
+      assert(readResult.check.get == MesosCommandCheck(command = Command("ls")), readResult)
+    }
+
     "SerializationRoundtrip with complex example" in {
       val app3 = raml.App(
         id = "/prod/product/my-app",
@@ -267,6 +308,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         maxLaunchDelaySeconds = 180,
         container = Some(raml.Container(`type` = raml.EngineType.Docker, docker = Some(raml.DockerContainer(image = "group/image")))),
         healthChecks = Set(raml.AppHealthCheck(protocol = raml.AppHealthCheckProtocol.Http, portIndex = Some(0))),
+        check = Some(raml.AppCheck(exec = Some(raml.CommandCheck(raml.ShellCommand("ls"))))),
         dependencies = Set("/prod/product/backend"),
         upgradeStrategy = Some(raml.UpgradeStrategy(minimumHealthCapacity = 0.75, maximumOverCapacity = 1.0))
       )
