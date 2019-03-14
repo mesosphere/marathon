@@ -61,7 +61,7 @@ case class AppDefinition(
 
     healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
 
-    check: Option[Check] = AppDefinition.DefaultChecks,
+    check: Option[Check] = AppDefinition.DefaultCheck,
 
     readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
@@ -430,7 +430,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultHealthChecks = Set.empty[HealthCheck]
 
-  val DefaultChecks: Option[Check] = None
+  val DefaultCheck: Option[Check] = None
 
   val DefaultReadinessChecks = Seq.empty[ReadinessCheck]
 

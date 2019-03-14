@@ -104,7 +104,7 @@ case class MesosCommandCheck(
       .build
   }
 
-  override def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): Option[MesosProtos.CheckInfo] = {
+  override def toMesos(portAssignments: Seq[PortAssignment]): Option[MesosProtos.CheckInfo] = {
     Option(MesosProtos.CheckInfo.newBuilder
       .setType(MesosProtos.CheckInfo.Type.COMMAND)
       .setIntervalSeconds(this.interval.toSeconds.toDouble)

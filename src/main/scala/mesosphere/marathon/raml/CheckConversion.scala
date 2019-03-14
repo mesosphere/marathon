@@ -25,28 +25,26 @@ trait CheckConversion {
     case p => throw new IllegalArgumentException(s"cannot convert check protocol $p to raml")
   }
 
-
   /*
   Used for pods checks
    */
   implicit val checkRamlReader: Reads[Check, MesosCheck] = Reads {
     case Check(Some(httpCheck), None, None, interval, timeout, delay) =>
-//      val portIndex = httpCheck.portIndex.collect{ case index: PortReference.ByIndex => index.value }
 
       MesosHttpCheck(
         interval = interval.seconds,
         timeout = timeout.seconds,
         path = httpCheck.path,
         protocol = Raml.fromRaml[HttpScheme, CheckDefinition.Protocol](httpCheck.scheme),
-//        portIndex = Some(PortReference(httpCheck.portIndex)),
-        delay = delay.seconds,
+        // TODO: (PODs) will need to manage portIndex and named endpt references
+        delay = delay.seconds
       )
-    case Check(None, Some(tcpCheck),  None, interval, timeout, delay) =>
+    case Check(None, Some(tcpCheck), None, interval, timeout, delay) =>
       MesosTcpCheck(
         interval = interval.seconds,
         timeout = timeout.seconds,
-        delay = delay.seconds,
-//        portIndex = Some(PortReference(tcpCheck.portIndex))
+        delay = delay.seconds
+      // TODO: (PODs) will need to manage portIndex and named endpt references
       )
     case Check(None, None, Some(execCheck), interval, timeout, delay) =>
       MesosCommandCheck(
@@ -64,7 +62,6 @@ trait CheckConversion {
    */
   implicit val appCheckRamlReader: Reads[AppCheck, MesosCheck] = Reads {
     case AppCheck(Some(httpCheck), None, None, interval, timeout, delay) =>
-      //      val portIndex = httpCheck.portIndex.collect{ case index: PortReference.ByIndex => index.value }
       MesosHttpCheck(
         interval = interval.seconds,
         timeout = timeout.seconds,
@@ -72,9 +69,9 @@ trait CheckConversion {
         protocol = Raml.fromRaml[HttpScheme, CheckDefinition.Protocol](httpCheck.scheme),
         portIndex = httpCheck.portIndex.map(PortReference(_)),
         port = httpCheck.port,
-        delay = delay.seconds,
+        delay = delay.seconds
       )
-    case AppCheck(None, Some(tcpCheck),  None, interval, timeout, delay) =>
+    case AppCheck(None, Some(tcpCheck), None, interval, timeout, delay) =>
       MesosTcpCheck(
         interval = interval.seconds,
         timeout = timeout.seconds,
@@ -103,7 +100,7 @@ trait CheckConversion {
     else
       None
 
-    val httpCheckStatus: Option[HttpCheckStatus] =  if (checkStatus.hasHttp && checkStatus.getHttp.hasStatusCode)
+    val httpCheckStatus: Option[HttpCheckStatus] = if (checkStatus.hasHttp && checkStatus.getHttp.hasStatusCode)
       Some(HttpCheckStatus(checkStatus.getHttp.getStatusCode))
     else
       None
@@ -116,11 +113,11 @@ trait CheckConversion {
     CheckStatus(httpCheckStatus, tcpCheckStatus, commandCheckStatus)
   }
 
-  implicit val checkRamlWriter: Writes[CoreCheck, AppCheck] = Writes {  check =>
+  implicit val checkRamlWriter: Writes[CoreCheck, AppCheck] = Writes { check =>
 
     check match {
       case httpCheck: MesosHttpCheck =>
-        val portIndex  = httpCheck.portIndex.collect { case index: PortReference.ByIndex => index.value}
+        val portIndex = httpCheck.portIndex.collect { case index: PortReference.ByIndex => index.value }
 
         AppCheck(
           intervalSeconds = check.interval.toSeconds.toInt,
@@ -134,7 +131,7 @@ trait CheckConversion {
           tcp = None,
           exec = None)
       case tcpCheck: MesosTcpCheck =>
-        val portIndex  = tcpCheck.portIndex.collect { case index: PortReference.ByIndex => index.value}
+        val portIndex = tcpCheck.portIndex.collect { case index: PortReference.ByIndex => index.value }
 
         AppCheck(
           intervalSeconds = check.interval.toSeconds.toInt,
