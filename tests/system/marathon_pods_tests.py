@@ -617,6 +617,8 @@ def test_pod_with_persistent_volume_recovers():
     path2 = tasks[1]['container']['volumes'][0]['container_path']
     logger.info('Deployd two containers on {}:{}/{} and {}:{}/{}'.format(host, port1, path1, host, port2, path2))
 
+    # Container with the name 'container1' appends its taskId to the file. So we search for the
+    # taskId of that container which is not always the tasks[0]
     expected_data2 = next((t['id'] for t in tasks if t['name'] == 'container1'), None)
     assert expected_data2, f"Hasn't found a container with the name 'container1' in the pod {tasks}"
 
