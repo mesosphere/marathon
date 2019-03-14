@@ -1,9 +1,5 @@
 #!/usr/bin/env amm
 
-interp.load.ivy("org.scalaj" %% "scalaj-http" % "2.3.0")
-
-@
-
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 import scala.util.control.NonFatal
@@ -106,7 +102,7 @@ def killStaleTestProcesses(): Unit = {
 }
 
 def installDcosCli(): Unit = {
-  val command = root / 'usr / 'local / 'bin / 'dcos
+  val command = Path.root / 'usr / 'local / 'bin / 'dcos
 
   if( ! (exists! command)) {
     val os = %%("uname", "-s").out.string.trim.toLowerCase
