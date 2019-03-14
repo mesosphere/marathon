@@ -520,6 +520,12 @@ def test_pod_with_persistent_volume():
     tasks = common.get_pod_tasks(pod_id)
 
     host = common.running_status_network_info(tasks[0]['statuses'])['ip_addresses'][0]['ip_address']
+
+    # Container with the name 'container1' appends its taskId to the file. So we search for the
+    # taskId of that container which is not always the tasks[0]
+    expected_data = next((t['id'] for t in tasks if t['name'] == 'container1'), None)
+    assert expected_data, f"Hasn't found a container with the name 'container1' in the pod {tasks}"
+
     port1 = tasks[0]['discovery']['ports']['ports'][0]["number"]
     port2 = tasks[1]['discovery']['ports']['ports'][0]["number"]
     path1 = tasks[0]['container']['volumes'][0]['container_path']
@@ -527,14 +533,14 @@ def test_pod_with_persistent_volume():
     logger.info('Deployd two containers on {}:{}/{} and {}:{}/{}'.format(host, port1, path1, host, port2, path2))
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=common.ignore_exception)
-    def check_http_endpoint(port, path):
+    def check_http_endpoint(port, path, expected):
         cmd = "curl {}:{}/{}/foo".format(host, port, path)
         run, data = run_command_on_master(cmd)
         assert run, "{} did not succeed".format(cmd)
-        assert data == 'hello\n', "'{}' was not equal to hello\\n".format(data)
+        assert expected in data, "'{}' was not found in '{}'".format(data, expected)
 
-    check_http_endpoint(port1, path1)
-    check_http_endpoint(port2, path2)
+    check_http_endpoint(port1, path1, expected_data)
+    check_http_endpoint(port2, path2, expected_data)
 
 
 @common.marathon_1_6
@@ -560,6 +566,22 @@ def test_pod_with_persistent_volume_recovers():
 
     task_id1 = tasks[0]['id']
     task_id2 = tasks[1]['id']
+    port1 = tasks[0]['discovery']['ports']['ports'][0]["number"]
+    path1 = tasks[0]['container']['volumes'][0]['container_path']
+
+    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    def check_data(port, path, expected):
+        cmd = "curl {}:{}/{}/foo".format(host, port, path)
+        run, data = run_command_on_master(cmd)
+        assert run, "{} did not succeed".format(cmd)
+        assert expected in data, "{} not found in '{}'n".format(expected, data)
+
+    # Container with the name 'container1' appends its taskId to the file. So we search for the
+    # taskId of that container which is not always the tasks[0]
+    expected_data1 = next((t['id'] for t in tasks if t['name'] == 'container1'), None)
+    assert expected_data1, f"Hasn't found a container with the name 'container1' in the pod {tasks}"
+
+    check_data(port1, path1, expected_data1)
 
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def kill_task(host, pattern):
@@ -595,12 +617,10 @@ def test_pod_with_persistent_volume_recovers():
     path2 = tasks[1]['container']['volumes'][0]['container_path']
     logger.info('Deployd two containers on {}:{}/{} and {}:{}/{}'.format(host, port1, path1, host, port2, path2))
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
-    def check_data(port, path):
-        cmd = "curl {}:{}/{}/foo".format(host, port, path)
-        run, data = run_command_on_master(cmd)
-        assert run, "{} did not succeed".format(cmd)
-        assert 'hello\nhello\n' in data, "'hello\nhello\n' not found in '{}'n".format(data)
+    # Container with the name 'container1' appends its taskId to the file. So we search for the
+    # taskId of that container which is not always the tasks[0]
+    expected_data2 = next((t['id'] for t in tasks if t['name'] == 'container1'), None)
+    assert expected_data2, f"Hasn't found a container with the name 'container1' in the pod {tasks}"
 
-    check_data(port1, path1)
-    check_data(port2, path2)
+    check_data(port1, path1, f"{expected_data1}\n{expected_data2}\n")
+    check_data(port2, path2, f"{expected_data1}\n{expected_data2}\n")

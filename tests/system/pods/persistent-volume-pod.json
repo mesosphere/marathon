@@ -26,7 +26,7 @@
       "name": "container1",
       "exec": {
         "command": {
-          "shell": "cd $MESOS_SANDBOX && echo 'hello' >> pst1/foo && /opt/mesosphere/bin/python -m http.server $EP_HOST_HTTPCT1"
+          "shell": "cd $MESOS_SANDBOX && echo \"$MESOS_TASK_ID\" >> pst1/foo && /opt/mesosphere/bin/python -m http.server $EP_HOST_HTTPCT1"
         }
       },
       "resources": {
