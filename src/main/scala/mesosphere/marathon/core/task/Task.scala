@@ -312,7 +312,7 @@ object Task {
   object Id {
 
     object Names {
-      val anonymousContainer = "_anon" // presence of `$` is important since it's illegal for a real container name!
+      val anonymousContainer = "_anon" // presence of `_` is important since it's illegal for a real container name!
     }
     // Regular expression for matching taskIds before instance-era
     private val LegacyTaskIdRegex = """^(.+)([\._])([^_\.]+)$""".r
