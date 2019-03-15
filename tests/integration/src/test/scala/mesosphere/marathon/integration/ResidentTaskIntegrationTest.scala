@@ -2,6 +2,7 @@ package mesosphere.marathon
 package integration
 
 import mesosphere.AkkaIntegrationTest
+import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.MesosFacade.{ITMesosState, ITResources}
@@ -28,11 +29,16 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
       When("A task is launched")
       val result = createAsynchronously(app)
+      val deploymentId = result.originalResponse.headers.find(_.name == RestResource.DeploymentHeader).map(_.value)
 
       Then("It writes successfully to the persistent volume and finishes")
-      waitForStatusUpdates(StatusUpdate.TASK_RUNNING)
-      waitForDeployment(result)
-      waitForStatusUpdates(StatusUpdate.TASK_FINISHED)
+      // Since the task fails immediately after it starts, the order of event seen on the event bus is arbitrary
+      val waitingFor = Map[String, CallbackEvent => Boolean](
+        "status_update_event" -> (_.taskStatus == "TASK_RUNNING"),
+        "status_update_event" -> (_.taskStatus == "TASK_FINISHED"),
+        "deployment_success" -> (_.id == deploymentId.value)
+      )
+      waitForEventsWith(s"waiting for the task to start and finish and ${app.id} to be successfully deployed", waitingFor)
     }
 
     "resident task can be deployed along with constraints" in new Fixture {
