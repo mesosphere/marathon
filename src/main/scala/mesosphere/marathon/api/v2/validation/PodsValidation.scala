@@ -9,6 +9,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{PathId, ResourceRole, RootGroup}
@@ -156,6 +157,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
 
   def containerValidator(pod: Pod, enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[PodContainer] =
     validator[PodContainer] { container =>
+      container.name is notEqualTo(Task.Id.Names.anonymousContainer)
       container.resources is resourceValidator
       container.endpoints is every(endpointValidator(pod.networks))
       container.image is optional(imageValidator(enabledFeatures, pod.secrets))
