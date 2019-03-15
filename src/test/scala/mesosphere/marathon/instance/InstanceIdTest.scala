@@ -25,7 +25,7 @@ class InstanceIdTest extends UnitTest with Inside {
       val appId = "/test/foo/bla/rest".toPath
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
-      taskId.idString should be(instanceId.idString + ".$anon.1")
+      taskId.idString should be(instanceId.idString + "._anon.1")
     }
 
     "be converted to TaskIds with container name" in {
@@ -52,7 +52,7 @@ class InstanceIdTest extends UnitTest with Inside {
     "be converted from TaskIds without a container name" in {
       val appId = "/test/foo/bla/rest".toPath
       val uuid = UUID.fromString("b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6")
-      val parsedTaskId = Task.Id.parse("test_foo_bla_rest.instance-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.$anon")
+      val parsedTaskId = Task.Id.parse("test_foo_bla_rest.instance-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6._anon")
       parsedTaskId.runSpecId should be(appId)
       parsedTaskId.instanceId should be(Instance.Id(appId, PrefixInstance, uuid))
       inside(parsedTaskId) {

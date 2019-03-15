@@ -263,8 +263,8 @@ object Task {
     * name. This is the container name specified in the containers section of the run spec.
     *
     * Examples:
-    *  - "myGroup_myApp.marathon-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.$anon"
-    *  - "myGroup_myApp.instance-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.$anon"
+    *  - "myGroup_myApp.marathon-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6._anon"
+    *  - "myGroup_myApp.instance-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6._anon"
     *  - "myGroup_myApp.marathon-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.rails"
     *  - "myGroup_myApp.instance-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.rails"
     *
@@ -289,8 +289,8 @@ object Task {
     * The ids match [[Task.Id.TaskIdWithInstanceIdAndIncarnationRegex]] and include a launch attempt.
     *
     * Examples:
-    *  - "myGroup_myApp.marathon-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.$anon.1"
-    *  - "myGroup_myApp.instance-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.$anon.3"
+    *  - "myGroup_myApp.marathon-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6._anon.1"
+    *  - "myGroup_myApp.instance-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6._anon.3"
     *  - "myGroup_myApp.marathon-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.rails.2"
     *  - "myGroup_myApp.instance-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.rails.42"
     *
@@ -312,15 +312,15 @@ object Task {
   object Id {
 
     object Names {
-      val anonymousContainer = "$anon" // presence of `$` is important since it's illegal for a real container name!
+      val anonymousContainer = "_anon" // presence of `$` is important since it's illegal for a real container name!
     }
     // Regular expression for matching taskIds before instance-era
     private val LegacyTaskIdRegex = """^(.+)([\._])([^_\.]+)$""".r
     private val ResidentTaskIdRegex = """^(.+)([\._])([^_\.]+)(\.)(\d+)$""".r
 
     // Regular expression for matching taskIds since instance-era
-    private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)$""".r
-    private val TaskIdWithInstanceIdAndIncarnationRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^_\.]+)\.(\d+)$""".r
+    private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^\.]+)$""".r
+    private val TaskIdWithInstanceIdAndIncarnationRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^\.]+)\.(\d+)$""".r
 
     /**
       * Parse instance and task id from idString.
