@@ -8,7 +8,7 @@ import mesosphere.mesos.protos.Implicits._
 
 import scala.concurrent.duration._
 
-trait AppConversion extends DefaultConversions with ConstraintConversion with EnvVarConversion with HealthCheckConversion
+trait AppConversion extends DefaultConversions with CheckConversion with ConstraintConversion with EnvVarConversion with HealthCheckConversion
   with NetworkConversion with ReadinessConversions with SecretConversion with VolumeConversion
   with UnreachableStrategyConversion with KillSelectionConversion {
 
@@ -51,6 +51,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       fetch = app.fetch.toRaml,
       gpus = app.resources.gpus,
       healthChecks = app.healthChecks.toRaml,
+      check = app.check.map(_.toRaml),
       instances = app.instances,
       ipAddress = None, // deprecated field
       labels = app.labels,
@@ -152,6 +153,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       backoffStrategy = backoffStrategy,
       container = app.container.map(Raml.fromRaml(_)),
       healthChecks = app.healthChecks.map(Raml.fromRaml(_)),
+      check = app.check.map(Raml.fromRaml(_)),
       readinessChecks = app.readinessChecks.map(Raml.fromRaml(_)),
       taskKillGracePeriod = app.taskKillGracePeriodSeconds.map(_.second),
       dependencies = app.dependencies.map(PathId(_))(collection.breakOut),
@@ -194,6 +196,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       maxLaunchDelaySeconds = update.maxLaunchDelaySeconds.getOrElse(app.maxLaunchDelaySeconds),
       container = update.container.orElse(app.container),
       healthChecks = update.healthChecks.getOrElse(app.healthChecks),
+      check = update.check.orElse(app.check),
       readinessChecks = update.readinessChecks.getOrElse(app.readinessChecks),
       dependencies = update.dependencies.getOrElse(app.dependencies),
       upgradeStrategy = update.upgradeStrategy.orElse(app.upgradeStrategy),
@@ -336,6 +339,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       executor = service.whenOrElse(_.hasExecutor, _.getExecutor, App.DefaultExecutor),
       fetch = if (service.hasCmd && service.getCmd.getUrisCount > 0) service.getCmd.getUrisList.toRaml else App.DefaultFetch,
       healthChecks = service.whenOrElse(_.getHealthChecksCount > 0, _.getHealthChecksList.toRaml.to[Set], App.DefaultHealthChecks),
+      check = if (service.hasCheck) Option(service.getCheck.toRaml) else App.DefaultCheck,
       instances = service.whenOrElse(_.hasInstances, _.getInstances, App.DefaultInstances),
       labels = service.getLabelsList.map { label => label.getKey -> label.getValue }(collection.breakOut),
       maxLaunchDelaySeconds = service.whenOrElse(_.hasMaxLaunchDelay, m => (m.getMaxLaunchDelay / 1000L).toInt, App.DefaultMaxLaunchDelaySeconds),
@@ -402,6 +406,7 @@ trait AppConversion extends DefaultConversions with ConstraintConversion with En
       maxLaunchDelaySeconds = Some(app.maxLaunchDelaySeconds),
       container = app.container,
       healthChecks = Some(app.healthChecks),
+      check = app.check,
       readinessChecks = Some(app.readinessChecks),
       taskKillGracePeriodSeconds = app.taskKillGracePeriodSeconds,
       dependencies = Some(app.dependencies),

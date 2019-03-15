@@ -138,7 +138,8 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
     maybeCurrent match {
       case Some(current) =>
         val healthy = update.hasHealthy && (!current.hasHealthy || current.getHealthy != update.getHealthy)
-        val changed = healthy || current.getState != update.getState
+        val checkResultChanged = update.hasCheckStatus && (!current.hasCheckStatus || current.getCheckStatus != update.getCheckStatus)
+        val changed = healthy || checkResultChanged || current.getState != update.getState
         if (changed) Some(update) else None
       case None => Some(update)
     }
