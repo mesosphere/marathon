@@ -41,6 +41,10 @@ attaching to or detaching from the event stream.
 curl -H "Accept: text/event-stream"  <MARATHON_HOST>:<MARATHON_PORT>/v2/events?event_type=event_stream_detached\&event_type=event_stream_attached
 ```
 
+## Event ordering guarantees
+
+The events are emitted by asynchronous components inside of Marathon. Generally speaking, the ordering of events is not guaranteed. If one is wanting to replicate Marathon's state, the event stream should only be used as a cache-invalidation mechanism (pull snapshots, and then pull bits of state as the event stream says something related has changed).
+
 ## Event Types
 
 Below are example JSON bodies that are send by Marathon.
@@ -390,46 +394,6 @@ Fired when a new http callback subscriber is added or removed:
   "timestamp": "2014-03-01T23:29:30.158Z",
   "plan": {
     "id": "867ed450-f6a8-4d33-9b0e-e11c5513990b",
-    "original": {
-      "apps": [],
-      "dependencies": [],
-      "groups": [],
-      "id": "/",
-      "version": "2014-09-09T06:30:49.667Z"
-    },
-    "target": {
-      "apps": [
-        {
-          "args": [],
-          "backoffFactor": 1.15,
-          "backoffSeconds": 1,
-          "cmd": "sleep 30",
-          "constraints": [],
-          "container": null,
-          "cpus": 0.2,
-          "dependencies": [],
-          "disk": 0.0,
-          "env": {},
-          "executor": "",
-          "healthChecks": [],
-          "id": "/my-app",
-          "instances": 2,
-          "mem": 32.0,
-          "ports": [10001],
-          "requirePorts": false,
-          "upgradeStrategy": {
-              "minimumHealthCapacity": 1.0
-          },
-          "fetch": [],
-          "user": null,
-          "version": "2014-09-09T05:57:50.866Z"
-        }
-      ],
-      "dependencies": [],
-      "groups": [],
-      "id": "/",
-      "version": "2014-09-09T05:57:50.866Z"
-    },
     "steps": [
       {
         "action": "ScaleApplication",
@@ -455,46 +419,6 @@ Fired when a new http callback subscriber is added or removed:
   "timestamp": "2014-03-01T23:29:30.158Z",
   "plan": {
     "id": "867ed450-f6a8-4d33-9b0e-e11c5513990b",
-    "original": {
-      "apps": [],
-      "dependencies": [],
-      "groups": [],
-      "id": "/",
-      "version": "2014-09-09T06:30:49.667Z"
-    },
-    "target": {
-      "apps": [
-        {
-          "args": [],
-          "backoffFactor": 1.15,
-          "backoffSeconds": 1,
-          "cmd": "sleep 30",
-          "constraints": [],
-          "container": null,
-          "cpus": 0.2,
-          "dependencies": [],
-          "disk": 0.0,
-          "env": {},
-          "executor": "",
-          "healthChecks": [],
-          "id": "/my-app",
-          "instances": 2,
-          "mem": 32.0,
-          "ports": [10001],
-          "requirePorts": false,
-          "upgradeStrategy": {
-              "minimumHealthCapacity": 1.0
-          },
-          "fetch": [],
-          "user": null,
-          "version": "2014-09-09T05:57:50.866Z"
-        }
-      ],
-      "dependencies": [],
-      "groups": [],
-      "id": "/",
-      "version": "2014-09-09T05:57:50.866Z"
-    },
     "steps": [
       {
         "action": "ScaleApplication",
@@ -520,46 +444,6 @@ Fired when a new http callback subscriber is added or removed:
   "timestamp": "2014-03-01T23:29:30.158Z",
   "plan": {
     "id": "867ed450-f6a8-4d33-9b0e-e11c5513990b",
-    "original": {
-      "apps": [],
-      "dependencies": [],
-      "groups": [],
-      "id": "/",
-      "version": "2014-09-09T06:30:49.667Z"
-    },
-    "target": {
-      "apps": [
-        {
-          "args": [],
-          "backoffFactor": 1.15,
-          "backoffSeconds": 1,
-          "cmd": "sleep 30",
-          "constraints": [],
-          "container": null,
-          "cpus": 0.2,
-          "dependencies": [],
-          "disk": 0.0,
-          "env": {},
-          "executor": "",
-          "healthChecks": [],
-          "id": "/my-app",
-          "instances": 2,
-          "mem": 32.0,
-          "ports": [10001],
-          "requirePorts": false,
-          "upgradeStrategy": {
-              "minimumHealthCapacity": 1.0
-          },
-          "fetch": [],
-          "user": null,
-          "version": "2014-09-09T05:57:50.866Z"
-        }
-      ],
-      "dependencies": [],
-      "groups": [],
-      "id": "/",
-      "version": "2014-09-09T05:57:50.866Z"
-    },
     "steps": [
       {
         "action": "ScaleApplication",
