@@ -5,8 +5,6 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.check.{MesosCheck, MesosCommandCheck, MesosHttpCheck, MesosTcpCheck, Check => CoreCheck}
 import mesosphere.marathon.state.Command
 
-import scala.concurrent.duration._
-
 class CheckConversionTest extends UnitTest {
 
   def convertToProtobufThenToRAML(check: => MesosCheck, raml: => AppCheck): Unit = {
