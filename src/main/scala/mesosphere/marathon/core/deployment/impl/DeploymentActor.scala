@@ -196,6 +196,9 @@ private class DeploymentActor(
     await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned))))
     await(killService.killInstances(instances, KillReason.DeletingApp))
 
+    // After killing all instances we expunge them from the state. This will result in `InstanceUpdateEffect.Noop(op.instanceId)` in case the instance has already been expunged as a result of killing it.
+    await(Future.sequence(instances.map(i => instanceTracker.forceExpunge(i.instanceId))))
+
     launchQueue.resetDelay(runSpec)
 
     // The tasks will be removed from the InstanceTracker when their termination
