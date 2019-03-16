@@ -327,6 +327,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       f.queue.purge(app.id) returns Future.successful(Done)
 
       instanceTracker.specInstances(mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance))
+      instanceTracker.forceExpunge(any) returns Future.successful(Done)
       system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
