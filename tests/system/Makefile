@@ -20,7 +20,8 @@ build:
 	pipenv run flake8 --count --max-line-length=120
 
 test:
-	pipenv run pytest --junitxml="../../shakedown.xml" -v --full-trace test_marathon_root.py test_marathon_universe.py
+	pipenv run pytest --junitxml="../../shakedown.xml" --pandas="../../report.json" -v --full-trace test_marathon_root.py test_marathon_universe.py
+	cat ../../report.json
 
 diagnostics:
 	pipenv run python download_diagnostics.py
