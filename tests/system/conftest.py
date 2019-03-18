@@ -43,18 +43,19 @@ class PandasReport(object):
     # Pytest hooks
 
     def pytest_runtest_logreport(self, report):
-        names = self.mangle_test_address(report.nodeid)
-        testsuite = ".".join(names[:-1])
-        testcase = names[-1]
-        self._report = self._report.append({
-            'build_id': self._build_id,
-            'testsuite': testsuite,
-            'testcase': testcase,
-            'status': report.outcome,
-            'error': 'unkown error',
-            'timesamp': self.suite_start_time
-        }, ignore_index=True)
-        self._build_id += 1 # TODO: save only once
+        if report.when == 'call':
+            names = self.mangle_test_address(report.nodeid)
+            testsuite = ".".join(names[:-1])
+            testcase = names[-1]
+            self._report = self._report.append({
+                'build_id': self._build_id,
+                'testsuite': testsuite,
+                'testcase': testcase,
+                'status': report.outcome,
+                'error': 'unkown error',
+                'timesamp': self.suite_start_time
+            }, ignore_index=True)
+            self._build_id += 1 # TODO: save only once
 
     def pytest_collectreport(self, report):
         # if report.failed:
