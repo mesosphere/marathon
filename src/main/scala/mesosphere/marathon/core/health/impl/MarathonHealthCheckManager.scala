@@ -58,16 +58,26 @@ class MarathonHealthCheckManager(
 
   override def add(app: AppDefinition, healthCheck: HealthCheck, instances: Seq[Instance]): Unit =
     appHealthChecks.writeLock { ahcs =>
-      val healthChecksForApp = listActive(app.id, app.version)
+      val healthChecksForApp: Set[ActiveHealthCheck] = listActive(app.id, app.version)
 
       if (healthChecksForApp.exists(_.healthCheck == healthCheck)) {
         log.debug(s"Not adding duplicated health check for app [$app.id] and version [${app.version}]: [$healthCheck]")
       } else {
         log.info(s"Adding health check for app [${app.id}] and version [${app.version}]: [$healthCheck]")
 
-        val ref = actorRefFactory.actorOf(
-          HealthCheckActor.props(app, appHealthChecksActor, killService, healthCheck, instanceTracker, eventBus))
-        val newHealthChecksForApp =
+        val ref = healthCheck match {
+          // Marathon HTTP/S health checks use a stream-based implementation (wrapped into an actor for convenience) which
+          // will back-pressure requests. This is due to Marathon HTTP checks specifically still being widely used (and
+          // sometimes overused) in production.
+          case marathonHttpHealthCheck: MarathonHttpHealthCheck =>
+            actorRefFactory.actorOf(
+              MarathonHttpHealthCheckActor.props(app, appHealthChecksActor, killService, marathonHttpHealthCheck, instanceTracker, eventBus))
+          case _ =>
+            actorRefFactory.actorOf(
+              HealthCheckActor.props(app, appHealthChecksActor, killService, healthCheck, instanceTracker, eventBus))
+        }
+
+        val newHealthChecksForApp: Set[ActiveHealthCheck] =
           healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
 
         appHealthChecksActor ! AppHealthCheckActor.AddHealthCheck(
@@ -87,7 +97,7 @@ class MarathonHealthCheckManager(
           case _ =>
         }
 
-        val appMap = ahcs(app.id) + (app.version -> newHealthChecksForApp)
+        val appMap: Map[Timestamp, Set[ActiveHealthCheck]] = ahcs(app.id) + (app.version -> newHealthChecksForApp)
         ahcs += app.id -> appMap
 
         eventBus.publish(AddHealthCheck(app.id, app.version, healthCheck))

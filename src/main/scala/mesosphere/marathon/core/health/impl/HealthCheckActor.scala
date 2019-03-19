@@ -287,7 +287,7 @@ object HealthCheckActor {
 
 }
 
-private class MarathonHttpHealthCheckActor(
+class MarathonHttpHealthCheckActor(
     appDef: AppDefinition,
     appHealthCheckActor: ActorRef,
     killService: KillService,
@@ -314,12 +314,7 @@ private class MarathonHttpHealthCheckActor(
     Source
       .tick(start, healthCheck.interval, Tick)
       .map { t =>
-        logger.debug(
-          "Scheduling next health check for app [{}] version [{}] and healthCheck [{}]",
-          appDef.id,
-          appDef.version,
-          healthCheck
-        )
+        logger.debug(s"HealthCheck stream for app ${appDef.id} version ${appDef.version} and healthCheck $healthCheck")
         t
       }
       .mapAsync(1) { _ =>
@@ -544,9 +539,7 @@ private class MarathonHttpHealthCheckActor(
     // ignore failures if maxFailures == 0
     if (consecutiveFailures >= maxFailures && maxFailures > 0) {
       val instanceId = instance.instanceId
-      logger.info(
-        s"Detected unhealthy $instanceId of app [${appDef.id}] version [${appDef.version}] on host ${instance.agentInfo.host}"
-      )
+      logger.info(s"Detected unhealthy $instanceId of app [${appDef.id}] version [${appDef.version}] on host ${instance.agentInfo.host}")
 
       // kill the instance, if it is reachable
       if (instance.isUnreachable) {
@@ -588,7 +581,7 @@ private class MarathonHttpHealthCheckActor(
     val health = instanceHealth.health
     val newHealth = instanceHealth.newHealth
 
-    logger.info("Received health result for app [{}] version [{}]: [{}]", appDef.id, appDef.version, result)
+    logger.info(s"Received health result for app ${appDef.id} version ${appDef.version}: $result")
     healthByInstanceId += (instanceId -> instanceHealth.newHealth)
     appHealthCheckActor ! HealthCheckStatusChanged(ApplicationKey(appDef.id, appDef.version), healthCheck, newHealth)
 
@@ -598,12 +591,7 @@ private class MarathonHttpHealthCheckActor(
   }
 
   def purgeStatusOfDoneInstances(instances: Seq[Instance]): Unit = {
-    logger.debug(
-      "Purging health status of inactive instances for app [{}] version [{}] and healthCheck [{}]",
-      appDef.id,
-      appDef.version,
-      healthCheck
-    )
+    logger.debug(s"HealthCheck stream for app ${appDef.id} version ${appDef.version} and healthCheck $healthCheck")
     val activeInstanceIds: Set[Instance.Id] = instances.withFilter(_.isLaunched).map(_.instanceId)(collection.breakOut)
     // The Map built with filterKeys wraps the original map and contains a reference to activeInstanceIds.
     // Therefore we materialize it into a new map.
@@ -617,5 +605,23 @@ private class MarathonHttpHealthCheckActor(
     })
     appHealthCheckActor ! PurgeHealthCheckStatuses(hcToPurge)
   }
+}
 
+object MarathonHttpHealthCheckActor {
+  def props(
+    app: AppDefinition,
+    appHealthCheckActor: ActorRef,
+    killService: KillService,
+    marathonHttpHealthCheck: MarathonHttpHealthCheck,
+    instanceTracker: InstanceTracker,
+    eventBus: EventStream)(implicit mat: Materializer, ec: ExecutionContext): Props = {
+
+    Props(new MarathonHttpHealthCheckActor(
+      app,
+      appHealthCheckActor,
+      killService,
+      marathonHttpHealthCheck,
+      instanceTracker,
+      eventBus))
+  }
 }
