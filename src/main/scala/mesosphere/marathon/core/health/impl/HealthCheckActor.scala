@@ -302,17 +302,13 @@ class MarathonHttpHealthCheckActor(
   val superPool = Http().superPool[Instance](connectionContext = ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig())))
 
   override def preStart(): Unit = {
-    logger.info(
-      "Starting health check actor for app [{}] version [{}] and healthCheck [{}]",
-      appDef.id,
-      appDef.version,
-      healthCheck
-    )
+    logger.info(s"Starting health check actor for app ${appDef.id} version ${appDef.version} and healthCheck ${healthCheck}")
+
     //Start health checking not after the default first health check
-    val start = math.min(healthCheck.interval.toMillis, HealthCheck.DefaultFirstHealthCheckAfter.toMillis).millis
+    val startAfter = math.min(healthCheck.interval.toMillis, HealthCheck.DefaultFirstHealthCheckAfter.toMillis).millis
 
     Source
-      .tick(start, healthCheck.interval, Tick)
+      .tick(startAfter, healthCheck.interval, Tick)
       .map { t =>
         logger.debug(s"HealthCheck stream for app ${appDef.id} version ${appDef.version} and healthCheck $healthCheck")
         t
@@ -361,7 +357,7 @@ class MarathonHttpHealthCheckActor(
   }
 
   override def receive: Receive = {
-    case 'restart => throw new RuntimeException("stream stopped, restarting")
+    case 'restart => throw new RuntimeException("MarathonHttpHealthCheckActor stream stopped, restarting")
   }
 
   val bypassUnhealthy: Flow[Either[Unhealthy, (HttpRequest, Instance)], Unhealthy, NotUsed] =
@@ -441,7 +437,7 @@ class MarathonHttpHealthCheckActor(
           val absolutePath = if (rawPath.startsWith("/")) rawPath else s"/$rawPath"
           val url = s"$protocol://$host:$port$absolutePath"
 
-          logger.debug(s"Checking the health of [$url] for instance=${instance.instanceId} via $protocol")
+          logger.debug(s"Checking the health of $url for instance=${instance.instanceId} via $protocol")
 
           val httpRequest = RequestBuilding.Get(url)
 
@@ -449,7 +445,7 @@ class MarathonHttpHealthCheckActor(
           val effectivePort = httpRequest.uri.effectivePort
           val hostHeader = headers.Host(effectiveHost, effectivePort)
           val effectiveRequest: HttpRequest = httpRequest
-            .withUri(httpRequest.uri.toHttpRequestTargetOriginForm)
+            .withUri(httpRequest.uri)
             .withDefaultHeaders(hostHeader)
 
           effectiveRequest -> instance
