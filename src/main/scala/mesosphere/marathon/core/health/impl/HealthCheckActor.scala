@@ -357,6 +357,13 @@ class MarathonHttpHealthCheckActor(
   }
 
   override def receive: Receive = {
+
+    case GetInstanceHealth(instanceId) =>
+      sender() ! healthByInstanceId.getOrElse(instanceId, Health(instanceId))
+
+    case GetAppHealth =>
+      sender() ! AppHealth(healthByInstanceId.values.to[Seq])
+
     case 'restart => throw new RuntimeException("MarathonHttpHealthCheckActor stream stopped, restarting")
   }
 
