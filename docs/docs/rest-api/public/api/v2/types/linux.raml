@@ -1,0 +1,18 @@
+#%RAML 1.0 Library
+uses:
+  strings: stringTypes.raml
+
+types:
+  SecComp:
+    type: object
+    properties:
+      profile_name?:
+        type: string
+        description: filename of the Seccomp profile found on the agent
+      unconfined?:
+        type: boolean
+        description:  set to `true` if Seccomp is not applied to the container
+  LinuxRuntime:
+    type: object
+    properties:
+      seccomp?: SecComp

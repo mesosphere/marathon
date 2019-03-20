@@ -6,6 +6,7 @@ uses:
   strings: stringTypes.raml
   pragma: pragma.raml
   docker: docker.raml
+  linux: linux.raml
 
 types:
   EngineType:
@@ -185,6 +186,7 @@ types:
         default: DOCKER
       docker?: DockerContainer
       appc?: AppCContainer
+      linux?: linux.LinuxRuntime
       volumes?:
         type: array
         items: volumes.AppVolume

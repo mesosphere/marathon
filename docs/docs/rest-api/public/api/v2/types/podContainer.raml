@@ -12,6 +12,7 @@ uses:
   strings: stringTypes.raml
   volumes: volumes.raml
   docker: docker.raml
+  linux: linux.raml
 
 types:
   ImageType:
@@ -84,6 +85,7 @@ types:
         type: network.Endpoint[]
         (pragma.omitEmpty):
         description: The ports needed to run this container
+      linux?: linux.LinuxRuntime
       image?:
         type: Image
         description: The filesystem image to populate the container with
