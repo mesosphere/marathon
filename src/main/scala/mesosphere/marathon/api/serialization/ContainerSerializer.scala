@@ -15,8 +15,6 @@ object ContainerSerializer {
       DockerSerializer.fromProto(proto)
     } else if (proto.hasMesosDocker) {
       MesosDockerSerializer.fromProto(proto)
-    } else if (proto.hasMesosAppC) {
-      MesosAppCSerializer.fromProto(proto)
     } else {
       val pms = proto.getPortMappingsList
       Container.Mesos(
@@ -47,9 +45,6 @@ object ContainerSerializer {
         md.linuxInfo.foreach { linuxInfo =>
           builder.setLinuxInfo(LinuxInfoSerializer.toProto(linuxInfo))
         }
-      case ma: Container.MesosAppC =>
-        builder.setType(mesos.Protos.ContainerInfo.Type.MESOS)
-        builder.setMesosAppC(MesosAppCSerializer.toProto(ma))
     }
 
     builder.build
@@ -88,9 +83,6 @@ object ContainerSerializer {
         md.linuxInfo.foreach { linuxInfo =>
           builder.setLinuxInfo(LinuxInfoSerializer.toMesos(linuxInfo))
         }
-      case ma: Container.MesosAppC =>
-        builder.setType(mesos.Protos.ContainerInfo.Type.MESOS)
-        builder.setMesos(MesosAppCSerializer.toMesos(ma))
     }
 
     container.volumes.foreach {
@@ -472,45 +464,5 @@ object LinuxInfoSerializer {
       linuxBuilder.setSeccomp(seccompBuilder)
     }
     linuxBuilder.build
-  }
-}
-
-object MesosAppCSerializer {
-  def fromProto(proto: Protos.ExtendedContainerInfo): Container.MesosAppC = {
-    val appc = proto.getMesosAppC
-    val pms = proto.getPortMappingsList
-    Container.MesosAppC(
-      volumes = proto.getVolumesList.map(VolumeWithMount(None, _))(collection.breakOut),
-      portMappings = pms.map(PortMappingSerializer.fromProto)(collection.breakOut),
-      image = appc.getImage,
-      id = if (appc.hasId) Some(appc.getId) else None,
-      labels = appc.getLabelsList.map { p => p.getKey -> p.getValue }(collection.breakOut),
-      forcePullImage = if (appc.hasForcePullImage) appc.getForcePullImage else false
-    )
-  }
-
-  def toProto(appc: Container.MesosAppC): Protos.ExtendedContainerInfo.MesosAppCInfo = {
-    val builder = Protos.ExtendedContainerInfo.MesosAppCInfo.newBuilder
-      .setImage(appc.image)
-      .setForcePullImage(appc.forcePullImage)
-
-    appc.id.foreach(builder.setId)
-    appc.labels.toProto.foreach(builder.addLabels)
-
-    builder.build
-  }
-
-  def toMesos(container: Container.MesosAppC): mesos.Protos.ContainerInfo.MesosInfo = {
-    val appcBuilder = mesos.Protos.Image.Appc.newBuilder
-      .setName(container.image)
-    container.id.foreach(appcBuilder.setId)
-    appcBuilder.setLabels(container.labels.toMesosLabels)
-
-    val imageBuilder = mesos.Protos.Image.newBuilder
-      .setType(mesos.Protos.Image.Type.APPC)
-      .setAppc(appcBuilder)
-      .setCached(!container.forcePullImage)
-
-    mesos.Protos.ContainerInfo.MesosInfo.newBuilder.setImage(imageBuilder).build
   }
 }

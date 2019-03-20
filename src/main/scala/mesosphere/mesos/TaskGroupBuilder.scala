@@ -569,10 +569,6 @@ object TaskGroupBuilder extends StrictLogging {
             docker.setConfig(SecretSerializer.toSecretReference(pullConfig.secret))
           }
           image.setType(mesos.Image.Type.DOCKER).setDocker(docker)
-        case raml.ImageType.Appc =>
-          val appcLabels = (LinuxAmd64 ++ im.labels).toMesosLabels
-          val appc = mesos.Image.Appc.newBuilder.setName(im.id).setLabels(appcLabels)
-          image.setType(mesos.Image.Type.APPC).setAppc(appc)
       }
 
       val mesosInfo = mesos.ContainerInfo.MesosInfo.newBuilder.setImage(image)
