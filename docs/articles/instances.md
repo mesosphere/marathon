@@ -14,7 +14,7 @@ Currently, instance goals are only used internally, but are reflected in the API
 See [Instance Life Cycle](instance-lifecycle.md) for more information on instance life cycle and goals.
 
 ### Instances in the API
-The `v2/apps` and `v2/tasks` API endpoints do not provide any means of direct interaction with instances. For historical reasons, these endpoints list apps or tasks respectively, and only allow interacts with them (not instances). The `v2/pods` endpoint on the other hand was build with instances as an abstraction for Mesos tasks, and thus only allows direct interaction with instances, not with tasks.
+The `v2/apps` and `v2/tasks` API endpoints do not provide any means of direct interaction with instances. For historical reasons, these endpoints list apps or tasks respectively, and only allow interactions with them (not instances). The `v2/pods` endpoint on the other hand was build with instances as an abstraction for Mesos tasks, and thus only allows direct interaction with instances, not with tasks.
 
 ### Instance Ids
 The relation between instances and their Tasks is reflected in their names. An *app* with name `/my-service` will result in instances named `my-service.<UUID>`. The first Task associated with this instance will be named `my-service.instance-a41beca1-fa49-11e8-93c4-269daf75ef3f._app.1` where `_app` designates the container as an anonymous container. The `.1` reveals the Task is the first task incarnation of this instance. Accordingly, `my-service.instance-<UUID>._app.42` will tell you that this is task incarnation number 42. This means 41 previous tasks for this instance became terminal, either because they exited normally or abnormally, or were killed by Marathon during a scale or upgrade operation.
