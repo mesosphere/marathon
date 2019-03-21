@@ -342,16 +342,12 @@ private[health] class MarathonHttpHealthCheckActor(
         instanceTracker.specInstances(appDef.id)
       }
       .map { instances =>
-        InstancesUpdate(version = appDef.version, instances = instances)
-      }
-      .collect {
-        case InstancesUpdate(version, instances) if version == appDef.version =>
-          purgeStatusOfDoneInstances(instances)
-          instances.collect {
-            case instance if instance.runSpecVersion == appDef.version && instance.isRunning =>
-              logger.debug("Making a health check request for {}", instance.instanceId)
-              (instance, healthCheck)
-          }
+        purgeStatusOfDoneInstances(instances)
+        instances.collect {
+          case instance if instance.runSpecVersion == appDef.version && instance.isRunning =>
+            logger.debug("Making a health check request for {}", instance.instanceId)
+            (instance, healthCheck)
+        }
       }
       .mapConcat(identity)
       .map {
