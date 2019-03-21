@@ -7,7 +7,7 @@ import akka.http.scaladsl.model.headers.`Content-Type`
 import akka.http.scaladsl.model.{ MediaTypes, StatusCodes, HttpResponse => AkkaHttpResponse }
 import akka.http.scaladsl.{ ConnectionContext, Http }
 import akka.stream.Materializer
-import mesosphere.marathon.core.health.impl.HealthCheckWorker
+import mesosphere.marathon.core.health.impl.MarathonHttpHealthCheckActor
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{ HttpResponse, ReadinessCheckExecutor, ReadinessCheckResult }
 import mesosphere.marathon.util.Timeout
@@ -82,7 +82,7 @@ private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorS
   private[impl] def akkaHttpGet(check: ReadinessCheckSpec): Future[AkkaHttpResponse] = {
     Timeout(check.timeout)(Http().singleRequest(
       request = RequestBuilding.Get(check.url),
-      connectionContext = ConnectionContext.https(HealthCheckWorker.disabledSslContext, sslConfig = Some(HealthCheckWorker.disabledSslConfig()))
+      connectionContext = ConnectionContext.https(MarathonHttpHealthCheckActor.disabledSslContext, sslConfig = Some(MarathonHttpHealthCheckActor.disabledSslConfig()))
     ))
   }
 }

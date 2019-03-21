@@ -4,7 +4,7 @@ package core.health.impl
 import akka.actor.Props
 import akka.testkit._
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.health.{ Health, HealthCheck, MarathonHttpHealthCheck, PortReference }
+import mesosphere.marathon.core.health.{ Health, HealthCheck, MarathonHttpHealthCheck, MarathonTcpHealthCheck, PortReference }
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
@@ -19,7 +19,7 @@ import scala.concurrent.Future
 
 class HealthCheckActorTest extends AkkaUnitTest {
   class Fixture {
-    val tracker = mock[InstanceTracker]
+    val instanceTracker = mock[InstanceTracker]
 
     val appId = "/test".toPath
     val appVersion = Timestamp(1)
@@ -45,7 +45,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
 
     def actor(healthCheck: HealthCheck) = TestActorRef[HealthCheckActor](
       Props(
-        new HealthCheckActor(app, appHealthCheckActor.ref, killService, healthCheck, tracker, system.eventStream)
+        new HealthCheckActor(app, appHealthCheckActor.ref, killService, healthCheck, instanceTracker, system.eventStream)
       )
     )
 
@@ -55,8 +55,8 @@ class HealthCheckActorTest extends AkkaUnitTest {
           app,
           appHealthCheckActor.ref,
           killService,
-          MarathonHttpHealthCheck(portIndex = Some(PortReference(0))),
-          tracker,
+          MarathonTcpHealthCheck(portIndex = Some(PortReference(0))),
+          instanceTracker,
           system.eventStream) {
 
           override val workerProps = Props {
@@ -115,7 +115,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
 
       actor.underlyingActor.checkConsecutiveFailures(f.instance, Health(f.instance.instanceId, consecutiveFailures = 3))
       verify(f.killService).killInstancesAndForget(Seq(f.instance), KillReason.FailedHealthChecks)
-      verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
+      verifyNoMoreInteractions(f.instanceTracker, f.driver, f.scheduler)
     }
 
     "task should not be killed if health check fails, but the task is unreachable" in {
@@ -123,7 +123,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
       val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(PortReference(0))))
 
       actor.underlyingActor.checkConsecutiveFailures(f.unreachableInstance, Health(f.unreachableInstance.instanceId, consecutiveFailures = 3))
-      verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
+      verifyNoMoreInteractions(f.instanceTracker, f.driver, f.scheduler)
     }
   }
 }

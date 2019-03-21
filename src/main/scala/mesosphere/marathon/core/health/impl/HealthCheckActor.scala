@@ -1,8 +1,10 @@
 package mesosphere.marathon
 package core.health.impl
 
+import java.security.cert.X509Certificate
+
 import akka.{ Done, NotUsed }
-import akka.actor.{ Actor, ActorRef, Cancellable, Props }
+import akka.actor.{ Actor, ActorRef, ActorSystem, Cancellable, Props }
 import akka.event.EventStream
 import akka.http.scaladsl.{ ConnectionContext, Http }
 import akka.http.scaladsl.client.RequestBuilding
@@ -10,11 +12,12 @@ import akka.http.scaladsl.model.{ HttpRequest, HttpResponse, headers }
 import akka.stream.{ FlowShape, Materializer }
 import akka.stream.scaladsl.{ Broadcast, Flow, GraphDSL, Merge, Sink, Source }
 import com.typesafe.scalalogging.StrictLogging
+import com.typesafe.sslconfig.akka.AkkaSSLConfig
+import javax.net.ssl.{ KeyManager, SSLContext, X509TrustManager }
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{ ApplicationKey, HealthCheckStatusChanged, InstanceKey, PurgeHealthCheckStatuses }
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
-import mesosphere.marathon.core.health.impl.HealthCheckWorker._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.{ KillReason, KillService }
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -120,7 +123,7 @@ private[health] class HealthCheckActor(
   }
 
   def dispatchJobs(instances: Seq[Instance]): Unit = healthCheck match {
-    case hc: MarathonHealthCheck =>
+    case hc: MarathonTcpHealthCheck =>
       logger.debug("Dispatching health check jobs to workers")
       instances.foreach { instance =>
         if (instance.runSpecVersion == app.version && instance.isRunning) {
@@ -129,7 +132,10 @@ private[health] class HealthCheckActor(
           worker ! HealthCheckJob(app, instance, hc)
         }
       }
-    case _ => // Don't do anything for Mesos health checks
+    case hc: MarathonHttpHealthCheck =>
+      throw new IllegalArgumentException(s"Marathon HTTP/S health check should be handled by the MarathonHttpHealthCheckActor for appId ${app.id}")
+    case _ =>
+    // Don't do anything for Mesos health checks
   }
 
   def checkConsecutiveFailures(instance: Instance, health: Health): Unit = {
@@ -284,7 +290,6 @@ object HealthCheckActor {
   case class InstanceHealth(result: HealthResult, health: Health, newHealth: Health)
 
   case class InstancesUpdate(version: Timestamp, instances: Seq[Instance])
-
 }
 
 class MarathonHttpHealthCheckActor(
@@ -298,6 +303,7 @@ class MarathonHttpHealthCheckActor(
   val healthByInstanceId = TrieMap.empty[Instance.Id, Health]
 
   import context.system
+  import MarathonHttpHealthCheckActor._
 
   val superPool = Http().superPool[Instance](connectionContext = ConnectionContext.https(disabledSslContext, sslConfig = Some(disabledSslConfig())))
 
@@ -322,10 +328,9 @@ class MarathonHttpHealthCheckActor(
       .collect {
         case InstancesUpdate(version, instances) if version == appDef.version =>
           purgeStatusOfDoneInstances(instances)
-          logger.debug("Dispatching health check jobs to workers")
           instances.collect {
             case instance if instance.runSpecVersion == appDef.version && instance.isRunning =>
-              logger.debug("Dispatching health check job for {}", instance.instanceId)
+              logger.debug("Making a health check request for {}", instance.instanceId)
               (instance, healthCheck)
           }
       }
@@ -343,15 +348,11 @@ class MarathonHttpHealthCheckActor(
       .runWith(Sink.ignore)
       .onComplete {
         case Success(_) =>
-          logger.info(
-            s"HealthCheck stream for app ${appDef.id} version ${appDef.version} and healthCheck $healthCheck was stopped"
-          )
+          logger.info(s"HealthCheck stream for app ${appDef.id} version ${appDef.version} and healthCheck $healthCheck was stopped")
           self ! 'restart
 
         case Failure(ex) =>
-          logger.info(
-            s"HealthCheck stream for app ${appDef.id} version ${appDef.version} and healthCheck $healthCheck crashed due to $ex"
-          )
+          logger.error(s"HealthCheck stream for app ${appDef.id} version ${appDef.version} and healthCheck $healthCheck crashed due to:", ex)
           self ! 'restart
       }
   }
@@ -627,4 +628,32 @@ object MarathonHttpHealthCheckActor {
       instanceTracker,
       eventBus))
   }
+
+  // Similar to AWS R53, we accept all responses in [200, 399]
+  protected[health] val acceptableResponses = Range(200, 400)
+  protected[health] val toIgnoreResponses = Range(100, 200)
+
+  val disabledSslContext: SSLContext = {
+    object BlindFaithX509TrustManager extends X509TrustManager {
+      @SuppressWarnings(Array("EmptyMethod"))
+      def checkClientTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
+      @SuppressWarnings(Array("EmptyMethod"))
+      def checkServerTrusted(chain: Array[X509Certificate], authType: String): Unit = {}
+      def getAcceptedIssuers: Array[X509Certificate] = Array[X509Certificate]()
+    }
+
+    val context = SSLContext.getInstance("TLS")
+    context.init(Array[KeyManager](), Array(BlindFaithX509TrustManager), null)
+    context
+  }
+
+  def disabledSslConfig()(implicit as: ActorSystem): AkkaSSLConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
+    s.loose.withAcceptAnyCertificate(true)
+      .withAllowLegacyHelloMessages(Some(true))
+      .withAllowUnsafeRenegotiation(Some(true))
+      .withAllowWeakCiphers(true)
+      .withAllowWeakProtocols(true)
+      .withDisableHostnameVerification(true)
+      .withDisableSNI(true)
+  })
 }
