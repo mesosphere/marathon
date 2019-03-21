@@ -2,6 +2,7 @@ package mesosphere.marathon
 package util
 
 import akka.actor.Scheduler
+import mesosphere.marathon.core.async.RunContext
 import mesosphere.util.DurationToHumanReadable
 import akka.pattern.after
 
