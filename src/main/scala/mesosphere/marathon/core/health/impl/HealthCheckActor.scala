@@ -28,6 +28,10 @@ import scala.concurrent.{ ExecutionContext, Future }
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success, Try }
 
+/**
+  * While originally this class was taking care of all Marathon health checks, HTTP/S health checks are now handled by
+  * [[MarathonHttpHealthCheckActor]] so this actor effectively only handles [[MarathonTcpHealthCheck]]s and [[MesosHealthCheck]]s.
+  */
 private[health] class HealthCheckActor(
     app: AppDefinition,
     appHealthCheckActor: ActorRef,
@@ -292,7 +296,22 @@ object HealthCheckActor {
   case class InstancesUpdate(version: Timestamp, instances: Seq[Instance])
 }
 
-class MarathonHttpHealthCheckActor(
+/**
+  * This is a special flavour of the [[HealthCheckActor]] which utilizes akka-streams (instead of sending itself Tick
+  * messages) to execute Marathon HTTP/S health checks *only*. Mesos and TCP health checks are still handled by the
+  * [[HealthCheckActor]].
+  *
+  * Stream-based implementation profits from:
+  * - automatic back-pressure meaning that we will not overload the same instance with HTTP requests
+  * - akka "superPool" which effectively limits total number of concurrent HTTP requests
+  *
+  * This implementation copy-pastes helper methods from the HealthCheckActor e.g. [[HealthCheckActor.handleHealthResult()]].
+  * I decided against creating a base trait encapsulating these methods since Marathon health checks are supposed to be
+  * deprecated (!) anyway. If you're reading this a year after it was written then we failed to actually remove this
+  * code - sorry about that.
+  *
+  */
+private[health] class MarathonHttpHealthCheckActor(
     appDef: AppDefinition,
     appHealthCheckActor: ActorRef,
     killService: KillService,
