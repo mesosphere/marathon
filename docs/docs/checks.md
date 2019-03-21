@@ -39,7 +39,7 @@ When a check is configured for an app/pod, it has zero impact on its deployment 
 
 #### TCP Check options
 
-- `portIndex` (Optional. ):  The index of the port defined.  The value 0 will be $PORT0 in the application. You can use port *OR* portIndex not both.
+- `portIndex` (Optional. ):  The index of the port defined.  The value 0 will be `$PORT0` in the application. You can either use `port` *OR* `portIndex`, but not both.
 - `port` (Optional. ): Specific port to check.  This is useful when using a network overlay or have a fixed port.  You can use port *OR* portIndex not both.
 
 #### Command Check options
