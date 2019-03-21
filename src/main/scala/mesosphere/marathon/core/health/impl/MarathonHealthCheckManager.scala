@@ -67,8 +67,8 @@ class MarathonHealthCheckManager(
 
         val ref = healthCheck match {
           // Marathon HTTP/S health checks use a stream-based implementation (wrapped into an actor for convenience) which
-          // will back-pressure requests. This is due to Marathon HTTP checks specifically still being widely used (and
-          // sometimes overused) in production.
+          // will back-pressure requests and are handled by and extra MarathonHttpHealthCheckActor. This is due to Marathon
+          // HTTP checks specifically still being widely used (and sometimes overused) in production.
           case marathonHttpHealthCheck: MarathonHttpHealthCheck =>
             actorRefFactory.actorOf(
               MarathonHttpHealthCheckActor.props(app, appHealthChecksActor, killService, marathonHttpHealthCheck, instanceTracker, eventBus))
