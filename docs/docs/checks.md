@@ -33,7 +33,7 @@ When a check is configured for an app/pod, it has zero impact on its deployment 
 #### HTTP Check options
 
 - `portIndex` (Optional. ):  The index of the port defined.  The value 0 will be $PORT0 in the application. You can use port *OR* portIndex not both.
-- `port` (Optional. ): Specific port to check.  This is useful when using a network overlay or have a fixed port.  You can use port *OR* portIndex not both.
+- `port` (Optional. ): Specific port to check.  This is useful when using a network overlay or have a fixed port.  You can use either `port` *OR* `portIndex`, but not both.
 - `path` (Optional. Default: `"/"`): Path to the endpoint the task exposes to provide check status. Example: `/path/to/check`.
 - `scheme` (Optional. Default: `"HTTP"`): Protocol of the requests to be performed. Only HTTP is currently supported.
 
