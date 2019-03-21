@@ -14,7 +14,7 @@ Checks can be defined as:
 * TCP Check
 * Command Check
 
-When a check is configured for an app/pod, it has zero impact on its deployment status in Marathon.  To control this behavior you will need to use a health-check or readiness check.  The value in the task varies depending on check type:
+When a check is configured for an app/pod, it has zero impact on its deployment status in Marathon.  To control this behavior you will need to use a health check or readiness check.  The value in the task varies depending on check type:
 
 * HTTP Check returns http response status code
 * TCP Check returns boolean true or false
