@@ -9,7 +9,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{ InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated }
-import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.ForwardTaskOp
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{ ForwardTaskOp, ListBySpec }
 import mesosphere.marathon.core.task.tracker.{ InstanceTracker, InstanceTrackerUpdateStepProcessor }
 import mesosphere.marathon.metrics.AtomicGauge
 import mesosphere.marathon.state.{ PathId, Timestamp }
@@ -28,6 +28,9 @@ object InstanceTrackerActor {
 
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
   private[impl] case object List
+
+  /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]] by RunSpec [[PathId]]. */
+  private[impl] case class ListBySpec(appId: PathId)
 
   private[impl] case class Get(taskId: Instance.Id)
 
@@ -140,8 +143,11 @@ private[impl] class InstanceTrackerActor(
       case InstanceTrackerActor.List =>
         sender() ! instancesBySpec
 
-      case InstanceTrackerActor.Get(taskId) =>
-        sender() ! instancesBySpec.instance(taskId)
+      case ListBySpec(appId: PathId) =>
+        sender() ! instancesBySpec.specInstances(appId)
+
+      case InstanceTrackerActor.Get(instanceId) =>
+        sender() ! instancesBySpec.instance(instanceId)
 
       case ForwardTaskOp(deadline, taskId, taskStateOp) =>
         val op = InstanceOpProcessor.Operation(deadline, sender(), taskId, taskStateOp)
