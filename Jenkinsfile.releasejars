@@ -1,0 +1,32 @@
+#!/usr/bin/env groovy
+
+ansiColor('xterm') {
+  node('JenkinsMarathonCI-Debian9-2018-12-17') {
+
+    stage("Run Pipeline") {
+      try {
+        checkout scm
+        withCredentials([
+            usernamePassword(credentialsId: 'a7ac7f84-64ea-4483-8e66-bb204484e58f', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER'),
+            string(credentialsId: '3f0dbb48-de33-431f-b91c-2366d2f0e1cf',variable: 'AWS_ACCESS_KEY_ID'),
+            string(credentialsId: 'f585ec9a-3c38-4f67-8bdb-79e5d4761937',variable: 'AWS_SECRET_ACCESS_KEY'),
+        ]) {
+          sshagent (credentials: ['0f7ec9c9-99b2-4797-9ed5-625572d5931d']) {
+            // add the ssh host key for the package uploader step
+            // These environment variables are defined in the "Properties Content" section for the job.
+            sh """echo "${PKG_SSH_HOST} ${PKG_SSH_HOSTKEY_TYPE} ${PKG_SSH_HOSTKEY}" | sudo -E tee -a /etc/ssh/ssh_known_hosts"""
+
+            sh """sudo -E env sbt 'project plugin-interface' publish"""
+            sh """sudo -E env sbt publish"""
+          }
+        }
+      } finally {
+        junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
+        junit(allowEmptyResults: true, testResults: 'tests/integration/target/test-reports/*.xml')
+        archive includes: "sandboxes.tar.gz"
+        archive includes: "ci-${env.BUILD_TAG}.log.tar.gz"
+        archive includes: "ci-${env.BUILD_TAG}.log"  // Only in case the build was  aborted and the logs weren't zipped
+      }
+    }
+  }
+}
