@@ -40,27 +40,61 @@ class PandasReport(object):
     def _save_report(self):
         self._report.set_index(['build_id', 'testsuite', 'testcase']).to_json(self._output_file)
 
+    def _append_pass(self, report):
+        names = self.mangle_test_address(report.nodeid)
+        testsuite = ".".join(names[:-1])
+        testcase = names[-1]
+
+        self._report = self._report.append({
+            'build_id': self._build_id,
+            'testsuite': testsuite,
+            'testcase': testcase,
+            'status': 'PASSED',
+            'error': '',
+            'timesamp': self.suite_start_time
+        }, ignore_index=True)
+
+    def _append_failure(self, report):
+        names = self.mangle_test_address(report.nodeid)
+        testsuite = ".".join(names[:-1])
+        testcase = names[-1]
+
+        if hasattr(report.longrepr, "reprcrash"):
+            message = report.longrepr.reprcrash.message
+        else:
+            message = str(report.longrepr)
+
+        self._report = self._report.append({
+            'build_id': self._build_id,
+            'testsuite': testsuite,
+            'testcase': testcase,
+            'status': 'FAILED',
+            'error': message,
+            'timesamp': self.suite_start_time
+        }, ignore_index=True)
+
+    def _append_skipped(self, report):
+        pass # TODO: how should we deal with skipped tests?
+
     # Pytest hooks
 
     def pytest_runtest_logreport(self, report):
-        if report.when == 'call':
-            names = self.mangle_test_address(report.nodeid)
-            testsuite = ".".join(names[:-1])
-            testcase = names[-1]
-            self._report = self._report.append({
-                'build_id': self._build_id,
-                'testsuite': testsuite,
-                'testcase': testcase,
-                'status': report.outcome,
-                'error': 'unkown error',
-                'timesamp': self.suite_start_time
-            }, ignore_index=True)
-            self._build_id += 1 # TODO: save only once
+        if report.passed:
+            if report.when == 'call':
+                self._append_pass(report)
+                self._build_id += 1 # TODO: save only once
+        elif report.failed:
+            if report.when == 'teardown':
+                pass # TODO: save teardown errors
+            elif report.when == 'call':
+                self._append_failure(report)
+                self._build_id += 1 # TODO: save only once
+        elif report.skipped:
+           self._append_skipped(report)
 
     def pytest_collectreport(self, report):
-        # if report.failed:
-        #    self.append_failed(report)
-        pass
+        if report.failed:
+            self._append_failed(report)
 
     def pytest_sessionstart(self, session):
         self.suite_start_time = time.time()
