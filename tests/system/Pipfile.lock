@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "d302fdc22846a3a1c5ca18752a09e10b58ebbbc7e06249c780cc878d75181607"
+            "sha256": "228800a5c50eaddcccb263a101a5c02cb094823f62021130359bb1ec73727836"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -180,11 +180,11 @@
         },
         "dcos-launch": {
             "git": "https://github.com/dcos/dcos-launch.git",
-            "ref": "6a0871b2454d41bdfbe0616f463e2425989bec78"
+            "ref": "0aa9eaa1200b8a87a7d07fe4e13d552ef7410a04"
         },
         "dcos-test-utils": {
             "git": "https://github.com/dcos/dcos-test-utils",
-            "ref": "8f1820f537b0caa4bbb697beaae4d1e4940bfbb6"
+            "ref": "a1a33c5465a9b9370209718fa72ae9429982bf35"
         },
         "idna": {
             "hashes": [
@@ -387,10 +387,10 @@
         },
         "scp": {
             "hashes": [
-                "sha256:4320ad188d3b8216352fb6c3647e0080ca14ced217735afc053256f86cd65159",
-                "sha256:64e2e386ef7c9aa7b5591cdffbaa66116d58332ed0df735c97f8468f26a326e9"
+                "sha256:26c0bbc7ea29c30ec096ae67b0afa7a6b7c557b2ce8f740109ee72a0d52af7d1",
+                "sha256:ef9d6e67c0331485d3db146bf9ee9baff8a48f3eb0e6c08276a8584b13bf34b3"
             ],
-            "version": "==0.13.1"
+            "version": "==0.13.2"
         },
         "six": {
             "hashes": [
