@@ -30,8 +30,10 @@ fi
 echo "Using: ${INSTALLER}"
 
 # Create config.yaml for dcos-launch.
-sed -e 's/%DEPLOYMENT_NAME%/$DEPLOYMENT_NAME/g' \
--e 's/%INSTALLER%/$INSTALLER/g' \
+export INSTALLER_ESCAPED=$(echo $INSTALLER | sed -e 's/[]\/$*.^[]/\\&/g')
+export $DEPLOYMENT_NAME_ESCAPED=$(echo $DEPLOYMENT_NAME | sed -e 's/[]\/$*.^[]/\\&/g')
+sed -e "s/%DEPLOYMENT_NAME%/$DEPLOYMENT_NAME_ESCAPED/g" \
+-e "s/%INSTALLER%/$INSTALLER_ESCAPED/g" \
 <<EOF > "$CONFIG_PATH"
 ---
 launch_config_version: 1
