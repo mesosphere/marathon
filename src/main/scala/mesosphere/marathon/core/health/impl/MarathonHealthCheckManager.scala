@@ -1,12 +1,14 @@
 package mesosphere.marathon
 package core.health.impl
 
-import akka.Done
 import akka.actor.{ ActorRef, ActorRefFactory }
 import akka.event.EventStream
 import akka.pattern.ask
-import akka.stream.Materializer
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{ MergeHub, Sink }
 import akka.util.Timeout
+import akka.{ Done, NotUsed }
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.async.ExecutionContexts.global
 import mesosphere.marathon.core.event.{ AddHealthCheck, RemoveHealthCheck }
 import mesosphere.marathon.core.group.GroupManager
@@ -26,13 +28,15 @@ import scala.collection.immutable.{ Map, Seq }
 import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.util.control.NonFatal
 
 class MarathonHealthCheckManager(
     actorRefFactory: ActorRefFactory,
     killService: KillService,
     eventBus: EventStream,
     instanceTracker: InstanceTracker,
-    groupManager: GroupManager)(implicit mat: Materializer) extends HealthCheckManager {
+    groupManager: GroupManager,
+    conf: MarathonConf)(implicit mat: ActorMaterializer) extends HealthCheckManager with StrictLogging {
 
   protected[this] case class ActiveHealthCheck(
     healthCheck: HealthCheck,
@@ -51,6 +55,32 @@ class MarathonHealthCheckManager(
       ahcs(appId).values.flatten.toSet
     }
 
+  /**
+    * A common materialized merge hub that is used by all [[HealthCheckActor]]s to channel the Marathon health checks.
+    * Its main purpose is to provide a global throttling mechanism that limit a total number of concurrent Marathon
+    * health check in the system defined by [[MarathonConf.maxConcurrentMarathonHealthChecks]] parameter. After
+    * executing the health check by calling the [[HealthCheckWorker.run()]] method the result is sent back to the
+    * HealthCheckActor via the provided ActorRef.
+    */
+  val healthCheckWorkerHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed] =
+    MergeHub
+      .source[(AppDefinition, Instance, MarathonHealthCheck, ActorRef)](1)
+      .mapAsync(conf.maxConcurrentMarathonHealthChecks()){
+        case (app, instance, marathonHealthCheck, actorRef) =>
+          HealthCheckWorker
+            .run(app, instance, marathonHealthCheck)
+            .map(healthResult => actorRef ! healthResult)
+            .recover {
+              // Theoretically we should never get there: [[HealthCheckWorker.run]] already wraps failed health checks into
+              // successful futures with Healthy/Unhealthy message. But just in case the underlying implementation changes...
+              case NonFatal(e) =>
+                logger.warn(s"HealthCheck stream for app ${app.id} version ${app.version} " +
+                  s"and healthCheck $marathonHealthCheck failed with: ", e)
+            }
+      }
+      .to(Sink.ignore)
+      .run()
+
   protected[this] def listActive(appId: PathId, appVersion: Timestamp): Set[ActiveHealthCheck] =
     appHealthChecks.readLock { ahcs =>
       ahcs(appId)(appVersion)
@@ -66,7 +96,7 @@ class MarathonHealthCheckManager(
         log.info(s"Adding health check for app [${app.id}] and version [${app.version}]: [$healthCheck]")
 
         val ref = actorRefFactory.actorOf(
-          HealthCheckActor.props(app, appHealthChecksActor, killService, healthCheck, instanceTracker, eventBus))
+          HealthCheckActor.props(app, appHealthChecksActor, killService, healthCheck, instanceTracker, eventBus, healthCheckWorkerHub))
         val newHealthChecksForApp =
           healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
 
@@ -151,7 +181,7 @@ class MarathonHealthCheckManager(
 
     def reconcileApp(app: AppDefinition, instances: Seq[Instance]): Future[Done] = {
       val appId = app.id
-      log.info(s"reconcile [$appId] with latest version [${app.version}]")
+      log.info(s"reconcile $appId with latest version ${app.version} for instances: $instances")
 
       val instancesByVersion = instances.groupBy(_.version)
 
