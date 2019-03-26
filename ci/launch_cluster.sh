@@ -6,10 +6,6 @@ if ! command -v jq >/dev/null; then
     echo "jq was not found. Please install it."
     exit 1
 fi
-if ! command -v envsubst >/dev/null 2>&1; then
-    echo "envsubst was not found. Please install along with gettext."
-    exit 1
-fi
 
 # Two parameters are expected: CHANNEL and VARIANT where CHANNEL is the respective PR and
 # VARIANT could be one of three custer variants: open, strict or permissive.
@@ -34,11 +30,13 @@ fi
 echo "Using: ${INSTALLER}"
 
 # Create config.yaml for dcos-launch.
-envsubst <<EOF > "$CONFIG_PATH"
+sed -e "s/%DEPLOYMENT_NAME%/$DEPLOYMENT_NAME/g" \
+-e "s/%INSTALLER%/$INSTALLER/g" \
+<<EOF > "$CONFIG_PATH"
 ---
 launch_config_version: 1
-deployment_name: $DEPLOYMENT_NAME
-installer_url: $INSTALLER
+deployment_name: %DEPLOYMENT_NAME%
+installer_url: %INSTALLER%
 provider: onprem
 platform: aws
 aws_region: us-west-2
@@ -49,7 +47,7 @@ num_public_agents: 1
 num_private_agents: 3
 num_masters: 3
 dcos_config:
-    cluster_name: $DEPLOYMENT_NAME
+    cluster_name: %DEPLOYMENT_NAME%
     resolvers:
         - 8.8.4.4
         - 8.8.8.8
