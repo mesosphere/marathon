@@ -88,7 +88,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
         .run
 
     instanceTracker.forceExpunge(any) returns Future.successful(Done)
-    Mockito.when(instanceTracker.schedule(any[Instance])).thenReturn(Future.successful(Done))
+    instanceTracker.schedule(any[Instance]) returns Future.successful(Done)
 
     private[impl] def createLauncherRef(appToLaunch: PathId = f.app.id): TestActorRef[TaskLauncherActor] = {
       val props = TaskLauncherActor.props(
