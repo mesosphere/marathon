@@ -142,6 +142,9 @@ private class TaskLauncherActor(
   }
 
   private[this] def receiveUnknown: Receive = {
+    case Status.Failure(ex) =>
+      logger.error(s"TaskLauncherActor received a failure from ${sender}", ex)
+
     case msg: Any =>
       // fail fast and do not let the sender time out
       sender() ! Status.Failure(new IllegalStateException(s"Unhandled message: $msg"))
