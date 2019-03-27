@@ -90,12 +90,31 @@ if [ "$VARIANT" == "strict" ]; then
       exit-with-cluster-launch-error "Could not retrieve cluster SSL certificate from $DCOS_URL."
     fi
   done
+
+  # DC/OS test utils
+  DCOS_LOGIN_UNAME="$DCOS_USERNAME"
+  DCOS_LOGIN_PW="$DCOS_PASSWORD"
+  DCOS_DNS_ADDRESS="$DCOS_URL"
+  DCOS_SSL_ENABLED="true"
+
 else
   DCOS_URL="http://$(terraform output -state "$TERRAFORM_STATE" cluster_address)"
   DCOS_SSL_VERIFY="false"
+
+  # DC/OS test utils
+  DCOS_DNS_ADDRESS="$DCOS_URL"
+  DCOS_SSL_ENABLED="false"
+  DCOS_ACS_TOKEN="SHAKEDOWN_OAUTH_TOKEN"
 fi
 export DCOS_SSL_VERIFY
 export DCOS_URL
+
+# DC/OS test utils
+export DCOS_DNS_ADDRESS
+export DCOS_LOGIN_UNAME
+export DCOS_LOGIN_PW
+export DCOS_SSL_ENABLED
+export DCOS_ACS_TOKEN
 
 # Run tests.
 case $CLUSTER_LAUNCH_CODE in

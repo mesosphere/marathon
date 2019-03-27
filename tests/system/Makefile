@@ -20,6 +20,7 @@ build:
 	pipenv run flake8 --count --max-line-length=120
 
 test:
+	pipenv run python wait_dcos.py
 	pipenv run pytest --junitxml="../../shakedown.xml" -v --full-trace test_marathon_root.py test_marathon_universe.py
 
 diagnostics:
