@@ -31,11 +31,11 @@ make clean all -j
 
 There are docker images created for:
 
-  * centos systemd
-  * centos systemv
-  * debian systemd
-  * debian systemv
-  * ubuntu upstart
+  * Centos 6
+  * Centos 7
+  * Debian 8
+  * Ubuntu 14.04
+  * Ubuntu 16.04
 
 The Dockerfiles for these images in subfolders of this directory.  
 These test bed docker images must be built prior to running the tests. If you don't build them, the tests will fail.
@@ -68,7 +68,7 @@ If you wanted to run just the DebianSystemd test, you could run:
 
 ```
 # case-insensitive substring filter
-amm test.sc debiansystemd
+amm test.sc Ubuntu1604Test
 ```
 
 # Debugging
@@ -76,7 +76,7 @@ amm test.sc debiansystemd
 If you wanted to the docker images to stay running for further debugging, then use the filter to run a single suite and set the environment variable to disable cleanup:
 
 ```
-SKIP_CLEANUP=1 amm test.sc debiansystemd
+SKIP_CLEANUP=1 amm test.sc Ubuntu1604Test
 ```
 
 The docker containers will be left running after the suite runs, so you can `docker exec` in to them and check things out.
