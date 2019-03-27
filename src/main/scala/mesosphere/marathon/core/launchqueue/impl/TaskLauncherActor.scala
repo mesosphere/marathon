@@ -142,6 +142,8 @@ private class TaskLauncherActor(
   }
 
   private[this] def receiveUnknown: Receive = {
+    case Status.Success(msg) =>
+      logger.debug(s"TaskLauncherActor received a success from ${sender}; ${msg}")
     case Status.Failure(ex) =>
       logger.error(s"TaskLauncherActor received a failure from ${sender}", ex)
 
@@ -197,6 +199,7 @@ private class TaskLauncherActor(
               await(instanceTracker.forceExpunge(instance.instanceId)): @silent
               await(instanceTracker.schedule(Instance.scheduled(instance.runSpec)))
             }
+            Status.Success(s"Rescheduled ${instance.instanceId} due to provision timeout.")
           } pipeTo self
         }
       }
