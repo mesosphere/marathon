@@ -8,6 +8,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.serialization._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.NetworkValidation
+import mesosphere.marathon.core.check.{Check, CheckWithPort}
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.plugin.PluginManager
@@ -21,6 +22,8 @@ import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{Resource, ScalarResource}
 import org.apache.mesos.{Protos => mesos}
+import mesosphere.marathon.core.health.{PortReference => HealthPortReference}
+import mesosphere.marathon.core.check.{PortReference => CheckPortReference}
 
 import scala.concurrent.duration._
 
@@ -57,6 +60,8 @@ case class AppDefinition(
     override val container: Option[Container] = AppDefinition.DefaultContainer,
 
     healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
+
+    check: Option[Check] = AppDefinition.DefaultCheck,
 
     readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
 
@@ -182,6 +187,8 @@ case class AppDefinition(
       .setUnreachableStrategy(unreachableStrategy.toProto)
       .setKillSelection(killSelection.toProto)
 
+    check.foreach { c => builder.setCheck(c.toProto) }
+
     executorResources.foreach(r => {
       builder.addExecutorResources(ScalarResource(Resource.CPUS, r.cpus))
       builder.addExecutorResources(ScalarResource(Resource.MEM, r.mem))
@@ -299,6 +306,7 @@ case class AppDefinition(
       fetch = proto.getCmd.getUrisList.map(FetchUri.fromProto)(collection.breakOut),
       container = containerOption,
       healthChecks = proto.getHealthChecksList.map(HealthCheck.fromProto).toSet,
+      check = if (proto.hasCheck) Some(Check.fromProto(proto.getCheck)) else None,
       readinessChecks =
         proto.getReadinessCheckDefinitionList.map(ReadinessCheckSerializer.fromProto)(collection.breakOut),
       taskKillGracePeriod = if (proto.hasTaskKillGracePeriod) Some(proto.getTaskKillGracePeriod.milliseconds)
@@ -358,6 +366,7 @@ case class AppDefinition(
           backoffStrategy != to.backoffStrategy ||
           container != to.container ||
           healthChecks != to.healthChecks ||
+          check != to.check ||
           taskKillGracePeriod != to.taskKillGracePeriod ||
           dependencies != to.dependencies ||
           upgradeStrategy != to.upgradeStrategy ||
@@ -421,6 +430,8 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultHealthChecks = Set.empty[HealthCheck]
 
+  val DefaultCheck: Option[Check] = None
+
   val DefaultReadinessChecks = Seq.empty[ReadinessCheck]
 
   val DefaultTaskKillGracePeriod = Option.empty[FiniteDuration]
@@ -479,6 +490,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     validator[AppDefinition] { app =>
       app.id is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
       app.dependencies is every(PathId.pathIdValidator)
+
     } and validBasicAppDefinition(enabledFeatures) and pluginValidators
 
   private def pluginValidators(implicit pluginManager: PluginManager): Validator[AppDefinition] =
@@ -498,6 +510,16 @@ object AppDefinition extends GeneralPurposeCombinators {
         case _ => false
       }
       (cmd ^ args) || (!(cmd && args) && container)
+    }
+
+  private val containsNoChecksWithDocker: Validator[AppDefinition] =
+    isTrue("AppDefinition must not use 'checks' if using docker") { app =>
+      val dockerContainer = app.container.exists {
+        case _: Container.Docker => true
+        case _ => false
+      }
+      val check = app.check.isDefined
+      !(check && dockerContainer)
     }
 
   private val complyWithMigrationAPI: Validator[AppDefinition] =
@@ -564,8 +586,12 @@ object AppDefinition extends GeneralPurposeCombinators {
     appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
     appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
     appDef must containsCmdArgsOrContainer
+    appDef must containsNoChecksWithDocker
     appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
     appDef must haveAtMostOneMesosHealthCheck
+    if (appDef.check.isDefined) {
+      appDef.check.get is checkPortIndexIsValid(appDef.portIndices)
+    }
     appDef.instances should be >= 0
     appDef.fetch is every(fetchUriIsValid)
     appDef.resources.mem as "mem" should be >= 0.0
@@ -592,9 +618,19 @@ object AppDefinition extends GeneralPurposeCombinators {
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") {
       case hc: HealthCheckWithPort =>
         hc.portIndex match {
-          case Some(PortReference.ByIndex(idx)) => hostPortsIndices.contains(idx)
-          case Some(PortReference.ByName(name)) => false // TODO(jdef) support port name as an index
+          case Some(HealthPortReference.ByIndex(idx)) => hostPortsIndices.contains(idx)
+          case Some(HealthPortReference.ByName(name)) => false // TODO(jdef) support port name as an index
           case None => hc.port.nonEmpty || (hostPortsIndices.length == 1 && hostPortsIndices.head == 0)
+        }
+      case _ => true
+    }
+
+  private def checkPortIndexIsValid(hostPortsIndices: Range): Validator[Check] =
+    isTrue("check port index must address an element of the ports array or container port mappings.") {
+      case c: CheckWithPort =>
+        c.portIndex match {
+          case Some(CheckPortReference.ByIndex(idx)) => hostPortsIndices.contains(idx)
+          case None => c.port.nonEmpty || (hostPortsIndices.length == 1 && hostPortsIndices.head == 0)
         }
       case _ => true
     }

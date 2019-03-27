@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "8886789c5b142ed00815b77b03c4493b97f765620ff6be35e61bf9295678626b"
+            "sha256": "d4e17d2f92c45c21721d92781e01dac6d5424e4ca259baf0b4eb2b5e14551c6c"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -102,10 +102,10 @@
         },
         "certifi": {
             "hashes": [
-                "sha256:47f9c83ef4c0c621eaef743f133f09fa8a74a9b75f037e8624f83bd1b6626cb7",
-                "sha256:993f830721089fef441cdfeb4b2c8c9df86f0c63239f06bd025a76a7daddb033"
+                "sha256:59b7658e26ca9c7339e00f8f4636cdfe59d34fa37b9b04f6f9e9926b3cece1a5",
+                "sha256:b26104d6835d1f5e49452a26eb2ff87fe7090b89dfcaee5ea2212697e1e1d7ae"
             ],
-            "version": "==2018.11.29"
+            "version": "==2019.3.9"
         },
         "cffi": {
             "hashes": [
@@ -180,7 +180,7 @@
         },
         "dcos-test-utils": {
             "git": "https://github.com/dcos/dcos-test-utils",
-            "ref": "8f1820f537b0caa4bbb697beaae4d1e4940bfbb6"
+            "ref": "a1a33c5465a9b9370209718fa72ae9429982bf35"
         },
         "idna": {
             "hashes": [
@@ -295,8 +295,7 @@
         },
         "pycparser": {
             "hashes": [
-                "sha256:a988718abfad80b6b157acce7bf130a30876d27603738ac39f140993246b25b3",
-                "sha256:e3af61fed7410189708e8180dc0c8e2ff60bf4e615cdb0b11a7b836a6742a765"
+                "sha256:a988718abfad80b6b157acce7bf130a30876d27603738ac39f140993246b25b3"
             ],
             "version": "==2.19"
         },
@@ -378,10 +377,10 @@
         },
         "scp": {
             "hashes": [
-                "sha256:1b7fd4d7e9e966542ed64a9716de7846d8a49efc5e0923e233c391119e6207b1",
-                "sha256:cfcc275c249ae59480f88fa55c4bd7795ce8b48d3a9b8fd635d82958084b4124"
+                "sha256:26c0bbc7ea29c30ec096ae67b0afa7a6b7c557b2ce8f740109ee72a0d52af7d1",
+                "sha256:ef9d6e67c0331485d3db146bf9ee9baff8a48f3eb0e6c08276a8584b13bf34b3"
             ],
-            "version": "==0.13.0"
+            "version": "==0.13.2"
         },
         "six": {
             "hashes": [

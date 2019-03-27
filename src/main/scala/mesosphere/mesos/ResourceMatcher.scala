@@ -249,8 +249,9 @@ object ResourceMatcher extends StrictLogging {
     }
 
     val checkGpuSchedulingBehaviour: Boolean = {
-      val applicationSpecificGpuBehavior = runSpec.labels.get("GPU_SCHEDULING_BEHAVIOR")
-        .filter(behavior => validBehaviors.contains(behavior))
+      val applicationSpecificGpuBehavior: Option[GpuSchedulingBehavior] = runSpec.labels.get("GPU_SCHEDULING_BEHAVIOR").flatMap { behaviorName =>
+        validBehaviors.find(_.name == behaviorName)
+      }
       val availableGPUs = groupedResources.getOrElse(Resource.GPUS, Nil).foldLeft(0.0)(_ + _.getScalar.getValue)
       val gpuResourcesAreWasted = availableGPUs > 0 && runSpec.resources.gpus == 0
       applicationSpecificGpuBehavior.getOrElse(conf.gpuSchedulingBehavior()) match {

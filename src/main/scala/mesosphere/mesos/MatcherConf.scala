@@ -1,5 +1,6 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.GpuSchedulingBehavior
 import org.rogach.scallop.ScallopOption
 
 import scala.concurrent.duration._
@@ -12,7 +13,7 @@ trait MatcherConf {
 
   def drainingTime: FiniteDuration = FiniteDuration(drainingSeconds(), SECONDS)
 
-  def gpuSchedulingBehavior: ScallopOption[String]
+  def gpuSchedulingBehavior: ScallopOption[GpuSchedulingBehavior]
 
   def maintenanceMode: ScallopOption[Boolean]
 }

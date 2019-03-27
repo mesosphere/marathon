@@ -21,9 +21,18 @@ object TaskConversion extends HealthConversion with DefaultConversions {
       reservation.volumeIds.toRaml
     }
 
+    val checkStatus: Option[CheckStatus] = task.status.mesosStatus.collect {
+      case mesosStatus if mesosStatus.hasCheckStatus => mesosStatus.getCheckStatus
+    }.map { check =>
+      check.toRaml
+    }.filter { ramlCheck =>
+      ramlCheck.command.nonEmpty || ramlCheck.tcp.nonEmpty || ramlCheck.http.nonEmpty
+    }
+
     Task(
       appId = enrichedTask.appId.toRaml,
       healthCheckResults = enrichedTask.healthCheckResults.toRaml,
+      checkResult = checkStatus,
       host = enrichedTask.agentInfo.host,
       id = task.taskId.idString,
       ipAddresses = ipAddresses,
