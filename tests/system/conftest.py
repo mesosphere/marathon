@@ -1,7 +1,6 @@
 import logging
 import logging.config
 
-import json
 import os
 import pandas as pd
 import re
@@ -74,7 +73,7 @@ class PandasReport(object):
         }, ignore_index=True)
 
     def _append_skipped(self, report):
-        pass # TODO: how should we deal with skipped tests?
+        pass  # TODO: how should we deal with skipped tests?
 
     # Pytest hooks
 
@@ -82,15 +81,15 @@ class PandasReport(object):
         if report.passed:
             if report.when == 'call':
                 self._append_pass(report)
-                self._build_id += 1 # TODO: save only once
+                self._build_id += 1  # TODO: save only once
         elif report.failed:
             if report.when == 'teardown':
-                pass # TODO: save teardown errors
+                pass  # TODO: save teardown errors
             elif report.when == 'call':
                 self._append_failure(report)
-                self._build_id += 1 # TODO: save only once
+                self._build_id += 1  # TODO: save only once
         elif report.skipped:
-           self._append_skipped(report)
+            self._append_skipped(report)
 
     def pytest_collectreport(self, report):
         if report.failed:
