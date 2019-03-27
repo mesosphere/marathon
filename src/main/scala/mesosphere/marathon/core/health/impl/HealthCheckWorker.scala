@@ -19,21 +19,14 @@ import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{ AppDefinition, Timestamp }
 import mesosphere.util.ThreadPoolContext
+import mesosphere.marathon.util.toRichFuture
 
+import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.control.NonFatal
-import scala.util.{ Failure, Success, Try }
+import scala.util.{ Failure, Success }
 
 object HealthCheckWorker extends StrictLogging {
-
-  implicit class RichFuture[T](f: Future[T])(implicit ec: ExecutionContext) {
-    def mapAll[U](pf: PartialFunction[Try[T], U]): Future[U] = {
-      val p = Promise[U]()
-      f.onComplete(r => p.complete(Try(pf(r))))
-      p.future
-    }
-  }
 
   def run(app: AppDefinition, instance: Instance, healthCheck: MarathonHealthCheck)(implicit mat: ActorMaterializer): Future[HealthResult] = {
     logger.debug("Dispatching health check job for {}", instance.instanceId)

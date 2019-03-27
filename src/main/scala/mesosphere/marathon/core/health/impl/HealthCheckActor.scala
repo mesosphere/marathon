@@ -41,12 +41,10 @@ private[health] class HealthCheckActor(
         //Start health checking not after the default first health check
         val startAfter = math.min(marathonHealthCheck.interval.toMillis, HealthCheck.DefaultFirstHealthCheckAfter.toMillis).millis
 
+        logger.info(s"Starting health check for ${app.id} version ${app.version} and healthCheck $marathonHealthCheck in $startAfter ms")
+
         Source
           .tick(startAfter, marathonHealthCheck.interval, Tick)
-          .map { t =>
-            logger.info(s"HealthCheck tick for app ${app.id} version ${app.version} and healthCheck $marathonHealthCheck")
-            t
-          }
           .mapAsync(1)(_ => instanceTracker.specInstances(app.id))
           .map { instances =>
             purgeStatusOfDoneInstances(instances)
