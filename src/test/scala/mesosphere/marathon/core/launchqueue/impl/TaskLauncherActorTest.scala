@@ -87,7 +87,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
         .toMat(Sink.queue[OfferMatchStatistics.OfferMatchUpdate])(Keep.both)
         .run
 
-    Mockito.when(instanceTracker.forceExpunge(any)).thenReturn(Future.successful(Done))
+    instanceTracker.forceExpunge(any) returns Future.successful(Done)
     Mockito.when(instanceTracker.schedule(any[Instance])).thenReturn(Future.successful(Done))
 
     private[impl] def createLauncherRef(appToLaunch: PathId = f.app.id): TestActorRef[TaskLauncherActor] = {
