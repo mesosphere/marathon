@@ -22,7 +22,9 @@ Build with:
 ```
 cd {marathon_project_dir}
 rm -rf target/packages
-sbt docker:publishLocal packageLinux
+sbt docker:publishLocal
+cd tools/packager
+make clean all -j
 ```
 
 ### 2) Build the test bed docker images
