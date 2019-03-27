@@ -6,7 +6,6 @@ import pytest
 import logging
 
 from datetime import timedelta
-from tenacity import before_log, retry
 
 from shakedown.clients import dcos_url_path
 from shakedown.clients.authentication import dcos_acs_token

@@ -532,13 +532,8 @@ def test_pod_with_persistent_volume():
     path2 = tasks[1]['container']['volumes'][0]['container_path']
     logger.info('Deployd two containers on {}:{}/{} and {}:{}/{}'.format(host, port1, path1, host, port2, path2))
 
-<<<<<<< HEAD
     @retry(wait=wait_fixed(1), stop=stop_after_attempt(60))
-    def check_http_endpoint(port, path):
-=======
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=60, retry_on_exception=common.ignore_exception)
     def check_http_endpoint(port, path, expected):
->>>>>>> origin/master
         cmd = "curl {}:{}/{}/foo".format(host, port, path)
         run, data = run_command_on_master(cmd)
         assert run, "{} did not succeed".format(cmd)
@@ -574,7 +569,7 @@ def test_pod_with_persistent_volume_recovers():
     port1 = tasks[0]['discovery']['ports']['ports'][0]["number"]
     path1 = tasks[0]['container']['volumes'][0]['container_path']
 
-    @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
+    @retry(wait=wait_fixed(1), stop=stop_after_attempt(30))
     def check_data(port, path, expected):
         cmd = "curl {}:{}/{}/foo".format(host, port, path)
         run, data = run_command_on_master(cmd)
