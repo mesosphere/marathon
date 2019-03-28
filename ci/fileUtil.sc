@@ -1,6 +1,5 @@
 #!/usr/bin/env amm
 
-import $ivy.`javax.xml.bind:jaxb-api:2.3.1`
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 
