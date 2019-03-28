@@ -3,7 +3,7 @@ package util
 
 import mesosphere.marathon.core.async.ExecutionContexts
 
-import scala.concurrent.{ Future, Promise }
+import scala.concurrent.{ ExecutionContext, Future, Promise }
 import scala.util.Try
 
 class RichFuture[T](val future: Future[T]) extends AnyVal {
@@ -18,5 +18,11 @@ class RichFuture[T](val future: Future[T]) extends AnyVal {
       x: Try[T] => promise.success(x)
     }(ExecutionContexts.callerThread)
     promise.future
+  }
+
+  def mapAll[U](pf: PartialFunction[Try[T], U])(implicit ec: ExecutionContext): Future[U] = {
+    val p = Promise[U]()
+    future.onComplete(r => p.complete(Try(pf(r))))
+    p.future
   }
 }
