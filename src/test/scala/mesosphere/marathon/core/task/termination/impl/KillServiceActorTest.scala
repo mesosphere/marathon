@@ -4,7 +4,7 @@ package core.task.termination.impl
 import java.util.UUID
 
 import akka.Done
-import akka.actor.{ActorRef, PoisonPill, Terminated}
+import akka.actor.{PoisonPill, Terminated}
 import akka.stream.scaladsl.Source
 import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.scalalogging.StrictLogging
