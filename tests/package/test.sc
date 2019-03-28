@@ -114,7 +114,7 @@ class DebianSystemdTest extends MesosTest {
     System.err.println(s"Installing package...")
     // install the package
     execBashWithoutCapture(systemd.containerId, """
-      apt-get update
+      apt-get update -o Acquire::Check-Valid-Until=false
       echo
       echo "We expect this to fail, due to dependencies missing:"
       echo
