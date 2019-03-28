@@ -4,9 +4,9 @@ package core.task.termination.impl
 import java.util.UUID
 
 import akka.Done
-import akka.actor.{ActorRef, PoisonPill, Terminated}
+import akka.actor.{PoisonPill, Terminated}
 import akka.stream.scaladsl.Source
-import akka.testkit.TestProbe
+import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
@@ -21,17 +21,18 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.SettableClock
 import org.apache.mesos
 import org.apache.mesos.SchedulerDriver
 import org.mockito.ArgumentCaptor
+import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
-class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
+class KillServiceActorTest extends AkkaUnitTest with StrictLogging with Eventually {
 
   val defaultConfig: KillConfig = new KillConfig {
     override lazy val killChunkSize: Int = 5
@@ -304,6 +305,22 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
       }
     }
 
+    "KillServiceActor" should {
+      "not put scheduled instance into the actor queue" in withActor(defaultConfig) { (f, actor) =>
+        val scheduledInstance = Instance.scheduled(AppDefinition(PathId("/scheduled-instance")))
+
+        val promise = Promise[Done]()
+        actor ! KillServiceActor.KillInstances(Seq(scheduledInstance), promise)
+
+        eventually {
+          promise.isCompleted
+        }
+
+        actor.underlyingActor.inFlight.isEmpty shouldBe (true) withClue(s"Expecting nothing in flight, actually '${actor.underlyingActor.inFlight}'")
+        actor.underlyingActor.instancesToKill.isEmpty shouldBe (true) withClue(s"Expecting nothing in instances to kill, actually '${actor.underlyingActor.instancesToKill}'")
+      }
+    }
+
     "initialize actor based on not running instances from tracker state" in {
       Given("KillServiceActor and instance tracker with active and decommissioned instance")
       val f = new Fixture(defaultConfig)
@@ -333,9 +350,9 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging {
     }
   }
 
-  def withActor(killConfig: KillConfig)(testCode: (Fixture, ActorRef) => Any): Unit = {
+  def withActor(killConfig: KillConfig)(testCode: (Fixture, TestActorRef[KillServiceActor]) => Any): Unit = {
     val f = new Fixture(killConfig)
-    val actor = system.actorOf(KillServiceActor.props(f.driverHolder, f.instanceTracker, killConfig, f.metrics, f.clock), s"KillService-${UUID.randomUUID()}")
+    val actor: TestActorRef[KillServiceActor] = TestActorRef(KillServiceActor.props(f.driverHolder, f.instanceTracker, killConfig, f.metrics, f.clock), s"KillService-${UUID.randomUUID()}")
 
     try {
       testCode(f, actor)
