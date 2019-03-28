@@ -215,7 +215,8 @@ lazy val packagingSettings = Seq(
       restCommands ++
       Seq(
         Cmd("ENV", "JAVA_HOME /docker-java-home"),
-        Cmd("RUN", "ln -sf /marathon/bin/marathon /marathon/bin/start"),
+        Cmd("RUN", s"""ln -sf /marathon/bin/marathon /marathon/bin/start && \\
+                      |chmod a+x /marathon/bin/marathon""".stripMargin),
         // Continue to keep the default user root, even though we now allow the user nobody
         Cmd("USER", "root"))
   },
