@@ -33,28 +33,31 @@ private[tracker] class InstanceTrackerDelegate(
     (taskTrackerRef ? InstanceTrackerActor.List).mapTo[InstanceTracker.InstancesBySpec].recover {
       case e: AskTimeoutException =>
         throw new TimeoutException(
-          "timeout while calling list. If you know what you are doing, you can adjust the timeout " +
-            s"with --${config.internalTaskTrackerRequestTimeout.name}."
+          s"timeout while calling instancesBySpec() (current value = ${config.internalTaskTrackerRequestTimeout().milliseconds}ms. " +
+            s"If you know what you are doing, you can adjust the timeout with --${config.internalTaskTrackerRequestTimeout.name}."
         )
     }
   }
 
   // TODO(jdef) support pods when counting launched instances
   override def countLaunchedSpecInstancesSync(appId: PathId): Int =
-    instancesBySpecSync.specInstances(appId).count(instance => instance.isLaunched || (instance.isReserved && !instance.isReservedTerminal))
+    specInstancesSync(appId).count(instance => instance.isLaunched || (instance.isReserved && !instance.isReservedTerminal))
   override def countLaunchedSpecInstances(appId: PathId): Future[Int] = {
     import mesosphere.marathon.core.async.ExecutionContexts.global
-    instancesBySpec().map(_.specInstances(appId).count(instance => instance.isLaunched || (instance.isReserved && !instance.isReservedTerminal)))
+    specInstances(appId).map(_.count(instance => instance.isLaunched || (instance.isReserved && !instance.isReservedTerminal)))
   }
 
-  override def hasSpecInstancesSync(appId: PathId): Boolean = instancesBySpecSync.hasSpecInstances(appId)
+  override def hasSpecInstancesSync(appId: PathId): Boolean = specInstancesSync(appId).nonEmpty
   override def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
-    instancesBySpec().map(_.hasSpecInstances(appId))
+    specInstances(appId).map(_.nonEmpty)
 
-  override def specInstancesSync(appId: PathId): Seq[Instance] =
-    instancesBySpecSync.specInstances(appId)
   override def specInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] =
-    instancesBySpec().map(_.specInstances(appId))
+    (taskTrackerRef ? InstanceTrackerActor.ListBySpec(appId)).mapTo[Seq[Instance]]
+
+  override def specInstancesSync(appId: PathId): Seq[Instance] = {
+    import mesosphere.marathon.core.async.ExecutionContexts.global
+    Await.result(specInstances(appId), taskTrackerQueryTimeout.duration)
+  }
 
   override def instance(taskId: Instance.Id): Future[Option[Instance]] =
     (taskTrackerRef ? InstanceTrackerActor.Get(taskId)).mapTo[Option[Instance]]

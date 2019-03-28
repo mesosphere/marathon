@@ -2,12 +2,12 @@ package mesosphere.marathon
 package core.health.impl
 
 import java.net.{ InetAddress, ServerSocket }
+import java.util.UUID
 
-import akka.Done
-import akka.actor.Props
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.StatusCodes
-import akka.testkit.{ ImplicitSender, TestActorRef }
+import akka.stream.ActorMaterializer
+import akka.testkit.ImplicitSender
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance.AgentInfo
@@ -17,15 +17,12 @@ import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{ AppDefinition, PathId, PortDefinition, UnreachableStrategy }
 
 import scala.collection.immutable.Seq
-import scala.concurrent.{ Await, Future, Promise }
-import scala.concurrent.duration._
+import scala.concurrent.{ Future, Promise }
 
-class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
+class HealthCheckWorkerTest extends AkkaUnitTest with ImplicitSender {
 
-  import HealthCheckWorker._
-
-  "HealthCheckWorkerActor" should {
-    "A TCP health check should correctly resolve the hostname" in {
+  "HealthCheckWorker" should {
+    "A TCP health check should correctly resolve the hostname and return a Healthy result" in {
       val socket = new ServerSocket(0)
       val socketPort: Int = socket.getLocalPort
 
@@ -33,7 +30,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
         socket.accept().close()
       }
 
-      val appId = PathId("/test_id")
+      val appId = PathId(s"/app-with-tcp-health-check-${UUID.randomUUID()}")
       val app = AppDefinition(id = appId, portDefinitions = Seq(PortDefinition(0)))
       val hostName = InetAddress.getLocalHost.getCanonicalHostName
       val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
@@ -44,48 +41,13 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       }
       val instance = LegacyAppInstance(task, agentInfo, UnreachableStrategy.default())
 
-      val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor], mat))
-      ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
+      val resF = HealthCheckWorker.run(app, instance,
+        healthCheck = MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))(mat.asInstanceOf[ActorMaterializer])
 
       try { res.futureValue }
       finally { socket.close() }
 
-      expectMsgPF(patienceConfig.timeout) {
-        case Healthy(_, _, _, _) => ()
-      }
-    }
-
-    "A health check worker should shut itself down" in {
-      val socket = new ServerSocket(0)
-      val socketPort: Int = socket.getLocalPort
-
-      val res = Future {
-        socket.accept().close()
-      }
-
-      val appId = PathId("/test_id")
-      val app = AppDefinition(id = appId, portDefinitions = Seq(PortDefinition(0)))
-      val hostName = InetAddress.getLocalHost.getCanonicalHostName
-      val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
-      val task = {
-        val t: Task.LaunchedEphemeral = TestTaskBuilder.Helper.runningTaskForApp(appId)
-        val hostPorts = Seq(socketPort)
-        t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName, hostPorts, ipAddresses = Nil)))
-      }
-      val instance = LegacyAppInstance(task, agentInfo, UnreachableStrategy.default())
-
-      val ref = TestActorRef[HealthCheckWorkerActor](Props(classOf[HealthCheckWorkerActor], mat))
-      ref ! HealthCheckJob(app, instance, MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))
-
-      try { res.futureValue }
-      finally { socket.close() }
-
-      expectMsgPF(patienceConfig.timeout) {
-        case _: HealthResult => ()
-      }
-
-      watch(ref)
-      expectTerminated(ref)
+      resF.futureValue shouldBe a[Healthy]
     }
 
     "A HTTP health check should work as expected" in {
@@ -112,7 +74,7 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
       val port = binding.localAddress.getPort
 
       val hostName = "localhost"
-      val appId = PathId("/test_id")
+      val appId = PathId(s"/app-with-http-health-check-${UUID.randomUUID()}")
       val app = AppDefinition(id = appId, portDefinitions = Seq(PortDefinition(0)))
       val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), attributes = Nil)
       val task = {
@@ -127,16 +89,16 @@ class HealthCheckWorkerActorTest extends AkkaUnitTest with ImplicitSender {
 
       val instance = Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy)
 
-      val ref = system.actorOf(Props(classOf[HealthCheckWorkerActor], mat))
-      ref ! HealthCheckJob(app, instance, MarathonHttpHealthCheck(port = Some(port), path = Some("/health")))
-      expectMsgClass(classOf[Healthy])
+      val resF = HealthCheckWorker.run(app, instance,
+        healthCheck = MarathonHttpHealthCheck(port = Some(port), path = Some("/health")))(mat.asInstanceOf[ActorMaterializer])
 
+      resF.futureValue shouldBe a[Healthy]
       promise.future.futureValue shouldEqual "success"
 
-      val unhealthy = system.actorOf(Props(classOf[HealthCheckWorkerActor], mat))
-      unhealthy ! HealthCheckJob(app, instance, MarathonHttpHealthCheck(port = Some(port), path = Some("/unhealthy")))
-      expectMsgClass(classOf[Unhealthy])
+      val unhealthyResF = HealthCheckWorker.run(app, instance,
+        healthCheck = MarathonHttpHealthCheck(port = Some(port), path = Some("/unhealthy")))(mat.asInstanceOf[ActorMaterializer])
 
+      unhealthyResF.futureValue shouldBe a[Unhealthy]
     }
   }
 }

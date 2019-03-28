@@ -1,3 +1,13 @@
+## Changes from 1.5.13 to 1.5.14
+
+## Introduce global throttling to Marathon health checks
+Marathon health checks is a deprecated feature and customers are strongly recommended to switch to Mesos health checks for scalability reasons. However, we've seen a number of issues when excessive number of Marathon health checks (HTTP and TCP) would overload parts of Marathon. Hence we introduced a new parameter `--max_concurrent_marathon_health_checks` that defines maximum number (256 by default) of *Marathon* health checks (HTTP/S and TCP) that can be executed concurrently in the given moment. Note that setting a big value here and using many services with Marathon health checks will overload Marathon leading to internal timeouts and unstable behavior.  
+
+### Fixed Issues
+- [MARATHON-8596](https://jira.mesosphere.com/browse/MARATHON-8596) Introduced global throttling to Marathon health checks
+- [MARATHON-8575](https://jira.mesosphere.com/browse/MARATHON-8575) Fixed a broken migration for app definitions with port mappings protocol "tcp,udp" which is no longer valid and should be "udp,tcp"
+- [MARATHON-8566](https://jira.mesosphere.com/browse/MARATHON-8566) Fixed a rare bug where a deployment was sometimes not immediately visible through the `v2/deployments` endpoint after creation
+
 ## Changes from 1.5.12 to 1.5.13
 
 ### Fixed Issues
