@@ -85,7 +85,7 @@ private class TaskLauncherActor(
 
   private[impl] def inFlightInstanceOperations = instanceMap.values.filter(_.isProvisioned)
 
-  private[this] val provisionTimeouts = mutable.Map.empty[Instance.Id, Cancellable]
+  private[impl] val provisionTimeouts = mutable.Map.empty[Instance.Id, Cancellable]
 
   private[impl] def scheduledInstances: Iterable[Instance] = instanceMap.values.filter(_.isScheduled)
   def scheduledVersions = scheduledInstances.map(_.runSpec.configRef).toSet
