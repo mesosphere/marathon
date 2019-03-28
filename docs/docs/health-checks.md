@@ -223,7 +223,7 @@ The `task_killing` feature must be enabled in order to make the state available.
 
 ## taskKillGracePeriodSeconds
 
-While health checks allow you to determine when a task is unhealthy and should be terminated, the `taskKillGracePeriodSeconds` field allows you to set the amount of time between when the executor sends the `SIGTERM` message to gracefully terminate a task and when it kills it by sending `SIGKILL`. This field can be useful if you have a task that does not shut down immediately. If you do not set the grace period duration, the default for Mesos is used (which is 10 seconds).
+While health checks allow you to determine when a task is unhealthy and should be terminated, the `taskKillGracePeriodSeconds` field allows you to set the amount of time between when the executor sends the `SIGTERM` message to gracefully terminate a task and when it kills it by sending `SIGKILL`. This field can be useful if you have a task that does not shut down immediately. If you do not set a kill grace period duration, then no value is provided to Mesos.
 
 ## Example
 
