@@ -221,6 +221,11 @@ private class TaskLauncherActor(
         if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchInstances(clock.now()))) {
           maybeOfferReviver.foreach(_.reviveOffers())
         }
+
+        // we have to reset the provisioning timeout here because if e.g. an app went from provision to failed
+        // this timer will still be going until the next launch happens
+        provisionTimeouts.get(update.instance.instanceId).foreach(_.cancel())
+        provisionTimeouts -= update.instance.instanceId
       }
       syncInstance(update.instance.instanceId)
       manageOfferMatcherStatus(clock.now())
