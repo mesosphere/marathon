@@ -221,11 +221,6 @@ private class TaskLauncherActor(
         if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchInstances(clock.now()))) {
           maybeOfferReviver.foreach(_.reviveOffers())
         }
-
-        // we have to reset the provisioning timeout here because if e.g. an app went from provision to failed
-        // this timer will still be going until the next launch happens
-        provisionTimeouts.get(update.instance.instanceId).foreach(_.cancel())
-        provisionTimeouts -= update.instance.instanceId
       }
       syncInstance(update.instance.instanceId)
       manageOfferMatcherStatus(clock.now())
@@ -283,7 +278,9 @@ private class TaskLauncherActor(
 
         // Only instances that scheduled or provisioned have not seen a Mesos update. The provision timeouts waits for
         // any Mesos update. Thus we can safely kill the provision timeout in all other cases, even on a TASK_FAILED.
-        if (!instance.isProvisioned && !instance.isScheduled) {
+        // with stable ids, TASK_FAILED ends up yielding instance.isScheduled typically in case of goal: Running
+        // because of that we have to handle instance becoming terminal explicitly
+        if ((!instance.isProvisioned && !instance.isScheduled) || instance.state.condition.isTerminal) {
           provisionTimeouts.get(instanceId).foreach(_.cancel())
           provisionTimeouts -= instanceId
         }
