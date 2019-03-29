@@ -84,6 +84,7 @@ private[launcher] class OfferProcessorImpl(
     val offerId = offer.getId.getValue
     val agentId = offer.getSlaveId.getValue
     logger.info(s"Processing offer: offerId $offerId, agentId $agentId")
+    logger.debug(offer.toString)
   }
 
   override def processOffer(offer: Offer): Future[Done] = {

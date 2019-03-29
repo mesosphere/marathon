@@ -1,5 +1,15 @@
 ## Changes to 1.8.xxx
 
+### `--gpu_scheduling_behavior` default is now `restricted`; `undefined` is deprecated and will be removed
+
+The default GPU Scheduling Behavior has been changed to `restricted`, and `undefined` has been deprecated and will be removed in `1.9.x`. Operators with GPU clusters that are upgrading to Marathon 1.8.x should think carefully about their desired policy and set accordingly; as a general rule:
+
+* You only need to configure `--gpu_scheduling_behavior` if Marathon is GPU enabled (`--enable_features gpu_resources`).
+* If you are using GPUs, and most nodes have GPUs, set the `unrestricted`.
+* If you are using GPUs, and most nodes do not have GPUs, set to `restricted` (the default).
+
+For more information on `gpu_scheduling_behavior`, please see [the docs](https://mesosphere.github.io/marathon/docs/preferential-gpu-scheduling.html)
+
 ### Upgrades only from Marathon 1.6+
 
 You can only upgrade to Marathon 1.8 from 1.6.x and 1.7.x. If you'd like to upgrade from an earlier version you should

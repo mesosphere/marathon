@@ -65,7 +65,7 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
       groupManager.runSpec(app.id).returns(Some(app))
       val delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed] =
         EnrichedSource.emptyCancellable.mapMaterializedValue { _ => NotUsed }
-      val launchQueue = system.actorOf(
+      lazy val launchQueue = system.actorOf(
         LaunchQueueActor.props(
           config, instanceTracker, groupManager, runSpecActorProps, delayUpdates))
 

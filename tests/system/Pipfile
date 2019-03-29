@@ -9,9 +9,9 @@ python_version = "3.6"
 [packages]
 aiohttp = "*"
 pytest-asyncio = "*"
-dcos-launch = {ref = "6a0871b2454d41bdfbe0616f463e2425989bec78",git = "https://github.com/dcos/dcos-launch.git"}
+dcos-launch = {ref = "0aa9eaa1200b8a87a7d07fe4e13d552ef7410a04",git = "https://github.com/dcos/dcos-launch.git"}
 python-dateutil = "<2.7.0,>=2.1"
-dcos-test-utils = {ref = "8f1820f537b0caa4bbb697beaae4d1e4940bfbb6",git = "https://github.com/dcos/dcos-test-utils"}
+dcos-test-utils = {ref = "a1a33c5465a9b9370209718fa72ae9429982bf35",git = "https://github.com/dcos/dcos-test-utils"}
 214ae30 = {editable = true,path = "../shakedown"}
 pytest = '==3.6.4'
 pandas = "*"

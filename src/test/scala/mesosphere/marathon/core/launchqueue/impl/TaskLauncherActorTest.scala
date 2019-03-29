@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
+import akka.Done
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.testkit.{TestActorRef, TestProbe}
@@ -25,8 +26,9 @@ import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.mockito
 import org.mockito.{ArgumentCaptor, Mockito}
 import org.scalatest.concurrent.Eventually
+
 import scala.collection.immutable.Seq
-import scala.concurrent.Promise
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
 
 /**
@@ -84,6 +86,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Source.queue[OfferMatchStatistics.OfferMatchUpdate](16, OverflowStrategy.fail)
         .toMat(Sink.queue[OfferMatchStatistics.OfferMatchUpdate])(Keep.both)
         .run
+
+    instanceTracker.forceExpunge(any) returns Future.successful(Done)
+    instanceTracker.schedule(any[Instance]) returns Future.successful(Done)
 
     private[impl] def createLauncherRef(appToLaunch: PathId = f.app.id): TestActorRef[TaskLauncherActor] = {
       val props = TaskLauncherActor.props(
