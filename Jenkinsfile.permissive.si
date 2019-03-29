@@ -37,6 +37,7 @@ timeout(time: 3, unit: 'HOURS') {
                     } finally {
                         junit allowEmptyResults: true, testResults: "**/shakedown.xml"
                         archive includes: "**/diagnostics.zip"
+                        archive includes: "**/pandas.zip"
                         archive includes: "**/sandbox_*.tar.gz"
                         archive includes: "**/preflight*.log"
                         archive includes: "**/postflight*.log"
