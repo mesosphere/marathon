@@ -98,6 +98,9 @@ def test_marathon_delete_leader(marathon_service_name):
 
 @masters(3)
 def test_marathon_delete_leader_and_check_apps(marathon_service_name):
+
+    assert False, "Something broke"
+
     original_leader = marathon_leader_ip()
     print('leader: {}'.format(original_leader))
 
