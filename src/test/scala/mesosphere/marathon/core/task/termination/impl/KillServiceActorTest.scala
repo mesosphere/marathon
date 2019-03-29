@@ -316,8 +316,8 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging with Eventual
           promise.isCompleted
         }
 
-        actor.underlyingActor.inFlight.isEmpty shouldBe (true) withClue(s"Expecting nothing in flight, actually '${actor.underlyingActor.inFlight}'")
-        actor.underlyingActor.instancesToKill.isEmpty shouldBe (true) withClue(s"Expecting nothing in instances to kill, actually '${actor.underlyingActor.instancesToKill}'")
+        actor.underlyingActor.inFlight.isEmpty shouldBe (true) withClue (s"Expecting nothing in flight, actually '${actor.underlyingActor.inFlight}'")
+        actor.underlyingActor.instancesToKill.isEmpty shouldBe (true) withClue (s"Expecting nothing in instances to kill, actually '${actor.underlyingActor.instancesToKill}'")
       }
     }
 

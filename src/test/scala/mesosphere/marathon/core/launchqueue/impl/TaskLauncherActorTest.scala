@@ -420,7 +420,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
 
       eventually {
-        launcherRef.underlyingActor.provisionTimeouts.keys should contains(f.scheduledInstance.instanceId)
+        launcherRef.underlyingActor.provisionTimeouts.keys should contain(f.scheduledInstance.instanceId)
       }
 
       When("the task fails after being provisioned")
