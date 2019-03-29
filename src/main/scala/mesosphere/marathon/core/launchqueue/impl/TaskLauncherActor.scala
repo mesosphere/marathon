@@ -276,7 +276,7 @@ private class TaskLauncherActor(
       case Some(instance) =>
         instanceMap += instanceId -> instance
 
-        // Only instances that scheduled or provisioned have not seen a Mesos update. The provision timeouts waits for
+        // Only instances that are provisioned have not seen a Mesos update yet. The provision timeout waits for
         // any Mesos update. Thus we can safely kill the provision timeout in all other cases, even on a TASK_FAILED.
         // with stable ids, TASK_FAILED ends up yielding instance.isScheduled typically in case of goal: Running
         // because of that we have to handle instance becoming terminal explicitly
