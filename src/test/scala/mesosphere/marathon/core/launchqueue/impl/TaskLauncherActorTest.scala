@@ -6,6 +6,7 @@ import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, InstanceUpdated}
@@ -405,6 +406,31 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
       Then("the instance is not rescheduled")
       verify(instanceTracker, never).forceExpunge(any[Instance.Id])
+    }
+
+    "reset provisioning timeout after instance failed" in new Fixture {
+      Given("a provisioned instance")
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.scheduledInstance))
+
+      val launcherRef = createLauncherRef()
+      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
+      Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
+
+      val promise = Promise[MatchedInstanceOps]
+      val offer = MarathonTestHelper.makeBasicOffer().build()
+      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
+
+      eventually {
+        launcherRef.underlyingActor.provisionTimeouts.keys should contain(f.scheduledInstance.instanceId)
+      }
+
+      When("the task fails after being provisioned")
+      val op = mock[InstanceOp]
+      op.instanceId returns f.provisionedInstance.instanceId
+      launcherRef ! TaskStatusUpdateTestHelper.failed(f.provisionedInstance.copy(state = f.provisionedInstance.state.copy(condition = Condition.Scheduled))).wrapped
+
+      Then("the provisioning timeout is removed")
+      launcherRef.underlyingActor.provisionTimeouts.isEmpty should be(true)
     }
   }
 }
