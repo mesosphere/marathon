@@ -6,6 +6,7 @@ import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, InstanceUpdated}
@@ -426,10 +427,10 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       When("the task fails after being provisioned")
       val op = mock[InstanceOp]
       op.instanceId returns f.provisionedInstance.instanceId
-      launcherRef ! TaskStatusUpdateTestHelper.failed(f.provisionedInstance).wrapped
+      launcherRef ! TaskStatusUpdateTestHelper.failed(f.provisionedInstance.copy(state = f.provisionedInstance.state.copy(condition = Condition.Scheduled))).wrapped
 
       Then("the provisioning timeout is removed")
-      launcherRef.underlyingActor.provisionTimeouts.keys should contain(f.scheduledInstance.instanceId)
+      launcherRef.underlyingActor.provisionTimeouts.isEmpty should be(true)
     }
   }
 }
