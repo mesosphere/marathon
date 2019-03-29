@@ -18,7 +18,7 @@ class PandasReport(object):
         self._output_file = os.path.abspath(file)
         self._report = pd.DataFrame(columns=['build_id', 'testsuite', 'testcase', 'status', 'error', 'timestamp'])
         self._py_ext_re = re.compile(r"\.py$")
-        self._build_id = 0
+        self._build_id = os.environ.get('BUILD_NUMBER', 'unknown')
 
     def mangle_test_address(self, address):
         """Forked from https://github.com/pytest-dev/pytest/blob/master/src/_pytest/junitxml.py"""
@@ -81,13 +81,11 @@ class PandasReport(object):
         if report.passed:
             if report.when == 'call':
                 self._append_pass(report)
-                self._build_id += 1  # TODO: save only once
         elif report.failed:
             if report.when == 'teardown':
                 pass  # TODO: save teardown errors
             elif report.when == 'call':
                 self._append_failure(report)
-                self._build_id += 1  # TODO: save only once
         elif report.skipped:
             self._append_skipped(report)
 
