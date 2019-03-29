@@ -280,7 +280,7 @@ private class TaskLauncherActor(
         // any Mesos update. Thus we can safely kill the provision timeout in all other cases, even on a TASK_FAILED.
         // with stable ids, TASK_FAILED ends up yielding instance.isScheduled typically in case of goal: Running
         // because of that we have to handle instance becoming terminal explicitly
-        if (!instance.isProvisioned && provisionTimeouts.contains(instanceId)) {
+        if (!instance.isProvisioned) {
           provisionTimeouts.get(instanceId).foreach(_.cancel())
           provisionTimeouts -= instanceId
         }
