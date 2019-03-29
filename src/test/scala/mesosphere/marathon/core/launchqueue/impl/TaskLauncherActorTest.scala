@@ -429,7 +429,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       launcherRef ! TaskStatusUpdateTestHelper.failed(f.provisionedInstance).wrapped
 
       Then("the provisioning timeout is removed")
-      launcherRef.underlyingActor.provisionTimeouts.contains(f.scheduledInstance.instanceId) shouldBe (false)
+      launcherRef.underlyingActor.provisionTimeouts.keys should contain(f.scheduledInstance.instanceId)
     }
   }
 }
