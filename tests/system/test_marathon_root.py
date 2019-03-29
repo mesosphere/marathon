@@ -102,7 +102,6 @@ def test_marathon_delete_leader_and_check_apps(marathon_service_name):
     assert False, "Something broke"
 
     original_leader = marathon_leader_ip()
-    print('leader: {}'.format(original_leader))
 
     app_def = apps.sleep_app()
     app_id = app_def['id']
