@@ -78,6 +78,12 @@ class TaskStatusUpdateProcessorImpl @Inject() (
         }
         acknowledge(status)
 
+      case Some(instance) if instance.hasReservation && (status.getState == MesosProtos.TaskState.TASK_GONE_BY_OPERATOR) =>
+        // expunge the instance
+        instanceTracker.forceExpunge(instance.instanceId).flatMap { _ =>
+          acknowledge(status)
+        }
+
       case Some(instance) =>
         // TODO(PODS): we might as well pass the taskCondition here
         instanceTracker.updateStatus(instance, status, now).flatMap(_ => acknowledge(status))
