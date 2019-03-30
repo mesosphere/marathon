@@ -28,7 +28,7 @@ class AgentGoneByOperatorIntegrationTest extends AkkaIntegrationTest with Embedd
       case Seq(task) => task
     }
 
-    mesos.markAgentGone(task.slaveId.get).success
+    mesos.markAgentGone(task.slaveId.get).success shouldBe true
 
     Then("A replacement is launched on a different agent")
     eventually {
