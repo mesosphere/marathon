@@ -197,7 +197,6 @@ private class TaskLauncherActor(
               await(instanceTracker.forceExpunge(instance.instanceId)): @silent
               await(instanceTracker.schedule(Instance.scheduled(instance.runSpec)))
             }
-            Status.Success(s"Rescheduled ${instance.instanceId} due to provision timeout.")
           }.failed.map(Status.Failure).pipeTo(self)
         }
       }
