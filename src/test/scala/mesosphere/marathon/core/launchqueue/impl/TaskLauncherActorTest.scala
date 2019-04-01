@@ -132,7 +132,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
         Instance.scheduled(f.app, Instance.Id.forRunSpec(f.app.id)),
         Instance.scheduled(f.app, Instance.Id.forRunSpec(f.app.id))
       )
-      Mockito.when(instanceTracker.instancesBySpecSync) returns InstanceTracker.InstancesBySpec.forInstances(instances))
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instances))
       val launcherRef = createLauncherRef()
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
       val mockedDelay = mock[Delay]
