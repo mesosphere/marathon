@@ -109,7 +109,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
   "TaskLauncherActor" should {
     "show correct count statistics for one running instance in the state" in new Fixture {
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(f.runningInstance))
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(f.runningInstance)
 
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
@@ -132,7 +132,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
         Instance.scheduled(f.app, Instance.Id.forRunSpec(f.app.id)),
         Instance.scheduled(f.app, Instance.Id.forRunSpec(f.app.id))
       )
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instances))
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instances)
       val launcherRef = createLauncherRef()
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
       val mockedDelay = mock[Delay]
