@@ -188,7 +188,7 @@ object MarathonTestHelper {
 
   def rawSource(path: String): Mesos.Resource.DiskInfo.Source = {
     val b = Mesos.Resource.DiskInfo.Source.newBuilder.
-      setType(Mesos.Resource.DiskInfo.Source.Type.PATH).
+      setType(Mesos.Resource.DiskInfo.Source.Type.RAW).
       setPath(Mesos.Resource.DiskInfo.Source.Path.newBuilder.setRoot(path))
     b.build
   }
