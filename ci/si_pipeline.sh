@@ -72,6 +72,7 @@ export TF_VAR_dcos_installer
 export TF_VAR_dcos_security
 
 # Create cluster.
+/opt/terraform/bin/terraform --help
 terraform init -upgrade || exit-with-cluster-launch-error "Could not initialize Terraform."
 terraform apply -auto-approve -state "$TERRAFORM_STATE"
 CLUSTER_LAUNCH_CODE=$?
