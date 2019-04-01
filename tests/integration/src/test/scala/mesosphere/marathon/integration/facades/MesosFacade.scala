@@ -4,10 +4,8 @@ package integration.facades
 import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding.{Get, Post}
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpResponse}
-import akka.http.scaladsl.server.ContentNegotiator.Alternative.ContentType
+import akka.http.scaladsl.model.{HttpEntity, HttpResponse}
 import akka.stream.Materializer
-import akka.util.ByteString
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon.integration.setup.RestResult
