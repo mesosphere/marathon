@@ -204,7 +204,7 @@ object DiskType {
       case None => DiskType.Root
       case Some(Source.Type.PATH) => DiskType.Path
       case Some(Source.Type.MOUNT) => DiskType.Mount
-      case Some(other) => Unkown(other)
+      //      case Some(other) => Unkown(other)
     }
 }
 
