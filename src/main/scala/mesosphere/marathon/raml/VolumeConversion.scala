@@ -180,7 +180,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     }
 
   implicit val appPersistentVolTypeProtoRamlWriter: Writes[Mesos.Resource.DiskInfo.Source.Type, PersistentVolumeType] = Writes { typ =>
-    import Mesos.Resource.DiskInfo.Source.Type._
+    import Mesos.Resource.DiskInfo.Source.Type.{MOUNT, PATH}
     typ match {
       case MOUNT => PersistentVolumeType.Mount
       case PATH => PersistentVolumeType.Path

@@ -333,6 +333,8 @@ object ResourceMatcher extends StrictLogging {
         resources.sortBy(_.size)(implicitly[Ordering[Double]].reverse)
       case DiskType.Mount =>
         resources.sortBy(_.size)
+      case DiskType.Unkown(_) =>
+        Nil
     }
   }
 

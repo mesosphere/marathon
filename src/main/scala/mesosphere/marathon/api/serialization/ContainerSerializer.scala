@@ -177,6 +177,8 @@ object PersistentVolumeInfoSerializer {
         builder.setType(mesos.Protos.Resource.DiskInfo.Source.Type.PATH)
       case DiskType.Mount =>
         builder.setType(mesos.Protos.Resource.DiskInfo.Source.Type.MOUNT)
+      case DiskType.Unkown(_) =>
+        ()
     }
     builder.addAllConstraints(info.constraints.asJava)
     info.maxSize.foreach(builder.setMaxSize)

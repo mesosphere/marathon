@@ -194,14 +194,17 @@ object DiskType {
     def toMesos: Option[Source.Type] = Some(Source.Type.MOUNT)
   }
 
-  val all: List[DiskType] = Root :: Path :: Mount :: Nil
+  case class Unkown(sourceType: Source.Type) extends DiskType {
+    override def toString: String = "unknown"
+    def toMesos: Option[Source.Type] = Some(sourceType)
+  }
 
   def fromMesosType(o: Option[Source.Type]): DiskType =
     o match {
       case None => DiskType.Root
       case Some(Source.Type.PATH) => DiskType.Path
       case Some(Source.Type.MOUNT) => DiskType.Mount
-      case Some(other) => throw new RuntimeException(s"unknown mesos disk type: $other")
+      case Some(other) => Unkown(other)
     }
 }
 
