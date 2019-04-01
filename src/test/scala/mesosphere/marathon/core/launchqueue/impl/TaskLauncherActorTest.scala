@@ -109,7 +109,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
   "TaskLauncherActor" should {
     "show correct count statistics for one running instance in the state" in new Fixture {
-      Mockito.when(instanceTracker.instancesBySpecSync) returns InstanceTracker.InstancesBySpec.forInstances(f.runningInstance))
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(f.runningInstance))
 
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
