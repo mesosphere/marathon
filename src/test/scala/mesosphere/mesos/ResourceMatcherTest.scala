@@ -1025,23 +1025,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         .addResources(MarathonTestHelper.scalarResource("disk", 1024.0, disk = Some(MarathonTestHelper.rawDisk("/path"))))
         .build()
 
-      val volume = VolumeWithMount(
-        PersistentVolume(
-          name = None,
-          persistent = PersistentVolumeInfo(
-            size = 128,
-            `type` = DiskType.Path)),
-        VolumeMount(None, "/var/lib/data"))
-
-      val app = AppDefinition(
-        id = "/test".toRootPath,
-        resources = Resources(
-          cpus = 1.0,
-          mem = 128.0,
-          disk = 0.0),
-        container = Some(Container.Mesos(
-          volumes = List(volume))),
-        versionInfo = OnlyVersion(Timestamp(2)))
+      val app = MarathonTestHelper.appWithPersistentVolume()
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty, localRegion = None)
 
