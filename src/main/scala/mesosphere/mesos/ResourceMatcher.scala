@@ -475,7 +475,14 @@ object ResourceMatcher extends StrictLogging {
 
     val diskResources = groupedResources.getOrElse(Resource.DISK, Seq.empty)
 
-    val resourcesByType: Map[DiskType, Seq[Protos.Resource]] = diskResources.groupBy { r =>
+    val withoutUnsupportedTypes = diskResources.filterNot { r =>
+      r.getDiskSourceOption.exists { source =>
+        source.getType == Source.Type.BLOCK ||
+          source.getType == Source.Type.RAW
+      }
+    }
+
+    val resourcesByType: Map[DiskType, Seq[Protos.Resource]] = withoutUnsupportedTypes.groupBy { r =>
       DiskSource.fromMesos(r.getDiskSourceOption).diskType
     }.withDefault(_ => Nil)
 
