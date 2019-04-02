@@ -1,6 +1,6 @@
 FROM marathon-package-test:debian-systemd
 
-RUN apt-get update && \
+RUN apt-get update -o Acquire::Check-Valid-Until=false && \
   (apt-get install -y sysvinit-core sysvinit-utils || echo ignoring failure) && \
   apt-get remove --purge --auto-remove systemd -y && \
   cp /usr/share/sysvinit/inittab /etc/inittab && \
