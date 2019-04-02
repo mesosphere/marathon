@@ -128,27 +128,6 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       verifyNoMoreInteractions()
     }
 
-    "receiving a TASK_GONE_BY_OPERATOR status update for a resident task results in expunge" in new Fixture {
-      val instance = TestInstanceBuilder.newBuilder(appId)
-        .withReservation(Seq(LocalVolumeId(appId, "vol", "DEADBEEF")))
-        .addTaskWithBuilder().taskLaunched().build().getInstance()
-      val status = TaskStatusUpdateTestHelper.goneByOperator(instance).status
-
-      instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-      instanceTracker.forceExpunge(instance.instanceId) returns Future.successful(Done)
-
-      updateProcessor.publish(status).futureValue
-
-      When("load the task in the task tracker")
-      verify(instanceTracker).instance(instance.instanceId)
-      Then("pass the TASK_GONE update")
-      verify(instanceTracker).forceExpunge(instance.instanceId)
-      Then("acknowledge the update")
-      verify(schedulerDriver).acknowledgeStatusUpdate(status)
-      Then("not do anything else")
-      verifyNoMoreInteractions()
-    }
-
     "receiving a TASK_DROPPED status update for a starting task" in new Fixture {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskStarting().getInstance()
       val update = TaskStatusUpdateTestHelper.dropped(instance)

@@ -337,6 +337,21 @@ class InstanceUpdaterTest extends UnitTest {
     updated.instance.reservation.get.state should be(Suspended(None))
   }
 
+  "abandon reservation when resident instance is TASK_GONE_BY_OPERATOR" in {
+    val f = new Fixture
+
+    val app = AppDefinition(PathId("/test"))
+    val scheduledReserved = TestInstanceBuilder.scheduledWithReservation(app)
+    val provisionedTasks = Tasks.provisioned(f.taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now(f.clock))
+    val provisionedInstance = scheduledReserved.provisioned(f.agentInfo, app, provisionedTasks, Timestamp(f.clock.instant()))
+    val killedOperation = InstanceUpdateOperation.MesosUpdate(provisionedInstance, Condition.Gone, MesosTaskStatusTestHelper.goneByOperator(f.taskId), Timestamp(f.clock.instant()))
+    val updated = InstanceUpdater.mesosUpdate(provisionedInstance, killedOperation).asInstanceOf[Update]
+
+    updated.instance.reservation shouldBe None
+    updated.instance.agentInfo shouldBe None
+    updated.instance.state.condition shouldBe Condition.Scheduled
+  }
+
   class Fixture {
     val container1 = MesosContainer(
       name = "container1",

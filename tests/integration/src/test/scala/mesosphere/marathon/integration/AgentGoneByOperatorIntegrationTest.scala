@@ -2,6 +2,7 @@ package mesosphere.marathon
 package integration
 
 import mesosphere.AkkaIntegrationTest
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, RestResult}
 import mesosphere.marathon.raml.App
@@ -31,10 +32,13 @@ class AgentGoneByOperatorIntegrationTest extends AkkaIntegrationTest with Embedd
     mesos.markAgentGone(task.slaveId.get).success shouldBe true
 
     Then("A replacement is launched on a different agent")
+    val oldTaskId = Task.Id.parse(task.id)
     eventually {
       val Seq(newTask) = marathon.tasks(id).value
+      val newTaskId = Task.Id.parse(newTask.id)
 
-      newTask.id.shouldNot(equal(task.id))
+      oldTaskId shouldNot equal(newTaskId)
+      oldTaskId.instanceId should equal(newTaskId.instanceId)
       newTask.slaveId.shouldNot(equal(task.slaveId))
     }
   }

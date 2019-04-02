@@ -8,6 +8,7 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{MesosUp
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.state.{Timestamp, UnreachableEnabled}
+import org.apache.mesos.{Protos => MesosProtos}
 
 /**
   * Provides methods that apply a given [[InstanceUpdateOperation]]
@@ -42,6 +43,9 @@ object InstanceUpdater extends StrictLogging {
   private def shouldBeExpunged(instance: Instance): Boolean =
     instance.tasksMap.values.forall(t => t.isTerminal) && instance.state.goal == Goal.Decommissioned
 
+  private def shouldGetNewReservation(instance: Instance): Boolean =
+    instance.tasksMap.values.iterator.flatMap(_.status.mesosStatus).map(_.getState).contains(MesosProtos.TaskState.TASK_GONE_BY_OPERATOR)
+
   private[marathon] def mesosUpdate(instance: Instance, op: MesosUpdate): InstanceUpdateEffect = {
     val now = op.now
     val taskId = Task.Id.parse(op.mesosStatus.getTaskId)
@@ -54,6 +58,9 @@ object InstanceUpdater extends StrictLogging {
           if (shouldBeExpunged(updated)) {
             logger.info("Requesting to expunge {}, all tasks are terminal, instance has no reservation and is not Stopped", updated.instanceId)
             InstanceUpdateEffect.Expunge(updated, events)
+          } else if (shouldGetNewReservation(updated)) {
+            val withoutReservation = updated.copy(agentInfo = None, reservation = None, state = updated.state.copy(condition = Condition.Scheduled))
+            InstanceUpdateEffect.Update(withoutReservation, oldState = Some(instance), events)
           } else {
             InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
           }
