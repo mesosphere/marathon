@@ -26,7 +26,6 @@ import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.{Resource, ResourceProviderID, TextAttribute}
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{Attribute, Offer}
-import org.apache.mesos.Protos.Resource.DiskInfo
 import org.scalatest.Inside
 import org.scalatest.prop.TableDrivenPropertyChecks
 
