@@ -1,10 +1,12 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
+import akka.Done
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, InstanceUpdated}
@@ -25,8 +27,9 @@ import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.mockito
 import org.mockito.{ArgumentCaptor, Mockito}
 import org.scalatest.concurrent.Eventually
+
 import scala.collection.immutable.Seq
-import scala.concurrent.Promise
+import scala.concurrent.{Future, Promise}
 import scala.concurrent.duration._
 
 /**
@@ -85,6 +88,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
         .toMat(Sink.queue[OfferMatchStatistics.OfferMatchUpdate])(Keep.both)
         .run
 
+    instanceTracker.forceExpunge(any) returns Future.successful(Done)
+    instanceTracker.schedule(any[Instance]) returns Future.successful(Done)
+
     private[impl] def createLauncherRef(appToLaunch: PathId = f.app.id): TestActorRef[TaskLauncherActor] = {
       val props = TaskLauncherActor.props(
         launchQueueConfig,
@@ -103,7 +109,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
   "TaskLauncherActor" should {
     "show correct count statistics for one running instance in the state" in new Fixture {
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.runningInstance))
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(f.runningInstance)
 
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
@@ -126,7 +132,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
         Instance.scheduled(f.app, Instance.Id.forRunSpec(f.app.id)),
         Instance.scheduled(f.app, Instance.Id.forRunSpec(f.app.id))
       )
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instances)
       val launcherRef = createLauncherRef()
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
       val mockedDelay = mock[Delay]
@@ -400,6 +406,31 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
       Then("the instance is not rescheduled")
       verify(instanceTracker, never).forceExpunge(any[Instance.Id])
+    }
+
+    "reset provisioning timeout after instance failed" in new Fixture {
+      Given("a provisioned instance")
+      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.scheduledInstance))
+
+      val launcherRef = createLauncherRef()
+      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
+      Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
+
+      val promise = Promise[MatchedInstanceOps]
+      val offer = MarathonTestHelper.makeBasicOffer().build()
+      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
+
+      eventually {
+        launcherRef.underlyingActor.provisionTimeouts.keys should contain(f.scheduledInstance.instanceId)
+      }
+
+      When("the task fails after being provisioned")
+      val op = mock[InstanceOp]
+      op.instanceId returns f.provisionedInstance.instanceId
+      launcherRef ! TaskStatusUpdateTestHelper.failed(f.provisionedInstance.copy(state = f.provisionedInstance.state.copy(condition = Condition.Scheduled))).wrapped
+
+      Then("the provisioning timeout is removed")
+      launcherRef.underlyingActor.provisionTimeouts.isEmpty should be(true)
     }
   }
 }
