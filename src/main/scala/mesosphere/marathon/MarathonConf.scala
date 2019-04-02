@@ -318,6 +318,14 @@ trait MarathonConf
       Left(s"${groupVersionsCacheSize.name} must be more than 2 times higher than ${maxRunningDeployments.name}")
     }
   }
+
+  lazy val maxConcurrentMarathonHealthChecks = opt[Int](
+    name = "max_concurrent_marathon_health_checks",
+    descr = "Defines maximum number of concurrent *Marathon* health checks (HTTP/S and TCP). Note that setting a big value" +
+      "here will overload Marathon leading to internal timeouts and unstable behavior.",
+    noshort = true,
+    default = Some(256)
+  )
 }
 
 object MarathonConf extends StrictLogging {

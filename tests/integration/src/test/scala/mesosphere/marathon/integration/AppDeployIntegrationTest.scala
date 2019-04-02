@@ -365,7 +365,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     "an unhealthy app fails to deploy because health checks takes too long to pass" in {
       Given("a new app that is not healthy")
       val id = appId(Some("unhealthy-fails-to-deploy-because-health-check-takes-too-long"))
-      registerAppProxyHealthCheck(id, "v1", state = true).withHealthAction(_ => Thread.sleep(20000))
+      val check = registerAppProxyHealthCheck(id, "v1", state = false)
       val app = appProxy(id, "v1", instances = 1, healthCheck = Some(appProxyHealthCheck().copy(timeoutSeconds = 2)))
 
       When("The app is deployed")
@@ -382,6 +382,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
           callbackEvent.eventType == "failed_health_check_event"
       )
 
+      check.afterDelay(20.seconds, true)
       for (event <- Iterator.continually(interestingEvent()).take(10)) {
         event.eventType should be("failed_health_check_event")
       }

@@ -2,6 +2,7 @@ package mesosphere.marathon
 package core.health.impl
 
 import akka.event.EventStream
+import akka.stream.ActorMaterializer
 import com.typesafe.config.{Config, ConfigFactory}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.group.GroupManager
@@ -36,18 +37,22 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
   private val clock = new SettableClock()
 
   case class Fixture() {
+    implicit val mat: ActorMaterializer = ActorMaterializer()
     val leadershipModule: LeadershipModule = AlwaysElectedLeadershipModule.forRefFactory(system)
     val instanceTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(leadershipModule)
     implicit val instanceTracker: InstanceTracker = instanceTrackerModule.instanceTracker
     val groupManager: GroupManager = mock[GroupManager]
     implicit val eventStream: EventStream = new EventStream(system)
     val killService: KillService = mock[KillService]
+    val conf = MarathonTestHelper.defaultConfig()
+
     implicit val hcManager: MarathonHealthCheckManager = new MarathonHealthCheckManager(
       system,
       killService,
       eventStream,
       instanceTracker,
-      groupManager
+      groupManager,
+      conf
     )
   }
 
