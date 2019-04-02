@@ -57,8 +57,8 @@ dcos_config:
     master_discovery: static
     exhibitor_storage_backend: static
     rexray_config_preset: aws
-    mesos_seccomp_enabled=true
-    mesos_seccomp_profile_name=default.json
+    mesos_seccomp_enabled: true
+    mesos_seccomp_profile_name: default.json
 EOF
 
 # Append license and security mode for EE variants.
