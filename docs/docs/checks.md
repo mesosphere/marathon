@@ -16,9 +16,9 @@ Checks can be defined as:
 
 When a check is configured for an app/pod, it has zero impact on its deployment status in Marathon.  To control this behavior you will need to use a health check or readiness check.  The value in the task varies depending on check type:
 
-* HTTP Check returns http response status code
-* TCP Check returns boolean true or false
-* Command Check returns the command process exit code
+* HTTP Check returns http response status code `"checkResult":{"http":{"statusCode":200}}`
+* TCP Check returns boolean true or false `"checkResult":{"tcp":{"succeeded":true}}`
+* Command Check returns the command process exit code `checkResult":{"command":{"exitCode":0}}`
 
 
 ### Check options
@@ -51,29 +51,29 @@ When a check is configured for an app/pod, it has zero impact on its deployment 
 ```json
 "check":
 {
-"id": "http-index-test",
-"cmd": "python3 -m http.server $PORT0",
-"cpus": 1,
-"mem": 128,
-"disk": 0,
-"instances": 1,
-"portDefinitions": [
-  {
+  "id": "http-index-test",
+  "cmd": "python3 -m http.server $PORT0",
+  "cpus": 1,
+  "mem": 128,
+  "disk": 0,
+  "instances": 1,
+  "portDefinitions": [
+    {
       "port": 0,
       "protocol": "tcp",
       "name": "http"
-  }],
-"requirePorts" : false,
-"env": {},
-"labels": {},
-"check": {
-   "http" : {
+    }],
+  "requirePorts" : false,
+  "env": {},
+  "labels": {},
+  "check": {
+    "http" : {
       "portIndex": 0,
       "path": "/"
     },
     "intervalSeconds": 60,
     "timeoutSeconds": 20
- }
+  }
 }
 ```
 
@@ -92,10 +92,10 @@ When a check is configured for an app/pod, it has zero impact on its deployment 
     "exec": {
       "command": {
         "shell": "ls"
-      },
-   "intervalSeconds": 60,
-   "timeoutSeconds": 20
-   }
- }
+      }
+    },
+    "intervalSeconds": 60,
+    "timeoutSeconds": 20
+  }
 }
 ```
