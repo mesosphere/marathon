@@ -197,7 +197,7 @@ private class TaskLauncherActor(
               await(instanceTracker.forceExpunge(instance.instanceId)): @silent
               await(instanceTracker.schedule(Instance.scheduled(instance.runSpec)))
             }
-          } pipeTo self
+          }.failed.map(Status.Failure).pipeTo(self)
         }
       }
 
