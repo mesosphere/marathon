@@ -40,7 +40,12 @@ trait NetworkConversion {
   }
 
   implicit val protocolWrites: Writes[String, NetworkProtocol] = Writes { protocol =>
-    NetworkProtocol.fromString(protocol).getOrElse(throw new IllegalStateException(s"unsupported protocol $protocol"))
+    // Regression MARATHON-8575
+    if (protocol == "tcp,udp") {
+      NetworkProtocol.UdpTcp
+    } else {
+      NetworkProtocol.fromString(protocol).getOrElse(throw new IllegalStateException(s"unsupported protocol $protocol"))
+    }
   }
 
   implicit val portDefinitionWrites: Writes[state.PortDefinition, PortDefinition] = Writes { port =>

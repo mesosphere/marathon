@@ -23,6 +23,7 @@ class NetworkConversionTest extends UnitTest {
       "tcp".toRaml[NetworkProtocol] should be(NetworkProtocol.Tcp)
       "udp".toRaml[NetworkProtocol] should be(NetworkProtocol.Udp)
       "udp,tcp".toRaml[NetworkProtocol] should be(NetworkProtocol.UdpTcp)
+      "tcp,udp".toRaml[NetworkProtocol] should be(NetworkProtocol.UdpTcp)
     }
   }
   "NetworkConversion port definition conversion" should {
