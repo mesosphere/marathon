@@ -3,7 +3,7 @@ package core.task.update.impl
 
 import akka.Done
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.{LocalVolumeId, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
