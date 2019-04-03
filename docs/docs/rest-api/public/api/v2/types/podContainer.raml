@@ -85,7 +85,7 @@ types:
         type: network.Endpoint[]
         (pragma.omitEmpty):
         description: The ports needed to run this container
-      linuxInfo?: linux.LinuxRuntime
+      linuxInfo?: linux.LinuxInfo
       image?:
         type: Image
         description: The filesystem image to populate the container with
@@ -99,7 +99,7 @@ types:
           Values here override a "user" value specified in the pod definition.
       healthCheck?:
         type: health.HealthCheck
-        description: All health checks to perform on the container
+        description: The health check to perform on the container, if any.
       check?:
         type: check.Check
         description: checks to perform on the container
