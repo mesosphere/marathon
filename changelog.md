@@ -1,38 +1,7 @@
 ## Changes to 1.7.XXX
 
 ### Introduce global throttling to Marathon health checks
-Marathon health checks is a deprecated feature and customers are strongly recommended to switch to Mesos health checks for scalability reasons. However, we've seen a number of issues when excessive number of Marathon health checks (HTTP and TCP) would overload parts of Marathon. Hence we introduced a new parameter `--max_concurrent_marathon_health_checks` that defines maximum number (256 by default) of *Marathon* health checks (HTTP/S and TCP) that can be executed concurrently in the given moment. Note that setting a big value here and using many services with Marathon health checks will overload Marathon leading to internal timeouts and unstable behavior.  
-
-### `--gpu_scheduling_behavior` default is now `restricted`; `undefined` is deprecated and will be removed
-
-The default GPU Scheduling Behavior has been changed to `restricted`, and `undefined` has been deprecated and will be removed in `1.9.x`. Operators with GPU clusters that are upgrading to Marathon 1.8.x should think carefully about their desired policy and set accordingly; as a general rule:
-
-* You only need to configure `--gpu_scheduling_behavior` if Marathon is GPU enabled (`--enable_features gpu_resources`).
-* If you are using GPUs, and most nodes have GPUs, set the `unrestricted`.
-* If you are using GPUs, and most nodes do not have GPUs, set to `restricted` (the default).
-
-For more information on `gpu_scheduling_behavior`, please see [the docs](https://mesosphere.github.io/marathon/docs/preferential-gpu-scheduling.html)
-
-### Upgrades only from Marathon 1.6+
-
-You can only upgrade to Marathon 1.8 from 1.6.x and 1.7.x. If you'd like to upgrade from an earlier version you should
-upgrade to Marathon 1.6 or 1.7 first.
-
-### /v2/events
-The default (and only) response format of the `/v2/events` is always "light". This is in accordance with the previously published deprecation plan. If `--deprecated_features=api_heavy_events` is still specified, Marathon will refuse to launch, with an error.
-
-### Removed deprecated metrics
-We removed deprecated Kamon based metrics from the code base (see the 1.7.xxx changelog for details on new metrics). This led to removal of deprecated command line arguments e.g. old reporters like `--reporter_graphite`, `--reporter_datadog`, `--reporter_datadog` and `--metrics_averaging_window`.
-
-### Apps names restrictions (breaking change)
-From now on, apps which uses ids which ends with "restart", "tasks", "versions" won't be valid anymore. Such apps already had broken behavior (for example it wasn't possible to use a `GET /v2/apps` endpoint with them), so we made that constraint more explicit. Existing apps with such names will continue working, however all operations on them (except deletion) will result in an error. Please take care of renaming them before upgrading Marathon.
-### Standby marathon instances no longer proxy events
-We no longer allow a standby Marathon instance to proxy `/v2/events` from Marathon master. Previously it was possible to use `proxy_events` flag to force Marathon
-to proxy the response from `/v2/events`, now it's deprecated. 
-
-### Fixed issues
-
-- [MARATHON-8482](https://jira.mesosphere.com/browse/MARATHON-8482) - We fixed a possibly incorrect behavior around killing overdue tasks: `--task_launch_confirm_timeout` parameter properly controls the time the task spends in `Provisioned` stage (between being launched and receiving `TASK_STAGING` status update).
+Marathon health checks is a deprecated feature and customers are strongly recommended to switch to Mesos health checks for scalability reasons. However, we've seen a number of issues when excessive number of Marathon health checks (HTTP and TCP) would overload parts of Marathon. Hence we introduced a new parameter `--max_concurrent_marathon_health_checks` that defines maximum number (256 by default) of *Marathon* health checks (HTTP/S and TCP) that can be executed concurrently in the given moment. Note that setting a big value here and using many services with Marathon health checks will overload Marathon leading to internal timeouts and unstable behavior.
 
 - [MARATHON-8566](https://jira.mesosphere.com/browse/MARATHON-8566) - We fixed a race condition causing `v2/deployments` not containing a confirmed deployment after HTTP 200/201 response was returned.
 
