@@ -43,8 +43,13 @@ object InstanceUpdater extends StrictLogging {
   private def shouldBeExpunged(instance: Instance): Boolean =
     instance.tasksMap.values.forall(t => t.isTerminal) && instance.state.goal == Goal.Decommissioned
 
-  private def shouldGetNewReservation(instance: Instance): Boolean =
-    instance.tasksMap.values.iterator.flatMap(_.status.mesosStatus).map(_.getState).contains(MesosProtos.TaskState.TASK_GONE_BY_OPERATOR)
+  private def shouldGetNewReservation(instance: Instance): Boolean = {
+    // note: we use forall for pods, so we will wait for all the task statuses for the pod to be received
+    instance.tasksMap.values
+      .iterator
+      .flatMap(_.status.mesosStatus)
+      .forall(_.getState == MesosProtos.TaskState.TASK_GONE_BY_OPERATOR)
+  }
 
   private[marathon] def mesosUpdate(instance: Instance, op: MesosUpdate): InstanceUpdateEffect = {
     val now = op.now
