@@ -86,7 +86,7 @@ private[impl] class InstanceTrackerActor(
   override def preStart(): Unit = {
     super.preStart()
 
-    logger.info(s"${getClass.getSimpleName} is starting. Task loading initiated.")
+    logger.info(s"${getClass.getSimpleName} is starting. Instances loading initiated.")
     metrics.resetMetrics()
 
     import context.dispatcher
@@ -104,6 +104,7 @@ private[impl] class InstanceTrackerActor(
   private[this] def initializing: Receive = LoggingReceive.withLabel("initializing") {
     case initialInstances: InstanceTracker.InstancesBySpec =>
       logger.info("Instances loading complete.")
+      logger.info(s"Loaded ${initialInstances.allInstances.size} instances.")
 
       instancesBySpec = initialInstances
       counts = TaskCounts(initialInstances.allInstances, healthStatuses = Map.empty)
