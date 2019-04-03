@@ -87,7 +87,6 @@ private[health] class HealthCheckActor(
   }
 
   def checkConsecutiveFailures(instance: Instance, health: Health): Unit = {
-    logger.info(s"Check consecutive failures for ${instance.instanceId} with health $health")
     val consecutiveFailures = health.consecutiveFailures
     val maxFailures = healthCheck.maxConsecutiveFailures
 
@@ -134,7 +133,6 @@ private[health] class HealthCheckActor(
 
   def handleHealthResult(result: HealthResult): Unit = {
     val instanceId = result.instanceId
-    logger.info(s"Current health states: $healthByInstanceId")
     val health = healthByInstanceId.getOrElse(instanceId, Health(instanceId))
 
     val updatedHealth = result match {
@@ -173,7 +171,7 @@ private[health] class HealthCheckActor(
     val health = instanceHealth.health
     val newHealth = instanceHealth.newHealth
 
-    logger.info(s"Received health result for app [${app.id}] version [${app.version}]: result:=$result, update health=$newHealth")
+    logger.info(s"Received health result for app [${app.id}] version [${app.version}]: [$result]")
     healthByInstanceId += (instanceId -> instanceHealth.newHealth)
     appHealthCheckActor ! HealthCheckStatusChanged(ApplicationKey(app.id, app.version), healthCheck, newHealth)
 
