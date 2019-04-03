@@ -25,11 +25,9 @@ class AgentGoneByOperatorIntegrationTest extends AkkaIntegrationTest with Embedd
     createSuccessfully(app)
 
     And("the matching agent is marked gone")
-    val oldTask = inside(marathon.tasks(id).value) {
-      case Seq(task) =>
-        mesos.markAgentGone(task.slaveId.get).success shouldBe true
-        task
-    }
+    val Seq(task) = marathon.tasks(id).value
+
+    mesos.markAgentGone(task.slaveId.get).success shouldBe true
 
     val oldTaskId = Task.Id.parse(oldTask.id)
 
