@@ -15,7 +15,7 @@ class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
   def appId(suffix: Option[String] = None): PathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
 
   "Health checks" should {
-    "replace an unhealthy app" in {
+    "kill unhealthy instance" in {
       Given("a deployed app with health checks")
       val app = appProxy(appId(Some("replace-marathon-http-health-check")), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(ramlHealthCheck))
