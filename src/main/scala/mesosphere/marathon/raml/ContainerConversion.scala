@@ -9,6 +9,7 @@ import org.apache.mesos.{Protos => Mesos}
 
 trait ContainerConversion extends HealthCheckConversion with VolumeConversion with NetworkConversion {
 
+  // TODO: need linuxInfo in Pods
   implicit val containerRamlWrites: Writes[MesosContainer, PodContainer] = Writes { c =>
     PodContainer(
       name = c.name,
@@ -27,6 +28,7 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
     )
   }
 
+  // TODO: need linuxInfo in Pods
   implicit val containerRamlReads: Reads[PodContainer, MesosContainer] = Reads { c =>
     MesosContainer(
       name = c.name,
@@ -79,27 +81,57 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       AppCContainer(container.image, container.id, container.labels, container.forcePullImage)
     }
 
-    def create(kind: EngineType, docker: Option[DockerContainer] = None, appc: Option[AppCContainer] = None): Container = {
+    implicit val seccompWrites: Writes[state.Seccomp, Seccomp] = Writes { seccomp =>
+      val unconfined = Some(seccomp.unconfined)
+      Seccomp(seccomp.profileName, unconfined)
+    }
+
+    implicit val linuxInfoWrites: Writes[state.LinuxInfo, LinuxInfo] = Writes { linuxInfo =>
+      LinuxInfo(linuxInfo.seccomp.toRaml)
+    }
+
+    def create(kind: EngineType, docker: Option[DockerContainer] = None, appc: Option[AppCContainer] = None, linuxInfo: Option[LinuxInfo]): Container = {
       Container(kind, docker = docker, appc = appc, volumes = container.volumes.toRaml,
-        portMappings = Option(container.portMappings.toRaml) // this might need to be None, but we can't check networking here
+        portMappings = Option(container.portMappings.toRaml), // this might need to be None, but we can't check networking here
+        linuxInfo = linuxInfo
       )
     }
 
     container match {
-      case docker: state.Container.Docker => create(EngineType.Docker, docker = Some(docker.toRaml[DockerContainer]))
-      case mesos: state.Container.MesosDocker => create(EngineType.Mesos, docker = Some(mesos.toRaml[DockerContainer]))
-      case mesos: state.Container.MesosAppC => create(EngineType.Mesos, appc = Some(mesos.toRaml[AppCContainer]))
-      case _: state.Container.Mesos => create(EngineType.Mesos)
+      case docker: state.Container.Docker => create(EngineType.Docker, docker = Some(docker.toRaml[DockerContainer]), linuxInfo = None)
+      case mesos: state.Container.MesosDocker => create(EngineType.Mesos, docker = Some(mesos.toRaml[DockerContainer]), linuxInfo = container.linuxInfo.toRaml)
+      case mesos: state.Container.MesosAppC => create(EngineType.Mesos, appc = Some(mesos.toRaml[AppCContainer]), linuxInfo = None) // Linux == None as it is deprecated
+      case _: state.Container.Mesos => create(EngineType.Mesos, linuxInfo = container.linuxInfo.toRaml)
     }
+  }
+
+  implicit val seccompReads: Reads[raml.Seccomp, state.Seccomp] = Reads { seccomp =>
+    val unconfined = seccomp.unconfined.getOrElse(false)
+    state.Seccomp(seccomp.profileName, unconfined)
+  }
+
+  implicit val linuxReads: Reads[raml.LinuxInfo, state.LinuxInfo] = Reads { linuxInfo =>
+    val seccomp = linuxInfo.seccomp.map(Raml.fromRaml(_))
+    state.LinuxInfo(seccomp)
   }
 
   implicit val pullConfigReads: Reads[DockerPullConfig, state.Container.DockerPullConfig] = Reads {
     case DockerPullConfig(secret) => state.Container.DockerPullConfig(secret)
   }
 
+  def validateLinuxInfo(linuxInfo: Option[state.LinuxInfo]) = {
+    if (linuxInfo.isDefined
+      && linuxInfo.get.seccomp.isDefined
+      && linuxInfo.get.seccomp.get.profileName.isDefined
+      && linuxInfo.get.seccomp.get.unconfined) {
+      throw new SerializationFailedException("Seccomp can not have unconfined and profile name set")
+    }
+  }
+
   implicit val appContainerRamlReader: Reads[Container, state.Container] = Reads { container =>
     val volumes = container.volumes.map(Raml.fromRaml(_))
     val portMappings: Seq[state.Container.PortMapping] = container.portMappings.getOrElse(Nil).map(Raml.fromRaml(_))
+    val linuxInfo = container.linuxInfo.map(Raml.fromRaml(_))
 
     val result: state.Container = (container.`type`, container.docker, container.appc) match {
       case (EngineType.Docker, Some(docker), None) =>
@@ -118,7 +150,8 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
           portMappings = portMappings, // assumed already normalized, see AppNormalization
           credential = docker.credential.map(c => state.Container.Credential(principal = c.principal, secret = c.secret)),
           pullConfig = docker.pullConfig.map(_.fromRaml),
-          forcePullImage = docker.forcePullImage
+          forcePullImage = docker.forcePullImage,
+          linuxInfo = linuxInfo
         )
       case (EngineType.Mesos, None, Some(appc)) =>
         state.Container.MesosAppC(
@@ -132,10 +165,12 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       case (EngineType.Mesos, None, None) =>
         state.Container.Mesos(
           volumes = volumes,
-          portMappings = portMappings
+          portMappings = portMappings,
+          linuxInfo = linuxInfo
         )
       case ct => throw SerializationFailedException(s"illegal container specification $ct")
     }
+    validateLinuxInfo(result.linuxInfo)
     result
   }
 

@@ -15,24 +15,28 @@ sealed trait Container extends Product with Serializable {
   def portMappings: Seq[PortMapping]
   val volumes: Seq[VolumeWithMount[Volume]]
 
+  val linuxInfo: Option[LinuxInfo]
+
   def hostPorts: Seq[Option[Int]] =
     portMappings.map(_.hostPort)
 
   def servicePorts: Seq[Int] =
     portMappings.map(_.servicePort)
 
-  def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes): Container
+  def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes, linuxInfo: Option[LinuxInfo] = linuxInfo): Container
 }
 
 object Container {
 
   case class Mesos(
       volumes: Seq[VolumeWithMount[Volume]] = Seq.empty,
-      override val portMappings: Seq[PortMapping] = Nil
+      override val portMappings: Seq[PortMapping] = Nil,
+      override val linuxInfo: Option[LinuxInfo] = None
   ) extends Container {
 
-    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes) =
+    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes, linuxInfo: Option[LinuxInfo] = linuxInfo) =
       copy(portMappings = portMappings, volumes = volumes)
+
   }
 
   case class Docker(
@@ -41,15 +45,17 @@ object Container {
       override val portMappings: Seq[PortMapping] = Nil,
       privileged: Boolean = false,
       parameters: Seq[Parameter] = Nil,
-      forcePullImage: Boolean = false) extends Container {
+      forcePullImage: Boolean = false,
+      override val linuxInfo: Option[LinuxInfo] = None) extends Container {
 
-    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes) =
+    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes, linuxInfo: Option[LinuxInfo] = linuxInfo) =
       copy(portMappings = portMappings, volumes = volumes)
   }
 
   object Docker {
     implicit val validDockerContainer: Validator[Docker] = validator[Docker] { docker =>
       docker.image is notEmpty
+      docker.linuxInfo is empty
     }
   }
 
@@ -94,9 +100,10 @@ object Container {
       override val portMappings: Seq[PortMapping] = Nil,
       credential: Option[Credential] = None,
       pullConfig: Option[DockerPullConfig] = None,
-      forcePullImage: Boolean = false) extends Container {
+      forcePullImage: Boolean = false,
+      override val linuxInfo: Option[LinuxInfo] = None) extends Container {
 
-    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes) =
+    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes, linuxInfo: Option[LinuxInfo] = linuxInfo) =
       copy(portMappings = portMappings, volumes = volumes)
   }
 
@@ -112,9 +119,10 @@ object Container {
       override val portMappings: Seq[PortMapping] = Nil,
       id: Option[String] = None,
       labels: Map[String, String] = Map.empty[String, String],
-      forcePullImage: Boolean = false) extends Container {
+      forcePullImage: Boolean = false,
+      override val linuxInfo: Option[LinuxInfo] = None) extends Container {
 
-    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes) =
+    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes, linuxInfo: Option[LinuxInfo] = linuxInfo) =
       copy(portMappings = portMappings, volumes = volumes)
   }
 
