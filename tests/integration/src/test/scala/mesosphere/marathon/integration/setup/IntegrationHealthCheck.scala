@@ -41,8 +41,4 @@ class IntegrationHealthCheck(val appId: PathId, val versionId: String, var state
     logger.debug(s"Get health state from: app=$appId -> $state")
     state
   }
-
-  def forVersion(versionId: String, state: Boolean) = {
-    new IntegrationHealthCheck(appId, versionId, state)
-  }
 }

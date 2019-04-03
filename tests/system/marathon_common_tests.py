@@ -548,8 +548,8 @@ def test_task_gets_restarted_due_to_network_split():
     # introduce a network partition
     common.block_iptable_rules_for_seconds(host, port, sleep_seconds=10, block_input=True, block_output=False)
 
-    # Network partition should cause the task to restart N times untill the partition is resvoled (since we
-    # pinned the task to the split agent). A new task with a new taskId should eventually be runnig and healthy.
+    # Network partition should cause the task to restart N times until the partition is resolved (since we
+    # pinned the task to the split agent). A new task with a new taskId should eventually be running and healthy.
     @retrying.retry(wait_fixed=1000, stop_max_attempt_number=30, retry_on_exception=common.ignore_exception)
     def check_health_message():
         tasks = client.get_tasks(app_id)
