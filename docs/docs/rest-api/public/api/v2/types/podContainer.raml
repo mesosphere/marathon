@@ -12,6 +12,7 @@ uses:
   strings: stringTypes.raml
   volumes: volumes.raml
   docker: docker.raml
+  linux: linux.raml
 
 types:
   ImageType:
@@ -84,6 +85,7 @@ types:
         type: network.Endpoint[]
         (pragma.omitEmpty):
         description: The ports needed to run this container
+      linuxInfo?: linux.LinuxInfo
       image?:
         type: Image
         description: The filesystem image to populate the container with
@@ -97,7 +99,7 @@ types:
           Values here override a "user" value specified in the pod definition.
       healthCheck?:
         type: health.HealthCheck
-        description: All healthchecks to perform on the container
+        description: The health check to perform on the container, if any.
       check?:
         type: check.Check
         description: checks to perform on the container
@@ -121,4 +123,4 @@ types:
       tty?:
         type: boolean
         description: |
-          Describes if (pseudo) TTY sould be allocated for the process of this container.
+          Describes if (pseudo) TTY should be allocated for the process of this container.
