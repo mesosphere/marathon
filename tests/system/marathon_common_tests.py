@@ -524,7 +524,7 @@ def test_failing_health_check_results_in_unhealthy_app():
 def test_task_gets_restarted_due_to_network_split():
     """Verifies that a health check fails in presence of a network partition."""
 
-    app_def = apps.http_server()
+    app_def = apps.http_server("app-network-split")
     app_id = app_def["id"]
     app_def['healthChecks'] = [common.health_check()]
     common.pin_to_host(app_def, common.ip_other_than_mom())
