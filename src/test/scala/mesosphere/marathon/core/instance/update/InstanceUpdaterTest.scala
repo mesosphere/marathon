@@ -11,7 +11,7 @@ import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, Pre
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect.Expunge
 import mesosphere.marathon.core.instance.Reservation.State.Suspended
 import mesosphere.marathon.core.instance.update.InstanceUpdateEffect.Update
-import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, Reservation, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
@@ -19,10 +19,11 @@ import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPla
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos.TaskState.TASK_UNREACHABLE
+import org.scalatest.Inside
 
 import scala.concurrent.duration._
 
-class InstanceUpdaterTest extends UnitTest {
+class InstanceUpdaterTest extends UnitTest with Inside {
 
   "A staged instance" when {
     "processing a TASK_RUNNING update for a staged instance" should {
@@ -337,19 +338,49 @@ class InstanceUpdaterTest extends UnitTest {
     updated.instance.reservation.get.state should be(Suspended(None))
   }
 
-  "abandon reservation when resident instance is TASK_GONE_BY_OPERATOR" in {
-    val f = new Fixture
-
+  "when a TASK_GONE_BY_OPERATOR status update is sent" should {
     val app = AppDefinition(PathId("/test"))
-    val scheduledReserved = TestInstanceBuilder.scheduledWithReservation(app)
-    val provisionedTasks = Tasks.provisioned(f.taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now(f.clock))
-    val provisionedInstance = scheduledReserved.provisioned(f.agentInfo, app, provisionedTasks, Timestamp(f.clock.instant()))
-    val killedOperation = InstanceUpdateOperation.MesosUpdate(provisionedInstance, Condition.Gone, MesosTaskStatusTestHelper.goneByOperator(f.taskId), Timestamp(f.clock.instant()))
-    val updated = InstanceUpdater.mesosUpdate(provisionedInstance, killedOperation).asInstanceOf[Update]
+    val instance = TestInstanceBuilder.newBuilder(app.id).withReservation(Nil).addTaskWithBuilder().taskRunning().build().instance
+    val task = instance.tasksMap.values.head.task
 
-    updated.instance.reservation shouldBe None
-    updated.instance.agentInfo shouldBe None
-    updated.instance.state.condition shouldBe Condition.Scheduled
+    "abandon reservation when all tasks are TASK_GONE_BY_OPERATOR, and the instance agentId matches the tasks" in {
+      val clock = new SettableClock()
+
+      val goneOperation = InstanceUpdateOperation.MesosUpdate(
+        instance,
+        Condition.Gone,
+        MesosTaskStatusTestHelper.goneByOperator(task.taskId, task.status.mesosStatus.map(_.getSlaveId)),
+        Timestamp(clock.instant()))
+      val updated = InstanceUpdater.mesosUpdate(instance, goneOperation).asInstanceOf[Update]
+
+      updated.instance.reservation shouldBe None
+      updated.instance.agentInfo shouldBe None
+      updated.instance.state.condition shouldBe Condition.Scheduled
+    }
+
+    "does not abandon the reservation when the instance targets a different slave ID than the task gone update" in {
+      val clock = new SettableClock()
+      Given("a reserved instance receives a Gone operation")
+      val goneOperation = InstanceUpdateOperation.MesosUpdate(
+        instance,
+        Condition.Gone,
+        MesosTaskStatusTestHelper.goneByOperator(task.taskId, task.status.mesosStatus.map(_.getSlaveId)),
+        Timestamp(clock.instant()))
+
+      val scheduledInstance = InstanceUpdater.mesosUpdate(instance, goneOperation).asInstanceOf[Update].instance
+
+      And("the reserved instance gets a new reservation, but doesn't yet launch tasks")
+      val withNewReservation = scheduledInstance.copy(
+        reservation = Some(Reservation(Nil, Reservation.State.New(timeout = None))),
+        agentInfo = Some(AgentInfo("new-host", Some("new-agent-id"), None, None, Nil)))
+      withNewReservation.state.condition shouldBe Condition.Scheduled
+
+      When("an old status update is received again, due to a pending reconciliation attempt")
+      val result = InstanceUpdater.mesosUpdate(withNewReservation, goneOperation)
+
+      Then("the result should be a Noop")
+      result shouldBe a[InstanceUpdateEffect.Noop]
+    }
   }
 
   class Fixture {

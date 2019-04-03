@@ -81,7 +81,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 
   private[instance] def addTask(task: Task): TestInstanceBuilder = {
-    this.copy(instance = InstanceUpdater.updatedInstance(instance, task, now + 1.second))
+    this.copy(instance = InstanceUpdater.applyTaskUpdate(instance, task, now + 1.second))
   }
 
   def getInstance(): Instance = instance
