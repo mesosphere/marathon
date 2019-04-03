@@ -3,7 +3,7 @@ uses:
   strings: stringTypes.raml
 
 types:
-  SecComp:
+  Seccomp:
     type: object
     properties:
       profileName?:
@@ -15,5 +15,4 @@ types:
   LinuxRuntime:
     type: object
     properties:
-      seccomp?: SecComp
-
+      seccomp?: Seccomp
