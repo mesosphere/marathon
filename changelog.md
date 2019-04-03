@@ -30,6 +30,9 @@ From now on, apps which uses ids which ends with "restart", "tasks", "versions" 
 We no longer allow a standby Marathon instance to proxy `/v2/events` from Marathon master. Previously it was possible to use `proxy_events` flag to force Marathon
 to proxy the response from `/v2/events`, now it's deprecated. 
 
+### save_tasks_to_launch_timeout was removed
+This option was deprecated since 1.5 and using that have no effect on Marathon. Marathon will no longer start with that option provided.
+
 ### Fixed issues
 
 - [MARATHON-8482](https://jira.mesosphere.com/browse/MARATHON-8482) - We fixed a possibly incorrect behavior around killing overdue tasks: `--task_launch_confirm_timeout` parameter properly controls the time the task spends in `Provisioned` stage (between being launched and receiving `TASK_STAGING` status update).
