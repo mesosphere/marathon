@@ -38,6 +38,9 @@ object InstanceTrackerActor {
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
   private[impl] case object List
 
+  /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]] by RunSpec [[PathId]]. */
+  private[impl] case class ListBySpec(appId: PathId)
+
   private[impl] case class Get(instanceId: Instance.Id)
 
   /** Add a new subscription for sender to instance updates */
@@ -138,6 +141,9 @@ private[impl] class InstanceTrackerActor(
 
       case InstanceTrackerActor.List =>
         sender() ! instancesBySpec
+
+      case InstanceTrackerActor.ListBySpec(appId: PathId) =>
+        sender() ! instancesBySpec.specInstances(appId)
 
       case InstanceTrackerActor.Get(instanceId) =>
         sender() ! instancesBySpec.instance(instanceId)

@@ -16,14 +16,14 @@ class HealthModule(
     actorSystem: ActorSystem,
     killService: KillService,
     eventBus: EventStream,
-    taskTracker: InstanceTracker,
+    instanceTracker: InstanceTracker,
     groupManager: GroupManager,
     conf: MarathonConf)(implicit mat: ActorMaterializer) {
   lazy val healthCheckManager = new MarathonHealthCheckManager(
     actorSystem,
     killService,
     eventBus,
-    taskTracker,
+    instanceTracker,
     groupManager,
     conf)
 }
