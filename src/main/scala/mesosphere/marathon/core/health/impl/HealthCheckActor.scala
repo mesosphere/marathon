@@ -28,9 +28,10 @@ private[health] class HealthCheckActor(
     healthCheck: HealthCheck,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,
-    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed])(implicit mat: ActorMaterializer)
+    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed])
   extends Actor with StrictLogging {
 
+  implicit val mat = ActorMaterializer()
   import context.dispatcher
 
   var healthByInstanceId = TrieMap.empty[Instance.Id, Health]
