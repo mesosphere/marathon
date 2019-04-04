@@ -74,10 +74,10 @@ private[health] class HealthCheckActor(
   def purgeStatusOfDoneInstances(instances: Seq[Instance]): Unit = {
     logger.debug(s"Purging health status of inactive instances for app ${app.id} version ${app.version} and healthCheck ${healthCheck}")
 
-    val activeInstanceIds: Set[Instance.Id] = instances.withFilter(_.isActive).map(_.instanceId)(collection.breakOut)
-    // The Map built with filterKeys wraps the original map and contains a reference to activeInstanceIds.
-    // Therefore we materialize it into a new map.
-    healthByInstanceId.filterKeys(activeInstanceIds)
+    val inactiveInstanceIds: Set[Instance.Id] = instances.filterNot(_.isActive).map(_.instanceId)(collection.breakOut)
+    inactiveInstanceIds.foreach { inactiveId =>
+      healthByInstanceId.remove(inactiveId)
+    }
 
     val checksToPurge = instances.withFilter(!_.isActive).map(instance => {
       val instanceKey = InstanceKey(ApplicationKey(instance.runSpecId, instance.runSpecVersion), instance.instanceId)
