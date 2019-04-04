@@ -193,6 +193,30 @@ object MarathonTestHelper {
   def pathDisk(path: String): Mesos.Resource.DiskInfo =
     pathDisk(Some(path))
 
+  def rawSource: Mesos.Resource.DiskInfo.Source = {
+    val b = Mesos.Resource.DiskInfo.Source.newBuilder.
+      setType(Mesos.Resource.DiskInfo.Source.Type.RAW)
+    b.build
+  }
+
+  def rawDisk(): Mesos.Resource.DiskInfo = {
+    Mesos.Resource.DiskInfo.newBuilder.
+      setSource(rawSource).
+      build
+  }
+
+  def blockSource: Mesos.Resource.DiskInfo.Source = {
+    val b = Mesos.Resource.DiskInfo.Source.newBuilder.
+      setType(Mesos.Resource.DiskInfo.Source.Type.BLOCK)
+    b.build
+  }
+
+  def blockDisk(): Mesos.Resource.DiskInfo = {
+    Mesos.Resource.DiskInfo.newBuilder.
+      setSource(blockSource).
+      build
+  }
+
   def scalarResource(
     name: String, d: Double, role: String = ResourceRole.Unreserved,
     providerId: Option[protos.ResourceProviderID] = None, reservation: Option[ReservationInfo] = None,
