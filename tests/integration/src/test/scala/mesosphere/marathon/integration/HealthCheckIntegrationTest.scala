@@ -45,7 +45,7 @@ class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       Given("a deployed app with health checks")
       val id = appId(Some(s"replace-mesos-http-health-check"))
       val app = appProxy(id, "v1", instances = 1, healthCheck = None).
-        copy(healthChecks = Set(ramlHealthCheck(AppHealthCheckProtocol.Http)))
+        copy(healthChecks = Set(ramlHealthCheck(AppHealthCheckProtocol.MesosHttp)))
       val check = registerAppProxyHealthCheck(id, "v1", state = true)
       val result = marathon.createAppV2(app)
       result should be(Created)
@@ -71,10 +71,10 @@ class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
   private def ramlHealthCheck(protocol: AppHealthCheckProtocol) = AppHealthCheck(
     path = Some("/health"),
     protocol = protocol,
-    gracePeriodSeconds = 20,
+    gracePeriodSeconds = 0,
     intervalSeconds = 1,
-    maxConsecutiveFailures = 5,
+    maxConsecutiveFailures = 3,
     portIndex = Some(0),
-    delaySeconds = 2
+    delaySeconds = 3
   )
 }
