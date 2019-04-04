@@ -6,12 +6,10 @@ import java.time.Clock
 import akka.Done
 import akka.actor._
 import akka.event.LoggingReceive
-import akka.pattern.pipe
 import akka.stream.scaladsl.SourceQueue
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.RescheduleReserved
 import mesosphere.marathon.core.instance.update.{InstanceDeleted, InstanceUpdateOperation, InstanceUpdated}
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
@@ -26,7 +24,6 @@ import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.CancellableOnce
 import org.apache.mesos.{Protos => Mesos}
 
-import scala.async.Async.{async, await}
 import scala.collection.mutable
 import scala.concurrent.Promise
 import scala.concurrent.duration._
@@ -85,7 +82,7 @@ private class TaskLauncherActor(
 
   private[impl] def inFlightInstanceOperations = instanceMap.values.filter(_.isProvisioned)
 
-  private[impl] val provisionTimeouts = mutable.Map.empty[Instance.Id, Cancellable]
+  private[impl] val offerOperationAcceptTimeout = mutable.Map.empty[Instance.Id, Cancellable]
 
   private[impl] def scheduledInstances: Iterable[Instance] = instanceMap.values.filter(_.isScheduled)
   def scheduledVersions = scheduledInstances.map(_.runSpec.configRef).toSet
@@ -120,7 +117,7 @@ private class TaskLauncherActor(
     if (inFlightInstanceOperations.nonEmpty) {
       logger.warn(s"Actor shutdown while instances are in flight: ${inFlightInstanceOperations.map(_.instanceId).mkString(", ")}")
     }
-    provisionTimeouts.valuesIterator.foreach(_.cancel())
+    offerOperationAcceptTimeout.valuesIterator.foreach(_.cancel())
 
     offerMatchStatistics.offer(OfferMatchStatistics.LaunchFinished(runSpecId))
 
@@ -183,28 +180,26 @@ private class TaskLauncherActor(
 
   private[this] def receiveTaskLaunchNotification: Receive = {
     case InstanceOpSourceDelegate.InstanceOpRejected(op, TaskLauncherActor.OfferOperationRejectedTimeoutReason) =>
-      // Reschedule instance with provision timeout..
-      if (inFlightInstanceOperations.exists(_.instanceId == op.instanceId)) {
-        instanceMap.get(op.instanceId).foreach { instance =>
-          import scala.concurrent.ExecutionContext.Implicits.global
-
-          logger.info(s"Reschedule ${instance.instanceId} because of provision timeout.")
-          async {
-            if (instance.runSpec.isResident) {
-              await(instanceTracker.process(RescheduleReserved(instance.instanceId, instance.runSpec)))
-            } else {
-              // Forget about old instance and schedule new one.
-              await(instanceTracker.forceExpunge(instance.instanceId)): @silent
-              await(instanceTracker.schedule(Instance.scheduled(instance.runSpec)))
-            }
-          }.failed.map(Status.Failure).pipeTo(self)
-        }
+      if (inFlightInstanceOperations.exists(_.instanceId == op.instanceId) && offerOperationAcceptTimeout.contains(op.instanceId)) {
+        // TaskLauncherActor is not always in sync with the state in InstanceTracker.
+        // Especially when accepting offer, its state is ahead of InstanceTracker because it marks the instance as provisioned even before we persist it.
+        // We do this because we need to know that we already attempted to launch that instance to not use the same one for another offer.
+        // If everything goes well, some time after we manually adjust the internal state we should receive instance update to Provisioned.
+        // It might happen that the we were not able to persist that Provisioned operation for some reason.
+        // This timeout is here just to prevent us from staying in a state where we have different state locally than in InstanceTracker
+        // This timeout should be set that far in the future that the offer operation should have already timed out anyway so it should be safe to do.
+        // By explicitly syncing here we would either get the instance in Provisioned (we persisted the update) or scheduled (something failed).
+        syncInstance(op.instanceId)
       }
 
     case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) =>
       logger.debug(s"Task op '${op.getClass.getSimpleName}' for ${op.instanceId} was REJECTED, reason '$reason', rescheduling. $status")
       syncInstance(op.instanceId)
-      manageOfferMatcherStatus(clock.now())
+
+    case InstanceOpSourceDelegate.InstanceOpAccepted(op) =>
+      logger.debug(s"Instance operation ${op.getClass.getSimpleName} for instance ${op.instanceId} got accepted")
+      offerOperationAcceptTimeout.get(op.instanceId).foreach(_.cancel())
+      offerOperationAcceptTimeout -= op.instanceId
   }
 
   private[this] def receiveInstanceUpdate: Receive = {
@@ -223,14 +218,12 @@ private class TaskLauncherActor(
         }
       }
       syncInstance(update.instance.instanceId)
-      manageOfferMatcherStatus(clock.now())
       sender() ! Done
 
     case update: InstanceDeleted =>
       // if an instance was deleted, it's not needed anymore and we only have to remove it from the internal state
       logger.info(s"${update.instance.instanceId} was deleted. Will remove from internal state.")
       removeInstanceFromInternalState(update.instance.instanceId)
-      manageOfferMatcherStatus(clock.now())
       sender() ! Done
   }
 
@@ -276,13 +269,11 @@ private class TaskLauncherActor(
       case Some(instance) =>
         instanceMap += instanceId -> instance
 
-        // Only instances that are provisioned have not seen a Mesos update yet. The provision timeout waits for
-        // any Mesos update. Thus we can safely kill the provision timeout in all other cases, even on a TASK_FAILED.
-        // with stable ids, TASK_FAILED ends up yielding instance.isScheduled typically in case of goal: Running
-        // because of that we have to handle instance becoming terminal explicitly
+        // This timeout is only between us creating provisioned instance operation based on received offer
+        // and that instance in provisioned state being persisted so this makes no sense for instances in all other states
         if (!instance.isProvisioned) {
-          provisionTimeouts.get(instanceId).foreach(_.cancel())
-          provisionTimeouts -= instanceId
+          offerOperationAcceptTimeout.get(instanceId).foreach(_.cancel())
+          offerOperationAcceptTimeout -= instanceId
         }
         logger.info(s"Synced single $instanceId from InstanceTracker: $instance")
 
@@ -297,12 +288,14 @@ private class TaskLauncherActor(
         logger.info(s"Instance $instanceId does not exist in InstanceTracker - removing it from internal state.")
         removeInstanceFromInternalState(instanceId)
     }
+
+    manageOfferMatcherStatus(clock.now())
   }
 
   def removeInstanceFromInternalState(instanceId: Instance.Id): Unit = {
     instanceMap -= instanceId
-    provisionTimeouts.get(instanceId).foreach(_.cancel())
-    provisionTimeouts -= instanceId
+    offerOperationAcceptTimeout.get(instanceId).foreach(_.cancel())
+    offerOperationAcceptTimeout -= instanceId
 
     // Remove backoffs for deleted config refs
     launchAllowedAt.keySet.diff(scheduledVersions).foreach(launchAllowedAt.remove)
@@ -353,7 +346,7 @@ private class TaskLauncherActor(
         instanceOp, TaskLauncherActor.OfferOperationRejectedTimeoutReason
       )
       val scheduledProvisionTimeout = context.system.scheduler.scheduleOnce(config.taskOpNotificationTimeout().milliseconds, self, message)
-      provisionTimeouts += instanceOp.instanceId -> scheduledProvisionTimeout
+      offerOperationAcceptTimeout += instanceOp.instanceId -> scheduledProvisionTimeout
     }
 
   /**
