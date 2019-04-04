@@ -20,12 +20,12 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
-import mesosphere.mesos.NoOfferMatchReason.{AgentMaintenance, DeclinedScarceResources, InsufficientCpus, UnfulfilledConstraint}
+import mesosphere.mesos.NoOfferMatchReason.{AgentMaintenance, DeclinedScarceResources, InsufficientCpus, InsufficientDisk, UnfulfilledConstraint}
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.{Resource, ResourceProviderID, TextAttribute}
 import mesosphere.util.state.FrameworkId
-import org.apache.mesos.Protos.Attribute
+import org.apache.mesos.Protos.{Attribute, Offer}
 import org.scalatest.Inside
 import org.scalatest.prop.TableDrivenPropertyChecks
 
@@ -1251,6 +1251,97 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
       resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual DeclinedScarceResources
+    }
+
+    List("RAW", "BLOCK").foreach { diskType =>
+
+      def addDiskResource(diskType: String, builder: Offer.Builder) = {
+        diskType match {
+          case "RAW" =>
+            builder.addResources(
+              MarathonTestHelper.scalarResource("disk", 1024.0,
+                disk = Some(MarathonTestHelper.rawDisk())))
+
+          case "BLOCK" =>
+            builder.addResources(
+              MarathonTestHelper.scalarResource("disk", 1024.0,
+                disk = Some(MarathonTestHelper.blockDisk())))
+
+          case other => throw new IllegalArgumentException("expected RAW or BLOCK disk type but got " + other)
+        }
+      }
+
+      s"Match an offer with $diskType disk type if disk is not required" in {
+
+        val offerBuilder = MarathonTestHelper.makeBasicOffer()
+        val diskResourceIndex = offerBuilder.getResourcesList.toIndexedSeq.indexWhere(_.getName == "disk")
+        offerBuilder.removeResources(diskResourceIndex)
+
+        addDiskResource(diskType, offerBuilder)
+
+        val offer = offerBuilder.build()
+
+        val app = AppDefinition(
+          id = "/test".toRootPath,
+          resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
+          portDefinitions = PortDefinitions(0, 0)
+        )
+
+        val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+
+        resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+        val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
+
+        res.scalarMatch(Resource.CPUS).get.roles should be(Seq(ResourceRole.Unreserved))
+        res.scalarMatch(Resource.MEM).get.roles should be(Seq(ResourceRole.Unreserved))
+        res.scalarMatch(Resource.DISK) should be(empty)
+
+      }
+
+      s"Match an offer with $diskType disk type if disk is required and there are other disk types available" in {
+        val offerBuilder = MarathonTestHelper.makeBasicOffer()
+
+        addDiskResource(diskType, offerBuilder)
+
+        val offer = offerBuilder.build()
+
+        val app = AppDefinition(
+          id = "/test".toRootPath,
+          resources = Resources(cpus = 1.0, mem = 128.0, disk = 1.0),
+          portDefinitions = PortDefinitions(0, 0)
+        )
+
+        val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+
+        resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+        val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
+
+        res.scalarMatch(Resource.CPUS).get.roles should be(Seq(ResourceRole.Unreserved))
+        res.scalarMatch(Resource.MEM).get.roles should be(Seq(ResourceRole.Unreserved))
+        res.scalarMatch(Resource.DISK) shouldNot be(empty)
+      }
+
+      s"Reject an offer with $diskType disk type if disk is required and there are no other disk types available" in {
+        val offerBuilder = MarathonTestHelper.makeBasicOffer()
+        val diskResourceIndex = offerBuilder.getResourcesList.toIndexedSeq.indexWhere(_.getName == "disk")
+        offerBuilder.removeResources(diskResourceIndex)
+
+        addDiskResource(diskType, offerBuilder)
+
+        val offer = offerBuilder.build()
+
+        val app = AppDefinition(
+          id = "/test".toRootPath,
+          resources = Resources(cpus = 1.0, mem = 128.0, disk = 1.0),
+          portDefinitions = PortDefinitions(0, 0)
+        )
+
+        val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+
+        resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+        resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual InsufficientDisk
+      }
+
     }
 
   }
