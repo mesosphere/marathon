@@ -236,7 +236,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(result)
     }
 
-    "create a simple app with a Mesos TCP healh check" in {
+    "create a simple app with a Mesos TCP health check" in {
       Given("a new app")
       val app = appProxy(appId(Some("with-mesos-tcp-health-check")), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(ramlHealthCheck.copy(protocol = AppHealthCheckProtocol.Tcp)))
