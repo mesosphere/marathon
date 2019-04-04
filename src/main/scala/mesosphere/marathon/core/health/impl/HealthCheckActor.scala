@@ -77,9 +77,7 @@ private[health] class HealthCheckActor(
     val activeInstanceIds: Set[Instance.Id] = instances.withFilter(_.isLaunched).map(_.instanceId)(collection.breakOut)
     // The Map built with filterKeys wraps the original map and contains a reference to activeInstanceIds.
     // Therefore we materialize it into a new map.
-    activeInstanceIds.foreach { activeId =>
-      healthByInstanceId.remove(activeId)
-    }
+    healthByInstanceId.filterKeys(activeInstanceIds)
 
     val checksToPurge = instances.withFilter(!_.isActive).map(instance => {
       val instanceKey = InstanceKey(ApplicationKey(instance.runSpecId, instance.runSpecVersion), instance.instanceId)
