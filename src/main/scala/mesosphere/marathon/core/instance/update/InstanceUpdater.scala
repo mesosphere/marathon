@@ -53,11 +53,17 @@ object InstanceUpdater extends StrictLogging {
 
   private def shouldAbandonReservation(instance: Instance): Boolean = {
 
-    def allAreGoneByOperator = instance.tasksMap.values.iterator
-      .flatMap(_.status.mesosStatus)
-      .forall(_.getState == MesosProtos.TaskState.TASK_GONE_BY_OPERATOR)
+    def allAreTerminal = instance.tasksMap.values.iterator.forall { task =>
+      task.status.condition.isTerminal
+    }
 
-    instance.reservation.nonEmpty && allAreGoneByOperator
+    def anyAreGoneByOperator = instance.tasksMap.values.iterator
+      .flatMap(_.status.mesosStatus)
+      .exists { status =>
+        status.getState == MesosProtos.TaskState.TASK_GONE_BY_OPERATOR
+      }
+
+    instance.reservation.nonEmpty && anyAreGoneByOperator && allAreTerminal
   }
 
   private[marathon] def mesosUpdate(instance: Instance, op: MesosUpdate): InstanceUpdateEffect = {

@@ -386,17 +386,18 @@ class InstanceUpdaterTest extends UnitTest with Inside {
 
     "for a pod" should {
       val podId = PathId("/test")
+      val podInstance = TestInstanceBuilder.newBuilder(podId)
+        .withReservation(Nil)
+        .addTaskWithBuilder()
+        .taskRunning(containerName = Some("container-1"))
+        .build()
+        .addTaskWithBuilder()
+        .taskRunning(containerName = Some("container-2"))
+        .build()
+        .instance
+
       "not reset the reservation until all of the tasks receive a TASK_GONE_BY_OPERATOR update" in {
         val clock = new SettableClock()
-        val podInstance = TestInstanceBuilder.newBuilder(podId)
-          .withReservation(Nil)
-          .addTaskWithBuilder()
-          .taskRunning(containerName = Some("container-1"))
-          .build()
-          .addTaskWithBuilder()
-          .taskRunning(containerName = Some("container-2"))
-          .build()
-          .instance
         val goneOperations = podInstance.tasksMap.values.map { task =>
           InstanceUpdateOperation.MesosUpdate(
             podInstance,
@@ -416,6 +417,39 @@ class InstanceUpdaterTest extends UnitTest with Inside {
 
             secondOp.reservation shouldBe None
             secondOp.instance.agentInfo shouldBe None
+        }
+      }
+
+      "reset the reservation if one of the tasks are TASK_GONE_BY_OPERATOR and all the others are terminal" in {
+        val clock = new SettableClock()
+        val Seq(task1, task2) = podInstance.tasksMap.values.toSeq
+        val finishedOperation =
+          InstanceUpdateOperation.MesosUpdate(
+            podInstance,
+            Condition.Finished,
+            MesosTaskStatusTestHelper.finished(task1.taskId),
+            Timestamp(clock.instant()))
+
+        val goneOperation =
+          InstanceUpdateOperation.MesosUpdate(
+            podInstance,
+            Condition.Gone,
+            MesosTaskStatusTestHelper.goneByOperator(task2.taskId, task2.status.mesosStatus.map(_.getSlaveId)),
+            Timestamp(clock.instant()))
+
+        val progressivelyApplied = Seq(finishedOperation, goneOperation).scanLeft(podInstance) { (instance, operation) =>
+          InstanceUpdater.mesosUpdate(instance, operation).asInstanceOf[Update].instance
+        }
+
+        inside(progressivelyApplied) {
+          case Seq(_, postFinishedOp, postGoneOp) =>
+            postFinishedOp.reservation.nonEmpty shouldBe true
+            postFinishedOp.agentInfo shouldBe podInstance.agentInfo
+            postFinishedOp.state.condition shouldBe Condition.Running
+
+            postGoneOp.reservation shouldBe None
+            postGoneOp.instance.agentInfo shouldBe None
+            postGoneOp.state.condition shouldBe Condition.Scheduled
         }
       }
     }
