@@ -71,7 +71,7 @@ class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
   private def ramlHealthCheck(protocol: AppHealthCheckProtocol) = AppHealthCheck(
     path = Some("/health"),
     protocol = protocol,
-    gracePeriodSeconds = 0,
+    gracePeriodSeconds = 3,
     intervalSeconds = 1,
     maxConsecutiveFailures = 3,
     portIndex = Some(0),
