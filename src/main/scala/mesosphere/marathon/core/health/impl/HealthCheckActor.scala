@@ -28,9 +28,10 @@ private[health] class HealthCheckActor(
     healthCheck: HealthCheck,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,
-    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed])(implicit mat: ActorMaterializer)
+    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed])
   extends Actor with StrictLogging {
 
+  implicit val mat = ActorMaterializer()
   import context.dispatcher
 
   val healthByInstanceId = TrieMap.empty[Instance.Id, Health]
@@ -59,7 +60,6 @@ private[health] class HealthCheckActor(
             done.onComplete {
               case Success(_) =>
                 logger.info(s"HealthCheck stream for app ${app.id} version ${app.version} and healthCheck $healthCheck was stopped")
-                self ! 'restart
 
               case Failure(ex) =>
                 logger.warn(s"HealthCheck stream for app ${app.id} version ${app.version} and healthCheck $healthCheck crashed due to:", ex)
@@ -205,7 +205,7 @@ object HealthCheckActor {
     healthCheck: HealthCheck,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,
-    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed])(implicit mat: ActorMaterializer): Props = {
+    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed]): Props = {
 
     Props(new HealthCheckActor(
       app,

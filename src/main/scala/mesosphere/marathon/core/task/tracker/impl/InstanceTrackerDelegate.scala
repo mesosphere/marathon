@@ -46,7 +46,7 @@ private[tracker] class InstanceTrackerDelegate(
         case e: AskTimeoutException =>
           throw new TimeoutException(
             "timeout while calling instancesBySpec() (current value = ${config.internalTaskTrackerRequestTimeout().milliseconds}ms." +
-              s"If you know what you are doing, you can adjust the timeout " +
+              "If you know what you are doing, you can adjust the timeout " +
               s"with --${config.internalTaskTrackerRequestTimeout.name}."
           )
       }
