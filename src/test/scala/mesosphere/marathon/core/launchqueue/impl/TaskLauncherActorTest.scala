@@ -373,11 +373,11 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
     "resync instance on provision timeout" in new Fixture {
       Given("a scheduled instance we matched offer for")
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.scheduledInstance))
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(f.scheduledInstance)
 
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
-      Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
+     instanceOpFactory.matchOfferRequest(m.any()) returns f.launchResult
 
       val promise = Promise[MatchedInstanceOps]
       val offer = MarathonTestHelper.makeBasicOffer().build()
