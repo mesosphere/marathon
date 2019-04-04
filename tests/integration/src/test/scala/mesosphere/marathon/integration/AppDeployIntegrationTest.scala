@@ -671,6 +671,11 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Then("the deployment gets created")
       WaitTestSupport.validFor("deployment visible", 1.second)(marathon.listDeploymentsForPathId(id).value.size == 1)
 
+      Then("overdue flag is set to true")
+      val queueItem = marathon.launchQueue().value.queue.find(_.app.id equals id.toString)
+      queueItem shouldBe defined
+      queueItem.get.delay.overdue shouldBe true
+
       When("the deployment is forcefully removed")
       val delete = marathon.deleteDeployment(deploymentId, force = true)
       delete should be(Accepted)
