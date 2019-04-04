@@ -195,7 +195,6 @@ private class TaskLauncherActor(
     case InstanceOpSourceDelegate.InstanceOpRejected(op, reason) =>
       logger.debug(s"Task op '${op.getClass.getSimpleName}' for ${op.instanceId} was REJECTED, reason '$reason', rescheduling. $status")
       syncInstance(op.instanceId)
-      manageOfferMatcherStatus(clock.now())
 
     case InstanceOpSourceDelegate.InstanceOpAccepted(op) =>
       logger.debug(s"Instance operation ${op.getClass.getSimpleName} for instance ${op.instanceId} got accepted")
@@ -219,14 +218,12 @@ private class TaskLauncherActor(
         }
       }
       syncInstance(update.instance.instanceId)
-      manageOfferMatcherStatus(clock.now())
       sender() ! Done
 
     case update: InstanceDeleted =>
       // if an instance was deleted, it's not needed anymore and we only have to remove it from the internal state
       logger.info(s"${update.instance.instanceId} was deleted. Will remove from internal state.")
       removeInstanceFromInternalState(update.instance.instanceId)
-      manageOfferMatcherStatus(clock.now())
       sender() ! Done
   }
 
@@ -291,6 +288,8 @@ private class TaskLauncherActor(
         logger.info(s"Instance $instanceId does not exist in InstanceTracker - removing it from internal state.")
         removeInstanceFromInternalState(instanceId)
     }
+
+    manageOfferMatcherStatus(clock.now())
   }
 
   def removeInstanceFromInternalState(instanceId: Instance.Id): Unit = {
