@@ -59,13 +59,12 @@ class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       waitForEvent("unhealthy_instance_kill_event")
 
       And("a replacement is started")
-      // This fails.
-      //check.afterDelay(1.seconds, true)
-      //eventually {
-      //  val currentTasks = marathon.tasks(id).value
-      //  currentTasks should have size (1)
-      //  currentTasks.map(_.id) should not contain (oldTaskId)
-      //}
+      check.afterDelay(1.seconds, true)
+      eventually {
+        val currentTasks = marathon.tasks(id).value
+        currentTasks should have size (1)
+        currentTasks.map(_.id) should not contain (oldTaskId)
+      }
     }
   }
 
