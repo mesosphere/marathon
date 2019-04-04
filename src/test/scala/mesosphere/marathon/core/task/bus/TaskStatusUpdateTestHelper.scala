@@ -162,6 +162,12 @@ object TaskStatusUpdateTestHelper {
     taskUpdateFor(instance, Condition.Gone, status)
   }
 
+  def goneByOperator(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+    val taskId = Task.Id(instance.instanceId, container)
+    val status = MesosTaskStatusTestHelper.goneByOperator(taskId)
+    taskUpdateFor(instance, Condition.Gone, status)
+  }
+
   def dropped(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
     val taskId = Task.Id(instance.instanceId, container)
     val status = MesosTaskStatusTestHelper.dropped(taskId)

@@ -135,7 +135,9 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       }
 
       And("the data survived")
-      eventually { AppMockFacade(newTask).get(s"/$containerPath/data").futureValue should be("hello\nhello\n") }
+      eventually {
+        AppMockFacade(newTask).get(s"/$containerPath/data").futureValue should be("hello\nhello\n")
+      }
     }
 
     "resident task is launched completely on reserved resources" in new Fixture {
