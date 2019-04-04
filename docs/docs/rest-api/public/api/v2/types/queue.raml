@@ -64,7 +64,9 @@ types:
         description: The number of seconds to wait, before the next launch attempt is started.
       overdue:
         type: boolean
-        description: true, if this run spec is backed off. Otherwise false.
+        description: |
+          true, if this run spec is waiting on offers. If false, the run spec is backed off and waits until
+          timeLeftSeconds for the next launch attempt.
 
   QueueObject:
     properties:
