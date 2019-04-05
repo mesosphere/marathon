@@ -13,6 +13,9 @@ The default GPU Scheduling Behavior has been changed to `restricted`, and `undef
 
 For more information on `gpu_scheduling_behavior`, please see [the docs](https://mesosphere.github.io/marathon/docs/preferential-gpu-scheduling.html)
 
+### Marathon is now suppressing offers by default
+The default for suppress offers changed in this release and it is now enabled by default. You can still disable suppressing via `--disable_suppress_offers` command line flag.
+
 ### Upgrades only from Marathon 1.6+
 
 You can only upgrade to Marathon 1.8 from 1.6.x and 1.7.x. If you'd like to upgrade from an earlier version you should

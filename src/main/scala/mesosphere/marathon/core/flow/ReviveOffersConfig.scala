@@ -25,7 +25,7 @@ trait ReviveOffersConfig extends ScallopConf {
 
   lazy val suppressOffers = toggle(
     "suppress_offers",
-    default = Some(false),
+    default = Some(true),
     noshort = true,
     descrYes = "Suppress Mesos offers if Marathon has nothing to launch.",
     descrNo = "(Default) Offers will be continually declined for declineOfferDuration.",
