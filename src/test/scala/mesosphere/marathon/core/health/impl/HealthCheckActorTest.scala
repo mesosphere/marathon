@@ -1,111 +1,100 @@
 package mesosphere.marathon
 package core.health.impl
 
-import akka.actor.Props
+import akka.NotUsed
+import akka.actor.{ActorRef, Props}
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.{MergeHub, Sink}
 import akka.testkit._
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.health.{Health, HealthCheck, MarathonHttpHealthCheck, PortReference}
-import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.health.impl.AppHealthCheckActor.PurgeHealthCheckStatuses
+import mesosphere.marathon.core.health.{Health, HealthCheck, Healthy, MarathonHealthCheck, MarathonHttpHealthCheck, PortReference}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{AppDefinition, Timestamp}
-import mesosphere.marathon.storage.repository.AppRepository
-import org.apache.mesos.SchedulerDriver
-import org.mockito.Mockito.{verifyNoMoreInteractions, when}
+import org.mockito.Mockito.verifyNoMoreInteractions
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class HealthCheckActorTest extends AkkaUnitTest {
   class Fixture {
-    val tracker = mock[InstanceTracker]
+    implicit val mat: ActorMaterializer = ActorMaterializer()
+
+    val instanceTracker = mock[InstanceTracker]
 
     val appId = "/test".toPath
     val appVersion = Timestamp(1)
     val app = AppDefinition(id = appId)
-    val appRepository: AppRepository = mock[AppRepository]
-    val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
-    val driver = mock[SchedulerDriver]
-    holder.driver = Some(driver)
-    when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
     val killService: KillService = mock[KillService]
-    when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
 
     val scheduler: MarathonScheduler = mock[MarathonScheduler]
 
     val instanceBuilder = TestInstanceBuilder.newBuilder(appId, version = appVersion).addTaskRunning()
     val instance = instanceBuilder.getInstance()
-    val appHealthCheckActor = TestProbe()
 
+    val appHealthCheckActor = TestProbe()
+    val healthCheck = MarathonHttpHealthCheck(portIndex = Some(PortReference(0)), interval = 1.second)
     val task: Task = instance.appTask
 
     val unreachableInstance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()
-    val unreachableTask: Task = unreachableInstance.appTask
+    val lostInstance = TestInstanceBuilder.newBuilder(appId).addTaskLost().getInstance()
+
+    val healthCheckWorkerHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed] =
+      MergeHub
+        .source[(AppDefinition, Instance, MarathonHealthCheck, ActorRef)](1)
+        .map { case (_, instance, _, ref) => ref ! Healthy(instance.instanceId, Timestamp.now()) }
+        .to(Sink.ignore)
+        .run()
 
     def actor(healthCheck: HealthCheck) = TestActorRef[HealthCheckActor](
       Props(
-        new HealthCheckActor(app, appHealthCheckActor.ref, killService, healthCheck, tracker, system.eventStream)
+        new HealthCheckActor(app, appHealthCheckActor.ref, killService, healthCheck, instanceTracker, system.eventStream, healthCheckWorkerHub)
       )
     )
 
-    def actorWithLatch(latch: TestLatch) = TestActorRef[HealthCheckActor](
+    def healthCheckActor() = TestActorRef[HealthCheckActor](
       Props(
         new HealthCheckActor(
           app,
           appHealthCheckActor.ref,
           killService,
-          MarathonHttpHealthCheck(portIndex = Some(PortReference(0))),
-          tracker,
-          system.eventStream) {
-
-          override val workerProps = Props {
-            latch.countDown()
-            new TestActors.EchoActor
-          }
+          healthCheck,
+          instanceTracker,
+          system.eventStream,
+          healthCheckWorkerHub) {
         }
       )
     )
   }
 
   "HealthCheckActor" should {
-    // regression test for #934
-    "should not dispatch health checks for staging tasks" in {
-      val f = new Fixture
-      val latch = TestLatch(1)
-      val appId = "/test".toPath
-      val appVersion = Timestamp(1)
-      val app = AppDefinition(id = appId)
-      val appRepository: AppRepository = mock[AppRepository]
+    //regression test for #934
+    "should not dispatch health checks for staging tasks" in new Fixture {
+      instanceTracker.specInstances(any)(any) returns Future.successful(Seq(instance))
 
-      when(appRepository.getVersion(appId, appVersion.toOffsetDateTime)).thenReturn(Future.successful(Some(app)))
+      val actor = healthCheckActor()
 
-      val actor = f.actorWithLatch(latch)
-      actor.underlyingActor.dispatchJobs(Seq(f.instance))
-      latch.isOpen should be (false)
-      verifyNoMoreInteractions(f.driver)
+      appHealthCheckActor.expectMsgAllClassOf(classOf[PurgeHealthCheckStatuses])
     }
 
-    "should not dispatch health checks for lost tasks" in {
-      val f = new Fixture
-      val latch = TestLatch(1)
+    "should not dispatch health checks for lost tasks" in new Fixture {
+      instanceTracker.specInstances(any)(any) returns Future.successful(Seq(lostInstance))
 
-      val actor = f.actorWithLatch(latch)
+      val actor = healthCheckActor()
 
-      actor.underlyingActor.dispatchJobs(Seq(f.unreachableInstance))
-      latch.isOpen should be (false)
-      verifyNoMoreInteractions(f.driver)
+      appHealthCheckActor.expectMsgAllClassOf(classOf[PurgeHealthCheckStatuses])
     }
 
-    "should not dispatch health checks for unreachable tasks" in {
-      val f = new Fixture
-      val latch = TestLatch(1)
+    "should not dispatch health checks for unreachable tasks" in new Fixture {
+      instanceTracker.specInstances(any)(any) returns Future.successful(Seq(unreachableInstance))
 
-      val actor = f.actorWithLatch(latch)
+      val actor = healthCheckActor()
 
-      actor.underlyingActor.dispatchJobs(Seq(f.unreachableInstance))
-      latch.isOpen should be (false)
-      verifyNoMoreInteractions(f.driver)
+      appHealthCheckActor.expectMsgAllClassOf(classOf[PurgeHealthCheckStatuses])
     }
 
     // regression test for #1456
@@ -115,7 +104,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
 
       actor.underlyingActor.checkConsecutiveFailures(f.instance, Health(f.instance.instanceId, consecutiveFailures = 3))
       verify(f.killService).killInstancesAndForget(Seq(f.instance), KillReason.FailedHealthChecks)
-      verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
+      verifyNoMoreInteractions(f.instanceTracker, f.scheduler)
     }
 
     "task should not be killed if health check fails, but the task is unreachable" in {
@@ -123,7 +112,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
       val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(PortReference(0))))
 
       actor.underlyingActor.checkConsecutiveFailures(f.unreachableInstance, Health(f.unreachableInstance.instanceId, consecutiveFailures = 3))
-      verifyNoMoreInteractions(f.tracker, f.driver, f.scheduler)
+      verifyNoMoreInteractions(f.instanceTracker, f.scheduler)
     }
   }
 }
