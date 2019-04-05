@@ -32,6 +32,9 @@ object InstanceTrackerActor {
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
   private[impl] case object List
 
+  /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]] by RunSpec [[PathId]]. */
+  private[impl] case class ListBySpec(appId: PathId)
+
   private[impl] case class Get(instanceId: Instance.Id)
 
   private[impl] case class UpdateContext(deadline: Timestamp, op: InstanceUpdateOperation) {
@@ -91,7 +94,7 @@ private[impl] class InstanceTrackerActor(
   override def preStart(): Unit = {
     super.preStart()
 
-    logger.info(s"${getClass.getSimpleName} is starting. Task loading initiated.")
+    logger.info(s"${getClass.getSimpleName} is starting. Instances loading initiated.")
     metrics.resetMetrics()
 
     import akka.pattern.pipe
@@ -135,6 +138,9 @@ private[impl] class InstanceTrackerActor(
     LoggingReceive.withLabel("initialized") {
       case InstanceTrackerActor.List =>
         sender() ! instancesBySpec
+
+      case InstanceTrackerActor.ListBySpec(appId: PathId) =>
+        sender() ! instancesBySpec.specInstances(appId)
 
       case InstanceTrackerActor.Get(instanceId) =>
         sender() ! instancesBySpec.instance(instanceId)

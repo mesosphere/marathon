@@ -39,7 +39,8 @@ private[tracker] class InstanceTrackerDelegate(
     (instanceTrackerRef ? InstanceTrackerActor.List).mapTo[InstanceTracker.InstancesBySpec].recover {
       case e: AskTimeoutException =>
         throw new TimeoutException(
-          "timeout while calling list. If you know what you are doing, you can adjust the timeout " +
+          s"timeout while calling instancesBySpec() (current value = ${config.internalTaskTrackerRequestTimeout().milliseconds}ms." +
+            "If you know what you are doing, you can adjust the timeout " +
             s"with --${config.internalTaskTrackerRequestTimeout.name}."
         )
     }
@@ -48,17 +49,19 @@ private[tracker] class InstanceTrackerDelegate(
   // TODO(jdef) support pods when counting launched instances
   override def countActiveSpecInstances(appId: PathId): Future[Int] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    instancesBySpec().map(_.specInstances(appId).count(instance => instance.isActive || (instance.isReserved && !instance.isReservedTerminal)))
+    specInstances(appId).map(_.count(instance => instance.isActive || (instance.isReserved && !instance.isReservedTerminal)))
   }
 
-  override def hasSpecInstancesSync(appId: PathId): Boolean = instancesBySpecSync.hasSpecInstances(appId)
+  override def hasSpecInstancesSync(appId: PathId): Boolean = specInstancesSync(appId).nonEmpty
   override def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
-    instancesBySpec().map(_.hasSpecInstances(appId))
+    specInstances(appId).map(_.nonEmpty)
 
-  override def specInstancesSync(appId: PathId): Seq[Instance] =
-    instancesBySpecSync.specInstances(appId)
+  override def specInstancesSync(appId: PathId): Seq[Instance] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Await.result(specInstances(appId), instanceTrackerQueryTimeout.duration)
+  }
   override def specInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] =
-    instancesBySpec().map(_.specInstances(appId))
+    (instanceTrackerRef ? InstanceTrackerActor.ListBySpec(appId)).mapTo[Seq[Instance]]
 
   override def instance(taskId: Instance.Id): Future[Option[Instance]] =
     (instanceTrackerRef ? InstanceTrackerActor.Get(taskId)).mapTo[Option[Instance]]
