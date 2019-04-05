@@ -206,7 +206,7 @@ object HealthCheckActor {
     healthCheck: HealthCheck,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,
-    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed])(implicit mat: ActorMaterializer): Props = {
+    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed]): Props = {
 
     Props(new HealthCheckActor(
       app,
