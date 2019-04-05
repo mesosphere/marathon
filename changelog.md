@@ -1,5 +1,8 @@
 ## Changes to 1.7.XXX
 
+### Introduce global throttling to Marathon health checks
+Marathon health checks is a deprecated feature and customers are strongly recommended to switch to Mesos health checks for scalability reasons. However, we've seen a number of issues when excessive number of Marathon health checks (HTTP and TCP) would overload parts of Marathon. Hence we introduced a new parameter `--max_concurrent_marathon_health_checks` that defines maximum number (256 by default) of *Marathon* health checks (HTTP/S and TCP) that can be executed concurrently in the given moment. Note that setting a big value here and using many services with Marathon health checks will overload Marathon leading to internal timeouts and unstable behavior.
+
 - [MARATHON-8566](https://jira.mesosphere.com/browse/MARATHON-8566) - We fixed a race condition causing `v2/deployments` not containing a confirmed deployment after HTTP 200/201 response was returned.
 
 ## Changes to 1.7.187

@@ -8,7 +8,6 @@ import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.core.task.tracker.InstanceTracker.{InstancesBySpec, SpecInstances}
 import mesosphere.marathon.state.PathId
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{TaskID, TaskStatus}
@@ -185,8 +184,8 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       var instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(None).getInstance()
       val reservedTask: Task = instance.appTask
       instance = instance.copy(tasksMap = Map(reservedTask.taskId -> reservedTask.copy(status = reservedTask.status.copy(mesosStatus = Some(MesosTaskStatusTestHelper.failed(reservedTask.taskId))))))
-      f.taskTrackerProbe.expectMsg(InstanceTrackerActor.List)
-      f.taskTrackerProbe.reply(InstancesBySpec(Map(appId -> SpecInstances(Map(instance.instanceId -> instance)))))
+      f.taskTrackerProbe.expectMsg(InstanceTrackerActor.ListBySpec(PathId("/test")))
+      f.taskTrackerProbe.reply(Seq(instance))
 
       val activeCount = activeCountFuture.futureValue
       activeCount should be(0)
@@ -201,8 +200,8 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       var instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(None).getInstance()
       val reservedTask: Task = instance.appTask
       instance = instance.copy(tasksMap = Map(reservedTask.taskId -> reservedTask.copy(status = reservedTask.status.copy(mesosStatus = Some(MesosTaskStatusTestHelper.running(reservedTask.taskId))))))
-      f.taskTrackerProbe.expectMsg(InstanceTrackerActor.List)
-      f.taskTrackerProbe.reply(InstancesBySpec(Map(appId -> SpecInstances(Map(instance.instanceId -> instance)))))
+      f.taskTrackerProbe.expectMsg(InstanceTrackerActor.ListBySpec(PathId("/test")))
+      f.taskTrackerProbe.reply(Seq(instance))
 
       val activeCount = activeCountFuture.futureValue
       activeCount should be(1)
@@ -215,8 +214,8 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       val activeCountFuture = f.delegate.countActiveSpecInstances(appId)
 
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskReserved(None).getInstance()
-      f.taskTrackerProbe.expectMsg(InstanceTrackerActor.List)
-      f.taskTrackerProbe.reply(InstancesBySpec(Map(appId -> SpecInstances(Map(instance.instanceId -> instance)))))
+      f.taskTrackerProbe.expectMsg(InstanceTrackerActor.ListBySpec(PathId("/test")))
+      f.taskTrackerProbe.reply(Seq(instance))
 
       val activeCount = activeCountFuture.futureValue
       activeCount should be(1)
