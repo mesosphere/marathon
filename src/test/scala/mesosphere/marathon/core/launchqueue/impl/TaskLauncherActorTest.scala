@@ -377,7 +377,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
-     instanceOpFactory.matchOfferRequest(m.any()) returns f.launchResult
+      instanceOpFactory.matchOfferRequest(m.any()) returns f.launchResult
 
       val promise = Promise[MatchedInstanceOps]
       val offer = MarathonTestHelper.makeBasicOffer().build()
