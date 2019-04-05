@@ -4,8 +4,6 @@ package integration
 import java.util.UUID
 
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.core.event.UnhealthyInstanceKillEvent
-import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.{AppHealthCheck, AppHealthCheckProtocol}
