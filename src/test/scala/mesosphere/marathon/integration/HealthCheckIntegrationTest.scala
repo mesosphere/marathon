@@ -4,6 +4,7 @@ package integration
 import java.util.UUID
 
 import mesosphere.AkkaIntegrationTest
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.{AppHealthCheck, AppHealthCheckProtocol}
 import mesosphere.marathon.state.PathId
@@ -30,7 +31,7 @@ class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       check.afterDelay(1.seconds, false)
 
       Then("the unhealthy instance is killed")
-      waitForEvent("unhealthy_instance_kill_event")
+      waitForEventWith("unhealthy_instance_kill_event", { event => event.info("taskId") == oldTaskId })
 
       And("a replacement is started")
       check.afterDelay(1.seconds, true)
@@ -53,7 +54,11 @@ class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       When("the app becomes unhealthy")
       val oldTaskId = marathon.tasks(id).value.head.id
+      val oldInstanceId = Task.Id(oldTaskId).instanceId.idString
       check.afterDelay(1.seconds, false)
+
+      Then("the unhealthy instance is killed")
+      waitForEventWith("instance_changed_event", { event => event.info("condition") == "Killed" && event.info("instanceId") == oldInstanceId })
 
       Then("the unhealthy instance is killed")
       waitForEvent("unhealthy_instance_kill_event")
@@ -63,10 +68,10 @@ class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
   private def ramlHealthCheck(protocol: AppHealthCheckProtocol) = AppHealthCheck(
     path = Some("/health"),
     protocol = protocol,
-    gracePeriodSeconds = 20,
+    gracePeriodSeconds = 3,
     intervalSeconds = 1,
-    maxConsecutiveFailures = 5,
+    maxConsecutiveFailures = 3,
     portIndex = Some(0),
-    delaySeconds = 2
+    delaySeconds = 3
   )
 }
