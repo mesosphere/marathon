@@ -46,7 +46,7 @@ following units:
 ## Metric names
 
 All metric names are prefixed with `marathon` by default. The prefix can
-be changed using `--metrics_prefix` command-line flag.
+be changed using `--metrics_name_prefix` command-line flag.
 
 Metric name components are joined with dots. Components may have dashes
 in them.
