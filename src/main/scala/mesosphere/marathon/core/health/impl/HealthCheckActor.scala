@@ -28,9 +28,10 @@ private[health] class HealthCheckActor(
   healthCheck: HealthCheck,
   instanceTracker: InstanceTracker,
   eventBus: EventStream,
-  healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed])(implicit mat: ActorMaterializer)
+  healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed])
     extends Actor with StrictLogging {
 
+  implicit val mat = ActorMaterializer()
   import context.dispatcher
 
   var healthByInstanceId = TrieMap.empty[Instance.Id, Health]
@@ -74,11 +75,9 @@ private[health] class HealthCheckActor(
   def purgeStatusOfDoneInstances(instances: Seq[Instance]): Unit = {
     logger.debug(s"Purging health status of inactive instances for app ${app.id} version ${app.version} and healthCheck ${healthCheck}")
 
-    val activeInstanceIds: Set[Instance.Id] = instances.withFilter(_.isLaunched).map(_.instanceId)(collection.breakOut)
-    // The Map built with filterKeys wraps the original map and contains a reference to activeInstanceIds.
-    // Therefore we materialize it into a new map.
-    activeInstanceIds.foreach { activeId =>
-      healthByInstanceId.remove(activeId)
+    val inactiveInstanceIds: Set[Instance.Id] = instances.filterNot(_.isActive).map(_.instanceId)(collection.breakOut)
+    inactiveInstanceIds.foreach { inactiveId =>
+      healthByInstanceId.remove(inactiveId)
     }
 
     val checksToPurge = instances.withFilter(!_.isActive).map(instance => {
@@ -207,7 +206,7 @@ object HealthCheckActor {
     healthCheck: HealthCheck,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,
-    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed])(implicit mat: ActorMaterializer): Props = {
+    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed]): Props = {
 
     Props(new HealthCheckActor(
       app,
