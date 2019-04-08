@@ -263,7 +263,8 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       portMappings = container.collect {
         case x if !x.hasDocker || x.getDocker.getOBSOLETEPortMappingsCount == 0 =>
           container.getPortMappingsList.map(_.toRaml)(collection.breakOut)
-      }
+      },
+      linuxInfo = container.when(_.hasLinuxInfo, _.getLinuxInfo.toRaml).orElse(None)
     )
   }
 
@@ -275,6 +276,18 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
     raml.VolumeMount(
       volMnt.volumeName.getOrElse(throw new IllegalArgumentException("volumeName must not be empty")),
       volMnt.mountPath, Some(volMnt.readOnly))
+  }
+
+  implicit val linuxInfoRamlWrites: Writes[Protos.ExtendedContainerInfo.LinuxInfo, LinuxInfo] = Writes { linuxInfo =>
+    raml.LinuxInfo(
+      if (linuxInfo.hasSeccomp) Some(linuxInfo.getSeccomp.toRaml) else None
+    )
+  }
+
+  implicit val seccompRamlWrites: Writes[Protos.ExtendedContainerInfo.LinuxInfo.Seccomp, Seccomp] = Writes { seccomp =>
+    val profileName = if (seccomp.hasProfileName) Some(seccomp.getProfileName) else None
+    val unconfined = if (seccomp.hasUnconfined) Some(seccomp.getUnconfined) else None
+    raml.Seccomp(profileName, unconfined)
   }
 }
 

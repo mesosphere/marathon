@@ -10,13 +10,22 @@ package state
   */
 case class Seccomp(profileName: Option[String], unconfined: Boolean)
 
-// TODO: validation rules
-//  1. profile is notEmpty | unconfined must be empty or true
-//  2. if profile is empty | unconfined must be false
-//  3. if linuxinfo (must be MesosContainer)
 /**
   * Defines the linux runtime the container will run under.   This could include things such as seccomp, linux capabilities,
   * and shared pid namespaces.
   * @param seccomp The seccomp mode to use, either unconfined or which profile.
   */
 case class LinuxInfo(seccomp: Option[Seccomp])
+
+object LinuxInfo {
+
+  /*
+  rules:  if seccomp not defined = valid
+          if profile is empty == valid (regardless of unconfined)
+          if profile is not empty unconfined must be false
+   */
+  def valid(linuxInfo: LinuxInfo): Boolean = {
+    if(linuxInfo.seccomp.isEmpty || linuxInfo.seccomp.get.profileName.isEmpty) return true
+    linuxInfo.seccomp.get.profileName.isDefined && !linuxInfo.seccomp.get.unconfined
+  }
+}

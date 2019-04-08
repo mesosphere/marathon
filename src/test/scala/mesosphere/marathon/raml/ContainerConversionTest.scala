@@ -19,7 +19,8 @@ class ContainerConversionTest extends UnitTest {
     "a mesos container" should {
       val container = state.Container.Mesos(
         volumes = Seq(coreHostVolume),
-        portMappings = Seq(corePortMapping))
+        portMappings = Seq(corePortMapping),
+        linuxInfo = Some(coreLinuxInfoProfile))
       val raml = container.toRaml[Container]
 
       behave like convertToProtobufThenToRAML(container, raml)
@@ -34,12 +35,13 @@ class ContainerConversionTest extends UnitTest {
     }
     "a RAML container" should {
       "convert to a mesos container" in {
-        val container = Container(EngineType.Mesos, portMappings = Option(Seq(ramlPortMapping)), volumes = Seq(ramlHostVolume))
+        val container = Container(EngineType.Mesos, portMappings = Option(Seq(ramlPortMapping)), volumes = Seq(ramlHostVolume), linuxInfo = Some(ramlLinuxInfoProfile))
         val mc = Some(container.fromRaml).collect {
           case c: state.Container.Mesos => c
         }.getOrElse(fail("expected Container.Mesos"))
         mc.portMappings should be(Seq(corePortMapping))
         mc.volumes should be(Seq(coreHostVolume))
+        mc.linuxInfo should be(Some(coreLinuxInfoProfile))
       }
     }
   }
@@ -47,7 +49,7 @@ class ContainerConversionTest extends UnitTest {
   "A Mesos Docker container is converted" when {
     "a mesos-docker container" should {
       val container = state.Container.MesosDocker(Seq(coreHostVolume), "test", Seq(corePortMapping),
-        Some(credentials), Some(dockerPullConfig))
+        Some(credentials), Some(dockerPullConfig), false, Some(coreLinuxInfoProfile))
       val raml = container.toRaml[Container]
 
       behave like convertToProtobufThenToRAML(container, raml)
@@ -65,6 +67,7 @@ class ContainerConversionTest extends UnitTest {
         raml.docker.get.pullConfig should be(defined)
         raml.docker.get.pullConfig.get shouldBe a[DockerPullConfig]
         raml.docker.get.pullConfig.get shouldBe DockerPullConfig(dockerPullConfig.secret)
+        raml.linuxInfo should be(defined)
       }
     }
     "a mesos-docker container w/o port mappings" should {
@@ -77,7 +80,8 @@ class ContainerConversionTest extends UnitTest {
       "convert to a mesos-docker container" in {
         val container = Container(EngineType.Mesos, portMappings = Option(Seq(ramlPortMapping)), docker = Some(DockerContainer(
           image = "foo", credential = Some(DockerCredentials(credentials.principal, credentials.secret)),
-          pullConfig = Some(DockerPullConfig(dockerPullConfig.secret)))), volumes = Seq(ramlHostVolume))
+          pullConfig = Some(DockerPullConfig(dockerPullConfig.secret)))), volumes = Seq(ramlHostVolume),
+          linuxInfo = Some(ramlLinuxInfoProfile))
         val mc = Some(container.fromRaml).collect {
           case c: state.Container.MesosDocker => c
         }.getOrElse(fail("expected Container.MesosDocker"))
@@ -87,6 +91,7 @@ class ContainerConversionTest extends UnitTest {
         mc.credential shouldBe Some(credentials)
         mc.pullConfig shouldBe Some(dockerPullConfig)
         mc.forcePullImage should be(container.docker.head.forcePullImage)
+        mc.linuxInfo shouldBe Some(coreLinuxInfoProfile)
       }
     }
   }
@@ -264,4 +269,6 @@ class ContainerConversionTest extends UnitTest {
     volume = state.HostVolume(None, "/host/path"),
     mount = state.VolumeMount(None, "cpath"))
   private lazy val ramlHostVolume = AppHostVolume("cpath", "/host/path", mode = ReadMode.Rw)
+  private lazy val coreLinuxInfoProfile = state.LinuxInfo(Some(state.Seccomp(Some("profile"), false)))
+  private lazy val ramlLinuxInfoProfile = LinuxInfo(Some(Seccomp(Some("profile"), Some(false))))
 }
