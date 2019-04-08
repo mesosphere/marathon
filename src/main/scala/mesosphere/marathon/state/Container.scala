@@ -146,6 +146,7 @@ object Container {
     import Network._
     val validGeneralContainer = validator[Container] { container =>
       container.volumes is every(VolumeWithMount.validVolumeWithMount(enabledFeatures))
+      container.linuxInfo is optional(LinuxInfo.validLinuxInfo)
     }
 
     new Validator[Container] {

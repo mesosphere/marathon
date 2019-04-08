@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package state
 
+import com.wix.accord._
+
 /**
   * Defines the seccomp expectations for the instance this is associated with.   This will govern the secure computing mode.
   * Unlike Mesos, unconfined is not optional.  If seccomp is provided, then unconfined is either true or false.  The optionality is with seccomp itself.
@@ -21,11 +23,18 @@ object LinuxInfo {
 
   /*
   rules:  if seccomp not defined = valid
-          if profile is empty == valid (regardless of unconfined)
-          if profile is not empty unconfined must be false
+          if profile is empty unconfined must be true to be valid
+          if profile is not empty unconfined must be false to be valid
    */
-  def valid(linuxInfo: LinuxInfo): Boolean = {
-    if(linuxInfo.seccomp.isEmpty || linuxInfo.seccomp.get.profileName.isEmpty) return true
-    linuxInfo.seccomp.get.profileName.isDefined && !linuxInfo.seccomp.get.unconfined
-  }
+  val validLinuxInfo =
+    new Validator[LinuxInfo] {
+      override def apply(linuxInfo: LinuxInfo): Result = {
+        if (linuxInfo.seccomp.isDefined) {
+          val seccomp = linuxInfo.seccomp.get
+          if (seccomp.profileName.isDefined && seccomp.unconfined) return Failure(Set(RuleViolation(linuxInfo, "Seccomp unconfined can NOT be true when Profile is defined")))
+          if (seccomp.profileName.isEmpty && !seccomp.unconfined) return Failure(Set(RuleViolation(linuxInfo, "Seccomp unconfined must be true when Profile is NOT defined")))
+        }
+        Success
+      }
+    }
 }
