@@ -8,7 +8,7 @@ import com.wix.accord._
   * Unlike Mesos, unconfined is not optional.  If seccomp is provided, then unconfined is either true or false.  The optionality is with seccomp itself.
   *
   * @param profileName The profile name which defines the security model this container will run under.  It is required that this profile be defined at the agent.
-  * @param unconfined True is running under a profile, False if under a profile.
+  * @param unconfined True is not running under a profile, False if running under a profile.
   */
 case class Seccomp(profileName: Option[String], unconfined: Boolean)
 
