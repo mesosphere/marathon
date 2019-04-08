@@ -1,3 +1,8 @@
+## Changes from 1.5.14 to 1.5.15
+
+### Fixed Issues:
+- [DCOS_OSS-4997](https://jira.mesosphere.com/browse/DCOS_OSS-4997) Previous 1.5.14 release introduced a regression where an unhealthy instance would not be killed. This will not happen anymore (promise) and we do not recommend using 1.5.14 release if you use health checks.
+
 ## Changes from 1.5.13 to 1.5.14
 
 ## Introduce global throttling to Marathon health checks
