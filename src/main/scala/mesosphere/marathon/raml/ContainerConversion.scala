@@ -9,7 +9,6 @@ import org.apache.mesos.{Protos => Mesos}
 
 trait ContainerConversion extends HealthCheckConversion with VolumeConversion with NetworkConversion {
 
-  // TODO: need linuxInfo in Pods
   implicit val containerRamlWrites: Writes[MesosContainer, PodContainer] = Writes { c =>
     PodContainer(
       name = c.name,
@@ -24,11 +23,11 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       artifacts = c.artifacts,
       labels = c.labels,
       lifecycle = c.lifecycle,
-      tty = c.tty
+      tty = c.tty,
+      linuxInfo = c.linuxInfo
     )
   }
 
-  // TODO: need linuxInfo in Pods
   implicit val containerRamlReads: Reads[PodContainer, MesosContainer] = Reads { c =>
     MesosContainer(
       name = c.name,
@@ -43,7 +42,8 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       artifacts = c.artifacts,
       labels = c.labels,
       lifecycle = c.lifecycle,
-      tty = c.tty
+      tty = c.tty,
+      linuxInfo = c.linuxInfo
     )
   }
 
