@@ -255,7 +255,7 @@ class TaskReplaceActor(
   /**
     * @return whether [[instance]] has the new run spec version or an old one.
     */
-  def isOldInstance(instance: Instance): Boolean = instance.runSpecVersion.before(runSpec.version)
+  def isOldInstance(instance: Instance): Boolean = instance.runSpecVersion != runSpec.version
 }
 
 object TaskReplaceActor extends StrictLogging {
