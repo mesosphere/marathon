@@ -512,17 +512,13 @@ class Client(object):
         :rtype: [dict]
         """
 
-        response = self._rpc.session.get('v2/tasks')
-
         if app_id is not None:
             app_id = util.normalize_marathon_id_path(app_id)
-            tasks = [
-                task for task in response.json()['tasks']
-                if app_id == task['appId']
-            ]
+            response = self._rpc.session.get('v2/{}/tasks'.format(app_id))
         else:
-            tasks = response.json()['tasks']
+            response = self._rpc.session.get('v2/tasks')
 
+        tasks = response.json()['tasks']
         return tasks
 
     def get_task(self, task_id):

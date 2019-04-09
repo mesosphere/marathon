@@ -58,7 +58,7 @@ class TaskReplaceActor(
   val oldActiveInstances = oldInstances.filter(_.state.goal == Goal.Running)
 
   // All instances to kill as set for quick lookup
-  private[this] var oldInstanceIds: SortedSet[Id] = oldActiveInstances.map(_.instanceId).to[SortedSet]
+  private[this] var oldActiveInstanceIds: SortedSet[Id] = oldActiveInstances.map(_.instanceId).to[SortedSet]
 
   // All instances to kill queued up
   private[this] val toKill: mutable.Queue[Instance.Id] = oldActiveInstances.map(_.instanceId).to[mutable.Queue]
@@ -130,7 +130,7 @@ class TaskReplaceActor(
   def replaceBehavior: Receive = {
 
     // === An InstanceChanged event for the *new* instance ===
-    case ic: InstanceChanged if !oldInstanceIds(ic.id) =>
+    case ic: InstanceChanged if !isOldInstance(ic.instance) =>
       val id = ic.id
       val condition = ic.condition
       val instance = ic.instance
@@ -150,7 +150,7 @@ class TaskReplaceActor(
       }
 
     // === An InstanceChanged event for the *old* instance ===
-    case ic: InstanceChanged if oldInstanceIds(ic.id) =>
+    case ic: InstanceChanged if isOldInstance(ic.instance) =>
       val id = ic.id
       val condition = ic.condition
       val instance = ic.instance
@@ -159,8 +159,8 @@ class TaskReplaceActor(
       // 1) An old instance terminated out of band and was not yet chosen to be decommissioned or stopped.
       // We stop/decommission the instance and let it be rescheduled with new instance RunSpec
       if (considerTerminal(condition) && goal == Goal.Running) {
-        logger.info(s"Old instance $id became $condition during an upgrade but still has goal Running. We will decommission that instance and launch new one with the new RunSpec.")
-        oldInstanceIds -= id
+        logger.info(s"Old $id became $condition during an upgrade but still has goal Running. We will decommission that instance and launch new one with the new RunSpec.")
+        oldActiveInstanceIds -= id
         instanceTerminated(id)
         val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
         instanceTracker.setGoal(instance.instanceId, goal, GoalChangeReason.Upgrading)
@@ -168,7 +168,7 @@ class TaskReplaceActor(
       } // 2) An old and decommissioned instance was successfully killed (or was never launched in the first place if condition == Scheduled)
       else if ((considerTerminal(condition) || condition == Condition.Scheduled) && instance.state.goal.isTerminal()) {
         logger.info(s"Old $id became $condition. Launching more instances.")
-        oldInstanceIds -= id
+        oldActiveInstanceIds -= id
         instanceTerminated(id)
         launchInstances()
           .map(_ => CheckFinished)
@@ -196,14 +196,14 @@ class TaskReplaceActor(
 
   def reconcileAlreadyStartedInstances(): Unit = {
     logger.info(s"Reconciling instances during ${runSpec.id} deployment: found ${instancesAlreadyStarted.size} already started instances " +
-      s"and ${oldInstanceIds.size} old instances: ${if (currentInstances.size > 0) currentInstances.map{ i => i.instanceId -> i.state.condition } else "[]"}")
+      s"and ${oldActiveInstanceIds.size} old instances: ${if (currentInstances.size > 0) currentInstances.map{ i => i.instanceId -> i.state.condition } else "[]"}")
     instancesAlreadyStarted.foreach(reconcileHealthAndReadinessCheck)
   }
 
   // Careful not to make this method completely asynchronous - it changes local actor's state `instancesStarted`.
   // Only launching new instances needs to be asynchronous.
   def launchInstances(): Future[Done] = {
-    val leftCapacity = math.max(0, ignitionStrategy.maxCapacity - oldInstanceIds.size - instancesStarted)
+    val leftCapacity = math.max(0, ignitionStrategy.maxCapacity - oldActiveInstanceIds.size - instancesStarted)
     val instancesNotStartedYet = math.max(0, runSpec.instances - instancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
     if (instancesToStartNow > 0) {
@@ -240,17 +240,22 @@ class TaskReplaceActor(
   }
 
   def checkFinished(): Unit = {
-    if (targetCountReached(runSpec.instances) && oldInstanceIds.isEmpty) {
+    if (targetCountReached(runSpec.instances) && oldActiveInstanceIds.isEmpty) {
       logger.info(s"All new instances for $pathId are ready and all old instances have been killed")
       promise.trySuccess(())
       context.stop(self)
     } else {
       logger.info(s"For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +
         s"[${readyInstances.size}] ready new instances and " +
-        s"[${oldInstanceIds.size}] old instances (${oldInstanceIds.take(3).map(_.idString).mkString("[", ",", "]")}). " +
+        s"[${oldActiveInstanceIds.size}] old instances (${oldActiveInstanceIds.take(3).map(_.idString).mkString("[", ",", "]")}). " +
         s"Target count is ${runSpec.instances}.")
     }
   }
+
+  /**
+    * @return whether [[instance]] has the new run spec version or an old one.
+    */
+  def isOldInstance(instance: Instance): Boolean = instance.runSpecVersion.before(runSpec.version)
 }
 
 object TaskReplaceActor extends StrictLogging {

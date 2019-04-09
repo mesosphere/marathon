@@ -542,7 +542,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       promise.future.futureValue
     }
 
-    " wait for the readiness checks and health checks if all tasks are replaced already" in {
+    "wait for the readiness checks and health checks if all tasks are replaced already" in {
       Given("An app without health checks but readiness checks, as well as 1 task of this version")
       val f = new Fixture
       val ready = ReadinessCheck()
