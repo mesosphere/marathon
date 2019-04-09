@@ -71,11 +71,11 @@ private[tracker] class InstanceTrackerDelegate(
     val query = InstanceTrackerActor.ListBySpec(appId)
 
     val promise = Promise[Seq[Instance]]
-    queue.offer(QueuedQuery(query, promise)).map {
+    queue.offer(QueuedQuery(query, promise)).foreach {
       case QueueOfferResult.Enqueued => logger.info(s"Queued query ${query.appId}")
-      case QueueOfferResult.Dropped => throw new RuntimeException(s"Dropped instance query: $query")
-      case QueueOfferResult.Failure(ex) => throw new RuntimeException(s"Failed to process instance query $query because", ex)
-      case QueueOfferResult.QueueClosed => throw new RuntimeException(s"Failed to process instance query $query because the queue is closed")
+      case QueueOfferResult.Dropped => promise.failure(new RuntimeException(s"Dropped instance query: $query"))
+      case QueueOfferResult.Failure(ex) => promise.failure(new RuntimeException(s"Failed to process instance query $query because", ex))
+      case QueueOfferResult.QueueClosed => promise.failure(new RuntimeException(s"Failed to process instance query $query because the queue is closed"))
     }
     promise.future
   }
@@ -150,11 +150,11 @@ private[tracker] class InstanceTrackerDelegate(
     val update = InstanceTrackerActor.UpdateContext(deadline, stateOp)
 
     val promise = Promise[InstanceUpdateEffect]
-    queue.offer(QueuedUpdate(update, promise)).map {
+    queue.offer(QueuedUpdate(update, promise)).foreach {
       case QueueOfferResult.Enqueued => logger.info(s"Queued ${update.operation.shortString}")
-      case QueueOfferResult.Dropped => throw new RuntimeException(s"Dropped instance update: $update")
-      case QueueOfferResult.Failure(ex) => throw new RuntimeException(s"Failed to process instance update $update because", ex)
-      case QueueOfferResult.QueueClosed => throw new RuntimeException(s"Failed to process instance update $update because the queue is closed")
+      case QueueOfferResult.Dropped => promise.failure(new RuntimeException(s"Dropped instance update: $update"))
+      case QueueOfferResult.Failure(ex) => promise.failure(new RuntimeException(s"Failed to process instance update $update because", ex))
+      case QueueOfferResult.QueueClosed => promise.failure(new RuntimeException(s"Failed to process instance update $update because the queue is closed"))
     }
     promise.future
   }
