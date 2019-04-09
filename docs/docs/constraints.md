@@ -194,7 +194,7 @@ $ curl -X POST -H "Content-type: application/json" localhost:8080/v2/apps -d '{
     "id": "sleep-cluster",
     "cmd": "sleep 60",
     "instances": 3,
-    "constraints": [["", "IS", "rack-1"]]
+    "constraints": [["rack_id", "IS", "rack-1"]]
   }'
 ```
 
