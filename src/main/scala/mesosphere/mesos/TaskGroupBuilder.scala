@@ -587,9 +587,7 @@ object TaskGroupBuilder extends StrictLogging {
       linuxInfo.seccomp.foreach { seccomp =>
         val seccompBuilder = mesos.SeccompInfo.newBuilder
 
-        seccomp.unconfined.foreach { unconfined =>
-          seccompBuilder.setUnconfined(unconfined)
-        }
+        seccompBuilder.setUnconfined(seccomp.unconfined)
         seccomp.profileName.foreach { profileName =>
           seccompBuilder.setProfileName(profileName)
         }

@@ -8,13 +8,14 @@ import com.wix.accord._
   * Unlike Mesos, unconfined is not optional.  If seccomp is provided, then unconfined is either true or false.  The optionality is with seccomp itself.
   *
   * @param profileName The profile name which defines the security model this container will run under.  It is required that this profile be defined at the agent.
-  * @param unconfined True is not running under a profile, False if running under a profile.
+  * @param unconfined  True is not running under a profile, False if running under a profile.
   */
 case class Seccomp(profileName: Option[String], unconfined: Boolean)
 
 /**
   * Defines the linux runtime the container will run under.   This could include things such as seccomp, linux capabilities,
   * and shared pid namespaces.
+  *
   * @param seccomp The seccomp mode to use, either unconfined or which profile.
   */
 case class LinuxInfo(seccomp: Option[Seccomp])
@@ -29,12 +30,13 @@ object LinuxInfo {
   val validLinuxInfo =
     new Validator[LinuxInfo] {
       override def apply(linuxInfo: LinuxInfo): Result = {
-        if (linuxInfo.seccomp.isDefined) {
-          val seccomp = linuxInfo.seccomp.get
-          if (seccomp.profileName.isDefined && seccomp.unconfined) return Failure(Set(RuleViolation(linuxInfo, "Seccomp unconfined can NOT be true when Profile is defined")))
-          if (seccomp.profileName.isEmpty && !seccomp.unconfined) return Failure(Set(RuleViolation(linuxInfo, "Seccomp unconfined must be true when Profile is NOT defined")))
+        linuxInfo.seccomp match {
+          case Some(seccomp) =>
+            if (seccomp.profileName.isDefined && seccomp.unconfined) Failure(Set(RuleViolation(linuxInfo, "Seccomp unconfined can NOT be true when Profile is defined")))
+            else if (seccomp.profileName.isEmpty && !seccomp.unconfined) Failure(Set(RuleViolation(linuxInfo, "Seccomp unconfined must be true when Profile is NOT defined")))
+            else Success // <-- otherwise it is not complete
+          case None => Success
         }
-        Success
       }
     }
 }

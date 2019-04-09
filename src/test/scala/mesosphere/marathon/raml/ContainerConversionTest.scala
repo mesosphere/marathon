@@ -270,5 +270,5 @@ class ContainerConversionTest extends UnitTest {
     mount = state.VolumeMount(None, "cpath"))
   private lazy val ramlHostVolume = AppHostVolume("cpath", "/host/path", mode = ReadMode.Rw)
   private lazy val coreLinuxInfoProfile = state.LinuxInfo(Some(state.Seccomp(Some("profile"), false)))
-  private lazy val ramlLinuxInfoProfile = LinuxInfo(Some(Seccomp(Some("profile"), Some(false))))
+  private lazy val ramlLinuxInfoProfile = LinuxInfo(Some(Seccomp(Some("profile"), false)))
 }

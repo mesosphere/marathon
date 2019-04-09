@@ -81,13 +81,11 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       AppCContainer(container.image, container.id, container.labels, container.forcePullImage)
     }
 
-    implicit val seccompWrites: Writes[state.Seccomp, Seccomp] = Writes { seccomp =>
-      val unconfined = Some(seccomp.unconfined)
-      Seccomp(seccomp.profileName, unconfined)
-    }
-
     implicit val linuxInfoWrites: Writes[state.LinuxInfo, LinuxInfo] = Writes { linuxInfo =>
-      LinuxInfo(linuxInfo.seccomp.toRaml)
+      val seccomp = linuxInfo.seccomp.map { seccomp =>
+        Seccomp(seccomp.profileName, seccomp.unconfined)
+      }
+      LinuxInfo(seccomp)
     }
 
     def create(kind: EngineType, docker: Option[DockerContainer] = None, appc: Option[AppCContainer] = None, linuxInfo: Option[LinuxInfo]): Container = {
@@ -106,8 +104,7 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
   }
 
   implicit val seccompReads: Reads[raml.Seccomp, state.Seccomp] = Reads { seccomp =>
-    val unconfined = seccomp.unconfined.getOrElse(false)
-    state.Seccomp(seccomp.profileName, unconfined)
+    state.Seccomp(seccomp.profileName, seccomp.unconfined)
   }
 
   implicit val linuxReads: Reads[raml.LinuxInfo, state.LinuxInfo] = Reads { linuxInfo =>
@@ -117,15 +114,6 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
 
   implicit val pullConfigReads: Reads[DockerPullConfig, state.Container.DockerPullConfig] = Reads {
     case DockerPullConfig(secret) => state.Container.DockerPullConfig(secret)
-  }
-
-  def validateLinuxInfo(linuxInfo: Option[state.LinuxInfo]) = {
-    if (linuxInfo.isDefined
-      && linuxInfo.get.seccomp.isDefined
-      && linuxInfo.get.seccomp.get.profileName.isDefined
-      && linuxInfo.get.seccomp.get.unconfined) {
-      throw new SerializationFailedException("Seccomp can not have unconfined and profile name set")
-    }
   }
 
   implicit val appContainerRamlReader: Reads[Container, state.Container] = Reads { container =>
@@ -170,7 +158,6 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
         )
       case ct => throw SerializationFailedException(s"illegal container specification $ct")
     }
-    validateLinuxInfo(result.linuxInfo)
     result
   }
 
@@ -286,8 +273,7 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
 
   implicit val seccompRamlWrites: Writes[Protos.ExtendedContainerInfo.LinuxInfo.Seccomp, Seccomp] = Writes { seccomp =>
     val profileName = if (seccomp.hasProfileName) Some(seccomp.getProfileName) else None
-    val unconfined = if (seccomp.hasUnconfined) Some(seccomp.getUnconfined) else None
-    raml.Seccomp(profileName, unconfined)
+    raml.Seccomp(profileName, seccomp.getUnconfined)
   }
 }
 
