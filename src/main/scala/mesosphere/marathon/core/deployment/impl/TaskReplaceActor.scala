@@ -32,6 +32,8 @@ class TaskReplaceActor(
     promise: Promise[Unit]) extends Actor with Stash with ReadinessBehavior with StrictLogging {
   import TaskReplaceActor._
 
+  def deploymentId = status.plan.id
+
   // All existing instances of this app independent of the goal.
   //
   // Killed resident tasks are not expunged from the instances list. Ignore
@@ -139,14 +141,17 @@ class TaskReplaceActor(
 
       // 1) Did the new instance task fail?
       if (considerTerminal(condition) && goal == Goal.Running) {
-        logger.warn(s"New $id is terminal ($condition) on agent $agentId during app $pathId restart: $condition reservation: ${instance.reservation}. Waiting for the task to restart...")
+        logger.warn(s"Deployment $deploymentId: New $id is terminal ($condition) on agent $agentId during app $pathId restart: " +
+          "$condition reservation: ${instance.reservation}. Waiting for the task to restart...")
         instanceTerminated(id)
         instancesStarted -= 1
       } // 2) Did someone tamper with new instance's goal? Don't do that - there should be only one "orchestrator" per service per time!
       else if (considerTerminal(condition) && goal.isTerminal()) {
-        logger.error(s"New $id is terminal ($condition) on agent $agentId during app $pathId restart (reservation: ${instance.reservation}) and the goal ($goal) is *NOT* Running! This means that someone is interfering with current deployment!")
+        logger.error(s"Deployment $deploymentId: New $id is terminal ($condition) on agent $agentId during app $pathId restart " +
+          "(reservation: ${instance.reservation}) and the goal ($goal) is *NOT* Running! This means that someone is interfering with current deployment!")
       } else {
-        logger.info(s"Unhandled InstanceChanged event for new instanceId=$id, condition=${condition} (considered terminal=${considerTerminal(condition)}) and current goal=${instance.state.goal}")
+        logger.info(s"Deployment $deploymentId: Unhandled InstanceChanged event for new instanceId=$id, condition=$condition " +
+          "(considered terminal=${considerTerminal(condition)}) and current goal=${instance.state.goal}")
       }
 
     // === An InstanceChanged event for the *old* instance ===
@@ -159,7 +164,8 @@ class TaskReplaceActor(
       // 1) An old instance terminated out of band and was not yet chosen to be decommissioned or stopped.
       // We stop/decommission the instance and let it be rescheduled with new instance RunSpec
       if (considerTerminal(condition) && goal == Goal.Running) {
-        logger.info(s"Old $id became $condition during an upgrade but still has goal Running. We will decommission that instance and launch new one with the new RunSpec.")
+        logger.info(s"Deployment $deploymentId: Old $id became $condition during an upgrade but still has goal Running. " +
+          "We will decommission that instance and launch new one with the new RunSpec.")
         oldActiveInstanceIds -= id
         instanceTerminated(id)
         val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
@@ -167,20 +173,21 @@ class TaskReplaceActor(
           .pipeTo(self)
       } // 2) An old and decommissioned instance was successfully killed (or was never launched in the first place if condition == Scheduled)
       else if ((considerTerminal(condition) || condition == Condition.Scheduled) && instance.state.goal.isTerminal()) {
-        logger.info(s"Old $id became $condition. Launching more instances.")
+        logger.info(s"Deployment $deploymentId: Old $id became $condition. Launching more instances.")
         oldActiveInstanceIds -= id
         instanceTerminated(id)
         launchInstances()
           .map(_ => CheckFinished)
           .pipeTo(self)
       } else {
-        logger.info(s"Unhandled InstanceChanged event for an old instanceId=$id, condition=${condition} (considered terminal=${considerTerminal(condition)}) and goal=${instance.state.goal}")
+        logger.info(s"Deployment $deploymentId: Unhandled InstanceChanged event for an old instanceId=$id, condition=$condition " +
+          "(considered terminal=${considerTerminal(condition)}) and goal=${instance.state.goal}")
       }
 
     case Status.Failure(e) =>
       // This is the result of failed launchQueue.addAsync(...) call. Log the message and
       // restart this actor. Next reincarnation should try to start from the beginning.
-      logger.warn("Failed to launch instances: ", e)
+      logger.warn(s"Deployment $deploymentId: Failed to launch instances: ", e)
       throw e
 
     case Done => // This is the result of successful launchQueue.addAsync(...) call. Nothing to do here
@@ -195,7 +202,7 @@ class TaskReplaceActor(
   }
 
   def reconcileAlreadyStartedInstances(): Unit = {
-    logger.info(s"Reconciling instances during ${runSpec.id} deployment: found ${instancesAlreadyStarted.size} already started instances " +
+    logger.info(s"Deployment $deploymentId: Reconciling instances during ${runSpec.id} deployment: found ${instancesAlreadyStarted.size} already started instances " +
       s"and ${oldActiveInstanceIds.size} old instances: ${if (currentInstances.size > 0) currentInstances.map{ i => i.instanceId -> i.state.condition } else "[]"}")
     instancesAlreadyStarted.foreach(reconcileHealthAndReadinessCheck)
   }
@@ -207,11 +214,12 @@ class TaskReplaceActor(
     val instancesNotStartedYet = math.max(0, runSpec.instances - instancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
     if (instancesToStartNow > 0) {
-      logger.info(s"Restarting app $pathId: queuing $instancesToStartNow new instances")
+      logger.info(s"Deployment $deploymentId: Restarting app $pathId: queuing $instancesToStartNow new instances")
       instancesStarted += instancesToStartNow
       launchQueue.add(runSpec, instancesToStartNow)
     } else {
-      logger.info(s"Restarting app $pathId. No need to start new instances right now with leftCapacity = $leftCapacity, instancesNotStartedYet = $instancesNotStartedYet and instancesToStartNow = $instancesToStartNow")
+      logger.info(s"Deployment $deploymentId: Restarting app $pathId. No need to start new instances right now with leftCapacity = $leftCapacity, " +
+        "instancesNotStartedYet = $instancesNotStartedYet and instancesToStartNow = $instancesToStartNow")
       Future.successful(Done)
     }
   }
@@ -223,13 +231,13 @@ class TaskReplaceActor(
       async {
         await(instanceTracker.get(dequeued)) match {
           case None =>
-            logger.warn(s"Was about to kill instance $dequeued but it did not exist in the instance tracker anymore.")
+            logger.warn(s"Deployment $deploymentId: Was about to kill instance $dequeued but it did not exist in the instance tracker anymore.")
           case Some(nextOldInstance) =>
             maybeNewInstanceId match {
               case Some(newInstanceId: Instance.Id) =>
-                logger.info(s"Killing old ${nextOldInstance.instanceId} because $newInstanceId became reachable")
+                logger.info(s"Deployment $deploymentId: Killing old ${nextOldInstance.instanceId} because $newInstanceId became reachable")
               case _ =>
-                logger.info(s"Killing old ${nextOldInstance.instanceId}")
+                logger.info(s"Deployment $deploymentId: Killing old ${nextOldInstance.instanceId}")
             }
 
             val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
@@ -241,11 +249,11 @@ class TaskReplaceActor(
 
   def checkFinished(): Unit = {
     if (targetCountReached(runSpec.instances) && oldActiveInstanceIds.isEmpty) {
-      logger.info(s"All new instances for $pathId are ready and all old instances have been killed")
+      logger.info(s"Deployment $deploymentId: All new instances for $pathId are ready and all old instances have been killed")
       promise.trySuccess(())
       context.stop(self)
     } else {
-      logger.info(s"For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +
+      logger.info(s"Deployment $deploymentId: For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +
         s"[${readyInstances.size}] ready new instances and " +
         s"[${oldActiveInstanceIds.size}] old instances (${oldActiveInstanceIds.take(3).map(_.idString).mkString("[", ",", "]")}). " +
         s"Target count is ${runSpec.instances}.")
