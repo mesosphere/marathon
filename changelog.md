@@ -1,5 +1,29 @@
 ## Changes to 1.8.xxx
 
+### Introducing Seccomp capabilities to Marathon Apps and Pods
+
+When running Marathon Apps or Pods it is possible now to configure the `LinuxInfo` in order to define [seccomp](http://man7.org/linux/man-pages/man2/seccomp.2.html) which provides the ability to define container execution in a secure computing state as defined by the profiles at the agent.
+Key considerations is that Seccomp only works with UCR and Mesos containerizers.   Prior to this feature all containers were run in a `unconfined` security model.   Not defining a `Seccomp` for a container will result in the same behavior.   You can also be explict about it by defining `Seccomp` with an `unconfided` is `true`.
+If you want to run in a specific seccomp profile.   That profile needs to be configured at the agent Marathon will launch a task on and the `profileName` that matches the agent profile will need to be provided to the `Seccomp` object in the `LinuxInfo` object associated with the container.  In this case the `unconfined` will need to be `false`  A simple example is:
+
+```
+{
+  "id": "/mesos-seccomp-app",
+  "cmd": "sleep 1000",
+  "cpus": 0.5,
+  "mem": 32,
+  "container": {
+    "type": "MESOS",
+    "linuxInfo": {
+      "seccomp": {
+        "profileName" : "default.json",
+        "unconfined" : false
+      }
+    }
+  }
+}
+```     
+
 ### Introduce global throttling to Marathon health checks
 Marathon health checks is a deprecated feature and customers are strongly recommended to switch to Mesos health checks for scalability reasons. However, we've seen a number of issues when excessive number of Marathon health checks (HTTP and TCP) would overload parts of Marathon. Hence we introduced a new parameter `--max_concurrent_marathon_health_checks` that defines maximum number (256 by default) of *Marathon* health checks (HTTP/S and TCP) that can be executed concurrently in the given moment. Note that setting a big value here and using many services with Marathon health checks will overload Marathon leading to internal timeouts and unstable behavior.  
 
