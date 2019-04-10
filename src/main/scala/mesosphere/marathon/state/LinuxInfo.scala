@@ -34,7 +34,7 @@ object LinuxInfo {
           case Some(seccomp) =>
             if (seccomp.profileName.isDefined && seccomp.unconfined) Failure(Set(RuleViolation(linuxInfo, "Seccomp unconfined can NOT be true when Profile is defined")))
             else if (seccomp.profileName.isEmpty && !seccomp.unconfined) Failure(Set(RuleViolation(linuxInfo, "Seccomp unconfined must be true when Profile is NOT defined")))
-            else Success // <-- otherwise it is not complete
+            else Success
           case None => Success
         }
       }
