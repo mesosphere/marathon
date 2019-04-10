@@ -22,6 +22,13 @@ case class DeprecatedFeature(
   * as opposed to simply telling them it is an unknown deprecated feature.
   */
 object DeprecatedFeatures {
+
+  val appC = DeprecatedFeature(
+    "app_c",
+    description = "appC is not supported in Marathon, Please use either Docker or UCR (Mesos) containerizers",
+    softRemoveVersion = SemVer(1, 8, 0),
+    hardRemoveVersion = SemVer(1, 9, 0))
+
   /* Removed */
   val syncProxy = DeprecatedFeature(
     "sync_proxy",
@@ -53,7 +60,7 @@ object DeprecatedFeatures {
     softRemoveVersion = SemVer(1, 7, 0),
     hardRemoveVersion = SemVer(1, 8, 0))
 
-  def all = Seq(syncProxy, jsonSchemasResource, apiHeavyEvents, proxyEvents, kamonMetrics)
+  def all = Seq(syncProxy, jsonSchemasResource, apiHeavyEvents, proxyEvents, kamonMetrics, appC)
 
   def description: String = {
     "  - " + all.map { df =>
