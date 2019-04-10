@@ -278,7 +278,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Accept an app definition with seccomp profile defined and unconfined = false" in new Fixture {
       Given("an app with seccomp profile defined and unconfined = false")
       val container = RamlContainer(
-       `type` = EngineType.Mesos,
+        `type` = EngineType.Mesos,
         docker = Option(DockerContainer(image = "private/image")),
         linuxInfo = Option(LinuxInfo(
           seccomp = Option(Seccomp(
