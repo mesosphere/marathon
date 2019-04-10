@@ -61,6 +61,5 @@ case class RichRuntime(runtime: Runtime) extends StrictLogging {
 object RichRuntime {
   val DefaultExitDelay = 10.seconds
 
-
   @volatile var ShutdownInProgress = false
 }

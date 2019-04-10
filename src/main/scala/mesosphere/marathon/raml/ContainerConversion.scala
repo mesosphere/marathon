@@ -24,7 +24,7 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       labels = c.labels,
       lifecycle = c.lifecycle,
       tty = c.tty,
-      linuxInfo = c.linuxInfo
+      linuxInfo = c.linuxInfo.map(_.toRaml[LinuxInfo])
     )
   }
 
@@ -43,7 +43,7 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       labels = c.labels,
       lifecycle = c.lifecycle,
       tty = c.tty,
-      linuxInfo = c.linuxInfo
+      linuxInfo = c.linuxInfo.map(_.fromRaml)
     )
   }
 
@@ -81,13 +81,6 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       AppCContainer(container.image, container.id, container.labels, container.forcePullImage)
     }
 
-    implicit val linuxInfoWrites: Writes[state.LinuxInfo, LinuxInfo] = Writes { linuxInfo =>
-      val seccomp = linuxInfo.seccomp.map { seccomp =>
-        Seccomp(seccomp.profileName, seccomp.unconfined)
-      }
-      LinuxInfo(seccomp)
-    }
-
     def create(kind: EngineType, docker: Option[DockerContainer] = None, appc: Option[AppCContainer] = None, linuxInfo: Option[LinuxInfo]): Container = {
       Container(kind, docker = docker, appc = appc, volumes = container.volumes.toRaml,
         portMappings = Option(container.portMappings.toRaml), // this might need to be None, but we can't check networking here
@@ -103,13 +96,18 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
     }
   }
 
-  implicit val seccompReads: Reads[raml.Seccomp, state.Seccomp] = Reads { seccomp =>
-    state.Seccomp(seccomp.profileName, seccomp.unconfined)
+  implicit val linuxInfoReads: Reads[raml.LinuxInfo, state.LinuxInfo] = Reads { linuxInfo =>
+    val seccomp = linuxInfo.seccomp.map { ramlSeccomp =>
+      state.Seccomp(ramlSeccomp.profileName, ramlSeccomp.unconfined)
+    }
+    state.LinuxInfo(seccomp)
   }
 
-  implicit val linuxReads: Reads[raml.LinuxInfo, state.LinuxInfo] = Reads { linuxInfo =>
-    val seccomp = linuxInfo.seccomp.map(Raml.fromRaml(_))
-    state.LinuxInfo(seccomp)
+  implicit val linuxInfoWrites: Writes[state.LinuxInfo, LinuxInfo] = Writes { linuxInfo =>
+    val seccomp = linuxInfo.seccomp.map { seccomp =>
+      Seccomp(seccomp.profileName, seccomp.unconfined)
+    }
+    LinuxInfo(seccomp)
   }
 
   implicit val pullConfigReads: Reads[DockerPullConfig, state.Container.DockerPullConfig] = Reads {
