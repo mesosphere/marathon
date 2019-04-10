@@ -924,7 +924,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
             |        },
             |        "linuxInfo": {
             |          "seccomp": {
-            |              "profileName": "foo"
+            |              "profileName": "foo",
+            |              "unconfined": true
             |          }
             |        },
             |        "exec": {
@@ -968,7 +969,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
             |        },
             |        "linuxInfo": {
             |          "seccomp": {
-            |              "profileName": "foo"
+            |              "unconfined": false
             |          }
             |        },
             |        "exec": {
