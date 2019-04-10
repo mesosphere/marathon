@@ -9,7 +9,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
 import mesosphere.marathon.core.task.Task
 import org.apache.mesos.Protos.TaskStatus.Reason
-import org.apache.mesos.Protos.{TaskState, TaskStatus, TimeInfo}
+import org.apache.mesos.Protos.{TaskState, TaskStatus, TimeInfo, SlaveID}
 
 object MesosTaskStatusTestHelper {
   def mesosStatus(
@@ -18,12 +18,14 @@ object MesosTaskStatusTestHelper {
     maybeReason: Option[Reason] = None,
     maybeMessage: Option[String] = None,
     timestamp: Timestamp = Timestamp.zero,
+    maybeAgentId: Option[SlaveID] = None,
     taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)): TaskStatus = {
 
     val mesosStatus = TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
       .setState(state)
       .setTimestamp(timestamp.seconds.toDouble)
+    maybeAgentId.foreach(mesosStatus.setSlaveId)
     maybeHealthy.foreach(mesosStatus.setHealthy)
     maybeReason.foreach(mesosStatus.setReason)
     maybeMessage.foreach(mesosStatus.setMessage)
@@ -60,6 +62,8 @@ object MesosTaskStatusTestHelper {
   def failed(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_FAILED, taskId = taskId)
   def finished(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_FINISHED, taskId = taskId)
   def gone(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_GONE, taskId = taskId)
+  def goneByOperator(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None), agentId: Option[SlaveID] = None) =
+    mesosStatus(state = TaskState.TASK_GONE_BY_OPERATOR, taskId = taskId, maybeAgentId = agentId)
   def error(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_ERROR, taskId = taskId)
   def lost(reason: Reason, taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None), since: Timestamp = Timestamp.zero) =
     mesosStatus(TaskState.TASK_LOST, maybeReason = Some(reason), timestamp = since, taskId = taskId)

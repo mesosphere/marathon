@@ -2,12 +2,15 @@ package mesosphere.marathon
 package integration
 
 import java.io.File
+
 import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
 import mesosphere.marathon.integration.facades.MarathonFacade.extractDeploymentIds
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{App, AppUpdate}
 import mesosphere.marathon.state.PathId._
+import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Milliseconds, Span}
 
 import scala.concurrent.duration._
 
@@ -71,7 +74,7 @@ class NonDestructiveLeaderIntegrationTest extends LeaderIntegrationTest {
   }
 }
 
-class DeathUponAbdicationLeaderIntegrationTest extends AkkaIntegrationTest with MarathonFixture with MesosClusterTest with ZookeeperServerTest {
+class DeathUponAbdicationLeaderIntegrationTest extends AkkaIntegrationTest with MarathonFixture with MesosClusterTest with ZookeeperServerTest with Eventually {
   "LeaderAbdicationDeath" should {
     "the leader abdicates and dies when it receives a DELETE" in withMarathon("death-abdication") { (server, f) =>
       Given("a leader")
@@ -89,8 +92,8 @@ class DeathUponAbdicationLeaderIntegrationTest extends AkkaIntegrationTest with 
       (result.entityJson \ "message").as[String] should be("Leadership abdicated")
 
       And("the leader must have died")
-      WaitTestSupport.waitUntil("the leading marathon dies changes", 30.seconds) {
-        !server.isRunning()
+      eventually(timeout(Span(30.seconds.toMillis, Milliseconds))) {
+        server.activePids should be('empty)
       }
     }
   }

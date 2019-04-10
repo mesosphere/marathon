@@ -8,7 +8,7 @@ import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.state.{NetworkInfo, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.state.{PathId, Timestamp}
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.{MarathonTestHelper, MesosProtoBuilders}
 import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 import org.apache.mesos
 
@@ -58,8 +58,13 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
   def taskRunning(containerName: Option[String] = None, stagedAt: Timestamp = now,
     startedAt: Timestamp = now): TestTaskBuilder = {
     val instance = instanceBuilder.getInstance()
-    this.copy(task = Some(TestTaskBuilder.Helper.runningTask(instance.instanceId, instance.runSpecVersion,
-      stagedAt = stagedAt.millis, startedAt = startedAt.millis, maybeMesosContainerByName(containerName))))
+    this.copy(task = Some(TestTaskBuilder.Helper.runningTask(
+      instance.instanceId,
+      instance.runSpecVersion,
+      stagedAt = stagedAt.millis,
+      startedAt = startedAt.millis,
+      container = maybeMesosContainerByName(containerName),
+      agentId = instance.agentInfo.flatMap(_.agentId))))
   }
 
   /**
@@ -140,6 +145,15 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
 
   def taskUnknown(since: Timestamp = now, containerName: Option[String] = None): TestTaskBuilder =
     createTask(since, containerName, Condition.Unknown)
+
+  def taskGoneByOperator(since: Timestamp = now, containerName: Option[String] = None): TestTaskBuilder = {
+    val instance = instanceBuilder.getInstance()
+    val taskId = Task.Id(instance.instanceId, maybeMesosContainerByName(containerName))
+    val agentId = instance.agentInfo.flatMap(_.agentId).map(MesosProtoBuilders.newAgentId)
+
+    val mesosStatus = MesosTaskStatusTestHelper.goneByOperator(taskId, agentId)
+    this.copy(task = Some(TestTaskBuilder.Helper.minimalTask(taskId, since, Some(mesosStatus), Condition.Gone)))
+  }
 
   def taskGone(since: Timestamp = now, containerName: Option[String] = None): TestTaskBuilder =
     createTask(since, containerName, Condition.Gone)
@@ -347,11 +361,15 @@ object TestTaskBuilder extends StrictLogging {
     }
 
     def statusForState(taskId: String, state: mesos.Protos.TaskState,
-      maybeReason: Option[mesos.Protos.TaskStatus.Reason] = None): mesos.Protos.TaskStatus = {
+      maybeReason: Option[mesos.Protos.TaskStatus.Reason] = None, agentId: Option[String] = None): mesos.Protos.TaskStatus = {
       val builder = mesos.Protos.TaskStatus
         .newBuilder()
         .setTaskId(mesos.Protos.TaskID.newBuilder().setValue(taskId))
         .setState(state)
+
+      agentId.foreach { id =>
+        builder.setSlaveId(mesos.Protos.SlaveID.newBuilder().setValue(id))
+      }
 
       maybeReason.foreach(builder.setReason)
       builder.buildPartial()
@@ -374,7 +392,8 @@ object TestTaskBuilder extends StrictLogging {
       appVersion: Timestamp = Timestamp(1),
       stagedAt: Long = 2,
       startedAt: Long = 3,
-      container: Option[MesosContainer] = None): Task = {
+      container: Option[MesosContainer] = None,
+      agentId: Option[String] = None): Task = {
       import mesosphere.marathon.test.MarathonTestHelper.Implicits._
 
       val taskId = Task.TaskIdWithIncarnation(instanceId, container.map(_.name), 1)
@@ -382,7 +401,7 @@ object TestTaskBuilder extends StrictLogging {
         .withStatus((status: Task.Status) =>
           status.copy(
             startedAt = Some(Timestamp(startedAt)),
-            mesosStatus = Some(statusForState(taskId.idString, mesos.Protos.TaskState.TASK_RUNNING)),
+            mesosStatus = Some(statusForState(taskId.idString, mesos.Protos.TaskState.TASK_RUNNING, agentId = agentId)),
             condition = Condition.Running))
     }
 

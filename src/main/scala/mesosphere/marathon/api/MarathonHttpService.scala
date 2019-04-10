@@ -13,7 +13,7 @@ import scala.util.Try
 class MarathonHttpService(val server: Server) extends AbstractIdleService with Service with StrictLogging {
 
   override def startUp(): Unit = {
-    logger.debug("Starting up HttpServer.")
+    logger.info("Starting up HttpServer.")
     try {
       server.start()
     } catch {
@@ -25,7 +25,7 @@ class MarathonHttpService(val server: Server) extends AbstractIdleService with S
   }
 
   override def shutDown(): Unit = {
-    logger.debug("Shutting down HttpServer.")
+    logger.info("Shutting down HttpServer.")
     server.stop()
   }
 }
