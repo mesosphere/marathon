@@ -371,41 +371,31 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       }
     }
 
-    "reschedule instance on provision timeout" in new Fixture {
-      Given("a provisioned instance")
-
-      val scheduledInstanceB = Instance.scheduled(f.app)
-      val provisionedInstance = scheduledInstanceB.provisioned(TestInstanceBuilder.defaultAgentInfo, f.app, f.provisionedTasks, clock.now())
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.scheduledInstance, provisionedInstance))
+    "resync instance on provision timeout" in new Fixture {
+      Given("a scheduled instance we matched offer for")
+      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(f.scheduledInstance)
 
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
+      instanceOpFactory.matchOfferRequest(m.any()) returns f.launchResult
 
-      When("the provision times out")
-      val op = mock[InstanceOp]
-      op.instanceId returns provisionedInstance.instanceId
-      launcherRef ! InstanceOpSourceDelegate.InstanceOpRejected(op, TaskLauncherActor.OfferOperationRejectedTimeoutReason)
+      val promise = Promise[MatchedInstanceOps]
+      val offer = MarathonTestHelper.makeBasicOffer().build()
+      launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
 
-      Then("the instance is rescheduled")
       eventually {
-        verify(instanceTracker).forceExpunge(provisionedInstance.instanceId)
+        launcherRef.underlyingActor.offerOperationAcceptTimeout.keys should contain(f.scheduledInstance.instanceId)
       }
-    }
 
-    "not reschedule instance on provision time out for a running instance" in new Fixture {
-      Given("a running instance")
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.runningInstance))
-
-      val launcherRef = createLauncherRef()
-      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
-
-      When("the provision times out")
+      When("the operation times out")
       val op = mock[InstanceOp]
-      op.instanceId returns f.provisionedInstance.instanceId
+      op.instanceId returns f.scheduledInstance.instanceId
       launcherRef ! InstanceOpSourceDelegate.InstanceOpRejected(op, TaskLauncherActor.OfferOperationRejectedTimeoutReason)
 
-      Then("the instance is not rescheduled")
-      verify(instanceTracker, never).forceExpunge(any[Instance.Id])
+      Then("the instance is reset to InstanceTracker state")
+      eventually {
+        verify(instanceTracker, atLeastOnce).instancesBySpecSync
+      }
     }
 
     "reset provisioning timeout after instance failed" in new Fixture {
@@ -421,7 +411,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
 
       eventually {
-        launcherRef.underlyingActor.provisionTimeouts.keys should contain(f.scheduledInstance.instanceId)
+        launcherRef.underlyingActor.offerOperationAcceptTimeout.keys should contain(f.scheduledInstance.instanceId)
       }
 
       When("the task fails after being provisioned")
@@ -430,7 +420,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       launcherRef ! TaskStatusUpdateTestHelper.failed(f.provisionedInstance.copy(state = f.provisionedInstance.state.copy(condition = Condition.Scheduled))).wrapped
 
       Then("the provisioning timeout is removed")
-      launcherRef.underlyingActor.provisionTimeouts.isEmpty should be(true)
+      launcherRef.underlyingActor.offerOperationAcceptTimeout.isEmpty should be(true)
     }
   }
 }

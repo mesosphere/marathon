@@ -38,6 +38,9 @@ object InstanceTrackerActor {
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
   private[impl] case object List
 
+  /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]] by RunSpec [[PathId]]. */
+  private[impl] case class ListBySpec(appId: PathId)
+
   private[impl] case class Get(instanceId: Instance.Id)
 
   /** Add a new subscription for sender to instance updates */
@@ -83,7 +86,7 @@ private[impl] class InstanceTrackerActor(
   override def preStart(): Unit = {
     super.preStart()
 
-    logger.info(s"${getClass.getSimpleName} is starting. Task loading initiated.")
+    logger.info(s"${getClass.getSimpleName} is starting. Instances loading initiated.")
     metrics.resetMetrics()
 
     import context.dispatcher
@@ -101,6 +104,7 @@ private[impl] class InstanceTrackerActor(
   private[this] def initializing: Receive = LoggingReceive.withLabel("initializing") {
     case initialInstances: InstanceTracker.InstancesBySpec =>
       logger.info("Instances loading complete.")
+      logger.info(s"Loaded ${initialInstances.allInstances.size} instances.")
 
       instancesBySpec = initialInstances
       counts = TaskCounts(initialInstances.allInstances, healthStatuses = Map.empty)
@@ -138,6 +142,9 @@ private[impl] class InstanceTrackerActor(
 
       case InstanceTrackerActor.List =>
         sender() ! instancesBySpec
+
+      case InstanceTrackerActor.ListBySpec(appId: PathId) =>
+        sender() ! instancesBySpec.specInstances(appId)
 
       case InstanceTrackerActor.Get(instanceId) =>
         sender() ! instancesBySpec.instance(instanceId)

@@ -163,6 +163,11 @@ trait MarathonConf
     true
   }
 
+  lazy val gracefulShutdownTimeout = opt[Long] (
+    "graceful_shutdown_timeout",
+    descr = "Time, in milliseconds, to wait for a graceful Marathon shutdown on eg abdication.",
+    default = Some(45000L)) // 45 seconds.
+
   lazy val taskLaunchConfirmTimeout = opt[Long](
     "task_launch_confirm_timeout",
     descr = "Time, in milliseconds, to wait for a task to enter " +

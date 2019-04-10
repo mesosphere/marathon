@@ -1,5 +1,7 @@
 package mesosphere.marathon
 
+import java.util.concurrent.TimeUnit
+
 import akka.actor.ActorSystem
 import com.google.common.util.concurrent.ServiceManager
 import com.google.inject.{Guice, Module}
@@ -108,7 +110,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     serviceManager.foreach { serviceManager =>
       shutdown()
       logger.info("Waiting for services to shut down")
-      serviceManager.awaitStopped()
+      serviceManager.awaitStopped(cliConf.gracefulShutdownTimeout(), TimeUnit.MILLISECONDS)
     }
   }
 

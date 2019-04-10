@@ -28,12 +28,13 @@ private[health] class HealthCheckActor(
     healthCheck: HealthCheck,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,
-    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed])(implicit mat: ActorMaterializer)
+    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed])
   extends Actor with StrictLogging {
 
+  implicit val mat = ActorMaterializer()
   import context.dispatcher
 
-  var healthByInstanceId = TrieMap.empty[Instance.Id, Health]
+  val healthByInstanceId = TrieMap.empty[Instance.Id, Health]
 
   override def preStart(): Unit = {
     healthCheck match {
@@ -59,7 +60,6 @@ private[health] class HealthCheckActor(
             done.onComplete {
               case Success(_) =>
                 logger.info(s"HealthCheck stream for app ${app.id} version ${app.version} and healthCheck $healthCheck was stopped")
-                self ! 'restart
 
               case Failure(ex) =>
                 logger.warn(s"HealthCheck stream for app ${app.id} version ${app.version} and healthCheck $healthCheck crashed due to:", ex)
@@ -74,11 +74,9 @@ private[health] class HealthCheckActor(
   def purgeStatusOfDoneInstances(instances: Seq[Instance]): Unit = {
     logger.debug(s"Purging health status of inactive instances for app ${app.id} version ${app.version} and healthCheck ${healthCheck}")
 
-    val activeInstanceIds: Set[Instance.Id] = instances.withFilter(_.isActive).map(_.instanceId)(collection.breakOut)
-    // The Map built with filterKeys wraps the original map and contains a reference to activeInstanceIds.
-    // Therefore we materialize it into a new map.
-    activeInstanceIds.foreach { activeId =>
-      healthByInstanceId.remove(activeId)
+    val inactiveInstanceIds: Set[Instance.Id] = instances.filterNot(_.isActive).map(_.instanceId)(collection.breakOut)
+    inactiveInstanceIds.foreach { inactiveId =>
+      healthByInstanceId.remove(inactiveId)
     }
 
     val checksToPurge = instances.withFilter(!_.isActive).map(instance => {
@@ -173,7 +171,7 @@ private[health] class HealthCheckActor(
     val health = instanceHealth.health
     val newHealth = instanceHealth.newHealth
 
-    logger.info("Received health result for app [{}] version [{}]: [{}]", app.id, app.version, result)
+    logger.info(s"Received health result for app [${app.id}] version [${app.version}]: [$result]")
     healthByInstanceId += (instanceId -> instanceHealth.newHealth)
     appHealthCheckActor ! HealthCheckStatusChanged(ApplicationKey(app.id, app.version), healthCheck, newHealth)
 
@@ -207,7 +205,7 @@ object HealthCheckActor {
     healthCheck: HealthCheck,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,
-    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed])(implicit mat: ActorMaterializer): Props = {
+    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed]): Props = {
 
     Props(new HealthCheckActor(
       app,

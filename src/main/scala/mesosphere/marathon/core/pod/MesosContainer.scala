@@ -2,8 +2,8 @@ package mesosphere.marathon
 package core.pod
 
 import mesosphere.marathon.plugin.ContainerSpec
-import mesosphere.marathon.raml.{Artifact, Endpoint, Image, Lifecycle, LinuxInfo, MesosExec, Resources}
-import mesosphere.marathon.state.VolumeMount
+import mesosphere.marathon.raml.{Artifact, Endpoint, Image, Lifecycle, MesosExec, Resources}
+import mesosphere.marathon.state.{LinuxInfo, VolumeMount}
 
 import scala.collection.immutable.Map
 

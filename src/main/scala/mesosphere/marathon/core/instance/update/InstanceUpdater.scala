@@ -8,6 +8,7 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.{MesosUp
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.state.{Timestamp, UnreachableEnabled}
+import org.apache.mesos.{Protos => MesosProtos}
 
 /**
   * Provides methods that apply a given [[InstanceUpdateOperation]]
@@ -15,7 +16,15 @@ import mesosphere.marathon.state.{Timestamp, UnreachableEnabled}
 object InstanceUpdater extends StrictLogging {
   private[this] val eventsGenerator = InstanceChangedEventsGenerator
 
-  private[instance] def updatedInstance(instance: Instance, updatedTask: Task, now: Timestamp): Instance = {
+  /**
+    * Apply the provided task update to the instance. If the instance is resident, and the task is terminal, update the reservation to be suspended.
+    *
+    * @param instance
+    * @param updatedTask
+    * @param now
+    * @return
+    */
+  private[instance] def applyTaskUpdate(instance: Instance, updatedTask: Task, now: Timestamp): Instance = {
     val updatedTasks = instance.tasksMap.updated(updatedTask.taskId, updatedTask)
 
     // We need to suspend reservation on already launched reserved instances
@@ -42,6 +51,21 @@ object InstanceUpdater extends StrictLogging {
   private def shouldBeExpunged(instance: Instance): Boolean =
     instance.tasksMap.values.forall(t => t.isTerminal) && instance.state.goal == Goal.Decommissioned
 
+  private def shouldAbandonReservation(instance: Instance): Boolean = {
+
+    def allAreTerminal = instance.tasksMap.values.iterator.forall { task =>
+      task.status.condition.isTerminal
+    }
+
+    def anyAreGoneByOperator = instance.tasksMap.values.iterator
+      .flatMap(_.status.mesosStatus)
+      .exists { status =>
+        status.getState == MesosProtos.TaskState.TASK_GONE_BY_OPERATOR
+      }
+
+    instance.reservation.nonEmpty && anyAreGoneByOperator && allAreTerminal
+  }
+
   private[marathon] def mesosUpdate(instance: Instance, op: MesosUpdate): InstanceUpdateEffect = {
     val now = op.now
     val taskId = Task.Id.parse(op.mesosStatus.getTaskId)
@@ -49,11 +73,14 @@ object InstanceUpdater extends StrictLogging {
       val taskEffect = task.update(instance, op.condition, op.mesosStatus, now)
       taskEffect match {
         case TaskUpdateEffect.Update(updatedTask) =>
-          val updated: Instance = updatedInstance(instance, updatedTask, now)
+          val updated: Instance = applyTaskUpdate(instance, updatedTask, now)
           val events = eventsGenerator.events(updated, Some(updatedTask), now, previousState = Some(instance.state))
           if (shouldBeExpunged(updated)) {
             logger.info("Requesting to expunge {}, all tasks are terminal, instance has no reservation and is not Stopped", updated.instanceId)
             InstanceUpdateEffect.Expunge(updated, events)
+          } else if (shouldAbandonReservation(updated)) {
+            val withoutReservation = updated.copy(agentInfo = None, reservation = None, state = updated.state.copy(condition = Condition.Scheduled))
+            InstanceUpdateEffect.Update(withoutReservation, oldState = Some(instance), events)
           } else {
             InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
           }
@@ -61,7 +88,7 @@ object InstanceUpdater extends StrictLogging {
         // We might still become UnreachableInactive.
         case TaskUpdateEffect.Noop if op.condition == Condition.Unreachable &&
           instance.state.condition != Condition.UnreachableInactive =>
-          val updated: Instance = updatedInstance(instance, task, now)
+          val updated: Instance = applyTaskUpdate(instance, task, now)
           if (updated.state.condition == Condition.UnreachableInactive) {
             updated.unreachableStrategy match {
               case u: UnreachableEnabled =>
