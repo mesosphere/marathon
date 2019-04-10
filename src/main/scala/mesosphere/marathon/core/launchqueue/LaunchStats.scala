@@ -170,7 +170,7 @@ object LaunchStats extends StrictLogging {
   ) {
     def queueDelay(clock: Clock): QueueDelay = {
       val timeLeft = this.backOffUntil.map(clock.now() until _).getOrElse(0.seconds)
-      val overdue = timeLeft.toSeconds < 0
+      val overdue = backOffUntil.isEmpty || timeLeft.toSeconds < 0
       QueueDelay(math.max(0, timeLeft.toSeconds), overdue)
     }
   }
