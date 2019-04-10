@@ -1,11 +1,14 @@
 package mesosphere.mesos
 
+import java.util.concurrent.TimeUnit.SECONDS
+
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.serialization.SecretSerializer
 import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHealthCheck}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
 import mesosphere.marathon.raml.Endpoint
@@ -15,9 +18,6 @@ import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.Protos.{DurationInfo, KillPolicy}
 import org.apache.mesos.{Protos => mesos}
-import java.util.concurrent.TimeUnit.SECONDS
-
-import mesosphere.marathon.core.task.state.NetworkInfo
 
 import scala.collection.immutable.Seq
 
@@ -581,6 +581,20 @@ object TaskGroupBuilder extends StrictLogging {
 
     // attach a tty if specified
     container.tty.filter(tty => tty).foreach(containerInfo.setTtyInfo(_))
+
+    container.linuxInfo.foreach { linuxInfo =>
+      val linuxBuilder = mesos.LinuxInfo.newBuilder
+      linuxInfo.seccomp.foreach { seccomp =>
+        val seccompBuilder = mesos.SeccompInfo.newBuilder
+
+        seccompBuilder.setUnconfined(seccomp.unconfined)
+        seccomp.profileName.foreach { profileName =>
+          seccompBuilder.setProfileName(profileName)
+        }
+        linuxBuilder.setSeccomp(seccompBuilder)
+      }
+      containerInfo.setLinuxInfo(linuxBuilder.build)
+    }
 
     // Only create a 'ContainerInfo' when some of it's fields are set.
     // If no fields other than the type have been set, then we shouldn't pass the container info

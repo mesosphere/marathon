@@ -15,7 +15,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
-import mesosphere.marathon.raml.{App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarSecret, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, Network, NetworkMode, Raml, SecretDef, Container => RamlContainer}
+import mesosphere.marathon.raml.{App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarSecret, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, LinuxInfo, Network, NetworkMode, Raml, Seccomp, SecretDef, Container => RamlContainer}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -273,6 +273,110 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       responseStr should include("/container/docker/pullConfig")
       responseStr should include("must be empty")
       responseStr should include("Feature secrets is not enabled. Enable with --enable_features secrets)")
+    }
+
+    "Accept an app definition with seccomp profile defined and unconfined = false" in new Fixture {
+      Given("an app with seccomp profile defined and unconfined = false")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(image = "private/image")),
+        linuxInfo = Option(LinuxInfo(
+          seccomp = Option(Seccomp(
+            profileName = Option("foo"),
+            unconfined = false
+          ))
+        ))
+      )
+
+      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val (body, _) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      Then("It is successful")
+      response.getStatus shouldBe 201
+    }
+
+    "Accept an app definition WITHOUT seccomp profile and unconfined = true" in new Fixture {
+      Given("an app with seccomp profile defined and unconfined = true")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(image = "private/image")),
+        linuxInfo = Option(LinuxInfo(
+          seccomp = Option(Seccomp(
+            unconfined = true
+          ))
+        ))
+      )
+
+      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val (body, _) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      Then("It is successful")
+      response.getStatus shouldBe 201
+    }
+
+    "Decline an app definition with seccomp profiled defined and unconfined = true" in new Fixture {
+      Given("an app with seccomp profile defined and unconfined = true")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(image = "private/image")),
+        linuxInfo = Option(LinuxInfo(
+          seccomp = Option(Seccomp(
+            profileName = Option("foo"),
+            unconfined = true
+          ))
+        ))
+      )
+
+      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+
+      When("The create request is made")
+      val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      Then("It fails")
+      withClue(s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}") {
+        response.getStatus shouldBe 422
+        response.getEntity.toString should include("Seccomp unconfined can NOT be true when Profile is defined")
+      }
+    }
+
+    "Decline an app definition WITHOUT seccomp profiled defined and unconfined = false" in new Fixture {
+      Given("an app without seccomp profile defined and unconfined = false")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(image = "private/image")),
+        linuxInfo = Option(LinuxInfo(
+          seccomp = Option(Seccomp(
+            unconfined = false
+          ))
+        ))
+      )
+
+      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+
+      When("The create request is made")
+      val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      Then("It fails")
+      withClue(s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}") {
+        response.getStatus shouldBe 422
+        response.getEntity.toString should include("Seccomp unconfined must be true when Profile is NOT defined")
+      }
     }
 
     "Do partial update with patch methods" in new Fixture {

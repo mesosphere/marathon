@@ -813,6 +813,185 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
     }
 
+    "Support seccomp" when {
+
+      "Accept a pod definition with seccomp profile defined and unconfined = false" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "seccomp": {
+            |              "profileName": "foo",
+            |              "unconfined": false
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "Accept a pod definition WITHOUT seccomp profile and unconfined = true" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "seccomp": {
+            |              "unconfined": true
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "Decline a pod definition with seccomp profiled defined and unconfined = true" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "seccomp": {
+            |              "profileName": "foo",
+            |              "unconfined": true
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(422)
+          response.getEntity.toString should include("Seccomp unconfined can NOT be true when Profile is defined")
+        }
+      }
+
+      "Decline a pod definition WITHOUT seccomp profiled defined and unconfined = false" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "seccomp": {
+            |              "unconfined": false
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(422)
+          response.getEntity.toString should include("Seccomp unconfined must be true when Profile is NOT defined")
+        }
+      }
+    }
+
     "support versions" when {
 
       "there are no versions" when {

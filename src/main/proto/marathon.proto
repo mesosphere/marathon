@@ -269,6 +269,19 @@ message ExtendedContainerInfo {
     optional DockerInfo.ImagePullConfig pull_config = 4;
   }
 
+  // Linux Container runtime information which governs security, policies and profiles
+  message LinuxInfo {
+    message Seccomp {
+      // the seccomp profile this linux container should run with
+      // a profile_name is allowed if unconfined doesn't exist or is false
+      optional string profileName =1;
+      // true is unconfined means a profile is not allowed
+      required bool unconfined = 2;
+    }
+
+    optional Seccomp seccomp = 1;
+  }
+
   // AppC on the universal Mesos engine
   message MesosAppCInfo {
     // The name of the image.
@@ -306,6 +319,7 @@ message ExtendedContainerInfo {
   optional DockerInfo docker = 3;
   optional MesosDockerInfo mesosDocker = 4;
   optional MesosAppCInfo mesosAppC = 5;
+  optional LinuxInfo linuxInfo = 7;   // since 1.8
 }
 
 // Copied from mesos.proto and adjusted to meet the needs of persistent volumes
