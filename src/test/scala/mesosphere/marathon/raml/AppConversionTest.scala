@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.api.v2.{AppNormalization, AppHelpers}
+import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{BridgeNetwork, HostNetwork}
 import mesosphere.marathon.state._
@@ -64,6 +64,11 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
     args = Seq("whatever", "one", "two", "three"),
     container = Some(state.Container.Docker(image = "foo/bla"))
   )
+  private lazy val mesosWithLinuxInfo = AppDefinition(
+    id = PathId("/mesos-with-linux-info"),
+    cmd = Option("whatever"),
+    container = Some(state.Container.Mesos(linuxInfo = Some(state.LinuxInfo(Some(state.Seccomp(Some("default"), false))))))
+  )
 
   def convertToRamlAndBack(app: AppDefinition): Unit = {
     s"app ${app.id.toString} is written to json and can be read again via formats" in {
@@ -108,6 +113,9 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
 
     behave like convertToRamlAndBack(argsOnlyApp)
     behave like convertToProtobufThenToRAML(argsOnlyApp)
+
+    behave like convertToRamlAndBack(mesosWithLinuxInfo)
+    behave like convertToProtobufThenToRAML(mesosWithLinuxInfo)
 
     behave like convertToRamlAndBack(simpleDockerApp)
     behave like convertToProtobufThenToRAML(simpleDockerApp)

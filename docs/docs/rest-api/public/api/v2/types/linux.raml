@@ -9,9 +9,10 @@ types:
       profileName?:
         type: string
         description: Filename of the Seccomp profile found on the agent.  The task will fail if that file does not exist.
-      unconfined?:
+      unconfined:
         type: boolean
         description:  Set to `true` if Seccomp is not applied to the container
+        default: false
   LinuxInfo:
     type: object
     properties:

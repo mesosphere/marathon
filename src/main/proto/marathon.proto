@@ -274,13 +274,12 @@ message ExtendedContainerInfo {
     message Seccomp {
       // the seccomp profile this linux container should run with
       // a profile_name is allowed if unconfined doesn't exist or is false
-      optional string profile_name =1;
+      optional string profileName =1;
       // true is unconfined means a profile is not allowed
-      optional bool unconfined = 2;
+      required bool unconfined = 2;
     }
 
     optional Seccomp seccomp = 1;
-
   }
 
   // AppC on the universal Mesos engine
