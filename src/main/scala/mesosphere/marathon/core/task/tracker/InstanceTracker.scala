@@ -42,7 +42,6 @@ trait InstanceTracker extends StrictLogging {
     *
     * @param pathId The id of the run spec.
     * @param readAfterWrite If true waits until all pending updates are written before returning instance.
-    * @param ec
     * @return A future sequence of all instances.
     */
   def specInstances(pathId: PathId, readAfterWrite: Boolean)(implicit ec: ExecutionContext): Future[Seq[Instance]]
