@@ -41,6 +41,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
       promise.future.futureValue should be(())
 
+      system.stop(ref)
       expectTerminated(ref)
     }
 
@@ -62,6 +63,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
       promise.future.futureValue should be(())
 
+      system.stop(ref)
       expectTerminated(ref)
     }
 
@@ -83,6 +85,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
       promise.future.futureValue should be(())
 
+      system.stop(ref)
       expectTerminated(ref)
     }
 
@@ -98,6 +101,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
       promise.future.futureValue should be(())
 
+      system.stop(ref)
       expectTerminated(ref)
     }
 
@@ -121,6 +125,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
       promise.future.futureValue should be(())
 
+      system.stop(ref)
       expectTerminated(ref)
     }
 
@@ -139,6 +144,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
       promise.future.futureValue should be(())
 
+      system.stop(ref)
       expectTerminated(ref)
     }
 
@@ -165,6 +171,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       // that is now handled within the scheduler itself so if the goal is running, orchestrator should not do anything
       verify(f.launchQueue, never).add(app, 1)
 
+      system.stop(ref)
       expectTerminated(ref)
     }
 
@@ -190,6 +197,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
       promise.future.futureValue should be(())
 
+      system.stop(ref)
       expectTerminated(ref)
     }
 
@@ -215,6 +223,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
 
       promise.future.futureValue should be(())
 
+      system.stop(ref)
       expectTerminated(ref)
     }
   }
