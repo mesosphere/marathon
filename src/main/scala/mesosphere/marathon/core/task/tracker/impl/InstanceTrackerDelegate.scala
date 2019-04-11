@@ -62,30 +62,25 @@ private[tracker] class InstanceTrackerDelegate(
   override def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
     specInstances(appId).map(_.nonEmpty)
 
-  override def specInstancesSync(appId: PathId): Seq[Instance] = {
+  override def specInstancesSync(appId: PathId, readAfterWrite: Boolean = false): Seq[Instance] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    Await.result(specInstances(appId), instanceTrackerQueryTimeout.duration)
+    Await.result(specInstances(appId, readAfterWrite), instanceTrackerQueryTimeout.duration)
   }
 
-  override def specInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] =
-    (instanceTrackerRef ? InstanceTrackerActor.ListBySpec(appId)).mapTo[Seq[Instance]]
-
-  override def specInstancesAfterPendingUpdatesSync(appId: PathId): Seq[Instance] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    Await.result(specInstances(appId), instanceTrackerQueryTimeout.duration)
-  }
-
-  override def specInstancesAfterPendingUpdates(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] = {
+  override def specInstances(appId: PathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]] = {
     val query = InstanceTrackerActor.ListBySpec(appId)
-
-    val promise = Promise[Seq[Instance]]
-    queue.offer(QueuedQuery(query, promise)).foreach {
-      case QueueOfferResult.Enqueued => logger.info(s"Queued query ${query.appId}")
-      case QueueOfferResult.Dropped => promise.failure(new RuntimeException(s"Dropped instance query: $query"))
-      case QueueOfferResult.Failure(ex) => promise.failure(new RuntimeException(s"Failed to process instance query $query because", ex))
-      case QueueOfferResult.QueueClosed => promise.failure(new RuntimeException(s"Failed to process instance query $query because the queue is closed"))
+    if (readAfterWrite) {
+      val promise = Promise[Seq[Instance]]
+      queue.offer(QueuedQuery(query, promise)).foreach {
+        case QueueOfferResult.Enqueued => logger.info(s"Queued query ${query.appId}")
+        case QueueOfferResult.Dropped => promise.failure(new RuntimeException(s"Dropped instance query: $query"))
+        case QueueOfferResult.Failure(ex) => promise.failure(new RuntimeException(s"Failed to process instance query $query because", ex))
+        case QueueOfferResult.QueueClosed => promise.failure(new RuntimeException(s"Failed to process instance query $query because the queue is closed"))
+      }
+      promise.future
+    } else {
+      (instanceTrackerRef ? query).mapTo[Seq[Instance]]
     }
-    promise.future
   }
 
   override def instance(taskId: Instance.Id): Future[Option[Instance]] =

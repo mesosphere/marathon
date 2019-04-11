@@ -39,7 +39,7 @@ class TaskReplaceActor(
   // Killed resident tasks are not expunged from the instances list. Ignore
   // them. LaunchQueue takes care of launching instances against reservations
   // first
-  val currentInstances = instanceTracker.specInstancesAfterPendingUpdatesSync(runSpec.id)
+  val currentInstances = instanceTracker.specInstancesSync(runSpec.id, readAfterWrite = true)
 
   // In case previous master was abdicated while the deployment was still running we might have
   // already started some new tasks.
@@ -142,16 +142,16 @@ class TaskReplaceActor(
       // 1) Did the new instance task fail?
       if (considerTerminal(condition) && goal == Goal.Running) {
         logger.warn(s"Deployment $deploymentId: New $id is terminal ($condition) on agent $agentId during app $pathId restart: " +
-          "$condition reservation: ${instance.reservation}. Waiting for the task to restart...")
+          s"$condition reservation: ${instance.reservation}. Waiting for the task to restart...")
         instanceTerminated(id)
         instancesStarted -= 1
       } // 2) Did someone tamper with new instance's goal? Don't do that - there should be only one "orchestrator" per service per time!
       else if (considerTerminal(condition) && goal.isTerminal()) {
         logger.error(s"Deployment $deploymentId: New $id is terminal ($condition) on agent $agentId during app $pathId restart " +
-          "(reservation: ${instance.reservation}) and the goal ($goal) is *NOT* Running! This means that someone is interfering with current deployment!")
+          s"(reservation: ${instance.reservation}) and the goal ($goal) is *NOT* Running! This means that someone is interfering with current deployment!")
       } else {
         logger.info(s"Deployment $deploymentId: Unhandled InstanceChanged event for new instanceId=$id, condition=$condition " +
-          "(considered terminal=${considerTerminal(condition)}) and current goal=${instance.state.goal}")
+          s"(considered terminal=${considerTerminal(condition)}) and current goal=${instance.state.goal}")
       }
 
     // === An InstanceChanged event for the *old* instance ===
@@ -181,7 +181,7 @@ class TaskReplaceActor(
           .pipeTo(self)
       } else {
         logger.info(s"Deployment $deploymentId: Unhandled InstanceChanged event for an old instanceId=$id, condition=$condition " +
-          "(considered terminal=${considerTerminal(condition)}) and goal=${instance.state.goal}")
+          s"(considered terminal=${considerTerminal(condition)}) and goal=${instance.state.goal}")
       }
 
     case Status.Failure(e) =>
@@ -219,7 +219,7 @@ class TaskReplaceActor(
       launchQueue.add(runSpec, instancesToStartNow)
     } else {
       logger.info(s"Deployment $deploymentId: Restarting app $pathId. No need to start new instances right now with leftCapacity = $leftCapacity, " +
-        "instancesNotStartedYet = $instancesNotStartedYet and instancesToStartNow = $instancesToStartNow")
+        s"instancesNotStartedYet = $instancesNotStartedYet and instancesToStartNow = $instancesToStartNow")
       Future.successful(Done)
     }
   }

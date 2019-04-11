@@ -203,7 +203,6 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance(stagedAt = 2L)
       )
 
-      f.instanceTracker.list(app.id) returns Future.successful(instances)
       f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
