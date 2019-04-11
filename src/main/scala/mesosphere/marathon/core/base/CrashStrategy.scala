@@ -23,6 +23,7 @@ object CrashStrategy {
   case object UncaughtException extends Reason { override val code: Int = 107 }
   case object FrameworkIdMissing extends Reason { override val code: Int = 108 }
   case object IncompatibleLibMesos extends Reason { override val code: Int = 109 }
+  case object FrameworkHasBeenRemoved extends Reason { override val code: Int = 110 }
 }
 
 case object JvmExitsCrashStrategy extends CrashStrategy {

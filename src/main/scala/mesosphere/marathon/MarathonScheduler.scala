@@ -116,7 +116,12 @@ class MarathonScheduler(
       "In case Mesos does not allow registration with the current frameworkId, " +
       "follow the instructions for recovery here: https://mesosphere.github.io/marathon/docs/framework-id.html")
 
-    crashStrategy.crash(CrashStrategy.MesosSchedulerError)
+    if (message.contains("Framework has been removed")) {
+      crashStrategy.crash(CrashStrategy.FrameworkHasBeenRemoved)
+    }
+    else {
+      crashStrategy.crash(CrashStrategy.MesosSchedulerError)
+    }
   }
 
   /**
