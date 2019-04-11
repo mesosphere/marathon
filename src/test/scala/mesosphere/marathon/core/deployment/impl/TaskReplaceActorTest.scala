@@ -38,7 +38,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB)
+      f.tracker.specInstancesAfterPendingUpdatesSync(app.id) returns Seq(instanceA, instanceB)
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
       f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
 
@@ -75,7 +75,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       val instanceC = f.runningInstance(newApp)
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceC)
+      f.tracker.specInstancesAfterPendingUpdatesSync(app.id) returns Seq(instanceA, instanceC)
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
       f.tracker.get(instanceC.instanceId) returns Future.successful(Some(instanceC))
 
@@ -105,7 +105,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
 
-      when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB))
+      when(f.tracker.specInstancesAfterPendingUpdatesSync(app.id)).thenReturn(Seq(instanceA, instanceB))
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
       f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
 
@@ -138,7 +138,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val instanceB = f.runningInstance(app)
       val instanceC = f.runningInstance(app)
 
-      when(f.tracker.specInstancesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
+      when(f.tracker.specInstancesAfterPendingUpdatesSync(app.id)).thenReturn(Seq(instanceA, instanceB, instanceC))
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
       f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
       f.tracker.get(instanceC.instanceId) returns Future.successful(Some(instanceC))
@@ -186,7 +186,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val instanceB = f.runningInstance(app)
       val instanceC = f.runningInstance(app)
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
+      f.tracker.specInstancesAfterPendingUpdatesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
       f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
       f.tracker.get(instanceC.instanceId) returns Future.successful(Some(instanceC))
@@ -244,7 +244,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val instanceB = f.runningInstance(app)
       val instanceC = f.runningInstance(app)
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
+      f.tracker.specInstancesAfterPendingUpdatesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
       f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
       f.tracker.get(instanceC.instanceId) returns Future.successful(Some(instanceC))
@@ -312,7 +312,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val instanceB = f.runningInstance(app)
       val instanceC = f.runningInstance(app)
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
+      f.tracker.specInstancesAfterPendingUpdatesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
       f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
       f.tracker.get(instanceC.instanceId) returns Future.successful(Some(instanceC))
@@ -378,7 +378,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val instanceB = f.runningInstance(app)
       val instanceC = f.runningInstance(app)
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
+      f.tracker.specInstancesAfterPendingUpdatesSync(app.id) returns Seq(instanceA, instanceB, instanceC)
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
       f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
       f.tracker.get(instanceC.instanceId) returns Future.successful(Some(instanceC))
@@ -446,7 +446,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB, instanceC, instanceD)
+      f.tracker.specInstancesAfterPendingUpdatesSync(app.id) returns Seq(instanceA, instanceB, instanceC, instanceD)
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
       f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
       f.tracker.get(instanceC.instanceId) returns Future.successful(Some(instanceC))
@@ -508,7 +508,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val app = AppDefinition(id = "/myApp".toPath, instances = 2)
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB)
+      f.tracker.specInstancesAfterPendingUpdatesSync(app.id) returns Seq(instanceA, instanceB)
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
       f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
       val promise = Promise[Unit]()
@@ -529,7 +529,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val port = PortDefinition(0, name = Some(check.portName))
       val app = AppDefinition(id = "/myApp".toPath, instances = 1, portDefinitions = Seq(port), readinessChecks = Seq(check))
       val instance = f.runningInstance(app)
-      f.tracker.specInstancesSync(app.id) returns Seq(instance)
+      f.tracker.specInstancesAfterPendingUpdatesSync(app.id) returns Seq(instance)
       f.tracker.get(instance.instanceId) returns Future.successful(Some(instance))
       val (_, readyCheck) = f.readinessResults(instance, check.name, ready = true)
       f.readinessCheckExecutor.execute(any[ReadinessCheckExecutor.ReadinessCheckSpec]) returns readyCheck
@@ -556,7 +556,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         healthChecks = Set(MarathonHttpHealthCheck())
       )
       val instance = f.runningInstance(app)
-      f.tracker.specInstancesSync(app.id) returns Seq(instance)
+      f.tracker.specInstancesAfterPendingUpdatesSync(app.id) returns Seq(instance)
       f.tracker.get(instance.instanceId) returns Future.successful(Some(instance))
       val (_, readyCheck) = f.readinessResults(instance, ready.name, ready = true)
       f.readinessCheckExecutor.execute(any[ReadinessCheckExecutor.ReadinessCheckSpec]) returns readyCheck
@@ -582,7 +582,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instanceA, instanceB)
+      f.tracker.specInstancesAfterPendingUpdatesSync(app.id) returns Seq(instanceA, instanceB)
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
       f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
 
@@ -617,7 +617,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       val instance = f.runningInstance(app)
 
-      f.tracker.specInstancesSync(app.id) returns Seq(instance)
+      f.tracker.specInstancesAfterPendingUpdatesSync(app.id) returns Seq(instance)
       f.tracker.get(instance.instanceId) returns Future.successful(Some(instance))
 
       val promise = Promise[Unit]()

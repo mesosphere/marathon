@@ -39,7 +39,7 @@ class TaskReplaceActor(
   // Killed resident tasks are not expunged from the instances list. Ignore
   // them. LaunchQueue takes care of launching instances against reservations
   // first
-  val currentInstances = instanceTracker.specInstancesSync(runSpec.id)
+  val currentInstances = instanceTracker.specInstancesAfterPendingUpdatesSync(runSpec.id)
 
   // In case previous master was abdicated while the deployment was still running we might have
   // already started some new tasks.

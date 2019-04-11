@@ -181,17 +181,17 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       lazy val delegate = new InstanceTrackerDelegate(f.metrics, f.clock, config, f.instanceTrackerProbe.ref)
 
       And("three queued queries")
-      delegate.specInstances(appId) // On way to instance tracker
-      delegate.specInstances(appId) // In mapAsync
-      delegate.specInstances(appId) // In queue buffer
+      delegate.specInstancesAfterPendingUpdates(appId) // On way to instance tracker
+      delegate.specInstancesAfterPendingUpdates(appId) // In mapAsync
+      delegate.specInstancesAfterPendingUpdates(appId) // In queue buffer
 
       When("we query a fourth time")
-      val result = delegate.specInstances(appId)
+      val result = delegate.specInstancesAfterPendingUpdates(appId)
 
       Then("the query fails")
       val failure = result.failed.futureValue
       failure shouldBe a[RuntimeException]
-      failure should have message("Dropped instance query: ListBySpec(/test)")
+      failure should have message ("Dropped instance query: ListBySpec(/test)")
     }
   }
 }

@@ -67,7 +67,15 @@ private[tracker] class InstanceTrackerDelegate(
     Await.result(specInstances(appId), instanceTrackerQueryTimeout.duration)
   }
 
-  override def specInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] = {
+  override def specInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] =
+    (instanceTrackerRef ? InstanceTrackerActor.ListBySpec(appId)).mapTo[Seq[Instance]]
+
+  override def specInstancesAfterPendingUpdatesSync(appId: PathId): Seq[Instance] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Await.result(specInstances(appId), instanceTrackerQueryTimeout.duration)
+  }
+
+  override def specInstancesAfterPendingUpdates(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] = {
     val query = InstanceTrackerActor.ListBySpec(appId)
 
     val promise = Promise[Seq[Instance]]

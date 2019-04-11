@@ -30,6 +30,17 @@ trait InstanceTracker extends StrictLogging {
   def specInstancesSync(pathId: PathId): Seq[Instance]
   def specInstances(pathId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]]
 
+  /** Synchronous blocking version of [[InstanceTracker.specInstancesAfterPendingUpdates()]] */
+  def specInstancesAfterPendingUpdatesSync(appId: PathId): Seq[Instance]
+
+  /**
+    * Similar method to [[InstanceTracker.specInstances()]] but guaranties that all pending updates
+    * for app with {{appId}} are processed first.
+    *
+    * @param appId The app id for which all instances should be fetched.
+    * @return A future sequence of all instances belonging to app with given app id.
+    */
+  def specInstancesAfterPendingUpdates(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]]
   /**
     * List all instances for a run spec with given id.
     *
