@@ -30,7 +30,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(Seq.empty)
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
@@ -50,7 +50,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
       val instances: Seq[Instance] = Seq(Instance.scheduled(app))
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(instances)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(instances)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -71,7 +71,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val app = AppDefinition("/myApp".toPath, instances = 5)
 
       val instances: Seq[Instance] = Seq(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(instances)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(instances)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -91,7 +91,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 0)
 
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -109,7 +109,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         instances = 5,
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
       )
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -132,7 +132,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         instances = 0,
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true")))
       )
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -147,7 +147,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 2)
 
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -173,7 +173,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 2)
 
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
@@ -198,7 +198,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val promise = Promise[Unit]()
       val app = AppDefinition("/myApp".toPath, instances = 2)
 
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(Seq.empty)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(Seq.empty)
 
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)

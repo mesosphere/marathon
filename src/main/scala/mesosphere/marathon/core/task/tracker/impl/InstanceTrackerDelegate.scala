@@ -11,9 +11,9 @@ import akka.stream.{Materializer, OverflowStrategy, QueueOfferResult}
 import akka.util.Timeout
 import akka.{Done, NotUsed}
 import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.core.instance.update.{InstancesSnapshot, InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation, InstancesSnapshot}
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
-import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
+import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{ListBySpec, UpdateContext}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{PathId, Timestamp}
@@ -62,13 +62,26 @@ private[tracker] class InstanceTrackerDelegate(
   override def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
     specInstances(appId).map(_.nonEmpty)
 
-  override def specInstancesSync(appId: PathId): Seq[Instance] = {
+  override def specInstancesSync(appId: PathId, readAfterWrite: Boolean = false): Seq[Instance] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    Await.result(specInstances(appId), instanceTrackerQueryTimeout.duration)
+    Await.result(specInstances(appId, readAfterWrite), instanceTrackerQueryTimeout.duration)
   }
 
-  override def specInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] =
-    (instanceTrackerRef ? InstanceTrackerActor.ListBySpec(appId)).mapTo[Seq[Instance]]
+  override def specInstances(appId: PathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]] = {
+    val query = InstanceTrackerActor.ListBySpec(appId)
+    if (readAfterWrite) {
+      val promise = Promise[Seq[Instance]]
+      queue.offer(QueuedQuery(query, promise)).foreach {
+        case QueueOfferResult.Enqueued => logger.info(s"Queued query ${query.appId}")
+        case QueueOfferResult.Dropped => promise.failure(new RuntimeException(s"Dropped instance query: $query"))
+        case QueueOfferResult.Failure(ex) => promise.failure(new RuntimeException(s"Failed to process instance query $query because", ex))
+        case QueueOfferResult.QueueClosed => promise.failure(new RuntimeException(s"Failed to process instance query $query because the queue is closed"))
+      }
+      promise.future
+    } else {
+      (instanceTrackerRef ? query).mapTo[Seq[Instance]]
+    }
+  }
 
   override def instance(taskId: Instance.Id): Future[Option[Instance]] =
     (instanceTrackerRef ? InstanceTrackerActor.Get(taskId)).mapTo[Option[Instance]]
@@ -80,7 +93,15 @@ private[tracker] class InstanceTrackerDelegate(
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  case class QueuedUpdate(update: UpdateContext, promise: Promise[InstanceUpdateEffect])
+  sealed trait Queued {
+    val idString: String
+  }
+  case class QueuedUpdate(update: UpdateContext, promise: Promise[InstanceUpdateEffect]) extends Queued {
+    override val idString: String = update.appId.toString
+  }
+  case class QueuedQuery(query: ListBySpec, promise: Promise[Seq[Instance]]) extends Queued {
+    override val idString: String = query.appId.toString
+  }
 
   /**
     * Important:
@@ -94,8 +115,8 @@ private[tracker] class InstanceTrackerDelegate(
     */
   // format: OFF
   val queue = Source
-    .queue[QueuedUpdate](config.internalInstanceTrackerUpdateQueueSize(), OverflowStrategy.dropNew)
-    .groupBy(config.internalInstanceTrackerNumParallelUpdates(), queued => Math.abs(queued.update.instanceId.idString.hashCode) % config.internalInstanceTrackerNumParallelUpdates())
+    .queue[Queued](config.internalInstanceTrackerUpdateQueueSize(), OverflowStrategy.dropNew)
+    .groupBy(config.internalInstanceTrackerNumParallelUpdates(), queued => Math.abs(queued.idString.hashCode) % config.internalInstanceTrackerNumParallelUpdates())
     .mapAsync(1){
       case QueuedUpdate(update, promise) =>
         logger.debug(s"Sending update to instance tracker: ${update.operation.shortString}")
@@ -110,6 +131,18 @@ private[tracker] class InstanceTrackerDelegate(
 
         effectF // We already completed the sender promise with the future result (failed or not)
           .transform(_ => Success(Done)) // so here we map the future to a successful one to preserve the stream
+      case QueuedQuery(query, promise) =>
+        logger.debug(s"Sending query to instance tracker: ${query.appId}")
+        val effectF = (instanceTrackerRef ? query)
+          .mapTo[Seq[Instance]]
+          .transform {
+            case s @ Success(_) => logger.info(s"Completed processing instance query ${query.appId}"); s
+            case f @ Failure(e: AskTimeoutException) => logger.error(s"Timed out waiting for response for query $query", e); f
+            case f @ Failure(t: Throwable) => logger.error(s"An unexpected error occurred during query processing of: $query", t); f
+          }
+        promise.completeWith(effectF)
+        effectF
+          .transform(_ => Success(Done))
     }
     .mergeSubstreams
     .toMat(Sink.ignore)(Keep.left)
@@ -120,11 +153,11 @@ private[tracker] class InstanceTrackerDelegate(
     val update = InstanceTrackerActor.UpdateContext(deadline, stateOp)
 
     val promise = Promise[InstanceUpdateEffect]
-    queue.offer(QueuedUpdate(update, promise)).map {
+    queue.offer(QueuedUpdate(update, promise)).foreach {
       case QueueOfferResult.Enqueued => logger.info(s"Queued ${update.operation.shortString}")
-      case QueueOfferResult.Dropped => throw new RuntimeException(s"Dropped instance update: $update")
-      case QueueOfferResult.Failure(ex) => throw new RuntimeException(s"Failed to process instance update $update because", ex)
-      case QueueOfferResult.QueueClosed => throw new RuntimeException(s"Failed to process instance update $update because the queue is closed")
+      case QueueOfferResult.Dropped => promise.failure(new RuntimeException(s"Dropped instance update: $update"))
+      case QueueOfferResult.Failure(ex) => promise.failure(new RuntimeException(s"Failed to process instance update $update because", ex))
+      case QueueOfferResult.QueueClosed => promise.failure(new RuntimeException(s"Failed to process instance update $update because the queue is closed"))
     }
     promise.future
   }

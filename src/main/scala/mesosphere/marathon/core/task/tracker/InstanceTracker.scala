@@ -27,16 +27,27 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 trait InstanceTracker extends StrictLogging {
 
-  def specInstancesSync(pathId: PathId): Seq[Instance]
-  def specInstances(pathId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]]
-
   /**
-    * List all instances for a run spec with given id.
+    * Retrieves all instances for one run spec.
+    *
+    * This method can have two behaviors. By default it fetches the current persisted state. This will ignore all
+    * all pending updates for an instances. The behavior can be changed by passing {{{readAfterWrite = true}}}. In
+    * this case the query for all instances is queued behind all pending updates and thus will see their effect.
+    *
+    * The {{{readAfterWrite}}} option should be used if the logic is short lived and has to see all updates before
+    * proceeding. Eg the [[mesosphere.marathon.core.deployment.impl.TaskReplaceActor]] is only alive for the period
+    * of a deployment. It does not *wait* for updates of unknown instances. Thus it uses the {{{readAfterWrite}}}
+    * option to guarantee that all updates are processed before it receives the current app state, ie all instances,
+    * and decides whether the deployment is done or not.
     *
     * @param pathId The id of the run spec.
-    * @return All instances for the run spec.
+    * @param readAfterWrite If true waits until all pending updates are written before returning instance.
+    * @return A future sequence of all instances.
     */
-  def list(pathId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] = specInstances(pathId)
+  def specInstances(pathId: PathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]]
+
+  /** Synchronous blocking version of [[InstanceTracker.specInstances()]]. */
+  def specInstancesSync(pathId: PathId, readAfterWrite: Boolean = false): Seq[Instance]
 
   /**
     * Look up a specific instance by id.

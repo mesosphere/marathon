@@ -88,7 +88,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       val unreachableInstances = Seq.fill(5)(TestInstanceBuilder.newBuilder(app.id).addTaskUnreachableInactive().getInstance())
       val runnningInstances = Seq.fill(10)(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
-      f.instanceTracker.specInstances(eq(app.id))(any[ExecutionContext]) returns Future.successful(unreachableInstances ++ runnningInstances)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any[ExecutionContext]) returns Future.successful(unreachableInstances ++ runnningInstances)
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
@@ -104,7 +104,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
 
       val scheduledInstances = Seq.fill(4)(Instance.scheduled(app))
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(scheduledInstances)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(scheduledInstances)
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
@@ -119,7 +119,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       Given("an app with 10 instances and an active queue with 10 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
       val scheduledInstances = Seq.fill(10)(Instance.scheduled(app))
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(scheduledInstances)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(scheduledInstances)
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
@@ -135,7 +135,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       Given("an app with 10 instances and an active queue with 10 tasks")
       val app = MarathonTestHelper.makeBasicApp().copy(instances = 10)
       val scheduledInstances = Seq.fill(15)(Instance.scheduled(app))
-      f.instanceTracker.specInstances(eq(app.id))(any) returns Future.successful(scheduledInstances)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(scheduledInstances)
 
       When("app is scaled")
       f.scheduler.scale(app).futureValue
@@ -170,7 +170,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance()
       )
 
-      f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
+      f.instanceTracker.specInstances(app.id, false) returns Future.successful(tasks)
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
@@ -203,8 +203,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance(stagedAt = 2L)
       )
 
-      f.instanceTracker.list(app.id) returns Future.successful(instances)
-      f.instanceTracker.specInstances(app.id) returns Future.successful(instances)
+      f.instanceTracker.specInstances(app.id, false) returns Future.successful(instances)
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
 
@@ -241,7 +240,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
         runningInstance(stagedAt = 2L)
       )
 
-      f.instanceTracker.specInstances(app.id) returns Future.successful(tasks)
+      f.instanceTracker.specInstances(app.id, false) returns Future.successful(tasks)
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue

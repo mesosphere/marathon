@@ -74,7 +74,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
   "HealthCheckActor" should {
     //regression test for #934
     "should not dispatch health checks for staging tasks" in new Fixture {
-      instanceTracker.specInstances(any)(any) returns Future.successful(Seq(instance))
+      instanceTracker.specInstances(any, anyBoolean)(any) returns Future.successful(Seq(instance))
 
       val actor = healthCheckActor()
 
@@ -82,7 +82,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
     }
 
     "should not dispatch health checks for lost tasks" in new Fixture {
-      instanceTracker.specInstances(any)(any) returns Future.successful(Seq(lostInstance))
+      instanceTracker.specInstances(any, anyBoolean)(any) returns Future.successful(Seq(lostInstance))
 
       val actor = healthCheckActor()
 
@@ -90,7 +90,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
     }
 
     "should not dispatch health checks for unreachable tasks" in new Fixture {
-      instanceTracker.specInstances(any)(any) returns Future.successful(Seq(unreachableInstance))
+      instanceTracker.specInstances(any, anyBoolean)(any) returns Future.successful(Seq(unreachableInstance))
 
       val actor = healthCheckActor()
 

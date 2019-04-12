@@ -29,7 +29,7 @@ import mesosphere.marathon.stream.Subject
 import mesosphere.marathon.test.GroupCreation
 import org.apache.mesos.Protos.{Status, TaskStatus}
 import org.apache.mesos.SchedulerDriver
-import org.mockito
+import org.mockito.{Matchers => M}
 import org.scalatest.concurrent.Eventually
 
 import scala.collection.immutable.Set
@@ -192,7 +192,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       val instances = Seq(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
 
-      instanceTracker.specInstances(mockito.Matchers.eq("nope".toPath))(mockito.Matchers.any[ExecutionContext]) returns Future.successful(instances)
+      instanceTracker.specInstances(M.eq("nope".toPath), M.eq(false))(M.any[ExecutionContext]) returns Future.successful(instances)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
@@ -269,7 +269,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       val plan = DeploymentPlan("d2", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
-      instanceTracker.specInstances(mockito.Matchers.eq(app.id))(any[ExecutionContext]) returns Future.successful(Seq(instance))
+      instanceTracker.specInstances(M.eq(app.id), M.eq(false))(any[ExecutionContext]) returns Future.successful(Seq(instance))
       system.eventStream.subscribe(probe.ref, classOf[UpgradeEvent])
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
@@ -418,8 +418,8 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     val hcManager: HealthCheckManager = mock[HealthCheckManager]
 
     val instanceTracker: InstanceTracker = mock[InstanceTracker]
-    instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty[Instance])
-    instanceTracker.specInstancesSync(any) returns Seq.empty[Instance]
+    instanceTracker.specInstances(any, M.eq(false))(any) returns Future.successful(Seq.empty[Instance])
+    instanceTracker.specInstancesSync(any, M.eq(false)) returns Seq.empty[Instance]
     instanceTracker.setGoal(any, any, any) returns Future.successful(Done)
     instanceTracker.instanceUpdates returns Source.empty
     val killService = new KillServiceMock(system)

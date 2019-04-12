@@ -815,23 +815,26 @@ def test_app_update():
 def test_app_update_rollback():
     """Tests that an updated app can be rolled back to its initial version."""
 
-    app_def = apps.readiness_and_health_app()
+    app_def = apps.readiness_and_health_app("app-update-rollback")
     app_id = app_def["id"]
 
+    # First deployment
     client = marathon.create_client()
     client.add_app(app_def)
     deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 1, "The number of tasks is {} after deployment, but 1 was expected".format(len(tasks))
+    assert_that(tasks, has_len(equal_to(1)))
 
+    # Second deployment
     app_def['instances'] = 2
     client.update_app(app_id, app_def)
     deployment_wait(service_id=app_id)
 
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 2, "The number of tasks is {} after update, but 2 was expected".format(len(tasks))
+    assert_that(tasks, has_len(equal_to(2)))
 
+    # Third deployment with rollback
     # provides a testing delay to rollback in the meantime
     app_def['readinessChecks'][0]['intervalSeconds'] = 30
     app_def['instances'] = 1
@@ -841,7 +844,7 @@ def test_app_update_rollback():
 
     # update to 1 instance is rollback to 2
     tasks = client.get_tasks(app_id)
-    assert len(tasks) == 2, "The number of tasks is {} after rollback, but 2 was expected".format(len(tasks))
+    assert_that(tasks, has_len(equal_to(2)))
 
 
 def test_unhealthy_app_can_be_rolled_back():

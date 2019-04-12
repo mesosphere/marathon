@@ -18,8 +18,6 @@ import org.apache.mesos.Protos.{TaskID, TaskStatus}
 
 import scala.concurrent.Future
 
-import scala.concurrent.Future
-
 class InstanceTrackerDelegateTest extends AkkaUnitTest {
   class Fixture {
     lazy val clock = new SettableClock()
@@ -171,6 +169,29 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       Then("The reply is the value of task")
       val updateValue = statusUpdate.failed.futureValue
       updateValue shouldBe cause
+    }
+
+    "Spec query fails" in {
+      Given("the delegate is processing a request")
+      val f = new Fixture
+      val appId: PathId = PathId("/test")
+      val config = AllConf.withTestConfig(
+        "--instance_tracker_update_queue_size", "1",
+        "--instance_tracker_num_parallel_updates", "1")
+      lazy val delegate = new InstanceTrackerDelegate(f.metrics, f.clock, config, f.instanceTrackerProbe.ref)
+
+      And("three queued queries")
+      delegate.specInstances(appId, readAfterWrite = true) // On way to instance tracker
+      delegate.specInstances(appId, readAfterWrite = true) // In mapAsync
+      delegate.specInstances(appId, readAfterWrite = true) // In queue buffer
+
+      When("we query a fourth time")
+      val result = delegate.specInstances(appId, readAfterWrite = true)
+
+      Then("the query fails")
+      val failure = result.failed.futureValue
+      failure shouldBe a[RuntimeException]
+      failure should have message ("Dropped instance query: ListBySpec(/test)")
     }
   }
 }
