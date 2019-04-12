@@ -44,12 +44,10 @@ trait InstanceTracker extends StrictLogging {
     * @param readAfterWrite If true waits until all pending updates are written before returning instance.
     * @return A future sequence of all instances.
     */
-  def specInstances(pathId: PathId, readAfterWrite: Boolean)(implicit ec: ExecutionContext): Future[Seq[Instance]]
-  def specInstances(pathId: PathId)(implicit ec: ExecutionContext): Future[Seq[Instance]] = specInstances(pathId, false)
+  def specInstances(pathId: PathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]]
 
   /** Synchronous blocking version of [[InstanceTracker.specInstances()]]. */
   def specInstancesSync(pathId: PathId, readAfterWrite: Boolean = false): Seq[Instance]
-  def specInstancesSync(pathId: PathId): Seq[Instance] = specInstancesSync(pathId, false)
 
   /**
     * Look up a specific instance by id.

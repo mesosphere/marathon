@@ -38,7 +38,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "adding a queue item registers new offer matcher" in fixture { f =>
       import f._
       Given("An empty task tracker")
-      instanceTracker.specInstances(any[PathId])(any) returns Future.successful(Seq.empty)
+      instanceTracker.specInstances(any[PathId], Matchers.eq(false))(any) returns Future.successful(Seq.empty)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.scheduled(app))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
@@ -57,7 +57,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       Given("An app in the queue")
       val scheduledInstance = Instance.scheduled(app)
-      instanceTracker.specInstances(any[PathId])(any) returns Future.successful(Seq.empty)
+      instanceTracker.specInstances(any[PathId], Matchers.eq(false))(any) returns Future.successful(Seq.empty)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
@@ -81,7 +81,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "an offer gets successfully matched against an item in the queue" in fixture { f =>
       import f._
       Given("An app in the queue")
-      instanceTracker.specInstances(any[PathId])(any) returns Future.successful(Seq.empty)
+      instanceTracker.specInstances(any[PathId], Matchers.eq(false))(any) returns Future.successful(Seq.empty)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))

@@ -140,11 +140,11 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val plan = DeploymentPlan(origGroup, targetGroup)
 
-      tracker.specInstances(Matchers.eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
+      tracker.specInstances(Matchers.eq(app1.id), Matchers.eq(false))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
       tracker.specInstancesSync(app2.id, readAfterWrite = true) returns Seq(instance2_1)
-      tracker.specInstances(Matchers.eq(app2.id))(any[ExecutionContext]) returns Future.successful(Seq(instance2_1))
-      tracker.specInstances(Matchers.eq(app3.id))(any[ExecutionContext]) returns Future.successful(Seq(instance3_1))
-      tracker.specInstances(Matchers.eq(app4.id))(any[ExecutionContext]) returns Future.successful(Seq(instance4_1))
+      tracker.specInstances(Matchers.eq(app2.id), Matchers.eq(false))(any[ExecutionContext]) returns Future.successful(Seq(instance2_1))
+      tracker.specInstances(Matchers.eq(app3.id), Matchers.eq(false))(any[ExecutionContext]) returns Future.successful(Seq(instance3_1))
+      tracker.specInstances(Matchers.eq(app4.id), Matchers.eq(false))(any[ExecutionContext]) returns Future.successful(Seq(instance4_1))
       tracker.get(instance1_1.instanceId) returns Future.successful(Some(instance1_1))
       tracker.get(instance1_2.instanceId) returns Future.successful(Some(instance1_2))
       tracker.get(instance2_1.instanceId) returns Future.successful(Some(instance2_1))
@@ -188,7 +188,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       tracker.specInstancesSync(app.id, readAfterWrite = true) returns Seq(instance1_1, instance1_2)
       tracker.get(instance1_1.instanceId) returns Future.successful(Some(instance1_1))
       tracker.get(instance1_2.instanceId) returns Future.successful(Some(instance1_2))
-      tracker.specInstances(app.id) returns Future.successful(Seq(instance1_1, instance1_2))
+      tracker.specInstances(app.id, false) returns Future.successful(Seq(instance1_1, instance1_2))
 
       val plan = DeploymentPlan("foo", origGroup, targetGroup, List(DeploymentStep(List(RestartApplication(appNew)))), Timestamp.now())
 
@@ -249,7 +249,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Seq(instance1_2)))
 
-      tracker.specInstances(Matchers.eq(app1.id))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2, instance1_3))
+      tracker.specInstances(Matchers.eq(app1.id), Matchers.eq(false))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2, instance1_3))
       tracker.get(instance1_1.instanceId).returns(Future.successful(Some(instance1_1)))
       tracker.get(instance1_2.instanceId).returns(Future.successful(Some(instance1_2)))
       tracker.get(instance1_3.instanceId).returns(Future.successful(Some(instance1_3)))

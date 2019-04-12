@@ -15,6 +15,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.{JerseyTest, MarathonTestHelper, SettableClock}
 import mesosphere.mesos.NoOfferMatchReason
+import org.mockito.Matchers
 import play.api.libs.json._
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -126,7 +127,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
 
     "unknown application backoff can not be removed from the launch queue" in new Fixture {
       //given
-      instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty)
+      instanceTracker.specInstances(any, Matchers.eq(false))(any) returns Future.successful(Seq.empty)
 
       //when
       val response = asyncRequest { r => queueResource.resetDelay("unknown", auth.request, r) }
@@ -139,7 +140,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       //given
       val app = AppDefinition(id = "app".toRootPath)
       val instances = Seq.fill(23)(Instance.scheduled(app))
-      instanceTracker.specInstances(any)(any) returns Future.successful(instances)
+      instanceTracker.specInstances(any, Matchers.eq(false))(any) returns Future.successful(instances)
       groupManager.runSpec(app.id) returns Some(app)
 
       //when
@@ -175,7 +176,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       When("one delay is reset")
       val app = AppDefinition(id = "app".toRootPath)
       val instances = Seq.fill(23)(Instance.scheduled(app))
-      instanceTracker.specInstances(any)(any) returns Future.successful(instances)
+      instanceTracker.specInstances(any, Matchers.eq(false))(any) returns Future.successful(instances)
       groupManager.runSpec(app.id) returns Some(app)
 
       val resetDelay = asyncRequest { r => queueResource.resetDelay("app", req, r) }
@@ -190,7 +191,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       val req = auth.request
 
       When("one delay is reset")
-      instanceTracker.specInstances(any)(any) returns Future.successful(Seq.empty)
+      instanceTracker.specInstances(any, Matchers.eq(false))(any) returns Future.successful(Seq.empty)
 
       val resetDelay = asyncRequest { r => queueResource.resetDelay("appId", req, r) }
       Then("we receive a not authorized response")
