@@ -29,10 +29,10 @@ When upgrading a Service during a [Deployment](deployments.md) from one version 
 When an instance is running on an agent which has disconnected from the cluster, it will eventually be reported as unreachable. According to the Service’s [unreachableStrategy](unreachable-strategy.md), Marathon might schedule a replacement, even though the unreachable instance might still be running. When an unreachable instance becomes reachable again, Marathon will scale down accordingly to the required amount of instances. It will decide which instance shall be killed based on the [killSelection](kill-selection.md).
 
 ## Links
-* [Scaling Applications](../tutorials/apps-scaling.md)
-* [Scaling Pods](../tutorials/pods-scaling.md)
-* [Killing Instances](../tutorials/instance-operations.md#delete-instances)
+* [Scaling Applications](tutorials/apps-scaling.md)
+* [Scaling Pods](tutorials/pods-scaling.md)
+* [Killing Instances](tutorials/instance-operations.md#delete-instances)
 
 ## Examples
-* [Simple Application](examples/app-simple.json) definition configuration 3 instances
-* [JSON Representation](examples/app-representation.json) of an instance via v2/tasks
+* [Simple Application](examples/requests/app-simple.json) definition configuring a service with 3 instances
+* [JSON Representation](examples/responses/app-representation.json) of an instance via v2/tasks
