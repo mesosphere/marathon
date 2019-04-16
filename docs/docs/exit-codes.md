@@ -31,7 +31,7 @@ One or more configured plugins could not be initialized. Please check your plugi
 
 ### 108 Missing Framework ID
 
-The configured zookeeper path contains references to the launched app or pod instances but it does not contain a Framework ID for registration with Mesos. Marathon will not register without a Framework ID since this would orphan any existing app or pod instances. Please see the documentation on [Framework ID registration](framework-id.html).
+The configured zookeeper path contains references to any app or pod instances but it does not contain a Framework ID for registration with Mesos. Marathon will not register without a Framework ID since this would orphan any existing app or pod instances. Please see the documentation on [Framework ID registration](framework-id.html).
 
 ### 110 Framework Has Been Removed
 
