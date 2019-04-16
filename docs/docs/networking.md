@@ -128,7 +128,8 @@ The [Marathon-LB service](https://docs.mesosphere.com/latest/networking/marathon
 
 `VIP_0`, defined in `portDefinitions` as a label, is like `servicePort` in that it is informational and implementation-dependent. However, when used with [DC/OS](https://docs.mesosphere.com), services internal to DC/OS will make available to the cluster that DNS name and port as a route to services. An example configuration:
 
-```app_def['portDefinitions'] = [{
+```
+    app_def['portDefinitions'] = [{
         "port": 0,
         "protocol": "tcp",
         "name": "acme",
@@ -361,7 +362,7 @@ If you are not using DC/OS and want to enable `container/bridge` mode with the U
 
 1. Create a file called `mesos-bridge.json`, copy the following configuration into it, and add it to `/var/lib/mesos/cni/config`.
 
-   ```
+```json
    {
      "name": "mesos-bridge",
      "type": "mesos-cni-port-mapper",
@@ -381,12 +382,12 @@ If you are not using DC/OS and want to enable `container/bridge` mode with the U
        }
      }
    }
-   ```
+```
 
 1. Soft-link the `mesos-cni-port-mapper` plugin to your plugins directory using the following command
-   ```
+```
    $ sudo ln -sf /usr/libexec/mesos/mesos-cni-port-mapper /var/lib/mesos/cni/plugins/mesos-cni-port-mapper
-   ```
+```
 
 #### Enabling `container` Mode
 
