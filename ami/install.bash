@@ -2,6 +2,7 @@
 set -euo pipefail
 
 # dirmngr is needed by multiple subsequent steps
+apt-get -y update
 apt-get install -y dirmngr
 
 # Install sbt
