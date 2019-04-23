@@ -77,8 +77,8 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
         forcePullImage = container.forcePullImage)
     }
 
-    def create(kind: EngineType, docker: Option[DockerContainer] = None, appc: Option[AppCContainer] = None, linuxInfo: Option[LinuxInfo]): Container = {
-      Container(kind, docker = docker, appc = appc, volumes = container.volumes.toRaml,
+    def create(kind: EngineType, docker: Option[DockerContainer] = None, linuxInfo: Option[LinuxInfo]): Container = {
+      Container(kind, docker = docker, volumes = container.volumes.toRaml,
         portMappings = Option(container.portMappings.toRaml), // this might need to be None, but we can't check networking here
         linuxInfo = linuxInfo
       )
