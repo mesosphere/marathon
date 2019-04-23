@@ -118,8 +118,7 @@ class MarathonScheduler(
 
     if (message.contains("Framework has been removed")) {
       crashStrategy.crash(CrashStrategy.FrameworkHasBeenRemoved)
-    }
-    else {
+    } else {
       crashStrategy.crash(CrashStrategy.MesosSchedulerError)
     }
   }
