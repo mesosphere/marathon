@@ -4,8 +4,8 @@ Marathon Jenkins AMI
 Packer installer script to create Marathon's Jenkins AMI.
 
 Get packer from https://www.packer.io/
-Documentation on provisioning new AMI for jenkins: https://wiki.mesosphere.com/display/MARATHON/Provision+New+AMI+for+Jenkins+Node
-Mesos version used by marathon: https://github.com/mesosphere/marathon/blob/master/project/Dependencies.scala#L87
+Documentation on provisioning new AMI for jenkins: https://wiki.mesosphere.com/display/ENG/%5BMarathon%5D+Provision+New+AMI+for+Jenkins+Node
+Mesos version used by marathon: https://github.com/mesosphere/marathon/blob/b00f71136a7e35cb76c7df136d49b16b9ead2689/project/Dependencies.scala#L128
 
 Here is an example on how to install Mesos 1.5.0 using maws (https://github.com/mesosphere/maws#osx--macos) which will result in image named 'JenkinsMarathonCI-Debian8-2018-02-02'
 
