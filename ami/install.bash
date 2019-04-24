@@ -65,6 +65,12 @@ apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF &&
   echo "deb http://repos.mesosphere.com/debian stretch main" | tee -a /etc/apt/sources.list.d/mesosphere.list
 apt-get -y update
 
+echo "=== Install libc6 Dependency for Mesos to Run ==="
+echo 'deb http://ftp.debian.org/debian/ buster main' >> /etc/apt/sources.list
+apt-get update -y
+apt-get -t buster install libc6 -y
+
+
 # Install but do not start Mesos master/slave processes
 # The CI task will install Mesos later.
 apt-get install -y --force-yes --no-install-recommends mesos=$MESOS_VERSION
