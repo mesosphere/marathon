@@ -20,6 +20,8 @@ ansiColor('xterm') {
             string(credentialsId: '3f0dbb48-de33-431f-b91c-2366d2f0e1cf',variable: 'AWS_ACCESS_KEY_ID'),
             string(credentialsId: 'f585ec9a-3c38-4f67-8bdb-79e5d4761937',variable: 'AWS_SECRET_ACCESS_KEY')
         ]) {
+            // first time a docker command is called, docker is doing some kind of initialization that in some pipelines was taking 15 seconds
+            // mesos when launching docker container enforces timeout on a docker command so it's good to have docker pre-initialized
             sh """docker --version"""
             sh """sudo update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java"""
             sh """sudo -E ci/pipeline jenkins"""
