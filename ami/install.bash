@@ -30,31 +30,16 @@ apt-get install -y docker-ce
 ssh-keyscan github.com >> /home/admin/.ssh/known_hosts
 ssh-keyscan github.com >> /root/.ssh/known_hosts
 
-# Install python (and some other dependencies)
-echo "=== Install Python ==="
-apt-get install -y \
-        build-essential \
-        git \
-        openjdk-8-jdk \
-        libssl-dev \
-        rpm \
-        zlib1g-dev
+echo "=== Install libc6 Dependency for Mesos to Run ==="
+export DEBIAN_FRONTEND=noninteractive
+echo 'deb http://ftp.debian.org/debian/ buster main' >> /etc/apt/sources.list
+apt-get update -y
+apt-get -t buster install libc6 -y
 
-# Download, compile and install Python 3.6.2
-wget https://www.python.org/ftp/python/3.6.2/Python-3.6.2.tgz
-tar xvf Python-3.6.2.tgz && cd Python-3.6.2/
-./configure --enable-optimizations
-make -j
-sudo make install
-cd ../ && rm -r Python-3.6.2
-
-# Install pip
-echo "=== Install Pip ==="
+echo "=== Install Python 3, Pip and Flake8 ==="
+apt-get -t buster install python3-distutils python3 -y
 wget https://bootstrap.pypa.io/get-pip.py
 python3 get-pip.py
-
-# Install falke8
-echo "=== Install Flake8 ==="
 pip3 install flake8
 
 # Install Mesos
@@ -65,14 +50,9 @@ apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF &&
   echo "deb http://repos.mesosphere.com/debian stretch main" | tee -a /etc/apt/sources.list.d/mesosphere.list
 apt-get -y update
 
-echo "=== Install libc6 Dependency for Mesos to Run ==="
-echo 'deb http://ftp.debian.org/debian/ buster main' >> /etc/apt/sources.list
-apt-get update -y
-apt-get -t buster install libc6 -y
-
-
 # Install but do not start Mesos master/slave processes
 # The CI task will install Mesos later.
+apt-get install -y libssl-dev libcurl4-openssl-dev libcurl4
 apt-get install -y --force-yes --no-install-recommends mesos=$MESOS_VERSION
 systemctl stop mesos-master.service mesos-slave.service
 systemctl disable mesos-master.service mesos-slave.service
@@ -88,8 +68,8 @@ apt-get install -y nodejs
 # Setup system
 systemctl enable docker
 update-ca-certificates -f
-systemctl stop apt-daily.timer
-systemctl stop apt-daily-upgrade.timer
+systemctl stop apt-daily.timer apt-daily-upgrade.timer
+systemctl disable apt-daily.timer apt-daily-upgrade.timer
 
 # Install jq
 echo "=== Install Jq ==="
