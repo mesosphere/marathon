@@ -23,12 +23,13 @@ import mesosphere.marathon
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.setup.{AkkaHttpResponse, RestResult}
 import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.Retry
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
-import mesosphere.marathon.state.PathId._
+
 import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
 import scala.concurrent.Future
@@ -45,7 +46,11 @@ case class ITAppVersions(versions: Seq[Timestamp])
 case class ITListTasks(tasks: Seq[ITEnrichedTask])
 case class ITDeploymentPlan(version: String, deploymentId: String)
 case class ITHealthCheckResult(firstSuccess: Option[String], lastSuccess: Option[String], lastFailure: Option[String], consecutiveFailures: Int, alive: Boolean)
+case class ITCheckResult(http: Option[ITHttpCheckStatus] = None, tcp: Option[ITTCPCheckStatus] = None, command: Option[ITCommandCheckStatus] = None)
 case class ITDeploymentResult(version: Timestamp, deploymentId: String)
+case class ITHttpCheckStatus(statusCode: Int)
+case class ITTCPCheckStatus(succeeded: Boolean)
+case class ITCommandCheckStatus(exitCode: Int)
 case class ITEnrichedTask(
     appId: String,
     id: String,
@@ -58,6 +63,7 @@ case class ITEnrichedTask(
     version: Option[String],
     region: Option[String],
     zone: Option[String],
+    check: Option[ITCheckResult],
     healthCheckResults: Seq[ITHealthCheckResult]) {
 
   def launched: Boolean = startedAt.nonEmpty
@@ -95,13 +101,14 @@ class MarathonFacade(
   extends PodConversion with StrictLogging {
   implicit val scheduler = system.scheduler
   import AkkaHttpResponse._
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   require(baseGroup.absolute)
 
+  import PlayJsonSupport.marshaller
   import mesosphere.marathon.api.v2.json.Formats._
   import play.api.libs.json._
-  import PlayJsonSupport.marshaller
 
   implicit lazy val itAppDefinitionFormat = Json.format[ITAppDefinition]
   implicit lazy val itListAppsResultFormat = Json.format[ITListAppsResult]
@@ -117,6 +124,15 @@ class MarathonFacade(
   implicit lazy val itQueueItemFormat = Json.format[ITQueueItem]
   implicit lazy val itLaunchQueueFormat = Json.format[ITLaunchQueue]
 
+  implicit lazy val itHttpCheckStatus = Json.format[ITHttpCheckStatus]
+  implicit lazy val itTCPCheckStatus = Json.format[ITTCPCheckStatus]
+  implicit lazy val itCommandCheckStatus = Json.format[ITCommandCheckStatus]
+  implicit lazy val itCheckResultFormat: Format[ITCheckResult] = (
+    (__ \ "http").formatNullable[ITHttpCheckStatus] ~
+    (__ \ "tcp").formatNullable[ITTCPCheckStatus] ~
+    (__ \ "command").formatNullable[ITCommandCheckStatus]
+  )(ITCheckResult( _, _, _), unlift(ITCheckResult.unapply))
+
   implicit lazy val itEnrichedTaskFormat: Format[ITEnrichedTask] = (
     (__ \ "appId").format[String] ~
     (__ \ "id").format[String] ~
@@ -129,8 +145,9 @@ class MarathonFacade(
     (__ \ "version").formatNullable[String] ~
     (__ \ "region").formatNullable[String] ~
     (__ \ "zone").formatNullable[String] ~
+    (__ \ "checkResult").formatNullable[ITCheckResult] ~
     (__ \ "healthCheckResults").formatWithDefault[Seq[ITHealthCheckResult]](Nil)
-  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
+  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
 
   def isInBaseGroup(pathId: PathId): Boolean = {
     pathId.path.startsWith(baseGroup.path)
