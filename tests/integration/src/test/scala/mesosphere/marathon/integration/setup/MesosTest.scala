@@ -42,13 +42,16 @@ case class MesosCluster(
     waitForMesosTimeout: FiniteDuration = 5.minutes,
     mastersFaultDomains: Seq[Option[FaultDomain]],
     agentsFaultDomains: Seq[Option[FaultDomain]],
-    agentsGpus: Option[Int] = None)(implicit
+    agentsGpus: Option[Int] = None,
+    agentSeccompConfigDir: Option[String],
+    agentSeccompDefaultProfile: Option[String])(implicit
     system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
     scheduler: Scheduler) extends AutoCloseable with Eventually {
   require(quorumSize > 0 && quorumSize <= numMasters)
   require(agentsFaultDomains.isEmpty || agentsFaultDomains.size == numSlaves)
+  require(agentSeccompConfigDir.isEmpty || (agentSeccompConfigDir.isDefined && config.isolation.get.contains("linux/seccomp")))
 
   lazy val masters = 0.until(numMasters).map { i =>
     val faultDomainJson = if (mastersFaultDomains.nonEmpty && mastersFaultDomains(i).nonEmpty) {
@@ -115,7 +118,10 @@ case class MesosCluster(
 
     Agent(resources = new Resources(ports = PortAllocator.portsRange(), gpus = agentsGpus), extraArgs = Seq(
       s"--attributes=$renderedAttributes"
-    ) ++ mesosFaultDomainAgentCmdOption.map(fd => s"--domain=$fd"))
+    ) ++ mesosFaultDomainAgentCmdOption.map(fd => s"--domain=$fd")
+      ++ agentSeccompConfigDir.map(dir => s"--seccomp_config_dir=$dir")
+      ++ agentSeccompDefaultProfile.map(prf => s"--seccomp_profile_name=$prf")
+    )
   }
 
   if (autoStart) {
@@ -355,6 +361,10 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
 
   def agentsGpus: Option[Int] = None
 
+  def agentSeccompConfigDir: Option[String] = None
+
+  def agentSeccompDefaultProfile: Option[String] = None
+
   private val localMesosUrl = sys.env.get("USE_LOCAL_MESOS")
   lazy val mesosMasterUrl = s"zk://${zkServer.connectUri}/mesos"
   lazy val mesosNumMasters = 1
@@ -362,8 +372,21 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   lazy val mesosQuorumSize = 1
   lazy val mesosConfig = MesosConfig()
   lazy val mesosLeaderTimeout: FiniteDuration = patienceConfig.timeout.toMillis.milliseconds
-  lazy val mesosCluster = MesosCluster(suiteName, mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
-    autoStart = false, config = mesosConfig, mesosLeaderTimeout, mastersFaultDomains, agentsFaultDomains, agentsGpus = agentsGpus)
+  lazy val mesosCluster = MesosCluster(
+    suiteName,
+    mesosNumMasters,
+    mesosNumSlaves,
+    mesosMasterUrl,
+    mesosQuorumSize,
+    autoStart = false,
+    config = mesosConfig,
+    mesosLeaderTimeout,
+    mastersFaultDomains,
+    agentsFaultDomains,
+    agentsGpus,
+    agentSeccompConfigDir,
+    agentSeccompDefaultProfile
+  )
   lazy val mesos = new MesosFacade(localMesosUrl.getOrElse(mesosCluster.waitForLeader().futureValue))
 
   abstract override def beforeAll(): Unit = {
