@@ -173,9 +173,12 @@ private class DeploymentActor(
       def startInstancesIfNeeded: Future[Done] = {
         logger.debug(s"Start next $tasksToStart tasks")
         val promise = Promise[Unit]()
-        context.actorOf(childSupervisor(TaskStartActor.props(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus,
+        val startActor = context.actorOf(childSupervisor(TaskStartActor.props(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus,
           readinessCheckExecutor, runnableSpec, scaleTo, promise), s"TaskStart-${plan.id}"))
-        promise.future.map(_ => Done)
+        promise.future.map(_ => {
+          context.stop(startActor)
+          Done
+        })
       }
       await(startInstancesIfNeeded)
     }

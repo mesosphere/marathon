@@ -110,7 +110,6 @@ class TaskStartActor(
     // Since a lot of actor's code happens asynchronously now
     // it can happen that this promise might succeed twice.
     promise.trySuccess(())
-    context.stop(self)
   }
 }
 
