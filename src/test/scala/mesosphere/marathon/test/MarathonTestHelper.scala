@@ -382,7 +382,8 @@ object MarathonTestHelper {
     }
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
-    new InstanceTrackerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, groupRepo, updateSteps) {
+    val crashStrategy = new TestCrashStrategy
+    new InstanceTrackerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, groupRepo, updateSteps, crashStrategy) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val instanceTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
