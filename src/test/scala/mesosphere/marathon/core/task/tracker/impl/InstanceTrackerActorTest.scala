@@ -14,7 +14,7 @@ import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateCon
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.storage.repository.InstanceView
-import mesosphere.marathon.test.SettableClock
+import mesosphere.marathon.test.{SettableClock, TestCrashStrategy}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.prop.TableDrivenPropertyChecks.{Table, forAll}
 
@@ -337,11 +337,12 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
       repository.delete(any) returns Future.successful(Done)
 
       val emptyInstances = InstanceTracker.InstancesBySpec.empty
+      val crashStrategy = new TestCrashStrategy
       instancesLoader.load() returns Future.successful(emptyInstances)
 
       stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(Done)
 
-      lazy val instanceTrackerActor = TestActorRef[InstanceTrackerActor](InstanceTrackerActor.props(actorMetrics, instancesLoader, stepProcessor, updateResolver, repository, clock))
+      lazy val instanceTrackerActor = TestActorRef[InstanceTrackerActor](InstanceTrackerActor.props(actorMetrics, instancesLoader, stepProcessor, updateResolver, repository, clock, crashStrategy))
 
       def verifyNoMoreInteractions(): Unit = {
         noMoreInteractions(instancesLoader)
