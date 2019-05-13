@@ -52,6 +52,7 @@ class MesosCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMaratho
       result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
+      And("the failing check status is exposed in /v2/tasks")
       eventually {
         val currentTasks = marathon.tasks(id).value
         currentTasks should have size (1)
