@@ -45,7 +45,7 @@ class MesosCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMaratho
         cmd = Some(appCommand),
         check = Some(ramlCommandCheck("false")))
 
-      When("The app deploys")
+      When("the app is created")
       val result = marathon.createAppV2(app)
 
       Then("The app is created with a failing exit code")
