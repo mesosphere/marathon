@@ -48,7 +48,7 @@ class MesosCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMaratho
       When("the app is created")
       val result = marathon.createAppV2(app)
 
-      Then("The app is created with a failing exit code")
+      Then("the app deploys successfully")
       result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
