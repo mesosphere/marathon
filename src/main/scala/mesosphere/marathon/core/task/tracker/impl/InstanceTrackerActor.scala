@@ -11,8 +11,9 @@ import akka.event.LoggingReceive
 import akka.pattern.pipe
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
+import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstancesSnapshot, InstanceUpdated}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdated, InstancesSnapshot}
 import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{RepositoryStateUpdated, UpdateContext}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
@@ -31,8 +32,9 @@ object InstanceTrackerActor {
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,
     stateOpResolver: InstanceUpdateOpResolver,
     repository: InstanceView,
-    clock: Clock): Props = {
-    Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, stateOpResolver, repository, clock))
+    clock: Clock,
+    crashStrategy: CrashStrategy): Props = {
+    Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, stateOpResolver, repository, clock, crashStrategy))
   }
 
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
@@ -75,7 +77,8 @@ private[impl] class InstanceTrackerActor(
     updateStepProcessor: InstanceTrackerUpdateStepProcessor,
     updateOperationResolver: InstanceUpdateOpResolver,
     repository: InstanceView,
-    clock: Clock) extends Actor with Stash with StrictLogging {
+    clock: Clock,
+    crashStrategy: CrashStrategy) extends Actor with Stash with StrictLogging {
 
   // Internal state of the tracker. It is set after initialization.
   var instancesBySpec: InstanceTracker.InstancesBySpec = _
@@ -97,6 +100,17 @@ private[impl] class InstanceTrackerActor(
     metrics.resetMetrics()
 
     super.postStop()
+  }
+
+  override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
+    /* Recovering instanceTracker leads to increased complexity for components that depend on InstanceTracker; for
+     * example, instanceTrackerState subscriptions become invalid and have to recover.
+     *
+     * Instead, we'd prefer to handle exceptions as best we can locally, and then treat unforeseen exceptions as a panic.
+     */
+    logger.error("InstanceTrackerActor had an unexpected exception! Crashing", reason)
+    crashStrategy.crash(CrashStrategy.UncaughtException)
+    super.preRestart(reason, message)
   }
 
   override def receive: Receive = initializing
@@ -153,7 +167,9 @@ private[impl] class InstanceTrackerActor(
         logger.info(s"Processing ${update.operation.shortString}")
 
         val originalSender = sender
-        val updateEffect = resolveUpdateEffect(update)
+        val updateEffect = try {
+          resolveUpdateEffect(update)
+        } catch { case ex => InstanceUpdateEffect.Failure(ex) }
         import scala.concurrent.ExecutionContext.Implicits.global
 
         updateEffect match {

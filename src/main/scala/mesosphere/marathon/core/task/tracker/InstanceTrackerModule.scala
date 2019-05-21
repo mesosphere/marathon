@@ -4,6 +4,7 @@ package core.task.tracker
 import java.time.Clock
 
 import akka.stream.Materializer
+import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.core.instance.update.{InstanceChangeHandler, InstanceUpdateOpResolver}
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.tracker.impl._
@@ -20,7 +21,8 @@ class InstanceTrackerModule(
     leadershipModule: LeadershipModule,
     instanceRepository: InstanceRepository,
     groupRepository: GroupRepository,
-    updateSteps: Seq[InstanceChangeHandler])(implicit mat: Materializer) {
+    updateSteps: Seq[InstanceChangeHandler],
+    crashStrategy: CrashStrategy)(implicit mat: Materializer) {
   lazy val instanceTracker: InstanceTracker =
     new InstanceTrackerDelegate(metrics, clock, config, instanceTrackerActorRef)
   lazy val instanceTrackerUpdateStepProcessor: InstanceTrackerUpdateStepProcessor =
@@ -30,7 +32,7 @@ class InstanceTrackerModule(
   private[this] lazy val instancesLoader = new InstancesLoaderImpl(InstanceView(instanceRepository, groupRepository), config)
   private[this] lazy val instanceTrackerMetrics = new InstanceTrackerActor.ActorMetrics(metrics)
   private[this] lazy val instanceTrackerActorProps = InstanceTrackerActor.props(
-    instanceTrackerMetrics, instancesLoader, instanceTrackerUpdateStepProcessor, updateOpResolver, InstanceView(instanceRepository, groupRepository), clock)
+    instanceTrackerMetrics, instancesLoader, instanceTrackerUpdateStepProcessor, updateOpResolver, InstanceView(instanceRepository, groupRepository), clock, crashStrategy)
   protected lazy val instanceTrackerActorName = "instanceTracker"
   private[this] lazy val instanceTrackerActorRef = leadershipModule.startWhenLeader(
     instanceTrackerActorProps, instanceTrackerActorName
