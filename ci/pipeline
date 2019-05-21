@@ -192,14 +192,6 @@ def buildDockerAndLinuxPackages(): Unit = {
   }
 }
 
-def testDockerAndLinuxPackages(): Unit = {
-  utils.stage("Testing Docker Image, Debian and RedHat Packages") {
-    // create test-bed docker images and run the package tests
-    val testPath = pwd/'tests/'package
-    %('make, "test")(testPath)
-  }
-}
-
 /**
  * Update DC/OS repository and triggers build of update DC/OS image.
  *
@@ -227,7 +219,6 @@ def buildMaster(): Unit = {
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"master-$buildNumber")
   buildDockerAndLinuxPackages()
-  testDockerAndLinuxPackages()
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
@@ -246,7 +237,6 @@ def buildReleaseBranch(releaseVersion: String): Unit = {
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"releases-$releaseVersion-$buildNumber")
   buildDockerAndLinuxPackages()
-  testDockerAndLinuxPackages()
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
@@ -332,8 +322,6 @@ def release(args: String*): Unit = {
 
   build(config.runTests)
   buildDockerAndLinuxPackages()
-  if (config.runTests)
-    testDockerAndLinuxPackages()
 
   targets.foreach {
     case ReleaseTarget.S3Package =>
