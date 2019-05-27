@@ -38,10 +38,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   val marathon16322Artifact = MarathonArtifact("1.6.322", "marathon-1.6.322-2bf46b341.tgz")
 
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
-  override lazy val mesosConfig = MesosConfig(
-    launcher = "linux",
-    isolation = Some("filesystem/linux,docker/runtime"),
-    imageProviders = Some("docker"))
+  //  override lazy val mesosConfig = MesosConfig(
+  //    launcher = "linux",
+  //    isolation = Some("filesystem/linux,docker/runtime"),
+  //    imageProviders = Some("docker"))
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -273,6 +273,57 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     eventually { marathonCurrent should have(runningTasksFor(app_16322_fail.id.toPath, 1)) }
 
     marathonCurrent.close()
+  }
+
+  "resident app can be restarted after upgrade from 1.6.322" in {
+    val zkUrl = s"$zkURLBase-to-latest"
+    val marathon16322 = Marathon16322(marathon16322Artifact.marathonPackage, suiteName = s"$suiteName-1-6-322", mesosMasterUrl, zkUrl)
+
+    // Start apps in 1.6.322
+    Given("A Marathon 1.6.322 is running")
+    marathon16322.start().futureValue
+    (marathon16322.client.info.entityJson \ "version").as[String] should be("1.6.322")
+
+    And("new running apps in Marathon 1.6.322")
+    val containerPath = "persistent-volume"
+    val residentApp_16322 = residentApp(
+      id = testBasePath / "resident-app-16322",
+      containerPath = containerPath,
+      cmd = s"""echo "data" > $containerPath/data && sleep 1000""")
+    marathon16322.client.createAppV2(residentApp_16322) should be(Created)
+
+    patienceConfig
+    eventually { marathon16322 should have (runningTasksFor(residentApp_16322.id.toPath, 1)) }
+    val originalApp16322Tasks = marathon16322.client.tasks(residentApp_16322.id.toPath).value
+
+    When("We restart the app")
+    marathon16322.client.restartApp(residentApp_16322.id.toPath) should be(OK)
+
+    Then("We have new running tasks")
+    eventually {
+      marathon16322.client.tasks(residentApp_16322.id.toPath).value should not contain theSameElementsAs(originalApp16322Tasks)
+      marathon16322 should have (runningTasksFor(residentApp_16322.id.toPath, 1))
+    }
+
+    // Pass upgrade to current
+    When("Marathon is upgraded to the current version")
+    marathon16322.stop().futureValue
+    val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
+    marathonCurrent.start().futureValue
+    (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
+
+    Then("All apps from 1.6.322 are still running")
+    marathonCurrent should have (runningTasksFor(residentApp_16322.id.toPath, 1))
+    val restartedApp16322Tasks = marathonCurrent.client.tasks(residentApp_16322.id.toPath).value
+
+    When("We restart the app again")
+    marathonCurrent.client.restartApp(residentApp_16322.id.toPath) should be(OK)
+
+    Then("We have new running tasks")
+    eventually {
+      marathonCurrent.client.tasks(residentApp_16322.id.toPath).value should not contain theSameElementsAs(restartedApp16322Tasks)
+      marathonCurrent should have (runningTasksFor(residentApp_16322.id.toPath, 1))
+    }
   }
 
   /**
