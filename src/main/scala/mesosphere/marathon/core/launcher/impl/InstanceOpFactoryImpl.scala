@@ -24,6 +24,7 @@ import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ExecutorInfo, TaskGroupInfo, TaskInfo}
 import org.apache.mesos.{Protos => Mesos}
 
+import scala.annotation.tailrec
 import scala.concurrent.duration._
 
 class InstanceOpFactoryImpl(
@@ -46,8 +47,9 @@ class InstanceOpFactoryImpl(
 
   override def matchOfferRequest(request: InstanceOpFactory.Request): OfferMatchResult = {
     logger.debug(s"Matching offer ${request.offer.getId}")
+    val scheduledInstances = request.scheduledInstances
 
-    request.scheduledInstances.head match {
+    val result = scheduledInstances.head match {
       case scheduledInstance @ Instance(_, _, _, _, app: AppDefinition, _) =>
         if (app.isResident) inferForResidents(request, scheduledInstance)
         else inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
@@ -56,6 +58,14 @@ class InstanceOpFactoryImpl(
         else inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
       case Instance(_, _, _, _, runSpec, _) =>
         throw new IllegalArgumentException(s"unsupported runSpec object ${runSpec}")
+    }
+
+    result match {
+      case m: OfferMatchResult.Match => result
+      case _ if scheduledInstances.tail.nonEmpty =>
+        val tail = scheduledInstances.tail
+        matchOfferRequest(request.copy(scheduledInstances = NonEmptyIterable(tail.head, tail)))
+      case _ => result
     }
   }
 
