@@ -24,7 +24,6 @@ import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{ExecutorInfo, TaskGroupInfo, TaskInfo}
 import org.apache.mesos.{Protos => Mesos}
 
-import scala.annotation.tailrec
 import scala.concurrent.duration._
 
 class InstanceOpFactoryImpl(
