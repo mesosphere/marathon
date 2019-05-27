@@ -63,8 +63,7 @@ object Reservation {
     def apply(label: String): Id = label match {
       case SimplifiedIdRegex(safeRunSpecId, prefix, uuid) =>
         val runSpec = PathId.fromSafePath(safeRunSpecId)
-        val instanceId = Instance.Id(runSpec, Prefix.fromString(prefix), UUID.fromString(uuid))
-        SimplifiedId(instanceId)
+        LegacyId(runSpec, "", UUID.fromString(uuid))
       case LegacyIdRegex(safeRunSpecId, separator, uuid) =>
         val runSpecId = PathId.fromSafePath(safeRunSpecId)
         LegacyId(runSpecId, separator, UUID.fromString(uuid))
