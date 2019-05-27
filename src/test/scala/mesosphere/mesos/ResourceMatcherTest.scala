@@ -143,7 +143,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
     "match resources success with preserved reservations" in {
       val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
-      val labels = TaskLabels.labelsForTask(FrameworkId("foo"), Reservation.Id(instanceId)).labels
+      val labels = TaskLabels.labelsForTask(FrameworkId("foo"), Reservation.SimplifiedId(instanceId)).labels
       val cpuReservation = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
       val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
       val memReservation = MarathonTestHelper.reservation(principal = "memPrincipal", labels)
@@ -266,7 +266,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal")
       val memReservation = MarathonTestHelper.reservation(
         principal = "memPrincipal",
-        labels = TaskLabels.labelsForTask(FrameworkId("foo"), Reservation.Id(instanceId)).labels)
+        labels = TaskLabels.labelsForTask(FrameworkId("foo"), Reservation.SimplifiedId(instanceId)).labels)
       val diskReservation = MarathonTestHelper.reservation(principal = "diskPrincipal")
       val portsReservation = MarathonTestHelper.reservation(principal = "portPrincipal")
 
