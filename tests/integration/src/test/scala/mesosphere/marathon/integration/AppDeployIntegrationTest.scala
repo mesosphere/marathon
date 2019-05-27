@@ -762,7 +762,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     // Regression for MARATHON-8537
     "rollback deployment with default deployment strategy" in {
       Given("an existing app")
-      val id: PathId = appId(Some("yet-another-deployment-rollback"))
+      val id: PathId = appId(Some("deployment-rollback-default-strategy"))
       val app = App(
         id = id.toString,
         cmd = Some("sleep 12345"),
