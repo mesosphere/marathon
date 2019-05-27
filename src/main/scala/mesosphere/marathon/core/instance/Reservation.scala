@@ -77,7 +77,7 @@ object Reservation {
       * @param instanceId The instance id used for the reservation id.
       * @return
       */
-    def apply(instanceId: Instance.Id): Id = Reservation.SimplifiedId(instanceId)
+    def apply(instanceId: Instance.Id): Id = Reservation.LegacyId(instanceId.runSpecId, ".", instanceId.uuid) //Reservation.SimplifiedId(instanceId)
   }
 
   /**
