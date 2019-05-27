@@ -172,8 +172,7 @@ class InstanceOpFactoryImpl(
 
       // resources are reserved for this role, so we only consider those resources
       val rolesToConsider = config.mesosRole.toOption.toSet
-      // TODO(karsten): We should pass the instance id to the resource matcher instead. See MARATHON-8517.
-      val reservationId = Reservation.Id(volumeMatch.instance)
+      val reservationId = volumeMatch.instance.reservation.get.id
       val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, reservationId).labels
       val resourceMatchResponse =
         ResourceMatcher.matchResources(
@@ -337,10 +336,11 @@ class InstanceOpFactoryImpl(
       deadline = now + config.taskReservationTimeout().millis,
       reason = Reservation.Timeout.Reason.ReservationTimeout)
     val state = Reservation.State.New(timeout = Some(timeout))
-    val reservation = Reservation(persistentVolumeIds, state)
+    val reservationId = Reservation.Id(runSpec.id)
+    val reservation = Reservation(persistentVolumeIds, state, reservationId)
     val agentInfo = Instance.AgentInfo(offer)
 
-    val reservationLabels = TaskLabels.labelsForTask(frameworkId, Reservation.Id(scheduledInstance))
+    val reservationLabels = TaskLabels.labelsForTask(frameworkId, reservationId)
     val stateOp = InstanceUpdateOperation.Reserve(scheduledInstance.instanceId, reservation, agentInfo)
     instanceOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)
   }

@@ -12,7 +12,7 @@ import play.api.libs.json._
   * Represents a reservation for all resources that are needed for launching an instance
   * and associated persistent local volumes.
   */
-case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State)
+case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State, id: Reservation.Id)
 
 object Reservation {
 
@@ -49,6 +49,10 @@ object Reservation {
     val label: String = instanceId.idString
   }
 
+  case class IndependentId(val value: String) extends Id {
+    override val label: String = value
+  }
+
   object Id {
 
     private val SimplifiedIdRegex = """^(.+)\.(instance-|marathon-)([^\.]+)$""".r
@@ -70,6 +74,8 @@ object Reservation {
         LegacyId(runSpecId, separator, UUID.fromString(uuid))
       case _ => throw new MatchError(s"reservation id $label does not include a valid instance identifier")
     }
+
+    def apply(runSpecId: PathId): Id = runSpecId.safePath
 
     /**
       * Infer reservation id from instance.
