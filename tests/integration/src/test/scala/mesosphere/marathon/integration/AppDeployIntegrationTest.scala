@@ -7,7 +7,7 @@ import akka.util.ByteString
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{ITDeployment, ITEnrichedTask, ITQueueItem}
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, AppCommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol}
+import mesosphere.marathon.raml.{App, AppCommandCheck, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, UpgradeStrategy}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
@@ -731,6 +731,41 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val app = App(
         id = id.toString,
         cmd = Some("sleep 12345"),
+        backoffFactor = 1d,
+        instances = 2,
+        upgradeStrategy = Some(UpgradeStrategy(maximumOverCapacity = 0d, minimumHealthCapacity = 0d))
+      )
+      val created = marathon.createAppV2(app)
+      created shouldBe Created
+      waitForDeployment(created)
+
+      And("it is updated with an impossible constraint")
+      val updated = marathon.updateApp(id, AppUpdate(cpus = Some(1000d), cmd = Some("na")))
+      updated shouldBe OK
+      val deploymentId = updated.deploymentId.value
+
+      Then("we wait for the first new instance to become scheduled")
+      // waitForEventWith("instance_changed_event", ev => ev.info("goal") == "Scheduled", s"event instance_changed_event with goal = Scheduled to arrive")
+      // But since we don't have this event now, we just simply try to wait for 5s which seems to work too ¯\_(ツ)_/¯
+      val start = System.currentTimeMillis()
+      eventually(System.currentTimeMillis() should be >= (start + 5000))(config = PatienceConfig(10.seconds, 100.millis), pos = Position.here)
+
+      And("cancel previous update")
+      val canceled = marathon.deleteDeployment(deploymentId)
+      canceled shouldBe OK
+
+      Then(s"rollback should be successful and ${app.instances} tasks running")
+      waitForDeployment(canceled)
+      waitForTasks(id, 2) //make sure, all the tasks have really started
+    }
+
+    // Regression for MARATHON-8537
+    "rollback deployment with default deployment strategy" in {
+      Given("an existing app")
+      val id: PathId = appId(Some("yet-another-deployment-rollback"))
+      val app = App(
+        id = id.toString,
+        cmd = Some("sleep 12345"),
         backoffFactor = 1d
       )
       val created = marathon.createAppV2(app)
@@ -756,31 +791,6 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(canceled)
       waitForTasks(id, 1) //make sure, all the tasks have really started
     }
-
-    /*"rollback back to correct version from a version that could not be started" in {
-      Given("an app that can be deployed")
-      val id = appId(Some("rollback-to-correct-version"))
-      val app = App(id.toString, portDefinitions = None)
-      val create = marathon.createAppV2(app)
-      create should be(Created)
-      waitForDeployment(create)
-
-      When("we update an app with constraint that cannot be fulfilled")
-      val c = Seq("nonExistent", "CLUSTER", "na")
-      val update = marathon.updateApp(id, AppUpdate(constraints = Some(Set(c))))
-      update should be(OK)
-      val deploymentId = update.deploymentId.value
-
-      And("the deployment gets created but is never finished")
-      WaitTestSupport.validFor("deployment visible", 5.second)(marathon.listDeploymentsForPathId(id).value.size == 1)
-
-      And("we rollback to previous version")
-      val delete = marathon.deleteDeployment(deploymentId, force = false)
-      delete should be(OK)
-
-      Then("The previous version of app gets deployed")
-      waitForDeployment(delete)
-    }*/
 
     "Docker info is not automagically created" in {
       Given("An app with MESOS container")
