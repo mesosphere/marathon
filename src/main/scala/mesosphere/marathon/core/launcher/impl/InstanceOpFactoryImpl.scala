@@ -47,7 +47,7 @@ class InstanceOpFactoryImpl(
   override def matchOfferRequest(request: InstanceOpFactory.Request): OfferMatchResult = {
     logger.debug(s"Matching offer ${request.offer.getId}")
 
-    request.scheduledInstances.head match {
+    request.scheduledInstances.toList.sortWith(_.runSpecVersion > _.runSpecVersion).head match {
       case scheduledInstance @ Instance(_, _, _, _, app: AppDefinition, _) =>
         if (app.isResident) inferForResidents(request, scheduledInstance)
         else inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
