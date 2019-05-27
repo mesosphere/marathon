@@ -393,7 +393,9 @@ class PodStatusConversionTest extends UnitTest {
         PathId("/persistent"), "volume", "5425cbaa-8fd3-45f0-afa4-74ef4fcc594b")
       val reservation = core.instance.Reservation(
         volumeIds = Seq(localVolumeId),
-        state = core.instance.Reservation.State.New(timeout = None))
+        state = core.instance.Reservation.State.New(timeout = None),
+        Reservation.SimplifiedId(core.instance.Instance.Id.forRunSpec(PathId("/persistent")))
+      )
 
       implicit val clock = new SettableClock()
       val fixture = fakeInstance(

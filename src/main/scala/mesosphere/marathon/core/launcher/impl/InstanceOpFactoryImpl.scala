@@ -336,7 +336,7 @@ class InstanceOpFactoryImpl(
       deadline = now + config.taskReservationTimeout().millis,
       reason = Reservation.Timeout.Reason.ReservationTimeout)
     val state = Reservation.State.New(timeout = Some(timeout))
-    val reservationId = Reservation.Id(runSpec.id)
+    val reservationId = Reservation.SimplifiedId(scheduledInstance.instanceId)
     val reservation = Reservation(persistentVolumeIds, state, reservationId)
     val agentInfo = Instance.AgentInfo(offer)
 

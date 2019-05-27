@@ -425,23 +425,23 @@ object MarathonTestHelper {
 
   def offerWithVolumes(taskId: Task.Id, hostname: String, agentId: String, localVolumeIds: LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer(
-      reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId.reservationId)),
+      reservation = Some(TaskLabels.labelsForTask(frameworkId, Reservation.SimplifiedId(taskId.instanceId))),
       role = "test"
     ).setHostname(hostname)
       .setSlaveId(Mesos.SlaveID.newBuilder().setValue(agentId).build())
-      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava).build()
+      .addAllResources(persistentVolumeResources(Reservation.SimplifiedId(taskId.instanceId), localVolumeIds: _*).asJava).build()
   }
 
   def offerWithVolumesOnly(taskId: Task.Id, localVolumeIds: LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer()
       .clearResources()
-      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava)
+      .addAllResources(persistentVolumeResources(Reservation.SimplifiedId(taskId.instanceId), localVolumeIds: _*).asJava)
       .build()
   }
 
   def addVolumesToOffer(offer: Offer.Builder, taskId: Task.Id, localVolumeIds: LocalVolumeId*): Offer.Builder = {
     offer
-      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava)
+      .addAllResources(persistentVolumeResources(Reservation.SimplifiedId(taskId.instanceId), localVolumeIds: _*).asJava)
   }
 
   def appWithPersistentVolume(): AppDefinition = {
