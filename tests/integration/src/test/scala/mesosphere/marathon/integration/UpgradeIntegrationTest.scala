@@ -276,7 +276,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   }
 
   "resident app can be restarted after upgrade from 1.6.322" in {
-    val zkUrl = s"$zkURLBase-to-latest"
+    val zkUrl = s"$zkURLBase-resident-apps"
     val marathon16322 = Marathon16322(marathon16322Artifact.marathonPackage, suiteName = s"$suiteName-1-6-322", mesosMasterUrl, zkUrl)
 
     // Start apps in 1.6.322
@@ -289,7 +289,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     val residentApp_16322 = residentApp(
       id = testBasePath / "resident-app-16322",
       containerPath = containerPath,
-      cmd = s"""echo "data" > $containerPath/data && sleep 1000""")
+      cmd = s"""echo "data" >> $containerPath/data && sleep 1000""")
     marathon16322.client.createAppV2(residentApp_16322) should be(Created)
 
     patienceConfig
@@ -324,6 +324,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathonCurrent.client.tasks(residentApp_16322.id.toPath).value should not contain theSameElementsAs(restartedApp16322Tasks)
       marathonCurrent should have (runningTasksFor(residentApp_16322.id.toPath, 1))
     }
+
+    marathonCurrent.close()
   }
 
   /**
