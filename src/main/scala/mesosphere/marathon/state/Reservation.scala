@@ -40,6 +40,7 @@ object Reservation {
     *
     * Later Marathon versions used the instance id, ie `<run spec path>.marathon-<uuid>`, as the
     * reservation id. This is expressed by [[mesosphere.marathon.core.instance.Reservation.SimplifiedId]].
+    * Notice the extra "marathon-" in the id string.
     *
     * The reservation id was in all cases determined by the `appTask.taskId`. The app task is just the
     * first task of the tasks map of an instance.
@@ -49,11 +50,11 @@ object Reservation {
     * and pods from later version will have a reservation id persisted.
     *
     * Future Marathon versions that only allow upgrades from Marathon 1.9 and later can drop the
-    * inferences and should safely assumed that all reservation have a persisted id.
+    * inference and should safely assume that all reservation have a persisted id.
     *
     * @param tasksMap All tasks of an instance.
     * @param instanceId The id of the instance this reservation belongs to.
-    * @return
+    * @return The proper reservation id.
     */
   def inferReservationId(tasksMap: Map[Task.Id, Task], instanceId: CoreInstance.Id): CoreReservation.Id = {
     if (tasksMap.nonEmpty) {
