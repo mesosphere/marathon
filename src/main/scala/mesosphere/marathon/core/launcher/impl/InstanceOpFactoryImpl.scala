@@ -10,8 +10,8 @@ import mesosphere.marathon.core.instance.{Instance, LocalVolume, LocalVolumeId, 
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
@@ -48,7 +48,7 @@ class InstanceOpFactoryImpl(
     logger.debug(s"Matching offer ${request.offer.getId}")
     val scheduledInstances = request.scheduledInstances
 
-    val result = scheduledInstances.head match {
+    val result: OfferMatchResult = scheduledInstances.head match {
       case scheduledInstance @ Instance(_, _, _, _, app: AppDefinition, _) =>
         if (app.isResident) inferForResidents(request, scheduledInstance)
         else inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
@@ -60,10 +60,10 @@ class InstanceOpFactoryImpl(
     }
 
     result match {
-      case m: OfferMatchResult.Match => result
+      case _: OfferMatchResult.Match => result
       case _ if scheduledInstances.tail.nonEmpty =>
-        val tail = scheduledInstances.tail
-        matchOfferRequest(request.copy(scheduledInstances = NonEmptyIterable(tail.head, tail)))
+        val rest = scheduledInstances.tail
+        matchOfferRequest(request.copy(scheduledInstances = NonEmptyIterable(rest.head, rest.tail)))
       case _ => result
     }
   }

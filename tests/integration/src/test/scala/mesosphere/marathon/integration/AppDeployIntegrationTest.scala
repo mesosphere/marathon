@@ -731,8 +731,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val app = App(
         id = id.toString,
         cmd = Some("sleep 12345"),
-        backoffFactor = 1d,
         instances = 2,
+        backoffFactor = 1d,
         upgradeStrategy = Some(UpgradeStrategy(maximumOverCapacity = 0d, minimumHealthCapacity = 0d))
       )
       val created = marathon.createAppV2(app)
@@ -740,7 +740,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(created)
 
       And("it is updated with an impossible constraint")
-      val updated = marathon.updateApp(id, AppUpdate(cpus = Some(1000d), cmd = Some("na")))
+      val updated = marathon.updateApp(id, AppUpdate(cpus = Some(1000d), cmd = Some("na"), instances = Some(1)))
       updated shouldBe OK
       val deploymentId = updated.deploymentId.value
 
