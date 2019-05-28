@@ -1,4 +1,10 @@
-## Changes to 1.7.XXX
+## Changes to 1.7.xxx
+
+### Fixed issues
+
+- [DCOS_OSS-5211](https://jira.mesosphere.com/browse/DCOS_OSS-5211) - Previously, Mesos disks with profiles would be matched before it was possible to specify that a service definition should only accept a specific disk profile. The behavior changed in a backwards incompatible way when support for disk profile matching was added. If no profile was specified to be matched for a Marathon service definition, then only Mesos disks without profiles would be considered as matching candidates. The behavior has been restored so that all Mesos disk profiles (specified or not) will be considered if no profile requirement is specified in the Marathon service definition.
+
+## Changes to 1.7.216
 
 ### Introduce global throttling to Marathon health checks
 Marathon health checks is a deprecated feature and customers are strongly recommended to switch to Mesos health checks for scalability reasons. However, we've seen a number of issues when excessive number of Marathon health checks (HTTP and TCP) would overload parts of Marathon. Hence we introduced a new parameter `--max_concurrent_marathon_health_checks` that defines maximum number (256 by default) of *Marathon* health checks (HTTP/S and TCP) that can be executed concurrently in the given moment. Note that setting a big value here and using many services with Marathon health checks will overload Marathon leading to internal timeouts and unstable behavior.
