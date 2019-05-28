@@ -1,4 +1,11 @@
-## Change from 1.6.549 to 1.6.xxx
+## Changes to 1.6.xxx
+
+### Fixed issues
+
+- [DCOS_OSS-5211](https://jira.mesosphere.com/browse/DCOS_OSS-5211) - Previously, Mesos disks with profiles would be matched before it was possible to specify that a service definition should only accept a specific disk profile. The behavior changed in a backwards incompatible way when support for disk profile matching was added. If no profile was specified to be matched for a Marathon service definition, then only Mesos disks without profiles would be considered as matching candidates. The behavior has been restored so that all Mesos disk profiles (specified or not) will be considered if no profile requirement is specified in the Marathon service definition.
+
+
+## Change from 1.6.549 to 1.6.567
 
 ### Apps names restrictions (breaking change)
 From now on, apps which uses ids which ends with "restart", "tasks", "versions" won't be valid anymore. Such apps already had broken behavior (for example it wasn't possible to use a `GET /v2/apps` endpoint with them), so we made that constraint more explicit. Existing apps with such names will continue working, however all operations on them (except deletion) will result in an error. Please take care of renaming them before upgrading Marathon.
