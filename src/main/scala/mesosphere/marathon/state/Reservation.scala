@@ -15,7 +15,9 @@ case class Reservation(volumeIds: Seq[LocalVolumeId], state: CoreReservation.Sta
     * @return This stored reservation as a core reservation.
     */
   def toCoreReservation(tasksMap: Map[Task.Id, Task], instanceId: CoreInstance.Id): CoreReservation = {
-    CoreReservation(volumeIds, state, id.getOrElse(Reservation.inferReservationId(tasksMap, instanceId)))
+    // Infer the reservation id in case it was not persisted yet.
+    val reservationId = id.getOrElse(Reservation.inferReservationId(tasksMap, instanceId))
+    CoreReservation(volumeIds, state, reservationId)
   }
 }
 
@@ -29,6 +31,30 @@ object Reservation {
 
   def appTask(tasksMap: Map[Task.Id, Task]): Option[Task] = tasksMap.headOption.map(_._2)
 
+  /**
+    * Infer the reservation id for an instance.
+    *
+    * In older Marathon versions the reservation id was the run spec path and the uuid of the instance
+    * joined by a separator. Eg ephemeral tasks and persistent apps used it. This is expressed by
+    * [[mesosphere.marathon.core.instance.Reservation.LegacyId]].
+    *
+    * Later Marathon versions used the instance id, ie `<run spec path>.marathon-<uuid>`, as the
+    * reservation id. This is expressed by [[mesosphere.marathon.core.instance.Reservation.SimplifiedId]].
+    *
+    * The reservation id was in all cases determined by the `appTask.taskId`. The app task is just the
+    * first task of the tasks map of an instance.
+    *
+    * This method is only used if the saved reservation does not include an id. This will be true for
+    * all instance from apps and pods started with Marathon 1.8.194-1590825ea and earlier. All apps
+    * and pods from later version will have a reservation id persisted.
+    *
+    * Future Marathon versions that only allow upgrades from Marathon 1.9 and later can drop the
+    * inferences and should safely assumed that all reservation have a persisted id.
+    *
+    * @param tasksMap All tasks of an instance.
+    * @param instanceId The id of the instance this reservation belongs to.
+    * @return
+    */
   def inferReservationId(tasksMap: Map[Task.Id, Task], instanceId: CoreInstance.Id): CoreReservation.Id = {
     if (tasksMap.nonEmpty) {
       val taskId = appTask(tasksMap).getOrElse(throw new IllegalStateException(s"No task in $instanceId")).taskId
