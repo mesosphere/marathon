@@ -1,4 +1,10 @@
-## Changes to 1.8.xxx
+## Changes from 1.8.180 to 1.8.xxx
+
+### Fixed issues
+
+- [DCOS_OSS-5211](https://jira.mesosphere.com/browse/DCOS_OSS-5211) - We fixed a regression in which disks with profiles would no longer be matched if a profile was not specified.
+
+## Changes from 1.7.xxx to 1.8.180
 
 ### AppC is now deprecated
 AppC is now deprecated and will be removed in Marathon 1.9
