@@ -72,12 +72,24 @@ object Reservation {
     }
 
     /**
-      * Construct a reservation id from an instance id.
+      * Infer reservation id from instance.
       *
-      * @param instanceId The instance id used for the reservation id.
-      * @return
+      * Instances created prior to 1.8 ''always'' have at least one task attached in reserved state.
+      * Thus we use the reservation id from the `appTask`. If an instance has no task we assume the
+      * instance is from 1.8 or later and uses the [[SimplifiedId]].
+      *
+      * This method might return a [[SimplifiedId]] even when there is an `appTask` for pods.
+      *
+      * @param instance An instance with a reservation.
+      * @return The reservation id for given instance.
       */
-    def apply(instanceId: Instance.Id): Id = Reservation.SimplifiedId(instanceId)
+    def apply(instance: Instance): Id = {
+      if (instance.tasksMap.nonEmpty) {
+        instance.appTask.taskId.reservationId
+      } else {
+        Reservation.SimplifiedId(instance.instanceId)
+      }
+    }
   }
 
   /**

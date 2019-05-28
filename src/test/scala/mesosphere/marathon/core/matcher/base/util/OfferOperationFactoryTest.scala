@@ -140,7 +140,7 @@ class OfferOperationFactoryTest extends UnitTest {
     val runSpecId = PathId("/my-app")
     val instanceId = Instance.Id.forRunSpec(runSpecId)
     val taskId = Task.Id(instanceId)
-    val reservationId = Reservation.Id(instanceId)
+    val reservationId = Reservation.SimplifiedId(instanceId)
     val frameworkId = MarathonTestHelper.frameworkId
     val reservationLabels = TaskLabels.labelsForTask(frameworkId, reservationId)
     val principal = Some("principal")
