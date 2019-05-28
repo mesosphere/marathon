@@ -8,6 +8,12 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 
+/**
+  * Storage model of a [[mesosphere.marathon.core.instance.Instance]].
+  *
+  * Note that it does not persist the [[RunSpec]] but its [[PathId]] and its version. The core
+  * instance does have the run spec attached.
+  */
 case class Instance(
     instanceId: CoreInstance.Id,
     agentInfo: Option[CoreInstance.AgentInfo],
@@ -29,13 +35,22 @@ case class Instance(
   }
   override def version: Timestamp = runSpecVersion
 
-  def toCoreInstance(runSpec: RunSpec) = CoreInstance(instanceId, agentInfo, state, tasksMap, runSpec, reservation)
+  /**
+    * Convert the this instance in storage model to an instance in core.
+    *
+    * @param runSpec The run spec belonging to this instance.
+    * @return This instance in core model.
+    */
+  def toCoreInstance(runSpec: RunSpec) = CoreInstance(instanceId, agentInfo, state, tasksMap, runSpec, reservation.map(_.toCoreReservation(tasksMap, instanceId)))
 }
 
 object Instance {
 
+  /**
+    * @return storage model instance of the core instance.
+    */
   def fromCoreInstance(instance: CoreInstance): Instance =
-    Instance(instance.instanceId, instance.agentInfo, instance.state, instance.tasksMap, instance.runSpecVersion, instance.reservation)
+    Instance(instance.instanceId, instance.agentInfo, instance.state, instance.tasksMap, instance.runSpecVersion, instance.reservation.map(Reservation.fromCoreReservation(_)))
 
   // Formats
 

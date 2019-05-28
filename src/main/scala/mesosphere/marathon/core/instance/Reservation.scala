@@ -152,10 +152,4 @@ object Reservation {
       }
     }
   }
-
-  implicit lazy val reservationIdFormat: Format[Reservation.Id] = Format(
-    Reads.of[String].map(Reservation.Id(_)),
-    Writes[Reservation.Id] { id => JsString(id.label) }
-  )
-  implicit val reservationFormat: OFormat[Reservation] = Json.format[Reservation]
 }
