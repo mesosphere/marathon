@@ -1,4 +1,10 @@
-## Changes to 1.8.xxx
+## Changes from 1.8.180 to 1.8.xxx
+
+### Fixed issues
+
+- [DCOS_OSS-5211](https://jira.mesosphere.com/browse/DCOS_OSS-5211) - Previously, Mesos disks with profiles would be matched before it was possible to specify that a service definition should only accept a specific disk profile. The behavior changed in a backwards incompatible way when support for disk profile matching was added. If no profile was specified to be matched for a Marathon service definition, then only Mesos disks without profiles would be considered as matching candidates. The behavior has been restored so that all Mesos disk profiles (specified or not) will be considered if no profile requirement is specified in the Marathon service definition.
+
+## Changes from 1.7.xxx to 1.8.180
 
 ### AppC is now deprecated
 AppC is now deprecated and will be removed in Marathon 1.9
