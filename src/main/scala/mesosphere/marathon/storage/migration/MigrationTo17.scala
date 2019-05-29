@@ -104,7 +104,7 @@ object MigrationTo17 extends StrictLogging {
         val reservation = rawReservation.map { raw =>
           val state = (raw \ "state").as[core.instance.Reservation.State]
           val volumesIds = (raw \ "volumesIds").as[Seq[LocalVolumeId]]
-          val reservationId = Reservation.inferReservationId(tasksMap, instanceId)
+          val reservationId = (raw \ "id").asOpt[Reservation.Id].getOrElse(Reservation.inferReservationId(tasksMap, instanceId))
           Reservation(volumesIds, state, reservationId)
         }
         new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation)
