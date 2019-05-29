@@ -89,6 +89,17 @@ object MigrationTo17 extends StrictLogging {
     }
   }
 
+  def legacyReservationReads(tasksMap: Map[Task.Id, Task], instanceId: Id): Reads[Reservation] = {
+    (
+      (__ \ "volumeIds").read[Seq[LocalVolumeId]] ~
+      (__ \ "state").read[Reservation.State] ~
+      (__ \ "id").readNullable[Reservation.Id]
+    ) { (volumesIds, state, maybeId) =>
+      val reservationId = maybeId.getOrElse(Reservation.inferReservationId(tasksMap, instanceId))
+      Reservation(volumesIds, state, reservationId)
+    }
+  }
+
   /**
     * Read format for old instance with created condition.
     */
@@ -102,10 +113,7 @@ object MigrationTo17 extends StrictLogging {
       (__ \ "reservation").readNullable[JsObject]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, rawReservation) =>
         val reservation = rawReservation.map { raw =>
-          val state = (raw \ "state").as[core.instance.Reservation.State]
-          val volumesIds = (raw \ "volumesIds").as[Seq[LocalVolumeId]]
-          val reservationId = (raw \ "id").asOpt[Reservation.Id].getOrElse(Reservation.inferReservationId(tasksMap, instanceId))
-          Reservation(volumesIds, state, reservationId)
+          raw.as[Reservation](legacyReservationReads(tasksMap, instanceId))
         }
         new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation)
       }
