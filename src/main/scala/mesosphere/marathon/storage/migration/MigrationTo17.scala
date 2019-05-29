@@ -7,12 +7,12 @@ import akka.stream.scaladsl.Flow
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Goal
-import mesosphere.marathon.core.instance.Instance.{agentFormat, AgentInfo, Id, InstanceState}
+import mesosphere.marathon.core.instance.{Goal, Reservation, LocalVolumeId}
+import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState, agentFormat}
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.state.{Instance, Reservation, Timestamp}
+import mesosphere.marathon.state.{Instance, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import play.api.libs.json.{JsValue, Reads}
 import play.api.libs.json._
@@ -99,8 +99,14 @@ object MigrationTo17 extends StrictLogging {
       (__ \ "tasksMap").read[Map[Task.Id, Task]](taskMapReads17) ~
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[InstanceState](instanceStateReads160) ~
-      (__ \ "reservation").readNullable[Reservation]
-    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation) =>
+      (__ \ "reservation").readNullable[JsObject]
+    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, rawReservation) =>
+        val reservation = rawReservation.map { raw =>
+          val state = (raw \ "state").as[core.instance.Reservation.State]
+          val volumesIds = (raw \ "volumesIds").as[Seq[LocalVolumeId]]
+          val reservationId = Reservation.inferReservationId(tasksMap, instanceId)
+          Reservation(volumesIds, state, reservationId)
+        }
         new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation)
       }
   }

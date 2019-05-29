@@ -41,7 +41,7 @@ case class Instance(
     * @param runSpec The run spec belonging to this instance.
     * @return This instance in core model.
     */
-  def toCoreInstance(runSpec: RunSpec) = CoreInstance(instanceId, agentInfo, state, tasksMap, runSpec, reservation.map(_.toCoreReservation(tasksMap, instanceId)))
+  def toCoreInstance(runSpec: RunSpec) = CoreInstance(instanceId, agentInfo, state, tasksMap, runSpec, reservation)
 }
 
 object Instance {
@@ -50,12 +50,14 @@ object Instance {
     * @return storage model instance of the core instance.
     */
   def fromCoreInstance(instance: CoreInstance): Instance =
-    Instance(instance.instanceId, instance.agentInfo, instance.state, instance.tasksMap, instance.runSpecVersion, instance.reservation.map(Reservation.fromCoreReservation(_)))
+    Instance(instance.instanceId, instance.agentInfo, instance.state, instance.tasksMap, instance.runSpecVersion, instance.reservation)
 
   // Formats
 
   import CoreInstance.{agentFormat, tasksMapFormat}
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
+
+  implicit val reservationFormat: Format[Reservation] = Reservation.reservationFormat
 
   implicit val instanceJsonWrites: Writes[Instance] = {
     (
