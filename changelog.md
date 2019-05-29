@@ -2,6 +2,14 @@
 
 ### Fixed issues
 
+- [DCOS_OSS-5212](https://jira.mesosphere.com/browse/DCOS_OSS-5212) - Fix an issue that caused reserved instances created by older Marathon versions to be restarted
+
+- [MARATHON-8623](https://jira.mesosphere.com/browse/MARATHON-8623) - Fix an issue that could cause /v2/deployments to become stale
+
+- [MARATHON-8624](https://jira.mesosphere.com/browse/MARATHON-8624) - Fix issue where the presence of a TASK_UNKNOWN status could cause an API failure
+
+- [DCOS-51375](https://jira.mesosphere.com/browse/DCOS-51375) - Fix an issue where deployment cancellation could leak instances.
+
 - [DCOS_OSS-5211](https://jira.mesosphere.com/browse/DCOS_OSS-5211) - Previously, Mesos disks with profiles would be matched before it was possible to specify that a service definition should only accept a specific disk profile. The behavior changed in a backwards incompatible way when support for disk profile matching was added. If no profile was specified to be matched for a Marathon service definition, then only Mesos disks without profiles would be considered as matching candidates. The behavior has been restored so that all Mesos disk profiles (specified or not) will be considered if no profile requirement is specified in the Marathon service definition.
 
 ## Changes from 1.7.xxx to 1.8.180
