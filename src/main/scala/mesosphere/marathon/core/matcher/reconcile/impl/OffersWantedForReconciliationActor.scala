@@ -14,6 +14,7 @@ import mesosphere.marathon.core.deployment.StopApplication
 
 import scala.concurrent.duration._
 
+// TODO: this actor works against the ReviveOffersActor and needs to be adjusted/removed
 /**
   * The OfferMatcherReconciler will check every incoming offer.
   * Sometimes the existing logic for driving offer revives is not sufficient, e.g.

@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package core
 
-import akka.actor.Cancellable
-import akka.stream.scaladsl.Source
 import java.time.Clock
 import java.util.concurrent.Executors
 
@@ -38,7 +36,6 @@ import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.{StorageConf, StorageConfig, StorageModule}
-import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.util.NamedExecutionContext
 import mesosphere.util.state.MesosLeaderInfo
 
@@ -184,18 +181,10 @@ class CoreModuleImpl @Inject() (
   flowActors.refillOfferMatcherManagerLaunchTokens(
     marathonConf, offerMatcherManagerModule.subOfferMatcherManager)
 
-  /** Combine offersWanted state from multiple sources. */
-  private[this] lazy val offersWanted: Source[Boolean, Cancellable] = {
-    offerMatcherManagerModule.globalOfferMatcherWantsOffers
-      .via(EnrichedFlow.combineLatest(offerMatcherReconcilerModule.offersWantedObservable, eagerComplete = true))
-      .map { case (managerWantsOffers, reconciliationWantsOffers) => managerWantsOffers || reconciliationWantsOffers }
-  }
-
   lazy val maybeOfferReviver = flowActors.maybeOfferReviver(
     metricsModule.metrics,
-    clock, marathonConf,
+    marathonConf,
     actorSystem.eventStream,
-    offersWanted,
     marathonSchedulerDriverHolder)
 
   // EVENT
