@@ -7,7 +7,7 @@ import akka.stream.scaladsl.Flow
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.{Goal, Reservation, LocalVolumeId}
+import mesosphere.marathon.core.instance.{Goal, Reservation}
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState, agentFormat}
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.task.Task

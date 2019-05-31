@@ -5,7 +5,6 @@ import java.util.UUID
 
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.instance.Instance.Prefix
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{PathId, Timestamp}
 import play.api.libs.json._
 
