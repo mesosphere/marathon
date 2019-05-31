@@ -153,8 +153,8 @@ object InstanceMigration extends MaybeStore with StrictLogging {
     * all instance from apps and pods started with Marathon 1.8.194-1590825ea and earlier. All apps
     * and pods from later version will have a reservation id persisted.
     *
-    * Future Marathon versions that only allow upgrades from Marathon 1.9 and later can drop the
-    * inference and should safely assume that all reservation have a persisted id.
+    * Future Marathon versions that only allow upgrades from storage version (1, 8, 200) and later can
+    * drop the inference and should safely assume that all reservation have a persisted id.
     *
     * @param tasksMap All tasks of an instance.
     * @param instanceId The id of the instance this reservation belongs to.
