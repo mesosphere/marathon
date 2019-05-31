@@ -1,4 +1,5 @@
-package mesosphere.marathon.storage.migration
+package mesosphere.marathon
+package storage.migration
 
 import akka.Done
 import akka.stream.Materializer
@@ -40,13 +41,13 @@ object MigrationTo18200 extends StrictLogging {
       (__ \ "state").read[InstanceState] ~
       (__ \ "reservation").readNullable[JsObject]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, rawReservation) =>
-      logger.info(s"Migrate $instanceId")
+        logger.info(s"Migrate $instanceId")
 
-      val reservation = rawReservation.map { raw =>
-        raw.as[Reservation](InstanceMigration.legacyReservationReads(tasksMap, instanceId))
+        val reservation = rawReservation.map { raw =>
+          raw.as[Reservation](InstanceMigration.legacyReservationReads(tasksMap, instanceId))
+        }
+        new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation)
       }
-      new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation)
-    }
   }
 
   /**

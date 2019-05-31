@@ -66,8 +66,8 @@ class MigrationTo18200Test extends AkkaUnitTest {
 
       val maybReservationJsObject = JsObject(reservationId.toSeq.map("id" -> JsString(_)))
       val reservation = Json.obj("reservation" -> (
-          Json.obj("volumeIds" -> Json.arr(), "state" -> Json.obj("name" -> "suspended")) ++ maybReservationJsObject
-        ))
+        Json.obj("volumeIds" -> Json.arr(), "state" -> Json.obj("name" -> "suspended")) ++ maybReservationJsObject
+      ))
 
       legacyInstanceJson(id) ++
         Json.obj("state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Reserved"), "goal" -> "Running")) ++

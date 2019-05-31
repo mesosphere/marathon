@@ -122,7 +122,7 @@ object InstanceMigration extends MaybeStore with StrictLogging {
     *
     * @param tasksMap The tasks from the instance belonging to the reservation.
     * @param instanceId The id of the instance.
-    * @return
+    * @return The reservation with an inferred id or the already persisted id.
     */
   def legacyReservationReads(tasksMap: Map[Task.Id, Task], instanceId: Id): Reads[Reservation] = {
     (
