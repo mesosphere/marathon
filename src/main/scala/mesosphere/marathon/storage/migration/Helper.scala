@@ -118,10 +118,10 @@ object InstanceMigration extends MaybeStore with StrictLogging {
     }
 
   /**
-    * JSON reads format for reservations that have no id saved. See [[MigrationTo17]] for an example.
+    * JSON [[Reads]] format for reservations that have no id saved. See [[MigrationTo17]] for an example.
     *
-    * @param tasksMap
-    * @param instanceId
+    * @param tasksMap The tasks from the instance belonging to the reservation.
+    * @param instanceId The id of the instance.
     * @return
     */
   def legacyReservationReads(tasksMap: Map[Task.Id, Task], instanceId: Id): Reads[Reservation] = {

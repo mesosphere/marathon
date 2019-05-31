@@ -64,6 +64,11 @@ class Migration(
   import StorageVersions.OrderedStorageVersion
   import Migration.statusLoggingInterval
 
+  /**
+    * If you change this to 1.9 see the comment in [[InstanceMigration.inferReservationId()]]. You
+    * probably should drop the inference alongside [[InstanceMigration.legacyReservationReads()]] since
+    * they are only used in [[MigrationTo17]], [[MigrationTo18]] and [[MigrationTo18100]].
+    */
   private[migration] val minSupportedStorageVersion = StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)
 
   val targetVersion = StorageVersions(steps)
