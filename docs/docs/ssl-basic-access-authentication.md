@@ -80,7 +80,7 @@ If you do not already have a Java keystore, follow the steps below to create one
     $ openssl pkcs12 -inkey marathon.key \
                     -passin "env:MARATHON_KEY_PASSWORD" \
                       -name marathon \
-                        -in trusted.pem \
+                        -in self-signed-marathon.pem \
                   -password "env:MARATHON_PKCS_PASSWORD" \
              -chain -CAfile "trustedCA.crt" \
                -export -out marathon.pkcs12
