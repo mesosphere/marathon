@@ -155,12 +155,15 @@ class CoreModuleImpl @Inject() (
   )(clock)
 
   override lazy val launchQueueModule = new LaunchQueueModule(
+    metricsModule.metrics,
     marathonConf,
+    marathonConf,
+    eventStream,
+    marathonSchedulerDriverHolder,
     leadershipModule, clock,
 
     // internal core dependencies
     offerMatcherManagerModule.subOfferMatcherManager,
-    maybeOfferReviver,
 
     // external guice dependencies
     instanceTrackerModule.instanceTracker,
@@ -180,12 +183,6 @@ class CoreModuleImpl @Inject() (
 
   flowActors.refillOfferMatcherManagerLaunchTokens(
     marathonConf, offerMatcherManagerModule.subOfferMatcherManager)
-
-  lazy val maybeOfferReviver = flowActors.maybeOfferReviver(
-    metricsModule.metrics,
-    marathonConf,
-    actorSystem.eventStream,
-    marathonSchedulerDriverHolder)
 
   // EVENT
 
@@ -250,7 +247,6 @@ class CoreModuleImpl @Inject() (
     metricsModule.metrics
   )
   taskJobsModule.expungeOverdueLostTasks(instanceTrackerModule.instanceTracker)
-  maybeOfferReviver
   offerMatcherManagerModule
   launcherModule
   offerMatcherReconcilerModule.start()
@@ -258,6 +254,7 @@ class CoreModuleImpl @Inject() (
   historyModule
   healthModule
   podModule
+  launchQueueModule.reviveOffersActor()
 
   // The core (!) of the problem is that SchedulerActions are needed by MarathonModule::provideSchedulerActor
   // and CoreModule::deploymentModule. So until MarathonSchedulerActor is also a core component

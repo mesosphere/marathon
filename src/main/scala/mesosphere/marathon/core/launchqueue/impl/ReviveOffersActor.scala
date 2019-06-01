@@ -1,19 +1,19 @@
 package mesosphere.marathon
-package core.flow.impl
+package core.launchqueue.impl
 
 import akka.actor.{Actor, Props, Stash, Status}
 import akka.event.{EventStream, LoggingReceive}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.InstanceChanged
-import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
 
 import scala.collection.immutable.HashSet
 
-private[impl] class ReviveOffersActor(
+class ReviveOffersActor(
     metrics: Metrics,
     conf: ReviveOffersConfig,
     eventStream: EventStream,
@@ -71,7 +71,9 @@ private[impl] class ReviveOffersActor(
         logger.debug(s"ignoring instance change for ${update.id} since it was already known to be Scheduled.")
       } else {
         val newState = scheduledInstances + update.id
-        logger.info("revive offers: new Scheduled instance found")
+        // TODO: an instance can be Scheduled even when the runSpec has a backoff applied. How should we handle this?
+        // If the backoff was (transiently) stored per instance, we could decide right here.
+        logger.info(s"revive offers: new Scheduled ${update.instance.instanceId} found")
         reviveOffers()
         context.become(initialized(newState))
       }
@@ -85,12 +87,15 @@ private[impl] class ReviveOffersActor(
           logger.info("suppress offers: no scheduled instances left")
           suppressOffers()
         } else {
-          logger.info(s"${newState.size} instances left; not suppressing offers")
+          logger.info(s"${newState.size} Scheduled instances left; not suppressing offers")
         }
         context.become(initialized(newState))
       } else {
-        logger.debug(s"ignoring instance change for ${update.id} since that instance not Scheduled.")
+        logger.debug(s"ignoring instance change for ${update.id} since that instance was not Scheduled.")
       }
+
+    case update: InstanceChanged =>
+      logger.info(s"ignoring ${update.condition}")
   }
 
   def reviveOffers(): Unit = {
@@ -104,7 +109,7 @@ private[impl] class ReviveOffersActor(
   }
 }
 
-private[flow] object ReviveOffersActor {
+object ReviveOffersActor {
   def props(
     metrics: Metrics,
     conf: ReviveOffersConfig,

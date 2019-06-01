@@ -1,5 +1,5 @@
 package mesosphere.marathon
-package core.flow.impl
+package core.launchqueue.impl
 
 import akka.actor._
 import akka.stream.ActorMaterializer
@@ -7,8 +7,8 @@ import akka.stream.scaladsl.Source
 import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.InstanceChanged
-import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics

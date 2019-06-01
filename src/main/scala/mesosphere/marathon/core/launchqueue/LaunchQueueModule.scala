@@ -8,26 +8,31 @@ import akka.stream.scaladsl.{Keep, Source}
 import java.time.Clock
 
 import akka.actor.{ActorRef, Props}
+import akka.event.EventStream
 import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launchqueue.impl._
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{Region, RunSpec}
+
 import scala.concurrent.ExecutionContext
 
 /**
   * Provides a [[LaunchQueue]] implementation which can be used to launch tasks for a given RunSpec.
   */
 class LaunchQueueModule(
+    metrics: Metrics,
     config: LaunchQueueConfig,
+    reviveConfig: ReviveOffersConfig,
+    eventStream: EventStream,
+    driverHolder: MarathonSchedulerDriverHolder,
     leadershipModule: LeadershipModule,
     clock: Clock,
     subOfferMatcherManager: OfferMatcherManager,
-    maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
     taskOpFactory: InstanceOpFactory,
     groupManager: GroupManager,
@@ -62,7 +67,6 @@ class LaunchQueueModule(
         subOfferMatcherManager,
         clock,
         taskOpFactory,
-        maybeOfferReviver,
         instanceTracker,
         rateLimiterActor,
         offerMatchStatisticsInput,
@@ -79,4 +83,9 @@ class LaunchQueueModule(
     instanceTracker.instanceUpdates,
     rateLimiterUpdates,
     offerMatchStatistics)
+
+  def reviveOffersActor(): ActorRef = {
+    val props = ReviveOffersActor.props(metrics, reviveConfig, eventStream, instanceTracker, driverHolder)
+    leadershipModule.startWhenLeader(props, "reviveOffers")
+  }
 }

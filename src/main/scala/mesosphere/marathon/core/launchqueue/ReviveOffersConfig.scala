@@ -1,5 +1,5 @@
 package mesosphere.marathon
-package core.flow
+package core.launchqueue
 
 import org.rogach.scallop.ScallopConf
 

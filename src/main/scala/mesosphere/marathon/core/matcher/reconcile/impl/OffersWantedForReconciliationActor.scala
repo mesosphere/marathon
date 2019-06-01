@@ -7,10 +7,10 @@ import java.time.Clock
 import akka.actor.{Actor, Cancellable, Props}
 import akka.event.{EventStream, LoggingReceive}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.core.event.DeploymentStepSuccess
 import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.core.deployment.StopApplication
+import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
 
 import scala.concurrent.duration._
 
