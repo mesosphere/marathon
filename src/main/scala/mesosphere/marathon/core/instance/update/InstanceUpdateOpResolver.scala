@@ -8,7 +8,6 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation._
-import mesosphere.marathon.state.Timestamp
 
 /**
   * Maps a [[InstanceUpdateOperation]] to the appropriate [[InstanceUpdateEffect]].
@@ -27,25 +26,27 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
   def resolve(maybeInstance: Option[Instance], op: InstanceUpdateOperation): InstanceUpdateEffect = {
     op match {
       case op: Schedule =>
-        // TODO(karsten): Create events
         createInstance(maybeInstance){
-          InstanceUpdateEffect.Update(op.instance, oldState = None, Seq.empty)
+          val events = Seq(InstanceChangedEventsGenerator.updatedCondition(op.instance, clock.now()))
+          InstanceUpdateEffect.Update(op.instance, oldState = None, events)
         }
 
       case op: Provision =>
         updateExistingInstance(maybeInstance, op.instanceId) { oldInstance =>
-          // TODO(karsten): Create events
           val updatedInstance = oldInstance.provisioned(op.agentInfo, op.runSpec, op.tasks, op.now)
-          InstanceUpdateEffect.Update(updatedInstance, oldState = Some(oldInstance), Seq.empty)
+          val events = Seq(InstanceChangedEventsGenerator.updatedCondition(updatedInstance, op.now))
+          InstanceUpdateEffect.Update(updatedInstance, oldState = Some(oldInstance), events)
         }
 
       case RescheduleReserved(_, runSpec) =>
-        // TODO(alena): Create events
         updateExistingInstance(maybeInstance, op.instanceId) { i =>
+          val now = clock.now()
+          val updatedInstance = i.copy(state = InstanceState(Condition.Scheduled, now, None, None, Goal.Running), runSpec = runSpec)
+          val events = Seq(InstanceChangedEventsGenerator.updatedCondition(updatedInstance, now))
           InstanceUpdateEffect.Update(
-            i.copy(state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running), runSpec = runSpec),
+            updatedInstance,
             oldState = Some(i),
-            events = Seq.empty
+            events = events
           )
         }
 

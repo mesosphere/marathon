@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package core.instance.update
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.{InstanceChanged, MarathonEvent, MesosStatusUpdateEvent}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.InstanceState
@@ -10,7 +11,7 @@ import org.apache.mesos.Protos.TaskState
 
 import scala.collection.immutable.Seq
 
-object InstanceChangedEventsGenerator {
+object InstanceChangedEventsGenerator extends StrictLogging {
   def events(instance: Instance, task: Option[Task], now: Timestamp, previousState: Option[InstanceState]): Seq[MarathonEvent] = {
     val stateChanged = previousState.fold(true) { previous =>
       previous.condition != instance.state.condition ||
@@ -55,4 +56,12 @@ object InstanceChangedEventsGenerator {
       taskEvent +: instanceEvent
     }
   }
+
+  def updatedCondition(instance: Instance, now: Timestamp): InstanceChanged = InstanceChanged(
+    id = instance.instanceId,
+    runSpecVersion = instance.runSpecVersion,
+    runSpecId = instance.runSpecId,
+    condition = instance.state.condition,
+    instance = instance
+  )
 }
