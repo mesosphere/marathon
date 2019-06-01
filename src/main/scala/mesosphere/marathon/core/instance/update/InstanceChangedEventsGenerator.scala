@@ -57,7 +57,7 @@ object InstanceChangedEventsGenerator extends StrictLogging {
     }
   }
 
-  def updatedCondition(instance: Instance, now: Timestamp): InstanceChanged = InstanceChanged(
+  def updatedCondition(instance: Instance): InstanceChanged = InstanceChanged(
     id = instance.instanceId,
     runSpecVersion = instance.runSpecVersion,
     runSpecId = instance.runSpecId,

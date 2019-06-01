@@ -6,7 +6,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.event.InstanceChanged
+import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -77,9 +77,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
 
       When("the actor gets notified of the Scheduled instance becoming Staging")
       val testInstanceStaging = TestInstanceBuilder.newBuilderWithInstanceId(testInstanceScheduled.instanceId).addTaskStaged().getInstance()
-      val instanceChangeEvent = InstanceChanged(
-        testInstanceStaging.instanceId, testInstanceStaging.runSpecVersion, testInstanceStaging.runSpecId,
-        testInstanceStaging.state.condition, testInstanceStaging)
+      val instanceChangeEvent = InstanceChangedEventsGenerator.updatedCondition(testInstanceStaging)
       system.eventStream.publish(instanceChangeEvent)
 
       Then("suppress offers is called")
@@ -103,9 +101,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
 
       When("the actor gets notified of a new Scheduled instance")
       val instance1 = Instance.scheduled(f.app)
-      val instance1ChangeEvent = InstanceChanged(
-        instance1.instanceId, instance1.runSpecVersion, instance1.runSpecId,
-        instance1.state.condition, instance1)
+      val instance1ChangeEvent = InstanceChangedEventsGenerator.updatedCondition(instance1)
       system.eventStream.publish(instance1ChangeEvent)
 
       Then("reviveOffers is called")
@@ -113,26 +109,20 @@ class ReviveOffersActorTest extends AkkaUnitTest {
 
       When("the actor gets notified of another Scheduled instance")
       val instance2 = Instance.scheduled(f.app)
-      val instanceChangeEvent = InstanceChanged(
-        instance2.instanceId, instance2.runSpecVersion, instance2.runSpecId,
-        instance2.state.condition, instance2)
-      system.eventStream.publish(instanceChangeEvent)
+      val instance2ChangeEvent = InstanceChangedEventsGenerator.updatedCondition(instance2)
+      system.eventStream.publish(instance2ChangeEvent)
 
       Then("reviveOffers is called again, since we might have declined offers meanwhile")
       Mockito.verify(f.driver, times(2)).reviveOffers()
 
       When("the actor gets notified of the first instance becoming Staging")
       val instance1Staging = TestInstanceBuilder.newBuilderWithInstanceId(instance1.instanceId).addTaskStaged().getInstance()
-      val instance1StagingEvent = InstanceChanged(
-        instance1Staging.instanceId, instance1Staging.runSpecVersion, instance1Staging.runSpecId,
-        instance1Staging.state.condition, instance1Staging)
+      val instance1StagingEvent = InstanceChangedEventsGenerator.updatedCondition(instance1Staging)
       system.eventStream.publish(instance1StagingEvent)
 
       And("the actor gets notified of the second instance becoming Gone")
       val instance2Gone = TestInstanceBuilder.newBuilderWithInstanceId(instance2.instanceId).addTaskGone().getInstance()
-      val instance2GoneEvent = InstanceChanged(
-        instance2Gone.instanceId, instance2Gone.runSpecVersion, instance2Gone.runSpecId,
-        instance2Gone.state.condition, instance2Gone)
+      val instance2GoneEvent = InstanceChangedEventsGenerator.updatedCondition(instance2Gone)
       system.eventStream.publish(instance2GoneEvent)
 
       Then("suppress is called again")

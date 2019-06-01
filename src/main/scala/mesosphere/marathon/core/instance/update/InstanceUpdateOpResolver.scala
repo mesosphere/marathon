@@ -27,22 +27,21 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
     op match {
       case op: Schedule =>
         createInstance(maybeInstance){
-          val events = Seq(InstanceChangedEventsGenerator.updatedCondition(op.instance, clock.now()))
+          val events = Seq(InstanceChangedEventsGenerator.updatedCondition(op.instance))
           InstanceUpdateEffect.Update(op.instance, oldState = None, events)
         }
 
       case op: Provision =>
         updateExistingInstance(maybeInstance, op.instanceId) { oldInstance =>
           val updatedInstance = oldInstance.provisioned(op.agentInfo, op.runSpec, op.tasks, op.now)
-          val events = Seq(InstanceChangedEventsGenerator.updatedCondition(updatedInstance, op.now))
+          val events = Seq(InstanceChangedEventsGenerator.updatedCondition(updatedInstance))
           InstanceUpdateEffect.Update(updatedInstance, oldState = Some(oldInstance), events)
         }
 
       case RescheduleReserved(_, runSpec) =>
         updateExistingInstance(maybeInstance, op.instanceId) { i =>
-          val now = clock.now()
-          val updatedInstance = i.copy(state = InstanceState(Condition.Scheduled, now, None, None, Goal.Running), runSpec = runSpec)
-          val events = Seq(InstanceChangedEventsGenerator.updatedCondition(updatedInstance, now))
+          val updatedInstance = i.copy(state = InstanceState(Condition.Scheduled, clock.now(), None, None, Goal.Running), runSpec = runSpec)
+          val events = Seq(InstanceChangedEventsGenerator.updatedCondition(updatedInstance))
           InstanceUpdateEffect.Update(
             updatedInstance,
             oldState = Some(i),
