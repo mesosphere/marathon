@@ -12,7 +12,14 @@ uses:
   volumes: volumes.raml
   unreachableStrategy: unreachableStrategy.raml
   killSelection: killSelection.raml
+  linux: linux.raml
 types:
+  PodExecutorInfo:
+    type: object
+    description: |
+      Configures executor security restrictions for the pod.
+    properties:
+      linuxInfo?: linux.LinuxInfo
   PodScalingPolicyType:
     type: string
     enum: [ fixed ]
@@ -161,5 +168,8 @@ types:
       scaling?: PodScalingPolicy
       scheduling?: PodSchedulingPolicy
       executorResources?:
-          type: resources.ExecutorResources
-          description: The resources to allocate to the executor.
+        type: resources.ExecutorResources
+        description: The resources to allocate to the executor.
+      executorInfo?:
+        type: PodExecutorInfo
+        description:  Configures executor security restrictions for the pod.

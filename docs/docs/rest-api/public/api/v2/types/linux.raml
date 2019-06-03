@@ -13,7 +13,19 @@ types:
         type: boolean
         description:  Set to `true` if Seccomp is not applied to the container
         default: false
+  SharedMem:
+    type: object
+    properties:
+      ipcMode:
+        type: string
+        enum: [PRIVATE, SHARE_PARENT]
+        description: Defines the shared memory and IPC contraints.
+      shmSize:
+        type: number
+        format: int32
+        description: The size of shared memory to be used.
   LinuxInfo:
     type: object
     properties:
       seccomp?: Seccomp
+      sharedMem?: SharedMem
