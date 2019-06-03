@@ -4,7 +4,6 @@ package core.launchqueue.impl
 import akka.actor.{Actor, Props, Stash, Status}
 import akka.event.{EventStream, LoggingReceive}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
@@ -66,7 +65,8 @@ class ReviveOffersActor(
   // state that reacts to instance changes
   def initialized(scheduledInstances: HashSet[Instance.Id]): Receive = LoggingReceive {
     // An instance is now Scheduled
-    case update: InstanceChanged if update.condition == Condition.Scheduled =>
+    case update: InstanceChanged if update.instance.isScheduled =>
+      logger.debug(s"${update.condition} ${update.instance.instanceId}")
       if (scheduledInstances.contains(update.id)) {
         logger.debug(s"ignoring instance change for ${update.id} since it was already known to be Scheduled.")
       } else {
@@ -79,7 +79,8 @@ class ReviveOffersActor(
       }
 
     // An instance is no longer Scheduled
-    case update: InstanceChanged if update.condition != Condition.Scheduled =>
+    case update: InstanceChanged if !update.instance.isScheduled =>
+      logger.debug(s"${update.condition} ${update.instance.instanceId}")
       if (scheduledInstances.contains(update.id)) {
         logger.debug(s"${update.id} is no longer scheduled; updating state")
         val newState = scheduledInstances - update.id
@@ -95,7 +96,7 @@ class ReviveOffersActor(
       }
 
     case update: InstanceChanged =>
-      logger.info(s"ignoring ${update.condition}")
+      logger.debug(s"(ignored) ${update.condition} ${update.instance.instanceId}")
   }
 
   def reviveOffers(): Unit = {
