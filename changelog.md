@@ -75,6 +75,8 @@ This option was deprecated since 1.5 and using that have no effect on Marathon. 
 
 - [MARATHON-8566](https://jira.mesosphere.com/browse/MARATHON-8566) - We fixed a race condition causing `v2/deployments` not containing a confirmed deployment after HTTP 200/201 response was returned.
 
+- [MARATHON-8625](https://jira.mesosphere.com/browse/MARATHON-8625) - We fixed stuck rollbacks of persistent apps.
+
 ### Closing connection on slow event consumers
 
 Prior to 1.8 Marathon would drop events from the event stream for slow consumers. Starting with 1.8 Marathon will close

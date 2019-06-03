@@ -4,14 +4,13 @@ package integration
 import java.util.UUID
 
 import akka.util.ByteString
-import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
-import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{ITDeployment, ITEnrichedTask, ITQueueItem}
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{App, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, AppCommandCheck, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, UpgradeStrategy}
+import mesosphere.marathon.raml.{App, AppCommandCheck, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, UpgradeStrategy}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
 import org.scalactic.source.Position
 
 import scala.concurrent.duration._
@@ -690,7 +689,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       marathon.app(id) should be(OK)
     }
 
-    "rollback a deployment" in {
+    "rollback a deployment (by removing an app)" in {
       Given("a new app with constraints that cannot be fulfilled")
       val c = Seq("nonExistent", "CLUSTER", "na")
       val id = appId(Some("rollback-a-deployment"))
@@ -707,7 +706,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       When("the deployment is rolled back")
       val delete = marathon.deleteDeployment(deploymentId, force = false)
       delete should be(OK)
-      val rollbackId = delete.originalResponse.headers.find(_.name == RestResource.DeploymentHeader).getOrElse(throw new IllegalArgumentException("No deployment id found in Http Header")).value()
+      val rollbackId = delete.deploymentId.value
 
       Then("old deployment should be canceled and rollback-deployment succeed")
       // Both deployment events may come out of order
@@ -743,7 +742,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       And("it is updated with an impossible constraint")
       val updated = marathon.updateApp(id, AppUpdate(cpus = Some(1000d), cmd = Some("na"), instances = Some(1)))
       updated shouldBe OK
-      val deploymentId = updated.originalResponse.headers.find(_.name == RestResource.DeploymentHeader).getOrElse(throw new IllegalArgumentException("No deployment id found in Http Header")).value()
+      val deploymentId = updated.deploymentId.value
 
       Then("we wait for the first new instance to become scheduled")
       // waitForEventWith("instance_changed_event", ev => ev.info("goal") == "Scheduled", s"event instance_changed_event with goal = Scheduled to arrive")
@@ -758,6 +757,39 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Then(s"rollback should be successful and ${app.instances} tasks running")
       waitForDeployment(canceled)
       waitForTasks(id, 2) //make sure, all the tasks have really started
+    }
+
+    // Regression for MARATHON-8537
+    "rollback deployment with default deployment strategy" in {
+      Given("an existing app")
+      val id: PathId = appId(Some("deployment-rollback-default-version"))
+      val app = App(
+        id = id.toString,
+        cmd = Some("sleep 12345"),
+        backoffFactor = 1d
+      )
+      val created = marathon.createAppV2(app)
+      created shouldBe Created
+      waitForDeployment(created)
+
+      And("it is updated with an impossible constraint")
+      val updated = marathon.updateApp(id, AppUpdate(cpus = Some(1000d), cmd = Some("na")))
+      updated shouldBe OK
+      val deploymentId = updated.deploymentId.value
+
+      Then("we wait for the first new instance to become scheduled")
+      // waitForEventWith("instance_changed_event", ev => ev.info("goal") == "Scheduled", s"event instance_changed_event with goal = Scheduled to arrive")
+      // But since we don't have this event now, we just simply try to wait for 5s which seems to work too ¯\_(ツ)_/¯
+      val start = System.currentTimeMillis()
+      eventually(System.currentTimeMillis() should be >= (start + 5000))(config = PatienceConfig(10.seconds, 100.millis), pos = Position.here)
+
+      And("cancel previous update")
+      val canceled = marathon.deleteDeployment(deploymentId)
+      canceled shouldBe OK
+
+      Then(s"rollback should be successful and ${app.instances} tasks running")
+      waitForDeployment(canceled)
+      waitForTasks(id, 1) //make sure, all the tasks have really started
     }
 
     "Docker info is not automagically created" in {
