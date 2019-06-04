@@ -2,7 +2,7 @@
 
 ### Fixed issues
 
-- [DCOS_OSS-5212](https://jira.mesosphere.com/browse/DCOS_OSS-5212) - Fix an issue that caused reserved instances created by older Marathon versions to be restarted
+- [DCOS_OSS-5212](https://jira.mesosphere.com/browse/DCOS_OSS-5212) - Fix an issue that prevented reserved instances created by older Marathon versions from being restarted
 
 - [MARATHON-8623](https://jira.mesosphere.com/browse/MARATHON-8623) - Fix an issue that could cause /v2/deployments to become stale
 
