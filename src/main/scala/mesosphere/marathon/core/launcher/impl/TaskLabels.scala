@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.launcher.impl
 
-import mesosphere.marathon.core.instance.{Instance, Reservation}
+import mesosphere.marathon.core.instance.Reservation
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{Protos => MesosProtos}
 
