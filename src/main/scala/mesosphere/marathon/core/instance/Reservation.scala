@@ -21,7 +21,6 @@ object Reservation {
     */
   sealed trait Id {
     val label: String
-    val instanceId: Instance.Id
   }
 
   /**
@@ -33,11 +32,6 @@ object Reservation {
     */
   case class LegacyId(runSpecId: PathId, separator: String, uuid: UUID) extends Id {
     override lazy val label: String = runSpecId.safePath + separator + uuid
-
-    /**
-      * See [[mesosphere.marathon.core.task.Task.LegacyResidentId.instanceId]] and [[mesosphere.marathon.core.task.Task.LegacyId.instanceId]]
-      */
-    override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
   }
 
   /**

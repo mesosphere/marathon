@@ -72,6 +72,10 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
 
       case op: Revert =>
         updater.revert(op.instance)
+
+      case Noop =>
+        logger.debug("Received Noop")
+        InstanceUpdateEffect.Noop(null)
     }
   }
 
