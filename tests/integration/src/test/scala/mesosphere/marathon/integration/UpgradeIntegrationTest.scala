@@ -98,7 +98,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
     override val processBuilder = {
-      val bin = new File(marathonPackage, "marathon-1.6.549-3e0898228/bin/marathon").getCanonicalPath
+      val bin = new File(marathonPackage, "marathon-1.6.549-aabf74302/bin/marathon").getCanonicalPath
       val cmd = Seq("bash", bin, "-J-Xmx1024m", "-J-Xms256m", "-J-XX:+UseConcMarkSweepGC", "-J-XX:ConcGCThreads=2") ++ akkaJvmArgs ++
         Seq(s"-DmarathonUUID=$uuid -DtestSuite=$suiteName") ++ args
       Process(cmd, workDir, sys.env.toSeq: _*)
