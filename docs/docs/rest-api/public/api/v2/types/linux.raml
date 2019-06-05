@@ -13,10 +13,10 @@ types:
         type: boolean
         description:  Set to `true` if Seccomp is not applied to the container
         default: false
-  SharedMem:
+  IPCInfo:
     type: object
     properties:
-      ipcMode:
+      mode:
         type: string
         enum: [PRIVATE, SHARE_PARENT]
         description: Defines the shared memory and IPC contraints.
@@ -28,4 +28,4 @@ types:
     type: object
     properties:
       seccomp?: Seccomp
-      sharedMem?: SharedMem
+      ipcInfo?: IPCInfo

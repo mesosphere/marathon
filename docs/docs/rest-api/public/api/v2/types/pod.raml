@@ -14,12 +14,6 @@ uses:
   killSelection: killSelection.raml
   linux: linux.raml
 types:
-  PodExecutorInfo:
-    type: object
-    description: |
-      Configures executor security restrictions for the pod.
-    properties:
-      linuxInfo?: linux.LinuxInfo
   PodScalingPolicyType:
     type: string
     enum: [ fixed ]
@@ -170,6 +164,4 @@ types:
       executorResources?:
         type: resources.ExecutorResources
         description: The resources to allocate to the executor.
-      executorInfo?:
-        type: PodExecutorInfo
-        description:  Configures executor security restrictions for the pod.
+      linuxInfo?: linux.LinuxInfo
