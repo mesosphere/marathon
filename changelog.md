@@ -2,6 +2,14 @@
 
 ### Fixed issues
 
+- [DCOS_OSS-5212](https://jira.mesosphere.com/browse/DCOS_OSS-5212) - Fix an issue that prevented reserved instances created by older Marathon versions from being restarted
+
+- [MARATHON-8623](https://jira.mesosphere.com/browse/MARATHON-8623) - Fix an issue that could cause /v2/deployments to become stale
+
+- [MARATHON-8624](https://jira.mesosphere.com/browse/MARATHON-8624) - Fix issue where the presence of a TASK_UNKNOWN status could cause an API failure
+
+- [DCOS-51375](https://jira.mesosphere.com/browse/DCOS-51375) - Fix an issue where deployment cancellation could leak instances.
+
 - [DCOS_OSS-5211](https://jira.mesosphere.com/browse/DCOS_OSS-5211) - The initial support for volume profiles would match disk resources with a profile, even if no profile was required. This behavior has been adjusted so that disk resources with profiles are only used when those profiles are required, and are not used if the service for which we are matching offers does not require a disk with that profile.
 
 ## Changes from 1.7.xxx to 1.8.180
