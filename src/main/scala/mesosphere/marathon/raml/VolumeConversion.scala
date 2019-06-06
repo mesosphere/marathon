@@ -13,8 +13,10 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     case hv: PodHostVolume => state.HostVolume(name = Some(hv.name), hostPath = hv.host)
     case sv: PodSecretVolume => state.SecretVolume(name = Some(sv.name), secret = sv.secret)
     case pv: PodPersistentVolume =>
+      // If a disk profile is set, only DiskType.Mount is supported, while DiskType defaults to Root
+      val diskType = pv.persistent.profileName.map(_ => DiskType.Mount).getOrElse(pv.persistent.`type`.fromRaml)
       val persistentInfo = state.PersistentVolumeInfo(
-        `type` = pv.persistent.`type`.fromRaml,
+        `type` = diskType,
         size = pv.persistent.size,
         maxSize = pv.persistent.maxSize,
         profileName = pv.persistent.profileName,
@@ -140,8 +142,10 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   }
 
   implicit val volumePersistentReads: Reads[AppPersistentVolume, state.VolumeWithMount[Volume]] = Reads { volumeRaml =>
+    // If a disk profile is set, only DiskType.Mount is supported, while DiskType defaults to Root
+    val diskType = volumeRaml.persistent.profileName.map(_ => DiskType.Mount).getOrElse(volumeRaml.persistent.`type`.fromRaml)
     val info = state.PersistentVolumeInfo(
-      `type` = volumeRaml.persistent.`type`.fromRaml,
+      `type` = diskType,
       size = volumeRaml.persistent.size,
       maxSize = volumeRaml.persistent.maxSize,
       profileName = volumeRaml.persistent.profileName,
