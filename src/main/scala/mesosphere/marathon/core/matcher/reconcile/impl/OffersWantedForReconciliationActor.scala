@@ -33,7 +33,7 @@ private[reconcile] object OffersWantedForReconciliationActor {
     ))
 
   private case class RequestOffers(reason: String)
-  case object RecheckInterest
+  case object CancelInterestInOffers
 }
 
 private[reconcile] class OffersWantedForReconciliationActor(
@@ -51,7 +51,7 @@ private[reconcile] class OffersWantedForReconciliationActor(
 
     eventStream.subscribe(self, classOf[DeploymentStepSuccess])
 
-    logger.info(s"Started. Will remain interested in offer reconciliation for $interestDuration when needed.")
+    logger.info("Scheduling request for offers after becoming leader")
     self ! OffersWantedForReconciliationActor.RequestOffers("becoming leader")
   }
 
@@ -77,42 +77,43 @@ private[reconcile] class OffersWantedForReconciliationActor(
       }
   }
 
-  private[this] def switchToSubscribedToOffers(reason: String): Receive = {
-    val nextCheck = scheduleNextCheck
+  private[this] def subscribedToOffers(reason: String): Receive = {
+    // exit this state after the timeout
+    val timeout = scheduleCancelInterestInOffers
+
+    // notify the ReviveOffersActor via this observable that the OfferMatcherReconciler needs offers
     offersWanted.onNext(true)
     val until: Timestamp = clock.now() + interestDuration
     logger.info(s"interested in offers for reservation reconciliation because of $reason (until $until)")
-    subscribedToOffers(until, nextCheck)
+
+    LoggingReceive.withLabel("subscribedToOffers") {
+      handleRequestOfferIndicators orElse {
+        case OffersWantedForReconciliationActor.CancelInterestInOffers =>
+          logger.info("Canceling interest in offers")
+          timeout.cancel()
+          context.become(unsubscribedToOffers)
+        case OffersWantedForReconciliationActor.RequestOffers(newReason) =>
+          logger.info("Received new RequestOffers; re-entering subscribedToOffers")
+          timeout.cancel()
+          context.become(subscribedToOffers(newReason))
+      }: Receive
+    }
   }
 
-  protected def scheduleNextCheck: Cancellable = {
+  protected def scheduleCancelInterestInOffers: Cancellable = {
     context.system.scheduler.scheduleOnce(
-      interestDuration, self, OffersWantedForReconciliationActor.RecheckInterest
+      interestDuration, self, OffersWantedForReconciliationActor.CancelInterestInOffers
     )(context.dispatcher)
-  }
-
-  private[this] def subscribedToOffers(
-    until: Timestamp, nextCheck: Cancellable): Receive = LoggingReceive.withLabel("subscribedToOffers") {
-
-    handleRequestOfferIndicators orElse {
-      case OffersWantedForReconciliationActor.RecheckInterest if clock.now() > until =>
-        nextCheck.cancel()
-        context.become(unsubscribedToOffers)
-      case OffersWantedForReconciliationActor.RecheckInterest => //ignore
-      case OffersWantedForReconciliationActor.RequestOffers(reason) =>
-        nextCheck.cancel()
-        context.become(switchToSubscribedToOffers(reason))
-    }: Receive
   }
 
   private[this] def unsubscribedToOffers: Receive = LoggingReceive.withLabel("unsubscribedToOffers") {
     offersWanted.onNext(false)
-    logger.info("no interest in offers for reservation reconciliation anymore.")
+    logger.info("No interest in offers for reservation reconciliation.")
 
     handleRequestOfferIndicators orElse {
-      case OffersWantedForReconciliationActor.RecheckInterest => //ignore
+      case OffersWantedForReconciliationActor.CancelInterestInOffers => //ignore
       case OffersWantedForReconciliationActor.RequestOffers(reason) =>
-        context.become(switchToSubscribedToOffers(reason))
+        context.become(subscribedToOffers(reason))
     }: Receive
   }
 }

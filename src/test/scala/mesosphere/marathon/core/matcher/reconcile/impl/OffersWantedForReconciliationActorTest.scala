@@ -35,7 +35,7 @@ class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCrea
       When("the timer is expired")
       val nextVal = f.futureOffersWanted()
       f.clock += 1.hour
-      f.actor ! OffersWantedForReconciliationActor.RecheckInterest
+      f.actor ! OffersWantedForReconciliationActor.CancelInterestInOffers
 
       Then("the interest stops")
       nextVal.futureValue should be(false)
@@ -53,7 +53,7 @@ class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCrea
       val firstVal = f.futureOffersWanted(drop = 2)
       f.actor
       f.clock += 1.hour
-      f.actor ! OffersWantedForReconciliationActor.RecheckInterest
+      f.actor ! OffersWantedForReconciliationActor.CancelInterestInOffers
       firstVal.futureValue should be(false)
 
       reset(f.cancellable)
@@ -79,7 +79,7 @@ class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCrea
       When("the timer is expired")
       val nextVal = f.futureOffersWanted()
       f.clock += 1.hour
-      f.actor ! OffersWantedForReconciliationActor.RecheckInterest
+      f.actor ! OffersWantedForReconciliationActor.CancelInterestInOffers
 
       Then("the interest stops again")
       nextVal.futureValue should be(false)
@@ -117,7 +117,7 @@ class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCrea
       eventStream,
       offersWanted
     ) {
-      override protected def scheduleNextCheck: Cancellable = Fixture.this.scheduleNextCheck
+      override protected def scheduleCancelInterestInOffers: Cancellable = Fixture.this.scheduleNextCheck
     }
     lazy val actor = TestActorRef(actorInstance)
 
