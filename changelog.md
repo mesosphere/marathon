@@ -10,7 +10,7 @@
 
 - [DCOS-51375](https://jira.mesosphere.com/browse/DCOS-51375) - Fix an issue where deployment cancellation could leak instances.
 
-- [DCOS_OSS-5211](https://jira.mesosphere.com/browse/DCOS_OSS-5211) - Previously, Mesos disks with profiles would be matched before it was possible to specify that a service definition should only accept a specific disk profile. The behavior changed in a backwards incompatible way when support for disk profile matching was added. If no profile was specified to be matched for a Marathon service definition, then only Mesos disks without profiles would be considered as matching candidates. The behavior has been restored so that all Mesos disk profiles (specified or not) will be considered if no profile requirement is specified in the Marathon service definition.
+- [DCOS_OSS-5211](https://jira.mesosphere.com/browse/DCOS_OSS-5211) - The initial support for volume profiles would match disk resources with a profile, even if no profile was required. This behavior has been adjusted so that disk resources with profiles are only used when those profiles are required, and are not used if the service for which we are matching offers does not require a disk with that profile.
 
 ## Changes from 1.7.xxx to 1.8.180
 
@@ -82,6 +82,8 @@ This option was deprecated since 1.5 and using that have no effect on Marathon. 
 - [MARATHON-8482](https://jira.mesosphere.com/browse/MARATHON-8482) - We fixed a possibly incorrect behavior around killing overdue tasks: `--task_launch_confirm_timeout` parameter properly controls the time the task spends in `Provisioned` stage (between being launched and receiving `TASK_STAGING` status update).
 
 - [MARATHON-8566](https://jira.mesosphere.com/browse/MARATHON-8566) - We fixed a race condition causing `v2/deployments` not containing a confirmed deployment after HTTP 200/201 response was returned.
+
+- [MARATHON-8625](https://jira.mesosphere.com/browse/MARATHON-8625) - We fixed stuck rollbacks of persistent apps.
 
 ### Closing connection on slow event consumers
 

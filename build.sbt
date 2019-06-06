@@ -278,19 +278,3 @@ lazy val benchmark = (project in file("benchmark"))
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
     libraryDependencies ++= Dependencies.benchmark
   )
-
-// see also mesos-client/README.md
-lazy val `mesos-client` = (project in file("mesos-client"))
-  .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
-  .settings(testSettings : _*)
-  .settings(commonSettings: _*)
-  .settings(formatSettings: _*)
-  .dependsOn(marathon % "compile->compile; test->test")
-  .settings(
-    name := "mesos-client",
-    libraryDependencies ++= Dependencies.mesosClient,
-
-    PB.targets in Compile := Seq(
-      scalapb.gen() -> (sourceManaged in Compile).value
-    )
-  )
