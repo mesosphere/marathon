@@ -88,58 +88,6 @@ class TaskIdTest extends UnitTest with Inside {
       originalId.instanceId shouldEqual newTaskId.instanceId
     }
 
-    "TaskId.reservationId is the same as task id when task id is without attempt counter" in {
-      val uuidGenerator = Generators.timeBasedGenerator()
-      val originalId = Task.LegacyId(PathId("/app"), "-", uuidGenerator.generate())
-      val reservationId = originalId.reservationId
-
-      // This is only true for legacy ids. For new ids the task id includes the container while reservation ids do not.
-      reservationId.label shouldEqual originalId.idString
-    }
-
-    "TaskId.reservationId removes attempt from app task id" in {
-      val instanceId = Instance.Id.forRunSpec(PathId("/app/test/23"))
-      val originalId = Task.Id(instanceId)
-
-      val residentTaskId = Task.Id.nextIncarnationFor(originalId)
-      residentTaskId.instanceId shouldEqual originalId.instanceId
-      residentTaskId.reservationId shouldEqual originalId.reservationId
-
-      val anotherResidentTaskId = Task.Id.nextIncarnationFor(residentTaskId)
-      anotherResidentTaskId.instanceId shouldEqual originalId.instanceId
-      anotherResidentTaskId.reservationId shouldEqual originalId.reservationId
-    }
-
-    "TaskId.reservationId removes attempt and container name from pod task id" in {
-      val originalId = Task.Id(Instance.Id.forRunSpec(PathId("/app/test/23")))
-
-      val residentTaskId = Task.Id.nextIncarnationFor(originalId)
-      residentTaskId.instanceId shouldEqual originalId.instanceId
-
-      val anotherResidentTaskId = Task.Id.nextIncarnationFor(residentTaskId)
-      anotherResidentTaskId.instanceId shouldEqual originalId.instanceId
-
-      anotherResidentTaskId.reservationId shouldEqual residentTaskId.reservationId
-    }
-
-    "TaskId.reservationId works as expected for all types of task ids" in {
-      val appTaskId = Task.Id.parse("app.4455cb85-0c16-490d-b84e-481f8321ff0a")
-      appTaskId shouldBe a[Task.LegacyId]
-      appTaskId.reservationId.label shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
-
-      val appResidentTaskIdWithAttempt = Task.Id.parse("app.4455cb85-0c16-490d-b84e-481f8321ff0a.1")
-      appResidentTaskIdWithAttempt shouldBe a[Task.LegacyResidentId]
-      appResidentTaskIdWithAttempt.reservationId.label shouldEqual "app.4455cb85-0c16-490d-b84e-481f8321ff0a"
-
-      val podTaskIdWithContainerName = Task.Id.parse("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct")
-      podTaskIdWithContainerName shouldBe a[Task.EphemeralTaskId]
-      podTaskIdWithContainerName.reservationId.label shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
-
-      val podTaskIdWithContainerNameAndAttempt = Task.Id.parse("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct.1")
-      podTaskIdWithContainerNameAndAttempt shouldBe a[Task.TaskIdWithIncarnation]
-      podTaskIdWithContainerNameAndAttempt.reservationId.label shouldEqual "app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a"
-    }
-
     "TaskId with incarnation can be parsed from idString" in {
       val originalId = Task.Id(Instance.Id.forRunSpec(PathId("/app/test/23")), None)
 

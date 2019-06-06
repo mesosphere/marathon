@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{Goal, Reservation}
-import mesosphere.marathon.core.instance.Instance.{agentFormat, AgentInfo, Id, InstanceState}
+import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState, agentFormat}
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
@@ -99,8 +99,11 @@ object MigrationTo17 extends StrictLogging {
       (__ \ "tasksMap").read[Map[Task.Id, Task]](taskMapReads17) ~
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[InstanceState](instanceStateReads160) ~
-      (__ \ "reservation").readNullable[Reservation]
-    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation) =>
+      (__ \ "reservation").readNullable[JsObject]
+    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, rawReservation) =>
+        val reservation = rawReservation.map { raw =>
+          raw.as[Reservation](InstanceMigration.legacyReservationReads(tasksMap, instanceId))
+        }
         new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation)
       }
   }

@@ -6,7 +6,7 @@ import java.util.{Base64, UUID}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
-import mesosphere.marathon.core.instance.{Instance, Reservation}
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
@@ -181,8 +181,6 @@ object Task {
     // Quick access to the underlying instance identifier of the task.
     val instanceId: Instance.Id
 
-    val reservationId: Reservation.Id
-
     // The Mesos task id representation of the task.
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
 
@@ -223,8 +221,6 @@ object Task {
 
     override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
 
-    override val reservationId = Reservation.LegacyId(runSpecId, separator, uuid)
-
     override val containerName: Option[String] = None
   }
 
@@ -249,8 +245,6 @@ object Task {
     override val idString: String = runSpecId.safePath + separator + uuid + "." + attempt
 
     override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
-
-    override val reservationId = Reservation.LegacyId(runSpecId, separator, uuid)
 
     override val containerName: Option[String] = None
   }
@@ -279,8 +273,6 @@ object Task {
 
     // Quick access to the underlying run spec identifier of the task.
     override lazy val runSpecId: PathId = instanceId.runSpecId
-
-    override lazy val reservationId = Reservation.SimplifiedId(instanceId)
   }
 
   /**
@@ -306,8 +298,6 @@ object Task {
 
     // Quick access to the underlying run spec identifier of the task.
     override lazy val runSpecId: PathId = instanceId.runSpecId
-
-    override lazy val reservationId = Reservation.SimplifiedId(instanceId)
   }
 
   object Id {

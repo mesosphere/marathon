@@ -407,8 +407,6 @@ object Instance {
 
   implicit val instanceStateFormat: Format[InstanceState] = Json.format[InstanceState]
 
-  implicit val reservationFormat: Format[Reservation] = Reservation.reservationFormat
-
   implicit lazy val tasksMapFormat: Format[Map[Task.Id, Task]] = Format(
     Reads.of[Map[String, Task]].map {
       _.map { case (k, v) => Task.Id.parse(k) -> v }
