@@ -48,6 +48,14 @@ object InstanceUpdater extends StrictLogging {
     InstanceUpdateEffect.Update(updatedInstance, oldState = None, events)
   }
 
+  private[marathon] def unreserve(instance: Instance, now: Timestamp): InstanceUpdateEffect = {
+    require(instance.state.condition.isTerminal && instance.state.goal == Goal.Decommissioned, s"Cannot unreserve non-terminal resident $instance")
+    val withoutReservation = instance.copy(agentInfo = None, reservation = None)
+    val events = eventsGenerator.events(withoutReservation, task = None, now, previousState = Some(instance.state))
+    // TODO: should we expunge instead?
+    InstanceUpdateEffect.Update(withoutReservation, oldState = Some(instance), events)
+  }
+
   private def shouldBeExpunged(instance: Instance): Boolean =
     instance.tasksMap.values.forall(t => t.isTerminal) && instance.state.goal == Goal.Decommissioned && instance.reservation.isEmpty
 

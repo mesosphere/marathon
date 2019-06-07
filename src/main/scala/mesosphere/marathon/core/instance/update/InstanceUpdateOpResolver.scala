@@ -61,6 +61,9 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
       case op: Reserve =>
         updateExistingInstance(maybeInstance, op.instanceId)(updater.reserve(_, op, clock.now()))
 
+      case op: Unreserve =>
+        updateExistingInstance(maybeInstance, op.instanceId)(updater.unreserve(_, clock.now()))
+
       case op: ForceExpunge =>
         maybeInstance match {
           case Some(existingInstance) =>
