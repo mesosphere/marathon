@@ -49,7 +49,7 @@ object InstanceUpdater extends StrictLogging {
   }
 
   private def shouldBeExpunged(instance: Instance): Boolean =
-    instance.tasksMap.values.forall(t => t.isTerminal) && instance.state.goal == Goal.Decommissioned
+    instance.tasksMap.values.forall(t => t.isTerminal) && instance.state.goal == Goal.Decommissioned && instance.reservation.isEmpty
 
   private def shouldAbandonReservation(instance: Instance): Boolean = {
 
