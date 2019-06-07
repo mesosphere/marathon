@@ -11,11 +11,12 @@ import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
+import mesosphere.marathon.stream.EnrichedFlow
 
-sealed trait Ops
-case object Revive extends Ops
-case object Suppress extends Ops
-case object Noop extends Ops
+sealed trait Op
+case object Revive extends Op
+case object Suppress extends Op
+case object Noop extends Op
 
 class ReviveOffersActor(
     metrics: Metrics,
@@ -38,41 +39,51 @@ class ReviveOffersActor(
         }.map(_.instanceId).toSet
         updates.scan(zero) {
           case (current, update) =>
+            logger.info(s"Processing update $update.")
             if (update.instance.isScheduled || shouldUnreserve(update.instance)) current + update.instance.instanceId
             else current - update.instance.instanceId
         }
     }.sliding(2)
       .map{
         // TODO: consider backoff.
-        case Seq(oldScheduledInstances: Set[Instance.Id], newScheduledInstances: Set[Instance.Id]) =>
-          if ((newScheduledInstances &~ oldScheduledInstances).nonEmpty) {
+        case Seq(oldInstances: Set[Instance.Id], newInstances: Set[Instance.Id]) =>
+          logger.info(s"Considering old $oldInstances and new $newInstances")
+          val addedInstances = newInstances &~ oldInstances
+          if (addedInstances.nonEmpty) {
+            logger.info(s"Reviving offers because of $addedInstances")
+
             // We have new scheduled instances
             Revive
-            logger.info("Reviving offers.")
-          } else if (newScheduledInstances.isEmpty) {
-            Suppress
+          } else if (newInstances.isEmpty) {
             logger.info("Suppressing offers.")
+            Suppress
           } else {
             logger.info("No action on instance update.")
             Noop // TODO: should we keep reviving?
           }
-      }.runWith(Sink.actorRef(self, Done))
+      }
+      .filter(_ != Noop)
+      .via(EnrichedFlow.dedup())
+      .runWith(Sink.actorRef[Op](self, Done))
   }
 
   override def receive: Receive = LoggingReceive {
     case Revive => reviveOffers()
     case Suppress => suppressOffers()
-    case Noop => // TODO: keep doing what we've done before.
     case Done => context.stop(self)
+    case other =>
+      logger.info(s"Unexpected message $other")
   }
 
   def reviveOffers(): Unit = {
     reviveCountMetric.increment()
+    logger.info("Sending revive")
     driverHolder.driver.foreach(_.reviveOffers())
   }
 
   def suppressOffers(): Unit = {
     suppressCountMetric.increment()
+    logger.info("Sending suppress")
     driverHolder.driver.foreach(_.suppressOffers())
   }
 
