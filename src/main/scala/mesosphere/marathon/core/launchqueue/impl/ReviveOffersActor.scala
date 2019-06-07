@@ -42,13 +42,17 @@ class ReviveOffersActor(
         }
     }.sliding(2)
       .map{
+        // TODO: consider backoff.
         case Seq(oldScheduledInstances: Set[Instance.Id], newScheduledInstances: Set[Instance.Id]) =>
           if ((newScheduledInstances &~ oldScheduledInstances).nonEmpty) {
             // We have new scheduled instances
             Revive
+            logger.info("Reviving offers.")
           } else if (newScheduledInstances.isEmpty) {
             Suppress
+            logger.info("Suppressing offers.")
           } else {
+            logger.info("No action on instance update.")
             Noop // TODO: should we keep reviving?
           }
       }.runWith(Sink.actorRef(self, Done))
