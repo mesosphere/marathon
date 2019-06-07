@@ -2,8 +2,9 @@ package mesosphere.marathon
 package core.matcher.reconcile.impl
 
 import java.time.Clock
+import java.util.UUID
 
-import akka.actor.{Actor, Cancellable, Props}
+import akka.actor.{Actor, Props}
 import akka.event.{EventStream, LoggingReceive}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.flow.ReviveOffersConfig
@@ -33,7 +34,7 @@ private[reconcile] object OffersWantedForReconciliationActor {
     ))
 
   private case class RequestOffers(reason: String)
-  case object CancelInterestInOffers
+  case class CancelInterestInOffers(id: UUID)
 }
 
 private[reconcile] class OffersWantedForReconciliationActor(
@@ -79,31 +80,36 @@ private[reconcile] class OffersWantedForReconciliationActor(
 
   private[this] def subscribedToOffers(reason: String): Receive = {
     // exit this state after the timeout
-    val timeout = scheduleCancelInterestInOffers
+    val currentCancelationId = scheduleCancelInterestInOffers
 
     // notify the ReviveOffersActor via this observable that the OfferMatcherReconciler needs offers
     offersWanted.onNext(true)
     val until: Timestamp = clock.now() + interestDuration
-    logger.info(s"interested in offers for reservation reconciliation because of $reason (until $until)")
+    logger.info(s"interested in offers for reservation reconciliation because of $reason (until $until, cancelation: $currentCancelationId)")
 
     LoggingReceive.withLabel("subscribedToOffers") {
       handleRequestOfferIndicators orElse {
-        case OffersWantedForReconciliationActor.CancelInterestInOffers =>
-          logger.info("Canceling interest in offers")
-          timeout.cancel()
+
+        case OffersWantedForReconciliationActor.CancelInterestInOffers(`currentCancelationId`) =>
+          logger.info(s"Canceling interest in offers (cancelation: $currentCancelationId)")
           context.become(unsubscribedToOffers)
+
+        case OffersWantedForReconciliationActor.CancelInterestInOffers(id) =>
+          logger.info(s"Ignoring outdated cancelation $id")
+
         case OffersWantedForReconciliationActor.RequestOffers(newReason) =>
           logger.info("Received new RequestOffers; re-entering subscribedToOffers")
-          timeout.cancel()
           context.become(subscribedToOffers(newReason))
       }: Receive
     }
   }
 
-  protected def scheduleCancelInterestInOffers: Cancellable = {
+  protected def scheduleCancelInterestInOffers: UUID = {
+    val id = UUID.randomUUID()
     context.system.scheduler.scheduleOnce(
-      interestDuration, self, OffersWantedForReconciliationActor.CancelInterestInOffers
+      interestDuration, self, OffersWantedForReconciliationActor.CancelInterestInOffers(id)
     )(context.dispatcher)
+    id
   }
 
   private[this] def unsubscribedToOffers: Receive = LoggingReceive.withLabel("unsubscribedToOffers") {
