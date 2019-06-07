@@ -2,12 +2,12 @@ package mesosphere.marathon
 package core.deployment.impl
 
 import akka.Done
-import akka.actor.{Actor, ActorRef, Cancellable, Props}
+import akka.actor.{Actor, ActorRef, Cancellable, PoisonPill, Props, UnhandledMessage}
 import akka.stream.scaladsl.Source
 import akka.testkit.TestActorRef
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.condition.Condition.Running
+import mesosphere.marathon.core.condition.Condition.{Killed, Running}
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, PortReference}
@@ -660,6 +660,40 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       }
 
       promise.future.futureValue
+    }
+
+    // regression DCOS-54927
+    "only handle InstanceChanged events of its own RunSpec" in {
+      val f = new Fixture
+      val app = AppDefinition(
+        id = "/myApp".toPath,
+        instances = 1,
+        versionInfo = VersionInfo.forNewConfig(Timestamp(0)))
+      val instanceA = f.runningInstance(app)
+
+      f.tracker.specInstancesSync(app.id, readAfterWrite = true) returns Seq(instanceA)
+      f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
+
+      val promise = Promise[Unit]()
+      val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+      f.queue.add(newApp, 1) returns Future.successful(Done)
+
+      val ref = f.replaceActor(newApp, promise)
+      watch(ref)
+
+      // Test that Instance changed events for a different RunSpec are not handled by the actor
+      import akka.testkit.TestProbe
+      val subscriber = TestProbe()
+      system.eventStream.subscribe(subscriber.ref, classOf[UnhandledMessage])
+
+      val otherApp = AppDefinition(id = "/some-other-app".toPath)
+      ref ! f.instanceChanged(otherApp, Killed)
+      subscriber.expectMsgClass(classOf[UnhandledMessage])
+
+      ref ! f.instanceChanged(otherApp, Running)
+      subscriber.expectMsgClass(classOf[UnhandledMessage])
+
+      ref ! PoisonPill
     }
   }
   class Fixture {
