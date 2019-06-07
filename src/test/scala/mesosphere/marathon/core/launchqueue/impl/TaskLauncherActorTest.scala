@@ -7,7 +7,6 @@ import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, InstanceUpdated}
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
@@ -79,7 +78,6 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       clock: SettableClock = new SettableClock(),
       instanceOpFactory: InstanceOpFactory = mock[InstanceOpFactory],
       instanceTracker: InstanceTracker = mock[InstanceTracker],
-      offerReviver: OfferReviver = mock[OfferReviver],
       rateLimiterActor: TestProbe = TestProbe(),
       localRegion: () => Option[Region] = () => None) {
 
@@ -95,7 +93,6 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       val props = TaskLauncherActor.props(
         launchQueueConfig,
         offerMatcherManager, clock, instanceOpFactory,
-        maybeOfferReviver = Some(offerReviver),
         instanceTracker, rateLimiterActor.ref, offerMatchInput, localRegion) _
       TestActorRef[TaskLauncherActor](props(appToLaunch))
     }
@@ -362,9 +359,6 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
         When("we get a status update about a terminated task")
         launcherRef ! update.wrapped
-
-        Then("reviveOffers has been called")
-        Mockito.verify(offerReviver).reviveOffers()
 
         And("the task tracker as well")
         verifyClean()

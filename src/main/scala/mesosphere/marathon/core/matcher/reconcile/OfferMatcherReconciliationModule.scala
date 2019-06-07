@@ -7,13 +7,13 @@ import akka.stream.scaladsl.{Keep, Source}
 import java.time.Clock
 
 import akka.event.EventStream
-import mesosphere.marathon.core.flow.ReviveOffersConfig
+import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.reconcile.impl.{OfferMatcherReconciler, OffersWantedForReconciliationActor}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.stream.{Subject}
+import mesosphere.marathon.stream.Subject
 
 class OfferMatcherReconciliationModule(
     reviveOffersConfig: ReviveOffersConfig,

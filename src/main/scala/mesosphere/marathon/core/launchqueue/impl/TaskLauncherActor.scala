@@ -8,7 +8,6 @@ import akka.actor._
 import akka.event.LoggingReceive
 import akka.stream.scaladsl.SourceQueue
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.flow.OfferReviver
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.{InstanceDeleted, InstanceUpdateOperation, InstanceUpdated}
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
@@ -34,7 +33,6 @@ private[launchqueue] object TaskLauncherActor {
     offerMatcherManager: OfferMatcherManager,
     clock: Clock,
     taskOpFactory: InstanceOpFactory,
-    maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
     offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
@@ -44,7 +42,6 @@ private[launchqueue] object TaskLauncherActor {
       config,
       offerMatcherManager,
       clock, taskOpFactory,
-      maybeOfferReviver,
       instanceTracker, rateLimiterActor, offerMatchStatistics,
       runSpecId, localRegion))
   }
@@ -69,7 +66,6 @@ private class TaskLauncherActor(
     offerMatcherManager: OfferMatcherManager,
     clock: Clock,
     instanceOpFactory: InstanceOpFactory,
-    maybeOfferReviver: Option[OfferReviver],
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
     offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
@@ -204,19 +200,6 @@ private class TaskLauncherActor(
 
   private[this] def receiveInstanceUpdate: Receive = {
     case update: InstanceUpdated =>
-      if (update.condition.isTerminal & update.instance.isScheduled) {
-        logger.info(s"receiveInstanceUpdate: ${update.id} is terminal (${update.condition}) and scheduled.")
-        // A) If the app has constraints, we need to reconsider offers that
-        // we already rejected. E.g. when a host:unique constraint prevented
-        // us to launch tasks on a particular node before, we need to reconsider offers
-        // of that node after a task on that node has died.
-        //
-        // B) If a reservation timed out, already rejected offers might become eligible for creating new reservations.
-        val runSpec = update.instance.runSpec
-        if (runSpec.constraints.nonEmpty || (runSpec.isResident && shouldLaunchInstances(clock.now()))) {
-          maybeOfferReviver.foreach(_.reviveOffers())
-        }
-      }
       syncInstance(update.instance.instanceId)
       sender() ! Done
 

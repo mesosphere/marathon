@@ -9,10 +9,11 @@ import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.event.DeploymentStepSuccess
-import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{GroupCreation, MarathonTestHelper}
 import mesosphere.marathon.core.deployment.DeploymentPlan
+import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
+
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
