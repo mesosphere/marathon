@@ -1,102 +1,64 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.actor.{Actor, Props, Stash, Status}
-import akka.event.{EventStream, LoggingReceive}
+import akka.Done
+import akka.actor.{Actor, Props, Stash}
+import akka.event.LoggingReceive
+import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.event.InstanceChanged
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
 
-import scala.collection.immutable.HashSet
+sealed trait Ops
+case object Revive extends Ops
+case object Suppress extends Ops
+case object Noop extends Ops
 
 class ReviveOffersActor(
     metrics: Metrics,
     conf: ReviveOffersConfig,
-    eventStream: EventStream,
-    instanceTracker: InstanceTracker,
+    instanceUpdates: InstanceTracker.InstanceUpdates,
     driverHolder: MarathonSchedulerDriverHolder) extends Actor with Stash with StrictLogging {
 
   private[this] val reviveCountMetric: Counter = metrics.counter("mesos.calls.revive")
   private[this] val suppressCountMetric: Counter = metrics.counter("mesos.calls.suppress")
 
+  implicit val mat = ActorMaterializer()
+
   override def preStart(): Unit = {
     super.preStart()
 
-    import akka.pattern.pipe
-    import context.dispatcher
-    instanceTracker.instancesBySpec().pipeTo(self)
-
-    eventStream.subscribe(self, classOf[InstanceChanged])
-  }
-
-  override def postStop(): Unit = {
-    eventStream.unsubscribe(self, classOf[InstanceChanged])
-  }
-
-  override def receive: Receive = initializing
-
-  // initial state while loading instance state
-  def initializing: Receive = LoggingReceive {
-    case instances: InstanceTracker.InstancesBySpec =>
-      val scheduledInstances: HashSet[Instance.Id] =
-        instances.allInstances.withFilter(_.isScheduled).map(_.instanceId)(collection.breakOut)
-
-      if (scheduledInstances.nonEmpty) {
-        logger.info("revive offers: scheduled instances found during initialization")
-        reviveOffers()
-      } else {
-        logger.info("suppress offers: no scheduled instances found during initialization")
-        suppressOffers()
-      }
-      context.become(initialized(scheduledInstances))
-      unstashAll()
-
-    case Status.Failure(cause) =>
-      // escalate this failure
-      throw new IllegalStateException("while loading instances", cause)
-
-    case _: AnyRef =>
-      stash()
-  }
-
-  // state that reacts to instance changes
-  def initialized(scheduledInstances: HashSet[Instance.Id]): Receive = LoggingReceive {
-    // An instance is now Scheduled
-    case update: InstanceChanged if update.instance.isScheduled =>
-      logger.debug(s"${update.condition} ${update.instance.instanceId}")
-      if (scheduledInstances.contains(update.id)) {
-        logger.debug(s"ignoring instance change for ${update.id} since it was already known to be Scheduled.")
-      } else {
-        val newState = scheduledInstances + update.id
-        // TODO: an instance can be Scheduled even when the runSpec has a backoff applied. How should we handle this?
-        // If the backoff was (transiently) stored per instance, we could decide right here.
-        logger.info(s"revive offers: new Scheduled ${update.instance.instanceId} found")
-        reviveOffers()
-        context.become(initialized(newState))
-      }
-
-    // An instance is no longer Scheduled
-    case update: InstanceChanged if !update.instance.isScheduled =>
-      logger.debug(s"${update.condition} ${update.instance.instanceId}")
-      if (scheduledInstances.contains(update.id)) {
-        logger.debug(s"${update.id} is no longer scheduled; updating state")
-        val newState = scheduledInstances - update.id
-        if (newState.isEmpty) {
-          logger.info("suppress offers: no scheduled instances left")
-          suppressOffers()
-        } else {
-          logger.info(s"${newState.size} Scheduled instances left; not suppressing offers")
+    instanceUpdates.flatMapConcat {
+      case (snapshot, updates) =>
+        // TODO: consider terminal resident instances that should be decommissioned.
+        val zero: Set[Instance.Id] = snapshot.instances.filter(_.isScheduled).map(_.instanceId).toSet
+        updates.scan(zero) {
+          case (current, update) =>
+            if (update.instance.isScheduled) current + update.instance.instanceId
+            else current - update.instance.instanceId
         }
-        context.become(initialized(newState))
-      } else {
-        logger.debug(s"ignoring instance change for ${update.id} since that instance was not Scheduled.")
-      }
+    }.sliding(2)
+      .map{
+        case Seq(oldScheduledInstances: Set[Instance.Id], newScheduledInstances: Set[Instance.Id]) =>
+          if ((newScheduledInstances &~ oldScheduledInstances).nonEmpty) {
+            // We have new scheduled instances
+            Revive
+          } else if (newScheduledInstances.isEmpty) {
+            Suppress
+          } else {
+            Noop // TODO: should we keep reviving?
+          }
+      }.runWith(Sink.actorRef(self, Done))
+  }
 
-    case update: InstanceChanged =>
-      logger.debug(s"(ignored) ${update.condition} ${update.instance.instanceId}")
+  override def receive: Receive = LoggingReceive {
+    case Revive => reviveOffers()
+    case Suppress => suppressOffers()
+    case Noop => // TODO: keep doing what we've done before.
+    case Done => context.stop(self)
   }
 
   def reviveOffers(): Unit = {
@@ -114,9 +76,8 @@ object ReviveOffersActor {
   def props(
     metrics: Metrics,
     conf: ReviveOffersConfig,
-    marathonEventStream: EventStream,
-    instanceTracker: InstanceTracker,
+    instanceUpdates: InstanceTracker.InstanceUpdates,
     driverHolder: MarathonSchedulerDriverHolder): Props = {
-    Props(new ReviveOffersActor(metrics, conf, marathonEventStream, instanceTracker, driverHolder))
+    Props(new ReviveOffersActor(metrics, conf, instanceUpdates, driverHolder))
   }
 }

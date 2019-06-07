@@ -129,13 +129,9 @@ class CoreModuleImpl @Inject() (
 
   private[this] lazy val offerMatcherReconcilerModule =
     new OfferMatcherReconciliationModule(
-      marathonConf,
-      clock,
-      actorSystem.eventStream,
       instanceTrackerModule.instanceTracker,
       storageModule.groupRepository,
-      leadershipModule
-    )(actorsModule.materializer)
+    )
 
   override lazy val launcherModule = new LauncherModule(
     // infrastructure
@@ -249,7 +245,6 @@ class CoreModuleImpl @Inject() (
   taskJobsModule.expungeOverdueLostTasks(instanceTrackerModule.instanceTracker)
   offerMatcherManagerModule
   launcherModule
-  offerMatcherReconcilerModule.start()
   eventModule
   historyModule
   healthModule
