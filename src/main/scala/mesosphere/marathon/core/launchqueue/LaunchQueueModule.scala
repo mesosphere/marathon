@@ -85,7 +85,7 @@ class LaunchQueueModule(
     offerMatchStatistics)
 
   def reviveOffersActor(): ActorRef = {
-    val props = ReviveOffersActor.props(metrics, reviveConfig, instanceTracker.instanceUpdates, driverHolder)
+    val props = ReviveOffersActor.props(metrics, reviveConfig, instanceTracker.instanceUpdates, driverHolder, launchQueue)
     leadershipModule.startWhenLeader(props, "reviveOffers")
   }
 }

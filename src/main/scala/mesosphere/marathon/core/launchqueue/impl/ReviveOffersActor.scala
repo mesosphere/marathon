@@ -5,13 +5,16 @@ import akka.Done
 import akka.actor.{Actor, Props, Stash}
 import akka.event.LoggingReceive
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
+import mesosphere.marathon.core.launchqueue.{LaunchQueue, ReviveOffersConfig}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
+import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.stream.EnrichedFlow
+
+import scala.concurrent.Future
 
 sealed trait Op
 case object Revive extends Op
@@ -22,7 +25,8 @@ class ReviveOffersActor(
     metrics: Metrics,
     conf: ReviveOffersConfig,
     instanceUpdates: InstanceTracker.InstanceUpdates,
-    driverHolder: MarathonSchedulerDriverHolder) extends Actor with Stash with StrictLogging {
+    driverHolder: MarathonSchedulerDriverHolder,
+    launchQueue: LaunchQueue) extends Actor with Stash with StrictLogging {
 
   private[this] val reviveCountMetric: Counter = metrics.counter("mesos.calls.revive")
   private[this] val suppressCountMetric: Counter = metrics.counter("mesos.calls.suppress")
@@ -34,18 +38,30 @@ class ReviveOffersActor(
 
     instanceUpdates.flatMapConcat {
       case (snapshot, updates) =>
-        val zero: Set[Instance.Id] = snapshot.instances.view.filter { instance =>
+        val zero: Set[Instance] = snapshot.instances.view.filter { instance =>
           instance.isScheduled || shouldUnreserve(instance)
-        }.map(_.instanceId).toSet
+        }.toSet
         updates.scan(zero) {
           case (current, update) =>
             logger.info(s"Processing update $update.")
-            if (update.instance.isScheduled || shouldUnreserve(update.instance)) current + update.instance.instanceId
-            else current - update.instance.instanceId
+            if (update.instance.isScheduled || shouldUnreserve(update.instance)) current + update.instance
+            else current - update.instance
         }
-    }.sliding(2)
+    }
+      .mapAsync(1) { instances =>
+        // TODO: maybe we can fetch the delays at once.
+
+        // Filter all scheduled instance that have an active delay.
+        Source(instances.view.filter(_.isScheduled).map(_.runSpec.configRef).toSet)
+          .mapAsync(5)(launchQueue.getDelay)
+          .filter { delayUpdate =>
+            // TODO: inject clock instead of using Timestamp
+            delayUpdate.delay.isEmpty || delayUpdate.delay.forall(_.deadline.before(Timestamp.now()))
+          }
+        Future.successful(instances.map(_.instanceId))
+      }
+      .sliding(2)
       .map{
-        // TODO: consider backoff.
         case Seq(oldInstances: Set[Instance.Id], newInstances: Set[Instance.Id]) =>
           logger.info(s"Considering old $oldInstances and new $newInstances")
           val addedInstances = newInstances &~ oldInstances
@@ -98,7 +114,8 @@ object ReviveOffersActor {
     metrics: Metrics,
     conf: ReviveOffersConfig,
     instanceUpdates: InstanceTracker.InstanceUpdates,
-    driverHolder: MarathonSchedulerDriverHolder): Props = {
-    Props(new ReviveOffersActor(metrics, conf, instanceUpdates, driverHolder))
+    driverHolder: MarathonSchedulerDriverHolder,
+    launchQueue: LaunchQueue): Props = {
+    Props(new ReviveOffersActor(metrics, conf, instanceUpdates, driverHolder, launchQueue))
   }
 }

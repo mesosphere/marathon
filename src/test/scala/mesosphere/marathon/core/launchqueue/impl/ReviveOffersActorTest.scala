@@ -8,7 +8,7 @@ import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.update.InstanceChangedEventsGenerator
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
-import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
+import mesosphere.marathon.core.launchqueue.{LaunchQueue, ReviveOffersConfig}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
@@ -150,8 +150,10 @@ class ReviveOffersActorTest extends AkkaUnitTest {
 
     val metrics: Metrics = DummyMetrics
 
+    val launchQueue: LaunchQueue = mock[LaunchQueue]
+
     lazy val actorRef: TestActorRef[ReviveOffersActor] = TestActorRef[ReviveOffersActor](
-      ReviveOffersActor.props(metrics, conf, instanceTracker.instanceUpdates, driverHolder)
+      ReviveOffersActor.props(metrics, conf, instanceTracker.instanceUpdates, driverHolder, launchQueue)
     )
 
     val app = AppDefinition(id = PathId("/test"))
