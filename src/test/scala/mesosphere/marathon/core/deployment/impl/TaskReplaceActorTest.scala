@@ -674,11 +674,10 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       f.tracker.specInstancesSync(app.id, readAfterWrite = true) returns Seq(instanceA)
       f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
 
-      val promise = Promise[Unit]()
       val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
       f.queue.add(newApp, 1) returns Future.successful(Done)
 
-      val ref = f.replaceActor(newApp, promise)
+      val ref = f.replaceActor(newApp, Promise[Unit]())
       watch(ref)
 
       // Test that Instance changed events for a different RunSpec are not handled by the actor
