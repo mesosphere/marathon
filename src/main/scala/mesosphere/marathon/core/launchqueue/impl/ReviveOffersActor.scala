@@ -7,7 +7,7 @@ import akka.event.LoggingReceive
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
@@ -33,11 +33,12 @@ class ReviveOffersActor(
 
     instanceUpdates.flatMapConcat {
       case (snapshot, updates) =>
-        // TODO: consider terminal resident instances that should be decommissioned.
-        val zero: Set[Instance.Id] = snapshot.instances.filter(_.isScheduled).map(_.instanceId).toSet
+        val zero: Set[Instance.Id] = snapshot.instances.view.filter { instance =>
+          instance.isScheduled || shouldUnreserve(instance)
+        }.map(_.instanceId).toSet
         updates.scan(zero) {
           case (current, update) =>
-            if (update.instance.isScheduled) current + update.instance.instanceId
+            if (update.instance.isScheduled || shouldUnreserve(update.instance)) current + update.instance.instanceId
             else current - update.instance.instanceId
         }
     }.sliding(2)
@@ -73,6 +74,11 @@ class ReviveOffersActor(
   def suppressOffers(): Unit = {
     suppressCountMetric.increment()
     driverHolder.driver.foreach(_.suppressOffers())
+  }
+
+  /** @return whether the instance has a reservation that can be freed. */
+  def shouldUnreserve(instance: Instance): Boolean = {
+    instance.reservation.nonEmpty && instance.state.goal == Goal.Decommissioned && instance.state.condition.isTerminal
   }
 }
 
