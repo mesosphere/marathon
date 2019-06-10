@@ -117,7 +117,7 @@ private[reconcile] class OffersWantedForReconciliationActor(
     logger.info("No interest in offers for reservation reconciliation.")
 
     handleRequestOfferIndicators orElse {
-      case OffersWantedForReconciliationActor.CancelInterestInOffers => //ignore
+      case OffersWantedForReconciliationActor.CancelInterestInOffers(_) => //ignore
       case OffersWantedForReconciliationActor.RequestOffers(reason) =>
         context.become(subscribedToOffers(reason))
     }: Receive
