@@ -1,7 +1,9 @@
 package mesosphere.marathon
 package core.matcher.reconcile.impl
 
-import akka.actor.{Cancellable, Terminated}
+import java.util.UUID
+
+import akka.actor.Terminated
 import akka.event.EventStream
 import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
@@ -11,37 +13,35 @@ import mesosphere.marathon.core.flow.ReviveOffersConfig
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{GroupCreation, MarathonTestHelper}
 import mesosphere.marathon.core.deployment.DeploymentPlan
+import org.scalatest.concurrent.Eventually
 import rx.lang.scala.Subject
 import rx.lang.scala.subjects.PublishSubject
 
 import scala.concurrent.Promise
 import scala.concurrent.duration._
 
-class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCreation {
+class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCreation with Eventually {
   "OffersWantedForReconciliationActor" should {
     "want offers on startup but times out" in {
       val f = new Fixture()
 
       When("starting up")
       val firstVal = f.futureOffersWanted(drop = 1)
-      f.actor
+      f.actor // start the actor
 
       Then("offersWanted becomes true")
       firstVal.futureValue should be(true)
 
       And("scheduleNextCheck has been called")
-      f.scheduleNextCheckCalls should be(1)
+      f.cancelUUIDs.length should be(1)
 
-      When("the timer is expired")
+      When("the cancellation timer runs")
       val nextVal = f.futureOffersWanted()
       f.clock += 1.hour
-      f.actor ! OffersWantedForReconciliationActor.CancelInterestInOffers
+      f.actor ! OffersWantedForReconciliationActor.CancelInterestInOffers(f.cancelUUIDs.last)
 
       Then("the interest stops")
       nextVal.futureValue should be(false)
-
-      And("the timer was canceled")
-      verify(f.cancellable).cancel()
 
       f.stop()
     }
@@ -51,12 +51,10 @@ class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCrea
 
       Given("an actor that has already started up and timed out")
       val firstVal = f.futureOffersWanted(drop = 2)
-      f.actor
-      f.clock += 1.hour
-      f.actor ! OffersWantedForReconciliationActor.CancelInterestInOffers
+      f.actor // start the actor
+      eventually { f.cancelUUIDs.length shouldBe 1 }
+      f.actor ! OffersWantedForReconciliationActor.CancelInterestInOffers(f.cancelUUIDs.last)
       firstVal.futureValue should be(false)
-
-      reset(f.cancellable)
 
       When("the deployment for a resident app stops")
       val valAfterDeploymentStepSuccess = f.futureOffersWanted()
@@ -75,21 +73,19 @@ class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCrea
 
       Then("there is interest for offers")
       valAfterDeploymentStepSuccess.futureValue should be(true)
+      eventually { f.cancelUUIDs.length shouldBe 2 }
 
       When("the timer is expired")
       val nextVal = f.futureOffersWanted()
-      f.clock += 1.hour
-      f.actor ! OffersWantedForReconciliationActor.CancelInterestInOffers
+      f.actor ! OffersWantedForReconciliationActor.CancelInterestInOffers(f.cancelUUIDs.last)
 
       Then("the interest stops again")
       nextVal.futureValue should be(false)
 
-      And("the timer was canceled again")
-      verify(f.cancellable).cancel()
-
       f.stop()
     }
   }
+
   class Fixture {
     lazy val reviveOffersConfig: ReviveOffersConfig = MarathonTestHelper.defaultConfig()
     lazy val clock: SettableClock = new SettableClock()
@@ -102,13 +98,11 @@ class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCrea
       promise.future
     }
 
-    lazy val cancellable = mock[Cancellable]
-
-    private[this] var scheduleNextCheckCalls_ = 0
-    def scheduleNextCheckCalls = synchronized(scheduleNextCheckCalls_)
-    def scheduleNextCheck: Cancellable = synchronized {
-      scheduleNextCheckCalls_ += 1
-      cancellable
+    var cancelUUIDs: List[UUID] = Nil
+    def scheduleNextCheck: UUID = synchronized {
+      val newUUID = UUID.randomUUID()
+      cancelUUIDs = cancelUUIDs :+ newUUID
+      newUUID
     }
 
     lazy val actorInstance = new OffersWantedForReconciliationActor(
@@ -117,7 +111,7 @@ class OffersWantedForReconciliationActorTest extends AkkaUnitTest with GroupCrea
       eventStream,
       offersWanted
     ) {
-      override protected def scheduleCancelInterestInOffers: Cancellable = Fixture.this.scheduleNextCheck
+      override protected def scheduleCancelInterestInOffers: UUID = Fixture.this.scheduleNextCheck
     }
     lazy val actor = TestActorRef(actorInstance)
 
