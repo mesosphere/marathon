@@ -7,6 +7,7 @@ import akka.event.LoggingReceive
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.instance.update.{InstanceDeleted, InstanceUpdated}
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.launchqueue.{LaunchQueue, ReviveOffersConfig}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -42,10 +43,13 @@ class ReviveOffersActor(
           instance.isScheduled || shouldUnreserve(instance)
         }.toSet
         updates.scan(zero) {
-          case (current, update) =>
-            logger.info(s"Processing update $update.")
-            if (update.instance.isScheduled || shouldUnreserve(update.instance)) current + update.instance
-            else current - update.instance
+          case (current, InstanceUpdated(updated, _, _)) =>
+            logger.info(s"${updated.instanceId} updated.")
+            if (updated.isScheduled || shouldUnreserve(updated)) current + updated
+            else current - updated
+          case (current, InstanceDeleted(deleted, _, _)) =>
+            logger.info(s"${deleted.instanceId} deleted.")
+            current - deleted
         }
     }
       .mapAsync(1) { instances =>
