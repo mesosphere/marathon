@@ -9,6 +9,32 @@
 ### AppC is now deprecated
 AppC is now deprecated and will be removed in Marathon 1.9
 
+### Introduce SharedMemory/IPC configuration to Marathon Apps and Pods
+
+When running Marathon Apps or Pods it is now possible to configure the IPC separation level and shared memory size.
+Each container or executor can have their IPC mode set to either private or share the parents namespace. If set to
+private, the shared memory size can also be configured.
+See Mesos documentation for shared memory configuration for details.
+
+```
+{
+  "id": "/mesos-shared-memory-app",
+  "cmd": "sleep 1000",
+  "cpus": 0.1,
+  "mem": 32,
+  "container": {
+    "type": "MESOS",
+    "linuxInfo": {
+      "IPCInfo": {
+        "IPCMode": "PRIVATE",
+        "shmSize": 16
+      }
+    }
+  }
+}
+``` 
+/
+
 ### Introducing Seccomp capabilities to Marathon Apps and Pods
 
 When running Marathon Apps or Pods it is possible now to configure the `LinuxInfo` in order to define [seccomp](http://man7.org/linux/man-pages/man2/seccomp.2.html) which provides the ability to define container execution in a secure computing state as defined by the profiles at the agent.

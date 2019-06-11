@@ -1214,6 +1214,36 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       containerInfo should be(empty)
     }
 
+    "IpcConfig defined on a pod renderes to executor info" in {
+      val ipcShmSize = 64
+      val ipcMode = IpcMode.Private
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 8000, endPort = 9000).build
+      val container = MesosContainer(name = "dummy", resources = Resources())
+
+      val podSpec = PodDefinition(id = PathId("/ipcConfig"), containers = Seq(container), linuxInfo = Some(LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(ipcMode = ipcMode, shmSize = Some(ipcShmSize))))))
+      val instanceId = Instance.Id.forRunSpec(podSpec.id)
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Nil,
+        defaultBuilderConfig.acceptedResourceRoles, config, Nil)
+      val (executorInfo, _, _) = TaskGroupBuilder.build(
+        podSpec,
+        offer,
+        instanceId,
+        taskIds,
+        defaultBuilderConfig,
+        RunSpecTaskProcessor.empty,
+        resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
+        None
+      )
+
+      executorInfo.hasContainer should be(true)
+      executorInfo.getContainer.hasLinuxInfo should be(true)
+      //      executorInfo.getContainer.getLinuxInfo.hasIpcConfig should be(true)
+      // TODO AN: Complete test when Mesos Protos are updated
+
+    }
+
     "killPolicy is specified correctly" in {
       val killDuration = 3.seconds
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 8000, endPort = 9000).build
