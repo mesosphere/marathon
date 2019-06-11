@@ -221,7 +221,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       mesosCluster.agents(0).start()
 
       Then("Marathon kills the task and removes the associated reservation and volume")
-      waitForEventMatching("Task is declared killed") {
+      waitForEventMatching(s"Task $taskId is declared killed") {
         matchUnknownTerminatedEvent(Task.Id.parse(taskId).instanceId)
       }
     }
