@@ -43,6 +43,8 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
 
     val executorResources: ExecutorResources = podd.executorResources.getOrElse(PodDefinition.DefaultExecutorResources.toRaml)
 
+    val linuxInfo: Option[raml.LinuxInfo] = podd.linuxInfo.orElse(PodDefinition.DefaultLinuxInfo.map(_.toRaml))
+
     new PodDefinition(
       id = PathId(podd.id).canonicalPath(),
       user = podd.user,
@@ -59,6 +61,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       backoffStrategy = backoffStrategy,
       upgradeStrategy = upgradeStrategy,
       executorResources = executorResources.fromRaml,
+      linuxInfo = linuxInfo.map(Raml.fromRaml(_)),
       unreachableStrategy = unreachableStrategy,
       killSelection = killSelection
     )

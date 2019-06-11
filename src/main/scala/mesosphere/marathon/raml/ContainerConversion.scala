@@ -7,7 +7,7 @@ import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.{Protos => Mesos}
 
-trait ContainerConversion extends HealthCheckConversion with VolumeConversion with NetworkConversion {
+trait ContainerConversion extends HealthCheckConversion with VolumeConversion with NetworkConversion with LinuxInfoConversion {
 
   implicit val containerRamlWrites: Writes[MesosContainer, PodContainer] = Writes { c =>
     PodContainer(
@@ -94,20 +94,6 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       case mesos: state.Container.MesosAppC => create(EngineType.Mesos, appc = Some(mesos.toRaml[AppCContainer]), linuxInfo = None) // Linux == None as it is deprecated
       case _: state.Container.Mesos => create(EngineType.Mesos, linuxInfo = container.linuxInfo.toRaml)
     }
-  }
-
-  implicit val linuxInfoReads: Reads[raml.LinuxInfo, state.LinuxInfo] = Reads { linuxInfo =>
-    val seccomp = linuxInfo.seccomp.map { ramlSeccomp =>
-      state.Seccomp(ramlSeccomp.profileName, ramlSeccomp.unconfined)
-    }
-    state.LinuxInfo(seccomp)
-  }
-
-  implicit val linuxInfoWrites: Writes[state.LinuxInfo, LinuxInfo] = Writes { linuxInfo =>
-    val seccomp = linuxInfo.seccomp.map { seccomp =>
-      Seccomp(seccomp.profileName, seccomp.unconfined)
-    }
-    LinuxInfo(seccomp)
   }
 
   implicit val pullConfigReads: Reads[DockerPullConfig, state.Container.DockerPullConfig] = Reads {
@@ -263,16 +249,6 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       volMnt.mountPath, Some(volMnt.readOnly))
   }
 
-  implicit val linuxInfoRamlWrites: Writes[Protos.ExtendedContainerInfo.LinuxInfo, LinuxInfo] = Writes { linuxInfo =>
-    raml.LinuxInfo(
-      if (linuxInfo.hasSeccomp) Some(linuxInfo.getSeccomp.toRaml) else None
-    )
-  }
-
-  implicit val seccompRamlWrites: Writes[Protos.ExtendedContainerInfo.LinuxInfo.Seccomp, Seccomp] = Writes { seccomp =>
-    val profileName = if (seccomp.hasProfileName) Some(seccomp.getProfileName) else None
-    raml.Seccomp(profileName, seccomp.getUnconfined)
-  }
 }
 
 object ContainerConversion extends ContainerConversion

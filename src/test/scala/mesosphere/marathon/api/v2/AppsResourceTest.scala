@@ -379,6 +379,107 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
     }
 
+    "Accept an app definition with ipcMode defined private and shmSize set" in new Fixture {
+      Given("an app with ipcMode defined private and shmSize set")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(image = "private/image")),
+        linuxInfo = Option(LinuxInfo(
+          ipcInfo = Option(raml.IPCInfo(
+            mode = raml.IPCMode.Private,
+            shmSize = Some(16)
+          ))
+        ))
+      )
+
+      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val (body, _) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      Then("It is successful")
+      response.getStatus shouldBe 201
+    }
+
+    "Accept an app definition with ipcMode defined private and shmSize NOT set" in new Fixture {
+      Given("an app with ipcMode defined private and shmSize set")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(image = "private/image")),
+        linuxInfo = Option(LinuxInfo(
+          ipcInfo = Option(raml.IPCInfo(
+            mode = raml.IPCMode.Private
+          ))
+        ))
+      )
+
+      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val (body, _) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      Then("It is successful")
+      response.getStatus shouldBe 201
+    }
+
+    "Decline an app definition with ipcMode defined sharedParent and shmSize set" in new Fixture {
+      Given("an app with ipcMode defined sharedParent and shmSize set")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(image = "private/image")),
+        linuxInfo = Option(LinuxInfo(
+          ipcInfo = Option(raml.IPCInfo(
+            mode = raml.IPCMode.ShareParent,
+            shmSize = Some(16)
+          ))
+        ))
+      )
+
+      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+
+      When("The create request is made")
+      val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      Then("It fails")
+      withClue(s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}") {
+        response.getStatus shouldBe 422
+        response.getEntity.toString should include("ipcInfo shmShize can NOT be set when mode is SHARE_PARENT")
+      }
+    }
+
+    "Accept an app definition with ipcMode defined sharedParent and shmSize NOT set" in new Fixture {
+      Given("an app with ipcMode defined sharedParent and shmSize NOT set")
+      val container = RamlContainer(
+        `type` = EngineType.Mesos,
+        docker = Option(DockerContainer(image = "private/image")),
+        linuxInfo = Option(LinuxInfo(
+          ipcInfo = Option(raml.IPCInfo(
+            mode = raml.IPCMode.ShareParent
+          ))
+        ))
+      )
+
+      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val (body, _) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      Then("It is successful")
+      response.getStatus shouldBe 201
+    }
+
     "Do partial update with patch methods" in new Fixture {
       Given("An app")
       val id = "/app"

@@ -417,12 +417,20 @@ object TaskGroupBuilder extends StrictLogging {
     consumer.consumeGpus(podDefinition.executorResources.gpus.toDouble).foreach(executorInfo.addResources)
     executorInfo.addAllResources(portsMatch.resources.asJava)
 
-    if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty) {
+    if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty || podDefinition.linuxInfo.nonEmpty) {
       val containerInfo = mesos.ContainerInfo.newBuilder
         .setType(mesos.ContainerInfo.Type.MESOS)
 
       mesosNetworks.foreach(containerInfo.addNetworkInfos)
       volumeMatchOption.foreach(_.persistentVolumeResources.foreach(executorInfo.addResources))
+
+      podDefinition.linuxInfo.foreach({ linuxInfo =>
+        val linuxInfoBuilder = mesos.LinuxInfo.newBuilder
+        // TODO AN: Set sharedMem/IPC settings
+
+        containerInfo.setLinuxInfo(linuxInfoBuilder)
+      })
+
       executorInfo.setContainer(containerInfo)
     }
 
@@ -582,17 +590,22 @@ object TaskGroupBuilder extends StrictLogging {
     // attach a tty if specified
     container.tty.filter(tty => tty).foreach(containerInfo.setTtyInfo(_))
 
+    // setup linux info
     container.linuxInfo.foreach { linuxInfo =>
       val linuxBuilder = mesos.LinuxInfo.newBuilder
       linuxInfo.seccomp.foreach { seccomp =>
         val seccompBuilder = mesos.SeccompInfo.newBuilder
 
         seccompBuilder.setUnconfined(seccomp.unconfined)
-        seccomp.profileName.foreach { profileName =>
-          seccompBuilder.setProfileName(profileName)
-        }
+        seccomp.profileName.foreach(seccompBuilder.setProfileName)
+
         linuxBuilder.setSeccomp(seccompBuilder)
       }
+
+      linuxInfo.ipcInfo.foreach { ipcInfo =>
+        // TODO AN: Set Mesos IPC Info in linuxBuilder.
+      }
+
       containerInfo.setLinuxInfo(linuxBuilder.build)
     }
 

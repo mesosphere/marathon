@@ -269,6 +269,7 @@ class ContainerConversionTest extends UnitTest {
     volume = state.HostVolume(None, "/host/path"),
     mount = state.VolumeMount(None, "cpath"))
   private lazy val ramlHostVolume = AppHostVolume("cpath", "/host/path", mode = ReadMode.Rw)
-  private lazy val coreLinuxInfoProfile = state.LinuxInfo(Some(state.Seccomp(Some("profile"), false)))
-  private lazy val ramlLinuxInfoProfile = LinuxInfo(Some(Seccomp(Some("profile"), false)))
+
+  private lazy val coreLinuxInfoProfile = state.LinuxInfo(Some(state.Seccomp(Some("profile"), false)), Some(state.IPCInfo(state.IpcMode.Private, Some(64))))
+  private lazy val ramlLinuxInfoProfile = LinuxInfo(Some(Seccomp(Some("profile"), false)), Some(IPCInfo(IPCMode.Private, Some(64))))
 }
