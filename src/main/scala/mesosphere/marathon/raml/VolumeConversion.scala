@@ -8,13 +8,18 @@ import org.apache.mesos.{Protos => Mesos}
 
 trait VolumeConversion extends ConstraintConversion with DefaultConversions {
 
+  /**
+    * If a disk profile is set, disk type defaults to Mount, as only that is supported by DSS which sets profileNames
+    * In any other case, DiskType defaults to Root
+    */
+  def defaultDiskTypeForProfile(profileName: Option[String]): DiskType = profileName.map(_ => DiskType.Mount).getOrElse(DiskType.Root)
+
   implicit val volumeRamlReader: Reads[PodVolume, state.Volume] = Reads {
     case ev: PodEphemeralVolume => state.EphemeralVolume(name = Some(ev.name))
     case hv: PodHostVolume => state.HostVolume(name = Some(hv.name), hostPath = hv.host)
     case sv: PodSecretVolume => state.SecretVolume(name = Some(sv.name), secret = sv.secret)
     case pv: PodPersistentVolume =>
-      // If a disk profile is set, only DiskType.Mount is supported, while DiskType defaults to Root
-      val diskType = pv.persistent.profileName.map(_ => DiskType.Mount).getOrElse(pv.persistent.`type`.fromRaml)
+      val diskType = pv.persistent.`type`.fromRaml.getOrElse(defaultDiskTypeForProfile(pv.persistent.profileName))
       val persistentInfo = state.PersistentVolumeInfo(
         `type` = diskType,
         size = pv.persistent.size,
@@ -117,13 +122,13 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     state.VolumeWithMount[Volume](volume = volume, mount = mount)
   }
 
-  implicit val volumeTypeReads: Reads[Option[PersistentVolumeType], DiskType] = Reads {
+  implicit val volumeTypeReads: Reads[Option[PersistentVolumeType], Option[DiskType]] = Reads {
     case Some(definedType) => definedType match {
-      case PersistentVolumeType.Root => DiskType.Root
-      case PersistentVolumeType.Mount => DiskType.Mount
-      case PersistentVolumeType.Path => DiskType.Path
+      case PersistentVolumeType.Root => Some(DiskType.Root)
+      case PersistentVolumeType.Mount => Some(DiskType.Mount)
+      case PersistentVolumeType.Path => Some(DiskType.Path)
     }
-    case None => DiskType.Root
+    case None => None
   }
 
   implicit val volumeConstraintsReads: Reads[Set[Seq[String]], Set[Protos.Constraint]] = Reads { constraints =>
@@ -142,8 +147,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   }
 
   implicit val volumePersistentReads: Reads[AppPersistentVolume, state.VolumeWithMount[Volume]] = Reads { volumeRaml =>
-    // If a disk profile is set, only DiskType.Mount is supported, while DiskType defaults to Root
-    val diskType = volumeRaml.persistent.profileName.map(_ => DiskType.Mount).getOrElse(volumeRaml.persistent.`type`.fromRaml)
+    val diskType = volumeRaml.persistent.`type`.fromRaml.getOrElse(defaultDiskTypeForProfile(volumeRaml.persistent.profileName))
     val info = state.PersistentVolumeInfo(
       `type` = diskType,
       size = volumeRaml.persistent.size,
