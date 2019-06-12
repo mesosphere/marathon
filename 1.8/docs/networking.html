@@ -499,125 +499,151 @@ If you choose your own service port, you must ensure that it is unique across al
 
 <p><code class="highlighter-rouge">VIP_0</code>, defined in <code class="highlighter-rouge">portDefinitions</code> as a label, is like <code class="highlighter-rouge">servicePort</code> in that it is informational and implementation-dependent. However, when used with <a href="https://docs.mesosphere.com">DC/OS</a>, services internal to DC/OS will make available to the cluster that DNS name and port as a route to services. An example configuration:</p>
 
-<p>```app_def[‘portDefinitions’] = [{
-        “port”: 0,
-        “protocol”: “tcp”,
-        “name”: “acme”,
-        “labels”: {
-            “VIP_0”: “/acme:10000”
-        }
-    }]</p>
-<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
-This configuration will create a fully qualified domain name (FQDN) according to the following schema: `&lt;vip-name&gt;.marathon.l4lb.thisdcos.directory:&lt;vip-port&gt;`, which will load balance all instances of the application. Here, the FQDN would be `acme.marathon.l4lb.thisdcos.directory:10000`.
-
-Marathon itself does nothing with this configuration. Marathon manages it as metadata for the application. A client in DC/OS could open a connection to `acme.marathon.l4lb.thisdcos.directory` at port `10000`, which would route to `10.0.0.2:31000`, which will in turn route to the `containerPort` of `8080`.
-
-#### Declaring ports in an application
-
-##### *endpoint*:
-
-Endpoints are declared only by the containers of a Pod.
-See the documentation for [pods](pods.html).
-
-##### *port-definition*:
-
-Port-definitions are used only with `host` mode networking.
-A *port-definition* (specifically its `port` field) is interpreted through the lens of the `requirePorts` app field:
-
-* When `requirePorts` is `false` (default), a port-definition's `port` is considered the *service-port* and a *host-port* is dynamically chosen by Marathon.
-* When `requirePorts` is `true`, a port-definition's `port` is considered both a *host-port* and *service-port*, otherwise;
-* The special `port` value of `0` tells Marathon to select any *host-port* from a Mesos resource offer and any *service-port* from the configured service port range.
-
-##### *port-mapping*:
-
-A *port-mapping* declares a *container-port* for an application, possibly linking that *container-port* to a *host-port* and *service-port*.
-Marathon communicates *container-port*/*host-port* links (aka "mappings") to Mesos when launching instances of the application.
-Port-mappings are used with both `container` and `container/bridge` networking.
-Marathon ignores the value of `requirePorts` when interpreting a *port-mapping*.
-* The special `containerPort` value of `0` tells Marathon to internally assign the (eventually) allocated *host-port* to `containerPort`.
-* The special `hostPort` value of `0` tells Marathon to select any *host-port* from a Mesos resource offer.
-* The special `servicePort` value of `0` tells Marathon to select any *service-port* from the configured *service-port* range.
-
-### Port Definitions
-
-#### Summary
-
-* Review *port-definition*, *host-port*, and *service-port* in [Terminology](#Terminology).
-* Location in app definition: `{ "portDefinitions": [ &lt;port-definition&gt;... ], "requirePorts": &lt;bool&gt;, ... }`
-* Used in conjunction with `host` mode networking.
-* `requirePorts` applies to `portDefinitions`.
-* If no `portDefinitions` are defined (or defined as `null`) at create-time, default to `{ "portDefinitions": [ { "port": 0, "name": "default" } ], ... }`
-    * Specify an empty array (`[]`) to indicate NO ports are used by the app; no default is injected in this case.
-* Ignored when used in conjunction with other networking modes.
-    * NOTE: Future versions of Marathon may fail to validate apps that declare `portDefinitions` with network modes other than `host`.
-
-### Port Mappings
-
-Summary:
-
-* Review *port-mapping*, *container-port*, and *host-port* in [Terminology](#Terminology).
-* Location in app definition: `{ "container": { "portMappings": [ &lt;port-mapping&gt;... ], ... }, ... }`
-* Used in conjunction with `container` and `container/bridge` mode networking.
-* When using `container/bridge` mode networking, an unspecified (`null`) value for `hostPort` is translated to `"hostPort": 0`.
-* `requirePorts` does not apply to `portMappings`.
-* If unspecified (`null`) at create-time, defaults to `{ "portMappings": [ { "containerPort": 0, "name": "default" } ], ... }`
-    * Specify an empty array (`[]`) to indicate NO ports are used by the app; no default is injected in this case.
-    * **NOTE:** When using `container/bridge` mode, the default *port-mapping* also sets `"hostPort: 0"`.
-* Ignored when used in conjunction with other networking modes.
-    * **NOTE:** Future versions of Marathon may fail to validate apps that declare `container.portMappings` with network modes other than `container` or `container/bridge`.
-* When used in conjunction with multiple container networks, each mapping entry that specifies a `hostPort` must also declare a `networkNames` value with a single item, identifying the network for which the mapping applies (a single `hostPort` may be mapped to only one container network, and `networkNames` defaults to all container networks for a pod or app).
-
-## Downward API
-
-### Per-Task Environment Variables
-
-If a port is named `NAME`, it will be accessible via the environment variable `$PORT_NAME`.
-Every *host-port* value is also exposed to the running application instance via environment variables `$PORT0`, `$PORT1`, etc.
-Each Marathon application is given a single port by default, so `$PORT0` will normally be available, except for apps that specifically declare "no ports".
-Variables are generated for all apps, regardless of whether the app uses the Mesos or Docker containerizer.
-It is **highly recommended** to name the ports of an app to provide clarity with respect to the app configuration and intended use of each port.
-
-When using `container` or `container/bridge` mode networking, be sure to bind your application to the `containerPort`s you have specified in your `portMapping`s.
-If you have set `containerPort` to `0`, this will be the same as `hostPort` and you can use the `$PORTxxx` environment variables.
-
-Additional [per-task enviroment variables](task-environment-vars.html) are also provided.
-
-### Discovery Via Mesos
-
-#### DiscoveryInfo and port `labels`:
-
-* `labels` may be defined for items of `portDefinitions` as well as for items of `portMappings`. These labels are sent to Mesos via `DiscoveryInfo` protobufs at instance-launch time.
-* Given a mapping or endpoint, we generate a port `DiscoveryInfo` for every combination of specified protocols and associated networks. (IE, if an `Endpoint` specifies 2 protocols and is associated with 3 container networks, then a total of 6 `DiscoveryInfo` protobufs would be generated for that single `Endpoint`).
-* Marathon injects a `network-scope` label into the port `DiscoveryInfo` to disambiguate between a *host-port* and *container-port*.
-    * A scope value of `host` is used for *host-port* discovery.
-    * A scope value of `container` is used for *container-port* discovery.
-* For *container-port* discovery, Marathon also injects a `network-name` label into the respective port `DiscoveryInfo`.
-
-#### Virtual addresses
-
-See the DC/OS documentation for [virtual addresses (VIPs)](https://docs.mesosphere.com/latest/networking/load-balancing-vips/).
-
-## Examples
-
-### `host` Mode
-
-`host` mode networking is the default networking mode for all apps.
-If your app uses Docker containers, it not necessary to `EXPOSE` ports in your `Dockerfile`.
-
-#### Using `host` Mode
-
-Host mode is enabled by default for all apps and all container types.
-If you wish to be explicit, you can also specify it manually through the `networks` property:
-
-```json
-  "networks": [ { "mode": "host" } ],
-  "container": {
-    "type": "MESOS",
-    "docker": {
-      "image": "my-image:1.0"
-    }
-  },
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="nx">app_def</span><span class="p">[</span><span class="s1">'portDefinitions'</span><span class="p">]</span> <span class="o">=</span> <span class="p">[{</span>
+        <span class="s2">"port"</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span>
+        <span class="s2">"protocol"</span><span class="p">:</span> <span class="s2">"tcp"</span><span class="p">,</span>
+        <span class="s2">"name"</span><span class="p">:</span> <span class="s2">"acme"</span><span class="p">,</span>
+        <span class="s2">"labels"</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">"VIP_0"</span><span class="p">:</span> <span class="s2">"/acme:10000"</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">]</span>
 </code></pre></div></div>
+
+<p>This configuration will create a fully qualified domain name (FQDN) according to the following schema: <code class="highlighter-rouge">&lt;vip-name&gt;.marathon.l4lb.thisdcos.directory:&lt;vip-port&gt;</code>, which will load balance all instances of the application. Here, the FQDN would be <code class="highlighter-rouge">acme.marathon.l4lb.thisdcos.directory:10000</code>.</p>
+
+<p>Marathon itself does nothing with this configuration. Marathon manages it as metadata for the application. A client in DC/OS could open a connection to <code class="highlighter-rouge">acme.marathon.l4lb.thisdcos.directory</code> at port <code class="highlighter-rouge">10000</code>, which would route to <code class="highlighter-rouge">10.0.0.2:31000</code>, which will in turn route to the <code class="highlighter-rouge">containerPort</code> of <code class="highlighter-rouge">8080</code>.</p>
+
+<h4 id="declaring-ports-in-an-application">Declaring ports in an application</h4>
+
+<h5 id="endpoint"><em>endpoint</em>:</h5>
+
+<p>Endpoints are declared only by the containers of a Pod.
+See the documentation for <a href="pods.html">pods</a>.</p>
+
+<h5 id="port-definition"><em>port-definition</em>:</h5>
+
+<p>Port-definitions are used only with <code class="highlighter-rouge">host</code> mode networking.
+A <em>port-definition</em> (specifically its <code class="highlighter-rouge">port</code> field) is interpreted through the lens of the <code class="highlighter-rouge">requirePorts</code> app field:</p>
+
+<ul>
+  <li>When <code class="highlighter-rouge">requirePorts</code> is <code class="highlighter-rouge">false</code> (default), a port-definition’s <code class="highlighter-rouge">port</code> is considered the <em>service-port</em> and a <em>host-port</em> is dynamically chosen by Marathon.</li>
+  <li>When <code class="highlighter-rouge">requirePorts</code> is <code class="highlighter-rouge">true</code>, a port-definition’s <code class="highlighter-rouge">port</code> is considered both a <em>host-port</em> and <em>service-port</em>, otherwise;</li>
+  <li>The special <code class="highlighter-rouge">port</code> value of <code class="highlighter-rouge">0</code> tells Marathon to select any <em>host-port</em> from a Mesos resource offer and any <em>service-port</em> from the configured service port range.</li>
+</ul>
+
+<h5 id="port-mapping"><em>port-mapping</em>:</h5>
+
+<p>A <em>port-mapping</em> declares a <em>container-port</em> for an application, possibly linking that <em>container-port</em> to a <em>host-port</em> and <em>service-port</em>.
+Marathon communicates <em>container-port</em>/<em>host-port</em> links (aka “mappings”) to Mesos when launching instances of the application.
+Port-mappings are used with both <code class="highlighter-rouge">container</code> and <code class="highlighter-rouge">container/bridge</code> networking.
+Marathon ignores the value of <code class="highlighter-rouge">requirePorts</code> when interpreting a <em>port-mapping</em>.</p>
+<ul>
+  <li>The special <code class="highlighter-rouge">containerPort</code> value of <code class="highlighter-rouge">0</code> tells Marathon to internally assign the (eventually) allocated <em>host-port</em> to <code class="highlighter-rouge">containerPort</code>.</li>
+  <li>The special <code class="highlighter-rouge">hostPort</code> value of <code class="highlighter-rouge">0</code> tells Marathon to select any <em>host-port</em> from a Mesos resource offer.</li>
+  <li>The special <code class="highlighter-rouge">servicePort</code> value of <code class="highlighter-rouge">0</code> tells Marathon to select any <em>service-port</em> from the configured <em>service-port</em> range.</li>
+</ul>
+
+<h3 id="port-definitions">Port Definitions</h3>
+
+<h4 id="summary">Summary</h4>
+
+<ul>
+  <li>Review <em>port-definition</em>, <em>host-port</em>, and <em>service-port</em> in <a href="#Terminology">Terminology</a>.</li>
+  <li>Location in app definition: <code class="highlighter-rouge">{ "portDefinitions": [ &lt;port-definition&gt;... ], "requirePorts": &lt;bool&gt;, ... }</code></li>
+  <li>Used in conjunction with <code class="highlighter-rouge">host</code> mode networking.</li>
+  <li><code class="highlighter-rouge">requirePorts</code> applies to <code class="highlighter-rouge">portDefinitions</code>.</li>
+  <li>If no <code class="highlighter-rouge">portDefinitions</code> are defined (or defined as <code class="highlighter-rouge">null</code>) at create-time, default to <code class="highlighter-rouge">{ "portDefinitions": [ { "port": 0, "name": "default" } ], ... }</code>
+    <ul>
+      <li>Specify an empty array (<code class="highlighter-rouge">[]</code>) to indicate NO ports are used by the app; no default is injected in this case.</li>
+    </ul>
+  </li>
+  <li>Ignored when used in conjunction with other networking modes.
+    <ul>
+      <li>NOTE: Future versions of Marathon may fail to validate apps that declare <code class="highlighter-rouge">portDefinitions</code> with network modes other than <code class="highlighter-rouge">host</code>.</li>
+    </ul>
+  </li>
+</ul>
+
+<h3 id="port-mappings">Port Mappings</h3>
+
+<p>Summary:</p>
+
+<ul>
+  <li>Review <em>port-mapping</em>, <em>container-port</em>, and <em>host-port</em> in <a href="#Terminology">Terminology</a>.</li>
+  <li>Location in app definition: <code class="highlighter-rouge">{ "container": { "portMappings": [ &lt;port-mapping&gt;... ], ... }, ... }</code></li>
+  <li>Used in conjunction with <code class="highlighter-rouge">container</code> and <code class="highlighter-rouge">container/bridge</code> mode networking.</li>
+  <li>When using <code class="highlighter-rouge">container/bridge</code> mode networking, an unspecified (<code class="highlighter-rouge">null</code>) value for <code class="highlighter-rouge">hostPort</code> is translated to <code class="highlighter-rouge">"hostPort": 0</code>.</li>
+  <li><code class="highlighter-rouge">requirePorts</code> does not apply to <code class="highlighter-rouge">portMappings</code>.</li>
+  <li>If unspecified (<code class="highlighter-rouge">null</code>) at create-time, defaults to <code class="highlighter-rouge">{ "portMappings": [ { "containerPort": 0, "name": "default" } ], ... }</code>
+    <ul>
+      <li>Specify an empty array (<code class="highlighter-rouge">[]</code>) to indicate NO ports are used by the app; no default is injected in this case.</li>
+      <li><strong>NOTE:</strong> When using <code class="highlighter-rouge">container/bridge</code> mode, the default <em>port-mapping</em> also sets <code class="highlighter-rouge">"hostPort: 0"</code>.</li>
+    </ul>
+  </li>
+  <li>Ignored when used in conjunction with other networking modes.
+    <ul>
+      <li><strong>NOTE:</strong> Future versions of Marathon may fail to validate apps that declare <code class="highlighter-rouge">container.portMappings</code> with network modes other than <code class="highlighter-rouge">container</code> or <code class="highlighter-rouge">container/bridge</code>.</li>
+    </ul>
+  </li>
+  <li>When used in conjunction with multiple container networks, each mapping entry that specifies a <code class="highlighter-rouge">hostPort</code> must also declare a <code class="highlighter-rouge">networkNames</code> value with a single item, identifying the network for which the mapping applies (a single <code class="highlighter-rouge">hostPort</code> may be mapped to only one container network, and <code class="highlighter-rouge">networkNames</code> defaults to all container networks for a pod or app).</li>
+</ul>
+
+<h2 id="downward-api">Downward API</h2>
+
+<h3 id="per-task-environment-variables">Per-Task Environment Variables</h3>
+
+<p>If a port is named <code class="highlighter-rouge">NAME</code>, it will be accessible via the environment variable <code class="highlighter-rouge">$PORT_NAME</code>.
+Every <em>host-port</em> value is also exposed to the running application instance via environment variables <code class="highlighter-rouge">$PORT0</code>, <code class="highlighter-rouge">$PORT1</code>, etc.
+Each Marathon application is given a single port by default, so <code class="highlighter-rouge">$PORT0</code> will normally be available, except for apps that specifically declare “no ports”.
+Variables are generated for all apps, regardless of whether the app uses the Mesos or Docker containerizer.
+It is <strong>highly recommended</strong> to name the ports of an app to provide clarity with respect to the app configuration and intended use of each port.</p>
+
+<p>When using <code class="highlighter-rouge">container</code> or <code class="highlighter-rouge">container/bridge</code> mode networking, be sure to bind your application to the <code class="highlighter-rouge">containerPort</code>s you have specified in your <code class="highlighter-rouge">portMapping</code>s.
+If you have set <code class="highlighter-rouge">containerPort</code> to <code class="highlighter-rouge">0</code>, this will be the same as <code class="highlighter-rouge">hostPort</code> and you can use the <code class="highlighter-rouge">$PORTxxx</code> environment variables.</p>
+
+<p>Additional <a href="task-environment-vars.html">per-task enviroment variables</a> are also provided.</p>
+
+<h3 id="discovery-via-mesos">Discovery Via Mesos</h3>
+
+<h4 id="discoveryinfo-and-port-labels">DiscoveryInfo and port <code class="highlighter-rouge">labels</code>:</h4>
+
+<ul>
+  <li><code class="highlighter-rouge">labels</code> may be defined for items of <code class="highlighter-rouge">portDefinitions</code> as well as for items of <code class="highlighter-rouge">portMappings</code>. These labels are sent to Mesos via <code class="highlighter-rouge">DiscoveryInfo</code> protobufs at instance-launch time.</li>
+  <li>Given a mapping or endpoint, we generate a port <code class="highlighter-rouge">DiscoveryInfo</code> for every combination of specified protocols and associated networks. (IE, if an <code class="highlighter-rouge">Endpoint</code> specifies 2 protocols and is associated with 3 container networks, then a total of 6 <code class="highlighter-rouge">DiscoveryInfo</code> protobufs would be generated for that single <code class="highlighter-rouge">Endpoint</code>).</li>
+  <li>Marathon injects a <code class="highlighter-rouge">network-scope</code> label into the port <code class="highlighter-rouge">DiscoveryInfo</code> to disambiguate between a <em>host-port</em> and <em>container-port</em>.
+    <ul>
+      <li>A scope value of <code class="highlighter-rouge">host</code> is used for <em>host-port</em> discovery.</li>
+      <li>A scope value of <code class="highlighter-rouge">container</code> is used for <em>container-port</em> discovery.</li>
+    </ul>
+  </li>
+  <li>For <em>container-port</em> discovery, Marathon also injects a <code class="highlighter-rouge">network-name</code> label into the respective port <code class="highlighter-rouge">DiscoveryInfo</code>.</li>
+</ul>
+
+<h4 id="virtual-addresses">Virtual addresses</h4>
+
+<p>See the DC/OS documentation for <a href="https://docs.mesosphere.com/latest/networking/load-balancing-vips/">virtual addresses (VIPs)</a>.</p>
+
+<h2 id="examples">Examples</h2>
+
+<h3 id="host-mode"><code class="highlighter-rouge">host</code> Mode</h3>
+
+<p><code class="highlighter-rouge">host</code> mode networking is the default networking mode for all apps.
+If your app uses Docker containers, it not necessary to <code class="highlighter-rouge">EXPOSE</code> ports in your <code class="highlighter-rouge">Dockerfile</code>.</p>
+
+<h4 id="using-host-mode">Using <code class="highlighter-rouge">host</code> Mode</h4>
+
+<p>Host mode is enabled by default for all apps and all container types.
+If you wish to be explicit, you can also specify it manually through the <code class="highlighter-rouge">networks</code> property:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">  </span><span class="s2">"networks"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="s2">"mode"</span><span class="p">:</span><span class="w"> </span><span class="s2">"host"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w">
+  </span><span class="s2">"container"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+    </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MESOS"</span><span class="p">,</span><span class="w">
+    </span><span class="s2">"docker"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="s2">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"my-image:1.0"</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">},</span><span class="w">
+</span></code></pre></div></div>
 
 <h4 id="specifying-ports">Specifying Ports</h4>
 
@@ -728,30 +754,32 @@ It is particularly useful if you are using a container image with fixed port ass
   </li>
   <li>
     <p>Create a file called <code class="highlighter-rouge">mesos-bridge.json</code>, copy the following configuration into it, and add it to <code class="highlighter-rouge">/var/lib/mesos/cni/config</code>.</p>
-
-    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
-  "name": "mesos-bridge",
-  "type": "mesos-cni-port-mapper",
-  "excludeDevices": ["mesos-bridge"],
-  "chain": "MESOS-BRIDGE-PORT-MAPPER",
-  "delegate": {
-    "type": "bridge",
-    "bridge": "mesos-bridge",
-    "isGateway": true,
-    "ipMasq": true,
-    "ipam": {
-      "type": "host-local",
-      "subnet": "10.1.1.0/24",
-      "routes": [{
-        "dst": "0.0.0.0/0"
-      }]
-    }
-  }
-}
-</code></pre></div>    </div>
   </li>
-  <li>
-    <p>Soft-link the <code class="highlighter-rouge">mesos-cni-port-mapper</code> plugin to your plugins directory using the following command</p>
+</ol>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">   </span><span class="p">{</span><span class="w">
+     </span><span class="s2">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesos-bridge"</span><span class="p">,</span><span class="w">
+     </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesos-cni-port-mapper"</span><span class="p">,</span><span class="w">
+     </span><span class="s2">"excludeDevices"</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">"mesos-bridge"</span><span class="p">],</span><span class="w">
+     </span><span class="s2">"chain"</span><span class="p">:</span><span class="w"> </span><span class="s2">"MESOS-BRIDGE-PORT-MAPPER"</span><span class="p">,</span><span class="w">
+     </span><span class="s2">"delegate"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+       </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"bridge"</span><span class="p">,</span><span class="w">
+       </span><span class="s2">"bridge"</span><span class="p">:</span><span class="w"> </span><span class="s2">"mesos-bridge"</span><span class="p">,</span><span class="w">
+       </span><span class="s2">"isGateway"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+       </span><span class="s2">"ipMasq"</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w">
+       </span><span class="s2">"ipam"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w">
+         </span><span class="s2">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"host-local"</span><span class="p">,</span><span class="w">
+         </span><span class="s2">"subnet"</span><span class="p">:</span><span class="w"> </span><span class="s2">"10.1.1.0/24"</span><span class="p">,</span><span class="w">
+         </span><span class="s2">"routes"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w">
+           </span><span class="s2">"dst"</span><span class="p">:</span><span class="w"> </span><span class="s2">"0.0.0.0/0"</span><span class="w">
+         </span><span class="p">}]</span><span class="w">
+       </span><span class="p">}</span><span class="w">
+     </span><span class="p">}</span><span class="w">
+   </span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<ol>
+  <li>Soft-link the <code class="highlighter-rouge">mesos-cni-port-mapper</code> plugin to your plugins directory using the following command
     <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ sudo ln -sf /usr/libexec/mesos/mesos-cni-port-mapper /var/lib/mesos/cni/plugins/mesos-cni-port-mapper
 </code></pre></div>    </div>
   </li>

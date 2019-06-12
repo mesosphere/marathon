@@ -444,7 +444,7 @@ docs to learn how to convert it.</p>
  <span class="nv">$ </span>openssl pkcs12 <span class="nt">-inkey</span> marathon.key <span class="se">\</span>
                  <span class="nt">-passin</span> <span class="s2">"env:MARATHON_KEY_PASSWORD"</span> <span class="se">\</span>
                    <span class="nt">-name</span> marathon <span class="se">\</span>
-                     <span class="nt">-in</span> trusted.pem <span class="se">\</span>
+                     <span class="nt">-in</span> self-signed-marathon.pem <span class="se">\</span>
                <span class="nt">-password</span> <span class="s2">"env:MARATHON_PKCS_PASSWORD"</span> <span class="se">\</span>
           <span class="nt">-chain</span> <span class="nt">-CAfile</span> <span class="s2">"trustedCA.crt"</span> <span class="se">\</span>
             <span class="nt">-export</span> <span class="nt">-out</span> marathon.pkcs12

@@ -412,11 +412,15 @@ help you figure out why the Marathon process stopped.</p>
     </tr>
     <tr>
       <td>108</td>
-      <td>The Framework ID could not be read.</td>
+      <td><code class="highlighter-rouge">FrameworkIdMissing</code> The Framework ID could not be read</td>
     </tr>
     <tr>
       <td>109</td>
-      <td>Provided LibMesos version is incompatible.</td>
+      <td><code class="highlighter-rouge">IncompatibleLibMesos</code> Provided LibMesos version is incompatible</td>
+    </tr>
+    <tr>
+      <td>110</td>
+      <td><code class="highlighter-rouge">FrameworkHasBeenRemoved</code> Framework has been removed via Mesos teardown call</td>
     </tr>
     <tr>
       <td>137</td>
@@ -424,6 +428,20 @@ help you figure out why the Marathon process stopped.</p>
     </tr>
   </tbody>
 </table>
+
+<h2 id="troubleshooting-exit-codes">Troubleshooting Exit Codes</h2>
+
+<h3 id="102-plugin-initialization-failure">102 Plugin Initialization Failure</h3>
+
+<p>One or more configured plugins could not be initialized. Please check your plugin configuration and the compatibility of the loaded plugin.</p>
+
+<h3 id="108-missing-framework-id">108 Missing Framework ID</h3>
+
+<p>The configured zookeeper path contains references to any app or pod instances but it does not contain a Framework ID for registration with Mesos. Marathon will not register without a Framework ID since this would orphan any existing app or pod instances. Please see the documentation on <a href="framework-id.html">Framework ID registration</a>.</p>
+
+<h3 id="110-framework-has-been-removed">110 Framework Has Been Removed</h3>
+
+<p>The Framework ID stored in zookeeper is no longer valid for registration with Mesos. Most likely, it has been torn down via the Mesos Master <code class="highlighter-rouge">teardown</code> endpoint. You should clean up the existing zookeeper node that the Marathon is configured to use. Note that the state may not contain any instances, otherwise Marathon will crash with a <code class="highlighter-rouge">108</code> exit code. You may keep app or pod definitions, but do this at your own risk.</p>
 
     </div>
 </div>
