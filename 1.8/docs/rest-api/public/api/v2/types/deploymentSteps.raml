@@ -1,0 +1,21 @@
+#%RAML 1.0 Library
+uses:
+  strings: stringTypes.raml
+  deploymentAction: deploymentAction.raml
+
+types:
+  DeploymentSteps:
+    type: object
+    properties:
+      steps:
+        type: array
+        items: DeploymentStep
+
+  DeploymentStep:
+    type: object
+    description: |
+      A step in the deployment plan, represented as a list of actions to be performed
+    properties:
+      actions:
+        type: array
+        items: deploymentAction.DeploymentAction

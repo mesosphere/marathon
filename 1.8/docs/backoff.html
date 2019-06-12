@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: No new instances of a service are starting, it is in 'delayed' mode</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.8/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.8/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.8/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.8/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.8/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.8/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.8/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/unreachable.html">
+                    Unreachable Strategy
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.8/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/data-migration.html">
+                    Data Migration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/deprecated-metrics.html">
+                    Deprecated Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/checks.html">
+                    Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/maintenance-mode.html">
+                    Maintenance mode
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/mesos-compatibility.html">
+                    Compatibility with Mesos
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/1.8/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.8/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.8/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.8/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.8/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/backoff.html">
+                    No new instances are starting
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/cfs.html">
+                    Slow Docker apps and deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.8/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.8/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+            
+            <li><a href="/marathon/1.8/docs">Version 1.8.x</a></li>
+            
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="new-instances-of-service-are-not-starting-because-it-is-delayed">New instances of service are not starting because it is delayed</h1>
+
+<p>If your deployment is not finishing and/or your instances appear to start very slowly, your service may be delayed.</p>
+
+<p>In order to protect the cluster from being overloaded with launch requests, Marathon will slow down the launch rate of services that crash loop / fail frequently via a mechanism known as “backoff delay”.
+Were it not for this protective measure, Marathon could cause cluster-wide agents due to disks filling up on Mesos Agents with sandboxes created for the frequently-launched-and-failing failing tasks.</p>
+
+<h2 id="how-do-i-find-out-if-my-service-is-being-delayed">How do I find out if my service is being delayed?</h2>
+
+<p>There are a number of <a href="waiting.html">reasons for application instances not being started</a>.
+To find out if the backoff delay might be causing your instances not to be launched you need to:</p>
+
+<ol>
+  <li>Query the <code class="highlighter-rouge">v2/queue</code> endpoint.</li>
+  <li>Find an item where <code class="highlighter-rouge">service.id</code> equals id of your application or pod.</li>
+  <li>Read the property <code class="highlighter-rouge">delay.timeLeftSeconds</code>; if it is higher than 0, then your service is delayed.</li>
+</ol>
+
+<h2 id="how-do-i-configure-the-backoff-delay">How do I configure the backoff delay?</h2>
+
+<p>The backoff delay length and rate can be configured per service. For apps, the <a href="https://github.com/mesosphere/marathon/blob/master/docs/docs/rest-api/public/api/v2/types/app.raml">Application definition</a> has the properties <code class="highlighter-rouge">backoffFactor</code>, <code class="highlighter-rouge">maxLaunchDelaySeconds</code> and <code class="highlighter-rouge">backoffSeconds</code>. For pods, the <a href="https://github.com/mesosphere/marathon/blob/master/docs/docs/rest-api/public/api/v2/types/pod.raml#L35">Pod definition</a> has a <code class="highlighter-rouge">backoff</code> object with the properties <code class="highlighter-rouge">backoff</code>, <code class="highlighter-rouge">backoffFactor</code> and <code class="highlighter-rouge">maxLaunchDelay</code>.</p>
+
+<ul>
+  <li><code class="highlighter-rouge">backoffSeconds</code> - The initial delay applied to a service that has failed for the first time.</li>
+  <li><code class="highlighter-rouge">backoffFactor</code> - Controls the rate at which the backoff delay grows; a value of 1.05 would result in a 5% slower launch rate after each failure.</li>
+  <li><code class="highlighter-rouge">maxLaunchDelaySeconds</code> - The largest delay allowed (default: 5 minutes).</li>
+</ul>
+
+<p>When deploying a new service or a new version of existing service, the delay value for that application is reset to <code class="highlighter-rouge">delaySeconds</code>.
+Every time an instance of this application fails, the current value of delay is multiplied by the <code class="highlighter-rouge">backoffFactor</code> up until <code class="highlighter-rouge">maxLaunchDelaySeconds</code> is reached.</p>
+
+<p>The delay is increased also when task fails or exits with exit code 0 (<code class="highlighter-rouge">TASK_FAILED</code> and <code class="highlighter-rouge">TASK_FINISHED</code> in Mesos).</p>
+
+<p>The delay is NOT increased when task is killed (<code class="highlighter-rouge">TASK_KILLED</code> in Mesos).</p>
+
+<h2 id="when-is-the-delay-reset-to-default">When is the delay reset to default?</h2>
+
+<ul>
+  <li>When a new version of a service is deployed</li>
+  <li>When <code class="highlighter-rouge">DELETE /v2/queue/{app.id}/delay</code> HTTP API request is issued</li>
+  <li>When there are no failing tasks for the value of current delay + maxLaunchDelay</li>
+</ul>
+
+<h2 id="how-do-i-reset-the-delay">How do I reset the delay?</h2>
+
+<p>By issuing a request to <code class="highlighter-rouge">DELETE /v2/queue/{service.id}/delay</code>.</p>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

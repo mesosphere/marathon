@@ -227,6 +227,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/checks.html">
+                    Checks
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/service-discovery-load-balancing.html">
                     Service Discovery and Load Balancing
                 </a>
@@ -349,11 +354,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.8/docs">Version 1.8.x</a></li>
+            
             <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
             
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
-            
-            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
             
         </ul>
     </div>
@@ -608,7 +613,7 @@ discarded and the health status of the task remains unchanged.</li>
 
 <h2 id="taskkillgraceperiodseconds">taskKillGracePeriodSeconds</h2>
 
-<p>While health checks allow you to determine when a task is unhealthy and should be terminated, the <code class="highlighter-rouge">taskKillGracePeriodSeconds</code> field allows you to set the amount of time between when the executor sends the <code class="highlighter-rouge">SIGTERM</code> message to gracefully terminate a task and when it kills it by sending <code class="highlighter-rouge">SIGKILL</code>. This field can be useful if you have a task that does not shut down immediately. If you do not set the grace period duration, the default is 3 seconds.</p>
+<p>While health checks allow you to determine when a task is unhealthy and should be terminated, the <code class="highlighter-rouge">taskKillGracePeriodSeconds</code> field allows you to set the amount of time between when the executor sends the <code class="highlighter-rouge">SIGTERM</code> message to gracefully terminate a task and when it kills it by sending <code class="highlighter-rouge">SIGKILL</code>. This field can be useful if you have a task that does not shut down immediately. If you do not set a kill grace period duration, then no value is provided to Mesos.</p>
 
 <h2 id="example">Example</h2>
 

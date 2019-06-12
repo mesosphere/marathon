@@ -1,0 +1,6 @@
+#%RAML 1.0 Library
+uses:
+  newMetrics: newMetrics.raml
+  deprecatedMetrics: deprecatedMetrics.raml
+types:
+  Metrics: deprecatedMetrics.DeprecatedMetrics | newMetrics.NewMetrics

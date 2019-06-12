@@ -3,14 +3,37 @@ uses:
   strings: stringTypes.raml
   command: mesosCommand.raml
   numbers: numberTypes.raml
-  check: check.raml
 types:
+  HttpHealthCheck:
+    type: object
+    properties:
+      endpoint:
+        type: strings.Name
+        description: |
+          The endpoint name to use.
+          In "host" mode health checks use the hostPort. In other modes use the containerPort.
+      path?: strings.Path
+      scheme?:
+        type: strings.HttpScheme
+        default: HTTP
+  TcpHealthCheck:
+    type: object
+    properties:
+      endpoint:
+        type: strings.Name
+        description: |
+          The endpoint name to use.
+          In "host" mode health checks use the hostPort. In other modes use the containerPort.
+  CommandHealthCheck:
+    type: object
+    properties:
+      command: command.MesosCommand
   HealthCheck:
     properties:
-      http?: check.HttpCheck
-      tcp?: check.TcpCheck
+      http?: HttpHealthCheck
+      tcp?: TcpHealthCheck
       exec?:
-        type: check.CommandCheck
+        type: CommandHealthCheck
         description: |
           Command that executes some health check process.
           Use with pods requires Mesos v1.2 or higher.
@@ -53,7 +76,7 @@ types:
     enum: [HTTP, HTTPS, TCP, COMMAND, MESOS_TCP, MESOS_HTTP, MESOS_HTTPS]
     description: |
       Protocol of the requests to be performed.
-  AppCommandCheck:
+  CommandCheck:
     properties:
       value:
         type: string
@@ -64,7 +87,7 @@ types:
   AppHealthCheck:
     type: object
     properties:
-      command?: AppCommandCheck
+      command?: CommandCheck
       gracePeriodSeconds?:
         type: integer
         format: int32

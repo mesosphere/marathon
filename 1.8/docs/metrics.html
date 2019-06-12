@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Metrics</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.8/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.8/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.8/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.8/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.8/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.8/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.8/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/unreachable.html">
+                    Unreachable Strategy
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.8/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/data-migration.html">
+                    Data Migration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/deprecated-metrics.html">
+                    Deprecated Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/checks.html">
+                    Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/maintenance-mode.html">
+                    Maintenance mode
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/mesos-compatibility.html">
+                    Compatibility with Mesos
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/1.8/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.8/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.8/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.8/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.8/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/backoff.html">
+                    No new instances are starting
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/cfs.html">
+                    Slow Docker apps and deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.8/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.8/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.8/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+            
+            <li><a href="/marathon/1.8/docs">Version 1.8.x</a></li>
+            
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
+            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
+            
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="metrics">Metrics</h1>
+
+<p>Marathon uses <a href="https://github.com/dropwizard/metrics">Dropwizard Metrics</a>
+for its metrics. You can query the current metric values via the
+<code class="highlighter-rouge">/metrics</code> HTTP endpoint.</p>
+
+<p>For the specific syntax see the
+<a href="/marathon/1.8/docs/command-line-flags.html#metrics-flags">metrics command-line flags</a>
+section.</p>
+
+<h2 id="stability-of-metric-names">Stability of metric names</h2>
+
+<p>Although we try to prevent unnecessary disruptions, we do not provide
+stability guarantees for metric names between major and minor releases.</p>
+
+<h2 id="metric-types">Metric types</h2>
+
+<p>Marathon has the following metric types:</p>
+
+<ul>
+  <li>a <code class="highlighter-rouge">counter</code> is a monotonically increasing integer, for instance, the
+number of Mesos <code class="highlighter-rouge">revive</code> calls performed since Marathon became
+a leader.</li>
+  <li>a <code class="highlighter-rouge">gauge</code> is a current measurement, for instance, the number of apps
+currently known to Marathon.</li>
+  <li>a <code class="highlighter-rouge">histogram</code> is a distribution of values in a stream of measurements,
+for instance, the number of apps in group deployments.</li>
+  <li>a <code class="highlighter-rouge">meter</code> measures the rate at which a set of events occur.</li>
+  <li>a <code class="highlighter-rouge">timer</code> is a combination of a meter and a histogram, which measure
+the duration of events and the rate of their occurrence.</li>
+</ul>
+
+<p>Histograms and timers are backed with reservoirs leveraging
+<a href="http://hdrhistogram.org/">HdrHistogram</a>.</p>
+
+<h2 id="units-of-measurement">Units of measurement</h2>
+
+<p>A metric measures something either in abstract quantities, or in the
+following units:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">bytes</code></li>
+  <li><code class="highlighter-rouge">seconds</code></li>
+</ul>
+
+<h2 id="metric-names">Metric names</h2>
+
+<p>All metric names are prefixed with <code class="highlighter-rouge">marathon</code> by default. The prefix can
+be changed using <code class="highlighter-rouge">--metrics_name_prefix</code> command-line flag.</p>
+
+<p>Metric name components are joined with dots. Components may have dashes
+in them.</p>
+
+<p>A metric type and a unit of measurement (if any) are appended to
+a metric name. A couple of examples:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">marathon.apps.active.gauge</code></li>
+  <li><code class="highlighter-rouge">marathon.http.event-streams.responses.size.counter.bytes</code></li>
+</ul>
+
+<h2 id="prometheus-reporter">Prometheus reporter</h2>
+
+<p>The Prometheus reporter is enabled by default, and it can be disabled
+with <code class="highlighter-rouge">--disable_metrics_prometheus</code> command-line flag. Metrics in the
+Prometheus format are available at <code class="highlighter-rouge">/metrics/prometheus</code>.</p>
+
+<p>Dots and dashes in metric names are replaced with underscores.</p>
+
+<h2 id="statsd-reporter">StatsD reporter</h2>
+
+<p>The StatsD reporter can be enabled with <code class="highlighter-rouge">--metrics_statsd</code> command-line
+flag. It sends metrics over UDP to the host and port specified with
+<code class="highlighter-rouge">--metrics_statsd_host</code> and <code class="highlighter-rouge">--metrics_statsd_port</code> respectively.</p>
+
+<p>Counters are forwarded as gauges.</p>
+
+<h2 id="datadog-reporter">DataDog reporter</h2>
+
+<p>The DataDog reporter can be enabled with <code class="highlighter-rouge">--metrics_datadog</code>
+command-line flag. It sends metrics over UDP to the host and port
+specified with <code class="highlighter-rouge">--metrics_datadog_host</code> and <code class="highlighter-rouge">--metrics_datadog_port</code>
+respectively.</p>
+
+<p>Marathon can send metrics to a DataDog agent over UDP, or directly to
+the DataDog cloud over HTTP. It is specified using
+<code class="highlighter-rouge">--metrics_datadog_protocol</code>. Its possible values are <code class="highlighter-rouge">udp</code> (default)
+and <code class="highlighter-rouge">api</code>. If <code class="highlighter-rouge">api</code> is chosen, your DataDog API key can be supplied with
+<code class="highlighter-rouge">--metrics_datadog_api_key</code>.</p>
+
+<p>Dashes in metric names are replaced with underscores. Counters are
+forwarded as gauges.</p>
+
+<h2 id="important-metrics">Important metrics</h2>
+
+<ul>
+  <li><code class="highlighter-rouge">marathon.apps.active.gauge</code> — the number of active apps.</li>
+  <li><code class="highlighter-rouge">marathon.deployments.active.gauge</code> — the number of active
+deployments.</li>
+  <li><code class="highlighter-rouge">marathon.deployments.counter</code> — the count of deployments received
+since the current Marathon instance became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.deployments.dismissed.counter</code> — the count of deployments
+dismissed since the current Marathon instance became a leader;
+a deployment might be dismissed by Marathon, when there are too many
+concurrent deployments.</li>
+  <li><code class="highlighter-rouge">marathon.groups.active.gauge</code> — the number of active groups.</li>
+  <li><code class="highlighter-rouge">marathon.instances.running.gauge</code> — the number of running instances
+at the moment.</li>
+  <li><code class="highlighter-rouge">marathon.instances.staged.gauge</code> — the number of instances staged at
+the moment.</li>
+  <li><code class="highlighter-rouge">marathon.leadership.duration.gauge.seconds</code> — the duration of
+current leadership.</li>
+  <li><code class="highlighter-rouge">marathon.persistence.gc.runs.counter</code> — the count of Marathon GC runs
+since it became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.persistence.gc.compaction.duration.timer.seconds</code> —
+a histogram of Marathon GC compaction phase durations, and a meter for
+compaction durations.</li>
+  <li><code class="highlighter-rouge">marathon.persistence.gc.scan.duration.timer.seconds</code> — a histogram of
+Marathon GC scan phase durations, and a meter for scan durations.</li>
+  <li><code class="highlighter-rouge">marathon.pods.active.gauge</code> — the number of active pods.</li>
+  <li><code class="highlighter-rouge">marathon.tasks.launched.counter</code> — the count of tasks launched by
+the current Marathon instance since it became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.uptime.gauge.seconds</code> — uptime of the current Marathon
+instance.</li>
+  <li><code class="highlighter-rouge">marathon.instances.launch-overdue.gauge</code> - the number of overdue instances. Overdue 
+instances are those that has been either launched or staged but hasn’t 
+become running within the <code class="highlighter-rouge">task_launch_timeout</code> or <code class="highlighter-rouge">task_launch_confirmation_timeout</code> 
+respectively.</li>
+  <li><code class="highlighter-rouge">marathon.instances.inflight-kills.gauge</code> - the current number of instances for which 
+Marathon has sent a kill request but hasn’t received a confirmation from 
+Mesos yet.</li>
+  <li><code class="highlighter-rouge">marathon.instances.inflight-kill-attempts.gauge</code> - the total number of kill attempts that
+Marathon has sent for all currently existing doomed instances.</li>
+</ul>
+
+<h3 id="mesos-specific-metrics">Mesos-specific metrics</h3>
+
+<ul>
+  <li><code class="highlighter-rouge">marathon.tasks.launched.counter</code> — the count of Mesos tasks
+launched by the current Marathon instance since it became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.mesos.calls.revive.counter</code> — the count of Mesos <code class="highlighter-rouge">revive</code>
+calls made since the current Marathon instance became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.mesos.calls.suppress.counter</code> — the count of Mesos
+<code class="highlighter-rouge">suppress</code> calls made since the current Marathon instance became
+a leader.</li>
+  <li><code class="highlighter-rouge">marathon.mesos.offer-operations.launch-group.counter</code> — the count of
+<code class="highlighter-rouge">LaunchGroup</code> offer operations made since the current Marathon
+instance became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.mesos.offer-operations.launch.counter</code> — the count of
+<code class="highlighter-rouge">Launch</code> offer operations made since the current Marathon instance
+became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.mesos.offer-operations.reserve.counter</code> — the count of
+<code class="highlighter-rouge">Reserve</code> offer operations made since the current Marathon instance
+became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.mesos.offers.declined.counter</code> — the count of offers
+declined since the current Marathon instance became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.mesos.offers.incoming.counter</code> — the count of offers
+received since the current Marathon instance became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.mesos.offers.used.counter</code> — the count of offers used since
+the current Marathon instance became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.mesos.task-updates.&lt;task-state&gt;.counter</code> — the count of task
+status updates received per each task state (<code class="highlighter-rouge">task-running</code>,
+<code class="highlighter-rouge">task-failed</code> and so on).</li>
+</ul>
+
+<h3 id="http-specific-metrics">HTTP-specific metrics</h3>
+
+<ul>
+  <li><code class="highlighter-rouge">marathon.http.responses.event-stream.size.counter.bytes</code> — the size
+of data sent to clients over event streams since the current Marathon
+instance became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.http.requests.size.counter.bytes</code> — the total size of
+all requests since the current Marathon instance became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.http.responses.size.counter.bytes</code> — the total size of all
+responses since the current Marathon instance became a leader.</li>
+  <li><code class="highlighter-rouge">marathon.http.responses.size.gzipped.counter.bytes</code> — the total size
+of all gzipped responses since the current Marathon instance became
+a leader.</li>
+  <li><code class="highlighter-rouge">marathon.http.requests.active.gauge</code> — the number of active requests.</li>
+  <li><code class="highlighter-rouge">marathon.http.responses.1xx.rate.meter</code> — the rate of <code class="highlighter-rouge">1xx</code> responses.</li>
+  <li><code class="highlighter-rouge">marathon.http.responses.2xx.rate.meter</code> — the rate of <code class="highlighter-rouge">2xx</code> responses.</li>
+  <li><code class="highlighter-rouge">marathon.http.responses.3xx.rate.meter</code> — the rate of <code class="highlighter-rouge">3xx</code> responses.</li>
+  <li><code class="highlighter-rouge">marathon.http.responses.4xx.rate.meter</code> — the rate of <code class="highlighter-rouge">4xx</code> responses.</li>
+  <li><code class="highlighter-rouge">marathon.http.responses.5xx.rate.meter</code> — the rate of <code class="highlighter-rouge">5xx</code> responses.</li>
+  <li><code class="highlighter-rouge">marathon.http.requests.duration.timer.seconds</code> — a histogram of
+request durations, and a meter for request durations.</li>
+  <li><code class="highlighter-rouge">marathon.http.requests.get.duration.timer.seconds</code> — the same but for
+<code class="highlighter-rouge">GET</code> requests only.</li>
+  <li><code class="highlighter-rouge">marathon.http.requests.post.duration.timer.seconds</code> — the same but
+for <code class="highlighter-rouge">POST</code> requests only.</li>
+  <li><code class="highlighter-rouge">marathon.http.requests.put.duration.timer.seconds</code> — the same but for
+<code class="highlighter-rouge">PUT</code> requests only.</li>
+  <li><code class="highlighter-rouge">marathon.http.requests.delete.duration.timer.seconds</code> — the same but
+for <code class="highlighter-rouge">DELETE</code> requests only.</li>
+</ul>
+
+<h3 id="jvm-specific-metrics">JVM-specific metrics</h3>
+
+<h4 id="jvm-buffer-pools">JVM buffer pools</h4>
+
+<ul>
+  <li><code class="highlighter-rouge">marathon.jvm.buffers.mapped.gauge</code> — an estimate of the number of
+mapped buffers.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.buffers.mapped.capacity.gauge.bytes</code> — an estimate of
+the total capacity of the mapped buffers in bytes.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.buffers.mapped.memory.used.gauge.bytes</code> an estimate of
+the memory that the JVM is using for mapped buffers in bytes, or <code class="highlighter-rouge">-1L</code>
+if an estimate of the memory usage is not available.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.buffers.direct.gauge</code> — an estimate of the number of
+direct buffers.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.buffers.direct.capacity.gauge.bytes</code> — an estimate of
+the total capacity of the direct buffers in bytes.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.buffers.direct.memory.used.gauge.bytes</code> an estimate of
+the memory that the JVM is using for direct buffers in bytes, or <code class="highlighter-rouge">-1L</code>
+if an estimate of the memory usage is not available.</li>
+</ul>
+
+<h4 id="jvm-garbage-collection">JVM garbage collection</h4>
+
+<ul>
+  <li><code class="highlighter-rouge">marathon.jvm.gc.&lt;gc&gt;.collections.gauge</code> — the total number
+of collections that have occurred</li>
+  <li><code class="highlighter-rouge">marathon.jvm.gc.&lt;gc&gt;.collections.duraration.gauge.seconds</code> — the
+approximate accumulated collection elapsed time, or <code class="highlighter-rouge">-1</code> if the
+collection elapsed time is undefined for the given collector.</li>
+</ul>
+
+<h4 id="jvm-memory">JVM memory</h4>
+
+<ul>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.total.init.gauge.bytes</code> - the amount of memory
+in bytes that the JVM initially requests from the operating system
+for memory management, or <code class="highlighter-rouge">-1</code> if the initial memory size is
+undefined.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.total.used.gauge.bytes</code> - the amount of used
+memory in bytes.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.total.max.gauge.bytes</code> - the maximum amount of
+memory in bytes that can be used for memory management, <code class="highlighter-rouge">-1</code> if the
+maximum memory size is undefined.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.total.committed.gauge.bytes</code> - the amount of
+memory in bytes that is committed for the JVM to use.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.heap.init.gauge.bytes</code> - the amount of heap
+memory in bytes that the JVM initially requests from the operating
+system for memory management, or <code class="highlighter-rouge">-1</code> if the initial memory size is
+undefined.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.heap.used.gauge.bytes</code> - the amount of used heap
+memory in bytes.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.heap.max.gauge.bytes</code> - the maximum amount of
+heap memory in bytes that can be used for memory management, <code class="highlighter-rouge">-1</code> if
+the maximum memory size is undefined.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.heap.committed.gauge.bytes</code> - the amount of heap
+memory in bytes that is committed for the JVM to use.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.heap.usage.gauge</code> - the ratio of
+<code class="highlighter-rouge">marathon.jvm.memory.heap.used.gauge.bytes</code> and
+<code class="highlighter-rouge">marathon.jvm.memory.heap.max.gauge.bytes</code>.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.non-heap.init.gauge.bytes</code> - the amount of
+non-heap memory in bytes that the JVM initially requests from the
+operating system for memory management, or <code class="highlighter-rouge">-1</code> if the initial memory
+size is undefined.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.non-heap.used.gauge.bytes</code> - the amount of used
+non-heap memory in bytes.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.non-heap.max.gauge.bytes</code> - the maximum amount of
+non-heap memory in bytes that can be used for memory management, <code class="highlighter-rouge">-1</code>
+if the maximum memory size is undefined.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.non-heap.committed.gauge.bytes</code> - the amount of
+non-heap memory in bytes that is committed for the JVM to use.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.memory.non-heap.usage.gauge</code> - the ratio of
+<code class="highlighter-rouge">marathon.jvm.memory.non-heap.used.gauge.bytes</code> and
+<code class="highlighter-rouge">marathon.jvm.memory.non-heap.max.gauge.bytes</code>.</li>
+</ul>
+
+<h4 id="jvm-threads">JVM threads</h4>
+
+<ul>
+  <li><code class="highlighter-rouge">marathon.jvm.threads.active.gauge</code> — the number of active threads.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.threads.daemon.gauge</code> — the number of daemon threads.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.threads.deadlocked.gauge</code> — the number of deadlocked
+threads.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.threads.new.gauge</code> — the number of threads in <code class="highlighter-rouge">NEW</code>
+ state.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.threads.runnable.gauge</code> — the number of threads in
+<code class="highlighter-rouge">RUNNABLE</code> state.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.threads.blocked.gauge</code> — the number of threads in
+<code class="highlighter-rouge">BLOCKED</code> state.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.threads.timed-waiting.gauge</code> — the number of threads in
+<code class="highlighter-rouge">TIMED_WAITING</code> state.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.threads.waiting.gauge</code> — the number of threads in
+<code class="highlighter-rouge">WAITING</code> state.</li>
+  <li><code class="highlighter-rouge">marathon.jvm.threads.terminated.gauge</code> — the number of threads in
+<code class="highlighter-rouge">TERMINATED</code> state.</li>
+</ul>
+
+<h2 id="alerting">Alerting</h2>
+
+<p>Let’s consider a few examples of alerting rules. We will use Prometheus
+as our alerting tool, but please keep in mind that any alerting service
+of your choice can be used instead.</p>
+
+<p>Please note that particular threshold values are dependent on many
+variables like the number of applications, a cluster size and so on.</p>
+
+<p>For the syntax of Prometheus alerting rules please refer to
+<a href="https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/">its official documentation</a>.</p>
+
+<p>Alert whenever a Marathon instance goes down or restarts:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="pi">-</span> <span class="na">alert</span><span class="pi">:</span> <span class="s">Marathon Uptime</span>
+    <span class="na">expr</span><span class="pi">:</span> <span class="s">up{job="marathon"} == 0</span>
+    <span class="na">for</span><span class="pi">:</span> <span class="s">30s</span>
+    <span class="na">labels</span><span class="pi">:</span>
+      <span class="na">severity</span><span class="pi">:</span> <span class="s">warning</span>
+    <span class="na">annotations</span><span class="pi">:</span>
+      <span class="na">summary</span><span class="pi">:</span> <span class="s">It fires when a Marathon instance stops or restarts.</span>
+</code></pre></div></div>
+
+<p>Alert when there are less than 2 out of 3 Marathon instances that are
+up and running:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="pi">-</span> <span class="na">alert</span><span class="pi">:</span> <span class="s">Marathon Too Few Instances</span>
+    <span class="na">expr</span><span class="pi">:</span> <span class="s">sum(up{job="marathon"}) &lt; 2</span>
+    <span class="na">for</span><span class="pi">:</span> <span class="s">30s</span>
+    <span class="na">labels</span><span class="pi">:</span>
+      <span class="na">severity</span><span class="pi">:</span> <span class="s">critical</span>
+      <span class="na">annotations</span><span class="pi">:</span>
+      <span class="na">summary</span><span class="pi">:</span> <span class="s">It fires when there are fewer Marathon instances up and running than expected (&lt; 2 instances).</span>
+</code></pre></div></div>
+
+<p>Alert if Marathon’s heap usage is too high:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="pi">-</span> <span class="na">alert</span><span class="pi">:</span> <span class="s">Marathon Heap Usage</span>
+    <span class="na">expr</span><span class="pi">:</span> <span class="s">avg_over_time(marathon_jvm_memory_heap_used_gauge_bytes[10s]) &gt; (2 * 1024 * 1024 * 1024)</span>
+    <span class="na">for</span><span class="pi">:</span> <span class="s">10s</span>
+    <span class="na">labels</span><span class="pi">:</span>
+      <span class="na">severity</span><span class="pi">:</span> <span class="s">critical</span>
+    <span class="na">annotations</span><span class="pi">:</span>
+      <span class="na">summary</span><span class="pi">:</span> <span class="s">It fires when Marathon's heap is too big (&gt; 2GB).</span>
+</code></pre></div></div>
+
+<p>Alert if Marathon has too many threads:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="pi">-</span> <span class="na">alert</span><span class="pi">:</span> <span class="s">Marathon Threads</span>
+    <span class="na">expr</span><span class="pi">:</span> <span class="s">avg_over_time(marathon_jvm_threads_active_gauge[10s]) &gt; 100</span>
+    <span class="na">for</span><span class="pi">:</span> <span class="s">10s</span>
+    <span class="na">labels</span><span class="pi">:</span>
+      <span class="na">severity</span><span class="pi">:</span> <span class="s">critical</span>
+    <span class="na">annotations</span><span class="pi">:</span>
+      <span class="na">summary</span><span class="pi">:</span> <span class="s">It fires when Marathon has too many threads (&gt; 100 threads).</span>
+</code></pre></div></div>
+
+<p>Alert if Marathon dismisses deployments way too often:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="pi">-</span> <span class="na">alert</span><span class="pi">:</span> <span class="s">Marathon Dismissed Deployments</span>
+    <span class="na">expr</span><span class="pi">:</span> <span class="s">rate(marathon_deployments_dismissed_counter[1m]) &gt; 3</span>
+    <span class="na">for</span><span class="pi">:</span> <span class="s">1m</span>
+    <span class="na">labels</span><span class="pi">:</span>
+      <span class="na">severity</span><span class="pi">:</span> <span class="s">warning</span>
+    <span class="na">annotations</span><span class="pi">:</span>
+      <span class="na">summary</span><span class="pi">:</span> <span class="s">It fires if there are too many deployments dismissed by Marathon (&gt; 3 deployments over the last minute).</span>
+</code></pre></div></div>
+
+<p>Alert if Marathon receives offers, but is unable to use them for some
+reason, i.e. insufficient resources:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="pi">-</span> <span class="na">alert</span><span class="pi">:</span> <span class="s">Marathon Given No Suitable Offer</span>
+    <span class="na">expr</span><span class="pi">:</span> <span class="s">rate(marathon_mesos_offers_used_counter[10m]) == 0 and rate(marathon_mesos_offers_incoming_counter[10m]) &gt; 0</span>
+    <span class="na">for</span><span class="pi">:</span> <span class="s">10m</span>
+    <span class="na">labels</span><span class="pi">:</span>
+      <span class="na">severity</span><span class="pi">:</span> <span class="s">warning</span>
+    <span class="na">annotations</span><span class="pi">:</span>
+      <span class="na">summary</span><span class="pi">:</span> <span class="s">It fires if there are incoming Mesos offers, but none can be used by Marathon (for the last 10 minutes).</span>
+</code></pre></div></div>
+
+<p>Alert if there are too many concurrent HTTP requests to Marathon:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="pi">-</span> <span class="na">alert</span><span class="pi">:</span> <span class="s">Marathon HTTP Requests</span>
+    <span class="na">expr</span><span class="pi">:</span> <span class="s">avg_over_time(marathon_http_requests_active_gauge[10s]) &gt; 100</span>
+    <span class="na">for</span><span class="pi">:</span> <span class="s">10s</span>
+    <span class="na">labels</span><span class="pi">:</span>
+      <span class="na">severity</span><span class="pi">:</span> <span class="s">critical</span>
+    <span class="na">annotations</span><span class="pi">:</span>
+      <span class="na">summary</span><span class="pi">:</span> <span class="s">It fires if there are too many concurrent HTTP requests to Marathon (&gt; 100 concurrent connections).</span>
+</code></pre></div></div>
+
+<p>Alert if Marathon responds with a 5xx status code:</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="pi">-</span> <span class="na">alert</span><span class="pi">:</span> <span class="s">Marathon HTTP 5xx Responses</span>
+    <span class="na">expr</span><span class="pi">:</span> <span class="s">marathon_http_responses_5xx_rate_m1_rate_meter &gt; 0</span>
+    <span class="na">for</span><span class="pi">:</span> <span class="s">10s</span>
+    <span class="na">labels</span><span class="pi">:</span>
+      <span class="na">severity</span><span class="pi">:</span> <span class="s">critical</span>
+    <span class="na">annotations</span><span class="pi">:</span>
+      <span class="na">summary</span><span class="pi">:</span> <span class="s">It fires if Marathon responds with a 5xx status codes.</span>
+</code></pre></div></div>
+
+<p>Alert if Marathon has too many staged instances, which might indicate
+that Marathon does not receive offers with enough resources or</p>
+
+<div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="pi">-</span> <span class="na">alert</span><span class="pi">:</span> <span class="s">Marathon Too Many Staged Instances</span>
+    <span class="na">expr</span><span class="pi">:</span> <span class="s">marathon_instances_staged_gauge &gt; 10</span>
+    <span class="na">for</span><span class="pi">:</span> <span class="s">10s</span>
+    <span class="na">labels</span><span class="pi">:</span>
+      <span class="na">severity</span><span class="pi">:</span> <span class="s">warning</span>
+    <span class="na">annotations</span><span class="pi">:</span>
+      <span class="na">summary</span><span class="pi">:</span> <span class="s">It fires if Marathon has too many staged instances (&gt; 10 staged instances).</span>
+</code></pre></div></div>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

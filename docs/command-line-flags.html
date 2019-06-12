@@ -227,6 +227,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/checks.html">
+                    Checks
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/service-discovery-load-balancing.html">
                     Service Discovery and Load Balancing
                 </a>
@@ -349,11 +354,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.8/docs">Version 1.8.x</a></li>
+            
             <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
             
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
-            
-            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
             
         </ul>
     </div>
@@ -418,7 +423,7 @@
   </li>
   <li><span class="label label-default">v1.6.488</span> <code class="highlighter-rouge">--deprecated_features</code> (Optional. Default: None):
   Comma-delimited list indicating which Marathon deprecated features should continue to be enabled. Read more about
-  <a href="/marathon/docs/deprecation.html">Deprecation</a>.
+  <a href="deprecation.html">Deprecation</a>.
   Example: <code class="highlighter-rouge">--deprecated_features feature_one,feature_two,feature_three</code></li>
   <li><code class="highlighter-rouge">--executor</code> (Optional. Default: “//cmd”): Executor to use when none is
   specified.</li>
@@ -562,7 +567,7 @@ If not provided, the <a href="http://docs.aws.amazon.com/sdk-for-java/v1/develop
   <strong>Note:</strong> This flag has no effect if <code class="highlighter-rouge">--disable_maintenance_mode</code> is specified.</li>
   <li><span class="label label-default">&gt; v1.6.352</span><code class="highlighter-rouge">--max_running_deployments</code> (Optional. Default: 100):
   Maximum number of concurrently running deployments. Should the user try to submit more updates than set by this flag a HTTP 403 Error is returned with an explanatory error message.</li>
-  <li><code class="highlighter-rouge">--[disable_]suppress_offers</code> (Optional. Default: disabled)
+  <li><code class="highlighter-rouge">--[disable_]suppress_offers</code> (Optional. Default: enabled)
   Controls whether or not Marathon will suppress offers if there is nothing to launch. Enabling helps the performance
   of Mesos in larger clusters, but enabling this flag will cause Marathon to more slowly release reservations.</li>
   <li><span class="label label-default">v1.6.0</span><code class="highlighter-rouge">--[disable]_maintenance_mode</code> (Optional. Default: enabled) Specifies
@@ -655,7 +660,7 @@ in your cluster. You should only need to reduce it if you use <code class="highl
     <p><code class="highlighter-rouge">--decline_offer_duration</code> (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default.</p>
   </li>
   <li>
-    <p><span class="label label-default">v1.6.x</span> <code class="highlighter-rouge">--gpu_scheduling_behavior</code> (Default: undefined) Defines how offered GPU resources should be treated. Possible settings are <code class="highlighter-rouge">undefined</code>, <code class="highlighter-rouge">restricted</code> and <code class="highlighter-rouge">unrestricted</code>. Read more about <a href="/marathon/docs/preferential-gpu-scheduling.html">Preferential GPU scheduling</a>.</p>
+    <p><span class="label label-default">v1.6.x</span> <code class="highlighter-rouge">--gpu_scheduling_behavior</code> (Default: restricted) Defines how offered GPU resources should be treated. Possible settings are <code class="highlighter-rouge">restricted</code> and <code class="highlighter-rouge">unrestricted</code>. Read more about <a href="preferential-gpu-scheduling.html">Preferential GPU scheduling</a>.</p>
   </li>
 </ul>
 

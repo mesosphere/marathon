@@ -72,7 +72,7 @@ types:
         type: number
         format: int32
         description: The number of instances left to launch.
-      delay:
+      delay?:
         type: QueueDelay
         description: If a runspec has failed to often the launch will be delayed. See backoff to tune this behavior.
       since:

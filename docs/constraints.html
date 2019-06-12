@@ -227,6 +227,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/checks.html">
+                    Checks
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/service-discovery-load-balancing.html">
                     Service Discovery and Load Balancing
                 </a>
@@ -349,11 +354,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.8/docs">Version 1.8.x</a></li>
+            
             <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
             
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
-            
-            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
             
         </ul>
     </div>
@@ -546,7 +551,7 @@ text : [a-zA-Z0-9_/.-]
     "id": "sleep-cluster",
     "cmd": "sleep 60",
     "instances": 3,
-    "constraints": [["", "IS", "rack-1"]]
+    "constraints": [["rack_id", "IS", "rack-1"]]
   }'</span>
 </code></pre></div></div>
 

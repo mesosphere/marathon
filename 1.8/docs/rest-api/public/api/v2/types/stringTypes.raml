@@ -1,0 +1,106 @@
+#%RAML 1.0 Library
+types:
+  InstanceId:
+    type: string
+    pattern: ^(.+)\.(instance-|marathon-)([^\.]+)$
+  Name:
+    type: string
+    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+    maxLength: 63
+    minLength: 1
+  NetworkName:
+    type: string
+    pattern: ^[a-z0-9]([-a-z0-9_]*[a-z0-9])?$
+    maxLength: 63
+    minLength: 1
+  LegacyName:
+    type: string
+    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+    minLength: 1
+    usage: |
+      Same as `Name` but without a max-length, useful for older v2 names for which length
+      validation has historically been lax.
+  PathId:
+    type: string
+    pattern: ^(\/?((\.\.)|(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9]))?($|\/))+$
+    minLength: 1
+    example: /ops/audit
+    description: |
+      Unique identifier for the pod consisting of a series of names separated by slashes.
+      Each name must be at least 1 character and may only contain digits (`0-9`), dashes
+      (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash.
+  Uri:
+    type: string
+    minLength: 1
+    maxLength: 1024
+  Path:
+    type: string
+    minLength: 1
+    maxLength: 1024
+  HttpScheme:
+    type: string
+    enum: [ HTTP, HTTPS ]
+    description: The http scheme to use
+  IpProtocol:
+    type: string
+    enum: [ IPv4, IPv6 ]
+  PersistenceId:
+    type: string
+    pattern: ^([^#]+)[#]([^#]+)[#]([^#]+)$
+  ReadMode:
+    type: string
+    enum: [RO, RW]
+  NetworkProtocol:
+    type: string
+    enum: [tcp, udp, "udp,tcp"]
+    description: Protocol of the port (tcp, udp)
+    default: tcp
+  TaskLostBehavior:
+    type: string
+    enum: [WAIT_FOREVER, RELAUNCH_AFTER_TIMEOUT]
+    default: WAIT_FOREVER
+    description: |
+      When Marathon receives a TASK_LOST status update indicating that the
+      agent running the task is gone, this property defines whether Marathon
+      will launch the task on another node or not. Defaults to WAIT_FOREVER"
+  MesosTaskState:
+    type: string
+    enum:
+      - TASK_ERROR
+      - TASK_FAILED
+      - TASK_FINISHED
+      - TASK_KILLED
+      - TASK_KILLING
+      - TASK_RUNNING
+      - TASK_STAGING
+      - TASK_STARTING
+      - TASK_UNREACHABLE
+      - TASK_UNREACHABLE
+      - TASK_GONE
+      - TASK_DROPPED
+  Condition:
+    type: string
+    enum:
+      - Error
+      - Failed
+      - Finished
+      - Killed
+      - Killing
+      - Running
+      - Staging
+      - Starting
+      - Unreachable
+      - UnreachableInactive
+      - Gone
+      - Dropped
+      - Unknown
+  Goal:
+    type: string
+    enum:
+      - Running
+      - Stopped
+      - Decommissioned
+  Message:
+    type: object
+    properties:
+      message: string

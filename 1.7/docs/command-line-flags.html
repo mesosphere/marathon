@@ -285,11 +285,6 @@
                 </a>
             </li>
             <li>
-                <a href="/marathon/1.7/docs/backoff.html">
-                    No new instances are starting
-                </a>
-            </li>
-            <li>
                 <a href="/marathon/1.7/docs/host-port.html">
                     An App Requires a Specific Host Port
                 </a>
@@ -349,11 +344,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.8/docs">Version 1.8.x</a></li>
+            
             <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
             
             <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
-            
-            <li><a href="/marathon/1.5/docs">Version 1.5.x</a></li>
             
         </ul>
     </div>
@@ -403,8 +398,8 @@
   Examples: <code class="highlighter-rouge">"*"</code>, or <code class="highlighter-rouge">"http://localhost:8888, http://domain.com"</code>.</li>
   <li><span class="label label-default">v0.13.0</span> <code class="highlighter-rouge">--[disable_]checkpoint</code> (Optional. Default: enabled):
   Enable checkpointing of tasks.
-  Requires checkpointing enabled on agents. Allows tasks to continue running
-  during mesos-agent restarts and Marathon scheduler failover.  See the
+  Requires checkpointing enabled on slaves. Allows tasks to continue running
+  during mesos-slave restarts and Marathon scheduler failover.  See the
   description of <code class="highlighter-rouge">--failover_timeout</code>.</li>
   <li><span class="label label-default">v1.0.0</span> <code class="highlighter-rouge">--enable_features</code> (Optional. Default: None):
   Enable the selected features. Options to use:
@@ -418,7 +413,7 @@
   </li>
   <li><span class="label label-default">v1.6.488</span> <code class="highlighter-rouge">--deprecated_features</code> (Optional. Default: None):
   Comma-delimited list indicating which Marathon deprecated features should continue to be enabled. Read more about
-  <a href="/marathon/1.7/docs/deprecation.html">Deprecation</a>.
+  <a href="deprecation.html">Deprecation</a>.
   Example: <code class="highlighter-rouge">--deprecated_features feature_one,feature_two,feature_three</code></li>
   <li><code class="highlighter-rouge">--executor</code> (Optional. Default: “//cmd”): Executor to use when none is
   specified.</li>
@@ -461,10 +456,8 @@
   attribute as a comma-separated list of strings. All app definitions which do not specify this attribute explicitly
   use this value for launching new tasks. Examples: <code class="highlighter-rouge">*</code>, <code class="highlighter-rouge">production,*</code>, <code class="highlighter-rouge">production</code></li>
   <li><code class="highlighter-rouge">--mesos_user</code> (Optional. Default: current user): Mesos user for
-  this framework. _Note: Default is determined by
-  <a href="http://www.scala-lang.org/api/current/index.html#scala.sys.SystemProperties@get\(key:String\):Option[String]"><code class="highlighter-rouge">SystemProperties.get("user.name")</code></a>,
-  which defaults to the system user as which Marathon is running. The value of this field is only used during initial
-  registration, changing it later has no affect.</li>
+  this framework. <em>Note: Default is determined by
+  <a href="http://www.scala-lang.org/api/current/index.html#scala.sys.SystemProperties@get\(key:String\):Option[String]"><code class="highlighter-rouge">SystemProperties.get("user.name")</code></a>.</em></li>
   <li><code class="highlighter-rouge">--reconciliation_initial_delay</code> (Optional. Default: 15000 (15 seconds)): The
   delay, in milliseconds, before Marathon begins to periodically perform task
   reconciliation operations.</li>
@@ -481,7 +474,7 @@
   <li><code class="highlighter-rouge">--zk</code> (Optional. Default: <code class="highlighter-rouge">zk://localhost:2181/marathon</code>): ZooKeeper URL for storing state.
   Format: <code class="highlighter-rouge">zk://host1:port1,host2:port2,.../path</code>
     <ul>
-      <li><span class="label label-default">v1.1.2</span> Format: <code class="highlighter-rouge">zk://user:pass@host1:port1,user:pass@host2:port2,.../path</code>.
+      <li><span class="label label-default">v1.1.2</span> Format: <code class="highlighter-rouge">zk://user@pass:host1:port1,user@pass:host2:port2,.../path</code>.
   When authentication is enabled the default ACL will be changed and all subsequent reads must be done using the same auth.</li>
     </ul>
   </li>
@@ -587,7 +580,7 @@ configurable with the following startup parameters:</p>
 <ul>
   <li><span class="label label-default">v1.4.0</span> <code class="highlighter-rouge">--max_instances_per_offer</code> (Optional. Default: 5): Launch at most this
   number of instances per Mesos offer. Usually,
-  there is one offer per cycle and agent. You can speed up launching tasks by increasing this number.</li>
+  there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.</li>
 </ul>
 
 <p>To prevent overloading Mesos itself, you can also restrict how many tasks Marathon launches per time interval.
@@ -655,7 +648,7 @@ in your cluster. You should only need to reduce it if you use <code class="highl
     <p><code class="highlighter-rouge">--decline_offer_duration</code> (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default.</p>
   </li>
   <li>
-    <p><span class="label label-default">v1.6.x</span> <code class="highlighter-rouge">--gpu_scheduling_behavior</code> (Default: undefined) Defines how offered GPU resources should be treated. Possible settings are <code class="highlighter-rouge">undefined</code>, <code class="highlighter-rouge">restricted</code> and <code class="highlighter-rouge">unrestricted</code>. Read more about <a href="/marathon/1.7/docs/preferential-gpu-scheduling.html">Preferential GPU scheduling</a>.</p>
+    <p><span class="label label-default">v1.6.x</span> <code class="highlighter-rouge">--gpu_scheduling_behavior</code> (Default: undefined) Defines how offered GPU resources should be treated. Possible settings are <code class="highlighter-rouge">undefined</code>, <code class="highlighter-rouge">restricted</code> and <code class="highlighter-rouge">unrestricted</code>. Read more about <a href="preferential-gpu-scheduling.html">Preferential GPU scheduling</a>.</p>
   </li>
 </ul>
 
@@ -670,7 +663,7 @@ the following startup parameters:</p>
   <li>
     <p><span class="label label-default">v0.8.2</span> <code class="highlighter-rouge">--max_tasks_per_offer</code> (Optional. Default: 5): Launch at most this
   number of tasks per Mesos offer. Usually,
-  there is one offer per cycle and agent. You can speed up launching tasks by increasing this number.</p>
+  there is one offer per cycle and slave. You can speed up launching tasks by increasing this number.</p>
   </li>
   <li>
     <p><span class="label label-default">v0.8.2</span> <code class="highlighter-rouge">--max_tasks_per_offer_cycle</code> (Optional. Default: 1000): Launch at
@@ -692,7 +685,7 @@ to 2000, we could start all tasks in a single cycle (given we receive offers for
 
 <p>Starting too many tasks at once can lead to a higher number of status updates being sent to Marathon than it can
 currently handle. We will improve the number of events Marathon can handle in a future version. A maximum of 1000
-tasks has proven to be a good default for now. <code class="highlighter-rouge">max_tasks_per_offer</code> should be adjusted so that <code class="highlighter-rouge">NUM_MESOS_AGENTS *
+tasks has proven to be a good default for now. <code class="highlighter-rouge">max_tasks_per_offer</code> should be adjusted so that <code class="highlighter-rouge">NUM_MESOS_SLAVES *
 max_tasks_per_offer == max_tasks_per_offer_cycle </code>. E.g. in a cluster of 200 nodes it should be set to 5.</p>
 
 <h2 id="web-site-flags">Web Site Flags</h2>
@@ -781,6 +774,36 @@ max_tasks_per_offer == max_tasks_per_offer_cycle </code>. E.g. in a cluster of 2
   elapsed (default: 0). Increasing this will increase Marathon RAM
   footprint substantially (approximately a couple of hundred MB per
   chunk).</li>
+  <li><span class="label label-default">v1.6.0 (deprecated since 1.7.0)</span> <code class="highlighter-rouge">--metrics_averaging_window</code> (Optional. Default: 30 seconds):
+  Configure the size of the sliding average window that is used to compute
+  the values for the <code class="highlighter-rouge">/metrics</code> endpoint when using the deprecated metrics.
+  Note that this value should be at least double the value of the
+  <code class="highlighter-rouge">kamon.metric.tick-interval</code> parameter, that is 1 second by default.</li>
+  <li><span class="label label-default">v0.13.0 (deprecated since 1.7.0)</span> <code class="highlighter-rouge">--reporter_graphite</code> (Optional. Default: disabled):
+  Report metrics to <a href="http://graphite.wikidot.com">Graphite</a> (StatsD) as
+  defined by the given URL when using the deprecated metrics.
+  Example: <code class="highlighter-rouge">udp://localhost:2003?prefix=marathon-test&amp;interval=10</code>
+  The URL can have several parameters to refine the functionality.
+    <ul>
+      <li>prefix: (Default: None) the prefix for all metrics</li>
+      <li>interval: (Default: 10) the interval to report to graphite in seconds</li>
+    </ul>
+  </li>
+  <li><span class="label label-default">v0.13.0 (deprecated since 1.7.0)</span> <code class="highlighter-rouge">--reporter_datadog</code> (Optional. Default: disabled):
+  Report metrics to <a href="https://www.datadoghq.com">DataDog</a> as defined by
+  the given URL when using the deprecated metrics. Either use UDP to
+  talk to a DataDog agent or HTTP to talk directly to DataDogHQ.
+  Example (UDP to agent): <code class="highlighter-rouge">udp://localhost:8125?prefix=marathon-test&amp;tags=marathon&amp;interval=10</code>
+  Example (HTTP to DataDogHQ): <code class="highlighter-rouge">http://datadog?apiKey=abc&amp;prefix=marathon-test&amp;tags=marathon&amp;interval=10</code>
+  The URL can have several parameters to refine the functionality.
+    <ul>
+      <li>expansions: (Default: all) which metric data should be expanded. It can be a list of: count,meanRate,1MinuteRate,5MinuteRate,15MinuteRate,min,mean,max,stddev,median,p75,p95,p98,p99,p999</li>
+      <li>interval: (Default: 10) the interval in seconds to report to Datadog</li>
+      <li>prefix: (Default: marathon_test) the prefix is prepended to all metric names</li>
+      <li>tags: (Default: empty) the tags to send with each metric. Can be either simple value like <code class="highlighter-rouge">foo</code> or key value like <code class="highlighter-rouge">foo:bla</code></li>
+      <li>apiKey: (Default: empty) the api key to use, when directly connecting to Datadog (HTTP)</li>
+    </ul>
+  </li>
 </ul>
 
 <h3 id="debug-flags">Debug Flags</h3>
