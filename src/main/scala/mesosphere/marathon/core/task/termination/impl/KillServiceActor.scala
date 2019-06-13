@@ -141,10 +141,10 @@ private[impl] class KillServiceActor(
       .foreach { instance =>
         // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
         logger.info(s"Process kill for ${instance.instanceId}:{${instance.state.condition}, ${instance.state.goal}} with tasks ${instance.tasksMap.values.map(_.taskId).toSeq}")
-        val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
+        //        val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
         instancesToKill.update(
           instance.instanceId,
-          ToKill(instance.instanceId, taskIds, maybeInstance = Some(instance), attempts = 0)
+          ToKill(instance.instanceId, instance.tasksMap.keys.toIndexedSeq, maybeInstance = Some(instance), attempts = 0)
         )
       }
     processKills()
