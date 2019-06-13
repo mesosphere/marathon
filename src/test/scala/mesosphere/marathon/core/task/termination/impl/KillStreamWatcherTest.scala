@@ -38,6 +38,18 @@ class KillStreamWatcherTest extends AkkaUnitTest {
       result shouldBe Done
     }
 
+    "completes immediately if provided instances are already terminal and no updates arrive" in {
+      val terminalInstance = TestInstanceBuilder.newBuilder(PathId("/test")).addTaskKilled().instance
+      val emptyUpdates: InstanceTracker.InstanceUpdates = Source.single((InstancesSnapshot(Seq(terminalInstance)), sourceNever))
+
+      val result = KillStreamWatcher
+        .watchForKilledTasks(emptyUpdates, Seq(terminalInstance))
+        .runWith(Sink.ignore)
+        .futureValue
+
+      result shouldBe Done
+    }
+
     "recognizes instances that are already terminal in the initial snapshot" in {
       val unreachableInstance = TestInstanceBuilder.newBuilder(PathId("/test")).addTaskUnreachable().instance
       val instanceUpdates = Source.single(InstancesSnapshot(Seq(unreachableInstance)) -> sourceNever)
