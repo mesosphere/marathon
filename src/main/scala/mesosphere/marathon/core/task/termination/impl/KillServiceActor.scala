@@ -126,6 +126,9 @@ private[impl] class KillServiceActor(
     if (!inFlight.contains(taskId.instanceId)) {
       instancesToKill.update(taskId.instanceId, ToKill(taskId.instanceId, Seq(taskId), maybeInstance = None, attempts = 0))
       processKills()
+    } else {
+      val toKill = inFlight(taskId.instanceId)
+      logger.info(s"Inflight already contains ${taskId.instanceId}: $toKill. Will not add $taskId")
     }
   }
 
