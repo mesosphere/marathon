@@ -132,10 +132,7 @@ class TaskReplaceActor(
   def replaceBehavior: Receive = {
 
     // === An InstanceChanged event for the *new* instance ===
-    case ic: InstanceChanged if !isOldInstance(ic.instance) =>
-      val id = ic.id
-      val condition = ic.condition
-      val instance = ic.instance
+    case InstanceChanged(id, _, `pathId`, condition, instance) if !isOldInstance(instance) =>
       val goal = instance.state.goal
       val agentId = instance.agentInfo.fold(Option.empty[String])(_.agentId)
 
@@ -155,10 +152,7 @@ class TaskReplaceActor(
       }
 
     // === An InstanceChanged event for the *old* instance ===
-    case ic: InstanceChanged if isOldInstance(ic.instance) =>
-      val id = ic.id
-      val condition = ic.condition
-      val instance = ic.instance
+    case InstanceChanged(id, _, `pathId`, condition, instance) if isOldInstance(instance) =>
       val goal = instance.state.goal
 
       // 1) An old instance terminated out of band and was not yet chosen to be decommissioned or stopped.
@@ -261,9 +255,12 @@ class TaskReplaceActor(
   }
 
   /**
-    * @return whether [[instance]] has the new run spec version or an old one.
+    * @return whether [[Instance]] has the new run spec version or an old one.
     */
-  def isOldInstance(instance: Instance): Boolean = instance.runSpecVersion != runSpec.version
+  def isOldInstance(instance: Instance): Boolean = {
+    require(instance.runSpecId == runSpec.id)   // sanity check
+    instance.runSpecVersion != runSpec.version
+  }
 }
 
 object TaskReplaceActor extends StrictLogging {
