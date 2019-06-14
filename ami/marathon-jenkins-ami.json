@@ -12,8 +12,9 @@
     "region": "us-east-1",
     "source_ami": "ami-0bd9223868b4778d7",
     "instance_type": "m5.2xlarge",
-    "vpc_id": "vpc-f46c7c8d",
-    "subnet_id": "subnet-1d724531",
+    "vpc_id": "vpc-0ed8d3d48747450d1",
+    "subnet_id": "subnet-0a320076f701e1066",
+    "associate_public_ip_address": true,
     "ssh_username": "admin",
     "run_tags": {"created_by": "jenkins"},
     "ami_name": "{{user `ami_name`}}",
@@ -37,7 +38,7 @@
     "execute_command": "{{ .Vars }} sudo -E -S bash '{{ .Path }}'",
     "type": "shell",
     "script": "install.bash",
-    "pause_before": "30s",
+    "pause_before": "10s",
     "environment_vars": [
         "MESOS_VERSION={{user `mesos_version`}}"
     ]
