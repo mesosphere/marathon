@@ -106,7 +106,8 @@ private[impl] class KillServiceActor(
       (inFlight.contains(id) || instancesToKill.contains(id)) =>
       handleTerminal(id)
 
-    case InstanceChanged(id, _, _, _, instance) if instance.state.goal.isTerminal() =>
+    // Only consider goal changes for non-terminal instances. This event could also be triggered by a condition change.
+    case InstanceChanged(id, _, _, condition, instance) if instance.state.goal.isTerminal() && !considerTerminal(condition) =>
       if (instancesToKill.contains(id)) {
         logger.info(s"Ignoring goal change to ${instance.state.goal} for ${instance.state.goal} since the instance is already queued.")
       } else {
@@ -134,7 +135,7 @@ private[impl] class KillServiceActor(
     logger.debug(s"Adding instances $instanceIds to the queue")
     maybePromise.map(p => p.completeWith(KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)))
     instances
-      .filterNot(instance => inFlight.keySet.contains(instance.instanceId) || instance.tasksMap.isEmpty || instance.state.condition.isTerminal)
+      .filterNot(instance => inFlight.keySet.contains(instance.instanceId) || instance.tasksMap.isEmpty)
       .foreach { instance =>
         logger.info(s"Process kill for ${instance.instanceId}:{${instance.state.condition}, ${instance.state.goal}} with tasks ${instance.tasksMap.values.map(_.taskId).toSeq}")
         val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
@@ -145,7 +146,7 @@ private[impl] class KillServiceActor(
             ToKill(instance.instanceId, taskIds, maybeInstance = Some(instance), attempts = 0)
           )
         } else {
-          logger.warn(s"${instance.instanceId} is ${instance.state.condition} and we try to kill all its terminal tasks.")
+          logger.warn(s"Told to kill ${instance.instanceId} which is ${instance.state.condition} and has no active tasks.")
         }
       }
     processKills()
