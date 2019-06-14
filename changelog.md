@@ -18,6 +18,8 @@
 
 - [DCOS_OSS-5211](https://jira.mesosphere.com/browse/DCOS_OSS-5211) - The initial support for volume profiles would match disk resources with a profile, even if no profile was required. This behavior has been adjusted so that disk resources with profiles are only used when those profiles are required, and are not used if the service for which we are matching offers does not require a disk with that profile.
 
+- [MARATHON-8422](https://jira.mesosphere.com/browse/MARATHON-8422) - Kill unreachable tasks that came back. Marathon could get stuck waiting for terminal events but not issue a kill.
+
 ## Changes from 1.7.xxx to 1.8.180
 
 ### AppC is now deprecated
