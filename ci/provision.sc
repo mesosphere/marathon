@@ -62,7 +62,7 @@ def eligibleProcess(proc: String): Boolean =
 /**
   * @return list of leaked process names.
   */
-def leakedProcesses() = %%('ps, 'aux).out.lines.filter { proc =>
+def leakedProcesses() = %%('ps, 'auxww).out.lines.filter { proc =>
   eligibleProcess(proc) && !protectedProcess(proc)
 }
 

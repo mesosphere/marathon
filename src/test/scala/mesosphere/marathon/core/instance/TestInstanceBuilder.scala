@@ -122,7 +122,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
     withReservation(Seq.empty, state)
 
   def withReservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State): TestInstanceBuilder =
-    withReservation(Reservation(volumeIds, state))
+    withReservation(Reservation(volumeIds, state, Reservation.SimplifiedId(instance.instanceId)))
 
   def withReservation(reservation: Reservation): TestInstanceBuilder =
     copy(instance = instance.copy(reservation = Some(reservation)))
@@ -194,5 +194,8 @@ object TestInstanceBuilder {
     def appTask[T <: Task]: T = new LegacyInstanceImprovement(instance).appTask.asInstanceOf[T]
   }
 
-  def scheduledWithReservation(runSpec: RunSpec, localVolumes: Seq[LocalVolumeId] = Seq.empty, state: Reservation.State = Reservation.State.New(None)): Instance = Instance.scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)).reserved(Reservation(localVolumes, state), AgentInfoPlaceholder())
+  def scheduledWithReservation(runSpec: RunSpec, localVolumes: Seq[LocalVolumeId] = Seq.empty, state: Reservation.State = Reservation.State.New(None)): Instance = {
+    val instanceId = Instance.Id.forRunSpec(runSpec.id)
+    Instance.scheduled(runSpec, instanceId).reserved(Reservation(localVolumes, state, Reservation.SimplifiedId(instanceId)), AgentInfoPlaceholder())
+  }
 }

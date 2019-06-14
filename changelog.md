@@ -1,4 +1,24 @@
-## Changes to 1.8.xxx
+## Changes from 1.8.194 to 1.8.xxx
+
+### Fixed issues
+
+- [DCOS-54927](https://jira.mesosphere.com/browse/DCOS-54927) - Fixed an issue where two independent deployments could interfere with each other resulting in too many tasks launched and/or possibly a stuck deployment.
+
+## Changes from 1.8.180 to 1.8.194
+
+### Fixed issues
+
+- [DCOS_OSS-5212](https://jira.mesosphere.com/browse/DCOS_OSS-5212) - Fixed an issue that prevented reserved instances created by older Marathon versions from being restarted
+
+- [MARATHON-8623](https://jira.mesosphere.com/browse/MARATHON-8623) - Fixed an issue that could cause /v2/deployments to become stale
+
+- [MARATHON-8624](https://jira.mesosphere.com/browse/MARATHON-8624) - Fixed issue where the presence of a TASK_UNKNOWN status could cause an API failure
+
+- [DCOS-51375](https://jira.mesosphere.com/browse/DCOS-51375) - Fixed an issue where deployment cancellation could leak instances.
+
+- [DCOS_OSS-5211](https://jira.mesosphere.com/browse/DCOS_OSS-5211) - The initial support for volume profiles would match disk resources with a profile, even if no profile was required. This behavior has been adjusted so that disk resources with profiles are only used when those profiles are required, and are not used if the service for which we are matching offers does not require a disk with that profile.
+
+## Changes from 1.7.xxx to 1.8.180
 
 ### AppC is now deprecated
 AppC is now deprecated and will be removed in Marathon 1.9
@@ -68,6 +88,8 @@ This option was deprecated since 1.5 and using that have no effect on Marathon. 
 - [MARATHON-8482](https://jira.mesosphere.com/browse/MARATHON-8482) - We fixed a possibly incorrect behavior around killing overdue tasks: `--task_launch_confirm_timeout` parameter properly controls the time the task spends in `Provisioned` stage (between being launched and receiving `TASK_STAGING` status update).
 
 - [MARATHON-8566](https://jira.mesosphere.com/browse/MARATHON-8566) - We fixed a race condition causing `v2/deployments` not containing a confirmed deployment after HTTP 200/201 response was returned.
+
+- [MARATHON-8625](https://jira.mesosphere.com/browse/MARATHON-8625) - We fixed stuck rollbacks of persistent apps.
 
 ### Closing connection on slow event consumers
 

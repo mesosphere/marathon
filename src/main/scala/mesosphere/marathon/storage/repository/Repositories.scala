@@ -200,7 +200,7 @@ case class InstanceView(instances: InstanceRepository, groups: GroupRepository) 
             logger.warn(s"No run spec $runSpecId with version ${runSpecVersion} was found for instance ${id}. Trying latest.")
             await(groups.latestRunSpec(runSpecId)) match {
               case None =>
-                logger.warn(s"No verions found for $runSpecId at all. $id is probably orphaned."); None
+                logger.warn(s"No versions found for $runSpecId at all. $id is probably orphaned."); None
               case Some(runSpec) => Some(stateInstance.toCoreInstance(runSpec))
             }
         }

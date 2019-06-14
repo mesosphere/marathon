@@ -12,7 +12,7 @@ import play.api.libs.json._
   * Represents a reservation for all resources that are needed for launching an instance
   * and associated persistent local volumes.
   */
-case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State)
+case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State, id: Reservation.Id)
 
 object Reservation {
 
@@ -71,13 +71,6 @@ object Reservation {
       case _ => throw new MatchError(s"reservation id $label does not include a valid instance identifier")
     }
 
-    /**
-      * Construct a reservation id from an instance id.
-      *
-      * @param instanceId The instance id used for the reservation id.
-      * @return
-      */
-    def apply(instanceId: Instance.Id): Id = Reservation.SimplifiedId(instanceId)
   }
 
   /**
@@ -160,5 +153,9 @@ object Reservation {
     }
   }
 
+  implicit lazy val reservationIdFormat: Format[Reservation.Id] = Format(
+    Reads.of[String].map(Reservation.Id(_)),
+    Writes[Reservation.Id] { id => JsString(id.label) }
+  )
   implicit val reservationFormat: OFormat[Reservation] = Json.format[Reservation]
 }

@@ -96,8 +96,9 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
   "say it's reserved when reservation is set" in {
     val f = new Fixture
-    val instance = f.instanceWith(Condition.Scheduled, Seq.empty)._1.copy(reservation = Some(Reservation(Seq.empty, Reservation.State.New(None))))
-    instance.hasReservation should be (true)
+    val (instance, _) = f.instanceWith(Condition.Scheduled, Seq.empty)
+    val instanceWithReservation = instance.copy(reservation = Some(Reservation(Seq.empty, Reservation.State.New(None), Reservation.SimplifiedId(instance.instanceId))))
+    instanceWithReservation.hasReservation should be (true)
   }
 
   "agentInfo serialization" should {

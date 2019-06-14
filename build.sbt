@@ -181,7 +181,7 @@ lazy val packagingSettings = Seq(
           |apt-get update && \\
           |# jdk setup
           |mkdir -p /usr/share/man/man1 && \\
-          |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java=20170929~deb9u1 && \\
+          |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java && \\
           |/var/lib/dpkg/info/ca-certificates-java.postinst configure && \\
           |ln -svT "/usr/lib/jvm/java-8-openjdk-$$(dpkg --print-architecture)" /docker-java-home && \\
           |# mesos setup
@@ -277,20 +277,4 @@ lazy val benchmark = (project in file("benchmark"))
   .settings(
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
     libraryDependencies ++= Dependencies.benchmark
-  )
-
-// see also mesos-client/README.md
-lazy val `mesos-client` = (project in file("mesos-client"))
-  .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
-  .settings(testSettings : _*)
-  .settings(commonSettings: _*)
-  .settings(formatSettings: _*)
-  .dependsOn(marathon % "compile->compile; test->test")
-  .settings(
-    name := "mesos-client",
-    libraryDependencies ++= Dependencies.mesosClient,
-
-    PB.targets in Compile := Seq(
-      scalapb.gen() -> (sourceManaged in Compile).value
-    )
   )

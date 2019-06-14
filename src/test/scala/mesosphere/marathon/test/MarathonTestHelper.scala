@@ -382,7 +382,8 @@ object MarathonTestHelper {
     }
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
-    new InstanceTrackerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, groupRepo, updateSteps) {
+    val crashStrategy = new TestCrashStrategy
+    new InstanceTrackerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, groupRepo, updateSteps, crashStrategy) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val instanceTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
@@ -424,23 +425,23 @@ object MarathonTestHelper {
 
   def offerWithVolumes(taskId: Task.Id, hostname: String, agentId: String, localVolumeIds: LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer(
-      reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId.reservationId)),
+      reservation = Some(TaskLabels.labelsForTask(frameworkId, Reservation.SimplifiedId(taskId.instanceId))),
       role = "test"
     ).setHostname(hostname)
       .setSlaveId(Mesos.SlaveID.newBuilder().setValue(agentId).build())
-      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava).build()
+      .addAllResources(persistentVolumeResources(Reservation.SimplifiedId(taskId.instanceId), localVolumeIds: _*).asJava).build()
   }
 
   def offerWithVolumesOnly(taskId: Task.Id, localVolumeIds: LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer()
       .clearResources()
-      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava)
+      .addAllResources(persistentVolumeResources(Reservation.SimplifiedId(taskId.instanceId), localVolumeIds: _*).asJava)
       .build()
   }
 
   def addVolumesToOffer(offer: Offer.Builder, taskId: Task.Id, localVolumeIds: LocalVolumeId*): Offer.Builder = {
     offer
-      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava)
+      .addAllResources(persistentVolumeResources(Reservation.SimplifiedId(taskId.instanceId), localVolumeIds: _*).asJava)
   }
 
   def appWithPersistentVolume(): AppDefinition = {

@@ -35,7 +35,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
-      val offer = MarathonTestHelper.offerWithVolumes(Reservation.Id(instanceId), localVolumeIdLaunched)
+      val offer = MarathonTestHelper.offerWithVolumes(Reservation.SimplifiedId(instanceId), localVolumeIdLaunched)
 
       And("no groups")
       f.groupRepository.root() returns Future.successful(createRootGroup())
@@ -65,7 +65,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
-      val offer = MarathonTestHelper.offerWithVolumes(Reservation.Id(instanceId), localVolumeIdLaunched)
+      val offer = MarathonTestHelper.offerWithVolumes(Reservation.SimplifiedId(instanceId), localVolumeIdLaunched)
 
       And("a bogus app")
       val app = AppDefinition(appId, cmd = Some("sleep"))
@@ -95,7 +95,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
-      val offer = MarathonTestHelper.offerWithVolumes(Reservation.Id(instanceId), localVolumeIdLaunched)
+      val offer = MarathonTestHelper.offerWithVolumes(Reservation.SimplifiedId(instanceId), localVolumeIdLaunched)
 
       And("no groups")
       f.groupRepository.root() returns Future.successful(createRootGroup())
@@ -125,7 +125,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
-      val offer = MarathonTestHelper.offerWithVolumes(Reservation.Id(instanceId), localVolumeIdLaunched)
+      val offer = MarathonTestHelper.offerWithVolumes(Reservation.SimplifiedId(instanceId), localVolumeIdLaunched)
 
       And("a matching bogus app")
       val app = AppDefinition(appId, cmd = Some("sleep"))

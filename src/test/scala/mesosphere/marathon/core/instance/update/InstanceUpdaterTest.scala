@@ -372,7 +372,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
 
         And("the reserved instance gets a new reservation, but doesn't yet launch tasks")
         val withNewReservation = scheduledInstance.copy(
-          reservation = Some(Reservation(Nil, Reservation.State.New(timeout = None))),
+          reservation = Some(Reservation(Nil, Reservation.State.New(timeout = None), Reservation.SimplifiedId(scheduledInstance.instanceId))),
           agentInfo = Some(AgentInfo("new-host", Some("new-agent-id"), None, None, Nil)))
         withNewReservation.state.condition shouldBe Condition.Scheduled
 

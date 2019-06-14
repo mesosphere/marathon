@@ -10,8 +10,8 @@ import mesosphere.marathon.core.instance.{Instance, LocalVolume, LocalVolumeId, 
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
@@ -46,8 +46,9 @@ class InstanceOpFactoryImpl(
 
   override def matchOfferRequest(request: InstanceOpFactory.Request): OfferMatchResult = {
     logger.debug(s"Matching offer ${request.offer.getId}")
+    val scheduledInstances = request.scheduledInstances
 
-    request.scheduledInstances.head match {
+    val result: OfferMatchResult = scheduledInstances.head match {
       case scheduledInstance @ Instance(_, _, _, _, app: AppDefinition, _) =>
         if (app.isResident) inferForResidents(request, scheduledInstance)
         else inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
@@ -56,6 +57,14 @@ class InstanceOpFactoryImpl(
         else inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
       case Instance(_, _, _, _, runSpec, _) =>
         throw new IllegalArgumentException(s"unsupported runSpec object ${runSpec}")
+    }
+
+    result match {
+      case _: OfferMatchResult.Match => result
+      case _ if scheduledInstances.tail.nonEmpty =>
+        val rest = scheduledInstances.tail
+        matchOfferRequest(request.copy(scheduledInstances = NonEmptyIterable(rest.head, rest.tail)))
+      case _ => result
     }
   }
 
@@ -172,8 +181,7 @@ class InstanceOpFactoryImpl(
 
       // resources are reserved for this role, so we only consider those resources
       val rolesToConsider = config.mesosRole.toOption.toSet
-      // TODO(karsten): We should pass the instance id to the resource matcher instead. See MARATHON-8517.
-      val reservationId = Reservation.Id(volumeMatch.instance.instanceId)
+      val reservationId = volumeMatch.instance.reservation.get.id
       val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, reservationId).labels
       val resourceMatchResponse =
         ResourceMatcher.matchResources(
@@ -337,10 +345,11 @@ class InstanceOpFactoryImpl(
       deadline = now + config.taskReservationTimeout().millis,
       reason = Reservation.Timeout.Reason.ReservationTimeout)
     val state = Reservation.State.New(timeout = Some(timeout))
-    val reservation = Reservation(persistentVolumeIds, state)
+    val reservationId = Reservation.SimplifiedId(scheduledInstance.instanceId)
+    val reservation = Reservation(persistentVolumeIds, state, reservationId)
     val agentInfo = Instance.AgentInfo(offer)
 
-    val reservationLabels = TaskLabels.labelsForTask(frameworkId, Reservation.Id(scheduledInstance.instanceId))
+    val reservationLabels = TaskLabels.labelsForTask(frameworkId, reservationId)
     val stateOp = InstanceUpdateOperation.Reserve(scheduledInstance.instanceId, reservation, agentInfo)
     instanceOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)
   }
