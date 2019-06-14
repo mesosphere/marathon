@@ -12,7 +12,7 @@ echo -e "\n=== Install SBT ==="
 echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
 apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
 apt-get -y update
-apt-get install -y sbt
+apt-get install -y openjdk-8-jdk-headless sbt
 
 # Install docker
 echo -e "\n=== Install Docker ==="
@@ -22,6 +22,7 @@ apt-get install -y \
     curl \
     gnupg2 \
     software-properties-common
+
 curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
 add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable"
 apt-get -y update
@@ -31,17 +32,6 @@ apt-get install -y docker-ce
 # Add github.com to known hosts
 ssh-keyscan github.com >> /home/admin/.ssh/known_hosts
 ssh-keyscan github.com >> /root/.ssh/known_hosts
-
-echo -e "\n=== Install libc6 Dependency for Mesos to Run ==="
-echo 'deb http://ftp.debian.org/debian/ buster main' >> /etc/apt/sources.list
-apt-get update -y
-apt-get -t buster install libc6 -y
-
-echo -e "\n=== Install Python 3, Pip and Flake8 ==="
-apt-get -t buster install python3-distutils python3 -y
-wget https://bootstrap.pypa.io/get-pip.py
-python3 get-pip.py
-pip3 install flake8
 
 # Install Mesos
 echo -e "\n=== Install Mesos ==="
@@ -53,10 +43,18 @@ apt-get -y update
 
 # Install but do not start Mesos master/slave processes
 # The CI task will install Mesos later.
-apt-get install -y libssl-dev libcurl4-openssl-dev libcurl4
 apt-get install -y --force-yes --no-install-recommends mesos=$MESOS_VERSION
 systemctl stop mesos-master.service mesos-slave.service
 systemctl disable mesos-master.service mesos-slave.service
+
+
+echo -e "\n=== Install Python 3, Pip and Flake8 ==="
+echo 'deb http://ftp.debian.org/debian/ buster main' >> /etc/apt/sources.list
+apt-get update -y
+apt-get -t buster install python3-distutils python3 -y
+wget https://bootstrap.pypa.io/get-pip.py
+python3 get-pip.py
+pip3 install flake8
 
 # Add user to docker group
 gpasswd -a admin docker
