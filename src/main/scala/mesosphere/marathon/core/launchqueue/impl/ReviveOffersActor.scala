@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.Done
+import akka.{Done, NotUsed}
 import akka.actor.{Actor, Props, Stash}
 import akka.event.LoggingReceive
 import akka.stream.ActorMaterializer
@@ -9,7 +9,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{InstanceDeleted, InstanceUpdated}
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.launchqueue.{LaunchQueue, ReviveOffersConfig}
+import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
 import mesosphere.marathon.state.Timestamp
@@ -26,8 +26,8 @@ class ReviveOffersActor(
     metrics: Metrics,
     conf: ReviveOffersConfig,
     instanceUpdates: InstanceTracker.InstanceUpdates,
-    driverHolder: MarathonSchedulerDriverHolder,
-    launchQueue: LaunchQueue) extends Actor with Stash with StrictLogging {
+    rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
+    driverHolder: MarathonSchedulerDriverHolder) extends Actor with Stash with StrictLogging {
 
   private[this] val reviveCountMetric: Counter = metrics.counter("mesos.calls.revive")
   private[this] val suppressCountMetric: Counter = metrics.counter("mesos.calls.suppress")
@@ -42,7 +42,7 @@ class ReviveOffersActor(
         val zero: Set[Instance] = snapshot.instances.view.filter { instance =>
           instance.isScheduled || shouldUnreserve(instance)
         }.toSet
-        updates.scan(zero) {
+        updates.merge(rateLimiterUpdates).scan(zero) {
           case (current, InstanceUpdated(updated, _, _)) =>
             logger.info(s"${updated.instanceId} updated.")
             if (updated.isScheduled || shouldUnreserve(updated)) current + updated
@@ -50,20 +50,14 @@ class ReviveOffersActor(
           case (current, InstanceDeleted(deleted, _, _)) =>
             logger.info(s"${deleted.instanceId} deleted.")
             current - deleted
+          case (current, delayUpdate: RateLimiter.DelayUpdate) =>
+            logger.info(s"${delayUpdate.ref} was updated.")
+            // TODO: add instance again if the backoff deadline was reached.
+            // current.filterNot { instance => backoffIsActive(instance, delayUpdate) }
+            current
         }
     }
-      .mapAsync(1) { instances =>
-        // TODO: maybe we can fetch the delays at once.
-
-        // Filter all scheduled instance that have an active delay.
-        Source(instances.view.filter(_.isScheduled).map(_.runSpec.configRef).toSet)
-          .mapAsync(5)(launchQueue.getDelay)
-          .filter { delayUpdate =>
-            // TODO: inject clock instead of using Timestamp
-            delayUpdate.delay.isEmpty || delayUpdate.delay.forall(_.deadline.before(Timestamp.now()))
-          }
-        Future.successful(instances.map(_.instanceId))
-      }
+      .map{ instances => instances.map(_.instanceId) }
       .sliding(2)
       .map{
         case Seq(oldInstances: Set[Instance.Id], newInstances: Set[Instance.Id]) =>
@@ -111,6 +105,11 @@ class ReviveOffersActor(
   def shouldUnreserve(instance: Instance): Boolean = {
     instance.reservation.nonEmpty && instance.state.goal == Goal.Decommissioned && instance.state.condition.isTerminal
   }
+
+  /** @return whether a launch backoff is active for a scheduled instance. */
+  def backoffIsActive(instance: Instance, update: RateLimiter.DelayUpdate): Boolean = {
+    instance.isScheduled && (instance.runSpec.configRef == update.ref) && update.delay.exists(_.deadline.after(Timestamp.now()))
+  }
 }
 
 object ReviveOffersActor {
@@ -118,8 +117,8 @@ object ReviveOffersActor {
     metrics: Metrics,
     conf: ReviveOffersConfig,
     instanceUpdates: InstanceTracker.InstanceUpdates,
-    driverHolder: MarathonSchedulerDriverHolder,
-    launchQueue: LaunchQueue): Props = {
-    Props(new ReviveOffersActor(metrics, conf, instanceUpdates, driverHolder, launchQueue))
+    rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
+    driverHolder: MarathonSchedulerDriverHolder): Props = {
+    Props(new ReviveOffersActor(metrics, conf, instanceUpdates, rateLimiterUpdates, driverHolder))
   }
 }
