@@ -14,7 +14,7 @@ $(maws login "Team 10")
 AWS_PROFILE=273854932432_Mesosphere-PowerUser packer build -color -var "ami_name=JenkinsMarathonCI-Debian9-$(date +%Y-%m-%d)" -var 'mesos_version=1.5.0-2.0.1' marathon-jenkins-ami.json
 ```
 
-Here is an example on how to install Mesos 1.8.0-rc using [maws](https://github.com/mesosphere/maws#osx--macos) which will result in image named 'JenkinsMarathonCI-Debian9-2019-04-22'
+Here is an example on how to install Mesos 1.8.0 using [maws](https://github.com/mesosphere/maws#osx--macos) which will result in image named 'JenkinsMarathonCI-Debian9-2019-04-22'
 
 ```bash
 $(maws login "Team 10")
