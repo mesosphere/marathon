@@ -134,15 +134,19 @@ private[impl] class KillServiceActor(
     logger.debug(s"Adding instances $instanceIds to the queue")
     maybePromise.map(p => p.completeWith(KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)))
     instances
-      .filterNot(instance => inFlight.keySet.contains(instance.instanceId) || instance.tasksMap.isEmpty) // Don't trigger a kill request for instances that are already being killed
+      .filterNot(instance => inFlight.keySet.contains(instance.instanceId) || instance.tasksMap.isEmpty || instance.state.condition.isTerminal)
       .foreach { instance =>
-        // TODO(PODS): do we make sure somewhere that an instance has _at_least_ one task?
         logger.info(s"Process kill for ${instance.instanceId}:{${instance.state.condition}, ${instance.state.goal}} with tasks ${instance.tasksMap.values.map(_.taskId).toSeq}")
         val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
-        instancesToKill.update(
-          instance.instanceId,
-          ToKill(instance.instanceId, taskIds, maybeInstance = Some(instance), attempts = 0)
-        )
+
+        if (taskIds.nonEmpty) {
+          instancesToKill.update(
+            instance.instanceId,
+            ToKill(instance.instanceId, taskIds, maybeInstance = Some(instance), attempts = 0)
+          )
+        } else {
+          logger.warn(s"${instance.instanceId} is ${instance.state.condition} and we try to kill all its terminal tasks.")
+        }
       }
     processKills()
   }
