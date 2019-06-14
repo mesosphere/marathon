@@ -4,8 +4,9 @@ package raml
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.VolumeSerializer
 import mesosphere.marathon.state.{DiskType, Volume}
+import org.scalatest.prop.TableDrivenPropertyChecks
 
-class VolumeConversionTest extends UnitTest {
+class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks {
 
   def convertToProtobufThenToRAML(volumeWithMount: => state.VolumeWithMount[Volume], raml: => AppVolume): Unit = {
     "convert to protobuf, then to RAML" in {
@@ -137,73 +138,43 @@ class VolumeConversionTest extends UnitTest {
     }.getOrElse(fail("expected PersistentVolume"))
   }
 
-  "test app volume disk types" when {
-    "without profileName" should {
-      "default to Root when type isn't specified" in {
-        val raml = AppPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = None, profileName = None,
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty), ReadMode.Rw)
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Root
-      }
-      "be Root when type is set to root" in {
-        val raml = AppPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Root), profileName = None,
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty), ReadMode.Rw)
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Root
-      }
-      "be Path when type is set to path" in {
-        val raml = AppPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Path), profileName = None,
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty), ReadMode.Rw)
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Path
-      }
-      "be Mount when type is set to mount" in {
-        val raml = AppPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Mount), profileName = None,
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty), ReadMode.Rw)
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Mount
-      }
-    }
-    "with profileName" should {
-      "default to Mount when type isn't specified" in {
-        val raml = AppPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = None, profileName = Some("ssd-fast"),
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty), ReadMode.Rw)
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Mount
-      }
-      "be Root when type is set to root" in { // this config would fail for DSS managed volumes
-        val raml = AppPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Root), profileName = Some("ssd-fast"),
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty), ReadMode.Rw)
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Root
-      }
-      "be Path when type is set to path" in { // this config would fail for DSS managed volumes
-        val raml = AppPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Path), profileName = Some("ssd-fast"),
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty), ReadMode.Rw)
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Path
-      }
-      "be Mount when type is set to mount" in {
-        val raml = AppPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Mount), profileName = Some("ssd-fast"),
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty), ReadMode.Rw)
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Mount
+  def persistentVolumeFrom(raml: PodPersistentVolume): state.PersistentVolume = {
+    Some(raml.asInstanceOf[PodVolume].fromRaml)
+        .collect { case pv: state.PersistentVolume => pv }
+        .getOrElse(fail("expected PersistentVolume"))
+  }
+
+  val diskProfileCombinations = Table (
+    ("configured disk type",            "configured profile", "expected disk type"),
+    (None,                              None,                 DiskType.Root),
+    (Some(PersistentVolumeType.Root),   None,                 DiskType.Root),
+    (Some(PersistentVolumeType.Path),   None,                 DiskType.Path),
+    (Some(PersistentVolumeType.Mount),  None,                 DiskType.Mount),
+    (None,                              Some("ssd"),          DiskType.Mount),
+    (Some(PersistentVolumeType.Root),   Some("ssd"),          DiskType.Root), // this won't work with DSS
+    (Some(PersistentVolumeType.Path),   Some("ssd"),          DiskType.Path), // this won't work with DSS
+    (Some(PersistentVolumeType.Mount),  Some("ssd"),          DiskType.Mount),
+  )
+
+  "test disk type profile combinations" when {
+    forAll (diskProfileCombinations) { (configuredDiskType: Option[PersistentVolumeType], configuredProfile: Option[String], expectedDiskType: DiskType) =>
+      s"configuring disk type <$configuredDiskType> with profile <$configuredProfile>" should {
+        s"result in expected disk type <$expectedDiskType> for apps" in {
+          val raml = AppPersistentVolume(
+            "/container",
+            PersistentVolumeInfo(`type` = configuredDiskType, profileName = configuredProfile,
+              size = 123L, maxSize = Some(1234L), constraints = Set.empty), ReadMode.Rw)
+          val volume = persistentVolumeFrom(raml)
+          volume.persistent.`type` shouldBe expectedDiskType
+        }
+        s"result in expected disk type <$expectedDiskType> for pods" in {
+          val raml = PodPersistentVolume(
+            "/container",
+            PersistentVolumeInfo(`type` = configuredDiskType, profileName = configuredProfile,
+              size = 123L, maxSize = Some(1234L), constraints = Set.empty))
+          val volume = persistentVolumeFrom(raml)
+          volume.persistent.`type` shouldBe expectedDiskType
+        }
       }
     }
   }
@@ -315,83 +286,6 @@ class VolumeConversionTest extends UnitTest {
       "convert all fields to core" in {
         secretVolume.name should be(Some(ramlVolume.name))
         secretVolume.secret should be(ramlVolume.secret)
-      }
-    }
-  }
-
-  def persistentVolumeFrom(raml: PodPersistentVolume): state.PersistentVolume = {
-    Some(raml.asInstanceOf[PodVolume].fromRaml)
-      .collect { case pv: state.PersistentVolume => pv }
-      .getOrElse(fail("expected PersistentVolume"))
-  }
-
-  "test pod volume disk types" when {
-    "without profileName" should {
-      "default to Root when type isn't specified" in {
-        val raml = PodPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = None, profileName = None,
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty))
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Root
-      }
-      "be Root when type is set to root" in {
-        val raml = PodPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Root), profileName = None,
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty))
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Root
-      }
-      "be Path when type is set to path" in {
-        val raml = PodPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Path), profileName = None,
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty))
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Path
-      }
-      "be Mount when type is set to mount" in {
-        val raml = PodPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Mount), profileName = None,
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty))
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Mount
-      }
-    }
-    "with profileName" should {
-      "default to Mount when type isn't specified" in {
-        val raml = PodPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = None, profileName = Some("ssd-fast"),
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty))
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Mount
-      }
-      "be Root when type is set to root" in { // this config would fail for DSS managed volumes
-        val raml = PodPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Root), profileName = Some("ssd-fast"),
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty))
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Root
-      }
-      "be Path when type is set to path" in { // this config would fail for DSS managed volumes
-        val raml = PodPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Path), profileName = Some("ssd-fast"),
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty))
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Path
-      }
-      "be Mount when type is set to mount" in {
-        val raml = PodPersistentVolume(
-          "/container",
-          PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Mount), profileName = Some("ssd-fast"),
-            size = 123L, maxSize = Some(1234L), constraints = Set.empty))
-        val volume = persistentVolumeFrom(raml)
-        volume.persistent.`type` shouldBe DiskType.Mount
       }
     }
   }
