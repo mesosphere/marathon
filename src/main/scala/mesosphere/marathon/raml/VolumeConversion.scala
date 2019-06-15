@@ -9,8 +9,26 @@ import org.apache.mesos.{Protos => Mesos}
 trait VolumeConversion extends ConstraintConversion with DefaultConversions {
 
   /**
-    * If a disk profile is set, disk type defaults to Mount, as only that is supported by DSS which sets profileNames
-    * In any other case, DiskType defaults to Root
+    * Will select the default disk type to use depending on whether or not a disk profileName is given.
+    *
+    * There are three types of disk currently supported by Marathon: Root, Path and Mount. These are the disk types
+    * introduced by Mesos and documented as Multiple Disks:
+    * http://mesos.apache.org/documentation/latest/multiple-disk/
+    *
+    * A Root disk usually maps to the storage on the main operating system drive. Root is the default type used when
+    * none is provided by the user. Other volume types will only exist if an operator created those using the present
+    * operating system drive. That means, when external services or tools carve up raw disks, they will produce disks
+    * of types Mount or Path, which can be used by frameworks. The only such service we are currently aware of and
+    * integrate with is the DC/OS Storage Service (DSS) which is in beta:
+    * https://docs.mesosphere.com/services/beta-storage/
+    *
+    * There are additional two types of disk that Marathon currently does not support directly, since they are of no
+    * direct value to the user: Raw and Block. For more information on these, see
+    * http://mesos.apache.org/documentation/latest/csi/
+    *
+    * DSS will use Mesos Raw disks and create Mount or Block devices out of them. The mechanism for frameworks to select
+    * such a Mount volume is the profileName, which will be populated by DSS. Therefore, if a disk profileName is set,
+    * the disk type default to Mount.
     */
   def defaultDiskTypeForProfile(profileName: Option[String]): DiskType = profileName.map(_ => DiskType.Mount).getOrElse(DiskType.Root)
 

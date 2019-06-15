@@ -17,7 +17,8 @@
 - [DCOS-51375](https://jira.mesosphere.com/browse/DCOS-51375) - Fixed an issue where deployment cancellation could leak instances.
 
 - [DCOS_OSS-5211](https://jira.mesosphere.com/browse/DCOS_OSS-5211) - The initial support for volume profiles would match disk resources with a profile, even if no profile was required. This behavior has been adjusted so that disk resources with profiles are only used when those profiles are required, and are not used if the service for which we are matching offers does not require a disk with that profile.
-- [MARATHON-8631](https://jira.mesosphere.com/browse/MARATHON-8631) - When using DC/OS Storage Service (DSS), users can provision storage volumes as disk resources tagged with a profile name. Marathon allows users to create services that make use of disks tagged with these profiles. The type of disk resource in Mesos will be `Mount` in this case, as this is the only disk type DSS supports. Therefore, Marathon should default to disk type `Mount` instead of `Root`, when a profileName is given for a persistent volume configuration.
+
+- [MARATHON-8631](https://jira.mesosphere.com/browse/MARATHON-8631) - In order to prepare for the general availability of the [DC/OS Storage Service](https://docs.mesosphere.com/services/beta-storage/) (DSS), Marathon will now default to disk type `Mount`, if a persistent volume `profileName` is configured by the user without specifying the wanted disk `type`. Services like DSS will populate this field to allow users selecting the volumes they previously created. Mesos `Root` disks will not have a `profileName` set, so the default for persistent volumes that do not specify a `profileName` is still `Root`.
 
 - [MARATHON-8422](https://jira.mesosphere.com/browse/MARATHON-8422) - Kill unreachable tasks that came back. Marathon could get stuck waiting for terminal events but not issue a kill.
 
