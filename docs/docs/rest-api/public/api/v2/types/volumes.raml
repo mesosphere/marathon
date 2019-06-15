@@ -29,7 +29,7 @@ types:
     type: string
     description: |
       The type of mesos disk resource to use; defaults to root if no profile name is specified.
-      When specififying a profileName, only disk type mount is supported.
+      When specififying a profileName, this will default to mount.
     enum: [ root, path, mount ]
   PersistentVolumeInfo:
     type: object
