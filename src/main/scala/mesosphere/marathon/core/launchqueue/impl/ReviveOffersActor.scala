@@ -50,12 +50,18 @@ case class ReviveActorState(
   /** @return this state with updated [[delays]]. */
   def withDelayUpdate(update: RateLimiter.DelayUpdate): ReviveActorState = update match {
     case RateLimiter.DelayUpdate(ref, Some(delay)) =>
-      logger.info(s"Update delay for $ref")
+      logger.info(s"Update delay for $ref to ${delay.deadline}")
       copy(delays = delays.updated(ref, delay))
     case RateLimiter.DelayUpdate(ref, None) =>
       logger.info(s"Remove delay for $ref")
       copy(delays = delays - ref)
   }
+
+  def freeze(now: Timestamp): (Set[RunSpecConfigRef], Set[Instance.Id]) = {
+    (scheduledRunSpecs.filter(launchAllowed(now)), terminalReservations)
+  }
+
+  // ------- ALTERNATIVE ------
 
   /**
     * Evaluate whether we should revive or suppress based on the current state ''and'' time.
@@ -128,9 +134,9 @@ class ReviveOffersActor(
           case (current, 'tick) => current // Retrigger evaluation of delays.
         }
     }
-      .map(_.evaluate(Timestamp.now()))
-      .via(EnrichedFlow.debounce[Op](2.seconds)) // Only process the latest op in 2 second.
-      .via(deduplicateSuppress)
+      .via(EnrichedFlow.debounce[ReviveActorState](3.seconds)) // Only process the latest element in 2 second.
+      .via(flowIgnoresDecline)
+      // .via(flowRespectsDecline) Still fails mesosphere.marathon.integration.AppDeployIntegrationTest
       .runWith(Sink.foreach {
         case Revive =>
           reviveCountMetric.increment()
@@ -142,6 +148,37 @@ class ReviveOffersActor(
           driverHolder.driver.foreach(_.suppressOffers())
       })
   }
+
+  /**
+    * This flow revives solely based on the current state. It will revive on every tick as long as
+    * there are scheduled instances. That means even if the scheduled instances declined all offers
+    * these will come back.
+    */
+  def flowIgnoresDecline: Flow[ReviveActorState, Op, NotUsed] = Flow[ReviveActorState]
+    .map(_.evaluate(Timestamp.now())) // Decide whether to suppress or revive based on time and delay.
+    .via(deduplicateSuppress)
+
+  /**
+    * This flow only revives if a run spec became scheduled or an resident task terminal. It will
+    * also repeat Revive calls and respect declined offers, ie if we have scheduled instances but
+    * they refused all offers we are not going to revive.
+    */
+  def flowRespectsDecline: Flow[ReviveActorState, Op, NotUsed] = Flow[ReviveActorState]
+    .map(_.freeze(Timestamp.now())) // Get all scheduled run specs based on delay and terminal instances.
+    .sliding(2)
+    .map {
+      case Seq((oldScheduled, oldTerminal), (newScheduled, newTerminal)) =>
+        val diffScheduled = newScheduled -- oldScheduled
+        val diffTerminal = newTerminal -- oldTerminal
+        if (diffScheduled.nonEmpty || diffTerminal.nonEmpty) Revive
+        else Suppress
+    }
+    .via(deduplicateSuppress)
+    .mapConcat {
+      case Suppress => Seq(Suppress)
+      case Revive => Seq.fill(conf.reviveOffersRepetitions())(Revive)
+    }
+    .throttle(1, conf.minReviveOffersInterval().millis)
 
   override def receive: Receive = LoggingReceive {
     case Revive => reviveOffers()
