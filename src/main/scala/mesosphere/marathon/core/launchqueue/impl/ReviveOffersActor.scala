@@ -35,7 +35,7 @@ case class ReviveActorState(
 
   /** @return this state updated with an instance. */
   def withInstanceUpdated(instance: Instance): ReviveActorState = {
-    logger.info(s"${instance.instanceId} updated.")
+    logger.info(s"${instance.instanceId} updated to ${instance.state}")
     if (instance.isScheduled) copy(scheduledRunSpecs = scheduledRunSpecs + instance.runSpec.configRef)
     else if (ReviveActorState.shouldUnreserve(instance)) copy(terminalReservations = terminalReservations + instance.instanceId)
     else this
@@ -135,8 +135,8 @@ class ReviveOffersActor(
         }
     }
       .via(EnrichedFlow.debounce[ReviveActorState](3.seconds)) // Only process the latest element in 2 second.
-      .via(flowIgnoresDecline)
-      // .via(flowRespectsDecline) Still fails mesosphere.marathon.integration.AppDeployIntegrationTest
+      //.via(flowIgnoresDecline)
+      .via(flowRespectsDecline) // Still fails mesosphere.marathon.integration.AppDeployIntegrationTest
       .runWith(Sink.foreach {
         case Revive =>
           reviveCountMetric.increment()
@@ -166,18 +166,21 @@ class ReviveOffersActor(
   def flowRespectsDecline: Flow[ReviveActorState, Op, NotUsed] = Flow[ReviveActorState]
     .map(_.freeze(Timestamp.now())) // Get all scheduled run specs based on delay and terminal instances.
     .sliding(2)
-    .map {
+    .mapConcat {
       case Seq((oldScheduled, oldTerminal), (newScheduled, newTerminal)) =>
         val diffScheduled = newScheduled -- oldScheduled
         val diffTerminal = newTerminal -- oldTerminal
-        if (diffScheduled.nonEmpty || diffTerminal.nonEmpty) Revive
-        else Suppress
+        if (diffScheduled.nonEmpty || diffTerminal.nonEmpty) {
+          logger.info(s"Revive because new: $newScheduled and old $oldScheduled = diff $diffScheduled")
+          Seq.fill(conf.reviveOffersRepetitions())(Revive)
+        } else if (newScheduled.isEmpty && newTerminal.isEmpty) {
+          logger.info(s"Suppress because both sets are empty.")
+          List(Suppress)
+        } else {
+          Nil
+        }
     }
     .via(deduplicateSuppress)
-    .mapConcat {
-      case Suppress => Seq(Suppress)
-      case Revive => Seq.fill(conf.reviveOffersRepetitions())(Revive)
-    }
     .throttle(1, conf.minReviveOffersInterval().millis)
 
   override def receive: Receive = LoggingReceive {
