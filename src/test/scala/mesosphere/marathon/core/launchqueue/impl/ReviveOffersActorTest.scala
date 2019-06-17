@@ -152,8 +152,10 @@ class ReviveOffersActorTest extends AkkaUnitTest {
 
     val launchQueue: LaunchQueue = mock[LaunchQueue]
 
+    val delayUpdates = Source.empty[RateLimiter.DelayUpdate]
+
     lazy val actorRef: TestActorRef[ReviveOffersActor] = TestActorRef[ReviveOffersActor](
-      ReviveOffersActor.props(metrics, conf, instanceTracker.instanceUpdates, driverHolder, launchQueue)
+      ReviveOffersActor.props(metrics, conf, instanceTracker.instanceUpdates, delayUpdates, driverHolder)
     )
 
     val app = AppDefinition(id = PathId("/test"))
