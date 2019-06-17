@@ -80,16 +80,10 @@ curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/downl
 
 # Warmup ivy2 cache. Note: `sbt` is later executed with `sudo` and Debian `sudo` modifies $HOME
 # so we need ivy2 cache in `/root`
-echo -e "\n=== Warmup SBT for master ==="
+echo -e "\n=== Warmup SBT and Ammonite for master ==="
 git clone https://github.com/mesosphere/marathon.git /home/admin/marathon
 cd /home/admin/marathon
 sbt update
-echo -e "\n=== Warmup SBT for releases/1.7 ==="
-git checkout origin/releases/1.7
-rm -rf $(find . -name target -type d)
-sbt update
-echo -e "\n=== Warmup SBT for releases/1.6 ==="
-git checkout origin/releases/1.6
-rm -rf $(find . -name target -type d)
-sbt update
-rm -rf /home/admin/marathon
+
+# This throws an error without a parameter, but still fetches all required dependencies
+ci/pipeline || true
