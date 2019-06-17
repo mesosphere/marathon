@@ -49,8 +49,12 @@ case class ReviveActorState(
 
   /** @return this state with updated [[delays]]. */
   def withDelayUpdate(update: RateLimiter.DelayUpdate): ReviveActorState = update match {
-    case RateLimiter.DelayUpdate(ref, Some(delay)) => copy(delays = delays.updated(ref, delay))
-    case RateLimiter.DelayUpdate(ref, None) => copy(delays = delays - ref)
+    case RateLimiter.DelayUpdate(ref, Some(delay)) =>
+      logger.info(s"Update delay for $ref")
+      copy(delays = delays.updated(ref, delay))
+    case RateLimiter.DelayUpdate(ref, None) =>
+      logger.info(s"Remove delay for $ref")
+      copy(delays = delays - ref)
   }
 
   /**
@@ -122,7 +126,6 @@ class ReviveOffersActor(
     }
       .map(_.evaluate(Timestamp.now()))
       .via(EnrichedFlow.debounce[Op](2.seconds)) // Only process the latest op in 2 second.
-      // TODO: emit last element if now new element was received in the last X seconds.
       .runWith(Sink.actorRef[Op](self, Done)) // TODO: replace actor sink with Sinke.foreach.
   }
 
