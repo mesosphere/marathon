@@ -24,27 +24,27 @@ case object Suppress extends Op
 /**
   * Holds the current state and defines the revive logic.
   *
-  * @param scheduledInstances All instances that are scheduled an require offers.
+  * @param scheduledRunSpecs All run specs that have at least one scheduled instance requiring offers.
   * @param terminalReservations Ids of terminal resident instance with [[Goal.Decommissioned]].
   * @param delays Delays for run specs.
   */
 case class ReviveActorState(
-    scheduledInstances: Map[Instance.Id, Instance],
+    scheduledRunSpecs: Set[RunSpecConfigRef],
     terminalReservations: Set[Instance.Id],
     delays: Map[RunSpecConfigRef, RateLimiter.Delay]) extends StrictLogging {
 
   /** @return this state updated with an instance. */
   def withInstanceUpdated(instance: Instance): ReviveActorState = {
     logger.info(s"${instance.instanceId} updated.")
-    if (instance.isScheduled) copy(scheduledInstances = scheduledInstances.updated(instance.instanceId, instance))
+    if (instance.isScheduled) copy(scheduledRunSpecs = scheduledRunSpecs + instance.runSpec.configRef)
     else if (ReviveActorState.shouldUnreserve(instance)) copy(terminalReservations = terminalReservations + instance.instanceId)
     else this
   }
 
-  /** @return this state with passed instance removed from [[scheduledInstances]] and [[terminalReservations]]. */
+  /** @return this state with passed instance removed from [[scheduledRunSpecs]] and [[terminalReservations]]. */
   def withInstanceDeleted(instance: Instance): ReviveActorState = {
     logger.info(s"${instance.instanceId} deleted.")
-    copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId)
+    copy(scheduledRunSpecs - instance.runSpec.configRef, terminalReservations - instance.instanceId)
   }
 
   /** @return this state with updated [[delays]]. */
@@ -79,19 +79,19 @@ case class ReviveActorState(
 
   /** @return true if there is at least one scheduled instance that has no active backoff. */
   def scheduledInstanceWithoutBackoffExists(now: Timestamp): Boolean = {
-    scheduledInstances.values.exists(launchAllowed(now))
+    scheduledRunSpecs.exists(launchAllowed(now))
   }
 
   /** @return true if a instance has no active backoff. */
-  def launchAllowed(now: Timestamp)(instance: Instance): Boolean = {
-    delays.get(instance.runSpec.configRef).forall(_.deadline <= now)
+  def launchAllowed(now: Timestamp)(ref: RunSpecConfigRef): Boolean = {
+    delays.get(ref).forall(_.deadline <= now)
   }
 }
 
 object ReviveActorState {
   def apply(snapshot: InstancesSnapshot): ReviveActorState = {
     ReviveActorState(
-      snapshot.instances.view.filter(_.isScheduled).map(i => i.instanceId -> i).toMap,
+      snapshot.instances.view.filter(_.isScheduled).map(i => i.runSpec.configRef).toSet,
       snapshot.instances.view.filter(shouldUnreserve).map(_.instanceId).toSet,
       Map.empty
     )
