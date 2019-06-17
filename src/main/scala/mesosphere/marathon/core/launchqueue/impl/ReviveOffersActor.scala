@@ -5,7 +5,7 @@ import akka.{Done, NotUsed}
 import akka.actor.{Actor, Props, Stash}
 import akka.event.LoggingReceive
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{InstanceDeleted, InstanceUpdated, InstancesSnapshot}
 import mesosphere.marathon.core.instance.{Goal, Instance}
@@ -90,7 +90,11 @@ case class ReviveActorState(
 
 object ReviveActorState {
   def apply(snapshot: InstancesSnapshot): ReviveActorState = {
-    ReviveActorState(snapshot.instances.filter(_.isScheduled).map(i => i.instanceId -> i).toMap, snapshot.instances.view.filter(shouldUnreserve).map(_.instanceId).toSet, Map.empty)
+    ReviveActorState(
+      snapshot.instances.view.filter(_.isScheduled).map(i => i.instanceId -> i).toMap,
+      snapshot.instances.view.filter(shouldUnreserve).map(_.instanceId).toSet,
+      Map.empty
+    )
   }
 
   /** @return whether the instance has a reservation that can be freed. */
@@ -126,7 +130,17 @@ class ReviveOffersActor(
     }
       .map(_.evaluate(Timestamp.now()))
       .via(EnrichedFlow.debounce[Op](2.seconds)) // Only process the latest op in 2 second.
-      .runWith(Sink.actorRef[Op](self, Done)) // TODO: replace actor sink with Sinke.foreach.
+      .via(deduplicateSuppress)
+      .runWith(Sink.foreach {
+        case Revive =>
+          reviveCountMetric.increment()
+          logger.info("Sending revive")
+          driverHolder.driver.foreach(_.reviveOffers())
+        case Suppress =>
+          suppressCountMetric.increment()
+          logger.info("Sending suppress")
+          driverHolder.driver.foreach(_.suppressOffers())
+      })
   }
 
   override def receive: Receive = LoggingReceive {
@@ -149,15 +163,22 @@ class ReviveOffersActor(
     driverHolder.driver.foreach(_.suppressOffers())
   }
 
-  /** @return whether the instance has a reservation that can be freed. */
-  def shouldUnreserve(instance: Instance): Boolean = {
-    instance.reservation.nonEmpty && instance.state.goal == Goal.Decommissioned && instance.state.condition.isTerminal
-  }
+  val deduplicateSuppress: Flow[Op, Op, NotUsed] = Flow[Op].statefulMapConcat(() => {
+    var lastElement: Op = null
 
-  /** @return whether a launch backoff is active for a scheduled instance. */
-  def backoffIsActive(instance: Instance, update: RateLimiter.DelayUpdate): Boolean = {
-    instance.isScheduled && (instance.runSpec.configRef == update.ref) && update.delay.exists(_.deadline.after(Timestamp.now()))
-  }
+    {
+      case Suppress =>
+        if (lastElement == Suppress) {
+          Nil
+        } else {
+          lastElement = Suppress
+          Seq(Suppress)
+        }
+      case Revive =>
+        lastElement = Revive
+        Seq(Revive)
+    }
+  })
 }
 
 object ReviveOffersActor {

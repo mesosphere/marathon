@@ -38,10 +38,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   val marathon16549Artifact = MarathonArtifact("1.6.549", "marathon-1.6.549-aabf74302.tgz")
 
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
-  override lazy val mesosConfig = MesosConfig(
-    launcher = "linux",
-    isolation = Some("filesystem/linux,docker/runtime"),
-    imageProviders = Some("docker"))
+  //  override lazy val mesosConfig = MesosConfig(
+  //    launcher = "linux",
+  //    isolation = Some("filesystem/linux,docker/runtime"),
+  //    imageProviders = Some("docker"))
 
   override def beforeAll(): Unit = {
     super.beforeAll()
