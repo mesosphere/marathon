@@ -53,8 +53,17 @@ case class ReviveActorState(
     case RateLimiter.DelayUpdate(ref, None) => copy(delays = delays - ref)
   }
 
-  /** @return whether we should revive or suppress given the current state. */
-  def op(now: Timestamp): Op = {
+  /**
+    * Evaluate whether we should revive or suppress based on the current state ''and'' time.
+    *
+    * Since methods is time based it is ''not'' idempotent given the same state but different timestamp.
+    * This is important when we evaluate the state a second time triggered by a tick. Scheduled instances
+    * might suddenly not have an active backoff and thus a revive call is triggered.
+    *
+    * @param now The current time.
+    * @return whether we should revive or suppress.
+    */
+  def evaluate(now: Timestamp): Op = {
     if (terminalReservations.nonEmpty || scheduledInstanceWithoutBackoffExists(now)) {
       logger.info("Reviving offers.")
       Revive
@@ -104,14 +113,15 @@ class ReviveOffersActor(
     instanceUpdates.flatMapConcat {
       case (snapshot, updates) =>
         val zero = ReviveActorState(snapshot)
-        updates.merge(rateLimiterUpdates).scan(zero) {
+        updates.merge(rateLimiterUpdates).merge(Source.tick(1.seconds, 1.seconds, 'tick)).scan(zero) {
           case (current, InstanceUpdated(updated, _, _)) => current.withInstanceUpdated(updated)
           case (current, InstanceDeleted(deleted, _, _)) => current.withInstanceDeleted(deleted)
           case (current, delayUpdate: RateLimiter.DelayUpdate) => current.withDelayUpdate(delayUpdate)
+          case (current, 'tick) => current // Retrigger evaluation of delays.
         }
     }
-      .map(_.op(Timestamp.now()))
-      .via(EnrichedFlow.debounce[Op](1.seconds)) // Only process the latest op in 1 second.
+      .map(_.evaluate(Timestamp.now()))
+      .via(EnrichedFlow.debounce[Op](2.seconds)) // Only process the latest op in 2 second.
       // TODO: emit last element if now new element was received in the last X seconds.
       .runWith(Sink.actorRef[Op](self, Done)) // TODO: replace actor sink with Sinke.foreach.
   }
