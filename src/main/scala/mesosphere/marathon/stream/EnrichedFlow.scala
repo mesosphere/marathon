@@ -4,6 +4,8 @@ package stream
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Keep, Source}
 
+import scala.concurrent.duration.FiniteDuration
+
 object EnrichedFlow {
   /**
     * Drops all elements and has an output type of Nothing.
@@ -104,4 +106,17 @@ object EnrichedFlow {
     *     3 c 2.5
     */
   def combineLatest[T] = new CombineLatest[T]
+
+  /**
+    * Debounces elements by only emitting the latest element received in given duration. It will drop all
+    * elements received before in the time frame.
+    *
+    * @param duration Defines the time frame.
+    * @tparam T The type of the element.
+    * @return The decouncing flow.
+    */
+  def debounce[T](duration: FiniteDuration) =
+    Flow[T]
+      .conflate((_, newElement) => newElement)
+      .throttle(1, duration)
 }

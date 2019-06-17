@@ -15,7 +15,7 @@ import mesosphere.marathon.metrics.{Counter, Metrics}
 import mesosphere.marathon.state.{RunSpecConfigRef, Timestamp}
 import mesosphere.marathon.stream.EnrichedFlow
 
-import scala.concurrent.Future
+import scala.concurrent.duration._
 
 sealed trait Op
 case object Revive extends Op
@@ -29,9 +29,9 @@ case object Suppress extends Op
   * @param delays Delays for run specs.
   */
 case class ReviveActorState(
-  scheduledInstances: Map[Instance.Id, Instance],
-  terminalReservations: Set[Instance.Id],
-  delays: Map[RunSpecConfigRef, RateLimiter.Delay]) extends StrictLogging {
+    scheduledInstances: Map[Instance.Id, Instance],
+    terminalReservations: Set[Instance.Id],
+    delays: Map[RunSpecConfigRef, RateLimiter.Delay]) extends StrictLogging {
 
   /** @return this state updated with an instance. */
   def withInstanceUpdated(instance: Instance): ReviveActorState = {
@@ -66,7 +66,7 @@ case class ReviveActorState(
 
   /** @return true if there is at least one scheduled instance that has no active backoff. */
   def scheduledInstanceWithoutBackoffExists(now: Timestamp): Boolean = {
-    scheduledInstances.values.exists(launchAllowed(Timestamp.now()))
+    scheduledInstances.values.exists(launchAllowed(now))
   }
 
   /** @return true if a instance has no active backoff. */
@@ -109,9 +109,11 @@ class ReviveOffersActor(
           case (current, InstanceDeleted(deleted, _, _)) => current.withInstanceDeleted(deleted)
           case (current, delayUpdate: RateLimiter.DelayUpdate) => current.withDelayUpdate(delayUpdate)
         }
-    }.map(_.op(Timestamp.now()))
-      //      .via(EnrichedFlow.dedup())
-      .runWith(Sink.actorRef[Op](self, Done))
+    }
+      .map(_.op(Timestamp.now()))
+      .via(EnrichedFlow.debounce[Op](1.seconds)) // Only process the latest op in 1 second.
+      // TODO: emit last element if now new element was received in the last X seconds.
+      .runWith(Sink.actorRef[Op](self, Done)) // TODO: replace actor sink with Sinke.foreach.
   }
 
   override def receive: Receive = LoggingReceive {
