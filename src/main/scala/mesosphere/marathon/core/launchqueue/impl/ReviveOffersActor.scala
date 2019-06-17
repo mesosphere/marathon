@@ -21,8 +21,19 @@ sealed trait Op
 case object Revive extends Op
 case object Suppress extends Op
 
-case class ReviveActorState(scheduledInstances: Map[Instance.Id, Instance], terminalReservations: Set[Instance.Id], delays: Map[RunSpecConfigRef, RateLimiter.Delay]) extends StrictLogging {
+/**
+  * Holds the current state and defines the revive logic.
+  *
+  * @param scheduledInstances All instances that are scheduled an require offers.
+  * @param terminalReservations Ids of terminal resident instance with [[Goal.Decommissioned]].
+  * @param delays Delays for run specs.
+  */
+case class ReviveActorState(
+  scheduledInstances: Map[Instance.Id, Instance],
+  terminalReservations: Set[Instance.Id],
+  delays: Map[RunSpecConfigRef, RateLimiter.Delay]) extends StrictLogging {
 
+  /** @return this state updated with an instance. */
   def withInstanceUpdated(instance: Instance): ReviveActorState = {
     logger.info(s"${instance.instanceId} updated.")
     if (instance.isScheduled) copy(scheduledInstances = scheduledInstances.updated(instance.instanceId, instance))
@@ -30,11 +41,13 @@ case class ReviveActorState(scheduledInstances: Map[Instance.Id, Instance], term
     else this
   }
 
+  /** @return this state with passed instance removed from [[scheduledInstances]] and [[terminalReservations]]. */
   def withInstanceDeleted(instance: Instance): ReviveActorState = {
     logger.info(s"${instance.instanceId} deleted.")
     copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId)
   }
 
+  /** @return this state with updated [[delays]]. */
   def withDelayUpdate(update: RateLimiter.DelayUpdate): ReviveActorState = update match {
     case RateLimiter.DelayUpdate(ref, Some(delay)) => copy(delays = delays.updated(ref, delay))
     case RateLimiter.DelayUpdate(ref, None) => copy(delays = delays - ref)
