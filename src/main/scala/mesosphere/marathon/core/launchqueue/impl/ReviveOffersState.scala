@@ -73,7 +73,7 @@ case class ReviveOffersState(
 
   /** @return true if a instance has no active delay. */
   def launchAllowed(ref: RunSpecConfigRef): Boolean = {
-    activeDelays.contains(ref)
+    !activeDelays.contains(ref)
   }
 }
 
