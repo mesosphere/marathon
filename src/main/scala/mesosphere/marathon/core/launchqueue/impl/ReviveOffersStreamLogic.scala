@@ -40,26 +40,26 @@ object ReviveOffersStreamLogic extends StrictLogging {
         }
     }
       .via(EnrichedFlow.debounce[ReviveOffersState](minReviveOffersInterval))
-      .via(flowRespectsDecline(reviveOffersRepetitions = reviveOffersRepetitions, minReviveOffersInterval = minReviveOffersInterval))
+      .via(reviveOrSuppress(reviveOffersRepetitions = reviveOffersRepetitions, minReviveOffersInterval = minReviveOffersInterval))
       .prepend(Source.single(Suppress))
   }
 
   /**
-    * This flow only revives if a run spec became scheduled or an resident task terminal. It will
-    * also repeat Revive calls and respect declined offers, ie if we have scheduled instances but
-    * they refused all offers we are not going to revive.
+    * This flow emits a [[Suppress]] or a [[Revive]] based on the last two states.
+    *
+    * @param reviveOffersRepetitions Revive calls are repeated to a void a race condition with the offer matcher.
+    * @param minReviveOffersInterval The interval between two revive calls.
+    * @return The actual flow.
     */
-  def flowRespectsDecline(reviveOffersRepetitions: Int, minReviveOffersInterval: FiniteDuration): Flow[ReviveOffersState, Op, NotUsed] = Flow[ReviveOffersState]
-    .map(_.freeze) // Get all scheduled run specs based on delay and terminal instances.
+  def reviveOrSuppress(reviveOffersRepetitions: Int, minReviveOffersInterval: FiniteDuration): Flow[ReviveOffersState, Op, NotUsed] = Flow[ReviveOffersState]
     .sliding(2)
     .mapConcat {
-      case Seq((oldScheduled, oldTerminal), (newScheduled, newTerminal)) =>
-        val diffScheduled = newScheduled -- oldScheduled
-        val diffTerminal = newTerminal -- oldTerminal
+      case Seq(previous, current) =>
+        val (diffScheduled, diffTerminal) = current -- previous
         if (diffScheduled.nonEmpty || diffTerminal.nonEmpty) {
-          logger.info(s"Revive because new: $newScheduled and old $oldScheduled = diff $diffScheduled")
+          logger.info(s"Revive because new new scheduled $diffScheduled or terminal $diffTerminal.")
           Seq.fill(reviveOffersRepetitions)(Revive)
-        } else if (newScheduled.isEmpty && newTerminal.isEmpty) {
+        } else if (current.isEmpty()) {
           logger.info(s"Suppress because both sets are empty.")
           List(Suppress)
         } else {
