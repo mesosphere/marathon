@@ -4,9 +4,10 @@ package core.launchqueue.impl
 import akka.actor.{Actor, Props, Stash}
 import akka.event.LoggingReceive
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstancesSnapshot}
 import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
@@ -33,7 +34,7 @@ class ReviveOffersActor(
     super.preStart()
 
     ReviveOffersStreamLogic.suppressAndReviveStream(
-      instanceUpdates,
+      instanceUpdates.alsoTo(reservationReconciliation),
       delayedConfigRefs = rateLimiterUpdates.via(ReviveOffersStreamLogic.activelyDelayedRefs),
       minReviveOffersInterval = conf.minReviveOffersInterval().millis,
       reviveOffersRepetitions = conf.reviveOffersRepetitions())
@@ -47,6 +48,32 @@ class ReviveOffersActor(
           logger.info("Sending suppress")
           driverHolder.driver.foreach(_.suppressOffers())
       })
+
+  }
+
+  /**
+    * Revives if a resident instances was deleted.
+    *
+    * Currently Marathon uses [[InstanceTrackerDelegate.forceExpunge]] when a run spec with resident instances
+    * is removed. Thus Marathon looses all knowledge of any reservations to these instances. The [[OfferMatcherReconciler]]
+    * is supposed to filter offers for these reservations and destroy them if no related instance is known.
+    *
+    * This flow logic emits one revive call to trigger an offer with said reservations to be destroyed. There is no
+    * guarantee that the reservation is destroyed.
+    *
+    * @return A simple flow that calls revive if a resident instances was deleted.
+    */
+  def reservationReconciliation: Sink[(InstancesSnapshot, Source[InstanceChange, NotUsed]), NotUsed] = {
+    Flow[(InstancesSnapshot, Source[InstanceChange, NotUsed])]
+      .flatMapConcat { pair =>
+        pair._2.filter {
+          case InstanceDeleted(instance, _, _) if instance.reservation.nonEmpty => true
+          case _ => false
+        }
+      }.toMat(Sink.foreach{ _ =>
+        logger.info("Sending revive to reconcile reservation")
+        driverHolder.driver.foreach(_.reviveOffers())
+      })(Keep.left)
   }
 
   override def receive: Receive = LoggingReceive {

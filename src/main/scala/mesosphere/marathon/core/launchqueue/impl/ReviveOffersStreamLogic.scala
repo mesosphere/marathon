@@ -2,9 +2,9 @@ package mesosphere.marathon
 package core.launchqueue.impl
 
 import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.update.{InstanceDeleted, InstanceUpdated}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdated}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpecConfigRef
 import mesosphere.marathon.stream.{EnrichedFlow, TimedEmitter}
