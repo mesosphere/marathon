@@ -184,7 +184,33 @@ object ObjectVisitor {
       OBJECTDEF(name) := BLOCK(defaultFields ++ defaultInstance)
     }
 
+    val jacksonSerializer = CLASSDEF(name + "Serializer").withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
+      DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
+        PARAM("value", name),
+        PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator"),
+        PARAM("provider", "com.fasterxml.jackson.databind.SerializerProvider")) := BLOCK(
+
+        Seq((REF("gen") DOT "writeStartObject")())
+        ++
+        actualFields.withFilter(_.name != AdditionalProperties).map { field =>
+          if (field.omitEmpty && field.repeated && !field.forceOptional) {
+            IF(REF("value") DOT field.name DOT "nonEmpty") THEN (
+              REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
+            ) ENDIF
+          } else if(field.omitEmpty && !field.repeated && !builtInTypes.contains(field.`type`.toString())) {
+            IF(REF("value") DOT field.name DOT "nonEmpty") THEN (
+              REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
+            ) ENDIF
+          } else {
+            REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
+          }
+        }
+        ++
+        Seq((REF("gen") DOT "writeEndObject")())
+      )
+    )
+
     val commentBlock = comments ++ actualFields.map(_.comment)(collection.breakOut)
-    Seq(klass.withDoc(commentBlock)) ++ childTypes.flatMap(Visitor.visit(_)) ++ Seq(obj)
+    Seq(klass.withDoc(commentBlock)) ++ childTypes.flatMap(Visitor.visit(_)) ++ Seq(obj) ++ Seq(jacksonSerializer)
   }
 }

@@ -57,6 +57,17 @@ object EnumVisitor {
         VAL("DefaultValue") withType(name) := REF(underscoreToCamel(camelify(defaultValue)))
       }
     )
-    Seq(baseTrait.withDoc(comments), obj)
+
+    val jacksonSerializer = CLASSDEF(name + "Serializer").withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
+      DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
+        PARAM("value", name),
+        PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator"),
+        PARAM("provider", "com.fasterxml.jackson.databind.SerializerProvider")) := BLOCK(
+
+        (REF("gen") DOT "writeString" APPLY(REF("value") DOT "value"))
+      )
+    )
+
+    Seq(baseTrait.withDoc(comments), obj, jacksonSerializer)
   }
 }

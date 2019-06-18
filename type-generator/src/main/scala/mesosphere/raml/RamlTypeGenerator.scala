@@ -350,9 +350,25 @@ object RamlTypeGenerator {
         )).withDoc("Validation helpers for generated RAML code."),
       CASEOBJECTDEF("RamlConstraints").withParents("RamlConstraints").tree
     ).inPackage(pkg)
+
+    val ramlSerializer = BLOCK(
+      IMPORT("com.fasterxml.jackson.databind.ObjectMapper"),
+      IMPORT("com.fasterxml.jackson.databind.module.SimpleModule"),
+
+      OBJECTDEF("RamlSerializer") := BLOCK(
+        DEF("serializer", "ObjectMapper") := BLOCK(
+          VAL("mapper") := NEW("ObjectMapper").APPLY(),
+          VAL("module") := NEW("SimpleModule").APPLY(),
+
+          REF("mapper") DOT "registerModule" APPLY REF("module")
+        )
+      )
+    ).inPackage(pkg)
+
     Map(
       "RamlGenerated" -> baseType,
-      "RamlConstraints" -> ramlConstraints
+      "RamlConstraints" -> ramlConstraints,
+      "RamlSerializer" -> ramlSerializer
     )
   }
 
