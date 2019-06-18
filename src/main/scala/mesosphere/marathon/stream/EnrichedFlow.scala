@@ -115,7 +115,7 @@ object EnrichedFlow {
     * @tparam T The type of the element.
     * @return The decouncing flow.
     */
-  def debounce[T](duration: FiniteDuration) =
+  def debounce[T](duration: FiniteDuration): Flow[T, T, NotUsed] =
     Flow[T]
       .conflate((_, newElement) => newElement)
       .throttle(1, duration)
