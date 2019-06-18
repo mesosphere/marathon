@@ -4,9 +4,11 @@ import mesosphere.raml.backend.{GeneratedFile, NoScalaFormat}
 import treehugger.forest._
 import treehuggerDSL._
 
-case class GeneratedFileTreehugger(trees: Seq[Tree], jacksonSerializers: Seq[Tree] = Seq.empty) extends GeneratedFile {
+case class GeneratedFileTreehugger(objects:Seq[GeneratedObjectTreehugger]) extends GeneratedFile {
 
   override def generateFile(pkg: String): String = {
+    val trees = objects.flatMap(o => o.trees)
+
     val rootBlock: Tree =
       if (trees.nonEmpty) {
           BLOCK(trees)
@@ -21,5 +23,9 @@ case class GeneratedFileTreehugger(trees: Seq[Tree], jacksonSerializers: Seq[Tre
 
       treehugger.forest.treeToString(rootBlock)
   }
+
+}
+
+case class GeneratedObjectTreehugger(name: String, trees: Seq[Tree], jacksonSerializer: Option[Symbol] = Option.empty) {
 
 }

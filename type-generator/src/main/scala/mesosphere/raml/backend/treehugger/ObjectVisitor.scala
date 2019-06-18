@@ -184,7 +184,9 @@ object ObjectVisitor {
       OBJECTDEF(name) := BLOCK(defaultFields ++ defaultInstance)
     }
 
-    val jacksonSerializer = CLASSDEF(name + "Serializer").withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
+    val jacksonSerializerSym = RootClass.newClass(name + "Serializer")
+
+    val jacksonSerializer = CLASSDEF(jacksonSerializerSym).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
       DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
         PARAM("value", name),
         PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator"),
@@ -193,14 +195,14 @@ object ObjectVisitor {
         Seq((REF("gen") DOT "writeStartObject")())
         ++
         actualFields.withFilter(_.name != AdditionalProperties).map { field =>
-          if (field.omitEmpty && field.repeated && !field.forceOptional) {
+          if (field.isOptionType) {
+            IF(REF("value") DOT field.name DOT "nonEmpty") THEN (
+              REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name DOT "get" )
+              ) ENDIF
+          } else if (field.isContainerType) {
             IF(REF("value") DOT field.name DOT "nonEmpty") THEN (
               REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
-            ) ENDIF
-          } else if(field.omitEmpty && !field.repeated && !builtInTypes.contains(field.`type`.toString())) {
-            IF(REF("value") DOT field.name DOT "nonEmpty") THEN (
-              REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
-            ) ENDIF
+              ) ENDIF
           } else {
             REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
           }
@@ -213,6 +215,10 @@ object ObjectVisitor {
     val commentBlock = comments ++ actualFields.map(_.comment)(collection.breakOut)
     val children = Visitor.visit(childTypes)
 
-    GeneratedFileTreehugger(Seq(klass.withDoc(commentBlock)) ++ children.trees ++ Seq(obj) ++ Seq(jacksonSerializer), Seq(jacksonSerializer) ++ children.jacksonSerializers)
+    GeneratedFileTreehugger(
+      children.objects
+      ++
+      Seq(GeneratedObjectTreehugger(name, Seq(klass.withDoc(commentBlock)) ++ Seq(obj) ++ Seq(jacksonSerializer), Some(jacksonSerializerSym)))
+    )
   }
 }

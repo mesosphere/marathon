@@ -3,7 +3,7 @@ package mesosphere.raml
 import treehugger.forest._
 import definitions._
 import mesosphere.raml.backend._
-import mesosphere.raml.backend.treehugger.Visitor
+import mesosphere.raml.backend.treehugger.{GeneratedFileTreehugger, Visitor}
 import mesosphere.raml.ir.{ConstraintT, EnumT, FieldT, GeneratedClass, ObjectT, StringT, UnionT}
 import org.raml.v2.api.RamlModelResult
 import org.raml.v2.api.model.v10.api.Library
@@ -320,7 +320,7 @@ object RamlTypeGenerator {
     }
   }
 
-  def generateBuiltInTypes(pkg: String): Map[String, Tree] = {
+  def generateBuiltInTypes(pkg: String, generatedFiles: Map[GeneratedClass, GeneratedFileTreehugger]): Map[String, String] = {
     val baseType = TRAITDEF("RamlGenerated").tree.withDoc("Marker trait indicating generated code.")
       .inPackage(pkg)
     val ramlConstraints = BLOCK(
@@ -357,18 +357,28 @@ object RamlTypeGenerator {
 
       OBJECTDEF("RamlSerializer") := BLOCK(
         DEF("serializer", "ObjectMapper") := BLOCK(
-          VAL("mapper") := NEW("ObjectMapper").APPLY(),
-          VAL("module") := NEW("SimpleModule").APPLY(),
+          Seq(VAL("mapper") := NEW("ObjectMapper").APPLY()) ++
+          Seq(VAL("module") := NEW("SimpleModule").APPLY()) ++
 
-          REF("mapper") DOT "registerModule" APPLY REF("module")
+          generatedFiles.values.flatMap( gf => gf.objects ).flatMap( o => {
+            if (o.jacksonSerializer.nonEmpty) {
+              val ctr = NEW(o.jacksonSerializer.get).APPLY()
+              val classOfMethod = PredefModuleClass.newMethod("classOf[" + o.name + "]")
+              Seq(REF("module") DOT "addSerializer" APPLY(REF(classOfMethod), ctr))
+            } else {
+              Seq.empty
+            }
+          }) ++
+
+          Seq(REF("mapper") DOT "registerModule" APPLY REF("module"))
         )
       )
     ).inPackage(pkg)
 
     Map(
-      "RamlGenerated" -> baseType,
-      "RamlConstraints" -> ramlConstraints,
-      "RamlSerializer" -> ramlSerializer
+      "RamlGenerated" -> treeToString(baseType),
+      "RamlConstraints" -> treeToString(ramlConstraints),
+      "RamlSerializer" -> treeToString(ramlSerializer)
     )
   }
 
@@ -380,22 +390,11 @@ object RamlTypeGenerator {
     val typeTable = buildTypeTable(typeDeclarations)
     val types = buildTypes(typeTable, typeDeclarations)
 
-    val files = types.map(Visitor.visit)
+    // Back end: Code generation
+    val files:Map[GeneratedClass, GeneratedFileTreehugger] = types.map { gc => gc -> Visitor.visit(gc)} toMap
 
-    files.map({ tpe =>
-      tpe.name -> Visitor.visit(tpe).generateFile(pkg)
-    }) ++ ge
+    val fileStrings:Map[String, String] = files.map { case (gc, gf) => (gc.name, gf.generateFile(pkg)) }
 
-    // Back end: Code generation with Treehugger.
-    generateBuiltInTypes(pkg) ++ types.map { tpe =>
-      val file = Visitor.visit(tpe)
-      if (file.trees.nonEmpty) {
-        tpe.name -> BLOCK(file.trees).inPackage(pkg)
-          .withComment(NoScalaFormat)
-      } else {
-        tpe.name -> BLOCK().withComment(s"Unsupported: $tpe").inPackage(pkg)
-          .withComment(NoScalaFormat)
-      }
-    }(collection.breakOut)
+    fileStrings ++ generateBuiltInTypes(pkg, files)
   }
 }

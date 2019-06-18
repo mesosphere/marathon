@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api
 
 import gnieh.diffson.playJson._
+import mesosphere.marathon.raml.RamlSerializer
 import org.scalatest.{Assertions, Matchers}
 import play.api.libs.json._
 
@@ -17,6 +18,18 @@ object JsonTestHelper extends Assertions with Matchers {
       normed should be (normalize(reread.get))
     }
   }
+
+  def assertSerializationRoundtripWithJacksonWorks[T](value: T, normalize: T => T = { t: T => t })(implicit format: Format[T]): Unit = {
+    val normed = normalize(value)
+    val json = RamlSerializer.serializer.writeValueAsString(normed)
+    val jsonObj = Json.parse(json)
+    val reread = Json.fromJson[T](jsonObj)
+    withClue(s"for json:\n${Json.prettyPrint(jsonObj)}\n") {
+      reread should be ('success)
+      normed should be (normalize(reread.get))
+    }
+  }
+
 
   def assertThatJsonOf[T](value: T)(implicit writes: Writes[T]): AssertThatJsonString = {
     AssertThatJsonString(Json.prettyPrint(Json.toJson(value)))

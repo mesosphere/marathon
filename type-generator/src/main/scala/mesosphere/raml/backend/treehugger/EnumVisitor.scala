@@ -58,7 +58,10 @@ object EnumVisitor {
       }
     )
 
-    val jacksonSerializer = CLASSDEF(name + "Serializer").withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
+    val jacksonSerializerSym = RootClass.newClass(name + "Serializer")
+
+
+    val jacksonSerializer = CLASSDEF(jacksonSerializerSym).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
       DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
         PARAM("value", name),
         PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator"),
@@ -68,6 +71,6 @@ object EnumVisitor {
       )
     )
 
-    GeneratedFileTreehugger(Seq(baseTrait.withDoc(comments), obj, jacksonSerializer), Seq(jacksonSerializer))
+    GeneratedFileTreehugger(Seq(GeneratedObjectTreehugger(name, Seq(baseTrait.withDoc(comments), obj, jacksonSerializer), Some(jacksonSerializerSym))))
   }
 }

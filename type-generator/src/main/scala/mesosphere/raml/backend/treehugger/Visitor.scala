@@ -8,7 +8,7 @@ object Visitor {
   def visit(generated: Seq[GeneratedClass]): GeneratedFileTreehugger = {
       generated
         .map(visit)
-        .foldLeft(GeneratedFileTreehugger(Seq.empty)) { (acc, next) => GeneratedFileTreehugger(acc.trees ++ next.trees, acc.jacksonSerializers ++ next.jacksonSerializers)}
+        .foldLeft(GeneratedFileTreehugger(Seq.empty)) { (acc, next) => GeneratedFileTreehugger(acc.objects ++ next.objects)}
   }
 
   def visit(generated: GeneratedClass): GeneratedFileTreehugger = {

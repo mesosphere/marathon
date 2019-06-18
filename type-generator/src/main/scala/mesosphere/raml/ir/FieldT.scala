@@ -12,6 +12,39 @@ case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constrai
   val name = scalaFieldName(rawName)
   override def toString: String = s"$name: ${`type`}"
 
+  lazy val isOptionType:Boolean = {
+    if ((required || default.isDefined) && !forceOptional) {
+      false
+    } else {
+      if (repeated && !forceOptional) {
+        false
+      } else {
+        true
+      }
+    }
+  }
+
+  lazy val isContainerType:Boolean = {
+    if ((required || default.isDefined) && !forceOptional) {
+      false
+    } else {
+      if (repeated && !forceOptional) {
+        val typeName = `type`.toString()
+        if (typeName.startsWith("Map")) {
+          true
+        } else {
+          if (typeName.startsWith("Set")) {
+            true
+          } else {
+            false
+          }
+        }
+      } else {
+        false
+      }
+    }
+  }
+
   lazy val paramTypeValue: Option[(Type, Tree)] = {
     if ((required || default.isDefined) && !forceOptional) {
       defaultValue.map { d => `type` -> d }

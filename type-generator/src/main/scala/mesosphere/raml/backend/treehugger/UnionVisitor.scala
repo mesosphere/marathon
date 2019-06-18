@@ -30,8 +30,8 @@ object UnionVisitor {
         )
       )
     )
-    val children:Seq[GeneratedFileTreehugger] = childTypes.map {
-      case s: StringT => GeneratedFileTreehugger(
+    val children:Seq[GeneratedObjectTreehugger] = childTypes.flatMap {
+      case s: StringT => Seq(GeneratedObjectTreehugger( s.name,
         Seq[Tree](
           CASECLASSDEF(s.name) withParents name withParams s.defaultValue.fold(PARAM("value", StringClass).tree){ defaultValue =>
             PARAM("value", StringClass) := LIT(defaultValue)
@@ -49,10 +49,14 @@ object UnionVisitor {
             }
           )
         )
-      )
-      case t => Visitor.visit(t)
+      ))
+      case t => Visitor.visit(t).objects
     }
 
-    GeneratedFileTreehugger(Seq(base) ++ children.flatMap(_.trees) ++ Seq(obj), children.flatMap(_.jacksonSerializers))
+    GeneratedFileTreehugger(
+      children
+      ++
+      Seq(GeneratedObjectTreehugger( name, Seq(base) ++ Seq(obj), Option.empty))
+    )
   }
 }

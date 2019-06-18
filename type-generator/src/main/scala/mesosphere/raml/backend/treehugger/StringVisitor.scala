@@ -6,5 +6,5 @@ import treehugger.forest.Tree
 
 object StringVisitor {
 
-  def visit(s: StringT): GeneratedFileTreehugger =  GeneratedFileTreehugger(Seq.empty[Tree])
+  def visit(s: StringT): GeneratedFileTreehugger =  GeneratedFileTreehugger(Seq.empty)
 }

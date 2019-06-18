@@ -3,7 +3,7 @@ package json
 
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.raml.{GroupConversion, Raml}
+import mesosphere.marathon.raml.{GroupConversion, Raml, RamlSerializer}
 import mesosphere.marathon.state.{AppDefinition, Group, RootGroup, Timestamp}
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
@@ -88,10 +88,16 @@ class JsonSerializeDeserializeBenchmark extends JsonSerializeDeserializeState {
   }
 
   @Benchmark
-  def jsonDeserialiseWrite(hole: Blackhole): Unit = {
+  def jsonSerialiseWrite(hole: Blackhole): Unit = {
     val value: JsValue = Json.toJson[raml.Group](groupMock)
     val str: String = value.toString()
     hole.consume(str)
+  }
+
+  @Benchmark
+  def jsonSerialiseWriteJackson(hole: Blackhole): Unit = {
+    val output = RamlSerializer.serializer.writeValueAsString(groupMock)
+    hole.consume(output)
   }
 
 }
