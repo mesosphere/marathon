@@ -39,20 +39,10 @@ object ReviveOffersStreamLogic extends StrictLogging {
           case (current, Right(TimedEmitter.Inactive(configRef))) => current.withoutDelay(configRef)
         }
     }
-      .via(EnrichedFlow.debounce[ReviveOffersState](3.seconds)) // Only process the latest element in 2 second.
-      //.via(flowIgnoresDecline)
-      .via(flowRespectsDecline(reviveOffersRepetitions = reviveOffersRepetitions, minReviveOffersInterval = minReviveOffersInterval)) // Still fails mesosphere.marathon.integration.AppDeployIntegrationTest
+      .via(EnrichedFlow.debounce[ReviveOffersState](minReviveOffersInterval))
+      .via(flowRespectsDecline(reviveOffersRepetitions = reviveOffersRepetitions, minReviveOffersInterval = minReviveOffersInterval))
       .prepend(Source.single(Suppress))
   }
-
-  /**
-    * This flow revives solely based on the current state. It will revive on every tick as long as
-    * there are scheduled instances. That means even if the scheduled instances declined all offers
-    * these will come back.
-    */
-  def flowIgnoresDecline: Flow[ReviveOffersState, Op, NotUsed] = Flow[ReviveOffersState]
-    .map(_.evaluate) // Decide whether to suppress or revive based on time and delay.
-    .via(deduplicateSuppress)
 
   /**
     * This flow only revives if a run spec became scheduled or an resident task terminal. It will
@@ -73,6 +63,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
           logger.info(s"Suppress because both sets are empty.")
           List(Suppress)
         } else {
+          logger.info("Nothing changed in last frame.")
           Nil
         }
     }

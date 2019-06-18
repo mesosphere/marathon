@@ -9,27 +9,32 @@ import mesosphere.marathon.state.RunSpecConfigRef
 /**
   * Holds the current state and defines the revive logic.
   *
-  * @param scheduledRunSpecs All run specs that have at least one scheduled instance requiring offers.
+  * @param scheduledInstances All scheduled instance requiring offers and their run spec ref.
   * @param terminalReservations Ids of terminal resident instance with [[Goal.Decommissioned]].
   * @param activeDelays Delays for run specs.
   */
 case class ReviveOffersState(
-    scheduledRunSpecs: Set[RunSpecConfigRef],
+    scheduledInstances: Map[Instance.Id, RunSpecConfigRef],
     terminalReservations: Set[Instance.Id],
     activeDelays: Set[RunSpecConfigRef]) extends StrictLogging {
 
   /** @return this state updated with an instance. */
   def withInstanceUpdated(instance: Instance): ReviveOffersState = {
     logger.info(s"${instance.instanceId} updated to ${instance.state}")
-    if (instance.isScheduled) copy(scheduledRunSpecs = scheduledRunSpecs + instance.runSpec.configRef)
-    else if (ReviveOffersState.shouldUnreserve(instance)) copy(terminalReservations = terminalReservations + instance.instanceId)
+    if (instance.isScheduled) {
+      logger.info(s"Adding ${instance.instanceId} to scheduled instances.")
+      copy(scheduledInstances = scheduledInstances.updated(instance.instanceId, instance.runSpec.configRef))
+    } else if (!instance.isScheduled) {
+      logger.info(s"Removing ${instance.instanceId} from scheduled instances.")
+      copy(scheduledInstances = scheduledInstances - instance.instanceId)
+    } else if (ReviveOffersState.shouldUnreserve(instance)) copy(terminalReservations = terminalReservations + instance.instanceId)
     else this
   }
 
-  /** @return this state with passed instance removed from [[scheduledRunSpecs]] and [[terminalReservations]]. */
+  /** @return this state with passed instance removed from [[scheduledInstances]] and [[terminalReservations]]. */
   def withInstanceDeleted(instance: Instance): ReviveOffersState = {
     logger.info(s"${instance.instanceId} deleted.")
-    copy(scheduledRunSpecs - instance.runSpec.configRef, terminalReservations - instance.instanceId)
+    copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId)
   }
 
   /** @return this state with removed ref from [[activeDelays]]. */
@@ -44,31 +49,8 @@ case class ReviveOffersState(
     copy(activeDelays = activeDelays + ref)
   }
 
-  def freeze: (Set[RunSpecConfigRef], Set[Instance.Id]) = {
-    (scheduledRunSpecs.filter(launchAllowed), terminalReservations)
-  }
-
-  // ------- ALTERNATIVE ------
-
-  /**
-    * Evaluate whether we should revive or suppress based on the current state ''and'' the existence of an active
-    * backoff delay.
-    *
-    * @return whether we should revive or suppress.
-    */
-  def evaluate: Op = {
-    if (terminalReservations.nonEmpty || scheduledInstanceWithoutBackoffExists) {
-      logger.info("Reviving offers.")
-      Revive
-    } else {
-      logger.info("Suppressing offers.")
-      Suppress
-    }
-  }
-
-  /** @return true if there is at least one scheduled instance that has no active backoff. */
-  def scheduledInstanceWithoutBackoffExists: Boolean = {
-    scheduledRunSpecs.exists(launchAllowed(_))
+  def freeze: (Set[Instance.Id], Set[Instance.Id]) = {
+    (scheduledInstances.view.filter(kv => launchAllowed(kv._2)).map(_._1).toSet, terminalReservations)
   }
 
   /** @return true if a instance has no active delay. */
@@ -80,7 +62,7 @@ case class ReviveOffersState(
 object ReviveOffersState {
   def apply(snapshot: InstancesSnapshot): ReviveOffersState = {
     ReviveOffersState(
-      snapshot.instances.view.filter(_.isScheduled).map(i => i.runSpec.configRef).toSet,
+      snapshot.instances.view.filter(_.isScheduled).map(i => i.instanceId -> i.runSpec.configRef).toMap,
       snapshot.instances.view.filter(shouldUnreserve).map(_.instanceId).toSet,
       Set.empty
     )
