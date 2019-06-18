@@ -8,7 +8,7 @@ import treehuggerDSL._
 object EnumVisitor {
   import mesosphere.raml.backend._
 
-  def visit(enumT: EnumT): Seq[Tree] = {
+  def visit(enumT: EnumT): GeneratedFileTreehugger = {
 
     val EnumT(name, values, default, comments) = enumT
     val sortedValues = enumT.sortedValues
@@ -68,6 +68,6 @@ object EnumVisitor {
       )
     )
 
-    Seq(baseTrait.withDoc(comments), obj, jacksonSerializer)
+    GeneratedFileTreehugger(Seq(baseTrait.withDoc(comments), obj, jacksonSerializer), Seq(jacksonSerializer))
   }
 }

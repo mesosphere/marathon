@@ -372,7 +372,7 @@ object RamlTypeGenerator {
     )
   }
 
-  def apply(models: Seq[RamlModelResult], pkg: String): Map[String, Tree] = {
+  def apply(models: Seq[RamlModelResult], pkg: String): Map[String, String] = {
     // Front end: Parsed type declarations.
     val typeDeclarations = allTypes(models)
 
@@ -380,11 +380,17 @@ object RamlTypeGenerator {
     val typeTable = buildTypeTable(typeDeclarations)
     val types = buildTypes(typeTable, typeDeclarations)
 
+    val files = types.map(Visitor.visit)
+
+    files.map({ tpe =>
+      tpe.name -> Visitor.visit(tpe).generateFile(pkg)
+    }) ++ ge
+
     // Back end: Code generation with Treehugger.
     generateBuiltInTypes(pkg) ++ types.map { tpe =>
-      val tree = Visitor.visit(tpe)
-      if (tree.nonEmpty) {
-        tpe.name -> BLOCK(tree).inPackage(pkg)
+      val file = Visitor.visit(tpe)
+      if (file.trees.nonEmpty) {
+        tpe.name -> BLOCK(file.trees).inPackage(pkg)
           .withComment(NoScalaFormat)
       } else {
         tpe.name -> BLOCK().withComment(s"Unsupported: $tpe").inPackage(pkg)

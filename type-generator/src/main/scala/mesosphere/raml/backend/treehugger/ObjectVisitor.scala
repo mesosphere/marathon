@@ -9,7 +9,7 @@ import treehuggerDSL._
 object ObjectVisitor {
   import mesosphere.raml.backend._
 
-  def visit(o: ObjectT): Seq[Tree] = {
+  def visit(o: ObjectT): GeneratedFileTreehugger = {
     val ObjectT(name, fields, parentType, comments, childTypes, discriminator, discriminatorValue, serializeOnly) = o
 
     val actualFields = fields.filter(_.rawName != discriminator.getOrElse(""))
@@ -211,6 +211,8 @@ object ObjectVisitor {
     )
 
     val commentBlock = comments ++ actualFields.map(_.comment)(collection.breakOut)
-    Seq(klass.withDoc(commentBlock)) ++ childTypes.flatMap(Visitor.visit(_)) ++ Seq(obj) ++ Seq(jacksonSerializer)
+    val children = Visitor.visit(childTypes)
+
+    GeneratedFileTreehugger(Seq(klass.withDoc(commentBlock)) ++ children.trees ++ Seq(obj) ++ Seq(jacksonSerializer), Seq(jacksonSerializer) ++ children.jacksonSerializers)
   }
 }

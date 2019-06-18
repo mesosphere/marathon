@@ -9,7 +9,7 @@ import treehuggerDSL._
 
 object UnionVisitor {
 
-  def visit(unionT: UnionT): Seq[Tree] = {
+  def visit(unionT: UnionT): GeneratedFileTreehugger = {
     val UnionT(name, childTypes, comments) = unionT
 
     val base = (TRAITDEF(name) withParents("RamlGenerated", "Product", "Serializable")).tree.withDoc(comments)
@@ -30,8 +30,8 @@ object UnionVisitor {
         )
       )
     )
-    val children = childTypes.flatMap {
-      case s: StringT =>
+    val children:Seq[GeneratedFileTreehugger] = childTypes.map {
+      case s: StringT => GeneratedFileTreehugger(
         Seq[Tree](
           CASECLASSDEF(s.name) withParents name withParams s.defaultValue.fold(PARAM("value", StringClass).tree){ defaultValue =>
             PARAM("value", StringClass) := LIT(defaultValue)
@@ -49,8 +49,10 @@ object UnionVisitor {
             }
           )
         )
+      )
       case t => Visitor.visit(t)
     }
-    Seq(base) ++ children ++ Seq(obj)
+
+    GeneratedFileTreehugger(Seq(base) ++ children.flatMap(_.trees) ++ Seq(obj), children.flatMap(_.jacksonSerializers))
   }
 }

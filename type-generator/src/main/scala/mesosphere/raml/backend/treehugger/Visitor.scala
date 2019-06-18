@@ -5,9 +5,13 @@ import treehugger.forest._
 
 object Visitor {
 
-  def visit(generated: Seq[GeneratedClass]): Seq[Tree] = generated.flatMap(visit)
+  def visit(generated: Seq[GeneratedClass]): GeneratedFileTreehugger = {
+      generated
+        .map(visit)
+        .foldLeft(GeneratedFileTreehugger(Seq.empty)) { (acc, next) => GeneratedFileTreehugger(acc.trees ++ next.trees, acc.jacksonSerializers ++ next.jacksonSerializers)}
+  }
 
-  def visit(generated: GeneratedClass): Seq[Tree] = {
+  def visit(generated: GeneratedClass): GeneratedFileTreehugger = {
     generated match {
       case enumT: EnumT => EnumVisitor.visit(enumT)
       case objectT: ObjectT => ObjectVisitor.visit(objectT)
