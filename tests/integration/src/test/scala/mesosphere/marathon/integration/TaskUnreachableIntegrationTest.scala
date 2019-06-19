@@ -10,6 +10,7 @@ import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.UnreachableDisabled
 import org.scalatest.Inside
+import org.scalatest.Inspectors.forAll
 
 import scala.concurrent.duration._
 
@@ -41,7 +42,11 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
   override def afterAll(): Unit = {
     // We need to start all the agents for the teardown to be able to kill all the (UNREACHABLE) executors/tasks
     mesosCluster.agents.foreach(_.start())
-    eventually { mesosCluster.state.value.agents.size shouldBe mesosCluster.agents.size }
+    eventually {
+      val state = mesosCluster.state.value
+      state.agents.size shouldBe mesosCluster.agents.size
+      forAll(state.frameworks) { _.unreachable_tasks should be('empty) }
+    }
     super.afterAll()
   }
 

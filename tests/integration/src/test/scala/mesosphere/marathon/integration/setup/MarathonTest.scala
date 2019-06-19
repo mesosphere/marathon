@@ -560,7 +560,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     }
   }
 
-  // We shouldn't eat exceptions in clenaUp() methods: it's a source of hard to find bugs if
+  // We shouldn't eat exceptions in cleanUp() methods: it's a source of hard to find bugs if
   // we just move on to the next test, that expects a "clean state". We should fail loud and
   // proud here and find out why the clean-up fails.
   def cleanUp(): Unit = {
