@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.launchqueue.impl
 
 import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Source}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{InstanceChangeOrSnapshot, InstanceDeleted, InstanceUpdated, InstancesSnapshot}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -76,7 +76,10 @@ object ReviveOffersStreamLogic extends StrictLogging {
         val diffTerminal = current.terminalReservations -- previous.terminalReservations
 
         if (diffScheduled.nonEmpty || diffTerminal.nonEmpty) {
-          logger.info(s"Revive because new new scheduled $diffScheduled or terminal $diffTerminal.")
+          logger.info(s"Revive because new scheduled $diffScheduled or terminal $diffTerminal.")
+          List(Revive)
+        } else if (current.shouldReconcileReservation) {
+          logger.info(s"Revive to trigger reservation reconciliation.")
           List(Revive)
         } else if (current.isEmpty) {
           logger.info(s"Suppress because there are no pending instances right now.")
@@ -92,7 +95,9 @@ object ReviveOffersStreamLogic extends StrictLogging {
 
   def suppressAndReviveStream(
     instanceUpdates: InstanceTracker.InstanceUpdates,
-    delayedConfigRefs: Source[DelayedStatus, NotUsed], minReviveOffersInterval: FiniteDuration): Source[Op, NotUsed] = {
+    delayedConfigRefs: Source[DelayedStatus, NotUsed],
+    minReviveOffersInterval: FiniteDuration,
+    driverHolder: MarathonSchedulerDriverHolder): Source[Op, NotUsed] = {
 
     val flattened = instanceUpdates.flatMapConcat {
       case (snapshot, updates) =>
@@ -100,8 +105,8 @@ object ReviveOffersStreamLogic extends StrictLogging {
     }
     flattened.map(Left(_)).merge(delayedConfigRefs.map(Right(_)))
       .via(reviveStateFromInstancesAndDelays)
+      .via(EnrichedFlow.debounce(minReviveOffersInterval)) // Debounce must happen before diffing.
       .via(suppressOrReviveFromDiff)
-      .via(EnrichedFlow.debounce(minReviveOffersInterval))
       // There's a very small chance that we decline an offer in response to a revive for an instance not yet registered
       // with the TaskLauncherActor. To deal with the rare case this happens, we just repeat the last suppress / revive
       // after a while.

@@ -19,6 +19,7 @@ import scala.concurrent.duration.FiniteDuration
   * Cancels when downstream completes
   *
   * @param after - Duration after which an element is emitted that it should be emitted again
+  * @param count - Number of times the original element is repeated.
   */
 class Repeater[T](after: FiniteDuration, count: Int = 1) extends GraphStage[FlowShape[T, T]] {
   val input = Inlet[T]("repeater-input")
