@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.task.termination.impl
 
-import akka.{Done, NotUsed}
+import akka.Done
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
