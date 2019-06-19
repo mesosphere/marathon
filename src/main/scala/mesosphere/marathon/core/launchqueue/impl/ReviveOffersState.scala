@@ -12,15 +12,13 @@ import mesosphere.marathon.state.RunSpecConfigRef
   * @param scheduledInstances All scheduled instance requiring offers and their run spec ref.
   * @param terminalReservations Ids of terminal resident instance with [[Goal.Decommissioned]].
   * @param activeDelays Delays for run specs.
+  * @param forceExpungedInstances Counts how many resident instances have been force expunged.
   */
 case class ReviveOffersState(
     scheduledInstances: Map[Instance.Id, RunSpecConfigRef],
     terminalReservations: Set[Instance.Id],
-    activeDelays: Set[RunSpecConfigRef]) extends StrictLogging {
-
-  // At least one instance with reservations was force expunged before the reservation was destroyed.
-  // This field should not be copied.
-  private var forceExpungedResidentInstance: Boolean = false
+    activeDelays: Set[RunSpecConfigRef],
+    forceExpungedInstances: Long) extends StrictLogging {
 
   /** @return this state updated with an instance. */
   def withInstanceUpdated(instance: Instance): ReviveOffersState = {
@@ -38,12 +36,12 @@ case class ReviveOffersState(
   /** @return this state with passed instance removed from [[scheduledInstances]] and [[terminalReservations]]. */
   def withInstanceDeleted(instance: Instance): ReviveOffersState = {
     logger.info(s"${instance.instanceId} deleted.")
-    val copied = copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId)
     if (instance.reservation.nonEmpty) {
       logger.info(s"Resident ${instance.instanceId} was force expunged.")
-      copied.forceExpungedResidentInstance = true
+      copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId, forceExpungedInstances = forceExpungedInstances + 1)
+    } else {
+      copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId)
     }
-    copied
   }
 
   /** @return this state with removed ref from [[activeDelays]]. */
@@ -69,18 +67,6 @@ case class ReviveOffersState(
 
   /** @return true there are no scheduled instances nor terminal instances with reservations. */
   def isEmpty: Boolean = scheduledInstancesWithoutBackoff.isEmpty && terminalReservations.isEmpty
-
-  /**
-    * A resident instances was deleted and requires a revive.
-    *
-    * Currently Marathon uses [[InstanceTrackerDelegate.forceExpunge]] when a run spec with resident instances
-    * is removed. Thus Marathon looses all knowledge of any reservations to these instances. The [[OfferMatcherReconciler]]
-    * is supposed to filter offers for these reservations and destroy them if no related instance is known.
-    *
-    * A revive call to trigger an offer with said reservations to be destroyed should be emitted. There is no
-    * guarantee that the reservation is destroyed.
-    */
-  def shouldReconcileReservation: Boolean = forceExpungedResidentInstance
 }
 
 object ReviveOffersState {
@@ -88,7 +74,8 @@ object ReviveOffersState {
     ReviveOffersState(
       snapshot.instances.view.filter(_.isScheduled).map(i => i.instanceId -> i.runSpec.configRef).toMap,
       snapshot.instances.view.filter(shouldUnreserve).map(_.instanceId).toSet,
-      Set.empty
+      Set.empty,
+      0
     )
   }
 

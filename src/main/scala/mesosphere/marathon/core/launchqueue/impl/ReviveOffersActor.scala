@@ -38,8 +38,7 @@ class ReviveOffersActor(
     val done = ReviveOffersStreamLogic.suppressAndReviveStream(
       instanceUpdates,
       delayedConfigRefs = rateLimiterUpdates.via(ReviveOffersStreamLogic.activelyDelayedRefs),
-      minReviveOffersInterval = minReviveOffersInterval,
-      driverHolder = driverHolder)
+      minReviveOffersInterval = minReviveOffersInterval)
       .runWith(Sink.foreach {
         case Revive =>
           reviveCountMetric.increment()

@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.launchqueue.impl
 
 import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{Flow, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{InstanceChangeOrSnapshot, InstanceDeleted, InstanceUpdated, InstancesSnapshot}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -63,6 +63,23 @@ object ReviveOffersStreamLogic extends StrictLogging {
   }
 
   /**
+    * A resident instances was deleted and requires a revive.
+    *
+    * Currently Marathon uses [[InstanceTrackerDelegate.forceExpunge]] when a run spec with resident instances
+    * is removed. Thus Marathon looses all knowledge of any reservations to these instances. The [[OfferMatcherReconciler]]
+    * is supposed to filter offers for these reservations and destroy them if no related instance is known.
+    *
+    * A revive call to trigger an offer with said reservations to be destroyed should be emitted. There is no
+    * guarantee that the reservation is destroyed.
+    *
+    * @param current The current accumulated state.
+    * @param previous The accumulated state of the last check.
+    * @return true if there is a new force expunged resident instance, false otherwise.
+    */
+  def shouldReconcileReservation(current: ReviveOffersState, previous: ReviveOffersState): Boolean =
+    current.forceExpungedInstances > previous.forceExpungedInstances
+
+  /**
     * This flow emits a [[Suppress]] or a [[Revive]] based on the last two states emitted by [[reviveStateFromInstancesAndDelays]]
     *
     * @return The actual flow.
@@ -78,7 +95,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
         if (diffScheduled.nonEmpty || diffTerminal.nonEmpty) {
           logger.info(s"Revive because new scheduled $diffScheduled or terminal $diffTerminal.")
           List(Revive)
-        } else if (current.shouldReconcileReservation) {
+        } else if (shouldReconcileReservation(current, previous)) {
           logger.info(s"Revive to trigger reservation reconciliation.")
           List(Revive)
         } else if (current.isEmpty) {
@@ -96,8 +113,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
   def suppressAndReviveStream(
     instanceUpdates: InstanceTracker.InstanceUpdates,
     delayedConfigRefs: Source[DelayedStatus, NotUsed],
-    minReviveOffersInterval: FiniteDuration,
-    driverHolder: MarathonSchedulerDriverHolder): Source[Op, NotUsed] = {
+    minReviveOffersInterval: FiniteDuration): Source[Op, NotUsed] = {
 
     val flattened = instanceUpdates.flatMapConcat {
       case (snapshot, updates) =>
