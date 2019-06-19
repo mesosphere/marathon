@@ -26,12 +26,12 @@ case class ReviveOffersState(
     if (instance.isScheduled) {
       logger.info(s"Adding ${instance.instanceId} to scheduled instances.")
       copy(scheduledInstances = scheduledInstances.updated(instance.instanceId, instance.runSpec.configRef))
+    } else if (ReviveOffersState.shouldUnreserve(instance)) {
+      logger.info(s"$instance is terminal but has a reservation.")
+      copy(scheduledInstances = scheduledInstances - instance.instanceId, terminalReservations = terminalReservations + instance.instanceId)
     } else if (!instance.isScheduled) {
       logger.info(s"Removing ${instance.instanceId} from scheduled instances.")
       copy(scheduledInstances = scheduledInstances - instance.instanceId)
-    } else if (ReviveOffersState.shouldUnreserve(instance)) {
-      logger.info(s"$instance is terminal but has a reservation.")
-      copy(terminalReservations = terminalReservations + instance.instanceId)
     } else this
   }
 
