@@ -31,7 +31,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     Raml.fromRaml(appNormalization(raw))
   }
 
-  private [this] def toJsonWithPlay(app:AppDefinition):String = {
+  private[this] def toJsonWithPlay(app: AppDefinition): String = {
     val raml: App = Raml.toRaml(app)
     val value: JsValue = Json.toJson(raml)
     value.toString()
@@ -327,7 +327,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       withValidationClue {
         JsonTestHelper.assertSerializationRoundtripWorks(app3, appNormalization)
         JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(app3, appNormalization)
-        JsonTestHelper.assertSerializationIsSameForPlayAndJackson(app3, appNormalization)
       }
     }
 
