@@ -2,9 +2,9 @@ package mesosphere.marathon
 package core.launchqueue.impl
 
 import akka.NotUsed
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{Flow, Source}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdated}
+import mesosphere.marathon.core.instance.update.{InstanceChangeOrSnapshot, InstanceDeleted, InstanceUpdated, InstancesSnapshot}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpecConfigRef
 import mesosphere.marathon.stream.{EnrichedFlow, TimedEmitter}
@@ -22,26 +22,29 @@ object ReviveOffersStreamLogic extends StrictLogging {
       val deadline = delayUpdate.delay.map(_.deadline.toInstant)
       delayUpdate.ref -> deadline
     }
-    .via { TimedEmitter.flow }
+    .via {
+      TimedEmitter.flow
+    }
 
   def suppressAndReviveStream(
     instanceUpdates: InstanceTracker.InstanceUpdates,
     delayedConfigRefs: Source[TimedEmitter.EventState[RunSpecConfigRef], NotUsed],
     reviveOffersRepetitions: Int, minReviveOffersInterval: FiniteDuration): Source[Op, NotUsed] = {
 
-    instanceUpdates.flatMapConcat {
+    val flattened = instanceUpdates.flatMapConcat {
       case (snapshot, updates) =>
-        val zero = ReviveOffersState(snapshot)
-        updates.map(Left(_)).merge(delayedConfigRefs.map(Right(_))).scan(zero) {
-          case (current, Left(InstanceUpdated(updated, _, _))) => current.withInstanceUpdated(updated)
-          case (current, Left(InstanceDeleted(deleted, _, _))) => current.withInstanceDeleted(deleted)
-          case (current, Right(TimedEmitter.Active(configRef))) => current.withDelay(configRef)
-          case (current, Right(TimedEmitter.Inactive(configRef))) => current.withoutDelay(configRef)
-        }
+        Source.single[InstanceChangeOrSnapshot](snapshot).concat(updates.map { lol => logger.info(s"evt1 = ${lol}"); lol })
     }
-      .via(EnrichedFlow.debounce[ReviveOffersState](minReviveOffersInterval))
+    val zero = ReviveOffersState(InstancesSnapshot(Nil))
+    flattened.map(Left(_)).merge(delayedConfigRefs.map(Right(_))).scan(zero) {
+      case (current, Left(snapshot: InstancesSnapshot)) => ReviveOffersState(snapshot)
+      case (current, Left(InstanceUpdated(updated, _, _))) => current.withInstanceUpdated(updated)
+      case (current, Left(InstanceDeleted(deleted, _, _))) => current.withInstanceDeleted(deleted)
+      case (current, Right(TimedEmitter.Active(configRef))) => current.withDelay(configRef)
+      case (current, Right(TimedEmitter.Inactive(configRef))) => current.withoutDelay(configRef)
+    }
       .via(reviveOrSuppress(reviveOffersRepetitions = reviveOffersRepetitions, minReviveOffersInterval = minReviveOffersInterval))
-      .prepend(Source.single(Suppress))
+      .via(EnrichedFlow.debounce(minReviveOffersInterval))
   }
 
   /**
@@ -66,9 +69,11 @@ object ReviveOffersStreamLogic extends StrictLogging {
           logger.info("Nothing changed in last frame.")
           Nil
         }
+      case _ =>
+        logger.warn("Did not receive two elements; end of stream detected")
+        Nil
     }
     .via(deduplicateSuppress)
-    .throttle(1, minReviveOffersInterval)
 
   val deduplicateSuppress: Flow[Op, Op, NotUsed] = Flow[Op].statefulMapConcat(() => {
     var lastElement: Op = null

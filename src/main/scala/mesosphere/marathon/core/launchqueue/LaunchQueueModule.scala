@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.launchqueue
 
 import akka.NotUsed
-import akka.stream.scaladsl.{BroadcastHub, Keep}
+import akka.stream.scaladsl.BroadcastHub
 import akka.stream.{Materializer, OverflowStrategy}
 import akka.stream.scaladsl.{Keep, Source}
 import java.time.Clock
@@ -20,6 +20,7 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{Region, RunSpec}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 /**
   * Provides a [[LaunchQueue]] implementation which can be used to launch tasks for a given RunSpec.
@@ -85,7 +86,11 @@ class LaunchQueueModule(
     offerMatchStatistics)
 
   def reviveOffersActor(): ActorRef = {
-    val props = ReviveOffersActor.props(metrics, reviveConfig, instanceTracker.instanceUpdates, rateLimiterUpdates, driverHolder)
+    val props = ReviveOffersActor.props(
+      metrics,
+      reviveConfig.reviveOffersRepetitions(),
+      reviveConfig.minReviveOffersInterval().millis,
+      instanceTracker.instanceUpdates, rateLimiterUpdates, driverHolder)
     leadershipModule.startWhenLeader(props, "reviveOffers")
   }
 }

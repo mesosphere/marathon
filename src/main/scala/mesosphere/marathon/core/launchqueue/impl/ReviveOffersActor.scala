@@ -8,7 +8,6 @@ import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstancesSnapshot}
-import mesosphere.marathon.core.launchqueue.ReviveOffersConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
 
@@ -20,7 +19,8 @@ case object Suppress extends Op
 
 class ReviveOffersActor(
     metrics: Metrics,
-    conf: ReviveOffersConfig,
+    reviveOffersRepetitions: Int,
+    minReviveOffersInterval: FiniteDuration,
     instanceUpdates: InstanceTracker.InstanceUpdates,
     rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
     driverHolder: MarathonSchedulerDriverHolder) extends Actor with Stash with StrictLogging {
@@ -28,16 +28,16 @@ class ReviveOffersActor(
   private[this] val reviveCountMetric: Counter = metrics.counter("mesos.calls.revive")
   private[this] val suppressCountMetric: Counter = metrics.counter("mesos.calls.suppress")
 
-  implicit val mat = ActorMaterializer()
+  implicit val mat = ActorMaterializer()(context)
 
   override def preStart(): Unit = {
     super.preStart()
 
-    ReviveOffersStreamLogic.suppressAndReviveStream(
+    val done = ReviveOffersStreamLogic.suppressAndReviveStream(
       instanceUpdates.alsoTo(reservationReconciliation),
       delayedConfigRefs = rateLimiterUpdates.via(ReviveOffersStreamLogic.activelyDelayedRefs),
-      minReviveOffersInterval = conf.minReviveOffersInterval().millis,
-      reviveOffersRepetitions = conf.reviveOffersRepetitions())
+      minReviveOffersInterval = minReviveOffersInterval,
+      reviveOffersRepetitions = reviveOffersRepetitions)
       .runWith(Sink.foreach {
         case Revive =>
           reviveCountMetric.increment()
@@ -48,6 +48,10 @@ class ReviveOffersActor(
           logger.info("Sending suppress")
           driverHolder.driver.foreach(_.suppressOffers())
       })
+
+    done.onComplete { result =>
+      logger.error(s"Unexpected termination of revive stream; ${result}")
+    }(context.dispatcher)
 
   }
 
@@ -101,10 +105,11 @@ class ReviveOffersActor(
 object ReviveOffersActor {
   def props(
     metrics: Metrics,
-    conf: ReviveOffersConfig,
+    reviveOffersRepetitions: Int,
+    minReviveOffersInterval: FiniteDuration,
     instanceUpdates: InstanceTracker.InstanceUpdates,
     rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
     driverHolder: MarathonSchedulerDriverHolder): Props = {
-    Props(new ReviveOffersActor(metrics, conf, instanceUpdates, rateLimiterUpdates, driverHolder))
+    Props(new ReviveOffersActor(metrics, reviveOffersRepetitions, minReviveOffersInterval, instanceUpdates, rateLimiterUpdates, driverHolder))
   }
 }

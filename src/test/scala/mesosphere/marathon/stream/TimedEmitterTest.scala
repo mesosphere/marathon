@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package stream
 
-import java.time.Clock
-
 import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import mesosphere.AkkaUnitTest
