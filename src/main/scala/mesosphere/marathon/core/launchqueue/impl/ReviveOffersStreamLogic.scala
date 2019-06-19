@@ -94,12 +94,12 @@ object ReviveOffersStreamLogic extends StrictLogging {
 
         if (diffScheduled.nonEmpty || diffTerminal.nonEmpty) {
           logger.info(s"Revive because new scheduled $diffScheduled or terminal $diffTerminal.")
-          List(Revive)
+          List.fill(3)(Revive)
         } else if (shouldReconcileReservation(current, previous)) {
-          logger.info(s"Revive to trigger reservation reconciliation.")
+          logger.info(s"Revive to trigger reservation reconciliation. Current ${current.forceExpungedInstances}, previous ${previous.forceExpungedInstances}")
           List(Revive)
         } else if (current.isEmpty) {
-          logger.info(s"Suppress because there are no pending instances right now.")
+          logger.info(s"Suppress because there are no pending instances right now and current force expunged ${current.forceExpungedInstances} == ${previous.forceExpungedInstances}.")
           List(Suppress)
         } else {
           logger.info("Nothing changed in last frame.")
@@ -126,7 +126,8 @@ object ReviveOffersStreamLogic extends StrictLogging {
       // There's a very small chance that we decline an offer in response to a revive for an instance not yet registered
       // with the TaskLauncherActor. To deal with the rare case this happens, we just repeat the last suppress / revive
       // after a while.
-      .via(Repeater(minReviveOffersInterval * 10, count = 1))
+      //      .via(Repeater(minReviveOffersInterval, count = 1))
       .via(deduplicateSuppress)
+      .throttle(1, minReviveOffersInterval)
   }
 }
