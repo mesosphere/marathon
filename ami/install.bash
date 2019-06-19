@@ -43,18 +43,35 @@ apt-get -y update
 
 # Install but do not start Mesos master/slave processes
 # The CI task will install Mesos later.
-apt-get install -y --force-yes --no-install-recommends mesos=$MESOS_VERSION
+apt-get install -y --no-install-recommends mesos=$MESOS_VERSION
 systemctl stop mesos-master.service mesos-slave.service
 systemctl disable mesos-master.service mesos-slave.service
 
+echo "=== Install Python 3.6.2, Pip and Flake 8==="
+apt-get install -y \
+        build-essential \
+        git \
+        openjdk-8-jdk \
+        libssl-dev \
+        rpm \
+        zlib1g-dev
 
-echo -e "\n=== Install Python 3, Pip and Flake8 ==="
-echo 'deb http://ftp.debian.org/debian/ buster main' >> /etc/apt/sources.list
-apt-get update -y
-apt-get -t buster install python3-distutils python3 -y
+# Download, compile and install Python 3.6.2
+wget https://www.python.org/ftp/python/3.6.2/Python-3.6.2.tgz
+tar xvf Python-3.6.2.tgz && cd Python-3.6.2/
+./configure
+make -j
+sudo make install
+cd ../ && rm -r Python-3.6.2
+# Use this instead of the manual python compile when we switch to buster base image. Make sure we get Python3.6
+#echo -e "\n=== Install Python 3, Pip and Flake8 ==="
+#apt-get install python3-distutils python3 -y
+
+# Install Pip and Flake8
 wget https://bootstrap.pypa.io/get-pip.py
 python3 get-pip.py
 pip3 install flake8
+
 
 # Add user to docker group
 gpasswd -a admin docker
