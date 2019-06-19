@@ -1,17 +1,19 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
+import akka.actor.Status.Success
 import akka.actor.{Actor, Props, Stash}
+import akka.pattern.pipe
 import akka.event.LoggingReceive
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstancesSnapshot}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
 
 import scala.concurrent.duration._
+import scala.util.Failure
 
 sealed trait Op
 case object Revive extends Op
@@ -27,6 +29,7 @@ class ReviveOffersActor(
   private[this] val reviveCountMetric: Counter = metrics.counter("mesos.calls.revive")
   private[this] val suppressCountMetric: Counter = metrics.counter("mesos.calls.suppress")
 
+  import context.dispatcher
   implicit val mat = ActorMaterializer()(context)
 
   override def preStart(): Unit = {
@@ -48,30 +51,16 @@ class ReviveOffersActor(
           driverHolder.driver.foreach(_.suppressOffers())
       })
 
-    done.onComplete { result =>
-      logger.error(s"Unexpected termination of revive stream; ${result}")
-    }(context.dispatcher)
+    done.pipeTo(self)
 
   }
 
   override def receive: Receive = LoggingReceive {
-    case Revive => reviveOffers()
-    case Suppress => suppressOffers()
-    case Done => context.stop(self)
-    case other =>
-      logger.info(s"Unexpected message $other")
-  }
-
-  def reviveOffers(): Unit = {
-    reviveCountMetric.increment()
-    logger.info("Sending revive")
-    driverHolder.driver.foreach(_.reviveOffers())
-  }
-
-  def suppressOffers(): Unit = {
-    suppressCountMetric.increment()
-    logger.info("Sending suppress")
-    driverHolder.driver.foreach(_.suppressOffers())
+    case Failure(ex) =>
+      logger.error("Unexpected termination of revive stream", ex)
+      throw ex
+    case Success(Done) =>
+      logger.error(s"Unexpected successful termination of revive stream")
   }
 
 }
