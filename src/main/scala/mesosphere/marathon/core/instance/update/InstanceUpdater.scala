@@ -48,16 +48,16 @@ object InstanceUpdater extends StrictLogging {
     InstanceUpdateEffect.Update(updatedInstance, oldState = None, events)
   }
 
-  private[marathon] def unreserve(instance: Instance, now: Timestamp): InstanceUpdateEffect = {
-    require(instance.state.condition.isTerminal && instance.state.goal == Goal.Decommissioned, s"Cannot unreserve non-terminal resident $instance")
-    val updatedInstance = instance.copy(state = instance.state.copy(condition = Condition.Killed))
-    val events = eventsGenerator.events(
-      updatedInstance, task = None, now, previousState = Some(instance.state))
-    InstanceUpdateEffect.Expunge(instance, events)
-  }
+//  private[marathon] def unreserve(instance: Instance, now: Timestamp): InstanceUpdateEffect = {
+//    require(instance.state.condition.isTerminal && instance.state.goal == Goal.Decommissioned, s"Cannot unreserve non-terminal resident $instance")
+//    val updatedInstance = instance.copy(state = instance.state.copy(condition = Condition.Killed))
+//    val events = eventsGenerator.events(
+//      updatedInstance, task = None, now, previousState = Some(instance.state))
+//    InstanceUpdateEffect.Expunge(instance, events)
+//  }
 
   private def shouldBeExpunged(instance: Instance): Boolean =
-    instance.tasksMap.values.forall(t => t.isTerminal) && instance.state.goal == Goal.Decommissioned && instance.reservation.isEmpty
+    instance.tasksMap.values.forall(t => t.isTerminal) && instance.state.goal == Goal.Decommissioned //&& instance.reservation.isEmpty
 
   private def shouldAbandonReservation(instance: Instance): Boolean = {
 
