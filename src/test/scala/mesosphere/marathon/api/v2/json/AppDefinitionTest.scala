@@ -327,7 +327,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       withValidationClue {
         JsonTestHelper.assertSerializationRoundtripWorks(app3, appNormalization)
         JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(app3, appNormalization)
-
+        JsonTestHelper.assertSerializationIsSameForPlayAndJackson(app3, appNormalization)
       }
     }
 
@@ -339,6 +339,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         healthChecks = Set(raml.AppHealthCheck(protocol = raml.AppHealthCheckProtocol.Http, portIndex = Some(1)))
       )
       JsonTestHelper.assertSerializationRoundtripWorks(app3, appNormalization)
+      JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(app3, appNormalization)
     }
 
     "Reading AppDefinition adds portIndex to a Marathon HTTP health check if the app has ports" in {
@@ -762,6 +763,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         secrets = Map("james" -> SecretDef("somesource"))
       )
       JsonTestHelper.assertSerializationRoundtripWorks(app3, appNormalization)
+      JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(app3, appNormalization)
     }
 
     "environment variables with secrets should parse" in {

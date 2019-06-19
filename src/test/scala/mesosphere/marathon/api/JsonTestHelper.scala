@@ -30,6 +30,13 @@ object JsonTestHelper extends Assertions with Matchers {
     }
   }
 
+  def assertSerializationIsSameForPlayAndJackson[T](value: T, normalize: T => T = { t: T => t })(implicit format: Format[T]): Unit = {
+    val normed = normalize(value)
+    val jsonJackson = RamlSerializer.serializer.writeValueAsString(normed)
+    val jsonPlay = Json.toJson(normed).toString()
+
+    jsonJackson should be (jsonPlay)
+  }
 
   def assertThatJsonOf[T](value: T)(implicit writes: Writes[T]): AssertThatJsonString = {
     AssertThatJsonString(Json.prettyPrint(Json.toJson(value)))

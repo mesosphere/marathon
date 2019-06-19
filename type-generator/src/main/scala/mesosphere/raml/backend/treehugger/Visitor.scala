@@ -5,13 +5,13 @@ import treehugger.forest._
 
 object Visitor {
 
-  def visit(generated: Seq[GeneratedClass]): GeneratedFileTreehugger = {
+  def visit(generated: Seq[GeneratedClass]): GeneratedFile = {
       generated
         .map(visit)
-        .foldLeft(GeneratedFileTreehugger(Seq.empty)) { (acc, next) => GeneratedFileTreehugger(acc.objects ++ next.objects)}
+        .foldLeft(GeneratedFile(Seq.empty)) { (acc, next) => GeneratedFile(acc.objects ++ next.objects)}
   }
 
-  def visit(generated: GeneratedClass): GeneratedFileTreehugger = {
+  def visit(generated: GeneratedClass): GeneratedFile = {
     generated match {
       case enumT: EnumT => EnumVisitor.visit(enumT)
       case objectT: ObjectT => ObjectVisitor.visit(objectT)

@@ -1,12 +1,12 @@
 package mesosphere.raml.backend.treehugger
 
-import mesosphere.raml.backend.{GeneratedFile, NoScalaFormat}
+import mesosphere.raml.backend.NoScalaFormat
 import treehugger.forest._
 import treehuggerDSL._
 
-case class GeneratedFileTreehugger(objects:Seq[GeneratedObjectTreehugger]) extends GeneratedFile {
+case class GeneratedFile(objects:Seq[GeneratedObject]) {
 
-  override def generateFile(pkg: String): String = {
+  def generateFile(pkg: String): String = {
     val trees = objects.flatMap(o => o.trees)
 
     val rootBlock: Tree =
@@ -26,6 +26,6 @@ case class GeneratedFileTreehugger(objects:Seq[GeneratedObjectTreehugger]) exten
 
 }
 
-case class GeneratedObjectTreehugger(name: String, trees: Seq[Tree], jacksonSerializer: Option[Symbol] = Option.empty) {
+case class GeneratedObject(name: String, trees: Seq[Tree], jacksonSerializer: Option[Symbol] = Option.empty) {
 
 }

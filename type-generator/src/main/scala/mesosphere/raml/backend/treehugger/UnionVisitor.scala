@@ -9,7 +9,7 @@ import treehuggerDSL._
 
 object UnionVisitor {
 
-  def visit(unionT: UnionT): GeneratedFileTreehugger = {
+  def visit(unionT: UnionT): GeneratedFile = {
     val UnionT(name, childTypes, comments) = unionT
 
     val base = (TRAITDEF(name) withParents("RamlGenerated", "Product", "Serializable")).tree.withDoc(comments)
@@ -30,12 +30,13 @@ object UnionVisitor {
         )
       )
     )
-    val children:Seq[GeneratedObjectTreehugger] = childTypes.flatMap {
-      case s: StringT => Seq(GeneratedObjectTreehugger( s.name,
-        Seq[Tree](
+    val children:Seq[GeneratedObject] = childTypes.flatMap {
+      case s: StringT => {
+        val caseClass =
           CASECLASSDEF(s.name) withParents name withParams s.defaultValue.fold(PARAM("value", StringClass).tree){ defaultValue =>
-            PARAM("value", StringClass) := LIT(defaultValue)
-          },
+          PARAM("value", StringClass) := LIT(defaultValue)
+        }
+        val objectDef =
           OBJECTDEF(s.name) := BLOCK(
             Seq(OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
               DEF("reads", PLAY_JSON_RESULT(s.name)) withParams PARAM("json", PlayJsValue) := BLOCK(
@@ -48,15 +49,28 @@ object UnionVisitor {
               VAL("DefaultValue") withType(s.name) := REF(s.name) APPLY()
             }
           )
+
+        val jacksonSerializerSym = RootClass.newClass(s.name + "Serializer")
+
+        val jacksonSerializer = CLASSDEF(jacksonSerializerSym).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + s.name + "](classOf[" + s.name + "])") := BLOCK(
+          DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
+            PARAM("value", s.name),
+            PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator"),
+            PARAM("provider", "com.fasterxml.jackson.databind.SerializerProvider")) := BLOCK(
+
+            (REF("gen") DOT "writeString" APPLY(REF("value") DOT "value"))
+          )
         )
-      ))
+
+        Seq(GeneratedObject( s.name, Seq( caseClass, objectDef, jacksonSerializer), Some(jacksonSerializerSym)))
+      }
       case t => Visitor.visit(t).objects
     }
 
-    GeneratedFileTreehugger(
+    GeneratedFile(
       children
       ++
-      Seq(GeneratedObjectTreehugger( name, Seq(base) ++ Seq(obj), Option.empty))
+      Seq(GeneratedObject( name, Seq(base) ++ Seq(obj), Option.empty))
     )
   }
 }

@@ -9,7 +9,7 @@ import treehuggerDSL._
 object ObjectVisitor {
   import mesosphere.raml.backend._
 
-  def visit(o: ObjectT): GeneratedFileTreehugger = {
+  def visit(o: ObjectT): GeneratedFile = {
     val ObjectT(name, fields, parentType, comments, childTypes, discriminator, discriminatorValue, serializeOnly) = o
 
     val actualFields = fields.filter(_.rawName != discriminator.getOrElse(""))
@@ -195,16 +195,26 @@ object ObjectVisitor {
         Seq((REF("gen") DOT "writeStartObject")())
         ++
         actualFields.withFilter(_.name != AdditionalProperties).map { field =>
-          if (field.isOptionType) {
-            IF(REF("value") DOT field.name DOT "nonEmpty") THEN (
-              REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name DOT "get" )
-              ) ENDIF
-          } else if (field.isContainerType) {
+          val writerSimple =
+            REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
+
+          val writerWithEmptyCheck =
             IF(REF("value") DOT field.name DOT "nonEmpty") THEN (
               REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
-              ) ENDIF
+            ) ENDIF
+
+          if (field.isOptionType) {
+            writerWithEmptyCheck
+          } else if (field.isContainerType) {
+            writerWithEmptyCheck
+          } else if (field.repeated) {
+            if (field.omitEmpty) {
+              writerWithEmptyCheck
+            } else {
+              writerSimple
+            }
           } else {
-            REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
+            writerSimple
           }
         }
         ++
@@ -215,10 +225,10 @@ object ObjectVisitor {
     val commentBlock = comments ++ actualFields.map(_.comment)(collection.breakOut)
     val children = Visitor.visit(childTypes)
 
-    GeneratedFileTreehugger(
+    GeneratedFile(
       children.objects
       ++
-      Seq(GeneratedObjectTreehugger(name, Seq(klass.withDoc(commentBlock)) ++ Seq(obj) ++ Seq(jacksonSerializer), Some(jacksonSerializerSym)))
+      Seq(GeneratedObject(name, Seq(klass.withDoc(commentBlock)) ++ Seq(obj) ++ Seq(jacksonSerializer), Some(jacksonSerializerSym)))
     )
   }
 }

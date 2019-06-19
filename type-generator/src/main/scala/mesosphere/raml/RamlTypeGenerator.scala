@@ -3,7 +3,7 @@ package mesosphere.raml
 import treehugger.forest._
 import definitions._
 import mesosphere.raml.backend._
-import mesosphere.raml.backend.treehugger.{GeneratedFileTreehugger, Visitor}
+import mesosphere.raml.backend.treehugger.{GeneratedFile, Visitor}
 import mesosphere.raml.ir.{ConstraintT, EnumT, FieldT, GeneratedClass, ObjectT, StringT, UnionT}
 import org.raml.v2.api.RamlModelResult
 import org.raml.v2.api.model.v10.api.Library
@@ -213,7 +213,7 @@ object RamlTypeGenerator {
             // reducing with TYPE_OF doesn't work, you'd expect Seq[Seq[X]] but only get Seq[X]
             // https://github.com/eed3si9n/treehugger/issues/38
             val finalType = typeList.reduce((a, b) => s"$b[$a]")
-            FieldT(a.name(), finalType, comments, buildConstraints(field, finalType), required, defaultValue, true, forceOptional, omitEmpty = omitEmpty)
+            FieldT(a.name(), finalType, comments, buildConstraints(field, finalType), required, defaultValue, repeated = true, forceOptional = forceOptional, omitEmpty = omitEmpty)
           case n: NumberTypeDeclaration =>
             val fieldType = typeTable(Option(n.format()).getOrElse("double"))
             FieldT(n.name(), fieldType, comments, buildConstraints(field, fieldType), required, defaultValue, forceOptional = forceOptional, omitEmpty = omitEmpty)
@@ -225,7 +225,7 @@ object RamlTypeGenerator {
                 TYPE_MAP(StringClass, typeTable(t.`type`()))
             }
             val constraints = buildConstraints(o, fieldType)
-            FieldT(o.name(), fieldType, comments, constraints, false, defaultValue, true, forceOptional = forceOptional, omitEmpty = omitEmpty)
+            FieldT(o.name(), fieldType, comments, constraints, required = false, defaultValue, repeated = true, forceOptional = forceOptional, omitEmpty = omitEmpty)
           case t: TypeDeclaration =>
             val (name, fieldType) = if (t.`type`() != "object") {
               t.name() -> typeTable(t.`type`())
@@ -320,7 +320,7 @@ object RamlTypeGenerator {
     }
   }
 
-  def generateBuiltInTypes(pkg: String, generatedFiles: Map[GeneratedClass, GeneratedFileTreehugger]): Map[String, String] = {
+  def generateBuiltInTypes(pkg: String, generatedFiles: Map[GeneratedClass, GeneratedFile]): Map[String, String] = {
     val baseType = TRAITDEF("RamlGenerated").tree.withDoc("Marker trait indicating generated code.")
       .inPackage(pkg)
     val ramlConstraints = BLOCK(
@@ -354,6 +354,7 @@ object RamlTypeGenerator {
     val ramlSerializer = BLOCK(
       IMPORT("com.fasterxml.jackson.databind.ObjectMapper"),
       IMPORT("com.fasterxml.jackson.databind.module.SimpleModule"),
+      IMPORT("com.fasterxml.jackson.module.scala.DefaultScalaModule"),
 
       OBJECTDEF("RamlSerializer") := BLOCK(
         DEF("serializer", "ObjectMapper") := BLOCK(
@@ -370,7 +371,8 @@ object RamlTypeGenerator {
             }
           }) ++
 
-          Seq(REF("mapper") DOT "registerModule" APPLY REF("module"))
+          Seq(REF("mapper") DOT "registerModule" APPLY REF("module")) ++
+          Seq(REF("mapper") DOT "registerModule" APPLY REF("DefaultScalaModule"))
         )
       )
     ).inPackage(pkg)
@@ -391,7 +393,7 @@ object RamlTypeGenerator {
     val types = buildTypes(typeTable, typeDeclarations)
 
     // Back end: Code generation
-    val files:Map[GeneratedClass, GeneratedFileTreehugger] = types.map { gc => gc -> Visitor.visit(gc)} toMap
+    val files:Map[GeneratedClass, GeneratedFile] = types.map { gc => gc -> Visitor.visit(gc)} toMap
 
     val fileStrings:Map[String, String] = files.map { case (gc, gf) => (gc.name, gf.generateFile(pkg)) }
 

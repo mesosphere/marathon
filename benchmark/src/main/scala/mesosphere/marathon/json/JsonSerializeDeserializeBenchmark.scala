@@ -3,6 +3,7 @@ package json
 
 import java.util.concurrent.TimeUnit
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import mesosphere.marathon.raml.{GroupConversion, Raml, RamlSerializer}
 import mesosphere.marathon.state.{AppDefinition, Group, RootGroup, Timestamp}
 import org.openjdk.jmh.annotations._
@@ -47,6 +48,8 @@ class JsonSerializeDeserializeState {
       GroupConversion(groupUpdate, group, Timestamp.zero) -> appConversionFunc)
   }
 
+  val jacksonSerializer: ObjectMapper = RamlSerializer.serializer
+
 }
 
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -85,19 +88,6 @@ class JsonSerializeDeserializeBenchmark extends JsonSerializeDeserializeState {
   def jsonDeserialise(hole: Blackhole): Unit = {
     val value: JsValue = Json.toJson[raml.Group](groupMock)
     hole.consume(value)
-  }
-
-  @Benchmark
-  def jsonSerialiseWrite(hole: Blackhole): Unit = {
-    val value: JsValue = Json.toJson[raml.Group](groupMock)
-    val str: String = value.toString()
-    hole.consume(str)
-  }
-
-  @Benchmark
-  def jsonSerialiseWriteJackson(hole: Blackhole): Unit = {
-    val output = RamlSerializer.serializer.writeValueAsString(groupMock)
-    hole.consume(output)
   }
 
 }
