@@ -29,8 +29,10 @@ case class ReviveOffersState(
     } else if (!instance.isScheduled) {
       logger.info(s"Removing ${instance.instanceId} from scheduled instances.")
       copy(scheduledInstances = scheduledInstances - instance.instanceId)
-    } else if (ReviveOffersState.shouldUnreserve(instance)) copy(terminalReservations = terminalReservations + instance.instanceId)
-    else this
+    } else if (ReviveOffersState.shouldUnreserve(instance)) {
+      logger.info(s"$instance is terminal but has a reservation.")
+      copy(terminalReservations = terminalReservations + instance.instanceId)
+    } else this
   }
 
   /** @return this state with passed instance removed from [[scheduledInstances]] and [[terminalReservations]]. */

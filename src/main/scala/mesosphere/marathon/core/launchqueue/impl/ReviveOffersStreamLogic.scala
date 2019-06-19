@@ -121,7 +121,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
     }
     flattened.map(Left(_)).merge(delayedConfigRefs.map(Right(_)))
       .via(reviveStateFromInstancesAndDelays)
-      .via(EnrichedFlow.debounce(minReviveOffersInterval)) // Debounce must happen before diffing.
+      .via(EnrichedFlow.debounce(minReviveOffersInterval * 10)) // Debounce must happen before diffing.
       .via(suppressOrReviveFromDiff)
       // There's a very small chance that we decline an offer in response to a revive for an instance not yet registered
       // with the TaskLauncherActor. To deal with the rare case this happens, we just repeat the last suppress / revive
