@@ -188,7 +188,6 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
       val launcherRef = createLauncherRef()
-      val now = clock.now()
       launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
 
       When("the launcher receives an offer")
@@ -205,7 +204,6 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Given("a scheduled and a running instance")
       Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(f.runningInstance, f.scheduledInstance))
       val launcherRef = createLauncherRef()
-      val now = clock.now()
       launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
 
       When("the launcher receives the update for the provisioned instance")

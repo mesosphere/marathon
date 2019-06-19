@@ -49,8 +49,8 @@ case class ReviveOffersState(
     copy(activeDelays = activeDelays + ref)
   }
 
-  /** @return scheduled instances that should be launched. */
-  def scheduledInstancesWithoutBackoff(): Set[Instance.Id] =
+  /** scheduled instances that should be launched. */
+  lazy val scheduledInstancesWithoutBackoff: Set[Instance.Id] =
     scheduledInstances.view.filter(kv => launchAllowed(kv._2)).map(_._1).toSet
 
   /** @return true if a instance has no active delay. */
@@ -58,19 +58,8 @@ case class ReviveOffersState(
     !activeDelays.contains(ref)
   }
 
-  /**
-    * Subtracts of other scheduled and terminal resident instance from this state.
-    *
-    * @param other The other probably older state to campare to.
-    * @return the set of newly scheduled instances and a the set of newly terminal resident instances.
-    */
-  def --(other: ReviveOffersState): (Set[Instance.Id], Set[Instance.Id]) = {
-    val diffScheduled = this.scheduledInstancesWithoutBackoff() -- other.scheduledInstancesWithoutBackoff()
-    (diffScheduled, this.terminalReservations -- other.terminalReservations)
-  }
-
   /** @return true there are no scheduled instances nor terminal instances with reservations. */
-  def isEmpty(): Boolean = scheduledInstances.isEmpty && terminalReservations.isEmpty
+  def isEmpty: Boolean = scheduledInstancesWithoutBackoff.isEmpty && terminalReservations.isEmpty
 }
 
 object ReviveOffersState {

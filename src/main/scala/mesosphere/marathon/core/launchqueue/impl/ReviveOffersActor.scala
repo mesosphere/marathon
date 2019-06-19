@@ -19,7 +19,6 @@ case object Suppress extends Op
 
 class ReviveOffersActor(
     metrics: Metrics,
-    reviveOffersRepetitions: Int,
     minReviveOffersInterval: FiniteDuration,
     instanceUpdates: InstanceTracker.InstanceUpdates,
     rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
@@ -36,8 +35,7 @@ class ReviveOffersActor(
     val done = ReviveOffersStreamLogic.suppressAndReviveStream(
       instanceUpdates.alsoTo(reservationReconciliation),
       delayedConfigRefs = rateLimiterUpdates.via(ReviveOffersStreamLogic.activelyDelayedRefs),
-      minReviveOffersInterval = minReviveOffersInterval,
-      reviveOffersRepetitions = reviveOffersRepetitions)
+      minReviveOffersInterval = minReviveOffersInterval)
       .runWith(Sink.foreach {
         case Revive =>
           reviveCountMetric.increment()
@@ -105,11 +103,10 @@ class ReviveOffersActor(
 object ReviveOffersActor {
   def props(
     metrics: Metrics,
-    reviveOffersRepetitions: Int,
     minReviveOffersInterval: FiniteDuration,
     instanceUpdates: InstanceTracker.InstanceUpdates,
     rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
     driverHolder: MarathonSchedulerDriverHolder): Props = {
-    Props(new ReviveOffersActor(metrics, reviveOffersRepetitions, minReviveOffersInterval, instanceUpdates, rateLimiterUpdates, driverHolder))
+    Props(new ReviveOffersActor(metrics, minReviveOffersInterval, instanceUpdates, rateLimiterUpdates, driverHolder))
   }
 }

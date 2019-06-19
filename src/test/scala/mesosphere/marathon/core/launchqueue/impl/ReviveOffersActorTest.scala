@@ -140,7 +140,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
     val metrics: Metrics = DummyMetrics
 
     lazy val actorRef: TestActorRef[ReviveOffersActor] = TestActorRef[ReviveOffersActor](
-      ReviveOffersActor.props(metrics, reviveOffersRepetitions = 1, minReviveOffersInterval = 100.millis,
+      ReviveOffersActor.props(metrics, minReviveOffersInterval = 100.millis,
         instanceUpdates = instanceUpdates, rateLimiterUpdates = delayUpdates, driverHolder = driverHolder)
     )
 
