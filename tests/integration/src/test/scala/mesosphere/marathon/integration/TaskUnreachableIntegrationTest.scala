@@ -229,6 +229,12 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       waitForEventMatching(s"Task $taskId is declared killed") {
         matchUnknownTerminatedEvent(Task.Id.parse(taskId).instanceId)
       }
+
+      When("the pod is deleted")
+      marathon.deletePod(pod.id)
+
+      And("The reservation is eventually removed")
+      waitForCleanMesos()
     }
 
     "wipe pod instances without persistent volumes" in {
@@ -282,6 +288,12 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       waitForEventMatching("Task is declared killed") {
         matchUnknownTerminatedEvent(Task.Id.parse(taskId).instanceId)
       }
+
+      When("the pod is deleted")
+      marathon.deletePod(pod.id)
+
+      And("The reservation is eventually removed")
+      waitForCleanMesos()
     }
   }
 

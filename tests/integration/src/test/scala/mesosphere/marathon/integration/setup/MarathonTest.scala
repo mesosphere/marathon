@@ -572,6 +572,20 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     //do not fail here, since the require statements will ensure a correct setup and fail otherwise
     Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
 
+    waitForCleanMesos()
+    val apps = marathon.listAppsInBaseGroup
+    require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
+    val pods = marathon.listPodsInBaseGroup
+    require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
+    val groups = marathon.listGroupsInBaseGroup
+    require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
+    events.clear()
+    healthChecks(_.clear())
+
+    logger.info("... CLEAN UP finished <<<")
+  }
+
+  def waitForCleanMesos(): Unit = {
     val cleanUpPatienceConfig = WaitTestSupport.PatienceConfig(timeout = Span(50, Seconds), interval = Span(1, Seconds))
 
     WaitTestSupport.waitUntil("clean slate in Mesos") {
@@ -591,17 +605,6 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
 
       occupiedAgents.isEmpty
     }(cleanUpPatienceConfig)
-
-    val apps = marathon.listAppsInBaseGroup
-    require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
-    val pods = marathon.listPodsInBaseGroup
-    require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
-    val groups = marathon.listGroupsInBaseGroup
-    require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
-    events.clear()
-    healthChecks(_.clear())
-
-    logger.info("... CLEAN UP finished <<<")
   }
 
   def waitForHealthCheck(check: IntegrationHealthCheck, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
