@@ -1,10 +1,12 @@
 package mesosphere.marathon
 package state
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.SerializerProvider
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation.isTrue
-import mesosphere.marathon.plugin
+import mesosphere.marathon.api.v2.json.JacksonSerializable
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
@@ -97,7 +99,12 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
   override val hashCode: Int = scala.util.hashing.MurmurHash3.productHash(this)
 }
 
-object PathId {
+object PathId extends JacksonSerializable[PathId] {
+
+  def serializeWithJackson(value: PathId, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeString(value.toString)
+  }
+
   def fromSafePath(in: String): PathId = {
     if (in.isEmpty) PathId.empty
     else PathId(in.split("_").toList, absolute = true)

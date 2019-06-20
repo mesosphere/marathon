@@ -357,7 +357,7 @@ object RamlTypeGenerator {
       IMPORT("com.fasterxml.jackson.module.scala.DefaultScalaModule"),
 
       OBJECTDEF("RamlSerializer") := BLOCK(
-        DEF("serializer", "ObjectMapper") := BLOCK(
+        VAL("serializer", "ObjectMapper") := BLOCK(
           Seq(VAL("mapper") := NEW("ObjectMapper").APPLY()) ++
           Seq(VAL("module") := NEW("SimpleModule").APPLY()) ++
 
@@ -373,7 +373,7 @@ object RamlTypeGenerator {
 
           Seq(REF("mapper") DOT "registerModule" APPLY REF("module")) ++
           Seq(REF("mapper") DOT "registerModule" APPLY REF("DefaultScalaModule"))
-        )
+        ).withComment("ObjectMapper is thread safe, we have a single shared instance here")
       )
     ).inPackage(pkg)
 

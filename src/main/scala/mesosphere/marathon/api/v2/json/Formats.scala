@@ -1,6 +1,9 @@
 package mesosphere.marathon
 package api.v2.json
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.{DeploymentAction, DeploymentPlan, DeploymentStep, DeploymentStepInfo}
 import mesosphere.marathon.core.event._
@@ -10,7 +13,7 @@ import mesosphere.marathon.core.plugin.{PluginDefinition, PluginDefinitions}
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.raml.{Raml, RamlSerializer}
 import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state._
@@ -476,4 +479,26 @@ trait PluginFormats {
   ) (d => (d.id, d.plugin, d.implementation, d.tags, d.info))
 
   implicit lazy val pluginDefinitionsFormat: Writes[PluginDefinitions] = Json.writes[PluginDefinitions]
+}
+
+/**
+  * Self registering trait that allows a class to be serialized with jackson object mapper.
+  *
+  * Creates a new StdSerializer and registers it the the RamlSerializer objectMapper
+  *
+  * @tparam T The type to be serialized, usually the class extending the trait
+  */
+trait JacksonSerializable[T] {
+  RamlSerializer.addSerializer(createSerializer())
+
+  def serializeWithJackson(value: T, gen: JsonGenerator, provider: SerializerProvider): Unit
+
+  def createSerializer():StdSerializer[T] = {
+    class Serializer extends StdSerializer[T](classOf[T]) {
+      override def serialize(value: T, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+        serializeWithJackson(value, gen, provider)
+      }
+    }
+    new Serializer()
+  }
 }
