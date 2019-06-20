@@ -1243,7 +1243,7 @@ class TaskBuilderTest extends UnitTest {
         ))
       ), None, None, None)
       assert(task.isDefined, "expected task to match offer")
-      val Some((taskInfo, _)) = task
+      val Some((taskInfo: MesosProtos.TaskInfo, _)) = task
       val taskId = Task.Id.parse(taskInfo.getTaskId())
 
       assert(taskInfo.getContainer.getDocker.getParametersList.size == 1, s"expected 1 parameter, but ${taskInfo.getContainer.getDocker.getParametersList.size}")
@@ -1943,7 +1943,7 @@ class TaskBuilderTest extends UnitTest {
       val ipcShmSize = 64
 
       val app = MarathonTestHelper.makeBasicApp().copy(
-        container = Some(Mesos(linuxInfo = Some(LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(IpcMode.ShareParent, Some(ipcShmSize)))))))
+        container = Some(Mesos(linuxInfo = Some(LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(IpcMode.Private, Some(ipcShmSize)))))))
       )
       val instanceId = Instance.Id.forRunSpec(app.id)
       val taskId = Task.Id(instanceId) // What about container?
@@ -1953,8 +1953,11 @@ class TaskBuilderTest extends UnitTest {
       containerInfo should be(defined)
       containerInfo.get.hasLinuxInfo should be(true)
       containerInfo.get.getLinuxInfo.hasSeccomp should be(false)
-      //      containerInfo.get.getLinuxInfo.hasIpcInfo should be(true)
-      // TODO AN: Complete test when Mesos Protos are updated
+      containerInfo.get.getLinuxInfo.hasIpcMode should be(true)
+      containerInfo.get.getLinuxInfo.getIpcMode should be (MesosProtos.LinuxInfo.IpcMode.PRIVATE)
+
+      containerInfo.get.getLinuxInfo.hasShmSize should be(true)
+      containerInfo.get.getLinuxInfo.getShmSize should be (64)
     }
 
   }

@@ -426,7 +426,11 @@ object TaskGroupBuilder extends StrictLogging {
 
       podDefinition.linuxInfo.foreach({ linuxInfo =>
         val linuxInfoBuilder = mesos.LinuxInfo.newBuilder
-        // TODO AN: Set sharedMem/IPC settings
+
+        linuxInfo.ipcInfo.foreach({ ipcInfo =>
+          ipcInfo.shmSize.foreach(linuxInfoBuilder.setShmSize)
+          linuxInfoBuilder.setIpcMode(ipcInfo.ipcMode.toMesos)
+        })
 
         containerInfo.setLinuxInfo(linuxInfoBuilder)
       })
@@ -603,7 +607,8 @@ object TaskGroupBuilder extends StrictLogging {
       }
 
       linuxInfo.ipcInfo.foreach { ipcInfo =>
-        // TODO AN: Set Mesos IPC Info in linuxBuilder.
+        ipcInfo.shmSize.foreach(linuxBuilder.setShmSize)
+        linuxBuilder.setIpcMode(ipcInfo.ipcMode.toMesos)
       }
 
       containerInfo.setLinuxInfo(linuxBuilder.build)

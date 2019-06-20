@@ -496,7 +496,8 @@ object LinuxInfoSerializer {
       linuxBuilder.setSeccomp(seccompBuilder)
     }
     linuxInfo.ipcInfo.foreach(ipcInfo => {
-      // TODO AN: Add mesos proto definition when it's there...
+      ipcInfo.shmSize.foreach(linuxBuilder.setShmSize)
+      linuxBuilder.setIpcMode(ipcInfo.ipcMode.toMesos)
     })
 
     linuxBuilder.build
