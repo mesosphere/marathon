@@ -82,15 +82,15 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
               logger.warn(s"removing spurious resources and volumes of $instanceId because the instance no longer exist")
               InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
 
-//            case (instanceId, spuriousResources) if terminalResident(instanceId) =>
-//              val unreserveAndDestroy =
-//                InstanceOp.UnreserveAndDestroyVolumes(
-//                  stateOp = InstanceUpdateOperation.Unreserve(instanceId),
-//                  oldInstance = instancesBySpec.instance(instanceId),
-//                  resources = spuriousResources
-//                )
-//              logger.info(s"Freeing reservation for terminal $instanceId")
-//              InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
+            case (instanceId, spuriousResources) if terminalResident(instanceId) =>
+              val unreserveAndDestroy =
+                InstanceOp.UnreserveAndDestroyVolumes(
+                  stateOp = InstanceUpdateOperation.Unreserve(instanceId),
+                  oldInstance = instancesBySpec.instance(instanceId),
+                  resources = spuriousResources
+                )
+              logger.info(s"Freeing reservation for terminal $instanceId")
+              InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
           }(collection.breakOut)
 
           MatchedInstanceOps(offer.getId, instanceOps, resendThisOffer = true)
