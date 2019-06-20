@@ -29,7 +29,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
       results shouldBe Vector(Suppress)
     }
 
-    "emit a single revive for a snapshot with multiple instances to launch" in {
+    "emit three revives for a snapshot with multiple instances to launch" in {
       val instance1 = Instance.scheduled(webApp)
       val instance2 = Instance.scheduled(webApp)
 
@@ -37,7 +37,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(Revive)
+      results shouldBe Vector(Revive, Revive, Revive)
     }
 
     "emit a revive for each new scheduled instance added" in {
@@ -52,7 +52,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(Suppress, Revive, Revive)
+      results shouldBe Vector(Suppress, Revive, Revive, Revive, Revive, Revive, Revive)
     }
 
     "does not emit a revive for updates to existing scheduled instances" in {
@@ -66,7 +66,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(Suppress, Revive)
+      results shouldBe Vector(Suppress, Revive, Revive, Revive)
     }
 
     "does not revive if an instance is backed off" in {
@@ -95,7 +95,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(Suppress, Revive, Suppress, Revive)
+      results shouldBe Vector(Suppress, Revive, Revive, Revive, Suppress, Revive, Revive, Revive)
     }
 
     "does not suppress if a backoff occurs for one instance, but there is still a scheduled instance" in {
@@ -109,7 +109,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(Revive)
+      results shouldBe Vector(Revive, Revive, Revive)
     }
   }
 }

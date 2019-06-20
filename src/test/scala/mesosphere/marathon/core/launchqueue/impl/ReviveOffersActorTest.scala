@@ -72,7 +72,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       f.actorRef.start()
 
       Then("it will revive offers")
-      Mockito.verify(f.driver, f.invocationTimeout).reviveOffers()
+      Mockito.verify(f.driver, f.invocationTimeout.times(3)).reviveOffers()
 
       When("the actor gets notified of the Scheduled instance becoming Staging")
       val testInstanceStaging = TestInstanceBuilder.newBuilderWithInstanceId(testInstanceScheduled.instanceId).addTaskStaged().getInstance()

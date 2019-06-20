@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{InstanceChangeOrSnapshot, InstanceDeleted, InstanceUpdated, InstancesSnapshot}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.RunSpecConfigRef
-import mesosphere.marathon.stream.{EnrichedFlow, Repeater, TimedEmitter}
+import mesosphere.marathon.stream.{EnrichedFlow, TimedEmitter}
 
 import scala.concurrent.duration._
 
@@ -94,12 +94,15 @@ object ReviveOffersStreamLogic extends StrictLogging {
 
         if (diffScheduled.nonEmpty || diffTerminal.nonEmpty) {
           logger.info(s"Revive because new scheduled $diffScheduled or terminal $diffTerminal.")
-          List.fill(3)(Revive)
+          // There's a very small chance that we decline an offer in response to a revive for an instance not yet registered
+          // with the TaskLauncherActor. To deal with the rare case this happens, we just repeat the last suppress / revive
+          // after a while.
+          List(Revive, Revive, Revive)
         } else if (shouldReconcileReservation(current, previous)) {
-          logger.info(s"Revive to trigger reservation reconciliation. Current ${current.forceExpungedInstances}, previous ${previous.forceExpungedInstances}")
+          logger.info(s"Revive to trigger reservation reconciliation.")
           List(Revive)
         } else if (current.isEmpty) {
-          logger.info(s"Suppress because there are no pending instances right now and current force expunged ${current.forceExpungedInstances} == ${previous.forceExpungedInstances}.")
+          logger.info(s"Suppress because there are no pending instances right now.")
           List(Suppress)
         } else {
           logger.info("Nothing changed in last frame.")
@@ -123,10 +126,6 @@ object ReviveOffersStreamLogic extends StrictLogging {
       .via(reviveStateFromInstancesAndDelays)
       .via(EnrichedFlow.debounce(minReviveOffersInterval)) // Debounce must happen before diffing.
       .via(suppressOrReviveFromDiff)
-      // There's a very small chance that we decline an offer in response to a revive for an instance not yet registered
-      // with the TaskLauncherActor. To deal with the rare case this happens, we just repeat the last suppress / revive
-      // after a while.
-      //      .via(Repeater(minReviveOffersInterval * 10, count = 1))
       .via(deduplicateSuppress)
       .throttle(1, minReviveOffersInterval)
   }
