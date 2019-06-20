@@ -69,7 +69,7 @@ class LaunchQueueModule(
         clock,
         taskOpFactory,
         instanceTracker,
-        rateLimiterActor,
+        rateLimiterUpdates.via(ReviveOffersStreamLogic.activelyDelayedRefs),
         offerMatchStatisticsInput,
         localRegion)(runSpec.id)
     val props = LaunchQueueActor.props(config, instanceTracker, groupManager, runSpecActorProps, rateLimiterUpdates)

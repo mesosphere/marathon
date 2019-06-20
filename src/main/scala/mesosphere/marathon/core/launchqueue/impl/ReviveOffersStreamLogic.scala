@@ -12,7 +12,9 @@ import mesosphere.marathon.stream.TimedEmitter
 import scala.concurrent.duration._
 
 object ReviveOffersStreamLogic extends StrictLogging {
-  sealed trait DelayedStatus
+  sealed trait DelayedStatus {
+    val element: RunSpecConfigRef
+  }
   case class Delayed(element: RunSpecConfigRef) extends DelayedStatus
   case class NotDelayed(element: RunSpecConfigRef) extends DelayedStatus
 

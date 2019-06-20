@@ -23,6 +23,7 @@ import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPla
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
+import mesosphere.marathon.util.StreamHelpers
 import org.mockito
 import org.mockito.{ArgumentCaptor, Mockito}
 import org.scalatest.concurrent.Eventually
@@ -93,7 +94,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       val props = TaskLauncherActor.props(
         launchQueueConfig,
         offerMatcherManager, clock, instanceOpFactory,
-        instanceTracker, rateLimiterActor.ref, offerMatchInput, localRegion) _
+        instanceTracker, StreamHelpers.sourceNever, offerMatchInput, localRegion) _
       TestActorRef[TaskLauncherActor](props(appToLaunch))
     }
 
