@@ -18,7 +18,7 @@ import scala.concurrent.duration._
 object MesosFacade {
 
   /**
-    * Corresponds to parts of `state.json`.
+    * Corresponds to parts of `state` JSON response.
     */
   case class ITMesosState(
       version: String,
