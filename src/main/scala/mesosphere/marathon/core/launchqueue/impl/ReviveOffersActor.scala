@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.launchqueue.impl
 
 import akka.actor.Status.Success
-import akka.actor.{Actor, Props, Stash}
+import akka.actor.{Actor, Props, Stash, Status}
 import akka.pattern.pipe
 import akka.event.LoggingReceive
 import akka.stream.ActorMaterializer
@@ -55,10 +55,10 @@ class ReviveOffersActor(
   }
 
   override def receive: Receive = LoggingReceive {
-    case Failure(ex) =>
+    case Status.Failure(ex) =>
       logger.error("Unexpected termination of revive stream", ex)
       throw ex
-    case Success(Done) =>
+    case Done =>
       logger.error(s"Unexpected successful termination of revive stream")
   }
 
