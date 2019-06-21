@@ -486,15 +486,17 @@ trait PluginFormats {
   *
   * Creates a new StdSerializer and registers it the the RamlSerializer objectMapper
   *
-  * @tparam T The type to be serialized, usually the class extending the trait
+  * @tparam T The type to be serialized, must be the class extending the trait
   */
 trait JacksonSerializable[T] {
-  RamlSerializer.addSerializer(createSerializer())
+  RamlSerializer.addSerializer(createSerializer(getClass().asInstanceOf))
 
   def serializeWithJackson(value: T, gen: JsonGenerator, provider: SerializerProvider): Unit
 
-  def createSerializer():StdSerializer[T] = {
-    class Serializer extends StdSerializer[T](classOf[T]) {
+  def createSerializer(clazz: Class[T]): StdSerializer[T] = {
+    //    val clazz: Class[T] = classTag[T].runtimeClass.asInstanceOf
+
+    class Serializer extends StdSerializer[T](clazz) {
       override def serialize(value: T, gen: JsonGenerator, provider: SerializerProvider): Unit = {
         serializeWithJackson(value, gen, provider)
       }

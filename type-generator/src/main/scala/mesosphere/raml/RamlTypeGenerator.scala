@@ -355,17 +355,28 @@ object RamlTypeGenerator {
       IMPORT("com.fasterxml.jackson.databind.ObjectMapper"),
       IMPORT("com.fasterxml.jackson.databind.module.SimpleModule"),
       IMPORT("com.fasterxml.jackson.module.scala.DefaultScalaModule"),
+      IMPORT("com.fasterxml.jackson.databind.ser.std.StdSerializer"),
 
       OBJECTDEF("RamlSerializer") := BLOCK(
+
+        PROC("addSerializer")
+          .withTypeParams(TYPEVAR("T"))
+          .withParams(VAL("s", TYPE_REF("StdSerializer[T]"))) := BLOCK(
+            REF("module") DOT "addSerializer" APPLY (REF("s"))
+          ),
+
+        // TODO: Make this private[this]
+        VAL("module") := NEW("SimpleModule").APPLY(),
+
         VAL("serializer", "ObjectMapper") := BLOCK(
           Seq(VAL("mapper") := NEW("ObjectMapper").APPLY()) ++
           Seq(VAL("module") := NEW("SimpleModule").APPLY()) ++
 
           generatedFiles.values.flatMap( gf => gf.objects ).flatMap( o => {
             if (o.jacksonSerializer.nonEmpty) {
-              val ctr = NEW(o.jacksonSerializer.get).APPLY()
+              val serializer = REF(o.jacksonSerializer.get)
               val classOfMethod = PredefModuleClass.newMethod("classOf[" + o.name + "]")
-              Seq(REF("module") DOT "addSerializer" APPLY(REF(classOfMethod), ctr))
+              Seq(REF("module") DOT "addSerializer" APPLY(REF(classOfMethod), serializer))
             } else {
               Seq.empty
             }

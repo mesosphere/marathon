@@ -1,7 +1,11 @@
 package mesosphere.marathon
 package core.appinfo
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.SerializerProvider
+import mesosphere.marathon.api.v2.json.JacksonSerializable
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
+import mesosphere.marathon.raml.{AppSerializer, Raml}
 import mesosphere.marathon.state.{AppDefinition, Identifiable, TaskFailure}
 
 import scala.collection.immutable.Seq
@@ -18,7 +22,35 @@ case class AppInfo(
     maybeDeployments: Option[Seq[Identifiable]] = None,
     maybeReadinessCheckResults: Option[Seq[ReadinessCheckResult]] = None,
     maybeLastTaskFailure: Option[TaskFailure] = None,
-    maybeTaskStats: Option[TaskStatsByVersion] = None)
+    maybeTaskStats: Option[TaskStatsByVersion] = None) extends JacksonSerializable[AppInfo] {
+
+  override def serializeWithJackson(value: AppInfo, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeStartObject()
+
+    AppSerializer.serializeFields(Raml.toRaml(value.app), gen, provider)
+    // TODO Counts
+    maybeDeployments.foreach( gen.writeObjectField("deployments", _ ))
+    maybeReadinessCheckResults.foreach( gen.writeObjectField( "readinessCheckResults", _))
+    maybeTasks.foreach(gen.writeObjectField("tasks", Raml.toRaml(_)))
+    maybeLastTaskFailure.foreach( gen.writeObjectField("lastTaskFailure", _))
+    maybeTaskStats.foreach(gen.writeObjectField("taskStats", _))
+
+    gen.writeEndObject()
+
+    //    val appJson = RunSpecWrites.writes(info.app).as[JsObject]
+    //
+    //    val maybeJson = Seq[Option[JsObject]](
+    //      info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),
+    //      info.maybeDeployments.map(deployments => Json.obj("deployments" -> deployments)),
+    //      info.maybeReadinessCheckResults.map(readiness => Json.obj("readinessCheckResults" -> readiness)),
+    //      info.maybeTasks.map(tasks => Json.obj("tasks" -> Raml.toRaml(tasks))),
+    //      info.maybeLastTaskFailure.map(lastFailure => Json.obj("lastTaskFailure" -> lastFailure)),
+    //      info.maybeTaskStats.map(taskStats => Json.obj("taskStats" -> taskStats))
+    //    ).flatten
+    //
+    //    maybeJson.foldLeft(appJson)((result, obj) => result ++ obj)
+  }
+}
 
 object AppInfo {
   sealed trait Embed

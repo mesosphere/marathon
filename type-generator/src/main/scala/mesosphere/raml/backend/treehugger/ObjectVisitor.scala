@@ -186,14 +186,11 @@ object ObjectVisitor {
 
     val jacksonSerializerSym = RootClass.newClass(name + "Serializer")
 
-    val jacksonSerializer = CLASSDEF(jacksonSerializerSym).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
-      DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
+    val jacksonSerializer = OBJECTDEF(jacksonSerializerSym).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
+      DEF( "serializeFields", UnitClass) withParams (
         PARAM("value", name),
         PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator"),
         PARAM("provider", "com.fasterxml.jackson.databind.SerializerProvider")) := BLOCK(
-
-        Seq((REF("gen") DOT "writeStartObject")())
-        ++
         actualFields.withFilter(_.name != AdditionalProperties).map { field =>
           val writerSimple =
             REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
@@ -201,7 +198,7 @@ object ObjectVisitor {
           val writerWithEmptyCheck =
             IF(REF("value") DOT field.name DOT "nonEmpty") THEN (
               REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
-            ) ENDIF
+              ) ENDIF
 
           if (field.isOptionType) {
             writerWithEmptyCheck
@@ -217,8 +214,15 @@ object ObjectVisitor {
             writerSimple
           }
         }
-        ++
-        Seq((REF("gen") DOT "writeEndObject")())
+      ),
+      DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
+        PARAM("value", name),
+        PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator"),
+        PARAM("provider", "com.fasterxml.jackson.databind.SerializerProvider")) := BLOCK(
+
+        (REF("gen") DOT "writeStartObject")(),
+        (THIS DOT "serializeFields") APPLY( REF("value"), REF("gen"), REF("provider")),
+        (REF("gen") DOT "writeEndObject")()
       )
     )
 

@@ -52,7 +52,7 @@ object UnionVisitor {
 
         val jacksonSerializerSym = RootClass.newClass(s.name + "Serializer")
 
-        val jacksonSerializer = CLASSDEF(jacksonSerializerSym).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + s.name + "](classOf[" + s.name + "])") := BLOCK(
+        val jacksonSerializer = OBJECTDEF(jacksonSerializerSym).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + s.name + "](classOf[" + s.name + "])") := BLOCK(
           DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
             PARAM("value", s.name),
             PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator"),

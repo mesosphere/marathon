@@ -26,19 +26,19 @@ case class GroupInfo(
     gen.writeObjectField("dependencies", value.group.dependencies)
     gen.writeObjectField("version", value.group.version)
 
-    value.maybeApps.foreach( apps => {
+    value.maybeApps.foreach(apps => {
       gen.writeArrayFieldStart("apps")
-      apps.foreach( gen.writeObject )
+      apps.foreach(gen.writeObject)
       gen.writeEndArray()
     })
-    value.maybeGroups.foreach( groups => {
+    value.maybeGroups.foreach(groups => {
       gen.writeArrayFieldStart("groups")
-      groups.foreach( gen.writeObject )
+      groups.foreach(gen.writeObject)
       gen.writeEndArray()
     })
-    value.maybePods.foreach( pods => {
+    value.maybePods.foreach(pods => {
       gen.writeArrayFieldStart("pods")
-      pods.foreach( gen.writeObject )
+      pods.foreach(gen.writeObject)
       gen.writeEndArray()
     })
     gen.writeEndObject()
