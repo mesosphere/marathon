@@ -3,7 +3,7 @@ package mesosphere.raml
 import treehugger.forest._
 import definitions._
 import mesosphere.raml.backend._
-import mesosphere.raml.backend.treehugger.{GeneratedFile, Visitor}
+import mesosphere.raml.backend.treehugger.{GeneratedFile, GeneratedObject, Visitor}
 import mesosphere.raml.ir.{ConstraintT, EnumT, FieldT, GeneratedClass, ObjectT, StringT, UnionT}
 import org.raml.v2.api.RamlModelResult
 import org.raml.v2.api.model.v10.api.Library
@@ -361,15 +361,12 @@ object RamlTypeGenerator {
           Seq(VAL("mapper") := NEW("ObjectMapper").APPLY()) ++
           Seq(VAL("module") := NEW("SimpleModule").APPLY()) ++
 
-          generatedFiles.values.flatMap( gf => gf.objects ).flatMap( o => {
-            if (o.jacksonSerializer.nonEmpty) {
-              val ctr = NEW(o.jacksonSerializer.get).APPLY()
-              val classOfMethod = PredefModuleClass.newMethod("classOf[" + o.name + "]")
-              Seq(REF("module") DOT "addSerializer" APPLY(REF(classOfMethod), ctr))
-            } else {
-              Seq.empty
-            }
-          }) ++
+          generatedFiles.values.flatMap( gf => gf.objects ).collect {
+            case GeneratedObject(name, _, Some(serializer)) =>
+              val ctr = NEW(serializer).APPLY()
+              val classOfMethod = PredefModuleClass.newMethod("classOf[" + name + "]")
+              REF("module") DOT "addSerializer" APPLY(REF(classOfMethod), ctr)
+          } ++
 
           Seq(REF("mapper") DOT "registerModule" APPLY REF("module")) ++
           Seq(REF("mapper") DOT "registerModule" APPLY REF("DefaultScalaModule"))
@@ -393,9 +390,9 @@ object RamlTypeGenerator {
     val types = buildTypes(typeTable, typeDeclarations)
 
     // Back end: Code generation
-    val files:Map[GeneratedClass, GeneratedFile] = types.map { gc => gc -> Visitor.visit(gc)} toMap
+    val files: Map[GeneratedClass, GeneratedFile] = types.map { gc => gc -> Visitor.visit(gc)} toMap
 
-    val fileStrings:Map[String, String] = files.map { case (gc, gf) => (gc.name, gf.generateFile(pkg)) }
+    val fileStrings: Map[String, String] = files.map { case (gc, gf) => (gc.name, gf.generateFile(pkg)) }
 
     fileStrings ++ generateBuiltInTypes(pkg, files)
   }
