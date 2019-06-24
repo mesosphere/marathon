@@ -13,7 +13,6 @@ import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.InstanceOp.LaunchTask
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
-import mesosphere.marathon.core.launchqueue.impl.RateLimiter.Delay
 import mesosphere.marathon.core.matcher.base.OfferMatcher.MatchedInstanceOps
 import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOpSourceDelegate}
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
@@ -24,7 +23,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import mesosphere.marathon.util.StreamHelpers
-import org.mockito
 import org.mockito.{ArgumentCaptor, Mockito}
 import org.scalatest.concurrent.Eventually
 
@@ -120,67 +118,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       verifyClean()
     }
 
-    // This test does not apply to the new task launcher. The number of scheduled instances should not be defined in the
-    // task launcher but outside.
-    "new instance with new app definition in actor and re-queries backoff" in new Fixture {
-      Given("an entry for an app")
-      val instances = Seq(
-        f.provisionedInstance,
-        Instance.scheduled(f.app, Instance.Id.forRunSpec(f.app.id)),
-        Instance.scheduled(f.app, Instance.Id.forRunSpec(f.app.id)),
-        Instance.scheduled(f.app, Instance.Id.forRunSpec(f.app.id))
-      )
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(instances)
-      val launcherRef = createLauncherRef()
-      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
-      val mockedDelay = mock[Delay]
-      Mockito.when(mockedDelay.deadline).thenReturn(clock.now())
-      rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, Some(mockedDelay)))
-
-      launcherRef.underlyingActor.instancesToLaunch shouldBe 3
-      Mockito.verify(offerMatcherManager).addSubscription(mockito.Matchers.any())(mockito.Matchers.any())
-      Mockito.reset(offerMatcherManager)
-
-      When("adding an instance with a new app version")
-      val newVersion: Timestamp = clock.now() + 2.days
-      val upgradedApp = f.app.copy(cmd = Some("new command"), versionInfo = VersionInfo.forNewConfig(newVersion))
-      val newInstance = Instance.scheduled(upgradedApp)
-      val newInstances = instances :+ newInstance
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(newInstances))
-      launcherRef ! InstanceUpdated(newInstance, None, Seq.empty)
-
-      Then("the actor re-queries the backoff delay")
-      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp.configRef))
-    }
-
-    "re-register the offerMatcher when adding an instance with a new app version" in new Fixture {
-      Given("an entry for an app")
-      val instances = Seq(f.provisionedInstance, Instance.scheduled(f.app))
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(instances))
-      val launcherRef = createLauncherRef()
-      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
-      rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, None))
-
-      // We don't care about interactions until this point
-      Mockito.reset(offerMatcherManager)
-
-      When("adding an instance with a new app version")
-      val newVersion: Timestamp = clock.now() + 2.days
-      val upgradedApp = f.app.copy(cmd = Some("new command"), versionInfo = VersionInfo.forNewConfig(newVersion))
-      val newInstance = Instance.scheduled(upgradedApp)
-      val newInstances = instances :+ newInstance
-      Mockito.when(instanceTracker.instancesBySpecSync).thenReturn(InstanceTracker.InstancesBySpec.forInstances(newInstances))
-      launcherRef ! InstanceUpdated(newInstance, None, Seq.empty)
-
-      Then("the actor re-queries the backoff")
-      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(upgradedApp.configRef))
-      rateLimiterActor.reply(RateLimiter.DelayUpdate(upgradedApp.configRef, None))
-
-      And("the actor re-registers itself for at the offerMatcher")
-      val inOrder = Mockito.inOrder(offerMatcherManager)
-      inOrder.verify(offerMatcherManager).removeSubscription(mockito.Matchers.any())(mockito.Matchers.any())
-      inOrder.verify(offerMatcherManager).addSubscription(mockito.Matchers.any())(mockito.Matchers.any())
-    }
+    // TODO: test the activeDelay defaults to true
 
     "match offer when in progress and offer received" in new Fixture {
       Given("a scheduled and a running instance")

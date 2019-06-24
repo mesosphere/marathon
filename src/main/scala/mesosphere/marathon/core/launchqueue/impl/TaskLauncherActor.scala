@@ -89,6 +89,7 @@ private class TaskLauncherActor(
 
   def instancesToLaunch = scheduledInstances.size
 
+  // A map indicating whether a delay is active or not for a specific run spec.
   val activeDelays: mutable.Set[RunSpecConfigRef] = mutable.Set.empty
 
   /** Decorator to use this actor as a [[OfferMatcher#TaskOpSource]] */
@@ -100,8 +101,7 @@ private class TaskLauncherActor(
     syncInstances()
 
     logger.info(s"Started instanceLaunchActor for ${runSpecId} with initial count $instancesToLaunch")
-    // TODO: scheduledVersions is not thread safe
-    delayedConfigRefs.filter(status => scheduledVersions.contains(status.element)).runWith(Sink.actorRef(self, Done))
+    delayedConfigRefs.runWith(Sink.actorRef(self, Done))
   }
 
   override def postStop(): Unit = {
@@ -144,13 +144,15 @@ private class TaskLauncherActor(
     * Receive rate limiter updates.
     */
   private[this] def receiveDelayStatus: Receive = {
-    case Delayed(ref) =>
+    case Delayed(ref) if ref.id == runSpecId =>
+      logger.info(s"Back-off activated for $ref.")
       val now = clock.now()
       activeDelays += ref
       manageOfferMatcherStatus(now)
-    case NotDelayed(ref) =>
+    case NotDelayed(ref) if ref.id == runSpecId =>
+      logger.info(s"Back-off deactivated for $ref")
       val now = clock.now()
-      activeDelays -= ref
+      activeDelays += ref
       manageOfferMatcherStatus(now)
   }
 
@@ -225,6 +227,7 @@ private class TaskLauncherActor(
       .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, goal: ${i.state.goal}, version: ${i.runSpecVersion}, reservation: ${i.reservation}}")
       .mkString(", ")
     logger.info(s"Synced instance map to $readable")
+    manageOfferMatcherStatus(clock.now())
   }
 
   def syncInstance(instanceId: Instance.Id): Unit = {
@@ -310,7 +313,11 @@ private class TaskLauncherActor(
   private[this] def shouldLaunchInstances(now: Timestamp): Boolean = {
     if (scheduledInstances.nonEmpty || activeDelays.nonEmpty)
       logger.info(s"Found scheduled instances: ${scheduledInstances.map(_.instanceId).mkString(",")} and current back-offs: $activeDelays")
-    scheduledInstances.nonEmpty && scheduledVersions.exists { configRef => launchAllowed(configRef) }
+    scheduledInstances.nonEmpty && scheduledVersions.exists { configRef =>
+      val t = launchAllowed(configRef)
+      logger.info(s"launchAllowed: $t")
+      t
+    }
   }
 
   private[this] def status: String = {
@@ -348,6 +355,9 @@ private class TaskLauncherActor(
         logger.info(s"No tasks left to launch. Stop receiving offers for ${runSpecId}")
       }
       unregister()
+    } else {
+      val state = if (registeredAsMatcher) "registered" else "unregistered"
+      logger.info(s"Staying $state as matcher")
     }
   }
 
