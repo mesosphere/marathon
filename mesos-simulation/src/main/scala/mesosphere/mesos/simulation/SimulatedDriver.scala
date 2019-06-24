@@ -118,4 +118,6 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver with StrictLog
         Status.DRIVER_STOPPED
     }
   }
+
+  override def updateFramework(frameworkInfo: FrameworkInfo, collection: util.Collection[String]): Status = ???
 }

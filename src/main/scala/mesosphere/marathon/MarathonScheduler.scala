@@ -25,7 +25,8 @@ class MarathonScheduler(
     frameworkIdRepository: FrameworkIdRepository,
     mesosLeaderInfo: MesosLeaderInfo,
     config: MarathonConf,
-    crashStrategy: CrashStrategy) extends Scheduler with StrictLogging {
+    crashStrategy: CrashStrategy,
+    frameworkIdPromise: Promise[FrameworkID]) extends Scheduler with StrictLogging {
 
   private var lastMesosMasterVersion: Option[SemanticVersion] = Option.empty
   @volatile private[this] var localFaultDomain: Option[FaultDomain] = Option.empty
@@ -44,6 +45,7 @@ class MarathonScheduler(
     Await.result(frameworkIdRepository.store(FrameworkId.fromProto(frameworkId)), zkTimeout)
     mesosLeaderInfo.onNewMasterInfo(master)
     eventBus.publish(SchedulerRegisteredEvent(frameworkId.getValue, master.getHostname))
+    frameworkIdPromise.trySuccess(frameworkId)
   }
 
   override def reregistered(driver: SchedulerDriver, master: MasterInfo): Unit = {

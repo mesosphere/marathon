@@ -10,13 +10,18 @@ import com.typesafe.scalalogging.StrictLogging
 
 object MarathonSchedulerDriver extends StrictLogging {
 
-  def newDriver(
+  /**
+    * Constructs the initial frameworkInfo used for initial subscription, and later frameworkInfo update calls
+    *
+    * Does not contain
+    * @param config
+    * @param httpConfig
+    * @return
+    */
+  def newFrameworkInfo(
+    frameworkId: Option[FrameworkID],
     config: MarathonConf,
-    httpConfig: HttpConf,
-    newScheduler: Scheduler,
-    frameworkId: Option[FrameworkID]): SchedulerDriver = {
-
-    logger.info(s"Create new Scheduler Driver with frameworkId: $frameworkId and scheduler $newScheduler")
+    httpConfig: HttpConf): FrameworkInfo = {
 
     val frameworkInfoBuilder = FrameworkInfo.newBuilder()
       .setName(config.frameworkName())
@@ -26,7 +31,7 @@ object MarathonSchedulerDriver extends StrictLogging {
       .setHostname(config.hostname())
 
     // Set the role, if provided.
-    config.mesosRole.foreach(frameworkInfoBuilder.setRole: @silent)
+    config.mesosRole.foreach(frameworkInfoBuilder.addRoles(_))
 
     // Set the ID, if provided
     frameworkId.foreach(frameworkInfoBuilder.setId)
@@ -84,8 +89,33 @@ object MarathonSchedulerDriver extends StrictLogging {
     frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.REGION_AWARE))
     logger.info("REGION_AWARE feature enabled")
 
-    val frameworkInfo = frameworkInfoBuilder.build()
+    frameworkInfoBuilder.addCapabilities(Capability.newBuilder().setType(Capability.Type.MULTI_ROLE))
+    logger.info("MULTI_ROLE feature enabled")
 
+    frameworkInfoBuilder.build()
+  }
+
+  def newDriver(
+    frameworkInfo: FrameworkInfo,
+    config: MarathonConf,
+    newScheduler: Scheduler): SchedulerDriver = {
+
+    val frameworkId = if (frameworkInfo.hasId) Some(frameworkInfo.getId) else None
+    logger.info(s"Create new Scheduler Driver with frameworkId: $frameworkId and scheduler $newScheduler")
+
+    val credential: Option[Credential] = {
+      def secretFileContent = config.mesosAuthenticationSecretFile.toOption.map { secretFile =>
+        ByteString.readFrom(new FileInputStream(secretFile)).toStringUtf8
+      }
+      def credentials = config.mesosAuthenticationPrincipal.toOption.map { principal =>
+        val credentials = Credential.newBuilder().setPrincipal(principal)
+        //secret is optional
+        config.mesosAuthenticationSecret.toOption.orElse(secretFileContent).foreach(credentials.setSecret)
+        credentials.build()
+      }
+      if (config.mesosAuthentication()) credentials else None
+    }
+    credential.foreach(c => logger.info(s"Authenticate with Mesos as ${c.getPrincipal}"))
     logger.debug("Start creating new driver")
 
     val implicitAcknowledgements = false

@@ -6,7 +6,7 @@ import com.typesafe.scalalogging.StrictLogging
 import javax.inject.Inject
 import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.storage.repository.{FrameworkIdRepository, InstanceRepository}
-import org.apache.mesos.Protos.FrameworkID
+import org.apache.mesos.Protos.{FrameworkInfo, FrameworkID}
 import org.apache.mesos.{Scheduler, SchedulerDriver}
 
 import scala.concurrent.Await
@@ -35,7 +35,8 @@ class MesosSchedulerDriverFactory @Inject() (
   override def createDriver(): SchedulerDriver = {
     val frameworkId: Option[FrameworkID] = MesosSchedulerDriverFactory.getFrameworkId(
       crashStrategy, config.zkTimeoutDuration, frameworkIdRepository, instanceRepository)
-    val driver = MarathonSchedulerDriver.newDriver(config, httpConfig, scheduler, frameworkId)
+    val frameworkInfo = MarathonSchedulerDriver.newFrameworkInfo(frameworkId, config, httpConfig)
+    val driver = MarathonSchedulerDriver.newDriver(frameworkInfo, config, scheduler)
     holder.driver = Some(driver)
     driver
   }

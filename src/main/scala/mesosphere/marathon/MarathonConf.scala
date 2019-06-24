@@ -130,7 +130,7 @@ trait MarathonConf
     descr = "Mesos role for this framework. " +
       "If set, Marathon receives resource offers for the specified role in addition to " +
       "resources with the role designation '*'.",
-    default = None)
+    default = Some("*"))
 
   def expectedResourceRoles: Set[String] = mesosRole.toOption match {
     case Some(role) => Set(role, ResourceRole.Unreserved)
