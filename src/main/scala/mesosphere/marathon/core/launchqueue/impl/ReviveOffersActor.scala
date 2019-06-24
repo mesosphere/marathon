@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.actor.Status.Success
 import akka.actor.{Actor, Props, Stash, Status}
 import akka.pattern.pipe
 import akka.event.LoggingReceive
@@ -13,7 +12,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
 
 import scala.concurrent.duration._
-import scala.util.Failure
 
 sealed trait Op
 case object Revive extends Op
