@@ -3,6 +3,12 @@ import sbt.{ExclusionRule, _}
 object Dependencies {
   import Dependency._
 
+  val mesosDep = Seq(
+    mesos % "compile" from "file:///Users/tim/src/m8e/mesos/build/src/java/target/mesos-1.9.0.jar",
+    "com.google.protobuf" % "protobuf-java" % "3.5.0" % "compile"
+  )
+
+
   val pluginInterface = Seq(
     /* Marathon plugin-interface doesn't directly use these, but we want to expose them as transitive dependencies so
      * that plugins can use it */
@@ -14,10 +20,9 @@ object Dependencies {
     logback % "compile",
 
     /** Marathon plugin-interface directly uses these via the interfaces exposed to plugins */
-    mesos % "compile",
     guava % "compile",
     wixAccord % "compile"
-  )
+  ) ++ mesosDep
 
   val mesosClient = Seq(
     playJson % "compile",
@@ -39,7 +44,6 @@ object Dependencies {
     akkaHttp % "compile",
     asyncAwait % "compile",
     aws % "compile",
-    mesos % "compile",
     jerseyServlet % "compile",
     jerseyMultiPart % "compile",
     jettyEventSource % "compile",
@@ -88,6 +92,7 @@ object Dependencies {
     Test.junit % "test",
     Test.scalacheck % "test"
   ) ++ Curator.all
+    ++ mesosDep
     ++ DropwizardMetrics.all
     ++ Java9Compatibility.all
     ).map(

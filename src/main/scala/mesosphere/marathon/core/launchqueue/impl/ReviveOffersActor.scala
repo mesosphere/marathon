@@ -2,8 +2,8 @@ package mesosphere.marathon
 package core.launchqueue.impl
 
 import akka.actor.{Actor, Props, Stash, Status}
-import akka.pattern.pipe
 import akka.event.LoggingReceive
+import akka.pattern.pipe
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.{Done, NotUsed}
@@ -11,15 +11,30 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstanceChangeOrSnapshot
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
+import org.apache.mesos.Protos.FrameworkInfo
 
+import scala.collection.JavaConverters._
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
 sealed trait Op
 case object Revive extends Op
 case object Suppress extends Op
 
+/**
+  *
+  * @param metrics
+  * @param initialFrameworkInfo - The initial frameworkInfo used, including the frameworkId received by the registered event
+  * @param defaultMesosRole - The default Mesos role as specified by --mesos_role
+  * @param minReviveOffersInterval
+  * @param instanceUpdates
+  * @param rateLimiterUpdates
+  * @param driverHolder
+  */
 class ReviveOffersActor(
     metrics: Metrics,
+    initialFrameworkInfo: Future[FrameworkInfo],
+    defaultMesosRole: String,
     minReviveOffersInterval: FiniteDuration,
     instanceUpdates: InstanceTracker.InstanceUpdates,
     rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
@@ -31,6 +46,13 @@ class ReviveOffersActor(
 
   import context.dispatcher
   implicit val mat = ActorMaterializer()(context)
+
+  private def frameworkInfoWithRoles(frameworkInfo: FrameworkInfo, roles: Iterable[String]): FrameworkInfo = {
+    val b = frameworkInfo.toBuilder
+    b.clearRoles()
+    b.addAllRoles(roles.asJava)
+    b.build
+  }
 
   override def preStart(): Unit = {
     super.preStart()
@@ -47,21 +69,29 @@ class ReviveOffersActor(
       minReviveOffersInterval = minReviveOffersInterval,
       enableSuppress = enableSuppress)
 
-    val done = flattenedInstanceUpdates.map(Left(_))
-      .merge(delayedConfigRefs.map(Right(_)))
-      .via(suppressReviveFlow)
-      .runWith(Sink.foreach {
-        case Revive =>
-          reviveCountMetric.increment()
-          logger.info("Sending revive")
-          driverHolder.driver.foreach(_.reviveOffers())
-        case Suppress =>
-          if (enableSuppress) {
-            suppressCountMetric.increment()
-            logger.info("Sending suppress")
-            driverHolder.driver.foreach(_.suppressOffers())
-          }
-      })
+    val done: Future[Done] = initialFrameworkInfo.flatMap { frameworkInfo =>
+      flattenedInstanceUpdates.map(Left(_))
+        .merge(delayedConfigRefs.map(Right(_)))
+        .via(suppressReviveFlow)
+        .runWith(Sink.foreach {
+          case Revive =>
+            reviveCountMetric.increment()
+            logger.info("Sending revive")
+            driverHolder.driver.foreach { d =>
+              d.reviveOffers(Seq(defaultMesosRole).asJava)
+            }
+
+          case Suppress =>
+            if (enableSuppress) {
+              suppressCountMetric.increment()
+              logger.info("Sending suppress")
+              driverHolder.driver.foreach { d =>
+                val newInfo = frameworkInfoWithRoles(frameworkInfo, Seq(defaultMesosRole))
+                d.updateFramework(newInfo, Seq(defaultMesosRole).asJava)
+              }
+            }
+        })
+    }
 
     done.pipeTo(self)
   }
@@ -79,11 +109,13 @@ class ReviveOffersActor(
 object ReviveOffersActor {
   def props(
     metrics: Metrics,
+    initialFrameworkInfo: Future[FrameworkInfo],
+    defaultMesosRole: String,
     minReviveOffersInterval: FiniteDuration,
     instanceUpdates: InstanceTracker.InstanceUpdates,
     rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
     driverHolder: MarathonSchedulerDriverHolder,
     enableSuppress: Boolean): Props = {
-    Props(new ReviveOffersActor(metrics, minReviveOffersInterval, instanceUpdates, rateLimiterUpdates, driverHolder, enableSuppress))
+    Props(new ReviveOffersActor(metrics, initialFrameworkInfo, defaultMesosRole, minReviveOffersInterval, instanceUpdates, rateLimiterUpdates, driverHolder, enableSuppress))
   }
 }
