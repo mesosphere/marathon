@@ -180,7 +180,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
             exec = Some(raml.MesosExec(raml.ShellCommand("cd $MESOS_SANDBOX && echo 'start' >> pst1/foo && python -m SimpleHTTPServer $ENDPOINT_TASK1"))),
             resources = raml.Resources(cpus = 0.1, mem = 32.0),
             endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
-            volumeMounts = Seq(VolumeMount(Some("pst"), "pst1", true))
+            volumeMounts = Seq(VolumeMount(Some("pst"), "pst1", false))
           )
         ),
         volumes = Seq(PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(size = 10L))),
