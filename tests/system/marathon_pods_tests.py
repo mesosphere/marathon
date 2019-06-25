@@ -21,7 +21,7 @@ from shakedown.dcos.command import run_command_on_master
 from shakedown.dcos.marathon import deployment_wait, marathon_version_less_than # NOQA F401
 from urllib.parse import urljoin
 
-from fixtures import sse_events, wait_for_marathon_and_cleanup
+from fixtures import sse_events, wait_for_marathon_and_cleanup # NOQA F401
 
 logger = logging.getLogger(__name__)
 
