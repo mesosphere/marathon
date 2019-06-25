@@ -139,8 +139,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
             endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
             healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task1")), path = Some("/ping"))),
             volumeMounts = Seq(
-              VolumeMount(Some("python"), s"$containerDir/python", false),
-              VolumeMount(Some("data"), s"$containerDir/data", true)
+              VolumeMount(Some("python"), s"$containerDir/python", true),
+              VolumeMount(Some("data"), s"$containerDir/data", false)
             )
           )
         ),
