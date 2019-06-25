@@ -27,7 +27,7 @@ def get_resource(resource):
 
     if os.path.isfile(resource):
         with util.open_file(resource) as resource_file:
-                return util.load_json(resource_file)
+            return util.load_json(resource_file)
     else:
         try:
             auth = DCOSAcsAuth(dcos_acs_token())
