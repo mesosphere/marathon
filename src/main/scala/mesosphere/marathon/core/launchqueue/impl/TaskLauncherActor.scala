@@ -14,7 +14,6 @@ import mesosphere.marathon.core.instance.update.{InstanceDeleted, InstanceUpdate
 import mesosphere.marathon.core.launcher.{InstanceOp, InstanceOpFactory, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.{Delayed, DelayedStatus, NotDelayed}
-import mesosphere.marathon.core.launchqueue.impl.TaskLauncherActor.RecheckIfBackOffUntilReached
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpWithSource, MatchedInstanceOps}
 import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOpSourceDelegate}
@@ -22,7 +21,6 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util.CancellableOnce
 import org.apache.mesos.{Protos => Mesos}
 
 import scala.collection.mutable
