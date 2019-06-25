@@ -17,7 +17,8 @@ class InstanceFormatTest extends UnitTest {
       |  "tasksMap": {},
       |  "runSpecVersion": "2015-01-01T12:00:00.000Z",
       |  "agentInfo": { "host": "localhost", "attributes": [] },
-      |  "state": { "since": "2015-01-01T12:00:00.000Z", "condition": { "str": "Running" }, "goal": "Running" }
+      |  "state": { "since": "2015-01-01T12:00:00.000Z", "condition": { "str": "Running" }, "goal": "Running" },
+      |  "role": "someRole"
       |}""".stripMargin).as[JsObject]
 
   "Instance.instanceFormat" should {
@@ -32,7 +33,7 @@ class InstanceFormatTest extends UnitTest {
 
     "not write out the unreachable strategy" in {
       val state = InstanceState(Condition.Running, Timestamp.now(), None, None, Goal.Running)
-      val instance = Instance(Id.forRunSpec(PathId("/app")), None, state, Map.empty, Timestamp.now(), None)
+      val instance = Instance(Id.forRunSpec(PathId("/app")), None, state, Map.empty, Timestamp.now(), None, core.instance.Instance.defaultMesosRole)
 
       val json = Json.toJson(instance)
 

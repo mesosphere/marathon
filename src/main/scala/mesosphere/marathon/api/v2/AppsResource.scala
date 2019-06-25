@@ -48,16 +48,16 @@ class AppsResource @Inject() (
   import Normalization._
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
-  private implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
+  private lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
 
   private val normalizationConfig = AppNormalization.Configuration(
     config.defaultNetworkName.toOption,
     config.mesosBridgeName())
 
-  private implicit val validateAndNormalizeApp: Normalization[raml.App] =
+  private val validateAndNormalizeApp: Normalization[raml.App] =
     appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
-  private implicit val normalizeAppUpdate: Normalization[raml.AppUpdate] =
+  private val normalizeAppUpdate: Normalization[raml.AppUpdate] =
     appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 
   @GET
@@ -89,9 +89,9 @@ class AppsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
 
-      val rawApp = Raml.fromRaml(Json.parse(body).as[raml.App].normalize)
+      val rawApp = Raml.fromRaml(Json.parse(body).as[raml.App].normalize(validateAndNormalizeApp))
       val now = clock.now()
-      val app = validateOrThrow(rawApp).copy(versionInfo = VersionInfo.OnlyVersion(now))
+      val app = validateOrThrow(rawApp)(appDefinitionValidator).copy(versionInfo = VersionInfo.OnlyVersion(now))
 
       checkAuthorization(CreateRunSpec, app)
 
@@ -172,12 +172,12 @@ class AppsResource @Inject() (
         // some hackery here to pass initial JSON parsing.
         val jsObj = Json.parse(body).as[JsObject] + ("id" -> Json.toJson(appId.toString))
         // the version is thrown away in conversion to AppUpdate
-        jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
+        jsObj.as[raml.App].normalize(validateAndNormalizeApp).toRaml[raml.AppUpdate]
 
       case PartialUpdate(existingApp) =>
         import mesosphere.marathon.raml.AppConversion.appUpdateRamlReader
-        val appUpdate = Json.parse(body).as[raml.AppUpdate].normalize
-        Raml.fromRaml(appUpdate -> existingApp)(appUpdateRamlReader).normalize //validate if the resulting app is correct
+        val appUpdate = Json.parse(body).as[raml.AppUpdate].normalize(normalizeAppUpdate)
+        Raml.fromRaml(appUpdate -> existingApp)(appUpdateRamlReader).normalize(validateAndNormalizeApp) //validate if the resulting app is correct
         appUpdate.copy(id = Some(appId.toString))
 
     }
@@ -193,13 +193,13 @@ class AppsResource @Inject() (
     */
   def canonicalAppUpdatesFromJson(body: Array[Byte], partialUpdate: Boolean): Seq[raml.AppUpdate] = {
     if (partialUpdate) {
-      Json.parse(body).as[Seq[raml.AppUpdate]].map(_.normalize)
+      Json.parse(body).as[Seq[raml.AppUpdate]].map(_.normalize(normalizeAppUpdate))
     } else {
       // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
       // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
       // the version is thrown away in toUpdate so just pass `zero` for now.
       Json.parse(body).as[Seq[raml.App]].map { app =>
-        app.normalize.toRaml[raml.AppUpdate]
+        app.normalize(validateAndNormalizeApp).toRaml[raml.AppUpdate]
       }
     }
   }
@@ -351,7 +351,7 @@ class AppsResource @Inject() (
 
     val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType)
     val version = clock.now()
-    val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation, clock.now(), service), version, force))
+    val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation, clock.now(), service, appDefinitionValidator, validateAndNormalizeApp), version, force))
     val response = plan.original.app(appId)
       .map(_ => Response.ok())
       .getOrElse(Response.created(new URI(appId.toString)))
@@ -379,7 +379,7 @@ class AppsResource @Inject() (
 
     def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
       update.id.map(PathId(_)) match {
-        case Some(id) => group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation, clock.now(), service), version)
+        case Some(id) => group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation, clock.now(), service, appDefinitionValidator, validateAndNormalizeApp), version)
         case None => group
       }
     }

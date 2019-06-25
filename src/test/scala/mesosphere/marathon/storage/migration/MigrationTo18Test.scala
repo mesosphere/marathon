@@ -32,15 +32,15 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
       val instanceId3 = Instance.Id.forRunSpec(PathId("/app3"))
 
       val instance1Json = f.created(instanceId1)
-      val instance1 = instance1Json.as[state.Instance]
+      val instance1 = (instance1Json + ("role" -> JsString(""))).as[state.Instance]
       val migratedInstance1 = f.setProvisionedCondition(instance1)
 
       val instance2Json = f.created(instanceId2)
-      val instance2 = instance2Json.as[state.Instance]
+      val instance2 = (instance2Json + ("role" -> JsString(""))).as[state.Instance]
       val migratedInstance2 = f.setProvisionedCondition(instance2)
 
       val instance3Json = f.provisioned(instanceId3)
-      val instance3 = instance3Json.as[state.Instance]
+      val instance3 = (instance3Json + ("role" -> JsString(""))).as[state.Instance]
 
       f.instanceRepository.ids() returns Source(List(instanceId1, instanceId2, instanceId3))
       f.persistenceStore.get[Instance.Id, JsValue](equalTo(instanceId1))(any, any) returns Future(Some(instance1Json))

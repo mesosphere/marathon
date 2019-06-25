@@ -85,7 +85,9 @@ case class AppDefinition(
 
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
 
-    tty: Option[Boolean] = AppDefinition.DefaultTTY) extends RunSpec
+    tty: Option[Boolean] = AppDefinition.DefaultTTY,
+
+    role: String = AppDefinition.DefaultRole) extends RunSpec
   with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
@@ -215,6 +217,8 @@ case class AppDefinition(
       case _ => // ignore
     }
 
+    builder.setRole(role)
+
     builder.build
   }
 
@@ -280,6 +284,9 @@ case class AppDefinition(
       ))
     }
 
+    // TODO AN: What do we deserialize from state if no role is given?
+    val role = if (proto.hasRole) proto.getRole else AppDefinition.DefaultRole
+
     AppDefinition(
       id = PathId(proto.getId),
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
@@ -321,7 +328,8 @@ case class AppDefinition(
       secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut),
       unreachableStrategy = unreachableStrategy,
       killSelection = KillSelection.fromProto(proto.getKillSelection),
-      tty = tty
+      tty = tty,
+      role = role
     )
   }
 
@@ -377,7 +385,8 @@ case class AppDefinition(
           secrets != to.secrets ||
           unreachableStrategy != to.unreachableStrategy ||
           killSelection != to.killSelection ||
-          tty != to.tty
+          tty != to.tty ||
+          role != to.role
       }
     case _ =>
       // A validation rule will ensure, this can not happen
@@ -458,6 +467,10 @@ object AppDefinition extends GeneralPurposeCombinators {
   val DefaultAcceptedResourceRoles = Set.empty[String]
 
   val DefaultTTY: Option[Boolean] = None
+
+  val DefaultRole: String = "TBD" // TODO AN: Really an empty string? Not sure about that...
+
+  val UndefinedRole: String = "undefined"
 
   /**
     * should be kept in sync with `Apps.DefaultNetworks`

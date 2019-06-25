@@ -31,7 +31,8 @@ case class PodDefinition(
     executorResources: Resources = PodDefinition.DefaultExecutorResources,
     override val volumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,
-    override val killSelection: KillSelection = KillSelection.DefaultKillSelection
+    override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
+    role: String = PodDefinition.DefaultRole
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
   /**
@@ -76,7 +77,8 @@ case class PodDefinition(
           volumes != to.volumes ||
           networks != to.networks ||
           backoffStrategy != to.backoffStrategy ||
-          upgradeStrategy != to.upgradeStrategy
+          upgradeStrategy != to.upgradeStrategy ||
+          role != to.role
       }
     case _ =>
       // A validation rule will ensure, this can not happen
@@ -134,4 +136,5 @@ object PodDefinition {
   val DefaultBackoffStrategy = BackoffStrategy()
   val DefaultUpgradeStrategy = AppDefinition.DefaultUpgradeStrategy
   val DefaultUnreachableStrategy = UnreachableStrategy.default(resident = false)
+  val DefaultRole = AppDefinition.DefaultRole
 }

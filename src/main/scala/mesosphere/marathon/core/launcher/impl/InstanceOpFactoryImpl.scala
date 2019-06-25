@@ -49,13 +49,13 @@ class InstanceOpFactoryImpl(
     val scheduledInstances = request.scheduledInstances
 
     val result: OfferMatchResult = scheduledInstances.head match {
-      case scheduledInstance @ Instance(_, _, _, _, app: AppDefinition, _) =>
+      case scheduledInstance @ Instance(_, _, _, _, app: AppDefinition, _, _) =>
         if (app.isResident) inferForResidents(request, scheduledInstance)
         else inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
-      case scheduledInstance @ Instance(_, _, _, _, pod: PodDefinition, _) =>
+      case scheduledInstance @ Instance(_, _, _, _, pod: PodDefinition, _, _) =>
         if (pod.isResident) inferForResidents(request, scheduledInstance)
         else inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
-      case Instance(_, _, _, _, runSpec, _) =>
+      case Instance(_, _, _, _, runSpec, _, _) =>
         throw new IllegalArgumentException(s"unsupported runSpec object ${runSpec}")
     }
 

@@ -73,31 +73,32 @@ object AppHelpers {
     partialUpdate: Boolean,
     allowCreation: Boolean,
     now: Timestamp,
-    service: MarathonSchedulerService)(implicit
-    identity: Identity,
-    authorizer: Authorizer,
+    service: MarathonSchedulerService,
     appDefinitionValidator: Validator[AppDefinition],
-    appNormalization: Normalization[raml.App]): AppDefinition = {
+    appNormalization: Normalization[raml.App])(implicit
+    identity: Identity,
+    authorizer: Authorizer
+  ): AppDefinition = {
     import Normalization._
     def createApp(): AppDefinition = {
-      val app = withoutPriorAppDefinition(appUpdate, appId).normalize
+      val app = withoutPriorAppDefinition(appUpdate, appId).normalize(appNormalization)
       // versionInfo doesn't change - it's never overridden by an AppUpdate.
       // the call to fromRaml loses the original versionInfo; it's just the current time in this case
       // so we just query for that (using a more predictable clock than AppDefinition has access to)
-      val appDef = validateOrThrow(Raml.fromRaml(app).copy(versionInfo = OnlyVersion(now)))
+      val appDef = validateOrThrow(Raml.fromRaml(app).copy(versionInfo = OnlyVersion(now)))(appDefinitionValidator)
       checkAuthorization(CreateRunSpec, appDef)
     }
 
     def updateApp(current: AppDefinition): AppDefinition = {
       val app =
         if (partialUpdate)
-          Raml.fromRaml(appUpdate -> current).normalize
+          Raml.fromRaml(appUpdate -> current).normalize(appNormalization)
         else
-          withoutPriorAppDefinition(appUpdate, appId).normalize
+          withoutPriorAppDefinition(appUpdate, appId).normalize(appNormalization)
 
       // versionInfo doesn't change - it's never overridden by an AppUpdate.
       // the call to fromRaml loses the original versionInfo; we take special care to preserve it
-      val appDef = validateOrThrow(Raml.fromRaml(app).copy(versionInfo = current.versionInfo))
+      val appDef = validateOrThrow(Raml.fromRaml(app).copy(versionInfo = current.versionInfo))(appDefinitionValidator)
       checkAuthorization(UpdateRunSpec, appDef)
     }
 

@@ -94,7 +94,7 @@ object MigrationTo18100 extends StrictLogging {
         // Override Condition.Unknown with inferred condition.
         val condition = tasksMap.valuesIterator.map(_.status.condition).minBy(InstanceState.conditionHierarchy)
         val updatedState = state.copy(condition = condition)
-        new Instance(instanceId, Some(agentInfo), updatedState, tasksMap, runSpecVersion, reservation)
+        new Instance(instanceId, Some(agentInfo), updatedState, tasksMap, runSpecVersion, reservation, null)
       }
   }
 

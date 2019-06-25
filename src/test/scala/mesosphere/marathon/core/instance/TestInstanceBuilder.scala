@@ -155,7 +155,7 @@ object TestInstanceBuilder {
       state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
       tasksMap = Map.empty,
       runSpec = runSpec,
-      None
+      None, Instance.defaultMesosRole
     )
   }
 
@@ -169,7 +169,7 @@ object TestInstanceBuilder {
       versionInfo = VersionInfo.OnlyVersion(task.runSpecVersion)
     )
 
-    new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, runSpec, None)
+    new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, runSpec, None, Instance.defaultMesosRole)
   }
 
   val defaultAgentInfo = Instance.AgentInfo(

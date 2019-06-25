@@ -40,7 +40,8 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       readinessChecks = Seq(core.readiness.ReadinessCheck()),
       acceptedResourceRoles = Set("*"),
       killSelection = state.KillSelection.OldestFirst,
-      secrets = Map("secret0" -> state.Secret("/path/to/secret"))
+      secrets = Map("secret0" -> state.Secret("/path/to/secret")),
+      role = "someRole"
     )
   }
   private lazy val hostApp = AppDefinition(

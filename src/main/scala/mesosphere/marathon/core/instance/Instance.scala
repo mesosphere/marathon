@@ -28,7 +28,8 @@ case class Instance(
     state: InstanceState,
     tasksMap: Map[Task.Id, Task],
     runSpec: RunSpec,
-    reservation: Option[Reservation]) extends Placed {
+    reservation: Option[Reservation],
+    role: String) extends Placed {
 
   def runSpecId: PathId = runSpec.id
   def runSpecVersion: Timestamp = runSpec.version
@@ -95,7 +96,7 @@ object Instance {
 
   object Running {
     def unapply(instance: Instance): Option[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]] = instance match {
-      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _) =>
+      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _, _) =>
         Some((instanceId, agentInfo, tasksMap))
       case _ =>
         Option.empty[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]]
@@ -111,7 +112,7 @@ object Instance {
     */
   def scheduled(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
     val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running)
-    Instance(instanceId, None, state, Map.empty, runSpec, None)
+    Instance(instanceId, None, state, Map.empty, runSpec, None, runSpec.role)
   }
 
   /*
@@ -418,4 +419,9 @@ object Instance {
       Json.toJson(stringToTask)
     }
   )
+
+  /**
+    * This is the default role that mesos uses when no role is specified by marathon.
+    */
+  val defaultMesosRole = "TBD"
 }
