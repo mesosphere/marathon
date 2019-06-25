@@ -1,4 +1,5 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import java.io.File
 import java.nio.file.Paths
