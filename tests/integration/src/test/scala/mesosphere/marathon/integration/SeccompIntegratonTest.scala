@@ -8,8 +8,6 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 
-import scala.io.Source
-
 class SeccompIntegratonTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
   val projectDir: String = sys.props.getOrElse("user.dir", ".")
