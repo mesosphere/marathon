@@ -34,7 +34,7 @@ case class MesosConfig(
 case class MesosCluster(
     suiteName: String,
     numMasters: Int,
-    numSlaves: Int,
+    numAgents: Int,
     masterUrl: String,
     quorumSize: Int = 1,
     autoStart: Boolean = false,
@@ -49,9 +49,14 @@ case class MesosCluster(
     mat: Materializer,
     ctx: ExecutionContext,
     scheduler: Scheduler) extends AutoCloseable with Eventually {
-  require(quorumSize > 0 && quorumSize <= numMasters)
-  require(agentsFaultDomains.isEmpty || agentsFaultDomains.size == numSlaves)
-  require(agentSeccompConfigDir.isEmpty || (agentSeccompConfigDir.isDefined && config.isolation.get.contains("linux/seccomp")))
+
+  require(isValidQuorumSize, "Mesos quorum size should be 0 or smaller than number of agents")
+  require(isValidFaultDomainConfig, "Fault domains should be configure for all agents or not at all")
+  require(isValidSeccompConfig, "To enable seccomp, agentSeccompConfigDir should be defined and isolation \"linux/seccomp\" set")
+
+  def isValidQuorumSize: Boolean = quorumSize > 0 && quorumSize <= numMasters
+  def isValidFaultDomainConfig: Boolean = agentsFaultDomains.isEmpty || agentsFaultDomains.size == numAgents
+  def isValidSeccompConfig: Boolean = agentSeccompConfigDir.isEmpty || (agentSeccompConfigDir.isDefined && config.isolation.get.contains("linux/seccomp"))
 
   lazy val masters = 0.until(numMasters).map { i =>
     val faultDomainJson = if (mastersFaultDomains.nonEmpty && mastersFaultDomains(i).nonEmpty) {
@@ -80,7 +85,7 @@ case class MesosCluster(
       s"--quorum=$quorumSize") ++ faultDomainJson.map(fd => s"--domain=$fd"))
   }
 
-  lazy val agents = 0.until(numSlaves).map { i =>
+  lazy val agents = 0.until(numAgents).map { i =>
     // We can add additional resources constraints for our test clusters here.
     // IMPORTANT: we give each cluster's agent it's own port range! Otherwise every mesos will offer the same port range
     // to it's marathon, leading to multiple tasks (from different IT suits) trying to use the same port!
@@ -363,7 +368,7 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
 
   def agentSeccompConfigDir: Option[String] = None
 
-  def agentSeccompDefaultProfile: Option[String] = None
+  def agentSeccompProfileName: Option[String] = None
 
   private val localMesosUrl = sys.env.get("USE_LOCAL_MESOS")
   lazy val mesosMasterUrl = s"zk://${zkServer.connectUri}/mesos"
@@ -385,7 +390,7 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
     agentsFaultDomains,
     agentsGpus,
     agentSeccompConfigDir,
-    agentSeccompDefaultProfile
+    agentSeccompProfileName
   )
   lazy val mesos = new MesosFacade(localMesosUrl.getOrElse(mesosCluster.waitForLeader().futureValue))
 
