@@ -12,7 +12,7 @@ import org.scalatest.Inside
 
 class AgentGoneByOperatorIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
-  override val mesosConfig = MesosConfig(
+  override lazy val mesosConfig = MesosConfig(
     numAgents = 2
   )
 

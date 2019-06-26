@@ -15,7 +15,7 @@ import scala.concurrent.duration._
 
 class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
-  override val mesosConfig = MesosConfig(
+  override lazy val mesosConfig = MesosConfig(
     numAgents = 2
   )
 

@@ -59,8 +59,6 @@ case class MesosCluster(
     ctx: ExecutionContext,
     scheduler: Scheduler) extends AutoCloseable with Eventually {
 
-
-
   lazy val masters = 0.until(config.numMasters).map { i =>
     val faultDomainJson = if (config.mastersFaultDomains.nonEmpty && config.mastersFaultDomains(i).nonEmpty) {
       val faultDomain = config.mastersFaultDomains(i).get
