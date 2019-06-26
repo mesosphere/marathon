@@ -151,7 +151,7 @@ class OfferProcessorImplTest extends UnitTest {
       val dummySource = new DummySource
       val tasksWithSource = tasks.map {
         case (taskInfo, _, _) =>
-          val dummyInstance = TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId))
+          val dummyInstance = TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId, role = Some("someRole")))
           val taskId = Task.Id.parse(taskInfo.getTaskId)
           val app = AppDefinition(appId)
           val launch = f.launchWithNewTask(

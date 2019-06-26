@@ -33,7 +33,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
     "Schedule succeeds" in {
       val f = new Fixture
       val appId: PathId = PathId("/test")
-      val scheduledInstance = Instance.scheduled(AppDefinition(appId))
+      val scheduledInstance = Instance.scheduled(AppDefinition(appId, role = Some("someRole")))
       val stateOp = InstanceUpdateOperation.Schedule(scheduledInstance)
       val expectedStateChange = InstanceUpdateEffect.Update(scheduledInstance, None, events = Nil)
 
@@ -54,7 +54,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
     "schedule fails but the update stream keeps working" in {
       val f = new Fixture
       val appId: PathId = PathId("/test")
-      val scheduledInstance = Instance.scheduled(AppDefinition(appId))
+      val scheduledInstance = Instance.scheduled(AppDefinition(appId, role = Some("someRole")))
       val stateOp = InstanceUpdateOperation.Schedule(scheduledInstance)
 
       When("process is called")

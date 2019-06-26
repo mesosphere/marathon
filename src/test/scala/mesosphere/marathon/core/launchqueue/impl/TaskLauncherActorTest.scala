@@ -53,7 +53,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       ref.underlyingActor.inFlightInstanceOperations.nonEmpty
 
   object f {
-    val app = AppDefinition(id = PathId("/testapp"))
+    val app = AppDefinition(id = PathId("/testapp"), role = Some("someRole"))
     val scheduledInstance = Instance.scheduled(app)
     val taskId = Task.Id(scheduledInstance.instanceId)
     val provisionedTasks = Tasks.provisioned(taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now())

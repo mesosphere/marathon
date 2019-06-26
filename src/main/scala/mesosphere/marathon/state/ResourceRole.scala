@@ -8,6 +8,13 @@ import mesosphere.marathon.api.v2.Validation._
 object ResourceRole {
   val Unreserved = "*"
 
+  def validForRole(role: String): Validator[Set[String]] = {
+    isTrue(s"""acceptedResourceRoles must be either [*] or '$role'""") { acceptedResourceRoles =>
+      acceptedResourceRoles.size == 1 &&
+        (acceptedResourceRoles.head.equals(Unreserved) || acceptedResourceRoles.head.equals(role))
+    }
+  }
+
   // NOTE: The validators below use conjunction over `isTrue` in order to provide more user-friendly error messages.
   //       For example, `char is notEqualTo('\u0020')` would print something like "char is equal to  " as opposed to
   //       "A role name must not include a space (\x20) character".

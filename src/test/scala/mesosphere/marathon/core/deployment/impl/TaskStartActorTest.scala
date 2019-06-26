@@ -28,7 +28,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
     "Start success no items in the queue" in {
       val f = new Fixture
       val promise = Promise[Unit]()
-      val app = AppDefinition("/myApp".toPath, instances = 5)
+      val app = AppDefinition("/myApp".toPath, instances = 5, role = Some("someRole"))
 
       f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(Seq.empty)
       val ref = f.startActor(app, app.instances, promise)
@@ -48,7 +48,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
     "Start success with one task left to launch" in {
       val f = new Fixture
       val promise = Promise[Unit]()
-      val app = AppDefinition("/myApp".toPath, instances = 5)
+      val app = AppDefinition("/myApp".toPath, instances = 5, role = Some("someRole"))
 
       val instances: Seq[Instance] = Seq(Instance.scheduled(app))
       f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(instances)
@@ -70,7 +70,7 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
     "Start success with existing task in launch queue" in {
       val f = new Fixture
       val promise = Promise[Unit]()
-      val app = AppDefinition("/myApp".toPath, instances = 5)
+      val app = AppDefinition("/myApp".toPath, instances = 5, role = Some("someRole"))
 
       val instances: Seq[Instance] = Seq(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
       f.instanceTracker.specInstances(eq(app.id), eq(false))(any) returns Future.successful(instances)

@@ -10,7 +10,7 @@ import scala.collection.immutable.Seq
 
 class AppDefinitionReadinessCheckValidationTest extends UnitTest {
 
-  lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
+  lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), RoleEnforcement())(PluginManager.None)
   "AppDefinitionReadinessValidation" should {
     "app with 0 readinessChecks is valid" in {
       val f = new Fixture

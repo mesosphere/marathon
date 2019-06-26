@@ -112,7 +112,9 @@ object Instance {
     */
   def scheduled(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
     val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running)
-    Instance(instanceId, None, state, Map.empty, runSpec, None, runSpec.role)
+
+    // TODO AN: Can we provide a default here in case role isn't set, or are we sure that role is set?
+    Instance(instanceId, None, state, Map.empty, runSpec, None, runSpec.role.get)
   }
 
   /*

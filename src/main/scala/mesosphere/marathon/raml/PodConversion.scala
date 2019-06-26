@@ -43,8 +43,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
 
     val executorResources: ExecutorResources = podd.executorResources.getOrElse(PodDefinition.DefaultExecutorResources.toRaml)
 
-    // TODO AN: Maybe better use some kind of undefined?
-    val role: String = podd.role.getOrElse(PodDefinition.DefaultRole)
+    val role = podd.role.orElse(PodDefinition.DefaultRole)
 
     new PodDefinition(
       id = PathId(podd.id).canonicalPath(),
@@ -104,7 +103,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       volumes = podDef.volumes.map(Raml.toRaml(_)),
       networks = podDef.networks.map(Raml.toRaml(_)),
       executorResources = Some(podDef.executorResources.toRaml),
-      role = Some(podDef.role)
+      role = podDef.role
     )
   }
 

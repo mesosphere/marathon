@@ -6,13 +6,13 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.raml.{App, AppUpdate, Raml}
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{AppDefinition, RoleEnforcement}
 import org.scalatest.Matchers
 import play.api.libs.json.Json
 
 class AppUpdateValidatorTest extends UnitTest with Matchers {
 
-  implicit val validAppDefinition = AppDefinition.validAppDefinition(Set.empty)(PluginManager.None)
+  implicit val validAppDefinition = AppDefinition.validAppDefinition(Set.empty, RoleEnforcement())(PluginManager.None)
 
   "validation for network type changes" should {
     // regression test for DCOS-10641

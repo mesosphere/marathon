@@ -310,7 +310,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging with Eventual
 
     "KillServiceActor" should {
       "not put scheduled instance into the actor queue" in withActor(defaultConfig) { (f, actor) =>
-        val scheduledInstance = Instance.scheduled(AppDefinition(PathId("/scheduled-instance")))
+        val scheduledInstance = Instance.scheduled(AppDefinition(PathId("/scheduled-instance"), role = Some("someRole")))
 
         val promise = Promise[Done]()
         actor ! KillServiceActor.KillInstances(Seq(scheduledInstance), promise)

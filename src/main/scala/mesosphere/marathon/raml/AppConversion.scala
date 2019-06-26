@@ -82,7 +82,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       killSelection = app.killSelection.toRaml,
       tty = app.tty,
       executorResources = app.executorResources.toRaml,
-      role = Some(app.role)
+      role = app.role
     )
   }
 
@@ -138,8 +138,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
 
     val versionInfo = state.VersionInfo.OnlyVersion(app.version.map(Timestamp(_)).getOrElse(Timestamp.now()))
 
-    // TODO AN: This should rather be something like "undefined", so we know we have to adjust it in the normalization, i guess?
-    val role = app.role.getOrElse(AppDefinition.DefaultRole)
+    val role = app.role.orElse(AppDefinition.DefaultRole)
 
     val result: AppDefinition = AppDefinition(
       id = PathId(app.id),

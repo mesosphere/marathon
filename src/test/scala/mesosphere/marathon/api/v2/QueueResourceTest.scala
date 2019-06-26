@@ -138,7 +138,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
 
     "application backoff can be removed from the launch queue" in new Fixture {
       //given
-      val app = AppDefinition(id = "app".toRootPath)
+      val app = AppDefinition(id = "app".toRootPath, role = Some("someRole"))
       val instances = Seq.fill(23)(Instance.scheduled(app))
       instanceTracker.specInstances(any, Matchers.eq(false))(any) returns Future.successful(instances)
       groupManager.runSpec(app.id) returns Some(app)
@@ -174,7 +174,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       val req = auth.request
 
       When("one delay is reset")
-      val app = AppDefinition(id = "app".toRootPath)
+      val app = AppDefinition(id = "app".toRootPath, role = Some("someRole"))
       val instances = Seq.fill(23)(Instance.scheduled(app))
       instanceTracker.specInstances(any, Matchers.eq(false))(any) returns Future.successful(instances)
       groupManager.runSpec(app.id) returns Some(app)

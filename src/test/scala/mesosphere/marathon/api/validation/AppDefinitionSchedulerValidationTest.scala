@@ -8,12 +8,13 @@ import mesosphere.marathon.state._
 
 class AppDefinitionSchedulerValidationTest extends UnitTest {
 
-  private lazy val validAppDefinition = AppDefinition.validAppDefinition(Set())(PluginManager.None)
+  private lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), RoleEnforcement())(PluginManager.None)
 
   class Fixture {
     def normalApp = AppDefinition(
       id = PathId("/test"),
-      cmd = Some("sleep 1000"))
+      cmd = Some("sleep 1000"),
+      role = Some("someRole"))
 
     def schedulerAppWithApi(
       frameworkName: String = "Framework-42",
@@ -23,6 +24,7 @@ class AppDefinitionSchedulerValidationTest extends UnitTest {
       AppDefinition(
         id = PathId("/test"),
         cmd = Some("sleep 1000"),
+        role = Some("someRole"),
         instances = 1,
         upgradeStrategy = UpgradeStrategy(0, 0),
         labels = Map(

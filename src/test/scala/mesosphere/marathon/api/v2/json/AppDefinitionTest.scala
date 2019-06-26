@@ -20,7 +20,11 @@ import scala.concurrent.duration._
 
 class AppDefinitionTest extends UnitTest with ValidationTestLike {
   val enabledFeatures = Set("secrets")
-  implicit val validator = AppDefinition.validAppDefinition(enabledFeatures)(PluginManager.None)
+  val enforcedRole = "someRole"
+
+  val validator = AppDefinition.validAppDefinition(enabledFeatures, RoleEnforcement())(PluginManager.None)
+
+  val validatorWithRole = AppDefinition.validAppDefinition(enabledFeatures, RoleEnforcement(enforceRole = true, role = "someRole"))(PluginManager.None)
 
   private[this] def appNormalization(app: raml.App): raml.App =
     AppHelpers.appNormalization(
@@ -50,6 +54,15 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       validator(app) should haveViolations("/id" -> idError)
 
       val correct = AppDefinition(id = "test".toRootPath)
+
+      app = correct.copy(
+        role = Some("aRole"),
+        cmd = Some("cmd")
+      )
+      validatorWithRole(app) should haveViolations(
+        "/role" -> "got aRole, expected someRole",
+        "/acceptedResourceRoles" -> "acceptedResourceRoles must be either [*] or 'someRole'"
+      )
 
       app = correct.copy(
         networks = Seq(ContainerNetwork("whatever")), container = Some(Docker(
@@ -176,7 +189,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       validator(app.copy(resources = Resources(gpus = 1))) should haveViolations("/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
 
       {
-        val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"))(PluginManager.None)
+        val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"), RoleEnforcement())(PluginManager.None)
         appValidator(app.copy(resources = Resources(gpus = 1))) shouldNot haveViolations(
           "/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
       }

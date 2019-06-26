@@ -57,7 +57,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
   }
 
   def setupTrackerWithProvisionedInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
-    val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version))
+    val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version), role = Some("someRole"))
     val scheduledInstance = Instance.scheduled(app)
     // schedule
     await(instanceTracker.schedule(scheduledInstance))
@@ -111,7 +111,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     }
 
     "update" in new Fixture {
-      val app: AppDefinition = AppDefinition(id = appId, versionInfo = VersionInfo.NoVersion)
+      val app: AppDefinition = AppDefinition(id = appId, versionInfo = VersionInfo.NoVersion, role = Some("someRole"))
 
       val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
 

@@ -23,7 +23,8 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
         val app = AppDefinition(
           id = PathId("/a/b/c/d"),
           cmd = Some("sleep 1000"),
-          dependencies = Set(PathId("/a/b/c/e"))
+          dependencies = Set(PathId("/a/b/c/e")),
+          role = Some("someRole")
         )
         validator(app) shouldBe aSuccess
       }
@@ -32,7 +33,8 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
         val app = AppDefinition(
           id = PathId("/a/b/c/d"),
           cmd = Some("sleep 1000"),
-          dependencies = Set(PathId("/x/y/z"))
+          dependencies = Set(PathId("/x/y/z")),
+          role = Some("someRole")
         )
         validator(app) shouldBe aSuccess
       }
@@ -41,7 +43,8 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
         val app = AppDefinition(
           id = PathId("/a/b/c/d"),
           cmd = Some("sleep 1000"),
-          dependencies = Set(PathId("/a/.../"))
+          dependencies = Set(PathId("/a/.../")),
+          role = Some("someRole")
         )
 
         validator(app) should haveViolations(
@@ -106,7 +109,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
   }
 
   class Fixture {
-    implicit val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(Set.empty)(PluginManager.None)
+    implicit val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(Set.empty, RoleEnforcement())(PluginManager.None)
     def validApp = AppDefinition(
       id = PathId("/a/b/c/d"),
       cmd = Some("sleep 1000"),

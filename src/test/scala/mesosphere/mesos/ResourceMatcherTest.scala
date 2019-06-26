@@ -48,7 +48,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val app = AppDefinition(
         id = "/test".toRootPath,
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
-        portDefinitions = PortDefinitions(0, 0)
+        portDefinitions = PortDefinitions(0, 0),
+        role = Some("someRole")
       )
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
@@ -68,7 +69,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val app = AppDefinition(
         id = "/test".toRootPath,
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
-        portDefinitions = PortDefinitions(0, 0)
+        portDefinitions = PortDefinitions(0, 0),
+        role = Some("someRole")
       )
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
@@ -871,7 +873,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         constraints = Set(Constraint.newBuilder.setField("hostname").
           setOperator(Constraint.Operator.UNIQUE).build),
         container = Some(Container.Mesos(
-          volumes = List(volume))))
+          volumes = List(volume))),
+        role = Some("someRole"))
 
       // Since offer matcher checks the instance version it's should be >= app.version
       val instance = TestInstanceBuilder.scheduledWithReservation(app, Seq(LocalVolumeId(app.id, persistentVolume, mount)))
@@ -899,7 +902,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         instances = 3,
         resources = Resources(cpus = 0.1, mem = 32.0, disk = 0.0),
         container = Some(Container.Mesos(
-          volumes = List(volume))))
+          volumes = List(volume))),
+        role = Some("someRole"))
 
       // Since offer matcher checks the instance version it's should be >= app.version
       val instance = TestInstanceBuilder.scheduledWithReservation(app, Seq(LocalVolumeId(app.id, persistentVolume, mount)))

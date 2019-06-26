@@ -258,7 +258,7 @@ class TaskReplaceActor(
     * @return whether [[Instance]] has the new run spec version or an old one.
     */
   def isOldInstance(instance: Instance): Boolean = {
-    require(instance.runSpecId == runSpec.id)   // sanity check
+    require(instance.runSpecId == runSpec.id) // sanity check
     instance.runSpecVersion != runSpec.version
   }
 }

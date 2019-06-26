@@ -421,4 +421,9 @@ object MarathonConf extends StrictLogging {
         Left("Expected exactly one connection string")
     }
   }
+
+  /**
+    * This should be the value that mesos uses for accepted offers if the framework specifies no role
+    */
+  val defaultMesosRole = "slave_public"
 }

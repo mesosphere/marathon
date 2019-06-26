@@ -156,7 +156,8 @@ object InstanceOpFactoryImplTest {
 
   val minimalPod = PodDefinition(
     id = PathId("/foo"),
-    containers = Seq(MesosContainer(name = "ct1", resources = someRes))
+    containers = Seq(MesosContainer(name = "ct1", resources = someRes)),
+    role = Some("someRole")
   )
 
   val host = "agent1"

@@ -25,6 +25,19 @@ case class BackoffStrategy(
     factor: Double = 1.15)
 
 /**
+  * Configures role enforcement on runSpecs, used for validation.
+  *
+  * If enforce role is false, the role must be set, but no further checking is done.
+  *
+  * @param enforceRole If true, the role on the runSpec must match the specified role, additionally the
+  *                    acceptedResourceRole field can only contain one of ['*', &lt;role&gt;]
+  * @param role The role to enforce.
+  */
+case class RoleEnforcement(
+    enforceRole: Boolean = false,
+    role: String = "")
+
+/**
   * A generic spec that specifies something that Marathon is able to launch instances of.
   */
 
@@ -64,7 +77,7 @@ trait RunSpec extends plugin.RunSpec {
   val unreachableStrategy: UnreachableStrategy
   val killSelection: KillSelection
   val networks: Seq[Network]
-  val role: String
+  val role: Option[String]
 
   final def ref: RunSpecRef = RunSpecRef(id, version)
   /**

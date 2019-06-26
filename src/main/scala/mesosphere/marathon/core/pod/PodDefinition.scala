@@ -32,7 +32,7 @@ case class PodDefinition(
     override val volumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
-    role: String = PodDefinition.DefaultRole
+    role: Option[String] = PodDefinition.DefaultRole
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
   /**

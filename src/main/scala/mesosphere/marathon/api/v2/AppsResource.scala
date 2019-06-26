@@ -48,7 +48,6 @@ class AppsResource @Inject() (
   import Normalization._
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
-  private lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(pluginManager)
 
   private val normalizationConfig = AppNormalization.Configuration(
     config.defaultNetworkName.toOption,
@@ -79,6 +78,22 @@ class AppsResource @Inject() (
     }
   }
 
+  private def getEnforcedRoleForService(servicePathId: PathId): RoleEnforcement = {
+    val defaultRole = config.mesosRole.getOrElse(MarathonConf.defaultMesosRole)
+
+    // We have a service in the root group, no enforced role here
+    if (servicePathId.parent.isRoot) return RoleEnforcement(role = defaultRole)
+    val rootPath = servicePathId.rootPath
+
+    groupManager.group(rootPath).map(group => {
+      //      if (group.enforceRole) {
+      RoleEnforcement(enforceRole = true, role = group.id.root)
+      //      } else {
+      //        RoleEnforcement(role = defaultRole)
+      //      }
+    }).getOrElse(RoleEnforcement(role = defaultRole))
+  }
+
   @POST
   @ManagedAsync
   def create(
@@ -91,7 +106,16 @@ class AppsResource @Inject() (
 
       val rawApp = Raml.fromRaml(Json.parse(body).as[raml.App].normalize(validateAndNormalizeApp))
       val now = clock.now()
-      val app = validateOrThrow(rawApp)(appDefinitionValidator).copy(versionInfo = VersionInfo.OnlyVersion(now))
+
+      // This is not really thread safe, another thread may intercept us and change the enforceRole flag, so we need
+      // to revalidate this inside the the groupManager later
+      val roleEnforcement = getEnforcedRoleForService(rawApp.id)
+      val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
+
+      // TODO AN: This should be somewhere else... Normalization maybe?ß
+      val appWithRole = if (rawApp.role.isDefined) rawApp else rawApp.copy(role = Some(roleEnforcement.role))
+
+      val app = validateOrThrow(appWithRole)(appDefinitionValidator).copy(versionInfo = VersionInfo.OnlyVersion(now))
 
       checkAuthorization(CreateRunSpec, app)
 
@@ -349,9 +373,14 @@ class AppsResource @Inject() (
       case (_, false) => CompleteReplacement
     }
 
+    val roleEnforcement = getEnforcedRoleForService(appId)
+    val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
+
     val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType)
+    val appUpdateWithRole = if (appUpdate.role.isDefined) appUpdate else appUpdate.copy(role = Some(roleEnforcement.role))
+
     val version = clock.now()
-    val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation, clock.now(), service, appDefinitionValidator, validateAndNormalizeApp), version, force))
+    val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdateWithRole, partialUpdate, allowCreation, clock.now(), service, appDefinitionValidator, validateAndNormalizeApp), version, force))
     val response = plan.original.app(appId)
       .map(_ => Response.ok())
       .getOrElse(Response.created(new URI(appId.toString)))
@@ -379,7 +408,11 @@ class AppsResource @Inject() (
 
     def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
       update.id.map(PathId(_)) match {
-        case Some(id) => group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation, clock.now(), service, appDefinitionValidator, validateAndNormalizeApp), version)
+        case Some(id) => {
+          val roleEnforcement = getEnforcedRoleForService(id)
+          val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
+          group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation, clock.now(), service, appDefinitionValidator, validateAndNormalizeApp), version)
+        }
         case None => group
       }
     }

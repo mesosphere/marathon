@@ -27,7 +27,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
     "Task reconciliation sends known running and staged tasks and empty list" in {
       val f = new Fixture
-      val app = AppDefinition(id = PathId("/myapp"))
+      val app = AppDefinition(id = PathId("/myapp"), role = Some("someRole"))
       val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
       val runningInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
       val stagedInstance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()

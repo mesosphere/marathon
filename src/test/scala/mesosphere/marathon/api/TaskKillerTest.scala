@@ -132,7 +132,7 @@ class TaskKillerTest extends UnitTest {
     "kill with wipe will kill running and expunge all" in {
       val f = new Fixture
       val appId = PathId(List("my", "app"))
-      val app = AppDefinition(appId)
+      val app = AppDefinition(appId, role = Some("someRole"))
       val runningInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val reservedInstance: Instance = TestInstanceBuilder.scheduledWithReservation(app)
       val instancesToKill = Seq(runningInstance, reservedInstance)

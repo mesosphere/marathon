@@ -56,7 +56,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     implicit val authorizer: Authorizer = auth.auth
 
     val normalizationConfig = AppNormalization.Configuration(config.defaultNetworkName.toOption, config.mesosBridgeName())
-    implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures)(PluginManager.None)
+    implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, RoleEnforcement())(PluginManager.None)
 
     implicit val validateAndNormalizeApp: Normalization[raml.App] =
       AppHelpers.appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
@@ -145,7 +145,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
   "Apps Resource" should {
     "Create a new app successfully" in new Fixture {
       Given("An app and group")
-      val app = App(id = "/app", cmd = Some("cmd"))
+      val app = App(id = "/app", cmd = Some("cmd"), role = Some("role"))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -435,7 +435,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app",
         cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo")))
+        networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo"))),
+        role = Some("someRole")
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -467,7 +468,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         cmd = Some("cmd"),
         networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo"))),
 
-        container = Some(raml.Container(`type` = EngineType.Mesos))
+        container = Some(raml.Container(`type` = EngineType.Mesos)),
+        role = Some("someRole")
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -543,7 +545,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       val app = App(
         id = "/app",
-        cmd = Some("cmd")
+        cmd = Some("cmd"),
+        role = Some("someRole")
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -574,7 +577,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app",
         cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container)))
+        networks = Seq(Network(mode = NetworkMode.Container)),
+        role = Some("someRole"))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -607,7 +611,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app",
         cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo")))
+        networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo"))),
+        role = Some("someRole")
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -647,7 +652,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
             image = "jdef/helpme",
             network = Some(DockerNetwork.User)
           ))
-        ))
+        )),
+        role = Some("someRole")
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -686,7 +692,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         id = "/app",
         cmd = Some("cmd"),
         container = Some(raml.Container(`type` = EngineType.Docker, docker = Some(container))),
-        portDefinitions = None
+        portDefinitions = None,
+        role = Some("someRole")
       )
 
       val appDef = normalizeAndConvert(app)
@@ -782,7 +789,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
             network = Some(DockerNetwork.Host),
             image = "jdef/helpme"
           ))
-        ))
+        )),
+        role = Some("someRole")
       )
       // mixing ipAddress with Docker containers is not allowed by validation; API migration fails it too
       a[NormalizationException] shouldBe thrownBy(prepareApp(app, groupManager))
@@ -794,7 +802,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("An app with a secret and an envvar secret-ref")
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")),
+        role = Some("someRole"))
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -844,7 +853,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("An app with a secret and an envvar secret-ref")
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo")))))
+        container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo")))),
+        role = Some("someRole"))
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -959,7 +969,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app",
         cmd = Some("cmd"),
-        portDefinitions = Some(raml.PortDefinitions(1000, 1001))
+        portDefinitions = Some(raml.PortDefinitions(1000, 1001)),
+        role = Some("someRole")
 
       )
       val (_, plan) = prepareApp(app, groupManager)
@@ -1843,5 +1854,42 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       updateResponse.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
     }
+
+    "Create a new top-level app with no role defined should set role to default roleß" in new Fixture() {
+      Given("An app without a role")
+      val app = App(id = "/app", cmd = Some("cmd"))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val result = Try {
+        val response = asyncRequest { r =>
+          appsResource.create(body, force = false, auth.request, r)
+        }
+
+        Then("It is successful")
+        response.getStatus should be(201)
+
+        And("the JSON is as expected, including a defined role")
+        import mesosphere.marathon.api.v2.json.Formats._
+        val expected = AppInfo(
+          normalizeAndConvert(app).copy(role = Some(MarathonConf.defaultMesosRole), versionInfo = VersionInfo.OnlyVersion(clock.now())),
+          maybeTasks = Some(immutable.Seq.empty),
+          maybeCounts = Some(TaskCounts.zero),
+          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+        )
+        JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
+      }
+      if (!result.isSuccess) {
+        result.failed.foreach {
+          case v: ValidationFailedException =>
+            assert(result.isSuccess, s"JSON body = ${new String(body)} :: violations = ${v.failure.violations}")
+          case th =>
+            throw th
+        }
+      }
+
+    }
+
   }
 }

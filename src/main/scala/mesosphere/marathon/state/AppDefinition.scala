@@ -87,7 +87,7 @@ case class AppDefinition(
 
     tty: Option[Boolean] = AppDefinition.DefaultTTY,
 
-    role: String = AppDefinition.DefaultRole) extends RunSpec
+    role: Option[String] = AppDefinition.DefaultRole) extends RunSpec
   with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
@@ -217,7 +217,7 @@ case class AppDefinition(
       case _ => // ignore
     }
 
-    builder.setRole(role)
+    role.foreach(builder.setRole)
 
     builder.build
   }
@@ -284,8 +284,7 @@ case class AppDefinition(
       ))
     }
 
-    // TODO AN: What do we deserialize from state if no role is given?
-    val role = if (proto.hasRole) proto.getRole else AppDefinition.DefaultRole
+    val role = if (proto.hasRole) Some(proto.getRole) else AppDefinition.DefaultRole
 
     AppDefinition(
       id = PathId(proto.getId),
@@ -468,9 +467,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultTTY: Option[Boolean] = None
 
-  val DefaultRole: String = "TBD" // TODO AN: Really an empty string? Not sure about that...
-
-  val UndefinedRole: String = "undefined"
+  val DefaultRole: Option[String] = None
 
   /**
     * should be kept in sync with `Apps.DefaultNetworks`
@@ -499,12 +496,20 @@ object AppDefinition extends GeneralPurposeCombinators {
     * errors for every deployment potentially unrelated to the deployed apps.
     */
   def validAppDefinition(
-    enabledFeatures: Set[String])(implicit pluginManager: PluginManager): Validator[AppDefinition] =
+    enabledFeatures: Set[String], roleEnforcement: RoleEnforcement)(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     validator[AppDefinition] { app =>
       app.id is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
       app.dependencies is every(PathId.pathIdValidator)
-
+      app is validWithRoleEnforcement(roleEnforcement)
     } and validBasicAppDefinition(enabledFeatures) and pluginValidators
+
+  private def validWithRoleEnforcement(roleEnforcement: RoleEnforcement): Validator[AppDefinition] = validator[AppDefinition] { app =>
+    if (roleEnforcement.enforceRole) {
+      app.role must notEmpty
+      app.role.get as "role" must be == roleEnforcement.role
+      app.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.role))
+    }
+  }
 
   private def pluginValidators(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     (app: AppDefinition) => {
