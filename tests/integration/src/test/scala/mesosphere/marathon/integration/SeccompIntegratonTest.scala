@@ -13,8 +13,10 @@ class SeccompIntegratonTest extends AkkaIntegrationTest with EmbeddedMarathonTes
 
   val projectDir = sys.props.getOrElse("user.dir", ".")
   override lazy val mesosConfig = MesosConfig(
+    launcher = "linux",
     containerizers = "docker,mesos",
-    isolation = Some("linux/seccomp"),
+    isolation = Some("filesystem/linux,docker/runtime,linux/seccomp"),
+    imageProviders = Some("docker"),
     agentSeccompConfigDir = Some(s"$projectDir/src/test/resources/mesos/seccomp"),
     agentSeccompProfileName = Some("default.json")
   )
@@ -59,9 +61,9 @@ class SeccompIntegratonTest extends AkkaIntegrationTest with EmbeddedMarathonTes
       container = Some(
         Container(
           `type` = EngineType.Mesos,
-          docker = Option(DockerContainer(image = "busybox")),
-          linuxInfo = Option(LinuxInfo(
-            seccomp = Option(Seccomp(
+          docker = Some(DockerContainer(image = "busybox")),
+          linuxInfo = Some(LinuxInfo(
+            seccomp = Some(Seccomp(
               unconfined = unconfined,
               profileName = profileName
             ))
