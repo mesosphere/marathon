@@ -11,19 +11,21 @@ import scala.io.Source
 
 class SeccompIntegratonTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  override lazy val mesosConfig = MesosConfig(isolation = Some("linux/seccomp"))
-
   val projectDir = sys.props.getOrElse("user.dir", ".")
-  override lazy val agentSeccompConfigDir = Some(s"$projectDir/src/test/resources/mesos/seccomp")
-  override lazy val agentSeccompProfileName = Some("default.json")
+  override lazy val mesosConfig = MesosConfig(
+    containerizers = "docker,mesos",
+    isolation = Some("linux/seccomp"),
+    agentSeccompConfigDir = Some(s"$projectDir/src/test/resources/mesos/seccomp"),
+    agentSeccompProfileName = Some("default.json")
+  )
 
-  logger.info(s"--seccomp_config_dir = ${agentSeccompConfigDir.get}")
-  logger.info(s"--seccomp_profile_name = ${agentSeccompProfileName.get}")
+  logger.info(s"Using --seccomp_config_dir = ${mesosConfig.agentSeccompConfigDir.get}")
+  logger.info(s"Using --seccomp_profile_name = ${mesosConfig.agentSeccompProfileName.get}")
   logger.debug(s"Seccomp profile: ${Source.fromFile(s"$projectDir/src/test/resources/mesos/seccomp/default.json").getLines.mkString("\n")}")
 
   "An app definition WITH seccomp profile defined and unconfined = false" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
     Given("an app WITH seccomp profile defined and unconfined = false")
-    val app = seccompApp(PathId("app-with-seccomp-profile-and-unconfined-false"), unconfined = false, profileName = agentSeccompProfileName)
+    val app = seccompApp(PathId("app-with-seccomp-profile-and-unconfined-false"), unconfined = false, profileName = mesosConfig.agentSeccompProfileName)
 
     When("the app is successfully deployed")
     val result = marathon.createAppV2(app)

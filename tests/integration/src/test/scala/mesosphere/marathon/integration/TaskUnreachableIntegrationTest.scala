@@ -15,8 +15,9 @@ import scala.concurrent.duration._
 
 class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
-  override lazy val mesosNumMasters = 1
-  override lazy val mesosNumSlaves = 2
+  override val mesosConfig = MesosConfig(
+    numAgents = 2
+  )
 
   override val marathonArgs: Map[String, String] = Map(
     "reconciliation_initial_delay" -> "5000",
