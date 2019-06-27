@@ -4,11 +4,12 @@ package stream
 import akka.Done
 import akka.actor.Cancellable
 import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.{Sink => AkkaSink, Source, SourceQueueWithComplete}
-import akka.stream.stage.{GraphStageLogic, InHandler, GraphStageWithMaterializedValue}
+import akka.stream.scaladsl.{Flow, Keep, Source, SourceQueueWithComplete, Sink => AkkaSink}
+import akka.stream.stage.{GraphStageLogic, GraphStageWithMaterializedValue, InHandler}
 import akka.stream.{Attributes, Inlet, SinkShape}
 import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.util.CancellableOnce
+
 import scala.util.{Failure, Success, Try}
 
 /**
@@ -110,8 +111,17 @@ object Subject {
     * In the event of stream failure, subscriber streams may or may not receive the last element before receiving the
     * error. All bets are off.
     */
-  def apply[T](queueSize: Int, overflowStrategy: OverflowStrategy): AkkaSink[T, Source[T, Cancellable]] = {
+  def apply[T](queueSize: Int, overflowStrategy: OverflowStrategy, default: Option[T] = None): AkkaSink[T, Source[T, Cancellable]] = {
     require(overflowStrategy != OverflowStrategy.backpressure, "backpressure overflow strategy not supported")
-    AkkaSink.fromGraph(new Subject[T](queueSize, overflowStrategy))
+    val sink = AkkaSink.fromGraph(new Subject[T](queueSize, overflowStrategy))
+
+    default match {
+      case Some(value) =>
+        Flow[T]
+          .prepend(Source.single(value))
+          .toMat(sink)(Keep.right)
+      case None =>
+        sink
+    }
   }
 }
