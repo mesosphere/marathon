@@ -1,10 +1,11 @@
 package mesosphere.marathon
-package core.flow
+package core.launchqueue
 
 import org.rogach.scallop.ScallopConf
 
 trait ReviveOffersConfig extends ScallopConf {
 
+  // TODO: deprecate this
   lazy val reviveOffersForNewApps = toggle(
     "revive_offers_for_new_apps",
     descrYes = "(Default) Call reviveOffers for new or changed apps.",
@@ -16,11 +17,14 @@ trait ReviveOffersConfig extends ScallopConf {
   lazy val minReviveOffersInterval = opt[Long](
     "min_revive_offers_interval",
     descr = "Do not ask for all offers (also already seen ones) more often than this interval (ms).",
-    default = Some(5000))
+    default = Some(30000))
 
+  /**
+    * Deprecated. Has no effect
+    */
   lazy val reviveOffersRepetitions = opt[Int](
     "revive_offers_repetitions",
-    descr = "Repeat every reviveOffer request this many times, delayed by the --min_revive_offers_interval.",
+    descr = "Deprecated parameter; no longer has any effect",
     default = Some(3))
 
   lazy val suppressOffers = toggle(

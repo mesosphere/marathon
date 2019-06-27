@@ -1,5 +1,15 @@
 ## Changes from 1.8.194 to 1.8.xxx
 
+### Revive and Suppress Refactoring
+
+The [revive](http://mesos.apache.org/documentation/latest/scheduler-http-api/#revive) and [suppress](http://mesos.apache.org/documentation/latest/scheduler-http-api/#suppress) logic was unified. In the past Marathon would keep reviving when
+an instance with a reservation was expunged (case 1) or it would revive when instance should be started (case 2). When
+no instance should be started Marathon would suppress offers which could conflict with case 1. With the refactoring
+only one logic decides whether to revive or suppress and thus avoids the conflict. The change also required changing
+the default `--min_revive_offers_interval` to thirty seconds. This should avoid overriding revive calls with a suppress
+too quickly. The `--[disable]_suppress_offers` flag can switch off suppress calls all together. This should be used
+when Marathon fails to clean up reservation which requires offers being sent.
+
 ### Fixed issues
 
 - [DCOS-54927](https://jira.mesosphere.com/browse/DCOS-54927) - Fixed an issue where two independent deployments could interfere with each other resulting in too many tasks launched and/or possibly a stuck deployment.
