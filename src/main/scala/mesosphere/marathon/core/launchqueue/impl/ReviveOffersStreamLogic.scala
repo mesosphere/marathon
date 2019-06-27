@@ -110,7 +110,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
           Nil
         }
       case _ =>
-        logger.warn("End of stream detected")
+        logger.warn("End of stream detected in suppress/revive logic.")
         Nil
     }
 

@@ -18,7 +18,7 @@ trait ReviveOffersConfig extends ScallopConf {
   lazy val minReviveOffersInterval = opt[Long](
     "min_revive_offers_interval",
     descr = "Do not ask for all offers (also already seen ones) more often than this interval (ms).",
-    default = Some(5000))
+    default = Some(30000))
 
   /**
     * Deprecated. Has no effect
@@ -28,7 +28,6 @@ trait ReviveOffersConfig extends ScallopConf {
     descr = "Deprecated parameter; no longer has any effect",
     default = Some(3))
 
-  // TODO: deprecate this
   lazy val suppressOffers = toggle(
     "suppress_offers",
     default = Some(true),
