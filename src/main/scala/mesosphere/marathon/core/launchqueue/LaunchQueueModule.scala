@@ -89,7 +89,7 @@ class LaunchQueueModule(
     val props = ReviveOffersActor.props(
       metrics,
       reviveConfig.minReviveOffersInterval().millis,
-      instanceTracker.instanceUpdates, rateLimiterUpdates, driverHolder)
+      instanceTracker.instanceUpdates, rateLimiterUpdates, driverHolder, reviveConfig.suppressOffers())
     leadershipModule.startWhenLeader(props, "reviveOffers")
   }
 }

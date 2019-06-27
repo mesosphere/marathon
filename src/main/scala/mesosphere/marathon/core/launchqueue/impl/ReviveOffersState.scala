@@ -12,13 +12,24 @@ import mesosphere.marathon.state.RunSpecConfigRef
   * @param scheduledInstances All scheduled instance requiring offers and their run spec ref.
   * @param terminalReservations Ids of terminal resident instance with [[Goal.Decommissioned]].
   * @param activeDelays Delays for run specs.
-  * @param forceExpungedInstances Counts how many resident instances have been force expunged.
+  * @param forceExpungedResidentInstances Counts how many resident instances have been force expunged.
   */
 case class ReviveOffersState(
     scheduledInstances: Map[Instance.Id, RunSpecConfigRef],
     terminalReservations: Set[Instance.Id],
     activeDelays: Set[RunSpecConfigRef],
-    forceExpungedInstances: Long) extends StrictLogging {
+    forceExpungedResidentInstances: Long) extends StrictLogging {
+
+  /** whether the instance has a reservation that should be freed. */
+  private def shouldUnreserve(instance: Instance): Boolean = {
+    instance.reservation.nonEmpty && instance.state.goal == Goal.Decommissioned && instance.state.condition.isTerminal
+  }
+
+  def withSnapshot(snapshot: InstancesSnapshot): ReviveOffersState = {
+    copy(
+      scheduledInstances = snapshot.instances.view.filter(_.isScheduled).map(i => i.instanceId -> i.runSpec.configRef).toMap,
+      terminalReservations = snapshot.instances.view.filter(shouldUnreserve).map(_.instanceId).toSet)
+  }
 
   /** @return this state updated with an instance. */
   def withInstanceUpdated(instance: Instance): ReviveOffersState = {
@@ -26,7 +37,7 @@ case class ReviveOffersState(
     if (instance.isScheduled) {
       logger.info(s"Adding ${instance.instanceId} to scheduled instances.")
       copy(scheduledInstances = scheduledInstances.updated(instance.instanceId, instance.runSpec.configRef))
-    } else if (ReviveOffersState.shouldUnreserve(instance)) {
+    } else if (shouldUnreserve(instance)) {
       logger.info(s"$instance is terminal but has a reservation.")
       copy(scheduledInstances = scheduledInstances - instance.instanceId, terminalReservations = terminalReservations + instance.instanceId)
     } else if (!instance.isScheduled) {
@@ -40,7 +51,7 @@ case class ReviveOffersState(
     logger.info(s"${instance.instanceId} deleted.")
     if (instance.reservation.nonEmpty) {
       logger.info(s"Resident ${instance.instanceId} was force expunged.")
-      copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId, forceExpungedInstances = forceExpungedInstances + 1)
+      copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId, forceExpungedResidentInstances = forceExpungedResidentInstances + 1)
     } else {
       copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId)
     }
@@ -72,17 +83,5 @@ case class ReviveOffersState(
 }
 
 object ReviveOffersState {
-  def apply(snapshot: InstancesSnapshot): ReviveOffersState = {
-    ReviveOffersState(
-      snapshot.instances.view.filter(_.isScheduled).map(i => i.instanceId -> i.runSpec.configRef).toMap,
-      snapshot.instances.view.filter(shouldUnreserve).map(_.instanceId).toSet,
-      Set.empty,
-      0
-    )
-  }
-
-  /** @return whether the instance has a reservation that can be freed. */
-  def shouldUnreserve(instance: Instance): Boolean = {
-    instance.reservation.nonEmpty && instance.state.goal == Goal.Decommissioned && instance.state.condition.isTerminal
-  }
+  def empty = ReviveOffersState(Map.empty, Set.empty, Set.empty, 0)
 }

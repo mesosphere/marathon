@@ -127,7 +127,8 @@ class ReviveOffersActorTest extends AkkaUnitTest {
   class Fixture(
       instancesSnapshot: InstancesSnapshot = InstancesSnapshot(Nil),
       instanceChanges: Source[InstanceChange, NotUsed] = StreamHelpers.sourceNever,
-      delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed] = StreamHelpers.sourceNever) {
+      delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed] = StreamHelpers.sourceNever,
+      enableSuppress: Boolean = true) {
 
     val instanceUpdates: InstanceTracker.InstanceUpdates = Source.single(instancesSnapshot -> instanceChanges)
     implicit val mat: ActorMaterializer = ActorMaterializer()
@@ -141,7 +142,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
 
     lazy val actorRef: TestActorRef[ReviveOffersActor] = TestActorRef[ReviveOffersActor](
       ReviveOffersActor.props(metrics, minReviveOffersInterval = 100.millis,
-        instanceUpdates = instanceUpdates, rateLimiterUpdates = delayUpdates, driverHolder = driverHolder)
+        instanceUpdates = instanceUpdates, rateLimiterUpdates = delayUpdates, driverHolder = driverHolder, enableSuppress = enableSuppress)
     )
 
     val invocationTimeout: VerificationWithTimeout = Mockito.timeout(1000)
