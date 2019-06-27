@@ -33,24 +33,24 @@ case class ReviveOffersState(
 
   /** @return this state updated with an instance. */
   def withInstanceUpdated(instance: Instance): ReviveOffersState = {
-    logger.info(s"${instance.instanceId} updated to ${instance.state}")
+    logger.debug(s"${instance.instanceId} updated to ${instance.state}")
     if (instance.isScheduled) {
-      logger.info(s"Adding ${instance.instanceId} to scheduled instances.")
+      logger.debug(s"Adding ${instance.instanceId} to scheduled instances.")
       copy(scheduledInstances = scheduledInstances.updated(instance.instanceId, instance.runSpec.configRef))
     } else if (shouldUnreserve(instance)) {
-      logger.info(s"$instance is terminal but has a reservation.")
+      logger.debug(s"$instance is terminal but has a reservation.")
       copy(scheduledInstances = scheduledInstances - instance.instanceId, terminalReservations = terminalReservations + instance.instanceId)
     } else if (!instance.isScheduled) {
-      logger.info(s"Removing ${instance.instanceId} from scheduled instances.")
+      logger.debug(s"Removing ${instance.instanceId} from scheduled instances.")
       copy(scheduledInstances = scheduledInstances - instance.instanceId)
     } else this
   }
 
   /** @return this state with passed instance removed from [[scheduledInstances]] and [[terminalReservations]]. */
   def withInstanceDeleted(instance: Instance): ReviveOffersState = {
-    logger.info(s"${instance.instanceId} deleted.")
+    logger.debug(s"${instance.instanceId} deleted.")
     if (instance.reservation.nonEmpty) {
-      logger.info(s"Resident ${instance.instanceId} was force expunged.")
+      logger.debug(s"Resident ${instance.instanceId} was force expunged.")
       copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId, forceExpungedResidentInstances = forceExpungedResidentInstances + 1)
     } else {
       copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId)
@@ -59,13 +59,13 @@ case class ReviveOffersState(
 
   /** @return this state with removed ref from [[activeDelays]]. */
   def withoutDelay(ref: RunSpecConfigRef): ReviveOffersState = {
-    logger.info(s"Marking $ref as no longer actively delayed")
+    logger.debug(s"Marking $ref as no longer actively delayed")
     copy(activeDelays = activeDelays - ref)
   }
 
   /** @return this state with updated [[activeDelays]]. */
   def withDelay(ref: RunSpecConfigRef): ReviveOffersState = {
-    logger.info(s"Marking $ref as actively delayed")
+    logger.debug(s"Marking $ref as actively delayed")
     copy(activeDelays = activeDelays + ref)
   }
 

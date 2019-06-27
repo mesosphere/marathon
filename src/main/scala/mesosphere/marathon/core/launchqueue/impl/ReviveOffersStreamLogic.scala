@@ -95,24 +95,24 @@ object ReviveOffersStreamLogic extends StrictLogging {
         def diffTerminal = current.terminalReservations -- previous.terminalReservations
 
         if (diffScheduled.nonEmpty) {
-          logger.info(s"Issuing revive as there are newly scheduled instances to launch $diffScheduled")
+          logger.info(s"Revive: There are newly scheduled instances to launch: $diffScheduled")
           // There's a very small chance that we decline an offer in response to a revive for an instance not yet registered
           // with the TaskLauncherActor. To deal with the rare case this happens, we just repeat the revive call a few times
           List(Revive, Revive, Revive)
         } else if (diffTerminal.nonEmpty) {
-          logger.info(s"Issuing revive as there are decommissioned resident instances that need their reservations cleaned up: $diffTerminal")
+          logger.info(s"Revive: There are decommissioned resident instances that need their reservations cleaned up: $diffTerminal")
           List(Revive)
         } else if (shouldTryToReleaseForceExpungedResidentInstances(current, previous)) {
-          logger.info(s"Revive to trigger reservation reconciliation.")
+          logger.info(s"Revive: Triggering reservation reconciliation.")
           List(Revive)
         } else if (current.isEmpty) {
-          logger.info(s"Suppress because there are no pending instances right now.")
+          logger.info(s"Suppress: There are no pending instances right now.")
           List(Suppress)
         } else {
           Nil
         }
       case _ =>
-        logger.warn("End of stream detected in suppress/revive logic.")
+        logger.warn("Revive or Suppress: End of stream detected in suppress/revive logic.")
         Nil
     }
 
