@@ -41,11 +41,13 @@ object ReviveOffersStreamLogic extends StrictLogging {
     var justSuppressed: Boolean = false
 
     {
-      case Suppress if justSuppressed =>
-        List(Suppress)
       case Suppress =>
-        justSuppressed = true
-        List(Suppress)
+        if (justSuppressed) {
+          Nil
+        } else {
+          justSuppressed = true
+          List(Suppress)
+        }
       case Revive =>
         justSuppressed = false
         List(Revive)
