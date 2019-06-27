@@ -26,12 +26,14 @@ class OfferMatcherReconciliationModule(
   /** An offer matcher that performs reconciliation on the expected reservations. */
   lazy val offerMatcherReconciler: OfferMatcher = new OfferMatcherReconciler(instanceTracker, groupRepository)
   /** Emits true when offers are wanted for reconciliation. */
-  def offersWantedObservable: Source[Boolean, Cancellable] = offersWantedSubject
+  def offersWantedObservable: Source[Boolean, Cancellable] = {
+    offersWantedSubject.prepend(Source.single(false))
+  }
   /** Starts underlying actors etc. */
   def start(): Unit = offersWantedForReconciliationActor
 
   val (offersWantedObserver, offersWantedSubject) = Source.queue[Boolean](16, OverflowStrategy.backpressure)
-    .toMat(Subject[Boolean](16, OverflowStrategy.dropHead))(Keep.both)
+    .toMat(Subject[Boolean](16, OverflowStrategy.dropHead, default = Some(false)))(Keep.both)
     .run
 
   private[this] lazy val offersWantedForReconciliationActor = leadershipModule.startWhenLeader(

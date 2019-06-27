@@ -31,7 +31,7 @@ class OfferMatcherManagerModule(
     actorName: String = "offerMatcherManager")(implicit val materializer: Materializer) {
 
   private[this] val (inputOffersWanted, offersWanted) = Source.queue[Boolean](16, OverflowStrategy.backpressure)
-    .toMat(Subject[Boolean](16, OverflowStrategy.dropHead))(Keep.both)
+    .toMat(Subject[Boolean](16, OverflowStrategy.dropHead, default = Some(false)))(Keep.both)
     .run
 
   private[this] lazy val offerMatcherManagerMetrics = new OfferMatcherManagerActorMetrics(metrics)
