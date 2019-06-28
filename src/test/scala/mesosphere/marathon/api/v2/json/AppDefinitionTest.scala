@@ -24,7 +24,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
   val validator = AppDefinition.validAppDefinition(enabledFeatures, RoleEnforcement())(PluginManager.None)
 
-  val validatorWithRole = AppDefinition.validAppDefinition(enabledFeatures, RoleEnforcement(enforceRole = true, role = "someRole"))(PluginManager.None)
+  val validatorWithRole = AppDefinition.validAppDefinition(enabledFeatures, RoleEnforcement(enforceRole = true, validRoles = Set("someRole")))(PluginManager.None)
 
   private[this] def appNormalization(app: raml.App): raml.App =
     AppHelpers.appNormalization(
@@ -60,8 +60,8 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         cmd = Some("cmd")
       )
       validatorWithRole(app) should haveViolations(
-        "/role" -> "got aRole, expected someRole",
-        "/acceptedResourceRoles" -> "acceptedResourceRoles must be either [*] or 'someRole'"
+        "/role" -> "got aRole, expected one of: [someRole]",
+        "/acceptedResourceRoles" -> "acceptedResourceRoles must be either [*] or one of 'Set(someRole)'"
       )
 
       app = correct.copy(

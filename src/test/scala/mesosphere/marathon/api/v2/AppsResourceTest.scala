@@ -32,6 +32,8 @@ import scala.util.Try
 
 class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
+  val mesosDefaultRole = "slave_public"
+
   case class Fixture(
       clock: SettableClock = new SettableClock(),
       auth: TestAuthFixture = new TestAuthFixture,
@@ -78,6 +80,34 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
       val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures)
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      val body = Json.stringify(Json.toJson(normed)).getBytes("UTF-8")
+      groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+      groupManager.rootGroup() returns rootGroup
+      groupManager.app(appDef.id) returns Some(appDef)
+      (body, plan)
+    }
+
+    def prepareAppInGroup(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
+      val normed = normalize(app)
+      val appDef = Raml.fromRaml(normed)
+
+      def buildParentGroup(path: PathId, childGroup: Group): Group = {
+        val group = createGroup(path, groups = Set(childGroup))
+        groupManager.group(path) returns Some(group)
+        if (path.parent.isRoot) group else buildParentGroup(path.parent, group)
+      }
+
+      def buildGroupWithApp(path: PathId): Group = {
+        val group = createGroup(path, apps = Map(appDef.id -> appDef))
+        groupManager.group(path) returns Some(group)
+        if (path.parent.isRoot) group else buildParentGroup(path.parent, group)
+      }
+
+      val appPath = PathId(app.id)
+      val group = buildGroupWithApp(appPath.parent)
+
+      val rootGroup = createRootGroup(groups = Set(group), validate = validate, enabledFeatures = enabledFeatures)
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(normed)).getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -145,7 +175,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
   "Apps Resource" should {
     "Create a new app successfully" in new Fixture {
       Given("An app and group")
-      val app = App(id = "/app", cmd = Some("cmd"), role = Some("role"))
+      val app = App(id = "/app", cmd = Some("cmd"))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -162,7 +192,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         And("the JSON is as expected, including a newly generated version")
         import mesosphere.marathon.api.v2.json.Formats._
         val expected = AppInfo(
-          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
+          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
           maybeTasks = Some(immutable.Seq.empty),
           maybeCounts = Some(TaskCounts.zero),
           maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -435,8 +465,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app",
         cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo"))),
-        role = Some("someRole")
+        networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo")))
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -453,7 +482,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -468,8 +497,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         cmd = Some("cmd"),
         networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo"))),
 
-        container = Some(raml.Container(`type` = EngineType.Mesos)),
-        role = Some("someRole")
+        container = Some(raml.Container(`type` = EngineType.Mesos))
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -486,7 +514,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -545,8 +573,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       val app = App(
         id = "/app",
-        cmd = Some("cmd"),
-        role = Some("someRole")
+        cmd = Some("cmd")
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -563,7 +590,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -577,8 +604,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app",
         cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container)),
-        role = Some("someRole"))
+        networks = Seq(Network(mode = NetworkMode.Container)))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -596,6 +622,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val expected = AppInfo(
         normalizeAndConvert(app).copy(
           versionInfo = VersionInfo.OnlyVersion(clock.now()),
+          role = Some(mesosDefaultRole),
           networks = Seq(ContainerNetwork(name = "bar"))
         ),
         maybeTasks = Some(immutable.Seq.empty),
@@ -611,8 +638,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app",
         cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo"))),
-        role = Some("someRole")
+        networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo")))
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -629,7 +655,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -652,8 +678,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
             image = "jdef/helpme",
             network = Some(DockerNetwork.User)
           ))
-        )),
-        role = Some("someRole")
+        ))
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -670,7 +695,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -692,8 +717,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         id = "/app",
         cmd = Some("cmd"),
         container = Some(raml.Container(`type` = EngineType.Docker, docker = Some(container))),
-        portDefinitions = None,
-        role = Some("someRole")
+        portDefinitions = None
       )
 
       val appDef = normalizeAndConvert(app)
@@ -719,7 +743,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val containerDef = appDef.container
       val expected = AppInfo(
         appDef.copy(
-          versionInfo = VersionInfo.OnlyVersion(clock.now()),
+          versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole),
           container = containerDef.map(_.copyWith(
             portMappings = Seq(
               Container.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
@@ -802,8 +826,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("An app with a secret and an envvar secret-ref")
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")),
-        role = Some("someRole"))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -819,7 +842,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -853,8 +876,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("An app with a secret and an envvar secret-ref")
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo")))),
-        role = Some("someRole"))
+        container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo")))))
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -870,7 +892,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -969,9 +991,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app",
         cmd = Some("cmd"),
-        portDefinitions = Some(raml.PortDefinitions(1000, 1001)),
-        role = Some("someRole")
-
+        portDefinitions = Some(raml.PortDefinitions(1000, 1001))
       )
       val (_, plan) = prepareApp(app, groupManager)
       val appJson = Json.toJson(app).as[JsObject]
@@ -989,7 +1009,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now())),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -1855,7 +1875,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     }
 
-    "Create a new top-level app with no role defined should set role to default roleß" in new Fixture() {
+    "Create a new top-level app with no role defined should set role to default role" in new Fixture() {
       Given("An app without a role")
       val app = App(id = "/app", cmd = Some("cmd"))
       val (body, plan) = prepareApp(app, groupManager)
@@ -1888,7 +1908,138 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
             throw th
         }
       }
+    }
 
+    "Create a new top-level app with a custom role defined should reject " in new Fixture() {
+      Given("An app with non-default role")
+      val app = App(id = "/app", cmd = Some("cmd"), role = Some("NotTheDefaultRole"))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
+        Then("The return code indicates a validation error")
+        response.getStatus should be(422)
+        response.getEntity.toString should include("/role")
+        response.getEntity.toString should include("got NotTheDefaultRole, expected ")
+      }
+    }
+
+    "Create a new top-level app with the mesos_role role defined should accept " in new Fixture(configArgs = Seq("--mesos_role", "customMesosRole")) {
+      Given("An app with the mesos_role role")
+      val app = App(id = "/app", cmd = Some("cmd"), role = Some("customMesosRole"))
+      val (body, plan) = prepareApp(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
+        Then("The return code indicates success")
+        response.getStatus should be(201)
+      }
+    }
+
+    "Create a new app inside a group with a custom role defined should reject " in new Fixture() {
+      Given("An app with non-default role")
+      val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("NotTheDefaultRole"))
+      val (body, plan) = prepareAppInGroup(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
+        Then("The return code indicates a validation error")
+        response.getStatus should be(422)
+        response.getEntity.toString should include("/role")
+        response.getEntity.toString should include("got NotTheDefaultRole, expected ")
+      }
+    }
+
+    "Create a new app inside a group with the mesos_role role defined should accept " in new Fixture(configArgs = Seq("--mesos_role", "customMesosRole")) {
+      Given("An app with the mesos_role role")
+      val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("customMesosRole"))
+      val (body, plan) = prepareAppInGroup(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
+        Then("The return code indicates success")
+        response.getStatus should be(201)
+      }
+    }
+
+    "Create a new app inside a group with the top-group role defined should accept " in new Fixture() {
+      Given("An app with the dev role inside a group dev")
+      val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("dev"))
+      val (body, plan) = prepareAppInGroup(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
+        Then("The return code indicates success")
+        response.getStatus should be(201)
+      }
+    }
+
+    "Create a new app inside a sub group with the sub-group name as role defined should reject " in new Fixture() {
+      Given("An app with the dev role inside a group dev")
+      val app = App(id = "/dev/sub/something/app", cmd = Some("cmd"), role = Some("sub"))
+      val (body, plan) = prepareAppInGroup(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
+        Then("The return code indicates success")
+        response.getStatus should be(422)
+        response.getEntity.toString should include("/role")
+        response.getEntity.toString should include("got sub, expected ")
+      }
+    }
+
+    "Create a new app inside a sub group with the top-group role defined should accept " in new Fixture() {
+      Given("An app with the dev role inside a group dev")
+      val app = App(id = "/dev/sub/something/app", cmd = Some("cmd"), role = Some("dev"))
+      val (body, plan) = prepareAppInGroup(app, groupManager)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
+        Then("The return code indicates success")
+        response.getStatus should be(201)
+      }
     }
 
   }

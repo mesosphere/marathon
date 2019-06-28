@@ -8,10 +8,10 @@ import mesosphere.marathon.api.v2.Validation._
 object ResourceRole {
   val Unreserved = "*"
 
-  def validForRole(role: String): Validator[Set[String]] = {
-    isTrue(s"""acceptedResourceRoles must be either [*] or '$role'""") { acceptedResourceRoles =>
+  def validForRole(validRoles: Set[String]): Validator[Set[String]] = {
+    isTrue(s"""acceptedResourceRoles must be either [*] or one of '$validRoles'""") { acceptedResourceRoles =>
       acceptedResourceRoles.size == 1 &&
-        (acceptedResourceRoles.head.equals(Unreserved) || acceptedResourceRoles.head.equals(role))
+        (acceptedResourceRoles.head.equals(Unreserved) || validRoles.contains(acceptedResourceRoles.head))
     }
   }
 

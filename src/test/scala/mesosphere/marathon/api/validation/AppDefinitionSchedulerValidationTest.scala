@@ -13,8 +13,7 @@ class AppDefinitionSchedulerValidationTest extends UnitTest {
   class Fixture {
     def normalApp = AppDefinition(
       id = PathId("/test"),
-      cmd = Some("sleep 1000"),
-      role = Some("someRole"))
+      cmd = Some("sleep 1000"))
 
     def schedulerAppWithApi(
       frameworkName: String = "Framework-42",
@@ -24,7 +23,6 @@ class AppDefinitionSchedulerValidationTest extends UnitTest {
       AppDefinition(
         id = PathId("/test"),
         cmd = Some("sleep 1000"),
-        role = Some("someRole"),
         instances = 1,
         upgradeStrategy = UpgradeStrategy(0, 0),
         labels = Map(

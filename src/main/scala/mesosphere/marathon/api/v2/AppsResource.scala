@@ -82,16 +82,16 @@ class AppsResource @Inject() (
     val defaultRole = config.mesosRole.getOrElse(MarathonConf.defaultMesosRole)
 
     // We have a service in the root group, no enforced role here
-    if (servicePathId.parent.isRoot) return RoleEnforcement(role = defaultRole)
+    if (servicePathId.parent.isRoot) return RoleEnforcement(validRoles = Set(defaultRole))
     val rootPath = servicePathId.rootPath
 
     groupManager.group(rootPath).map(group => {
       //      if (group.enforceRole) {
-      RoleEnforcement(enforceRole = true, role = group.id.root)
+      //      RoleEnforcement(enforceRole = true, validRoles = Seq(group.id.root))
       //      } else {
-      //        RoleEnforcement(role = defaultRole)
+      RoleEnforcement(validRoles = Set(defaultRole, group.id.root))
       //      }
-    }).getOrElse(RoleEnforcement(role = defaultRole))
+    }).getOrElse(RoleEnforcement(validRoles = Set(defaultRole)))
   }
 
   @POST
@@ -113,7 +113,7 @@ class AppsResource @Inject() (
       val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
 
       // TODO AN: This should be somewhere else... Normalization maybe?ß
-      val appWithRole = if (rawApp.role.isDefined) rawApp else rawApp.copy(role = Some(roleEnforcement.role))
+      val appWithRole = if (rawApp.role.isDefined) rawApp else rawApp.copy(role = Some(roleEnforcement.defaultRole))
 
       val app = validateOrThrow(appWithRole)(appDefinitionValidator).copy(versionInfo = VersionInfo.OnlyVersion(now))
 
@@ -377,7 +377,7 @@ class AppsResource @Inject() (
     val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
 
     val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType)
-    val appUpdateWithRole = if (appUpdate.role.isDefined) appUpdate else appUpdate.copy(role = Some(roleEnforcement.role))
+    val appUpdateWithRole = if (appUpdate.role.isDefined) appUpdate else appUpdate.copy(role = Some(roleEnforcement.defaultRole))
 
     val version = clock.now()
     val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdateWithRole, partialUpdate, allowCreation, clock.now(), service, appDefinitionValidator, validateAndNormalizeApp), version, force))

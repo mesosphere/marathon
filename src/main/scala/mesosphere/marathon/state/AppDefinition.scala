@@ -506,8 +506,13 @@ object AppDefinition extends GeneralPurposeCombinators {
   private def validWithRoleEnforcement(roleEnforcement: RoleEnforcement): Validator[AppDefinition] = validator[AppDefinition] { app =>
     if (roleEnforcement.enforceRole) {
       app.role must notEmpty
-      app.role.get as "role" must be == roleEnforcement.role
-      app.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.role))
+      app.role.get as "role" is in(roleEnforcement.validRoles)
+      app.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
+    } else {
+      if (app.role.isDefined) {
+        app.role.get as "role" is in(roleEnforcement.validRoles)
+        app.acceptedResourceRoles is empty or valid(ResourceRole.validForRole(roleEnforcement.validRoles))
+      }
     }
   }
 

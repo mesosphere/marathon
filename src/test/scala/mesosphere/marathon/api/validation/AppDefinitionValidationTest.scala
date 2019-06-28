@@ -23,8 +23,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
         val app = AppDefinition(
           id = PathId("/a/b/c/d"),
           cmd = Some("sleep 1000"),
-          dependencies = Set(PathId("/a/b/c/e")),
-          role = Some("someRole")
+          dependencies = Set(PathId("/a/b/c/e"))
         )
         validator(app) shouldBe aSuccess
       }
@@ -33,8 +32,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
         val app = AppDefinition(
           id = PathId("/a/b/c/d"),
           cmd = Some("sleep 1000"),
-          dependencies = Set(PathId("/x/y/z")),
-          role = Some("someRole")
+          dependencies = Set(PathId("/x/y/z"))
         )
         validator(app) shouldBe aSuccess
       }
