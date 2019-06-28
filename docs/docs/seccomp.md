@@ -4,7 +4,7 @@ title: seccomp
 
 Secure computing mode (seccomp) is a Linux kernel feature used to restrict the actions available within a running container. The seccomp() system call operates on the seccomp state of the calling process. You can use this feature to restrict your application’s access to the underlying system.
 
-Seccomp support was introduced in Mesos 1.8 which [introduces the ability to configure seccomp](http://mesos.apache.org/documentation/latest/isolators/linux-seccomp/) through the UCR containerizer to provide a higher degree of isolation and security to services deployed on Mesos.  In order to use seccomp within Marathon, it is necessary to configure a Mesos cluster to enable seccomp with the seccomp isolator.
+Seccomp support was introduced in Mesos 1.8 which [introduces the ability to configure seccomp](http://mesos.apache.org/documentation/latest/isolators/linux-seccomp/) through the UCR containerizer to provide a higher degree of isolation and security to services deployed on Mesos.  In order to use seccomp within Marathon, it is necessary to configure the Mesos agents in a Mesos cluster to enable seccomp with the seccomp isolator.
 
 # Marathon Apps/Pods under a Default Profile
 Once Mesos agents are configured with the seccomp isolator with a default profile, all tasks launched by Marathon will launch under that seccomp profile.  All apps and pods that do not define a seccomp configuration will be launch on an agent under the restrictions defined by the default seccomp configuration.
