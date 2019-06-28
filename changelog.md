@@ -1,3 +1,10 @@
+## Changes from 1.8.194 to 1.9.xxx
+
+### `undefined` is an Illegal `--gpu_scheduling_behavior` Parameter
+
+As described [in an earlies note](#--gpu_scheduling_behavior-default-is-now-restricted-undefined-is-deprecated-and-will-be-removed) `undefined`
+is removed with `1.9.x`.
+
 ## Changes from 1.8.194 to 1.8.xxx
 
 ### Revive and Suppress Refactoring
