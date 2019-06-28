@@ -2,7 +2,7 @@
 
 @Library('sec_ci_libs@v2-latest') _
 
-def master_branches = ["master", ] as String[]
+def master_branches = ["master", "releases/1.8", ] as String[]
 
 ansiColor('xterm') {
   // using shakedown node because it's a lightweight alpine docker image instead of full VM
