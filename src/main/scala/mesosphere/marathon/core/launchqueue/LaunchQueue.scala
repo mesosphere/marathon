@@ -4,7 +4,7 @@ package core.launchqueue
 import akka.Done
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.launchqueue.impl.RateLimiter.DelayUpdate
-import mesosphere.marathon.state.RunSpec
+import mesosphere.marathon.state.{RunSpec, RunSpecConfigRef}
 
 import scala.concurrent.Future
 
@@ -19,7 +19,7 @@ trait LaunchQueue {
   def add(spec: RunSpec, count: Int = 1): Future[Done]
 
   /** Get delay (if any) on the given RunnableSpec */
-  def getDelay(spec: RunSpec): Future[DelayUpdate]
+  def getDelay(specConfigRef: RunSpecConfigRef): Future[DelayUpdate]
 
   /** Add delay to the given RunnableSpec because of a failed instance */
   def addDelay(spec: RunSpec): Unit

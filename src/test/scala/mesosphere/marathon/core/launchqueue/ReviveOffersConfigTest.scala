@@ -1,5 +1,5 @@
 package mesosphere.marathon
-package core.flow
+package core.launchqueue
 
 import mesosphere.UnitTest
 import mesosphere.marathon.test.MarathonTestHelper

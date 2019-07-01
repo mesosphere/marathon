@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.matcher.reconcile.impl
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.impl.TaskLabels
@@ -67,6 +67,10 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
             instancesBySpec.instance(instanceId).isEmpty ||
               (rootGroup.app(instanceId.runSpecId).isEmpty && rootGroup.pod(instanceId.runSpecId).isEmpty)
 
+          def terminalResident(id: Instance.Id): Boolean = instancesBySpec.instance(id).forall { instance =>
+            instance.reservation.nonEmpty && instance.state.goal == Goal.Decommissioned && instance.state.condition.isTerminal
+          }
+
           val instanceOps: Seq[InstanceOpWithSource] = resourcesByInstanceId.collect {
             case (instanceId, spuriousResources) if spurious(instanceId) =>
               val unreserveAndDestroy =
@@ -76,6 +80,16 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
                   resources = spuriousResources
                 )
               logger.warn(s"removing spurious resources and volumes of $instanceId because the instance no longer exist")
+              InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
+
+            case (instanceId, spuriousResources) if terminalResident(instanceId) =>
+              val unreserveAndDestroy =
+                InstanceOp.UnreserveAndDestroyVolumes(
+                  stateOp = InstanceUpdateOperation.Unreserve(instanceId),
+                  oldInstance = instancesBySpec.instance(instanceId),
+                  resources = spuriousResources
+                )
+              logger.info(s"Freeing reservation for terminal $instanceId")
               InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
           }(collection.breakOut)
 

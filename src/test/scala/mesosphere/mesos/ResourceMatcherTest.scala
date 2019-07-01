@@ -1062,45 +1062,6 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       gpuAppMatchResponse shouldBe a[ResourceMatchResponse.Match]
     }
 
-    "match any offer on gpu-enabled agent with a undefined gpu scheduling behavior" in {
-      val gpuConfig = AllConf.withTestConfig("--draining_seconds", "300", "--gpu_scheduling_behavior", "undefined")
-      val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
-        .build()
-      val app = AppDefinition(
-        id = "/test".toRootPath,
-        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
-        portDefinitions = PortDefinitions(0, 0)
-      )
-
-      val gpuApp = AppDefinition(
-        id = "/gpu".toRootPath,
-        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0, gpus = 1),
-        portDefinitions = PortDefinitions(0, 0)
-      )
-
-      val nonGpuResourceMatchResponse = ResourceMatcher.matchResources(
-        offer,
-        app,
-        knownInstances = Seq.empty,
-        unreservedResourceSelector,
-        gpuConfig,
-        Seq.empty
-      )
-
-      nonGpuResourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
-
-      val gpuResourceMatchResponse = ResourceMatcher.matchResources(
-        offer,
-        gpuApp,
-        knownInstances = Seq.empty,
-        unreservedResourceSelector,
-        gpuConfig,
-        Seq.empty
-      )
-
-      gpuResourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
-    }
-
     "match any offer on gpu-enabled agent with a unrestricted gpu scheduling behavior" in {
       val gpuConfig = AllConf.withTestConfig(
         "--draining_seconds", "300",

@@ -255,13 +255,6 @@ object ResourceMatcher extends StrictLogging {
       val availableGPUs = groupedResources.getOrElse(Resource.GPUS, Nil).foldLeft(0.0)(_ + _.getScalar.getValue)
       val gpuResourcesAreWasted = availableGPUs > 0 && runSpec.resources.gpus == 0
       applicationSpecificGpuBehavior.getOrElse(conf.gpuSchedulingBehavior()) match {
-        case GpuSchedulingBehavior.Undefined =>
-          if (gpuResourcesAreWasted) {
-            addOnMatch(() => logger.warn(s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
-              "will be launched on an agent with GPU resources."))
-          }
-          true
-
         case GpuSchedulingBehavior.Restricted =>
           val noPersistentVolumeToMatch = PersistentVolumeMatcher.matchVolumes(offer, reservedInstances).isEmpty
           if (!gpuResourcesAreWasted) {

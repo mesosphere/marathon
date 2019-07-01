@@ -381,10 +381,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
           callbackEvent.eventType == "failed_health_check_event"
       )
 
-      check.afterDelay(20.seconds, true)
       for (event <- Iterator.continually(interestingEvent()).take(10)) {
         event.eventType should be("failed_health_check_event")
       }
+      check.afterDelay(20.seconds, true)
 
       When("The app is deleted")
       val delete = marathon.deleteApp(id, force = true)

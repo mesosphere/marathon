@@ -122,11 +122,10 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val projectDir = sys.props.getOrElse("user.dir", ".")
       val containerDir = "marathon"
       val id = testBasePath / "recover-simple-persistent-pod"
-      //val cmd = s"""echo hello >> $containerPath/data && ${appMockCmd(id, "v1")}"""
       def appMockCommand(port: String) =
         s"""
            |echo APP PROXY $$MESOS_TASK_ID RUNNING; \\
-           |echo "hello" >> $containerDir/data/test; \\
+           |echo "hello" >> $containerDir/data/test && \\
            |$containerDir/python/app_mock.py $port $id v1 http://httpbin.org/anything
         """.stripMargin
 
@@ -140,8 +139,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
             endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
             healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task1")), path = Some("/ping"))),
             volumeMounts = Seq(
-              VolumeMount(Some("python"), s"$containerDir/python", false),
-              VolumeMount(Some("data"), s"$containerDir/data", true)
+              VolumeMount(Some("python"), s"$containerDir/python", true),
+              VolumeMount(Some("data"), s"$containerDir/data", false)
             )
           )
         ),

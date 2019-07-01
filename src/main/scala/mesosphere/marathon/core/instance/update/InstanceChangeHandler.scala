@@ -23,12 +23,14 @@ trait InstanceChangeHandler {
   def process(update: InstanceChange): Future[Done]
 }
 
-case class InstancesSnapshot(instances: Seq[Instance])
+sealed trait InstanceChangeOrSnapshot
+
+case class InstancesSnapshot(instances: Seq[Instance]) extends InstanceChangeOrSnapshot
 
 /**
   * An event notifying of an [[Instance]] change.
   */
-sealed trait InstanceChange extends Product with Serializable {
+sealed trait InstanceChange extends InstanceChangeOrSnapshot with Product with Serializable {
   /** The affected [[Instance]] */
   val instance: Instance
   /** Id of the affected [[Instance]] */
