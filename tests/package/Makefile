@@ -23,8 +23,8 @@ target/mesos-version: ../../project/Dependencies.scala
 	[ "$$(wc -l $@.tmp | awk '{print $$1}')" = 1 ]
 	mv $@.tmp $@
 
-target/debian8.built: debian8/Dockerfile debian8/mesos-version
-	cd debian8 && docker build . -t marathon-package-test:debian8
+target/debian9.built: debian9/Dockerfile debian9/mesos-version
+	cd debian9 && docker build . -t marathon-package-test:debian9
 	mkdir -p target
 	touch $@
 
@@ -46,11 +46,11 @@ target/centos7.built: centos7/Dockerfile centos7/mesos-version
 	cd centos7 && docker build . -t marathon-package-test:centos7
 	touch $@
 
-target/mesos.built: target/debian8.built mesos/Dockerfile
+target/mesos.built: target/debian9.built mesos/Dockerfile
 	cd mesos && docker build . -t marathon-package-test:mesos
 	touch $@
 
 test: | all
 	amm test.sc all
 
-all: target/mesos.built target/debian8.built target/centos7.built target/centos6.built target/ubuntu1404.built target/ubuntu1604.built
+all: target/mesos.built target/debian9.built target/centos7.built target/centos6.built target/ubuntu1404.built target/ubuntu1604.built
