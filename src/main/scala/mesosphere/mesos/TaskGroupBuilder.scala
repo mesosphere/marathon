@@ -23,11 +23,6 @@ import scala.collection.immutable.Seq
 
 object TaskGroupBuilder extends StrictLogging {
 
-  // These labels are necessary for AppC images to work.
-  // Given that Docker only works under linux with 64bit,
-  // let's (for now) set these values to reflect that.
-  protected[mesos] val LinuxAmd64 = Map("os" -> "linux", "arch" -> "amd64")
-
   private val ephemeralVolumePathPrefix = "volumes/"
 
   case class BuilderConfig(

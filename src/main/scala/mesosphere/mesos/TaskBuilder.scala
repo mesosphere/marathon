@@ -173,7 +173,6 @@ class TaskBuilder(
           case d: Container.Docker => d.copy(parameters = d.parameters :+
             state.Parameter("label", s"MESOS_TASK_ID=${taskId.mesosTaskId.getValue}")
           )
-          case a: Container.MesosAppC => a.copy(labels = a.labels + ("MESOS_TASK_ID" -> taskId.mesosTaskId.getValue))
           case c => c
         }
         builder.mergeFrom(
