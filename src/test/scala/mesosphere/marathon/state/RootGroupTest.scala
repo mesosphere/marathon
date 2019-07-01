@@ -11,6 +11,8 @@ import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.GroupCreation
 
 class RootGroupTest extends UnitTest with GroupCreation {
+  val emptyConfig = AllConf.withTestConfig()
+
   "A Group" should {
 
     "find an app by its path" in {
@@ -167,7 +169,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       changed.transitiveAppIds.map(_.toString) should contain theSameElementsAs (Vector("/some/nested"))
 
       Then("the resulting group should be valid when represented in the V2 API model")
-      validate(changed)(RootGroup.rootGroupValidator(Set())) should be(Success)
+      validate(changed)(RootGroup.rootGroupValidator(emptyConfig)) should be(Success)
     }
 
     "cannot replace a group with apps by an app definition" in {
@@ -196,7 +198,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       changed.transitiveAppIds.map(_.toString) should contain theSameElementsAs (Vector("/some/nested", "/some/nested/path2/app"))
 
       Then("the conflict will be detected by our V2 API model validation")
-      val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
+      val result = validate(changed)(RootGroup.rootGroupValidator(emptyConfig))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstraints(result).head
         .constraint should be("Groups and Applications may not have the same identifier.")
@@ -229,7 +231,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       changed.transitivePodIds.map(_.toString) should contain theSameElementsAs (Vector("/some/nested/path2/pod"))
 
       Then("the conflict will be detected by our V2 API model validation")
-      val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
+      val result = validate(changed)(RootGroup.rootGroupValidator(emptyConfig))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstraints(result).head
         .constraint should be("Groups and Applications may not have the same identifier.")
@@ -264,7 +266,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       changed.transitivePodIds.map(_.toString) should contain theSameElementsAs (Vector("/some/nested", "/some/nested/path2/pod"))
 
       Then("the conflict will be detected by our V2 API model validation")
-      val result = validate(changed)(RootGroup.rootGroupValidator(Set()))
+      val result = validate(changed)(RootGroup.rootGroupValidator(emptyConfig))
       result.isFailure should be(true)
       ValidationHelper.getAllRuleConstraints(result).head
         .constraint should be("Groups and Pods may not have the same identifier.")
@@ -499,7 +501,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       ))
 
       When("group is validated")
-      val result = validate(rootGroup)(RootGroup.rootGroupValidator(Set()))
+      val result = validate(rootGroup)(RootGroup.rootGroupValidator(emptyConfig))
 
       Then("result should be a success")
       result.isSuccess should be(true)
@@ -513,7 +515,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       ), validate = false)
 
       When("group is validated")
-      val invalidResult = validate(invalid)(RootGroup.rootGroupValidator(Set()))
+      val invalidResult = validate(invalid)(RootGroup.rootGroupValidator(emptyConfig))
 
       Then("validation is not successful")
       invalidResult.isSuccess should be(false)
@@ -528,7 +530,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       ), validate = false)
 
       When("group is validated")
-      val invalidResult = validate(invalid)(RootGroup.rootGroupValidator(Set()))
+      val invalidResult = validate(invalid)(RootGroup.rootGroupValidator(emptyConfig))
 
       Then("validation is not successful")
       invalidResult.isSuccess should be(false)
@@ -540,7 +542,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val invalid = createRootGroup(apps = Map(app.id -> app), validate = false)
 
       When("group is validated")
-      val invalidResult = validate(invalid)(RootGroup.rootGroupValidator(Set()))
+      val invalidResult = validate(invalid)(RootGroup.rootGroupValidator(emptyConfig))
 
       Then("validation is not successful")
       invalidResult.isSuccess should be(false)
@@ -554,7 +556,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       ))
 
       When("group is validated")
-      val validResult = validate(valid)(RootGroup.rootGroupValidator(Set()))
+      val validResult = validate(valid)(RootGroup.rootGroupValidator(emptyConfig))
 
       Then("validation is successful")
       validResult.isSuccess should be(true)

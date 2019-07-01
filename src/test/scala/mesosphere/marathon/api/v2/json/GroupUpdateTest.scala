@@ -10,7 +10,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 
 class GroupUpdateTest extends UnitTest with GroupCreation {
-  val noEnabledFeatures = Set.empty[String]
+  val noEnabledFeatures = AllConf.withTestConfig()
   val appConversionFunc: (App => AppDefinition) = { app =>
     // assume canonical form and that the app is valid
     Raml.fromRaml(AppNormalization.apply(AppNormalization.Configuration(None, "bridge-name")).normalized(app))
@@ -83,7 +83,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val result: RootGroup = RootGroup.fromGroup(Raml.fromRaml(
         GroupConversion(update, actual, timestamp) -> appConversionFunc))
 
-      validate(result)(RootGroup.rootGroupValidator(Set())).isSuccess should be(true)
+      validate(result)(RootGroup.rootGroupValidator(noEnabledFeatures)).isSuccess should be(true)
 
       Then("The update is applied correctly")
       result.id should be(PathId.empty)
@@ -133,7 +133,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val next = Raml.fromRaml(GroupConversion(update, current, timestamp) -> appConversionFunc)
       val result = createRootGroup(groups = Set(next))
 
-      validate(result)(RootGroup.rootGroupValidator(Set())).isSuccess should be(true)
+      validate(result)(RootGroup.rootGroupValidator(noEnabledFeatures)).isSuccess should be(true)
 
       Then("The update is reflected in the current group")
       result.id.toString should be("/")

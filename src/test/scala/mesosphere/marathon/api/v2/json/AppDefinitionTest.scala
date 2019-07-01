@@ -61,7 +61,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       )
       validatorWithRole(app) should haveViolations(
         "/role" -> "got aRole, expected one of: [someRole]",
-        "/acceptedResourceRoles" -> "acceptedResourceRoles must be either [*] or one of 'Set(someRole)'"
+        "/acceptedResourceRoles" -> "acceptedResourceRoles must be either [*] or one of [someRole]"
       )
 
       app = correct.copy(

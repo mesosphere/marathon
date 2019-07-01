@@ -24,7 +24,7 @@ import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 import mesosphere.marathon.raml.{EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, PersistentVolumeInfo, PersistentVolumeType, Pod, PodPersistentVolume, PodSecretVolume, PodState, PodStatus, Raml, Resources, VolumeMount}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableStrategy, VersionInfo}
-import mesosphere.marathon.test.{JerseyTest, Mockito, SettableClock}
+import mesosphere.marathon.test.{GroupCreation, JerseyTest, Mockito, SettableClock}
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
 
@@ -813,6 +813,234 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
     }
 
+    "Support multi-roles" when {
+
+      "A pod definition with no role defined should be success and have default role set" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+          val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
+          pod.role.isDefined should be(true)
+          pod.role.get should be("slave_public")
+        }
+      }
+
+      "A pod definition with no role defined should be success and have mesos_role role set" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture(configArgs = Seq("--mesos_role", "customMesosRole"))
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+          val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
+          pod.role.isDefined should be(true)
+          pod.role.get should be("customMesosRole")
+        }
+      }
+
+      "A pod definition with role defined the same as mesos_role should be success" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture(configArgs = Seq("--mesos_role", "customMesosRole"))
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "role": "customMesosRole",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+          val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
+          pod.role.isDefined should be(true)
+          pod.role.get should be("customMesosRole")
+        }
+      }
+
+      "A pod definition with not default role defined should fail" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "role": "NotTheDefaultRole",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(422)
+          response.getEntity.toString should include("expected one of: ")
+        }
+      }
+
+      "A pod definition in a top-level group no role defined should have the default role" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        f.prepareGroup("/dev")
+
+        val podJson =
+          """
+            |{
+            |    "id": "/dev/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+          val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
+          pod.role.isDefined should be(true)
+          pod.role.get should be("slave_public")
+        }
+      }
+
+      "A pod definition in a top-level group with the group role defined should be success" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        f.prepareGroup("/dev")
+
+        val podJson =
+          """
+            |{
+            |    "id": "/dev/pod",
+            |    "role": "dev",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+    }
+
     "Support seccomp" when {
 
       "Accept a pod definition with seccomp profile defined and unconfined = false" in {
@@ -1252,8 +1480,18 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       podsResource: PodsResource,
       auth: TestAuthFixture,
       podSystem: PodManager,
-      clock: SettableClock
-  )
+      clock: SettableClock,
+      groupManager: GroupManager
+  ) extends GroupCreation {
+
+    def prepareGroup(groupId: String): Unit = {
+      val groupPath = PathId(groupId)
+
+      val group = createGroup(groupPath)
+
+      groupManager.group(groupPath) returns Some(group)
+    }
+  }
 
   object Fixture {
     def apply(
@@ -1271,13 +1509,18 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       implicit val authn: Authenticator = auth.auth
       implicit val clock = new SettableClock()
       implicit val pluginManager: PluginManager = PluginManager.None
+      implicit val groupManager: GroupManager = mock[GroupManager]
+
       scheduler.mesosMasterVersion() returns Some(SemanticVersion(0, 0, 0))
+
       new Fixture(
         new PodsResource(config),
         auth,
         podSystem,
-        clock
+        clock,
+        groupManager
       )
     }
+
   }
 }

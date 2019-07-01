@@ -112,7 +112,7 @@ class AppsResource @Inject() (
       val roleEnforcement = getEnforcedRoleForService(rawApp.id)
       val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
 
-      // TODO AN: This should be somewhere else... Normalization maybe?ß
+      // TODO AN: This should be somewhere else... Normalization maybe?
       val appWithRole = if (rawApp.role.isDefined) rawApp else rawApp.copy(role = Some(roleEnforcement.defaultRole))
 
       val app = validateOrThrow(appWithRole)(appDefinitionValidator).copy(versionInfo = VersionInfo.OnlyVersion(now))

@@ -23,12 +23,13 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{Pod, Raml}
-import mesosphere.marathon.state.{PathId, Timestamp, VersionInfo}
+import mesosphere.marathon.state.{PathId, RoleEnforcement, Timestamp, VersionInfo}
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json.Json
 import Normalization._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.core.group.GroupManager
 
 import scala.concurrent.ExecutionContext
 import scala.async.Async._
@@ -48,14 +49,11 @@ class PodsResource @Inject() (
     mat: Materializer,
     clock: Clock,
     scheduler: MarathonScheduler,
+    groupManager: GroupManager,
     pluginManager: PluginManager,
     val executionContext: ExecutionContext) extends RestResource with AuthResource {
 
   import PodsResource._
-  implicit def podDefValidator: Validator[Pod] =
-    PodsValidation.podValidator(
-      config.availableFeatures,
-      scheduler.mesosMasterVersion().getOrElse(SemanticVersion(0, 0, 0)), config.defaultNetworkName.toOption)
 
   // If we change/add/upgrade the notion of a Pod and can't do it purely in the internal model,
   // update the json first
@@ -73,6 +71,23 @@ class PodsResource @Inject() (
   private def unmarshal(bytes: Array[Byte]): Pod = {
     // no normalization or validation here, that happens elsewhere and in a precise order
     Json.parse(bytes).as[Pod]
+  }
+
+  // TODO AN: Merge this with the one from AppsResource
+  private def getEnforcedRoleForService(servicePathId: PathId): RoleEnforcement = {
+    val defaultRole = config.mesosRole.getOrElse(MarathonConf.defaultMesosRole)
+
+    // We have a service in the root group, no enforced role here
+    if (servicePathId.parent.isRoot) return RoleEnforcement(validRoles = Set(defaultRole))
+    val rootPath = servicePathId.rootPath
+
+    groupManager.group(rootPath).map(group => {
+      //      if (group.enforceRole) {
+      //      RoleEnforcement(enforceRole = true, validRoles = Seq(group.id.root))
+      //      } else {
+      RoleEnforcement(validRoles = Set(defaultRole, group.id.root))
+      //      }
+    }).getOrElse(RoleEnforcement(validRoles = Set(defaultRole)))
   }
 
   /**
@@ -100,8 +115,21 @@ class PodsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
       val podDef = unmarshal(body)
-      validateOrThrow(podDef)
-      val pod = normalize(Raml.fromRaml(podDef.normalize))
+
+      // This is not really thread safe, another thread may intercept us and change the enforceRole flag, so we need
+      // to revalidate this inside the the groupManager later
+      val roleEnforcement = getEnforcedRoleForService(PathId(podDef.id))
+
+      // TODO AN: This should be somewhere else... Normalization maybe?
+      val podWithRole = if (podDef.role.isDefined) podDef else podDef.copy(role = Some(roleEnforcement.defaultRole))
+
+      def podDefValidator: Validator[Pod] =
+        PodsValidation.podValidator(
+          config.availableFeatures,
+          scheduler.mesosMasterVersion().getOrElse(SemanticVersion(0, 0, 0)), config.defaultNetworkName.toOption, roleEnforcement)
+
+      validateOrThrow(podWithRole)(podDefValidator)
+      val pod = normalize(Raml.fromRaml(podWithRole.normalize))
       validateOrThrow(pod)(PodsValidation.pluginValidators)
 
       checkAuthorization(CreateRunSpec, pod)
@@ -128,7 +156,17 @@ class PodsResource @Inject() (
 
       val podId = id.toRootPath
       val podDef = unmarshal(body)
-      validateOrThrow(podDef)
+
+      // This is not really thread safe, another thread may intercept us and change the enforceRole flag, so we need
+      // to revalidate this inside the the groupManager later
+      val roleEnforcement = getEnforcedRoleForService(PathId(podDef.id))
+
+      def podDefValidator: Validator[Pod] =
+        PodsValidation.podValidator(
+          config.availableFeatures,
+          scheduler.mesosMasterVersion().getOrElse(SemanticVersion(0, 0, 0)), config.defaultNetworkName.toOption, roleEnforcement)
+
+      validateOrThrow(podDef)(podDefValidator)
       if (podId != podDef.id.toRootPath) {
         Response.status(Status.BAD_REQUEST).entity(
           s"""

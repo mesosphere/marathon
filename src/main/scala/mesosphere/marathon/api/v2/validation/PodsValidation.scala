@@ -12,7 +12,7 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{PathId, ResourceRole, RootGroup}
+import mesosphere.marathon.state.{PathId, ResourceRole, RoleEnforcement, RootGroup}
 import mesosphere.marathon.util.SemanticVersion
 // scalastyle:on
 
@@ -227,12 +227,11 @@ trait PodsValidation extends GeneralPurposeCombinators {
       }
     }
 
-  val haveValidAcceptedResourceRoles: Validator[Pod] = validator[Pod] { pod =>
-    (podAcceptedResourceRoles(pod) as "acceptedResourceRoles"
-      is empty or valid(ResourceRole.validAcceptedResourceRoles("pod", podPersistentVolumes(pod).nonEmpty)))
+  def haveValidAcceptedResourceRoles(validRoles: Set[String]): Validator[Pod] = validator[Pod] { pod =>
+    (podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is empty or valid(ResourceRole.validAcceptedResourceRoles("pod", podPersistentVolumes(pod).nonEmpty)))
   }
 
-  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String]): Validator[Pod] = validator[Pod] { pod =>
+  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String], roleEnforcement: RoleEnforcement): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
@@ -255,7 +254,35 @@ trait PodsValidation extends GeneralPurposeCombinators {
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
     pod should complyWithPodUpgradeStrategyRules
     pod should haveUnreachableDisabledForResidentPods
-    pod should haveValidAcceptedResourceRoles
+    pod should haveValidAcceptedResourceRoles(roleEnforcement.validRoles)
+    pod is validWithRoleEnforcement(roleEnforcement)
+  }
+
+  private def validWithRoleEnforcement(roleEnforcement: RoleEnforcement): Validator[Pod] = new Validator[Pod] {
+    override def apply(pod: Pod): Result = {
+      if (roleEnforcement.enforceRole) {
+        if (pod.role.isEmpty) return Failure(Set(RuleViolation(pod, "must not be empty", Descriptions.Path(Descriptions.Explicit("role")))))
+        if (pod.role.isDefined) {
+          if (!roleEnforcement.validRoles.contains(pod.role.get)) return Failure(Set(RuleViolation(pod.role.get, "expected one of: " + roleEnforcement.validRoles.mkString("[", ",", "]"), Descriptions.Path(Descriptions.Explicit("role")))))
+        }
+        if (podAcceptedResourceRoles(pod).nonEmpty) {
+          ResourceRole.validForRole(roleEnforcement.validRoles)(podAcceptedResourceRoles(pod)) match {
+            case res: Failure => return res
+          }
+        }
+      } else {
+        if (pod.role.isDefined) {
+          if (!roleEnforcement.validRoles.contains(pod.role.get)) return Failure(Set(RuleViolation(pod.role.get, "expected one of: " + roleEnforcement.validRoles.mkString("[", ",", "]"), Descriptions.Path(Descriptions.Explicit("role")))))
+
+          if (podAcceptedResourceRoles(pod).nonEmpty) {
+            ResourceRole.validForRole(roleEnforcement.validRoles)(podAcceptedResourceRoles(pod)) match {
+              case res: Failure => return res
+            }
+          }
+        }
+      }
+      Success
+    }
   }
 
   def volumeNames(volumes: Seq[PodVolume]): Seq[String] = volumes.map(volumeName)

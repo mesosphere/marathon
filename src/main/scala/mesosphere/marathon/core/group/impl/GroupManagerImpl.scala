@@ -31,7 +31,7 @@ import scala.util.{Failure, Success}
 
 class GroupManagerImpl(
     metrics: Metrics,
-    val config: GroupManagerConfig,
+    val config: MarathonConf,
     initialRoot: Option[RootGroup],
     groupRepository: GroupRepository,
     deploymentService: Provider[DeploymentService])(implicit eventStream: EventStream, ctx: ExecutionContext) extends GroupManager with StrictLogging {
@@ -135,7 +135,7 @@ class GroupManagerImpl(
               changed)
             val withVersionedApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
             val withVersionedAppsPods = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, withVersionedApps)
-            Validation.validateOrThrow(withVersionedAppsPods)(RootGroup.rootGroupValidator(config.availableFeatures))
+            Validation.validateOrThrow(withVersionedAppsPods)(RootGroup.rootGroupValidator(config))
             val plan = DeploymentPlan(from, withVersionedAppsPods, version, toKill)
             Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
             logger.info(s"Computed new deployment plan for ${plan.targetIdsString}:\n$plan")

@@ -143,12 +143,12 @@ object Group extends StrictLogging {
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  def validGroup(base: PathId, enabledFeatures: Set[String]): Validator[Group] =
+  def validGroup(base: PathId, config: MarathonConf): Validator[Group] =
     validator[Group] { group =>
       group.id is validPathWithBase(base)
 
       group.transitiveApps as "apps" is everyApp(
-        AppDefinition.validBasicAppDefinition(enabledFeatures) and isChildOfParentId(group)
+        AppDefinition.validBasicAppDefinition(config.availableFeatures) and isChildOfParentId(group)
       )
 
       group is noAppsAndPodsWithSameId

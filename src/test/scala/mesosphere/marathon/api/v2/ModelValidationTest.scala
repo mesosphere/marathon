@@ -3,13 +3,13 @@ package api.v2
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.core.pod.BridgeNetwork
 import mesosphere.marathon.raml.GroupUpdate
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
+import mesosphere.{UnitTest, ValidationTestLike}
 import play.api.libs.json.{JsObject, Json}
 
 import scala.collection.immutable.Seq
@@ -38,6 +38,8 @@ object ModelValidationTest {
 
 class ModelValidationTest extends UnitTest with GroupCreation with ValidationTestLike {
 
+  val emptyConfig = AllConf.withTestConfig()
+
   import ModelValidationTest._
 
   "ModelValidation" should {
@@ -53,7 +55,7 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
       val conflictingApp = createServicePortApp("/app2".toPath, 3201)
 
       val rootGroup = createRootGroup(apps = Map(existingApp.id -> existingApp, conflictingApp.id -> conflictingApp))
-      val result = validate(rootGroup)(RootGroup.rootGroupValidator(Set()))
+      val result = validate(rootGroup)(RootGroup.rootGroupValidator(emptyConfig))
 
       result.isSuccess should be(true)
     }
@@ -86,7 +88,7 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
         validate = false
       )
 
-      validate(rootGroup)(RootGroup.rootGroupValidator(Set())) should haveViolations(
+      validate(rootGroup)(RootGroup.rootGroupValidator(emptyConfig)) should haveViolations(
         "/apps//test/group1/invalid" -> "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
       )
     }
@@ -96,7 +98,7 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
 
       val rootGroup = createRootGroup(groups = Set(createGroup("/test".toPath, apps = Map(validApp.id -> validApp))))
 
-      val result = validate(rootGroup)(RootGroup.rootGroupValidator(Set()))
+      val result = validate(rootGroup)(RootGroup.rootGroupValidator(emptyConfig))
       result.isSuccess should be(true)
     }
   }

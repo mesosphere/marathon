@@ -120,7 +120,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
         withClue(jsonResult(externalVolumesResult)) { externalVolumesResult.isFailure should be(expectFailure) }
 
         And("global validation agrees")
-        val globalResult: Result = RootGroup.rootGroupValidator(Set("external_volumes"))(rootGroup)
+        val globalResult: Result = RootGroup.rootGroupValidator(AllConf.withTestConfig("--enable_features", "external_volumes"))(rootGroup)
         withClue(jsonResult(globalResult)) { globalResult.isFailure should be(expectFailure) }
 
         val ruleViolations = globalResult match {

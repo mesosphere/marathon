@@ -2,8 +2,8 @@ package mesosphere.marathon
 package api.v2.validation
 
 import com.wix.accord.{Failure, Result, Validator}
-import mesosphere.marathon.raml.{Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, Image, ImageType, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodEphemeralVolume, PodPersistentVolume, PodSchedulingPolicy, PodSecretVolume, PodUpgradeStrategy, Resources, SecretDef, UnreachableDisabled, UnreachableEnabled, VolumeMount}
-import mesosphere.marathon.state.PersistentVolume
+import mesosphere.marathon.raml.{Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, Image, ImageType, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodEphemeralVolume, PodPersistentVolume, PodPlacementPolicy, PodSchedulingPolicy, PodSecretVolume, PodUpgradeStrategy, Resources, SecretDef, UnreachableDisabled, UnreachableEnabled, VolumeMount}
+import mesosphere.marathon.state.{PersistentVolume, RoleEnforcement}
 import mesosphere.marathon.util.SemanticVersion
 import mesosphere.{UnitTest, ValidationTestLike}
 
@@ -112,6 +112,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       validator(invalid) should haveViolations(
         "/containers(0)/image/pullConfig" -> "pullConfig is supported only with Docker images")
     }
+
   }
 
   "A constraint definition" should {
@@ -215,6 +216,44 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
     }
   }
 
+  "roleValidation" should {
+
+    "be valid without role and no role enforcement" in new Fixture {
+      val pod = podWithoutRole
+      validator(pod) should be(aSuccess)
+    }
+
+    "be valid without role and valid roles list" in new Fixture {
+      val pod = podWithoutRole
+      validatorWithValidRolesList(pod) should be(aSuccess)
+    }
+
+    "be invalid without role and role enforcement" in new Fixture {
+      val pod = podWithoutRole
+      validatorWithRoleEnforcement(pod) should haveViolations(
+        "/role" -> "must not be empty")
+    }
+
+    "be valid when the role is the same as the role enforcement" in new Fixture {
+      val pod = podWithoutRole.copy(role = Some("dev"))
+      validatorWithValidRolesList(pod) should be(aSuccess)
+    }
+
+    "be invalid when the role is not in the the role enforcement" in new Fixture {
+      val pod = podWithoutRole.copy(role = Some("anotherRole"))
+      validatorWithValidRolesList(pod) should haveViolations(
+        "/role" -> "expected one of: [dev]")
+    }
+
+    "be invalid when acceptedResource role is different from the role" in new Fixture {
+      val pod = podWithoutRole.copy(role = Some("dev"), scheduling = Some(PodSchedulingPolicy(placement = Some(PodPlacementPolicy(acceptedResourceRoles = Seq("differentRole"))))))
+      validatorWithValidRolesList(pod) should haveViolations(
+        "/" -> "acceptedResourceRoles must be either [*] or one of [dev]"
+      )
+    }
+
+  }
+
   class Fixture(validateSecrets: Boolean = false) {
     val validContainer = PodContainer(
       name = "ct1",
@@ -237,6 +276,11 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       secrets = Map("aSecret" -> SecretDef("/pull/config"))
     )
 
+    val podWithoutRole = Pod(
+      id = "/somepod",
+      containers = Seq(validContainer)
+    )
+
     def validResidentPod = validPod.copy(
       containers = Seq(validContainer.copy(
         endpoints = Seq(Endpoint("ep1", hostPort = Some(1))),
@@ -247,11 +291,17 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
         unreachableStrategy = Some(UnreachableDisabled()))))
 
     val features: Set[String] = if (validateSecrets) Set(Features.SECRETS) else Set.empty
-    implicit val validator: Validator[Pod] = podValidator(features, SemanticVersion.zero, None)
+    implicit val validator: Validator[Pod] = podValidator(features, SemanticVersion.zero, None, RoleEnforcement())
+
+    val validRolesForRoleDev = RoleEnforcement(validRoles = Set("dev"))
+    val validatorWithValidRolesList = podValidator(features, SemanticVersion.zero, None, validRolesForRoleDev)
+
+    val validRolesForRoleDevAndEnforcement = RoleEnforcement(enforceRole = true, validRoles = Set("dev"))
+    val validatorWithRoleEnforcement = podValidator(features, SemanticVersion.zero, None, validRolesForRoleDevAndEnforcement)
   }
 
   "network validation" when {
-    implicit val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero, Some("default-network-name"))
+    implicit val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero, Some("default-network-name"), RoleEnforcement())
 
     def podContainer(name: String = "ct1", resources: Resources = Resources(), endpoints: Seq[Endpoint]) =
       PodContainer(

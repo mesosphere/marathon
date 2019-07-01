@@ -9,7 +9,7 @@ object ResourceRole {
   val Unreserved = "*"
 
   def validForRole(validRoles: Set[String]): Validator[Set[String]] = {
-    isTrue(s"""acceptedResourceRoles must be either [*] or one of '$validRoles'""") { acceptedResourceRoles =>
+    isTrue(s"""acceptedResourceRoles must be either [*] or one of ${validRoles.mkString("[", ",", "]")}""") { acceptedResourceRoles =>
       acceptedResourceRoles.size == 1 &&
         (acceptedResourceRoles.head.equals(Unreserved) || validRoles.contains(acceptedResourceRoles.head))
     }
