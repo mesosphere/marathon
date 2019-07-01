@@ -61,7 +61,7 @@ el: el6 el7
 ubuntu: ubuntu-trusty-1404 ubuntu-xenial-1604 ubuntu-bionic-1804
 
 .PHONY: debian
-debian: debian-jessie-8 debian-stretch-9
+debian: debian-stretch-9
 
 .PHONY: el6
 el6: toor/el6/etc/init.d/marathon
@@ -120,15 +120,6 @@ ubuntu-bionic-1804: toor/ubuntu-bionic/etc/default/marathon
 ubuntu-bionic-1804: fpm-docker/.provisioned
 	$(FPM) -C toor/ubuntu-xenial \
 		--iteration $(PKG_REL).ubuntu1804 \
-		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
-
-.PHONY: debian-jessie-8
-debian-jessie-8: toor/debian-jessie-8/lib/systemd/system/marathon.service
-debian-jessie-8: toor/debian-jessie-8/$(PREFIX)/share/marathon
-debian-jessie-8: toor/debian-jessie-8/etc/default/marathon
-debian-jessie-8: fpm-docker/.provisioned
-	$(FPM) -C toor/debian-jessie-8 \
-		--iteration $(PKG_REL).debian8 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
 .PHONY: debian-stretch-9
