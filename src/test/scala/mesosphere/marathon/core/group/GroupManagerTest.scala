@@ -71,13 +71,16 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
 
       groupRepository.root() returns Future.successful(createRootGroup())
       deploymentService.deploy(any, any) returns Future.successful(Done)
-      val appWithVersionInfo = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+      val appWithAdditionalInfo = app.copy(
+        versionInfo = VersionInfo.forNewConfig(Timestamp(1)),
+        role = Some("*")
+      )
 
       val groupWithVersionInfo = createRootGroup(
         version = Timestamp(1),
         groups = Set(
           createGroup(
-            "/group".toPath, apps = Map(appWithVersionInfo.id -> appWithVersionInfo), version = Timestamp(1))))
+            "/group".toPath, apps = Map(appWithAdditionalInfo.id -> appWithAdditionalInfo), version = Timestamp(1))))
       groupRepository.storeRootVersion(any, any, any) returns Future.successful(Done)
       groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
       val groupChangeSuccess = Promise[GroupChangeSuccess]
@@ -89,8 +92,8 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       }
 
       groupManager.updateRoot(PathId.empty, _.putGroup(group, version = Timestamp(1)), version = Timestamp(1), force = false).futureValue
-      verify(groupRepository).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil, Nil, Nil)
-      verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
+      verify(groupRepository).storeRoot(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil, Nil, Nil)
+      verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil)
 
       groupChangeSuccess.future.
         futureValue.
@@ -103,17 +106,20 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       val rootGroup = createRootGroup(Map(app.id -> app), version = Timestamp(1))
       groupRepository.root() returns Future.successful(createRootGroup())
       deploymentService.deploy(any, any) returns Future.successful(Done)
-      val appWithVersionInfo = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+      val appWithAdditionalInfo = app.copy(
+        versionInfo = VersionInfo.forNewConfig(Timestamp(1)),
+        role = Some("*")
+      )
 
       val groupWithVersionInfo = createRootGroup(Map(
-        appWithVersionInfo.id -> appWithVersionInfo), version = Timestamp(1))
+        appWithAdditionalInfo.id -> appWithAdditionalInfo), version = Timestamp(1))
       groupRepository.storeRootVersion(any, any, any) returns Future.successful(Done)
       groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
 
       groupManager.updateRoot(PathId.empty, _.putGroup(rootGroup, version = Timestamp(1)), version = Timestamp(1), force = false).futureValue
 
-      verify(groupRepository).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil, Nil, Nil)
-      verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
+      verify(groupRepository).storeRoot(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil, Nil, Nil)
+      verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil)
     }
 
     "expunge removed apps from appRepo" in new Fixture(initialRoot = Option({

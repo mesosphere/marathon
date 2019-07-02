@@ -848,7 +848,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           response.getStatus should be(201)
           val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
           pod.role.isDefined should be(true)
-          pod.role.get should be("slave_public")
+          pod.role.get should be(MarathonConf.defaultMesosRole)
         }
       }
 
@@ -998,7 +998,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           response.getStatus should be(201)
           val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
           pod.role.isDefined should be(true)
-          pod.role.get should be("slave_public")
+          pod.role.get should be(MarathonConf.defaultMesosRole)
         }
       }
 

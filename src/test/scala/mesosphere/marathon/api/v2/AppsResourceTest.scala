@@ -32,8 +32,6 @@ import scala.util.Try
 
 class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
-  val mesosDefaultRole = "slave_public"
-
   case class Fixture(
       clock: SettableClock = new SettableClock(),
       auth: TestAuthFixture = new TestAuthFixture,
@@ -192,7 +190,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         And("the JSON is as expected, including a newly generated version")
         import mesosphere.marathon.api.v2.json.Formats._
         val expected = AppInfo(
-          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
+          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(MarathonConf.defaultMesosRole)),
           maybeTasks = Some(immutable.Seq.empty),
           maybeCounts = Some(TaskCounts.zero),
           maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -482,7 +480,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(MarathonConf.defaultMesosRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -514,7 +512,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(MarathonConf.defaultMesosRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -590,7 +588,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(MarathonConf.defaultMesosRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -622,7 +620,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val expected = AppInfo(
         normalizeAndConvert(app).copy(
           versionInfo = VersionInfo.OnlyVersion(clock.now()),
-          role = Some(mesosDefaultRole),
+          role = Some(MarathonConf.defaultMesosRole),
           networks = Seq(ContainerNetwork(name = "bar"))
         ),
         maybeTasks = Some(immutable.Seq.empty),
@@ -655,7 +653,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(MarathonConf.defaultMesosRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -695,7 +693,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(MarathonConf.defaultMesosRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -743,7 +741,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val containerDef = appDef.container
       val expected = AppInfo(
         appDef.copy(
-          versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole),
+          versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(MarathonConf.defaultMesosRole),
           container = containerDef.map(_.copyWith(
             portMappings = Seq(
               Container.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
@@ -842,7 +840,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(MarathonConf.defaultMesosRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -892,7 +890,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(MarathonConf.defaultMesosRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
@@ -1009,7 +1007,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       import mesosphere.marathon.api.v2.json.Formats._
       val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(mesosDefaultRole)),
+        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = Some(MarathonConf.defaultMesosRole)),
         maybeTasks = Some(immutable.Seq.empty),
         maybeCounts = Some(TaskCounts.zero),
         maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
