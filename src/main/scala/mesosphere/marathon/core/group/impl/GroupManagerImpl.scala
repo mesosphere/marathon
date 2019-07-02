@@ -4,16 +4,16 @@ package core.group.impl
 import java.time.OffsetDateTime
 import java.util.concurrent.atomic.AtomicBoolean
 
-import javax.inject.Provider
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.api.{Rejection, RejectionException}
+import javax.inject.Provider
 import mesosphere.marathon.api.v2.Validation
+import mesosphere.marathon.api.{Rejection, RejectionException}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.{GroupChangeFailed, GroupChangeSuccess}
-import mesosphere.marathon.core.group.{GroupManager, GroupManagerConfig}
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
