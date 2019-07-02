@@ -88,7 +88,8 @@ class SeccompIntegratonTest extends AkkaIntegrationTest with EmbeddedMarathonTes
             seccomp = Some(state.Seccomp(
               profileName,
               unconfined
-            ))
+            )),
+            ipcInfo = None
           ))
         )
       ))
