@@ -155,7 +155,7 @@ trait SystemvSpec extends MesosTest {
   }
 }
 
-trait Debian8Container extends MesosTest {
+trait Debian9Container extends MesosTest {
 
   val marathonDebPackage: String
   var mesos: Container = _
@@ -165,7 +165,7 @@ trait Debian8Container extends MesosTest {
     super.beforeAll()
     assertPackagesCleanlyBuilt()
     mesos = startMesos()
-    systemd = runContainer("--name", "debian8", "-v", s"${packagePath}:/var/packages", "marathon-package-test:debian8")
+    systemd = runContainer("--name", "debian9", "-v", s"${packagePath}:/var/packages", "marathon-package-test:debian9")
 
     System.err.println(s"Installing package...")
     // install the package
@@ -222,12 +222,7 @@ trait Ubuntu1604Container extends MesosTest {
 }
 
 
-class Debian8Test extends SystemdSpec with Debian8Container with MesosTest {
-  override val marathonDebPackage = s"/var/packages/marathon_${MarathonVersion}-*.debian8_all.deb"
-
-  "Marathon Debian 8 package" should behave like systemdUnit(systemd, mesos)
-}
-class Debian9Test extends SystemdSpec with Debian8Container with MesosTest {
+class Debian9Test extends SystemdSpec with Debian9Container with MesosTest {
   override val marathonDebPackage = s"/var/packages/marathon_${MarathonVersion}-*.debian9_all.deb"
 
   "Marathon Debian 9 package" should behave like systemdUnit(systemd, mesos)
@@ -435,7 +430,6 @@ def main(args: String*): Unit = {
     t.getClass.getSimpleName.split("$").last
 
   val tests = Seq(
-    new Debian8Test,
     new Debian9Test,
     new Centos7Test,
     new Centos6Test,

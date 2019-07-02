@@ -17,9 +17,11 @@ import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.{AkkaUnitTest, WaitTestSupport}
+import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers
 
 import scala.concurrent.Future
@@ -139,13 +141,23 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val parentActor = newTestActor()
     lazy val localRegion = () => None
+    lazy val metrics = DummyMetrics
+    val driver: SchedulerDriver = mock[SchedulerDriver]
+    val driverHolder: MarathonSchedulerDriverHolder = {
+      val holder = new MarathonSchedulerDriverHolder
+      holder.driver = Some(driver)
+      holder
+    }
 
     lazy val module: LaunchQueueModule = new LaunchQueueModule(
+      metrics,
       config,
+      config,
+      system.eventStream,
+      driverHolder,
       AlwaysElectedLeadershipModule.forRefFactory(parentActor.underlying),
       clock,
       subOfferMatcherManager = offerMatcherManager,
-      maybeOfferReviver = None,
       instanceTracker,
       instanceOpFactory,
       groupManager,

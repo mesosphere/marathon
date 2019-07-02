@@ -23,11 +23,6 @@ import scala.collection.immutable.Seq
 
 object TaskGroupBuilder extends StrictLogging {
 
-  // These labels are necessary for AppC images to work.
-  // Given that Docker only works under linux with 64bit,
-  // let's (for now) set these values to reflect that.
-  protected[mesos] val LinuxAmd64 = Map("os" -> "linux", "arch" -> "amd64")
-
   private val ephemeralVolumePathPrefix = "volumes/"
 
   case class BuilderConfig(
@@ -581,10 +576,6 @@ object TaskGroupBuilder extends StrictLogging {
             docker.setConfig(SecretSerializer.toSecretReference(pullConfig.secret))
           }
           image.setType(mesos.Image.Type.DOCKER).setDocker(docker)
-        case raml.ImageType.Appc =>
-          val appcLabels = (LinuxAmd64 ++ im.labels).toMesosLabels
-          val appc = mesos.Image.Appc.newBuilder.setName(im.id).setLabels(appcLabels)
-          image.setType(mesos.Image.Type.APPC).setAppc(appc)
       }
 
       val mesosInfo = mesos.ContainerInfo.MesosInfo.newBuilder.setImage(image)

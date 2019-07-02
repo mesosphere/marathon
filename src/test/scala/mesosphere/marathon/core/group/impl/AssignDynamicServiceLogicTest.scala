@@ -224,7 +224,6 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
 
   behave like withContainerNetworking("docker-docker", Container.Docker(image = "foobar"))
   behave like withContainerNetworking("mesos-docker", Container.MesosDocker(image = "foobar"))
-  behave like withContainerNetworking("mesos-appc", Container.MesosAppC(image = "foobar"))
   behave like withContainerNetworking("mesos", Container.Mesos())
 
 }

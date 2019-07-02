@@ -50,12 +50,13 @@ object TaskStatusUpdateTestHelper {
   lazy val defaultTimestamp = Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC))
 
   def provision(instance: Instance, timestamp: Timestamp = defaultTimestamp) = {
-    val provisioned = TestInstanceBuilder.newBuilderWithInstanceId(instance.instanceId).addTaskProvisioned().getInstance()
-    val operation = InstanceUpdateOperation.Provision(instance.instanceId, provisioned.agentInfo.get, provisioned.runSpec, provisioned.tasksMap, timestamp)
+    val dummy = TestInstanceBuilder.newBuilderWithInstanceId(instance.instanceId, timestamp).addTaskProvisioned().getInstance()
+    val operation = InstanceUpdateOperation.Provision(instance.instanceId, dummy.agentInfo.get, dummy.runSpec, dummy.tasksMap, timestamp)
+    val provisioned = instance.provisioned(dummy.agentInfo.get, dummy.runSpec, dummy.tasksMap, timestamp)
     val effect = InstanceUpdateEffect.Update(
-      instance.provisioned(provisioned.agentInfo.get, provisioned.runSpec, provisioned.tasksMap, timestamp),
+      provisioned,
       oldState = Some(instance),
-      events = Nil)
+      events = Seq(InstanceChangedEventsGenerator.updatedCondition(provisioned)))
     TaskStatusUpdateTestHelper(operation, effect)
   }
 

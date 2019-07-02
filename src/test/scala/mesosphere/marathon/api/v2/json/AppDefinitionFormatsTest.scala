@@ -424,39 +424,6 @@ class AppDefinitionFormatsTest extends UnitTest
       AppValidation.validateOldAppAPI(app3) should haveViolations("/container/docker/parameters" -> "must be empty")
     }
 
-    "FromJSON should parse Mesos AppC container" in {
-      val appDef = normalizeAndConvert(Json.parse(
-        """{
-        |  "id": "test",
-        |  "ipAddress": {
-        |    "networkName": "foo"
-        |  },
-        |  "container": {
-        |    "type": "MESOS",
-        |    "appc": {
-        |      "image": "busybox",
-        |      "id": "sha512-aHashValue",
-        |      "labels": {
-        |        "version": "1.2.0",
-        |        "arch": "amd64",
-        |        "os": "linux"
-        |      }
-        |    }
-        |  }
-        |}""".stripMargin).as[raml.App])
-
-      appDef.networks should be(Seq(ContainerNetwork(name = "foo")))
-      appDef.container should be(Some(Container.MesosAppC(
-        image = "busybox",
-        id = Some("sha512-aHashValue"),
-        labels = Map(
-          "version" -> "1.2.0",
-          "arch" -> "amd64",
-          "os" -> "linux"
-        ),
-        portMappings = Seq(Container.PortMapping.defaultInstance))))
-    }
-
     "FromJSON should parse ipAddress without networkName" in {
       val app = Json.parse(
         """{

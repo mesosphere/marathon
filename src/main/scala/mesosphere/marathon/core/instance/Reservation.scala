@@ -12,7 +12,7 @@ import play.api.libs.json._
   * Represents a reservation for all resources that are needed for launching an instance
   * and associated persistent local volumes.
   */
-case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State)
+case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State, id: Reservation.Id)
 
 object Reservation {
 
@@ -71,25 +71,6 @@ object Reservation {
       case _ => throw new MatchError(s"reservation id $label does not include a valid instance identifier")
     }
 
-    /**
-      * Infer reservation id from instance.
-      *
-      * Instances created prior to 1.8 ''always'' have at least one task attached in reserved state.
-      * Thus we use the reservation id from the `appTask`. If an instance has no task we assume the
-      * instance is from 1.8 or later and uses the [[SimplifiedId]].
-      *
-      * This method might return a [[SimplifiedId]] even when there is an `appTask` for pods.
-      *
-      * @param instance An instance with a reservation.
-      * @return The reservation id for given instance.
-      */
-    def apply(instance: Instance): Id = {
-      if (instance.tasksMap.nonEmpty) {
-        instance.appTask.taskId.reservationId
-      } else {
-        Reservation.SimplifiedId(instance.instanceId)
-      }
-    }
   }
 
   /**
@@ -172,5 +153,9 @@ object Reservation {
     }
   }
 
+  implicit lazy val reservationIdFormat: Format[Reservation.Id] = Format(
+    Reads.of[String].map(Reservation.Id(_)),
+    Writes[Reservation.Id] { id => JsString(id.label) }
+  )
   implicit val reservationFormat: OFormat[Reservation] = Json.format[Reservation]
 }

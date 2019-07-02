@@ -103,15 +103,6 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       validator(invalid) should haveViolations(
         "/containers(0)/image/pullConfig" -> "pullConfig.secret must refer to an existing secret")
     }
-
-    "be rejected if a pull config image is not Docker" in new Fixture() {
-      private val invalid = pullConfigPod.copy(
-        containers = Seq(pullConfigContainer.copy(
-          image = Some(pullConfigContainer.image.get.copy(kind = ImageType.Appc))
-        )))
-      validator(invalid) should haveViolations(
-        "/containers(0)/image/pullConfig" -> "pullConfig is supported only with Docker images")
-    }
   }
 
   "A constraint definition" should {

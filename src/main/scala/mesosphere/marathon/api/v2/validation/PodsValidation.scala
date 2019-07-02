@@ -120,13 +120,8 @@ trait PodsValidation extends GeneralPurposeCombinators {
             config => secrets.contains(config.secret)))
       }
 
-      val appcImageValidator: Validator[Image] = validator[Image] { image =>
-        image.pullConfig is isTrue("pullConfig is supported only with Docker images")(_.isEmpty)
-      }
-
       image.kind match {
         case ImageType.Docker => validate(image)(dockerImageValidator)
-        case ImageType.Appc => validate(image)(appcImageValidator)
       }
     }
   }

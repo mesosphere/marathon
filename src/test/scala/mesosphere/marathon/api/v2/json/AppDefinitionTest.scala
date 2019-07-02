@@ -203,13 +203,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       app = correct.copy(
         resources = Resources(gpus = 1),
-        container = Some(Container.MesosAppC())
-      )
-
-      validator(app) shouldNot haveViolations("/" -> "GPU resources only work with the Mesos containerizer")
-
-      app = correct.copy(
-        resources = Resources(gpus = 1),
         container = None
       )
 

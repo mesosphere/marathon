@@ -10,9 +10,6 @@ import org.scalatest.Inside
 
 class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
-  override lazy val mesosNumMasters = 1
-  override lazy val mesosNumSlaves = 3
-
   class Fixture {
     val homeRegion = Region("home_region")
     val homeZone = Zone("home_zone")
@@ -24,12 +21,16 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
 
   val f = new Fixture
 
-  override def mastersFaultDomains = Seq(Some(FaultDomain(region = f.homeRegion, zone = f.homeZone)))
+  override lazy val mesosConfig = MesosConfig(
+    numAgents = 3,
+    mastersFaultDomains = Seq(
+      Some(FaultDomain(region = f.homeRegion, zone = f.homeZone))),
+    agentsFaultDomains = Seq(
+      Some(FaultDomain(region = f.remoteRegion, zone = f.remoteZone1)),
+      Some(FaultDomain(region = f.remoteRegion, zone = f.remoteZone2)),
+      Some(FaultDomain(region = f.homeRegion, zone = f.homeZone)))
 
-  override def agentsFaultDomains = Seq(
-    Some(FaultDomain(region = f.remoteRegion, zone = f.remoteZone1)),
-    Some(FaultDomain(region = f.remoteRegion, zone = f.remoteZone2)),
-    Some(FaultDomain(region = f.homeRegion, zone = f.homeZone)))
+  )
 
   def appId(suffix: String): PathId = testBasePath / s"app-${suffix}"
 

@@ -10,13 +10,15 @@ import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.UnreachableDisabled
 import org.scalatest.Inside
+import org.scalatest.Inspectors.forAll
 
 import scala.concurrent.duration._
 
 class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
-  override lazy val mesosNumMasters = 1
-  override lazy val mesosNumSlaves = 2
+  override lazy val mesosConfig = MesosConfig(
+    numAgents = 2
+  )
 
   override val marathonArgs: Map[String, String] = Map(
     "reconciliation_initial_delay" -> "5000",
@@ -41,7 +43,11 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
   override def afterAll(): Unit = {
     // We need to start all the agents for the teardown to be able to kill all the (UNREACHABLE) executors/tasks
     mesosCluster.agents.foreach(_.start())
-    eventually { mesosCluster.state.value.agents.size shouldBe mesosCluster.agents.size }
+    eventually {
+      val state = mesosCluster.state.value
+      state.agents.size shouldBe mesosCluster.agents.size
+      forAll(state.frameworks) { _.unreachable_tasks should be('empty) }
+    }
     super.afterAll()
   }
 
@@ -202,12 +208,12 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
         matchEvent("TASK_UNREACHABLE", taskId)
       }
 
-      And("Pods instance is deleted")
+      And("pod instance is deleted")
       val instanceId = status.value.instances.head.id
       val deleteResult = marathon.deleteInstance(pod.id, instanceId, wipe = true)
       deleteResult should be(OK)
 
-      Then("pod instance is erased from marathon's knowledge ")
+      Then("pod instance is erased from Marathon's knowledge ")
       val knownInstanceIds = marathon.status(pod.id).value.instances.map(_.id)
       eventually {
         knownInstanceIds should not contain instanceId
@@ -221,9 +227,15 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       mesosCluster.agents(0).start()
 
       Then("Marathon kills the task and removes the associated reservation and volume")
-      waitForEventMatching("Task is declared killed") {
+      waitForEventMatching(s"Task $taskId is declared killed") {
         matchUnknownTerminatedEvent(Task.Id.parse(taskId).instanceId)
       }
+
+      When("the pod is deleted")
+      marathon.deletePod(pod.id)
+
+      And("The reservation is eventually removed")
+      waitForCleanMesos()
     }
 
     "wipe pod instances without persistent volumes" in {
@@ -277,6 +289,12 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       waitForEventMatching("Task is declared killed") {
         matchUnknownTerminatedEvent(Task.Id.parse(taskId).instanceId)
       }
+
+      When("the pod is deleted")
+      marathon.deletePod(pod.id)
+
+      And("The reservation is eventually removed")
+      waitForCleanMesos()
     }
   }
 
