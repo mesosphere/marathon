@@ -155,11 +155,14 @@ class PodsResource @Inject() (
       import PathId._
 
       val podId = id.toRootPath
-      val podDef = unmarshal(body)
+      val rawPodDef = unmarshal(body)
 
       // This is not really thread safe, another thread may intercept us and change the enforceRole flag, so we need
       // to revalidate this inside the the groupManager later
-      val roleEnforcement = getEnforcedRoleForService(PathId(podDef.id))
+      val roleEnforcement = getEnforcedRoleForService(PathId(rawPodDef.id))
+
+      // TODO AN: This should be somewhere else... Normalization maybe?
+      val podDef = if (rawPodDef.role.isDefined) rawPodDef else rawPodDef.copy(role = Some(roleEnforcement.defaultRole))
 
       def podDefValidator: Validator[Pod] =
         PodsValidation.podValidator(

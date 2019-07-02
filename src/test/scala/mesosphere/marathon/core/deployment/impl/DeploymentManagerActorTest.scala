@@ -41,7 +41,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Deployment" in {
       val f = new Fixture
       val manager = f.deploymentManager()
-      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"))
+      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = Some("someRole"))
 
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
@@ -56,7 +56,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Finished deployment" in {
       val f = new Fixture
       val manager = f.deploymentManager()
-      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"))
+      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = Some("someRole"))
 
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))

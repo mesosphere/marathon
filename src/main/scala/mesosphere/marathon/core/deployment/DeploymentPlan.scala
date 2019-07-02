@@ -160,7 +160,7 @@ case class DeploymentPlan(
     }
     def podString(pod: PodDefinition): String = {
       val containers = pod.containers.map(containerString).mkString(", ")
-      s"""Pod(id="${pod.id}", containers=[$containers])"""
+      s"""Pod(id="${pod.id}", containers=[$containers], role=${pod.role})"""
     }
     def containerString(container: MesosContainer): String = {
       val command = container.exec.map{
@@ -178,7 +178,7 @@ case class DeploymentPlan(
       val maybeDockerImage: Option[String] = app.container.collect { case c: Docker => c.image }
       val dockerImageString = maybeDockerImage.fold("")(image => ", image=\"" + image + "\"")
 
-      s"App(${app.id}$dockerImageString$cmdString$argsString))"
+      s"App(${app.id}$dockerImageString$cmdString$argsString, role = ${app.role}))"
     }
     def actionString(a: DeploymentAction): String = a match {
       case StartApplication(spec) => s"Start(${specString(spec)}, instances=0)"
