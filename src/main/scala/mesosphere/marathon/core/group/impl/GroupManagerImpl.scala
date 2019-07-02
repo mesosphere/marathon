@@ -21,7 +21,7 @@ import mesosphere.marathon.metrics.{Counter, Gauge, Metrics}
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.upgrade.GroupVersioningUtil
-import mesosphere.marathon.util.{LockedVar, WorkQueue}
+import mesosphere.marathon.util.{LockedVar, RoleUtils, WorkQueue}
 
 import scala.async.Async._
 import scala.collection.immutable.Seq
@@ -129,10 +129,15 @@ class GroupManagerImpl(
           case Left(left) =>
             Left(left)
           case Right(changed) =>
+            // Set default roles
+            val withRoles = RoleUtils.updateRoles(config, changed)
+
+            // Assign service ports
             val unversioned = AssignDynamicServiceLogic.assignDynamicServicePorts(
               Range.inclusive(config.localPortMin(), config.localPortMax()),
               from,
-              changed)
+              withRoles)
+
             val withVersionedApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
             val withVersionedAppsPods = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, withVersionedApps)
             Validation.validateOrThrow(withVersionedAppsPods)(RootGroup.rootGroupValidator(config))

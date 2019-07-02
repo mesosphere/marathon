@@ -426,5 +426,5 @@ object MarathonConf extends StrictLogging {
   /**
     * This should be the value that mesos uses for accepted offers if the framework specifies no role
     */
-  val defaultMesosRole = "slave_public"
+  val defaultMesosRole = "*"
 }

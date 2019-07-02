@@ -22,7 +22,7 @@ import scala.concurrent.duration._
 
 class ReviveOffersActorTest extends AkkaUnitTest {
 
-  val testApp = AppDefinition(id = PathId("/test"))
+  val testApp = AppDefinition(id = PathId("/test"), role = Some("someRole"))
 
   "ReviveOffersActor" should {
 

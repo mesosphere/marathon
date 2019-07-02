@@ -111,6 +111,8 @@ object Instance {
     * @return An instance in the scheduled state.
     */
   def scheduled(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
+    require(runSpec.role.isDefined, "Scheduling an instance from a runspec requires the runSpec to have a valid role")
+
     val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running)
 
     // TODO AN: Can we provide a default here in case role isn't set, or are we sure that role is set?
