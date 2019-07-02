@@ -660,43 +660,6 @@ class TaskBuilderTest extends UnitTest {
       taskInfo.getContainer.getMesos.getImage.getDocker.getConfig.getReference.getName shouldBe dockerPullConfigSecret
     }
 
-    "build creates task for MESOS AppC container" in {
-      val offer = MarathonTestHelper.makeBasicOfferWithRole(
-        cpus = 1.0, mem = 128.0, disk = 1000.0, beginPort = 31000, endPort = 31010, role = ResourceRole.Unreserved
-      )
-        .addResources(RangesResource(Resource.PORTS, Seq(protos.Range(33000, 34000)), "marathon"))
-        .build
-
-      val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
-        offer, AppDefinition(
-        id = "/testApp".toPath,
-        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
-        executor = "//cmd",
-        container = Some(Container.MesosAppC(
-          image = "anImage",
-          id = Some("sha512-aHashValue"),
-          labels = labels
-        )),
-        portDefinitions = Seq.empty,
-        networks = Seq(ContainerNetwork("vnet"))
-      )
-      )
-      assert(task.isDefined, "expected task to match offer")
-      val (taskInfo: TaskInfo, _) = task.get
-      taskInfo.hasContainer should be (true)
-      taskInfo.getContainer.getType should be (MesosProtos.ContainerInfo.Type.MESOS)
-      taskInfo.getContainer.hasMesos should be (true)
-      taskInfo.getContainer.getMesos.hasImage should be (true)
-      taskInfo.getContainer.getMesos.getImage.getType should be (MesosProtos.Image.Type.APPC)
-      taskInfo.getContainer.getMesos.getImage.hasAppc should be (true)
-      taskInfo.getContainer.getMesos.getImage.getAppc.hasId should be (true)
-      taskInfo.getContainer.getMesos.getImage.getAppc.getId should be ("sha512-aHashValue")
-      taskInfo.getContainer.getMesos.getImage.getAppc.hasLabels should be (true)
-      taskInfo.getContainer.getMesos.getImage.getAppc.getLabels should be (
-        (labels + ("MESOS_TASK_ID" -> taskInfo.getTaskId.getValue)).toMesosLabels
-      )
-    }
-
     "BuildIfMatchesWithLabels" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
 

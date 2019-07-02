@@ -675,53 +675,6 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
     }
 
-    "Creating a new pod with w/ AppC image and config.json should fail" in {
-      implicit val podSystem = mock[PodManager]
-      val f = Fixture(configArgs = Seq("--enable_features", "secrets"))
-
-      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-
-      val podJson =
-        """
-          |{
-          |    "id": "/pod",
-          |    "containers": [{
-          |        "name": "container0",
-          |        "resources": {
-          |            "cpus": 0.1,
-          |            "mem": 32
-          |        },
-          |        "image": {
-          |            "kind": "APPC",
-          |            "id": "private/image",
-          |            "pullConfig": {
-          |                "secret": "pullConfigSecret"
-          |            }
-          |        },
-          |        "exec": {
-          |            "command": {
-          |                "shell": "sleep 1"
-          |            }
-          |        }
-          |    }],
-          |    "secrets": {
-          |        "pullConfigSecret": {
-          |            "source": "/config"
-          |        }
-          |    }
-          |}
-        """.stripMargin
-
-      val response = asyncRequest { r =>
-        f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
-      }
-
-      withClue(s"response body: ${response.getEntity}") {
-        response.getStatus should be(422)
-        response.getEntity.toString should include("pullConfig is supported only with Docker images")
-      }
-    }
-
     "Creating a new pod with w/ Docker image and non-existing secret should fail" in {
       implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--enable_features", "secrets"))

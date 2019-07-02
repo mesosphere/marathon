@@ -15,7 +15,7 @@ Marathon enables users to launch containers with container images using two diff
 
 # Universal Container Runtime
 
-The [Universal Container Runtime](http://mesos.apache.org/documentation/latest/container-image) (UCR) extends the Mesos containerizer to support provisioning [Docker](https://docker.com/) container images ([AppC](https://github.com/appc/spec) which is deprecated in v1.8). This means that you can use both the Mesos containerizer and other container image types. You can still use the Docker container runtime directly ([instructions are below](#docker-containerizer)), but the Universal Container Runtime supports running Docker images without depending on the Docker Engine, which allows for better integration with Mesos.
+The [Universal Container Runtime](http://mesos.apache.org/documentation/latest/container-image) (UCR) extends the Mesos containerizer to support provisioning [Docker](https://docker.com/) container images. This means that you can use both the Mesos containerizer and other container image types. You can still use the Docker container runtime directly ([instructions are below](#docker-containerizer)), but the Universal Container Runtime supports running Docker images without depending on the Docker Engine, which allows for better integration with Mesos.
 
 The following Marathon features _only_ work with the UCR:
 

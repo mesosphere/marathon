@@ -16,7 +16,7 @@ import mesosphere.marathon.core.pod.{HostNetwork, Network}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml.{App, Apps, ExecutorResources, Resources}
-import mesosphere.marathon.state.Container.{Docker, MesosAppC, MesosDocker}
+import mesosphere.marathon.state.Container.{Docker, MesosDocker}
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.TaskBuilder
@@ -528,7 +528,6 @@ object AppDefinition extends GeneralPurposeCombinators {
       val args = app.args.nonEmpty
       val container = app.container.exists {
         case _: MesosDocker => true
-        case _: MesosAppC => true
         case _: Container.Docker => true
         case _ => false
       }
