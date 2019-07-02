@@ -7,17 +7,14 @@ import mesosphere.marathon.state.{AppDefinition, PathId, RoleEnforcement, RootGr
 
 object RoleUtils extends StrictLogging {
 
-  def getDefaultRole(config: MarathonConf): String = {
-    config.mesosRole.getOrElse(MarathonConf.defaultMesosRole)
-  }
-
   def getEnforcedRoleForService(config: MarathonConf, servicePathId: PathId, rootGroup: RootGroup): RoleEnforcement = {
-    val defaultRole = config.mesosRole.getOrElse(MarathonConf.defaultMesosRole)
+    val defaultRole = config.mesosRole()
 
     // We have a service in the root group, no enforced role here
     if (servicePathId.parent.isRoot) return RoleEnforcement(validRoles = Set(defaultRole))
     val rootPath = servicePathId.rootPath
 
+    // TODO: Add enforced role setting
     rootGroup.group(rootPath).map(group => {
       //      if (group.enforceRole) {
       //      RoleEnforcement(enforceRole = true, validRoles = Seq(group.id.root))

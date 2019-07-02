@@ -10,6 +10,7 @@ import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.{Context, MediaType, Response}
 import akka.event.EventStream
+import com.wix.accord.Validator
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{AuthResource, PATCH, RestResource}
@@ -22,6 +23,7 @@ import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.util.RoleUtils
 import org.glassfish.jersey.server.ManagedAsync
 import play.api.libs.json.{JsObject, Json}
 
@@ -78,22 +80,6 @@ class AppsResource @Inject() (
     }
   }
 
-  private def getEnforcedRoleForService(servicePathId: PathId): RoleEnforcement = {
-    val defaultRole = config.mesosRole.getOrElse(MarathonConf.defaultMesosRole)
-
-    // We have a service in the root group, no enforced role here
-    if (servicePathId.parent.isRoot) return RoleEnforcement(validRoles = Set(defaultRole))
-    val rootPath = servicePathId.rootPath
-
-    groupManager.group(rootPath).map(group => {
-      //      if (group.enforceRole) {
-      //      RoleEnforcement(enforceRole = true, validRoles = Seq(group.id.root))
-      //      } else {
-      RoleEnforcement(validRoles = Set(defaultRole, group.id.root))
-      //      }
-    }).getOrElse(RoleEnforcement(validRoles = Set(defaultRole)))
-  }
-
   @POST
   @ManagedAsync
   def create(
@@ -109,7 +95,7 @@ class AppsResource @Inject() (
 
       // This is not really thread safe, another thread may intercept us and change the enforceRole flag, so we need
       // to revalidate this inside the the groupManager later
-      val roleEnforcement = getEnforcedRoleForService(rawApp.id)
+      val roleEnforcement = RoleUtils.getEnforcedRoleForService(config, rawApp.id, groupManager.rootGroup())
       val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
 
       // TODO AN: This should be somewhere else... Normalization maybe?
@@ -373,14 +359,14 @@ class AppsResource @Inject() (
       case (_, false) => CompleteReplacement
     }
 
-    val roleEnforcement = getEnforcedRoleForService(appId)
-    val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
+    val roleEnforcement = RoleUtils.getEnforcedRoleForService(config, appId, groupManager.rootGroup())
+    implicit val appDefinitionValidator: Validator[AppDefinition] = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
 
     val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType)
     val appUpdateWithRole = if (appUpdate.role.isDefined) appUpdate else appUpdate.copy(role = Some(roleEnforcement.defaultRole))
 
     val version = clock.now()
-    val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdateWithRole, partialUpdate, allowCreation, clock.now(), service, appDefinitionValidator, validateAndNormalizeApp), version, force))
+    val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdateWithRole, partialUpdate, allowCreation, clock.now(), service, validateAndNormalizeApp), version, force))
     val response = plan.original.app(appId)
       .map(_ => Response.ok())
       .getOrElse(Response.created(new URI(appId.toString)))
@@ -409,9 +395,9 @@ class AppsResource @Inject() (
     def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
       update.id.map(PathId(_)) match {
         case Some(id) => {
-          val roleEnforcement = getEnforcedRoleForService(id)
-          val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
-          group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation, clock.now(), service, appDefinitionValidator, validateAndNormalizeApp), version)
+          val roleEnforcement = RoleUtils.getEnforcedRoleForService(config, id, groupManager.rootGroup())
+          implicit val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
+          group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation, clock.now(), service, validateAndNormalizeApp), version)
         }
         case None => group
       }

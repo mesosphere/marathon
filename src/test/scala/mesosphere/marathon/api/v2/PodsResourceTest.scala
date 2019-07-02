@@ -23,7 +23,7 @@ import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition, PodManager}
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 import mesosphere.marathon.raml.{EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, PersistentVolumeInfo, PersistentVolumeType, Pod, PodPersistentVolume, PodSecretVolume, PodState, PodStatus, Raml, Resources, VolumeMount}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableStrategy, VersionInfo}
+import mesosphere.marathon.state.{AppDefinition, PathId, ResourceRole, Timestamp, UnreachableStrategy, VersionInfo}
 import mesosphere.marathon.test.{GroupCreation, JerseyTest, Mockito, SettableClock}
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
@@ -848,7 +848,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           response.getStatus should be(201)
           val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
           pod.role.isDefined should be(true)
-          pod.role.get should be(MarathonConf.defaultMesosRole)
+          pod.role.get should be(ResourceRole.Unreserved)
         }
       }
 
@@ -998,7 +998,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           response.getStatus should be(201)
           val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
           pod.role.isDefined should be(true)
-          pod.role.get should be(MarathonConf.defaultMesosRole)
+          pod.role.get should be(ResourceRole.Unreserved)
         }
       }
 
@@ -1489,7 +1489,10 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
       val group = createGroup(groupPath)
 
+      val root = createRootGroup(groups = Set(group))
+
       groupManager.group(groupPath) returns Some(group)
+      groupManager.rootGroup() returns root
     }
   }
 

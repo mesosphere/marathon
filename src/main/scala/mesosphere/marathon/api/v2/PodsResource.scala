@@ -1,38 +1,37 @@
 package mesosphere.marathon
 package api.v2
 
-import java.time.Clock
 import java.net.URI
+import java.time.Clock
 
+import akka.event.EventStream
+import akka.stream.Materializer
+import akka.stream.scaladsl.Sink
+import com.wix.accord.Validator
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{Context, MediaType, Response}
-import akka.event.EventStream
-import akka.stream.Materializer
-import akka.stream.scaladsl.Sink
-import com.wix.accord.Validator
-import mesosphere.marathon.api.v2.validation.PodsValidation
+import mesosphere.marathon.Normalization._
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
+import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.{AuthResource, RestResource, TaskKiller}
 import mesosphere.marathon.core.appinfo.{PodSelector, PodStatusService, Selector}
 import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{Pod, Raml}
-import mesosphere.marathon.state.{PathId, RoleEnforcement, Timestamp, VersionInfo}
-import mesosphere.marathon.util.SemanticVersion
+import mesosphere.marathon.state.{PathId, Timestamp, VersionInfo}
+import mesosphere.marathon.util.{RoleUtils, SemanticVersion}
 import play.api.libs.json.Json
-import Normalization._
-import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.core.group.GroupManager
 
-import scala.concurrent.ExecutionContext
 import scala.async.Async._
+import scala.concurrent.ExecutionContext
 
 @Path("v2/pods")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -73,23 +72,6 @@ class PodsResource @Inject() (
     Json.parse(bytes).as[Pod]
   }
 
-  // TODO AN: Merge this with the one from AppsResource
-  private def getEnforcedRoleForService(servicePathId: PathId): RoleEnforcement = {
-    val defaultRole = config.mesosRole.getOrElse(MarathonConf.defaultMesosRole)
-
-    // We have a service in the root group, no enforced role here
-    if (servicePathId.parent.isRoot) return RoleEnforcement(validRoles = Set(defaultRole))
-    val rootPath = servicePathId.rootPath
-
-    groupManager.group(rootPath).map(group => {
-      //      if (group.enforceRole) {
-      //      RoleEnforcement(enforceRole = true, validRoles = Seq(group.id.root))
-      //      } else {
-      RoleEnforcement(validRoles = Set(defaultRole, group.id.root))
-      //      }
-    }).getOrElse(RoleEnforcement(validRoles = Set(defaultRole)))
-  }
-
   /**
     * HEAD is used to determine whether some Marathon variant supports pods.
     *
@@ -118,7 +100,7 @@ class PodsResource @Inject() (
 
       // This is not really thread safe, another thread may intercept us and change the enforceRole flag, so we need
       // to revalidate this inside the the groupManager later
-      val roleEnforcement = getEnforcedRoleForService(PathId(podDef.id))
+      val roleEnforcement = RoleUtils.getEnforcedRoleForService(config, PathId(podDef.id), groupManager.rootGroup())
 
       // TODO AN: This should be somewhere else... Normalization maybe?
       val podWithRole = if (podDef.role.isDefined) podDef else podDef.copy(role = Some(roleEnforcement.defaultRole))
@@ -159,7 +141,7 @@ class PodsResource @Inject() (
 
       // This is not really thread safe, another thread may intercept us and change the enforceRole flag, so we need
       // to revalidate this inside the the groupManager later
-      val roleEnforcement = getEnforcedRoleForService(PathId(rawPodDef.id))
+      val roleEnforcement = RoleUtils.getEnforcedRoleForService(config, PathId(rawPodDef.id), groupManager.rootGroup())
 
       // TODO AN: This should be somewhere else... Normalization maybe?
       val podDef = if (rawPodDef.role.isDefined) rawPodDef else rawPodDef.copy(role = Some(roleEnforcement.defaultRole))

@@ -74,8 +74,8 @@ object AppHelpers {
     allowCreation: Boolean,
     now: Timestamp,
     service: MarathonSchedulerService,
-    appDefinitionValidator: Validator[AppDefinition],
     appNormalization: Normalization[raml.App])(implicit
+    appDefinitionValidator: Validator[AppDefinition],
     identity: Identity,
     authorizer: Authorizer
   ): AppDefinition = {
