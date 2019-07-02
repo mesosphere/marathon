@@ -77,25 +77,6 @@ trait AppValidation {
     }
   }
 
-  val mesosAppcContainerValidator: Validator[Container] = {
-    val prefix = "sha512-"
-
-    val validId: Validator[String] =
-      isTrue[String](s"id must begin with '$prefix',") { id =>
-        id.startsWith(prefix)
-      } and isTrue[String](s"id must contain non-empty digest after '$prefix'.") { id =>
-        id.length > prefix.length
-      }
-
-    val validMesosEngineSpec: Validator[AppCContainer] = validator[AppCContainer] { appc =>
-      appc.image is notEmpty
-      appc.id is optional(validId)
-    }
-    validator{ (container: Container) =>
-      container.appc is definedAnd(validMesosEngineSpec)
-    }
-  }
-
   val mesosImagelessContainerValidator: Validator[Container] =
     // placeholder, there is no additional validation to do for a non-image-based mesos container
     new NullSafeValidator[Container](_ => true, _ => Failure(Set.empty))
@@ -122,9 +103,9 @@ trait AppValidation {
       }
     }
     override def apply(container: Container): Result = {
-      (container.docker, container.appc, container.`type`) match {
-        case (Some(_), None, EngineType.Docker) => validate(container)(forDockerContainerizer)
-        case (Some(_), None, EngineType.Mesos) => validate(container)(forMesosContainerizer)
+      (container.docker, container.`type`) match {
+        case (Some(_), EngineType.Docker) => validate(container)(forDockerContainerizer)
+        case (Some(_), EngineType.Mesos) => validate(container)(forMesosContainerizer)
         case _ => Success // canonical validation picks up where we leave off
       }
     }
@@ -149,10 +130,9 @@ trait AppValidation {
 
     val mesosContainerImageValidator = new Validator[Container] {
       override def apply(container: Container): Result = {
-        (container.docker, container.appc, container.`type`) match {
-          case (Some(_), None, EngineType.Mesos) => validate(container)(mesosDockerContainerValidator(enabledFeatures, secrets))
-          case (None, Some(_), EngineType.Mesos) => validate(container)(mesosAppcContainerValidator)
-          case (None, None, EngineType.Mesos) => validate(container)(mesosImagelessContainerValidator)
+        (container.docker, container.`type`) match {
+          case (Some(_), EngineType.Mesos) => validate(container)(mesosDockerContainerValidator(enabledFeatures, secrets))
+          case (None, EngineType.Mesos) => validate(container)(mesosImagelessContainerValidator)
           case _ => Failure(Set(RuleViolation(container, "mesos containers should specify, at most, a single image type")))
         }
       }
@@ -467,10 +447,10 @@ trait AppValidation {
       val cmd = app.cmd.nonEmpty
       val args = app.args.nonEmpty
       val container = app.container.exists { ct =>
-        (ct.docker, ct.appc, ct.`type`) match {
-          case (Some(_), None, EngineType.Docker) |
-            (Some(_), None, EngineType.Mesos) |
-            (None, Some(_), EngineType.Mesos) => true
+        (ct.docker, ct.`type`) match {
+          case (Some(_), EngineType.Docker) |
+            (Some(_), EngineType.Mesos) |
+            (None, EngineType.Mesos) => true
           case _ => false
         }
       }

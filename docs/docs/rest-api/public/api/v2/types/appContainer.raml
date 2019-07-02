@@ -154,31 +154,6 @@ types:
           Run this docker image in privileged mode
           Please note: this property is supported only with the docker containerizer, not the Mesos containerizer.
         default: false
-  AppCContainer:
-    type: object
-    properties:
-      image:
-        type: string
-        minLength: 1
-        description: The name of the AppC image to use
-      id?:
-        type: string
-        minLength: 7
-        description: |
-          An image ID is a string of the format 'hash-value', where 'hash' is
-          the hash algorithm used and 'value' is the hex-encoded digest.
-          Currently the only permitted hash algorithm is sha512.
-      labels?:
-        type: label.KVLabels
-        description: |
-          Optional labels. Suggested labels: 'version', 'os', 'arch'.
-      forcePullImage?:
-        type: boolean
-        description: |
-          The container will be pulled, regardless if it is already available
-          on the local system
-        default: false
-    (pragma.deprecated): Deprecated since Marathon v1.8 and will be removed in v1.9
   Container:
     type: object
     properties:
@@ -186,7 +161,6 @@ types:
         type: EngineType
         default: DOCKER
       docker?: DockerContainer
-      appc?: AppCContainer
       linuxInfo?: linux.LinuxInfo
       volumes?:
         type: array

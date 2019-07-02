@@ -7,7 +7,7 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.raml.{AppCContainer, AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, Raml, UpgradeStrategy}
+import mesosphere.marathon.raml.{AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, Raml, UpgradeStrategy}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import play.api.libs.json.Json
@@ -33,14 +33,6 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
 
     "SerializationRoundtrip for empty definition" in {
       val update0 = AppUpdate(container = Some(Container(EngineType.Mesos)))
-      JsonTestHelper.assertSerializationRoundtripWorks(update0)
-    }
-
-    "SerializationRoundtrip for definition with simple AppC container" in {
-      val update0 = AppUpdate(container = Some(Container(EngineType.Mesos, appc = Some(AppCContainer(
-        image = "anImage",
-        labels = Map("key" -> "foo", "value" -> "bar")
-      )))))
       JsonTestHelper.assertSerializationRoundtripWorks(update0)
     }
 
