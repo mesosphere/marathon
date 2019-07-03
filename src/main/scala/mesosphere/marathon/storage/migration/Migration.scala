@@ -213,7 +213,8 @@ object Migration {
       StorageVersions(17) -> { (migration) => new MigrationTo17(migration.instanceRepo, migration.persistenceStore) },
       StorageVersions(18) -> { (migration) => new MigrationTo18(migration.instanceRepo, migration.persistenceStore) },
       StorageVersions(18, 100) -> { (migration) => new MigrationTo18100(migration.instanceRepo, migration.persistenceStore) },
-      StorageVersions(18, 200) -> { (migration) => new MigrationTo18200(migration.instanceRepo, migration.persistenceStore) }
+      StorageVersions(18, 200) -> { (migration) => new MigrationTo18200(migration.instanceRepo, migration.persistenceStore) },
+      StorageVersions(19, 100) -> { (migration) => new MigrationTo19100(migration.appRepository, migration.podRepository) }
     )
 }
 

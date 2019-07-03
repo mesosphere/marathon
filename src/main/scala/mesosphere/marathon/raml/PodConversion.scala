@@ -60,7 +60,8 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       upgradeStrategy = upgradeStrategy,
       executorResources = executorResources.fromRaml,
       unreachableStrategy = unreachableStrategy,
-      killSelection = killSelection
+      killSelection = killSelection,
+      role = podd.role
     )
   }
 

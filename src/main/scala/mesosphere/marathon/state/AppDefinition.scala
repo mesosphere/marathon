@@ -85,7 +85,9 @@ case class AppDefinition(
 
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
 
-    tty: Option[Boolean] = AppDefinition.DefaultTTY) extends RunSpec
+    tty: Option[Boolean] = AppDefinition.DefaultTTY,
+
+    role: String) extends RunSpec
   with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
@@ -257,6 +259,8 @@ case class AppDefinition(
 
     val tty: Option[Boolean] = if (proto.hasTty) Some(proto.getTty) else AppDefinition.DefaultTTY
 
+    val role: String = proto.getRole()
+
     // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
     // until the deprecation cycle is complete.
     val portDefinitions =
@@ -321,7 +325,8 @@ case class AppDefinition(
       secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut),
       unreachableStrategy = unreachableStrategy,
       killSelection = KillSelection.fromProto(proto.getKillSelection),
-      tty = tty
+      tty = tty,
+      role = role
     )
   }
 
