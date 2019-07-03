@@ -464,7 +464,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   val DefaultAcceptedResourceRoles = Set.empty[String]
 
   val DefaultTTY: Option[Boolean] = None
-  
+
   val DefaultRole: String = "*" // TODO: use --mesos_role or slave_public
 
   /**
