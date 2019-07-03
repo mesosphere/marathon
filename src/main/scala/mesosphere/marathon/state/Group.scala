@@ -191,6 +191,24 @@ object Group extends StrictLogging {
     }
   }
 
+  implicit def everyPod(validator: Validator[PodDefinition]): Validator[Iterable[PodDefinition]] = {
+    new Validator[Iterable[PodDefinition]] {
+      override def apply(seq: Iterable[PodDefinition]): Result = {
+        seq.foldLeft[Result](Success) {
+          case (accum, (pod)) =>
+            validator(pod) match {
+              case Success => accum
+              case Failure(violations) =>
+                val scopedViolations = violations.map { violation =>
+                  violation.withPath(Descriptions.Path(Explicit(pod.id.toString)))
+                }
+                accum.and(Failure(scopedViolations))
+            }
+        }
+      }
+    }
+  }
+
   /**
     * An app validator to verify that the app is in a proper child group of group.
     *

@@ -266,6 +266,19 @@ trait PodsValidation extends GeneralPurposeCombinators {
     }
   }
 
+  def validPodDefinitionWithRoleEnforcement(roleEnforcement: RoleEnforcement): Validator[PodDefinition] = validator[PodDefinition] { pod =>
+    if (roleEnforcement.enforceRole) {
+      pod.role must notEmpty
+      pod.role.orNull as "role" is in(roleEnforcement.validRoles) // We need to use orNull here, as accord validator-and does not short-circuit
+      pod.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
+    } else {
+      if (pod.role.isDefined) {
+        pod.role.orNull as "role" is in(roleEnforcement.validRoles)
+        pod.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
+      }
+    }
+  }
+
   def volumeNames(volumes: Seq[PodVolume]): Seq[String] = volumes.map(volumeName)
   def volumeName(volume: PodVolume): String = volume match {
     case PodEphemeralVolume(name) => name

@@ -4,6 +4,7 @@ package state
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.util.RoleUtils
@@ -416,6 +417,9 @@ object RootGroup {
     rootGroup.transitiveApps as "apps" is Group.everyApp(
       validAppRole(config, rootGroup)
     )
+    rootGroup.transitivePods as "pods" is Group.everyPod(
+      validPodRole(config, rootGroup)
+    )
   }
 
   private def noCyclicDependencies: Validator[RootGroup] =
@@ -423,6 +427,10 @@ object RootGroup {
 
   private def validAppRole(config: MarathonConf, rootGroup: RootGroup): Validator[AppDefinition] = (app: AppDefinition) => {
     AppDefinition.validWithRoleEnforcement(RoleUtils.getRoleSettingsForService(config, app.id, rootGroup)).apply(app)
+  }
+
+  private def validPodRole(config: MarathonConf, rootGroup: RootGroup): Validator[PodDefinition] = (pod: PodDefinition) => {
+    PodsValidation.validPodDefinitionWithRoleEnforcement(RoleUtils.getRoleSettingsForService(config, pod.id, rootGroup)).apply(pod)
   }
 
 }
