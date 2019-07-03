@@ -253,30 +253,16 @@ trait PodsValidation extends GeneralPurposeCombinators {
     pod is validWithRoleEnforcement(roleEnforcement)
   }
 
-  private def validWithRoleEnforcement(roleEnforcement: RoleEnforcement): Validator[Pod] = new Validator[Pod] {
-    override def apply(pod: Pod): Result = {
-      if (roleEnforcement.enforceRole) {
-        if (pod.role.isEmpty) return Failure(Set(RuleViolation(pod, "must not be empty", Descriptions.Path(Descriptions.Explicit("role")))))
-        if (pod.role.isDefined) {
-          if (!roleEnforcement.validRoles.contains(pod.role.get)) return Failure(Set(RuleViolation(pod.role.get, "expected one of: " + roleEnforcement.validRoles.mkString("[", ",", "]"), Descriptions.Path(Descriptions.Explicit("role")))))
-        }
-        if (podAcceptedResourceRoles(pod).nonEmpty) {
-          ResourceRole.validForRole(roleEnforcement.validRoles)(podAcceptedResourceRoles(pod)) match {
-            case res: Failure => return res
-          }
-        }
-      } else {
-        if (pod.role.isDefined) {
-          if (!roleEnforcement.validRoles.contains(pod.role.get)) return Failure(Set(RuleViolation(pod.role.get, "expected one of: " + roleEnforcement.validRoles.mkString("[", ",", "]"), Descriptions.Path(Descriptions.Explicit("role")))))
-
-          if (podAcceptedResourceRoles(pod).nonEmpty) {
-            ResourceRole.validForRole(roleEnforcement.validRoles)(podAcceptedResourceRoles(pod)) match {
-              case res: Failure => return res
-            }
-          }
-        }
+  private def validWithRoleEnforcement(roleEnforcement: RoleEnforcement): Validator[Pod] = validator[Pod] { pod =>
+    if (roleEnforcement.enforceRole) {
+      pod.role must notEmpty
+      pod.role.orNull as "role" is in(roleEnforcement.validRoles) // We need to use orNull here, as accord validator-and does not short-circuit
+      podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
+    } else {
+      if (pod.role.isDefined) {
+        pod.role.orNull as "role" is in(roleEnforcement.validRoles)
+        podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
       }
-      Success
     }
   }
 

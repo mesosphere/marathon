@@ -232,13 +232,13 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
     "be invalid when the role is not in the the role enforcement" in new Fixture {
       val pod = podWithoutRole.copy(role = Some("anotherRole"))
       validatorWithValidRolesList(pod) should haveViolations(
-        "/role" -> "expected one of: [dev]")
+        "/role" -> "got anotherRole, expected one of: [dev]")
     }
 
     "be invalid when acceptedResource role is different from the role" in new Fixture {
       val pod = podWithoutRole.copy(role = Some("dev"), scheduling = Some(PodSchedulingPolicy(placement = Some(PodPlacementPolicy(acceptedResourceRoles = Seq("differentRole"))))))
       validatorWithValidRolesList(pod) should haveViolations(
-        "/" -> "acceptedResourceRoles must be either [*] or one of [dev]"
+        "/acceptedResourceRoles" -> "acceptedResourceRoles must be either [*] or one of [dev]"
       )
     }
 

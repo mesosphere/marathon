@@ -507,12 +507,12 @@ object AppDefinition extends GeneralPurposeCombinators {
   def validWithRoleEnforcement(roleEnforcement: RoleEnforcement): Validator[AppDefinition] = validator[AppDefinition] { app =>
     if (roleEnforcement.enforceRole) {
       app.role must notEmpty
-      app.role.get as "role" is in(roleEnforcement.validRoles)
+      app.role.orNull as "role" is in(roleEnforcement.validRoles) // We need to use orNull here, as accord validator-and does not short-circuit
       app.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
     } else {
       if (app.role.isDefined) {
-        app.role.get as "role" is in(roleEnforcement.validRoles)
-        app.acceptedResourceRoles is empty or valid(ResourceRole.validForRole(roleEnforcement.validRoles))
+        app.role.orNull as "role" is in(roleEnforcement.validRoles)
+        app.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
       }
     }
   }
