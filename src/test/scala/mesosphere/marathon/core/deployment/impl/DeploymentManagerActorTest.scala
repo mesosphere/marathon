@@ -23,7 +23,7 @@ import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.state.{AppDefinition, ResourceRole}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.storage.repository.{AppRepository, DeploymentRepository}
 import mesosphere.marathon.test.{GroupCreation, MarathonTestHelper}
@@ -41,7 +41,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Deployment" in {
       val f = new Fixture
       val manager = f.deploymentManager()
-      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = Some("someRole"))
+      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = Some(ResourceRole.Unreserved))
 
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
@@ -56,7 +56,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Finished deployment" in {
       val f = new Fixture
       val manager = f.deploymentManager()
-      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = Some("someRole"))
+      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = Some(ResourceRole.Unreserved))
 
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))

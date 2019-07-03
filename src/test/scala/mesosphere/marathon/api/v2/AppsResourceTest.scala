@@ -1835,7 +1835,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Allow editing a env configuration without sending secrets" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
       Given("An app with a secret")
       val app = App(id = "/app", cmd = Some("cmd"), env = Map("DATABASE_PW" -> EnvVarSecret("database")), secrets = Map("database" -> SecretDef("dbpassword")))
-      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -1910,7 +1910,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new top-level app with a custom role defined should reject " in new Fixture() {
       Given("An app with non-default role")
       val app = App(id = "/app", cmd = Some("cmd"), role = Some("NotTheDefaultRole"))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
       clock += 5.seconds
@@ -1930,7 +1930,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new top-level app with the mesos_role role defined should accept " in new Fixture(configArgs = Seq("--mesos_role", "customMesosRole")) {
       Given("An app with the mesos_role role")
       val app = App(id = "/app", cmd = Some("cmd"), role = Some("customMesosRole"))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
       clock += 5.seconds
@@ -1948,7 +1948,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new app inside a group with a custom role defined should reject " in new Fixture() {
       Given("An app with non-default role")
       val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("NotTheDefaultRole"))
-      val (body, plan) = prepareAppInGroup(app, groupManager)
+      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
       clock += 5.seconds
@@ -1968,7 +1968,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new app inside a group with the mesos_role role defined should accept " in new Fixture(configArgs = Seq("--mesos_role", "customMesosRole")) {
       Given("An app with the mesos_role role")
       val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("customMesosRole"))
-      val (body, plan) = prepareAppInGroup(app, groupManager)
+      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
       clock += 5.seconds
@@ -1986,7 +1986,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new app inside a group with the top-group role defined should accept " in new Fixture() {
       Given("An app with the dev role inside a group dev")
       val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("dev"))
-      val (body, plan) = prepareAppInGroup(app, groupManager)
+      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
       clock += 5.seconds
@@ -2004,7 +2004,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new app inside a sub group with the sub-group name as role defined should reject " in new Fixture() {
       Given("An app with the dev role inside a group dev")
       val app = App(id = "/dev/sub/something/app", cmd = Some("cmd"), role = Some("sub"))
-      val (body, plan) = prepareAppInGroup(app, groupManager)
+      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
       clock += 5.seconds
@@ -2024,7 +2024,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new app inside a sub group with the top-group role defined should accept " in new Fixture() {
       Given("An app with the dev role inside a group dev")
       val app = App(id = "/dev/sub/something/app", cmd = Some("cmd"), role = Some("dev"))
-      val (body, plan) = prepareAppInGroup(app, groupManager)
+      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
       clock += 5.seconds

@@ -504,7 +504,7 @@ object AppDefinition extends GeneralPurposeCombinators {
       app is validWithRoleEnforcement(roleEnforcement)
     } and validBasicAppDefinition(enabledFeatures) and pluginValidators
 
-  private def validWithRoleEnforcement(roleEnforcement: RoleEnforcement): Validator[AppDefinition] = validator[AppDefinition] { app =>
+  def validWithRoleEnforcement(roleEnforcement: RoleEnforcement): Validator[AppDefinition] = validator[AppDefinition] { app =>
     if (roleEnforcement.enforceRole) {
       app.role must notEmpty
       app.role.get as "role" is in(roleEnforcement.validRoles)
