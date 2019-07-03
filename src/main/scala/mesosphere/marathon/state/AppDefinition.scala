@@ -465,7 +465,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultTTY: Option[Boolean] = None
 
-  val DefaultRole: String = "*" // TODO: use --mesos_role or slave_public
+  val DefaultRole: String = "*" // TODO: use --mesos_role or top-level group
 
   /**
     * should be kept in sync with `Apps.DefaultNetworks`
