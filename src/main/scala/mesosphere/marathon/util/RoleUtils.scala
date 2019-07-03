@@ -37,15 +37,15 @@ object RoleUtils extends StrictLogging {
 
     // We have a service in the root group, no enforced role here
     if (servicePathId.parent.isRoot) return RoleEnforcement(validRoles = Set(defaultRole), defaultRole = defaultRole)
-    val rootPath = servicePathId.rootPath
 
-    // TODO: Add enforced role setting
-    rootGroup.group(rootPath).map(group => {
-      //      if (group.enforceRole) {
-      //      RoleEnforcement(enforceRole = true, validRoles = Seq(group.id.root))
-      //      } else {
-      RoleEnforcement(validRoles = Set(defaultRole, group.id.root), defaultRole = defaultRole)
-      //      }
+    val topLevelGroupPath = servicePathId.rootPath
+
+    rootGroup.group(topLevelGroupPath).map(group => {
+      if (group.enforceRole.getOrElse(false)) {
+        RoleEnforcement(enforceRole = true, validRoles = Set(group.id.root), defaultRole = group.id.root)
+      } else {
+        RoleEnforcement(validRoles = Set(defaultRole, group.id.root), defaultRole = defaultRole)
+      }
     }).getOrElse(RoleEnforcement(validRoles = Set(defaultRole), defaultRole = defaultRole))
   }
 
