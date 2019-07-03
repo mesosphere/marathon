@@ -96,22 +96,22 @@ class PodsResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val podDef = unmarshal(body)
+      val rawPodDef = unmarshal(body)
 
       // This is not really thread safe, another thread may intercept us and change the enforceRole flag, so we need
       // to revalidate this inside the the groupManager later
-      val roleEnforcement = RoleUtils.getRoleSettingsForService(config, PathId(podDef.id), groupManager.rootGroup())
+      val roleEnforcement = RoleUtils.getRoleSettingsForService(config, PathId(rawPodDef.id), groupManager.rootGroup())
 
       // TODO AN: This should be somewhere else... Normalization maybe?
-      val podWithRole = if (podDef.role.isDefined) podDef else podDef.copy(role = Some(roleEnforcement.defaultRole))
+      val podDef = if (rawPodDef.role.isDefined) rawPodDef else rawPodDef.copy(role = Some(roleEnforcement.defaultRole))
 
       implicit val podDefValidator: Validator[Pod] =
         PodsValidation.podValidator(
           config.availableFeatures,
           scheduler.mesosMasterVersion().getOrElse(SemanticVersion(0, 0, 0)), config.defaultNetworkName.toOption, roleEnforcement)
 
-      validateOrThrow(podWithRole)
-      val pod = normalize(Raml.fromRaml(podWithRole.normalize))
+      validateOrThrow(podDef)
+      val pod = normalize(Raml.fromRaml(podDef.normalize))
       validateOrThrow(pod)(PodsValidation.pluginValidators)
 
       checkAuthorization(CreateRunSpec, pod)
@@ -151,7 +151,7 @@ class PodsResource @Inject() (
           config.availableFeatures,
           scheduler.mesosMasterVersion().getOrElse(SemanticVersion(0, 0, 0)), config.defaultNetworkName.toOption, roleEnforcement)
 
-      validateOrThrow(podDef)(podDefValidator)
+      validateOrThrow(podDef)
       if (podId != podDef.id.toRootPath) {
         Response.status(Status.BAD_REQUEST).entity(
           s"""
