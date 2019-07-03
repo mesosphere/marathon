@@ -1,0 +1,8 @@
+{
+  "id": "/simple",
+  "instances": 2,
+  "cmd": "sleep 1000",
+  "cpus": 0.1,
+  "disk": 0,
+  "mem": 16
+}
