@@ -55,10 +55,10 @@ class AppsResource @Inject() (
     config.defaultNetworkName.toOption,
     config.mesosBridgeName())
 
-  private val validateAndNormalizeApp: Normalization[raml.App] =
+  private implicit val validateAndNormalizeApp: Normalization[raml.App] =
     appNormalization(config.availableFeatures, normalizationConfig)(AppNormalization.withCanonizedIds())
 
-  private val normalizeAppUpdate: Normalization[raml.AppUpdate] =
+  private implicit val normalizeAppUpdate: Normalization[raml.AppUpdate] =
     appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 
   @GET
@@ -90,7 +90,7 @@ class AppsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
 
-      val rawApp = Raml.fromRaml(Json.parse(body).as[raml.App].normalize(validateAndNormalizeApp))
+      val rawApp = Raml.fromRaml(Json.parse(body).as[raml.App].normalize)
       val now = clock.now()
 
       // This is not really thread safe, another thread may intercept us and change the enforceRole flag, so we need
@@ -182,12 +182,12 @@ class AppsResource @Inject() (
         // some hackery here to pass initial JSON parsing.
         val jsObj = Json.parse(body).as[JsObject] + ("id" -> Json.toJson(appId.toString))
         // the version is thrown away in conversion to AppUpdate
-        jsObj.as[raml.App].normalize(validateAndNormalizeApp).toRaml[raml.AppUpdate]
+        jsObj.as[raml.App].normalize.toRaml[raml.AppUpdate]
 
       case PartialUpdate(existingApp) =>
         import mesosphere.marathon.raml.AppConversion.appUpdateRamlReader
-        val appUpdate = Json.parse(body).as[raml.AppUpdate].normalize(normalizeAppUpdate)
-        Raml.fromRaml(appUpdate -> existingApp)(appUpdateRamlReader).normalize(validateAndNormalizeApp) //validate if the resulting app is correct
+        val appUpdate = Json.parse(body).as[raml.AppUpdate].normalize
+        Raml.fromRaml(appUpdate -> existingApp)(appUpdateRamlReader).normalize //validate if the resulting app is correct
         appUpdate.copy(id = Some(appId.toString))
 
     }
@@ -203,13 +203,13 @@ class AppsResource @Inject() (
     */
   def canonicalAppUpdatesFromJson(body: Array[Byte], partialUpdate: Boolean): Seq[raml.AppUpdate] = {
     if (partialUpdate) {
-      Json.parse(body).as[Seq[raml.AppUpdate]].map(_.normalize(normalizeAppUpdate))
+      Json.parse(body).as[Seq[raml.AppUpdate]].map(_.normalize)
     } else {
       // this is a complete replacement of the app as we know it, so parse and normalize as if we're dealing
       // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
       // the version is thrown away in toUpdate so just pass `zero` for now.
       Json.parse(body).as[Seq[raml.App]].map { app =>
-        app.normalize(validateAndNormalizeApp).toRaml[raml.AppUpdate]
+        app.normalize.toRaml[raml.AppUpdate]
       }
     }
   }
@@ -366,7 +366,7 @@ class AppsResource @Inject() (
     val appUpdateWithRole = if (appUpdate.role.isDefined) appUpdate else appUpdate.copy(role = Some(roleEnforcement.defaultRole))
 
     val version = clock.now()
-    val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdateWithRole, partialUpdate, allowCreation, clock.now(), service, validateAndNormalizeApp), version, force))
+    val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdateWithRole, partialUpdate, allowCreation, clock.now(), service), version, force))
     val response = plan.original.app(appId)
       .map(_ => Response.ok())
       .getOrElse(Response.created(new URI(appId.toString)))
@@ -397,7 +397,7 @@ class AppsResource @Inject() (
         case Some(id) => {
           val roleEnforcement = RoleUtils.getEnforcedRoleForService(config, id, groupManager.rootGroup())
           implicit val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
-          group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation, clock.now(), service, validateAndNormalizeApp), version)
+          group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation, clock.now(), service), version)
         }
         case None => group
       }

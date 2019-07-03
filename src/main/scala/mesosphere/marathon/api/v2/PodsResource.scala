@@ -105,12 +105,12 @@ class PodsResource @Inject() (
       // TODO AN: This should be somewhere else... Normalization maybe?
       val podWithRole = if (podDef.role.isDefined) podDef else podDef.copy(role = Some(roleEnforcement.defaultRole))
 
-      def podDefValidator: Validator[Pod] =
+      implicit val podDefValidator: Validator[Pod] =
         PodsValidation.podValidator(
           config.availableFeatures,
           scheduler.mesosMasterVersion().getOrElse(SemanticVersion(0, 0, 0)), config.defaultNetworkName.toOption, roleEnforcement)
 
-      validateOrThrow(podWithRole)(podDefValidator)
+      validateOrThrow(podWithRole)
       val pod = normalize(Raml.fromRaml(podWithRole.normalize))
       validateOrThrow(pod)(PodsValidation.pluginValidators)
 
@@ -146,7 +146,7 @@ class PodsResource @Inject() (
       // TODO AN: This should be somewhere else... Normalization maybe?
       val podDef = if (rawPodDef.role.isDefined) rawPodDef else rawPodDef.copy(role = Some(roleEnforcement.defaultRole))
 
-      def podDefValidator: Validator[Pod] =
+      implicit val podDefValidator: Validator[Pod] =
         PodsValidation.podValidator(
           config.availableFeatures,
           scheduler.mesosMasterVersion().getOrElse(SemanticVersion(0, 0, 0)), config.defaultNetworkName.toOption, roleEnforcement)

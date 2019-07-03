@@ -334,12 +334,10 @@ trait AppValidation {
     app.healthChecks is every(complyWithIpProtocolRules(app.container))
     app must haveAtMostOneMesosHealthCheck
     app.fetch is every(valid)
-
     app.secrets is { secrets: Map[String, SecretDef] =>
       secrets.nonEmpty
-    } -> featureEnabled(enabledFeatures, Features.SECRETS)
+    } -> (featureEnabled(enabledFeatures, Features.SECRETS))
     app.secrets is featureEnabledImplies(enabledFeatures, Features.SECRETS)(secretValidator)
-
     app.env is envValidator(strictNameValidation = false, app.secrets, enabledFeatures)
     app.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles("app", app.residency.isDefined) and notEmpty)
     app must complyWithGpuRules(enabledFeatures)
@@ -351,13 +349,6 @@ trait AppValidation {
     app must requireUnreachableDisabledForResidentTasks
     app.constraints.each must complyWithAppConstraintRules
     app.networks is ramlNetworksValidator
-
-    // Role Validation
-    //    app.role is { role: Option[String] =>
-    //      role.nonEmpty
-    //    } -> featureEnabled(enabledFeatures, Features.GROUP_ROLES)
-    //    app.role is featureEnabledImplies(enabledFeatures, Features.GROUP_ROLES)(RoleValidation.validateServiceRole(app))
-
   } and ExternalVolumes.validAppRaml
 
   val requireUnreachableDisabledForResidentTasks =

@@ -73,32 +73,31 @@ object AppHelpers {
     partialUpdate: Boolean,
     allowCreation: Boolean,
     now: Timestamp,
-    service: MarathonSchedulerService,
-    appNormalization: Normalization[raml.App])(implicit
-    appDefinitionValidator: Validator[AppDefinition],
+    service: MarathonSchedulerService)(implicit
     identity: Identity,
-    authorizer: Authorizer
-  ): AppDefinition = {
+    authorizer: Authorizer,
+    appDefinitionValidator: Validator[AppDefinition],
+    appNormalization: Normalization[raml.App]): AppDefinition = {
     import Normalization._
     def createApp(): AppDefinition = {
-      val app = withoutPriorAppDefinition(appUpdate, appId).normalize(appNormalization)
+      val app = withoutPriorAppDefinition(appUpdate, appId).normalize
       // versionInfo doesn't change - it's never overridden by an AppUpdate.
       // the call to fromRaml loses the original versionInfo; it's just the current time in this case
       // so we just query for that (using a more predictable clock than AppDefinition has access to)
-      val appDef = validateOrThrow(Raml.fromRaml(app).copy(versionInfo = OnlyVersion(now)))(appDefinitionValidator)
+      val appDef = validateOrThrow(Raml.fromRaml(app).copy(versionInfo = OnlyVersion(now)))
       checkAuthorization(CreateRunSpec, appDef)
     }
 
     def updateApp(current: AppDefinition): AppDefinition = {
       val app =
         if (partialUpdate)
-          Raml.fromRaml(appUpdate -> current).normalize(appNormalization)
+          Raml.fromRaml(appUpdate -> current).normalize
         else
-          withoutPriorAppDefinition(appUpdate, appId).normalize(appNormalization)
+          withoutPriorAppDefinition(appUpdate, appId).normalize
 
       // versionInfo doesn't change - it's never overridden by an AppUpdate.
       // the call to fromRaml loses the original versionInfo; we take special care to preserve it
-      val appDef = validateOrThrow(Raml.fromRaml(app).copy(versionInfo = current.versionInfo))(appDefinitionValidator)
+      val appDef = validateOrThrow(Raml.fromRaml(app).copy(versionInfo = current.versionInfo))
       checkAuthorization(UpdateRunSpec, appDef)
     }
 
