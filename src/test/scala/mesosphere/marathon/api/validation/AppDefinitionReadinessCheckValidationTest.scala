@@ -5,6 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.state._
+import mesosphere.marathon.util.RoleEnforcement
 
 import scala.collection.immutable.Seq
 

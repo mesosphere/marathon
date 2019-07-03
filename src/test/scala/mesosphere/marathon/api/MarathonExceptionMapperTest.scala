@@ -7,7 +7,8 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.raml.App
-import mesosphere.marathon.state.{AppDefinition, PathId, RoleEnforcement}
+import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.util.RoleEnforcement
 import play.api.libs.json.{JsObject, JsResultException, Json}
 
 class MarathonExceptionMapperTest extends UnitTest {

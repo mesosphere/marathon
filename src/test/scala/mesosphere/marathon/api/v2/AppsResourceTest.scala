@@ -20,6 +20,7 @@ import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.{GroupCreation, JerseyTest, SettableClock}
+import mesosphere.marathon.util.RoleEnforcement
 import org.mockito.Matchers
 import play.api.libs.json._
 

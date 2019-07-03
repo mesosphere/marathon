@@ -25,22 +25,6 @@ case class BackoffStrategy(
     factor: Double = 1.15)
 
 /**
-  * Configures role enforcement on runSpecs, used for validation.
-  *
-  * If enforce role is false, the role must be set, but no further checking is done.
-  *
-  * @param enforceRole If true, the role on the runSpec must match the specified role, additionally the
-  *                    acceptedResourceRole field can only contain one of ['*', &lt;role&gt;]
-  * @param validRoles List of valid roles
-  */
-case class RoleEnforcement(
-    enforceRole: Boolean = false,
-    validRoles: Set[String] = Set.empty) {
-
-  def defaultRole = validRoles.head
-}
-
-/**
   * A generic spec that specifies something that Marathon is able to launch instances of.
   */
 

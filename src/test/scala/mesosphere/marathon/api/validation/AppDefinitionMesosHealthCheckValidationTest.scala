@@ -5,6 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.state._
+import mesosphere.marathon.util.RoleEnforcement
 
 class AppDefinitionMesosHealthCheckValidationTest extends UnitTest {
 

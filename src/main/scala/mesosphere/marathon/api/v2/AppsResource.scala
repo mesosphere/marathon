@@ -95,7 +95,7 @@ class AppsResource @Inject() (
 
       // This is not really thread safe, another thread may intercept us and change the enforceRole flag, so we need
       // to revalidate this inside the the groupManager later
-      val roleEnforcement = RoleUtils.getEnforcedRoleForService(config, rawApp.id, groupManager.rootGroup())
+      val roleEnforcement = RoleUtils.getRoleSettingsForService(config, rawApp.id, groupManager.rootGroup())
       val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
 
       // TODO AN: This should be somewhere else... Normalization maybe?
@@ -359,7 +359,7 @@ class AppsResource @Inject() (
       case (_, false) => CompleteReplacement
     }
 
-    val roleEnforcement = RoleUtils.getEnforcedRoleForService(config, appId, groupManager.rootGroup())
+    val roleEnforcement = RoleUtils.getRoleSettingsForService(config, appId, groupManager.rootGroup())
     implicit val appDefinitionValidator: Validator[AppDefinition] = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
 
     val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType)
@@ -395,7 +395,7 @@ class AppsResource @Inject() (
     def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
       update.id.map(PathId(_)) match {
         case Some(id) => {
-          val roleEnforcement = RoleUtils.getEnforcedRoleForService(config, id, groupManager.rootGroup())
+          val roleEnforcement = RoleUtils.getRoleSettingsForService(config, id, groupManager.rootGroup())
           implicit val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleEnforcement)(pluginManager)
           group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation, clock.now(), service), version)
         }

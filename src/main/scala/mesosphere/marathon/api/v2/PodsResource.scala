@@ -100,7 +100,7 @@ class PodsResource @Inject() (
 
       // This is not really thread safe, another thread may intercept us and change the enforceRole flag, so we need
       // to revalidate this inside the the groupManager later
-      val roleEnforcement = RoleUtils.getEnforcedRoleForService(config, PathId(podDef.id), groupManager.rootGroup())
+      val roleEnforcement = RoleUtils.getRoleSettingsForService(config, PathId(podDef.id), groupManager.rootGroup())
 
       // TODO AN: This should be somewhere else... Normalization maybe?
       val podWithRole = if (podDef.role.isDefined) podDef else podDef.copy(role = Some(roleEnforcement.defaultRole))
@@ -141,7 +141,7 @@ class PodsResource @Inject() (
 
       // This is not really thread safe, another thread may intercept us and change the enforceRole flag, so we need
       // to revalidate this inside the the groupManager later
-      val roleEnforcement = RoleUtils.getEnforcedRoleForService(config, PathId(rawPodDef.id), groupManager.rootGroup())
+      val roleEnforcement = RoleUtils.getRoleSettingsForService(config, PathId(rawPodDef.id), groupManager.rootGroup())
 
       // TODO AN: This should be somewhere else... Normalization maybe?
       val podDef = if (rawPodDef.role.isDefined) rawPodDef else rawPodDef.copy(role = Some(roleEnforcement.defaultRole))

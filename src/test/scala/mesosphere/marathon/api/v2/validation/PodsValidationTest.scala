@@ -3,8 +3,8 @@ package api.v2.validation
 
 import com.wix.accord.{Failure, Result, Validator}
 import mesosphere.marathon.raml.{Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, Image, ImageType, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodEphemeralVolume, PodPersistentVolume, PodPlacementPolicy, PodSchedulingPolicy, PodSecretVolume, PodUpgradeStrategy, Resources, SecretDef, UnreachableDisabled, UnreachableEnabled, VolumeMount}
-import mesosphere.marathon.state.{PersistentVolume, RoleEnforcement}
-import mesosphere.marathon.util.SemanticVersion
+import mesosphere.marathon.state.PersistentVolume
+import mesosphere.marathon.util.{RoleEnforcement, SemanticVersion}
 import mesosphere.{UnitTest, ValidationTestLike}
 
 class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValidation with SchedulingValidation {

@@ -12,6 +12,7 @@ import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.util.RoleEnforcement
 import mesosphere.{UnitTest, ValidationTestLike}
 import play.api.libs.json.Json
 

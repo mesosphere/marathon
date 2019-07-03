@@ -5,6 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.raml.Apps
 import mesosphere.marathon.state._
+import mesosphere.marathon.util.RoleEnforcement
 
 class AppDefinitionSchedulerValidationTest extends UnitTest {
 

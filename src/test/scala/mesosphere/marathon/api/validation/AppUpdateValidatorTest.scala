@@ -6,7 +6,8 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.raml.{App, AppUpdate, Raml}
-import mesosphere.marathon.state.{AppDefinition, RoleEnforcement}
+import mesosphere.marathon.state.AppDefinition
+import mesosphere.marathon.util.RoleEnforcement
 import org.scalatest.Matchers
 import play.api.libs.json.Json
 
