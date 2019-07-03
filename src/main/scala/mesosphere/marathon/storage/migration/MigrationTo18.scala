@@ -131,10 +131,10 @@ object MigrationTo18 extends StrictLogging {
         }
 
         if (List(state, tasksMap).exists(_.isModified)) {
-          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation, "")
+          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation)
           ParsedValue(instance, Modified)
         } else {
-          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation, "")
+          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation)
           ParsedValue(instance, NotModified)
         }
 

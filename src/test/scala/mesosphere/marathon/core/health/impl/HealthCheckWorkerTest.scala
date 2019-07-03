@@ -87,7 +87,7 @@ class HealthCheckWorkerTest extends AkkaUnitTest with ImplicitSender {
       val tasksMap = Map(task.taskId -> task)
       val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, Goal.Running)
 
-      val instance = Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, app, None, Instance.defaultMesosRole)
+      val instance = Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, app, None)
 
       val resF = HealthCheckWorker.run(app, instance,
         healthCheck = MarathonHttpHealthCheck(port = Some(port), path = Some("/health")))(mat.asInstanceOf[ActorMaterializer])

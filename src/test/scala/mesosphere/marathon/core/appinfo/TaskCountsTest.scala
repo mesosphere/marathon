@@ -198,7 +198,7 @@ object Fixture {
         state = Instance.InstanceState(None, tasksMap, task.status.startedAt.getOrElse(task.status.stagedAt), app.unreachableStrategy, Goal.Running),
         tasksMap = tasksMap,
         app,
-        None, Instance.defaultMesosRole)
+        None)
     }
   }
 }

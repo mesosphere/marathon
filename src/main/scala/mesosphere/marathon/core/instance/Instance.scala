@@ -28,8 +28,7 @@ case class Instance(
     state: InstanceState,
     tasksMap: Map[Task.Id, Task],
     runSpec: RunSpec,
-    reservation: Option[Reservation],
-    role: String) extends Placed {
+    reservation: Option[Reservation]) extends Placed {
 
   def runSpecId: PathId = runSpec.id
   def runSpecVersion: Timestamp = runSpec.version
@@ -96,7 +95,7 @@ object Instance {
 
   object Running {
     def unapply(instance: Instance): Option[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]] = instance match {
-      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _, _) =>
+      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _) =>
         Some((instanceId, agentInfo, tasksMap))
       case _ =>
         Option.empty[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]]
@@ -111,12 +110,11 @@ object Instance {
     * @return An instance in the scheduled state.
     */
   def scheduled(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
+    // TODO AN: We already require the role here, even if it's not used yet
     require(runSpec.role.isDefined, "Scheduling an instance from a runspec requires the runSpec to have a valid role")
 
     val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running)
-
-    // TODO AN: Can we provide a default here in case role isn't set, or are we sure that role is set?
-    Instance(instanceId, None, state, Map.empty, runSpec, None, runSpec.role.get)
+    Instance(instanceId, None, state, Map.empty, runSpec, None)
   }
 
   /*
@@ -423,9 +421,4 @@ object Instance {
       Json.toJson(stringToTask)
     }
   )
-
-  /**
-    * This is the default role that mesos uses when no role is specified by marathon.
-    */
-  val defaultMesosRole = "TBD"
 }

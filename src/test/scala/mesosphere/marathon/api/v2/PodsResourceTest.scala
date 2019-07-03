@@ -1250,7 +1250,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
             InstanceState(Condition.Running, f.clock.now(), Some(f.clock.now()), None, Goal.Running),
             Map.empty,
             runSpec = runSpec,
-            None, Instance.defaultMesosRole
+            None
           )
           killer.kill(any, any, any)(any) returns Future.successful(Seq(instance))
           val response = asyncRequest { r =>
@@ -1287,12 +1287,12 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
             Instance(Instance.Id.forRunSpec(runSpec.id), Some(Instance.AgentInfo("", None, None, None, Nil)),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,
               runSpec,
-              None, Instance.defaultMesosRole
+              None
             ),
             Instance(Instance.Id.forRunSpec(runSpec.id), Some(Instance.AgentInfo("", None, None, None, Nil)),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,
               runSpec,
-              None, Instance.defaultMesosRole))
+              None))
 
           val f = Fixture()
 

@@ -104,7 +104,7 @@ object MigrationTo17 extends StrictLogging {
         val reservation = rawReservation.map { raw =>
           raw.as[Reservation](InstanceMigration.legacyReservationReads(tasksMap, instanceId))
         }
-        new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation, null)
+        new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation)
       }
   }
 
