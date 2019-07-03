@@ -61,7 +61,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       executorResources = executorResources.fromRaml,
       unreachableStrategy = unreachableStrategy,
       killSelection = killSelection,
-      role = podd.role
+      role = podd.role.getOrElse(throw new IllegalArgumentException("Pod role must be defined."))
     )
   }
 

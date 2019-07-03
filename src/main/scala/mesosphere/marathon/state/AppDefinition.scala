@@ -87,7 +87,7 @@ case class AppDefinition(
 
     tty: Option[Boolean] = AppDefinition.DefaultTTY,
 
-    role: String) extends RunSpec
+    role: String = AppDefinition.DefaultRole) extends RunSpec
   with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
@@ -188,6 +188,7 @@ case class AppDefinition(
       .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto).asJava)
       .setUnreachableStrategy(unreachableStrategy.toProto)
       .setKillSelection(killSelection.toProto)
+      .setRole(role)
 
     check.foreach { c => builder.setCheck(c.toProto) }
 
@@ -463,6 +464,8 @@ object AppDefinition extends GeneralPurposeCombinators {
   val DefaultAcceptedResourceRoles = Set.empty[String]
 
   val DefaultTTY: Option[Boolean] = None
+  
+  val DefaultRole: String = "*" // TODO: use --mesos_role or slave_public
 
   /**
     * should be kept in sync with `Apps.DefaultNetworks`
