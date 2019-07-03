@@ -32,7 +32,7 @@ case class PodDefinition(
     override val volumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
-    override val role: String
+    override val role: String = PodDefinition.DefaultRole
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
   /**
@@ -135,4 +135,5 @@ object PodDefinition {
   val DefaultBackoffStrategy = BackoffStrategy()
   val DefaultUpgradeStrategy = AppDefinition.DefaultUpgradeStrategy
   val DefaultUnreachableStrategy = UnreachableStrategy.default(resident = false)
+  val DefaultRole: String = "*" // TODO use --mesos_slave
 }
