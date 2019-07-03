@@ -1,4 +1,7 @@
-package mesosphere.marathon.storage.migration
+package mesosphere.marathon
+package storage.migration
+
+import java.nio.charset.StandardCharsets
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
@@ -13,7 +16,7 @@ import mesosphere.marathon.core.storage.store.impl.zk.ZkSerialized
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.storage.repository.{AppRepository, PodRepository}
 import mesosphere.marathon.storage.store.ZkStoreSerialization
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.Json
 
 import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
@@ -69,7 +72,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
     }
   }
 
-  def migratePods(persistenceStore: PersistenceStore[_, _, _], podRepository: PodRepository): Future[Done] = {
+  def migratePods(persistenceStore: PersistenceStore[_, _, _], podRepository: PodRepository)(implicit mat: Materializer): Future[Done] = {
 
     implicit val podIdResolver =
       new ZkStoreSerialization.ZkPathIdResolver[raml.Pod]("pods", true, _.version.getOrElse(Timestamp.now().toOffsetDateTime))
@@ -79,10 +82,26 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         case ZkSerialized(byteString) => Json.parse(byteString.utf8String).as[raml.Pod]
       }
 
+    implicit val podRamlMarshaller: Marshaller[raml.Pod, ZkSerialized] =
+      Marshaller.opaque { podRaml =>
+        ZkSerialized(ByteString(Json.stringify(Json.toJson(podRaml)), StandardCharsets.UTF_8.name()))
+      }
+
     maybeStore(persistenceStore).map { store =>
-     podRepository
+      podRepository
         .ids()
         .mapAsync(Migration.maxConcurrency) { podId => store.get(podId) }
-        .collect { case Some(podRaml) if !podRaml.role.isEmpty => podRaml }
+        .collect { case Some(podRaml) if !podRaml.role.isDefined => podRaml }
+        .map { podRaml =>
+          // TODO: use --mesos_role or slave_public
+          podRaml.copy(role = Some("*"))
+        }
+        .mapAsync(Migration.maxConcurrency) { podRaml =>
+          store.store(PathId(podRaml.id), podRaml)
+        }
+        .runWith(Sink.ignore)
+    }.getOrElse {
+      Future.successful(Done)
+    }
   }
 }
