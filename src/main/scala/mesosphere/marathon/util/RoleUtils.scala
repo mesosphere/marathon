@@ -26,10 +26,11 @@ object RoleUtils extends StrictLogging {
   /**
     * Returns the role settings for the service with the specified ID, based on the top-level group and the global config
     *
-    * @param config
-    * @param servicePathId
-    * @param rootGroup
-    * @return
+    * @param config Global config to provide defaultMesos role
+    * @param servicePathId The pathId of the affected runSpec, used to determine a possible top-level group role
+    * @param rootGroup The root group, used to access possible top-level groups and their settings
+    *
+    * @return A data set with valid roles, default role and a flag if the role should be enforced
     */
   def getRoleSettingsForService(config: MarathonConf, servicePathId: PathId, rootGroup: RootGroup): RoleEnforcement = {
     val defaultRole = config.mesosRole()
@@ -48,6 +49,14 @@ object RoleUtils extends StrictLogging {
     }).getOrElse(RoleEnforcement(validRoles = Set(defaultRole), defaultRole = defaultRole))
   }
 
+  /**
+    * Update roles on RunSpecs who don't have any roles defined.
+    *
+    * @param config Global config to provide defaultMesos role
+    * @param originalRoot The root group, used to determine possible top-level group roles
+    *
+    * @return An updated root group in which all runSpecs have valid roles
+    */
   def updateRoles(config: MarathonConf, originalRoot: RootGroup): RootGroup = {
 
     def updateApp(app: AppDefinition): Option[AppDefinition] = {
