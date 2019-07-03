@@ -751,7 +751,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     def instanceChanged(app: AppDefinition, condition: Condition): InstanceChanged = {
       val instanceId = Instance.Id.forRunSpec(app.id)
       val state = InstanceState(Condition.Running, Timestamp.now(), None, None, Goal.Running)
-      val instance: Instance = Instance(instanceId, None, state, Map.empty, app, None)
+      val instance: Instance = Instance(instanceId, None, state, Map.empty, app, None, Instance.defaultMesosRole)
 
       InstanceChanged(instanceId, app.version, app.id, condition, instance)
     }

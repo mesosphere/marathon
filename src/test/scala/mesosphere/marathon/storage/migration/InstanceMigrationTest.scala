@@ -52,7 +52,8 @@ class InstanceMigrationTest extends AkkaUnitTest with StrictLogging {
          |  "tasksMap": {},
          |  "runSpecVersion": "2015-01-01T12:00:00.000Z",
          |  "agentInfo": { "host": "localhost", "attributes": [] },
-         |  "state": { "since": "2015-01-01T12:00:00.000Z", "condition": { "str": "Running" }, "goal": "Running" }
+         |  "state": { "since": "2015-01-01T12:00:00.000Z", "condition": { "str": "Running" }, "goal": "Running" },
+         |  "role": "someRole"
          |}""".stripMargin).as[JsObject]
   }
 }
