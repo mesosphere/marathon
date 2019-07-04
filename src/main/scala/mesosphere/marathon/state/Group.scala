@@ -231,6 +231,13 @@ object Group extends StrictLogging {
     validator[raml.GroupUpdate] { group =>
       group is notNull
 
+      // Only top-level groups are allowed to set the enforce role parameter.
+      if (group.enforceRole.isDefined) {
+        group.id.map(_.toPath) is optional(PathId.topLevel)
+      }
+
+      // TODO: Should we allow enforceRole changes via put?
+
       group.version is theOnlyDefinedOptionIn(group)
       group.scaleBy is theOnlyDefinedOptionIn(group)
 
