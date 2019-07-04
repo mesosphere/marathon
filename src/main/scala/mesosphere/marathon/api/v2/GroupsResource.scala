@@ -196,7 +196,9 @@ class GroupsResource @Inject() (
   }
 
   @PATCH
-  def patchRoot(
+  @Path("""{id:.+}""")
+  def patchGroup(
+    @PathParam("id") id: String,
     body: Array[Byte],
     @Context req: HttpServletRequest,
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
@@ -205,7 +207,7 @@ class GroupsResource @Inject() (
       val raw = Json.parse(body).as[raml.GroupPartialUpdate]
       val normalized = GroupNormalization.partialUpdateNormalization(config).normalized(raw)
 
-      val partialUpdate = validateOrThrow(normalized)(Group.validPartialUpdate)
+      validateOrThrow(PathId(id))(PathId.topLevel)
 
       // TODO: actually update the group in GroupManager without triggering a deployment.
 

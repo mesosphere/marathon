@@ -250,9 +250,4 @@ object Group extends StrictLogging {
       group.groups is optional(every(
         validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)))))
     }
-
-  val validPartialUpdate: Validator[raml.GroupPartialUpdate] =
-    validator[raml.GroupPartialUpdate] { update =>
-      update.id.toPath is PathId.topLevel
-    }
 }
