@@ -19,6 +19,7 @@ class NetworkInfoTest extends UnitTest {
 
       val app = AppDefinition(
         id = PathId("test"),
+        role = "*",
         networks = Seq(BridgeNetwork()), container = Some(Docker(
           portMappings = Seq(
             PortMapping(
@@ -105,7 +106,9 @@ class NetworkInfoTest extends UnitTest {
 
       val app = AppDefinition(
         id = PathId("test"),
-        networks = Seq(ContainerNetwork("whatever")), container = Some(Docker(
+        role = "*",
+        networks = Seq(ContainerNetwork("whatever")),
+        container = Some(Docker(
 
           portMappings = Seq(
             PortMapping(containerPort = 0, hostPort = Some(31000), servicePort = 9000, protocol = "tcp"),
@@ -177,6 +180,7 @@ class NetworkInfoTest extends UnitTest {
       "compute the correct values" in {
         val app = AppDefinition(
           id = PathId("test"),
+          role = "*",
           container = Some(Mesos()),
           portDefinitions = Seq(
             PortDefinition(

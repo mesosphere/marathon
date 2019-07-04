@@ -7,13 +7,13 @@ import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.raml.{App, AppUpdate, Raml}
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.util.RoleEnforcement
+import mesosphere.marathon.util.RoleSettings
 import org.scalatest.Matchers
 import play.api.libs.json.Json
 
 class AppUpdateValidatorTest extends UnitTest with Matchers {
 
-  implicit val validAppDefinition = AppDefinition.validAppDefinition(Set.empty, RoleEnforcement())(PluginManager.None)
+  implicit val validAppDefinition = AppDefinition.validAppDefinition(Set.empty, RoleSettings.forTest)(PluginManager.None)
 
   "validation for network type changes" should {
     // regression test for DCOS-10641
@@ -53,7 +53,7 @@ class AppUpdateValidatorTest extends UnitTest with Matchers {
           |}
         """.stripMargin).as[App]
 
-      val config = AppNormalization.Configuration(None, "mesos-bridge-name")
+      val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), RoleSettings.forTest)
       val appDef = Raml.fromRaml(
         AppNormalization.apply(config)
           .normalized(AppNormalization.forDeprecated(config).normalized(originalApp)))

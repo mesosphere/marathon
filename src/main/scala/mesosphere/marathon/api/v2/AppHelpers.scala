@@ -2,24 +2,25 @@ package mesosphere.marathon
 package api.v2
 
 import com.wix.accord.Validator
-import mesosphere.marathon.api.{Rejection, RejectionException}
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
+import mesosphere.marathon.api.{Rejection, RejectionException}
 import mesosphere.marathon.core.appinfo.{AppSelector, Selector}
 import mesosphere.marathon.plugin.auth._
+import mesosphere.marathon.raml.{AppConversion, AppExternalVolume, AppPersistentVolume, Raml}
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableStrategy}
-import mesosphere.marathon.raml.{AppConversion, AppExternalVolume, AppPersistentVolume, Raml}
-import stream.Implicits._
+import mesosphere.marathon.stream.Implicits._
 
 object AppHelpers {
 
-  def appNormalization(
-    enabledFeatures: Set[String], config: AppNormalization.Config): Normalization[raml.App] = Normalization { app =>
+  def appNormalization(config: AppNormalization.Config): Normalization[raml.App] = Normalization { app =>
+
     validateOrThrow(app)(AppValidation.validateOldAppAPI)
     val migrated = AppNormalization.forDeprecated(config).normalized(app)
-    validateOrThrow(migrated)(AppValidation.validateCanonicalAppAPI(enabledFeatures, () => config.defaultNetworkName))
+    validateOrThrow(migrated)(AppValidation.validateCanonicalAppAPI(config.enabledFeatures, () => config.defaultNetworkName))
     AppNormalization(config).normalized(migrated)
+
   }
 
   def appUpdateNormalization(config: AppNormalization.Config): Normalization[raml.AppUpdate] = Normalization { app =>
@@ -43,8 +44,11 @@ object AppHelpers {
     val unreachableStrategy = update
       .unreachableStrategy.map(Raml.fromRaml(_))
       .getOrElse(UnreachableStrategy.default(hasPersistentVols))
+
+    val role = update.role.orNull
+
     val template = AppDefinition(
-      appId, upgradeStrategy = selectedStrategy, unreachableStrategy = unreachableStrategy)
+      appId, role = role, upgradeStrategy = selectedStrategy, unreachableStrategy = unreachableStrategy)
     Raml.fromRaml(update -> template)
   }
 

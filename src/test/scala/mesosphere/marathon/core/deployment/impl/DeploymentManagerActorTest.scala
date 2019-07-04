@@ -41,7 +41,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Deployment" in {
       val f = new Fixture
       val manager = f.deploymentManager()
-      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = Some(ResourceRole.Unreserved))
+      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = ResourceRole.Unreserved)
 
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
@@ -56,7 +56,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Finished deployment" in {
       val f = new Fixture
       val manager = f.deploymentManager()
-      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = Some(ResourceRole.Unreserved))
+      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = ResourceRole.Unreserved)
 
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
@@ -76,7 +76,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       val f = new Fixture
       val manager = f.deploymentManager()
-      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"))
+      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = "*")
 
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
@@ -93,7 +93,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Conflicting not forced deployment" in {
       val f = new Fixture
       val manager = f.deploymentManager()
-      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"))
+      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = "*")
 
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
@@ -115,7 +115,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Conflicting forced deployment" in {
       val f = new Fixture
       val manager = f.deploymentManager()
-      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"))
+      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = "*")
 
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
@@ -137,7 +137,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Multiple conflicting forced deployments" in {
       val f = new Fixture
       val manager = f.deploymentManager()
-      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"))
+      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = "*")
 
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
@@ -187,7 +187,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
       val f = new Fixture
       val manager = f.deploymentManager()
 
-      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"))
+      val app = AppDefinition("app".toRootPath, cmd = Some("sleep"), role = "*")
       val oldGroup = createRootGroup()
       val newGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(oldGroup, newGroup)

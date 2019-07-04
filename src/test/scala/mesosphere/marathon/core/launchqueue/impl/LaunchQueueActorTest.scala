@@ -55,7 +55,7 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
         verify()
       }
       def runSpecActorProps(runSpec: RunSpec) = Props(new TestLauncherActor) // linter:ignore UnusedParameter
-      val app = AppDefinition(PathId("/foo"), role = Some("someRole"))
+      val app = AppDefinition(PathId("/foo"), role = "*")
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
       val instanceTracker = mock[InstanceTracker]

@@ -3,6 +3,7 @@ package api.v2
 
 import mesosphere.marathon.raml.{AnyToRaml, Endpoint, Network, NetworkMode, Pod, PodContainer, PodPersistentVolume, PodSchedulingPolicy, PodUpgradeStrategy}
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.util.RoleSettings
 
 object PodNormalization {
 
@@ -13,15 +14,15 @@ object PodNormalization {
   import Normalization._
 
   /** dynamic pod normalization configuration, useful for migration and/or testing */
-  trait Config extends NetworkNormalization.Config
-
-  case class Configuration(nc: NetworkNormalization.Config) extends Config {
-    override val defaultNetworkName: Option[String] = nc.defaultNetworkName
+  trait Config extends NetworkNormalization.Config {
+    def roleSettings: RoleSettings
   }
 
+  case class Configuration(defaultNetworkName: Option[String], roleSettings: RoleSettings) extends Config
+
   object Configuration {
-    def apply(defaultNetworkName: Option[String]): Config =
-      Configuration(NetworkNormalization.Configure(defaultNetworkName))
+    def apply(config: MarathonConf, roleSettings: RoleSettings): Config =
+      Configuration(config.defaultNetworkName.toOption, roleSettings)
   }
 
   case class Containers(networks: Seq[Network], containers: Seq[PodContainer])
@@ -74,6 +75,9 @@ object PodNormalization {
     NetworkNormalization.requireContainerNetworkNameResolution(networks)
     val containers = Containers(networks, pod.containers).normalize.containers
     val scheduling = normalizeScheduling(pod)
-    pod.copy(containers = containers, networks = networks, scheduling = scheduling)
+
+    val role = pod.role.getOrElse(config.roleSettings.defaultRole)
+
+    pod.copy(containers = containers, networks = networks, scheduling = scheduling, role = Some(role))
   }
 }

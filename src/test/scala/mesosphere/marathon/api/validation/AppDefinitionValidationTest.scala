@@ -5,7 +5,7 @@ import com.wix.accord.Validator
 import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.state._
-import mesosphere.marathon.util.RoleEnforcement
+import mesosphere.marathon.util.RoleSettings
 
 class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
   import AppDefinition._
@@ -13,7 +13,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
   "AppDefinition" when {
     "created with the default unreachable strategy" should {
       "be valid" in new Fixture {
-        val app = AppDefinition(id = PathId("/test"), cmd = Some("sleep 1000"))
+        val app = AppDefinition(id = PathId("/test"), cmd = Some("sleep 1000"), role = "*")
         validator(app) shouldBe aSuccess
       }
     }
@@ -23,6 +23,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
       "be valid with dependencies pointing to a a subtree of this app" in new Fixture {
         val app = AppDefinition(
           id = PathId("/a/b/c/d"),
+          role = "*",
           cmd = Some("sleep 1000"),
           dependencies = Set(PathId("/a/b/c/e"))
         )
@@ -32,6 +33,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
       "be valid with dependencies pointing to a different subtree (Regression for #5024)" in new Fixture {
         val app = AppDefinition(
           id = PathId("/a/b/c/d"),
+          role = "*",
           cmd = Some("sleep 1000"),
           dependencies = Set(PathId("/x/y/z"))
         )
@@ -43,7 +45,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
           id = PathId("/a/b/c/d"),
           cmd = Some("sleep 1000"),
           dependencies = Set(PathId("/a/.../")),
-          role = Some("someRole")
+          role = "*"
         )
 
         validator(app) should haveViolations(
@@ -108,9 +110,10 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
   }
 
   class Fixture {
-    implicit val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(Set.empty, RoleEnforcement())(PluginManager.None)
+    implicit val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(Set.empty, RoleSettings.forTest)(PluginManager.None)
     def validApp = AppDefinition(
       id = PathId("/a/b/c/d"),
+      role = "*",
       cmd = Some("sleep 1000"),
       portDefinitions = Seq(PortDefinition(0, name = Some("default")))
     )

@@ -52,7 +52,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
   "QueueResource" should {
     "return well formatted JSON" in new Fixture {
       //given
-      val app = AppDefinition(id = "app".toRootPath, acceptedResourceRoles = Set("*"))
+      val app = AppDefinition(id = "app".toRootPath, acceptedResourceRoles = Set("*"), role = "*")
       val noMatch = OfferMatchResult.NoMatch(
         app,
         MarathonTestHelper.makeBasicOffer().build(),
@@ -101,7 +101,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
 
     "the generated info from the queue contains 0 if there is no delay" in new Fixture {
       //given
-      val app = AppDefinition(id = "app".toRootPath)
+      val app = AppDefinition(id = "app".toRootPath, role = "*")
       stats.getStatistics() returns Future.successful(Seq(
         QueuedInstanceInfoWithStatistics(
           app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
@@ -138,7 +138,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
 
     "application backoff can be removed from the launch queue" in new Fixture {
       //given
-      val app = AppDefinition(id = "app".toRootPath, role = Some("someRole"))
+      val app = AppDefinition(id = "app".toRootPath, role = "*")
       val instances = Seq.fill(23)(Instance.scheduled(app))
       instanceTracker.specInstances(any, Matchers.eq(false))(any) returns Future.successful(instances)
       groupManager.runSpec(app.id) returns Some(app)
@@ -174,7 +174,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       val req = auth.request
 
       When("one delay is reset")
-      val app = AppDefinition(id = "app".toRootPath, role = Some("someRole"))
+      val app = AppDefinition(id = "app".toRootPath, role = "*")
       val instances = Seq.fill(23)(Instance.scheduled(app))
       instanceTracker.specInstances(any, Matchers.eq(false))(any) returns Future.successful(instances)
       groupManager.runSpec(app.id) returns Some(app)

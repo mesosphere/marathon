@@ -32,6 +32,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
+        role = "*",
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         upgradeStrategy = UpgradeStrategy(0.0))
@@ -63,6 +64,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
+        role = "*",
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         upgradeStrategy = UpgradeStrategy(0.0))
@@ -97,6 +99,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
+        role = "*",
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))),
@@ -131,6 +134,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
+        role = "*",
         instances = 2,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1.0))
@@ -176,6 +180,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
+        role = "*",
         instances = 3,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))),
@@ -234,6 +239,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
+        role = "*",
         instances = 3,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))),
@@ -302,6 +308,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
+        role = "*",
         instances = 3,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))),
@@ -368,6 +375,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
+        role = "*",
         instances = 3,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))),
@@ -432,6 +440,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
+        role = "*",
         instances = 3,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))),
@@ -505,7 +514,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "stop the actor if all tasks are replaced already" in {
       Given("An app without health checks and readiness checks, as well as 2 tasks of this version")
       val f = new Fixture
-      val app = AppDefinition(id = "/myApp".toPath, instances = 2)
+      val app = AppDefinition(id = "/myApp".toPath, instances = 2, role = "*")
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
       f.tracker.specInstancesSync(app.id, readAfterWrite = true) returns Seq(instanceA, instanceB)
@@ -527,7 +536,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val check = ReadinessCheck()
       val port = PortDefinition(0, name = Some(check.portName))
-      val app = AppDefinition(id = "/myApp".toPath, instances = 1, portDefinitions = Seq(port), readinessChecks = Seq(check))
+      val app = AppDefinition(id = "/myApp".toPath, role = "*", instances = 1, portDefinitions = Seq(port), readinessChecks = Seq(check))
       val instance = f.runningInstance(app)
       f.tracker.specInstancesSync(app.id, readAfterWrite = true) returns Seq(instance)
       f.tracker.get(instance.instanceId) returns Future.successful(Some(instance))
@@ -550,6 +559,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val port = PortDefinition(0, name = Some(ready.portName))
       val app = AppDefinition(
         id = "/myApp".toPath,
+        role = "*",
         instances = 1,
         portDefinitions = Seq(port),
         readinessChecks = Seq(ready),
@@ -576,6 +586,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
+        role = "*",
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         upgradeStrategy = UpgradeStrategy(0.0))
@@ -608,6 +619,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
+        role = "*",
         instances = 1,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         healthChecks = Set(MarathonHttpHealthCheck()),
@@ -667,6 +679,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val app = AppDefinition(
         id = "/myApp".toPath,
+        role = "*",
         instances = 1,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)))
       val instanceA = f.runningInstance(app)
@@ -685,7 +698,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val subscriber = TestProbe()
       system.eventStream.subscribe(subscriber.ref, classOf[UnhandledMessage])
 
-      val otherApp = AppDefinition(id = "/some-other-app".toPath)
+      val otherApp = AppDefinition(id = "/some-other-app".toPath, role = "*")
       ref ! f.instanceChanged(otherApp, Killed)
       subscriber.expectMsgClass(classOf[UnhandledMessage])
 

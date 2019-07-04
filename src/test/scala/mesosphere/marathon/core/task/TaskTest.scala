@@ -28,10 +28,11 @@ class TaskTest extends UnitTest with Inside {
 
     val clock = new SettableClock()
 
-    val appWithoutIpAddress = AppDefinition(id = PathId("/foo/bar"), networks = Seq(HostNetwork), portDefinitions = Seq(PortDefinition(0)))
+    val appWithoutIpAddress = AppDefinition(id = PathId("/foo/bar"), role = "*", networks = Seq(HostNetwork), portDefinitions = Seq(PortDefinition(0)))
     val appVirtualNetworks = Seq(ContainerNetwork("whatever"))
     val appWithIpAddress = AppDefinition(
       id = PathId("/foo/bar"),
+      role = "*",
       portDefinitions = Seq.empty,
       networks = appVirtualNetworks
     )

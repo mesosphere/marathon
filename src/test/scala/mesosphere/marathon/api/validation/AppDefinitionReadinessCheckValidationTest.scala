@@ -5,13 +5,13 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.state._
-import mesosphere.marathon.util.RoleEnforcement
+import mesosphere.marathon.util.RoleSettings
 
 import scala.collection.immutable.Seq
 
 class AppDefinitionReadinessCheckValidationTest extends UnitTest {
 
-  lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), RoleEnforcement())(PluginManager.None)
+  lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), RoleSettings.forTest)(PluginManager.None)
   "AppDefinitionReadinessValidation" should {
     "app with 0 readinessChecks is valid" in {
       val f = new Fixture
@@ -88,6 +88,7 @@ class AppDefinitionReadinessCheckValidationTest extends UnitTest {
 
         AppDefinition(
           id = PathId("/test"),
+          role = "*",
           cmd = Some("sleep 1000"),
           instances = 1,
           readinessChecks = readinessChecks,

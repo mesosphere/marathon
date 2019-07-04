@@ -28,7 +28,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
 
     val appId = "/test".toPath
     val appVersion = Timestamp(1)
-    val app = AppDefinition(id = appId)
+    val app = AppDefinition(id = appId, role = "*")
     val killService: KillService = mock[KillService]
 
     val scheduler: MarathonScheduler = mock[MarathonScheduler]

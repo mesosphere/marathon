@@ -57,7 +57,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
   }
 
   def setupTrackerWithProvisionedInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
-    val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version), role = Some("someRole"))
+    val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version), role = "*")
     val scheduledInstance = Instance.scheduled(app)
     // schedule
     await(instanceTracker.schedule(scheduledInstance))
@@ -95,7 +95,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
 
   "HealthCheckManager" should {
     "add for a known app" in new Fixture {
-      val app: AppDefinition = AppDefinition(id = appId)
+      val app: AppDefinition = AppDefinition(id = appId, role = "*")
 
       val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
       hcManager.add(app, healthCheck, Seq.empty)
@@ -103,7 +103,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     }
 
     "add for not-yet-known app" in new Fixture {
-      val app: AppDefinition = AppDefinition(id = appId)
+      val app: AppDefinition = AppDefinition(id = appId, role = "*")
 
       val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
       hcManager.add(app, healthCheck, Seq.empty)
@@ -111,7 +111,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     }
 
     "update" in new Fixture {
-      val app: AppDefinition = AppDefinition(id = appId, versionInfo = VersionInfo.NoVersion, role = Some("someRole"))
+      val app: AppDefinition = AppDefinition(id = appId, versionInfo = VersionInfo.NoVersion, role = "*")
 
       val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
 
@@ -147,7 +147,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     }
 
     "statuses" in new Fixture {
-      val app: AppDefinition = AppDefinition(id = appId)
+      val app: AppDefinition = AppDefinition(id = appId, role = "*")
       val version = app.version
 
       val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
@@ -237,6 +237,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       def startInstance(appId: PathId, version: Timestamp, healthChecks: Set[HealthCheck]): (Instance, AppDefinition) = {
         val app = AppDefinition(
           id = appId,
+          role = "*",
           versionInfo = VersionInfo.forNewConfig(version),
           healthChecks = healthChecks
         )
@@ -322,7 +323,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
 
     "reconcile loads the last known task health state" in new Fixture {
       val healthCheck = MesosCommandHealthCheck(command = Command("true"))
-      val app: AppDefinition = AppDefinition(id = appId, healthChecks = Set(healthCheck))
+      val app: AppDefinition = AppDefinition(id = appId, role = "*", healthChecks = Set(healthCheck))
 
       // Send an unhealthy update
       val instance = setupTrackerWithRunningInstance(appId, app.version, instanceTracker).futureValue

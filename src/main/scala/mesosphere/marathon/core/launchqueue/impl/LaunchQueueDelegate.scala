@@ -32,7 +32,6 @@ private[launchqueue] class LaunchQueueDelegate(
     askQueueActorFuture[InstanceChange, Done]("notifyOfInstanceUpdate")(update)
 
   override def add(runSpec: RunSpec, count: Int): Future[Done] = {
-    require(runSpec.role.isDefined, "Adding a runSpec to launch queue requires a valid role in runSpec")
     askQueueActorFuture[LaunchQueueDelegate.Request, Done]("add")(LaunchQueueDelegate.Add(runSpec, count))
   }
 

@@ -466,6 +466,7 @@ trait MarathonAppFixtures {
 
   def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1): PodDefinition = PodDefinition(
     id = testBasePath / s"$podId",
+    role = "*",
     containers = Seq(
       MesosContainer(
         name = "task1",
@@ -491,6 +492,7 @@ trait MarathonAppFixtures {
 
     val pod = PodDefinition(
       id = testBasePath / id,
+      role = "*",
       containers = Seq(
         MesosContainer(
           name = "task1",

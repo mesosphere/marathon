@@ -8,12 +8,13 @@ import mesosphere.marathon.raml.{App, GroupConversion, GroupUpdate, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
+import mesosphere.marathon.util.RoleSettings
 
 class GroupUpdateTest extends UnitTest with GroupCreation {
   val noEnabledFeatures = AllConf.withTestConfig()
   val appConversionFunc: (App => AppDefinition) = { app =>
     // assume canonical form and that the app is valid
-    Raml.fromRaml(AppNormalization.apply(AppNormalization.Configuration(None, "bridge-name")).normalized(app))
+    Raml.fromRaml(AppNormalization.apply(AppNormalization.Configuration(None, "bridge-name", Set(), RoleSettings.forTest)).normalized(app))
   }
   implicit val groupUpdateRamlReader = raml.GroupConversion.groupUpdateRamlReads // HACK: workaround bogus compiler error?!
 
@@ -56,7 +57,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
 
     "A group update can be applied to existing entries" in {
       Given("A group with updates of existing nodes")
-      val blaApp = AppDefinition("/test/bla".toPath, Some("foo"))
+      val blaApp = AppDefinition("/test/bla".toPath, Some("foo"), role = "*")
       val actual = createRootGroup(groups = Set(
         createGroup("/test".toPath, apps = Map(blaApp.id -> blaApp)),
         createGroup("/apps".toPath, groups = Set(createGroup("/apps/foo".toPath)))
@@ -103,8 +104,8 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
 
     "GroupUpdate will update a Group correctly" in {
       Given("An existing group with two subgroups")
-      val app1 = AppDefinition("/test/group1/app1".toPath, Some("foo"))
-      val app2 = AppDefinition("/test/group2/app2".toPath, Some("foo"))
+      val app1 = AppDefinition("/test/group1/app1".toPath, Some("foo"), role = "*")
+      val app2 = AppDefinition("/test/group2/app2".toPath, Some("foo"), role = "*")
       val current = createGroup(
         "/test".toPath,
         groups = Set(

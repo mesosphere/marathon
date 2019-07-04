@@ -110,9 +110,6 @@ object Instance {
     * @return An instance in the scheduled state.
     */
   def scheduled(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
-    // TODO AN: We already require the role here, even if it's not used yet
-    require(runSpec.role.isDefined, "Scheduling an instance from a runspec requires the runSpec to have a valid role")
-
     val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running)
     Instance(instanceId, None, state, Map.empty, runSpec, None)
   }

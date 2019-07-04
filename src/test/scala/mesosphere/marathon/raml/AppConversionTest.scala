@@ -5,6 +5,7 @@ import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{BridgeNetwork, HostNetwork}
 import mesosphere.marathon.state._
+import mesosphere.marathon.util.RoleSettings
 import mesosphere.{UnitTest, ValidationTestLike}
 import org.apache.mesos.{Protos => Mesos}
 
@@ -41,11 +42,12 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       acceptedResourceRoles = Set("*"),
       killSelection = state.KillSelection.OldestFirst,
       secrets = Map("secret0" -> state.Secret("/path/to/secret")),
-      role = Some("someRole")
+      role = "*"
     )
   }
   private lazy val hostApp = AppDefinition(
     id = PathId("/host-app"),
+    role = "*",
     networks = Seq(HostNetwork),
     cmd = Option("whatever"),
     requirePorts = true,
@@ -54,19 +56,23 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
   )
   private lazy val argsOnlyApp = AppDefinition(
     id = PathId("/args-only-app"),
+    role = "*",
     args = Seq("whatever", "one", "two", "three")
   )
   private lazy val simpleDockerApp = AppDefinition(
     id = PathId("/simple-docker-app"),
+    role = "*",
     container = Some(state.Container.Docker(image = "foo/bla"))
   )
   private lazy val dockerWithArgsApp = AppDefinition(
     id = PathId("/docker-with-args-app"),
+    role = "*",
     args = Seq("whatever", "one", "two", "three"),
     container = Some(state.Container.Docker(image = "foo/bla"))
   )
   private lazy val mesosWithLinuxInfo = AppDefinition(
     id = PathId("/mesos-with-linux-info"),
+    role = "*",
     cmd = Option("whatever"),
     container = Some(state.Container.Mesos(linuxInfo = Some(state.LinuxInfo(Some(state.Seccomp(Some("default"), false))))))
   )
@@ -81,7 +87,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val readApp: AppDefinition = withValidationClue {
         Raml.fromRaml(
           AppHelpers.appNormalization(
-            features, AppNormalization.Configuration(None, "bridge-name")).normalized(ramlApp)
+            AppNormalization.Configuration(None, "bridge-name", features, RoleSettings.forTest)).normalized(ramlApp)
         )
       }
       Then("The app is identical")
@@ -98,7 +104,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val protoRamlApp = app.toProto.toRaml[App]
 
       Then("The direct and indirect RAML conversions are identical")
-      val config = AppNormalization.Configuration(None, "bridge-name")
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), RoleSettings.forTest)
       val normalizedProtoRamlApp = AppNormalization(
         config).normalized(AppNormalization.forDeprecated(config).normalized(protoRamlApp))
       normalizedProtoRamlApp should be(ramlApp)

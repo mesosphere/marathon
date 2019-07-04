@@ -130,13 +130,13 @@ class GroupManagerImpl(
             Left(left)
           case Right(changed) =>
             // Set default roles
-            val withRoles = RoleUtils.updateRoles(config, changed)
+            //            val withRoles = RoleUtils.updateRoles(config, changed)
 
             // Assign service ports
             val unversioned = AssignDynamicServiceLogic.assignDynamicServicePorts(
               Range.inclusive(config.localPortMin(), config.localPortMax()),
               from,
-              withRoles)
+              changed)
 
             val withVersionedApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
             val withVersionedAppsPods = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, withVersionedApps)

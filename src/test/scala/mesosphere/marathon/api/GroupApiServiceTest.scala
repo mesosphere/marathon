@@ -57,7 +57,7 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
   "scale when scaleBy provided" in {
     Given("Initialized service with root group and one app")
     val f = Fixture()
-    val app = AppDefinition("/app".toRootPath, cmd = Some("cmd"), networks = Seq(ContainerNetwork("foo")))
+    val app = AppDefinition("/app".toRootPath, cmd = Some("cmd"), networks = Seq(ContainerNetwork("foo")), role = "*")
     val originalInstancesCount = app.instances
     val rootGroup = createRootGroup(apps = Map(
       "/app".toRootPath -> app
@@ -85,11 +85,11 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
     val updatedGroup = f.groupApiService.updateGroup(
       createRootGroup(),
       PathId.empty,
-      GroupUpdate(apps = Some(Set(App("/app", networks = Seq(Network(mode = NetworkMode.ContainerBridge)))))),
+      GroupUpdate(apps = Some(Set(App("/app", role = Some(ResourceRole.Unreserved), networks = Seq(Network(mode = NetworkMode.ContainerBridge)))))),
       newVersion).futureValue
 
     Then("Group will contain those apps after an update")
-    updatedGroup.apps(PathId("/app")) should be (AppDefinition("/app".toRootPath, networks = Seq(BridgeNetwork()), versionInfo = VersionInfo.OnlyVersion(newVersion)))
+    updatedGroup.apps(PathId("/app")) should be (AppDefinition("/app".toRootPath, networks = Seq(BridgeNetwork()), versionInfo = VersionInfo.OnlyVersion(newVersion), role = "*"))
   }
 
   case class Fixture(

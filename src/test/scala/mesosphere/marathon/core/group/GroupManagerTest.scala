@@ -44,7 +44,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     }
 
     "not store invalid groups" in new Fixture {
-      val app1 = AppDefinition("/app1".toPath)
+      val app1 = AppDefinition("/app1".toPath, role = "*")
       val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/app1".toPath)), validate = false)
 
       groupRepository.root() returns Future.successful(createRootGroup())
@@ -57,8 +57,8 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     }
 
     "return multiple apps when asked" in {
-      val app1 = AppDefinition("/app1".toPath, cmd = Some("sleep"))
-      val app2 = AppDefinition("/app2".toPath, cmd = Some("sleep"))
+      val app1 = AppDefinition("/app1".toPath, role = "*", cmd = Some("sleep"))
+      val app2 = AppDefinition("/app2".toPath, role = "*", cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app1.id -> app1, app2.id -> app2))
       val f = new Fixture(initialRoot = Some(rootGroup))
 
@@ -66,14 +66,14 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     }
 
     "publishes GroupChangeSuccess with the appropriate GID on successful deployment" in new Fixture {
-      val app: AppDefinition = AppDefinition("/group/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
+      val app: AppDefinition = AppDefinition("/group/app1".toPath, role = "*", cmd = Some("sleep 3"), portDefinitions = Seq.empty)
       val group = createGroup("/group".toPath, apps = Map(app.id -> app), version = Timestamp(1))
 
       groupRepository.root() returns Future.successful(createRootGroup())
       deploymentService.deploy(any, any) returns Future.successful(Done)
       val appWithAdditionalInfo = app.copy(
         versionInfo = VersionInfo.forNewConfig(Timestamp(1)),
-        role = Some("*")
+        role = "*"
       )
 
       val groupWithVersionInfo = createRootGroup(
@@ -102,13 +102,13 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
 
     "store new apps with correct version infos in groupRepo and appRepo" in new Fixture {
 
-      val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
+      val app: AppDefinition = AppDefinition("/app1".toPath, role = "*", cmd = Some("sleep 3"), portDefinitions = Seq.empty)
       val rootGroup = createRootGroup(Map(app.id -> app), version = Timestamp(1))
       groupRepository.root() returns Future.successful(createRootGroup())
       deploymentService.deploy(any, any) returns Future.successful(Done)
       val appWithAdditionalInfo = app.copy(
         versionInfo = VersionInfo.forNewConfig(Timestamp(1)),
-        role = Some("*")
+        role = "*"
       )
 
       val groupWithVersionInfo = createRootGroup(Map(
@@ -123,7 +123,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     }
 
     "expunge removed apps from appRepo" in new Fixture(initialRoot = Option({
-      val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
+      val app: AppDefinition = AppDefinition("/app1".toPath, role = "*", cmd = Some("sleep 3"), portDefinitions = Seq.empty)
       createRootGroup(Map(app.id -> app), version = Timestamp(1))
     })) {
       val groupEmpty = createRootGroup(version = Timestamp(1))
@@ -138,7 +138,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     }
 
     "dismiss deployments when max_running_deployments limit is achieved" in new Fixture(maxRunningDeployments = 5) {
-      val app1 = AppDefinition("/app1".toPath)
+      val app1 = AppDefinition("/app1".toPath, role = "*")
       val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/app1".toPath)), validate = false)
       groupRepository.root() returns Future.successful(createRootGroup())
 

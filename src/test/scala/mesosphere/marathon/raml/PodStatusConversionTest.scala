@@ -418,6 +418,7 @@ object PodStatusConversionTest {
 
   val basicOneContainerPod = PodDefinition(
     id = PathId("/foo"),
+    role = "*",
     containers = Seq(
       MesosContainer(
         name = "ct1",
@@ -435,6 +436,7 @@ object PodStatusConversionTest {
 
   val podWithPersistentVolume = PodDefinition(
     id = PathId("/persistent"),
+    role = "*",
     containers = Seq(
       MesosContainer(
         name = "ct1",

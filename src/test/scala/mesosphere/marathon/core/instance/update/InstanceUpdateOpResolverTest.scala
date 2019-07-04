@@ -235,7 +235,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
     "expunge a Scheduled instance after it was decommissioned" in new Fixture {
       Given("a scheduled instance (no tasks)")
-      val runSpec = AppDefinition(id = appId, role = Some("someRole"))
+      val runSpec = AppDefinition(id = appId, role = "*")
       val scheduled = Instance.scheduled(runSpec)
 
       When("it is decommissioned")
@@ -308,7 +308,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
     "move instance to scheduled state when previously reserved" in new Fixture {
       val version = Timestamp(clock.instant())
-      val runSpec = AppDefinition(id = PathId("foo"), versionInfo = VersionInfo.OnlyVersion(version))
+      val runSpec = AppDefinition(id = PathId("foo"), role = "*", versionInfo = VersionInfo.OnlyVersion(version))
       val stateChange = updateOpResolver.resolve(Some(reservedInstance), RescheduleReserved(reservedInstance.instanceId, runSpec))
 
       inside(stateChange) {
@@ -329,7 +329,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     val existingDecommissionedInstance = existingInstance.copy(state = existingInstance.state.copy(goal = Goal.Decommissioned))
     lazy val existingTask: Task = existingInstance.appTask
 
-    lazy val reservedInstance = TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId, role = Some("someRole"))).copy(state = InstanceState(Condition.Killed, Timestamp.now(), None, healthy = None, Goal.Running))
+    lazy val reservedInstance = TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId, role = "*")).copy(state = InstanceState(Condition.Killed, Timestamp.now(), None, healthy = None, Goal.Running))
     lazy val existingReservedTask: Task = reservedInstance.appTask
 
     lazy val reservedLaunchedInstance: Instance = TestInstanceBuilder.

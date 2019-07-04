@@ -43,7 +43,10 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
 
     val executorResources: ExecutorResources = podd.executorResources.getOrElse(PodDefinition.DefaultExecutorResources.toRaml)
 
-    val role = podd.role.orElse(PodDefinition.DefaultRole)
+    val role = podd.role.orNull
+    if (role == null) {
+      throw new IllegalArgumentException("Deserializing raml.Pod failed, as no role was provided.")
+    }
 
     new PodDefinition(
       id = PathId(podd.id).canonicalPath(),
@@ -103,7 +106,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       volumes = podDef.volumes.map(Raml.toRaml(_)),
       networks = podDef.networks.map(Raml.toRaml(_)),
       executorResources = Some(podDef.executorResources.toRaml),
-      role = podDef.role
+      role = Some(podDef.role)
     )
   }
 

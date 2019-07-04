@@ -5,11 +5,11 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.state._
-import mesosphere.marathon.util.RoleEnforcement
+import mesosphere.marathon.util.RoleSettings
 
 class AppDefinitionMesosHealthCheckValidationTest extends UnitTest {
 
-  lazy val validAppDefinition = AppDefinition.validAppDefinition(Set.empty, RoleEnforcement())(PluginManager.None)
+  lazy val validAppDefinition = AppDefinition.validAppDefinition(Set.empty, RoleSettings.forTest)(PluginManager.None)
   "AppDefinitionMesosHealthCheckValidation" should {
     "app with 0 Mesos health checks is valid" in {
       val f = new Fixture
@@ -68,6 +68,7 @@ class AppDefinitionMesosHealthCheckValidationTest extends UnitTest {
     def app(healthChecks: Set[HealthCheck] = Set(MarathonHttpHealthCheck())): AppDefinition =
       AppDefinition(
         id = PathId("/test"),
+        role = "*",
         cmd = Some("sleep 1000"),
         instances = 1,
         healthChecks = healthChecks,

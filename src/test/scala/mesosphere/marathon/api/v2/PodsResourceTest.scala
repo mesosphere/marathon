@@ -534,7 +534,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       implicit val podSystem = mock[PodManager]
       val f = Fixture()
 
-      podSystem.find(any).returns(Some(PodDefinition()))
+      podSystem.find(any).returns(Some(PodDefinition(role = "*")))
       podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
       val response = asyncRequest { r =>
         f.podsResource.remove("/mypod", force = false, f.auth.request, r)
@@ -569,7 +569,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       implicit val podSystem = mock[PodManager]
       val f = Fixture()
 
-      podSystem.findAll(any).returns(List(PodDefinition(), PodDefinition()))
+      podSystem.findAll(any).returns(List(PodDefinition(role = "*"), PodDefinition(role = "*")))
       val response = asyncRequest { r => f.podsResource.findAll(f.auth.request, r) }
 
       withClue(s"response body: ${response.getEntity}") {
@@ -800,8 +800,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         withClue(s"response body: ${response.getEntity}") {
           response.getStatus should be(201)
           val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
-          pod.role.isDefined should be(true)
-          pod.role.get should be(ResourceRole.Unreserved)
+          pod.role should be(ResourceRole.Unreserved)
         }
       }
 
@@ -837,8 +836,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         withClue(s"response body: ${response.getEntity}") {
           response.getStatus should be(201)
           val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
-          pod.role.isDefined should be(true)
-          pod.role.get should be("customMesosRole")
+          pod.role should be("customMesosRole")
         }
       }
 
@@ -875,8 +873,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         withClue(s"response body: ${response.getEntity}") {
           response.getStatus should be(201)
           val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
-          pod.role.isDefined should be(true)
-          pod.role.get should be("customMesosRole")
+          pod.role should be("customMesosRole")
         }
       }
 
@@ -950,8 +947,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         withClue(s"response body: ${response.getEntity}") {
           response.getStatus should be(201)
           val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
-          pod.role.isDefined should be(true)
-          pod.role.get should be(ResourceRole.Unreserved)
+          pod.role should be(ResourceRole.Unreserved)
         }
       }
 
@@ -1205,7 +1201,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
       "there are versions" when {
         import mesosphere.marathon.state.PathId._
-        val pod1 = PodDefinition("/id".toRootPath, containers = Seq(MesosContainer(name = "foo", resources = Resources())))
+        val pod1 = PodDefinition("/id".toRootPath, containers = Seq(MesosContainer(name = "foo", resources = Resources())), role = "*")
         val pod2 = pod1.copy(versionInfo = VersionInfo.OnlyVersion(pod1.version + 1.minute))
         "list the available versions" in {
           val groupManager = mock[GroupManager]
@@ -1243,7 +1239,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         "attempting to kill a single instance" in {
           implicit val killer = mock[TaskKiller]
           val f = Fixture()
-          val runSpec = AppDefinition(id = "/id1".toRootPath, versionInfo = VersionInfo.OnlyVersion(f.clock.now()))
+          val runSpec = AppDefinition(id = "/id1".toRootPath, versionInfo = VersionInfo.OnlyVersion(f.clock.now()), role = "*")
           val instanceId = Instance.Id.fromIdString("id1.instance-a905036a-f6ed-11e8-9688-2a978491fd64")
           val instance = Instance(
             instanceId, Some(Instance.AgentInfo("", None, None, None, Nil)),
@@ -1282,7 +1278,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         }
         "attempting to kill multiple instances" in {
           implicit val killer = mock[TaskKiller]
-          val runSpec = AppDefinition(id = "/id1".toRootPath, unreachableStrategy = UnreachableStrategy.default())
+          val runSpec = AppDefinition(id = "/id1".toRootPath, unreachableStrategy = UnreachableStrategy.default(), role = "*")
           val instances = Seq(
             Instance(Instance.Id.forRunSpec(runSpec.id), Some(Instance.AgentInfo("", None, None, None, Nil)),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,
@@ -1315,7 +1311,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         "delete a pod without auth access" in {
           implicit val podSystem = mock[PodManager]
           val f = Fixture()
-          podSystem.find(any).returns(Some(PodDefinition()))
+          podSystem.find(any).returns(Some(PodDefinition(role = "*")))
           podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
           f.auth.authorized = false
           val response = asyncRequest { r =>
@@ -1333,10 +1329,10 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         implicit val podSystem = mock[PodManager]
         val fixture = Fixture()
         podSystem.findAll(any).returns(Seq.empty)
-        podSystem.find(any).returns(Some(PodDefinition()))
+        podSystem.find(any).returns(Some(PodDefinition(role = "*")))
         podSystem.delete(any, any).returns(Future.successful(DeploymentPlan.empty))
         podSystem.ids().returns(Set.empty)
-        podSystem.version(any, any).returns(Future.successful(Some(PodDefinition())))
+        podSystem.version(any, any).returns(Future.successful(Some(PodDefinition(role = "*"))))
         podSystem.versions(any).returns(Source.empty)
         fixture.auth.authorized = authorized
         fixture.auth.authenticated = authenticated

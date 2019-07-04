@@ -14,8 +14,8 @@ import scala.concurrent.duration._
 
 class ReviveOffersStreamLogicTest extends AkkaUnitTest {
   import ReviveOffersStreamLogic.{Delayed, NotDelayed}
-  val webApp = AppDefinition(id = PathId("/test"), role = Some("someRole"))
-  val monitoringApp = AppDefinition(id = PathId("/test2"), role = Some("someRole"))
+  val webApp = AppDefinition(id = PathId("/test"), role = "*")
+  val monitoringApp = AppDefinition(id = PathId("/test2"), role = "*")
 
   val inputSourceQueue = Source.queue[Either[InstanceChangeOrSnapshot, DelayedStatus]](16, OverflowStrategy.fail)
   val outputSinkQueue = Sink.queue[Op]()

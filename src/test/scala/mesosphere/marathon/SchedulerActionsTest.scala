@@ -27,7 +27,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
     "Task reconciliation sends known running and staged tasks and empty list" in {
       val f = new Fixture
-      val app = AppDefinition(id = PathId("/myapp"), role = Some("someRole"))
+      val app = AppDefinition(id = PathId("/myapp"), role = "*")
       val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
       val runningInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
       val stagedInstance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()
@@ -66,8 +66,8 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
     "Kill orphaned task" in {
       val f = new Fixture
-      val app = AppDefinition(id = PathId("/myapp"))
-      val orphanedApp = AppDefinition(id = PathId("/orphan"))
+      val app = AppDefinition(id = PathId("/myapp"), role = "*")
+      val orphanedApp = AppDefinition(id = PathId("/orphan"), role = "*")
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
       val orphanedInstance = TestInstanceBuilder.newBuilder(orphanedApp.id).addTaskRunning().getInstance()
 

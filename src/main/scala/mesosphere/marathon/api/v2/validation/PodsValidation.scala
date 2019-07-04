@@ -13,7 +13,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{PathId, ResourceRole, RootGroup}
-import mesosphere.marathon.util.{RoleEnforcement, SemanticVersion}
+import mesosphere.marathon.util.{RoleSettings, SemanticVersion}
 // scalastyle:on
 
 /**
@@ -226,7 +226,10 @@ trait PodsValidation extends GeneralPurposeCombinators {
     (podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is empty or valid(ResourceRole.validAcceptedResourceRoles("pod", podPersistentVolumes(pod).nonEmpty)))
   }
 
-  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String], roleEnforcement: RoleEnforcement): Validator[Pod] = validator[Pod] { pod =>
+  def podValidator(config: MarathonConf, mesosMasterVersion: Option[SemanticVersion] = Some(SemanticVersion.zero), roleSettings: RoleSettings): Validator[Pod] =
+    podValidator(config.availableFeatures, mesosMasterVersion.getOrElse(SemanticVersion.zero), config.defaultNetworkName.toOption, roleSettings)
+
+  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String], roleEnforcement: RoleSettings): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
@@ -253,7 +256,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     pod is validWithRoleEnforcement(roleEnforcement)
   }
 
-  private def validWithRoleEnforcement(roleEnforcement: RoleEnforcement): Validator[Pod] = validator[Pod] { pod =>
+  private def validWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[Pod] = validator[Pod] { pod =>
     if (roleEnforcement.enforceRole) {
       pod.role must notEmpty
       pod.role.orNull as "role" is in(roleEnforcement.validRoles) // We need to use orNull here, as accord validator-and does not short-circuit
@@ -266,17 +269,9 @@ trait PodsValidation extends GeneralPurposeCombinators {
     }
   }
 
-  def validPodDefinitionWithRoleEnforcement(roleEnforcement: RoleEnforcement): Validator[PodDefinition] = validator[PodDefinition] { pod =>
-    if (roleEnforcement.enforceRole) {
-      pod.role must notEmpty
-      pod.role.orNull as "role" is in(roleEnforcement.validRoles) // We need to use orNull here, as accord validator-and does not short-circuit
-      pod.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
-    } else {
-      if (pod.role.isDefined) {
-        pod.role.orNull as "role" is in(roleEnforcement.validRoles)
-        pod.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
-      }
-    }
+  def validPodDefinitionWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[PodDefinition] = validator[PodDefinition] { pod =>
+    pod.role is in(roleEnforcement.validRoles)
+    pod.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
   }
 
   def volumeNames(volumes: Seq[PodVolume]): Seq[String] = volumes.map(volumeName)

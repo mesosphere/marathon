@@ -8,11 +8,11 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.{AppDefinition, PathId}
-import mesosphere.marathon.util.RoleEnforcement
+import mesosphere.marathon.util.RoleSettings
 import play.api.libs.json.{JsObject, JsResultException, Json}
 
 class MarathonExceptionMapperTest extends UnitTest {
-  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set.empty[String], RoleEnforcement())(PluginManager.None)
+  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set.empty[String], RoleSettings.forTest)(PluginManager.None)
 
   "MarathonExceptionMapper" should {
     "Render js result exception correctly" in {
@@ -71,7 +71,7 @@ class MarathonExceptionMapperTest extends UnitTest {
 
     "Render ConstraintValidationException correctly" in {
       Given("A ConstraintValidationException from an invalid app")
-      val ex = intercept[ValidationFailedException] { validateOrThrow(AppDefinition(id = PathId("/test"))) }
+      val ex = intercept[ValidationFailedException] { validateOrThrow(AppDefinition(id = PathId("/test"), role = "*")) }
       val mapper = new MarathonExceptionMapper()
 
       When("The mapper creates a response from this exception")

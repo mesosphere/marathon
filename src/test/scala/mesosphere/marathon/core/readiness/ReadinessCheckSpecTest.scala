@@ -101,6 +101,7 @@ class ReadinessCheckSpecTest extends UnitTest {
 
     val appWithOneReadinessCheck = AppDefinition(
       id = appId,
+      role = "*",
       readinessChecks = Seq(ReadinessCheckTestHelper.defaultHttp),
       portDefinitions = Seq(
         PortDefinition(
@@ -112,6 +113,7 @@ class ReadinessCheckSpecTest extends UnitTest {
 
     val appWithOneReadinessCheckWithRequiredPorts = AppDefinition(
       id = appId,
+      role = "*",
       readinessChecks = Seq(ReadinessCheckTestHelper.defaultHttp),
       requirePorts = true,
       portDefinitions = Seq(
@@ -128,6 +130,7 @@ class ReadinessCheckSpecTest extends UnitTest {
 
     val appWithMultipleReadinessChecks = AppDefinition(
       id = appId,
+      role = "*",
       readinessChecks = Seq(
         ReadinessCheckTestHelper.defaultHttp,
         ReadinessCheckTestHelper.alternativeHttps

@@ -24,7 +24,7 @@ import mesosphere.mesos.protos.{Resource, ScalarResource}
 import org.apache.mesos.{Protos => mesos}
 import mesosphere.marathon.core.health.{PortReference => HealthPortReference}
 import mesosphere.marathon.core.check.{PortReference => CheckPortReference}
-import mesosphere.marathon.util.RoleEnforcement
+import mesosphere.marathon.util.RoleSettings
 
 import scala.concurrent.duration._
 
@@ -88,7 +88,7 @@ case class AppDefinition(
 
     tty: Option[Boolean] = AppDefinition.DefaultTTY,
 
-    role: Option[String] = AppDefinition.DefaultRole) extends RunSpec
+    role: String) extends RunSpec
   with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
@@ -218,7 +218,7 @@ case class AppDefinition(
       case _ => // ignore
     }
 
-    role.foreach(builder.setRole)
+    builder.setRole(role)
 
     builder.build
   }
@@ -285,7 +285,7 @@ case class AppDefinition(
       ))
     }
 
-    val role = if (proto.hasRole) Some(proto.getRole) else AppDefinition.DefaultRole
+    val role = proto.getRole
 
     AppDefinition(
       id = PathId(proto.getId),
@@ -476,7 +476,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   val DefaultNetworks = Seq[Network](HostNetwork)
 
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
-    AppDefinition(id = DefaultId).mergeFromProto(proto)
+    AppDefinition(id = DefaultId, role = null).mergeFromProto(proto)
 
   def versionInfoFrom(proto: Protos.ServiceDefinition): VersionInfo = {
     if (proto.hasLastScalingAt)
@@ -497,24 +497,16 @@ object AppDefinition extends GeneralPurposeCombinators {
     * errors for every deployment potentially unrelated to the deployed apps.
     */
   def validAppDefinition(
-    enabledFeatures: Set[String], roleEnforcement: RoleEnforcement)(implicit pluginManager: PluginManager): Validator[AppDefinition] =
+    enabledFeatures: Set[String], roleEnforcement: RoleSettings)(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     validator[AppDefinition] { app =>
       app.id is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
       app.dependencies is every(PathId.pathIdValidator)
       app is validWithRoleEnforcement(roleEnforcement)
     } and validBasicAppDefinition(enabledFeatures) and pluginValidators
 
-  def validWithRoleEnforcement(roleEnforcement: RoleEnforcement): Validator[AppDefinition] = validator[AppDefinition] { app =>
-    if (roleEnforcement.enforceRole) {
-      app.role must notEmpty
-      app.role.orNull as "role" is in(roleEnforcement.validRoles) // We need to use orNull here, as accord validator-and does not short-circuit
-      app.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
-    } else {
-      if (app.role.isDefined) {
-        app.role.orNull as "role" is in(roleEnforcement.validRoles)
-        app.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
-      }
-    }
+  def validWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[AppDefinition] = validator[AppDefinition] { app =>
+    app.role is in(roleEnforcement.validRoles)
+    app.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
   }
 
   private def pluginValidators(implicit pluginManager: PluginManager): Validator[AppDefinition] =

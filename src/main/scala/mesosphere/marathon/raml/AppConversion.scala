@@ -82,7 +82,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       killSelection = app.killSelection.toRaml,
       tty = app.tty,
       executorResources = app.executorResources.toRaml,
-      role = app.role
+      role = Some(app.role)
     )
   }
 
@@ -138,7 +138,10 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
 
     val versionInfo = state.VersionInfo.OnlyVersion(app.version.map(Timestamp(_)).getOrElse(Timestamp.now()))
 
-    val role = app.role.orElse(AppDefinition.DefaultRole)
+    val role = app.role.orNull
+    if (role == null) {
+      throw new IllegalArgumentException("Failed to deserialize raml.App, no role provided")
+    }
 
     val result: AppDefinition = AppDefinition(
       id = PathId(app.id),

@@ -78,6 +78,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
       def appWithDVDIVolume(appId: PathId, volumeName: String, provider: String = DVDIProvider.name): AppDefinition = {
         AppDefinition(
           id = appId,
+          role = "*",
           cmd = Some("sleep 123"),
           upgradeStrategy = UpgradeStrategy.forResidentTasks,
           container = Some(

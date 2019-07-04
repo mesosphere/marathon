@@ -17,7 +17,7 @@ import scala.collection.immutable.Seq
 class AppDefinitionAppInfoTest extends UnitTest {
   import Formats._
 
-  val app = AppDefinition(PathId("/test"), cmd = Some("sleep 123"))
+  val app = AppDefinition(PathId("/test"), cmd = Some("sleep 123"), role = "*")
 
   val counts = TaskCounts(
     tasksStaged = 3,

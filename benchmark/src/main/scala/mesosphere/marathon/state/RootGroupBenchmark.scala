@@ -18,6 +18,7 @@ class GroupBenchmark {
   def makeApp(path: PathId) =
     AppDefinition(
       id = path,
+      role = "someRole",
       labels = Map("ID" -> path.toString),
       versionInfo = version,
       networks = Seq(BridgeNetwork()),

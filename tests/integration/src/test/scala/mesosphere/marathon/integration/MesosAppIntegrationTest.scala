@@ -131,6 +131,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       val pod = PodDefinition(
         id = id,
+        role = "*",
         containers = Seq(
           MesosContainer(
             name = "task1",
@@ -192,6 +193,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       val pod = PodDefinition(
         id = podId,
+        role = "*",
         containers = Seq(
           MesosContainer(
             name = "task1",

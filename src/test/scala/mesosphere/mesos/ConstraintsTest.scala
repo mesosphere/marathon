@@ -45,7 +45,7 @@ class ConstraintsTest extends UnitTest {
   "Constraints" should {
     "Select tasks to kill for a single group by works" in {
       Given("app with hostname group_by and 20 tasks even distributed on 2 hosts")
-      val app = AppDefinition(id = PathId("/test"), constraints = Set(makeConstraint(hostnameField, GROUP_BY, "")))
+      val app = AppDefinition(id = PathId("/test"), role = "*", constraints = Set(makeConstraint(hostnameField, GROUP_BY, "")))
       val tasks = 0.to(19).map(num => makeInstance(app.id, host = s"${num % 2}"))
 
       When("10 tasks should be selected to kill")
@@ -60,7 +60,7 @@ class ConstraintsTest extends UnitTest {
 
     "Select only tasks to kill for an unbalanced distribution" in {
       Given("app with hostname group_by and 30 tasks uneven distributed on 2 hosts")
-      val app = AppDefinition(id = PathId("/test"), constraints = Set(makeConstraint(hostnameField, GROUP_BY, "")))
+      val app = AppDefinition(id = PathId("/test"), role = "*", constraints = Set(makeConstraint(hostnameField, GROUP_BY, "")))
       val tasks = 0.to(19).map(num => makeInstance(app.id, host = "1")) ++
         20.to(29).map(num => makeInstance(app.id, host = "2"))
 
@@ -76,6 +76,7 @@ class ConstraintsTest extends UnitTest {
       Given("app with 2 group_by distributions and 40 tasks even distributed")
       val app = AppDefinition(
         id = PathId("/test"),
+        role = "*",
         constraints = Set(
           makeConstraint("rack", GROUP_BY, ""),
           makeConstraint("color", GROUP_BY, "")))
@@ -98,7 +99,7 @@ class ConstraintsTest extends UnitTest {
 
     "Does not select any task without constraint" in {
       Given("app with hostname group_by and 10 tasks even distributed on 5 hosts")
-      val app = AppDefinition(id = PathId("/test"))
+      val app = AppDefinition(id = PathId("/test"), role = "*")
 
       val tasks = 0.to(9).map(num => makeInstance(app.id, attributes = "rack:rack-1;color:blue"))
 

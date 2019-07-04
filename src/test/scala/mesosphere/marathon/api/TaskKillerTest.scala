@@ -32,7 +32,7 @@ class TaskKillerTest extends UnitTest {
       val f = new Fixture
       val appId = PathId("invalid")
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(Seq.empty))
-      when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId)))
+      when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId, role = "*")))
 
       val result = f.taskKiller.kill(appId, (tasks) => Seq.empty[Instance]).futureValue
       result.isEmpty shouldEqual true
@@ -92,7 +92,7 @@ class TaskKillerTest extends UnitTest {
       val appId = PathId(List("my", "app"))
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val tasksToKill = Seq(instance)
-      when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId)))
+      when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId, role = "*")))
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
 
       val result = f.taskKiller.kill(appId, { tasks =>
@@ -132,12 +132,12 @@ class TaskKillerTest extends UnitTest {
     "kill with wipe will kill running and expunge all" in {
       val f = new Fixture
       val appId = PathId(List("my", "app"))
-      val app = AppDefinition(appId, role = Some("someRole"))
+      val app = AppDefinition(appId, role = "*")
       val runningInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val reservedInstance: Instance = TestInstanceBuilder.scheduledWithReservation(app)
       val instancesToKill = Seq(runningInstance, reservedInstance)
 
-      when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId)))
+      when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId, role = "*")))
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(instancesToKill))
       when(f.tracker.forceExpunge(runningInstance.instanceId)).thenReturn(Future.successful(Done))
       when(f.tracker.forceExpunge(reservedInstance.instanceId)).thenReturn(Future.successful(Done))
