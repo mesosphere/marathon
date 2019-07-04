@@ -22,14 +22,15 @@ import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
 
 class MigrationTo19100(
+    defaultMesosRole: String,
     appRepository: AppRepository,
     podRepository: PodRepository,
     persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = async {
     logger.info("Starting migration to 1.9.100")
-    await(MigrationTo19100.migrateApps(persistenceStore, appRepository))
-    await(MigrationTo19100.migratePods(persistenceStore, podRepository))
+    await(MigrationTo19100.migrateApps(defaultMesosRole, persistenceStore, appRepository))
+    await(MigrationTo19100.migratePods(defaultMesosRole, persistenceStore, podRepository))
   }
 }
 
@@ -38,11 +39,12 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
   /**
     * Loads all app definition from store and sets the role to Marathon's default role.
     *
+    * @param defaultMesosRole The Mesos role define by [[MarathonConf.mesosRole]].
     * @param persistenceStore The ZooKeeper storage.
     * @param appRepository The app repository is required to load all app ids.
     * @return Successful future when done.
     */
-  def migrateApps(persistenceStore: PersistenceStore[_, _, _], appRepository: AppRepository)(implicit mat: Materializer): Future[Done] = {
+  def migrateApps(defaultMesosRole: String, persistenceStore: PersistenceStore[_, _, _], appRepository: AppRepository)(implicit mat: Materializer): Future[Done] = {
     implicit val appProtosUnmarshaller: Unmarshaller[ZkSerialized, Protos.ServiceDefinition] =
       Unmarshaller.strict {
         case ZkSerialized(byteString) => Protos.ServiceDefinition.PARSER.parseFrom(byteString.toArray)
@@ -60,8 +62,8 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         .mapAsync(Migration.maxConcurrency) { appId => store.get(appId) }
         .collect { case Some(appProtos) if !appProtos.hasRole => appProtos }
         .map { appProtos =>
-          // TODO: use --mesos_role or slave_public
-          appProtos.toBuilder.setRole("*").build()
+          // TODO: check for slave_public
+          appProtos.toBuilder.setRole(defaultMesosRole).build()
         }
         .mapAsync(Migration.maxConcurrency) { appProtos =>
           store.store(PathId(appProtos.getId), appProtos)
@@ -72,7 +74,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
     }
   }
 
-  def migratePods(persistenceStore: PersistenceStore[_, _, _], podRepository: PodRepository)(implicit mat: Materializer): Future[Done] = {
+  def migratePods(defaultMesosRole: String, persistenceStore: PersistenceStore[_, _, _], podRepository: PodRepository)(implicit mat: Materializer): Future[Done] = {
 
     implicit val podIdResolver =
       new ZkStoreSerialization.ZkPathIdResolver[raml.Pod]("pods", true, _.version.getOrElse(Timestamp.now().toOffsetDateTime))
@@ -93,8 +95,8 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         .mapAsync(Migration.maxConcurrency) { podId => store.get(podId) }
         .collect { case Some(podRaml) if !podRaml.role.isDefined => podRaml }
         .map { podRaml =>
-          // TODO: use --mesos_role or slave_public
-          podRaml.copy(role = Some("*"))
+          // TODO: check for slave_public
+          podRaml.copy(role = Some(defaultMesosRole))
         }
         .mapAsync(Migration.maxConcurrency) { podRaml =>
           store.store(PathId(podRaml.id), podRaml)
