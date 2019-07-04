@@ -51,7 +51,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     implicit val scheduler = new SimulatedScheduler(clock)
     val notificationCounter = new AtomicInteger(0)
     val migrationSteps = if (fakeMigrations.nonEmpty) fakeMigrations else Migration.steps
-    val migration = new Migration(Set.empty, None, "bridge-name", persistenceStore, appRepository, podRepository, groupRepository, deploymentRepository,
+    val migration = new Migration(Set.empty, "mesos-role", persistenceStore, appRepository, podRepository, groupRepository, deploymentRepository,
       instanceRepository, taskFailureRepository, frameworkIdRepository,
       serviceDefinitionRepository, configurationRepository, backup, config, migrationSteps) {
 
