@@ -63,11 +63,6 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
       groupFromNull.version should be('empty)
     }
 
-    "Can write/read Group" in {
-      marshalUnmarshal(Raml.toRaml(genGroup()))
-      marshalUnmarshal(Raml.toRaml(genGroup(Set(genGroup(), genGroup(Set(genGroup()))))))
-    }
-
     "Can write/read byte arrays" in {
       marshalUnmarshal("Hello".getBytes)
     }
