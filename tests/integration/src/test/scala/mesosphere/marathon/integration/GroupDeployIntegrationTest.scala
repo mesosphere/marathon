@@ -294,7 +294,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val result = marathon.createGroup(group)
 
       Then("An unsuccessful response has been posted, with an error indicating cyclic dependencies")
-      result.success should be(false) withClue s"Response code is ${result.code}: ${result.entityString}"
+      result should be (UnprocessableEntity)
 
       val errors = (result.entityJson \ "details" \\ "errors").flatMap(_.as[Seq[String]])
       errors.find(_.contains("cyclic dependencies")) shouldBe defined withClue s"""errors "$errors" did not contain "cyclic dependencies" error."""
