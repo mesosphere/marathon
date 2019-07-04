@@ -21,7 +21,7 @@ import mesosphere.marathon.metrics.{Counter, Gauge, Metrics}
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.upgrade.GroupVersioningUtil
-import mesosphere.marathon.util.{LockedVar, RoleUtils, WorkQueue}
+import mesosphere.marathon.util.{LockedVar, WorkQueue}
 
 import scala.async.Async._
 import scala.collection.immutable.Seq
@@ -129,9 +129,6 @@ class GroupManagerImpl(
           case Left(left) =>
             Left(left)
           case Right(changed) =>
-            // Set default roles
-            //            val withRoles = RoleUtils.updateRoles(config, changed)
-
             // Assign service ports
             val unversioned = AssignDynamicServiceLogic.assignDynamicServicePorts(
               Range.inclusive(config.localPortMin(), config.localPortMax()),
@@ -140,7 +137,7 @@ class GroupManagerImpl(
 
             val withVersionedApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
             val withVersionedAppsPods = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, withVersionedApps)
-            Validation.validateOrThrow(withVersionedAppsPods)(RootGroup.rootGroupValidator(config))
+            Validation.validateOrThrow(withVersionedAppsPods)(RootGroup.validRootGroup(config))
             val plan = DeploymentPlan(from, withVersionedAppsPods, version, toKill)
             Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
             logger.info(s"Computed new deployment plan for ${plan.targetIdsString}:\n$plan")

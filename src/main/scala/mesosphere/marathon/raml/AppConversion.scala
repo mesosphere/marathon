@@ -138,10 +138,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
 
     val versionInfo = state.VersionInfo.OnlyVersion(app.version.map(Timestamp(_)).getOrElse(Timestamp.now()))
 
-    val role = app.role.orNull
-    if (role == null) {
-      throw new IllegalArgumentException("Failed to deserialize raml.App, no role provided")
-    }
+    val role = app.role.getOrElse(throw new IllegalArgumentException("Failed to convert raml.App, no role provided. This is a bug in AppNormalization."))
 
     val result: AppDefinition = AppDefinition(
       id = PathId(app.id),

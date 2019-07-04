@@ -468,8 +468,6 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultTTY: Option[Boolean] = None
 
-  val DefaultRole: Option[String] = None
-
   /**
     * should be kept in sync with `Apps.DefaultNetworks`
     */
@@ -506,7 +504,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   def validWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.role is in(roleEnforcement.validRoles)
-    app.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
+    app.acceptedResourceRoles is ResourceRole.validForRole(roleEnforcement.validRoles)
   }
 
   private def pluginValidators(implicit pluginManager: PluginManager): Validator[AppDefinition] =
@@ -627,7 +625,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     // constraints are validated in AppValidation
     appDef.unreachableStrategy is valid
     appDef.networks is valid(NetworkValidation.modelNetworksValidator)
-  } and ExternalVolumes.validApp and EnvVarValue.validApp
+  } and ExternalVolumes.validApp() and EnvVarValue.validApp()
 
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") {

@@ -82,6 +82,6 @@ class RootGroupBenchmark extends GroupBenchmark {
 
   @Benchmark
   def validateRootGroup(hole: Blackhole): Unit = {
-    Validation.validateOrThrow(rootGroup)(RootGroup.rootGroupValidator(AllConf.withTestConfig()))
+    Validation.validateOrThrow(rootGroup)(RootGroup.validRootGroup(AllConf.withTestConfig()))
   }
 }

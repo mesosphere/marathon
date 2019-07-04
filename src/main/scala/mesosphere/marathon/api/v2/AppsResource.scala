@@ -23,7 +23,7 @@ import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util.RoleUtils
+import mesosphere.marathon.util.RoleSettings
 import org.glassfish.jersey.server.ManagedAsync
 import play.api.libs.json.{JsObject, Json}
 
@@ -50,6 +50,24 @@ class AppsResource @Inject() (
   import Normalization._
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
+
+  private def createValidatorAndNormalizerForApp(pathId: PathId): (Normalization[raml.App], Validator[AppDefinition]) = {
+    val roleSettings = RoleSettings.forService(config, pathId, groupManager.rootGroup())
+    val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
+    implicit val normalizer: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+    implicit val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(config.availableFeatures, roleSettings)(pluginManager)
+
+    (normalizer, validator)
+  }
+
+  private def createValidatorAndNormalizerForAppUpdate(pathId: PathId): (Normalization[raml.AppUpdate], Validator[AppDefinition]) = {
+    val roleSettings = RoleSettings.forService(config, pathId, groupManager.rootGroup())
+    val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
+    implicit val normalizer: Normalization[raml.AppUpdate] = appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+    implicit val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(config.availableFeatures, roleSettings)(pluginManager)
+
+    (normalizer, validator)
+  }
 
   @GET
   def index(
@@ -82,12 +100,7 @@ class AppsResource @Inject() (
 
       val ramlApp = Json.parse(body).as[raml.App]
 
-      // This is not really thread safe, another thread may intercept us and change the enforceRole flag, so we need
-      // to revalidate this inside the the groupManager later
-      val roleSettings = RoleUtils.getRoleSettingsForService(config, PathId(ramlApp.id), groupManager.rootGroup())
-      val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
-      implicit val validateAndNormalizeApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
-      implicit val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, roleSettings)(pluginManager)
+      implicit val (normalize, validate) = createValidatorAndNormalizerForApp(PathId(ramlApp.id))
 
       val now = clock.now()
 
@@ -164,11 +177,11 @@ class AppsResource @Inject() (
     * @param updateType CompleteReplacement if we want to replace the app entirely, PartialUpdate if we only want to update provided parts
     */
   def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], updateType: UpdateType): raml.AppUpdate = {
-    val roleSettings = RoleUtils.getRoleSettingsForService(config, appId, groupManager.rootGroup())
+    val roleSettings = RoleSettings.forService(config, appId, groupManager.rootGroup())
     val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
 
-    implicit val normalizeAppUpdate: Normalization[raml.AppUpdate] = appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
-    implicit val validateAndNormalizeApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+    implicit val normalizerApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+    implicit val normalizerUpdate: Normalization[raml.AppUpdate] = appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 
     updateType match {
       case CompleteReplacement =>
@@ -205,11 +218,7 @@ class AppsResource @Inject() (
         // TODO AN: Are we sure that ID is set here?
         val appId = appUpdate.id.get
 
-        val roleSettings = RoleUtils.getRoleSettingsForService(config, PathId(appId), groupManager.rootGroup())
-        val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
-
-        implicit val normalizeAppUpdate: Normalization[raml.AppUpdate] = appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
-
+        implicit val (normalizer, _) = createValidatorAndNormalizerForAppUpdate(PathId(appId))
         appUpdate.normalize
       }
     } else {
@@ -217,11 +226,8 @@ class AppsResource @Inject() (
       // with a brand new app because the rules are different (for example, many fields are non-optional with brand-new apps).
       // the version is thrown away in toUpdate so just pass `zero` for now.
       Json.parse(body).as[Seq[raml.App]].map { app =>
-        val roleSettings = RoleUtils.getRoleSettingsForService(config, PathId(app.id), groupManager.rootGroup())
-        val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
 
-        implicit val validateAndNormalizeApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
-
+        implicit val (normalizer, _) = createValidatorAndNormalizerForApp(PathId(app.id))
         app.normalize.toRaml[raml.AppUpdate]
       }
     }
@@ -372,10 +378,7 @@ class AppsResource @Inject() (
       case (_, false) => CompleteReplacement
     }
 
-    val roleSettings = RoleUtils.getRoleSettingsForService(config, appId, groupManager.rootGroup())
-    val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
-    implicit val appDefinitionValidator: Validator[AppDefinition] = AppDefinition.validAppDefinition(config.availableFeatures, roleSettings)(pluginManager)
-    implicit val validateAndNormalizeApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+    implicit val (normalizer, validate) = createValidatorAndNormalizerForApp(appId)
 
     val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType)
 
@@ -409,10 +412,7 @@ class AppsResource @Inject() (
     def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
       update.id.map(PathId(_)) match {
         case Some(id) => {
-          val roleSettings = RoleUtils.getRoleSettingsForService(config, id, groupManager.rootGroup())
-          val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
-          implicit val appDefinitionValidator: Validator[AppDefinition] = AppDefinition.validAppDefinition(config.availableFeatures, roleSettings)(pluginManager)
-          implicit val validateAndNormalizeApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+          implicit val (normalizer, validate) = createValidatorAndNormalizerForApp(id)
 
           group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation, clock.now(), service), version)
         }

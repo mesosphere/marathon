@@ -7,7 +7,7 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.util.RoleUtils
+import mesosphere.marathon.util.RoleSettings
 import org.jgrapht.DirectedGraph
 import org.jgrapht.alg.CycleDetector
 import org.jgrapht.graph._
@@ -410,7 +410,7 @@ object RootGroup {
     RootGroup(group.apps, group.pods, group.groupsById, group.dependencies, group.version)
   }
 
-  def rootGroupValidator(config: MarathonConf): Validator[RootGroup] = validator[RootGroup] { rootGroup =>
+  def validRootGroup(config: MarathonConf): Validator[RootGroup] = validator[RootGroup] { rootGroup =>
     rootGroup is noCyclicDependencies
     rootGroup is Group.validGroup(PathId.empty, config)
     rootGroup is ExternalVolumes.validRootGroup()
@@ -426,11 +426,11 @@ object RootGroup {
     isTrue("Dependency graph has cyclic dependencies.") { _.hasNonCyclicDependencies }
 
   private def validAppRole(config: MarathonConf, rootGroup: RootGroup): Validator[AppDefinition] = (app: AppDefinition) => {
-    AppDefinition.validWithRoleEnforcement(RoleUtils.getRoleSettingsForService(config, app.id, rootGroup)).apply(app)
+    AppDefinition.validWithRoleEnforcement(RoleSettings.forService(config, app.id, rootGroup)).apply(app)
   }
 
   private def validPodRole(config: MarathonConf, rootGroup: RootGroup): Validator[PodDefinition] = (pod: PodDefinition) => {
-    PodsValidation.validPodDefinitionWithRoleEnforcement(RoleUtils.getRoleSettingsForService(config, pod.id, rootGroup)).apply(pod)
+    PodsValidation.validPodDefinitionWithRoleEnforcement(RoleSettings.forService(config, pod.id, rootGroup)).apply(pod)
   }
 
 }

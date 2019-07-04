@@ -122,7 +122,7 @@ class PodNormalizationTest extends UnitTest with Inside {
         }
       }
 
-      "return the configured role for pods without a role" in new Fixture(config = PodNormalization.Configuration(None, RoleSettings(validRoles = Set("customDefault"), defaultRole = "customDefault"))) {
+      "return the configured role for pods without a role" in new Fixture(config = PodNormalization.Configuration(None, RoleSettings(enforceRole = false, validRoles = Set("customDefault"), defaultRole = "customDefault"))) {
         inside(template.normalize.role) {
           case Some(role) =>
             role shouldBe "customDefault"

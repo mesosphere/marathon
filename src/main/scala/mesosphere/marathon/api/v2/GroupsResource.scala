@@ -22,7 +22,7 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util.RoleUtils
+import mesosphere.marathon.util.RoleSettings
 import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -330,7 +330,7 @@ object GroupsResource {
     val groupPath = update.id.map(PathId(_).canonicalPath(rootPath)).getOrElse(rootPath)
     val apps = update.apps.map(_.map { a =>
 
-      val roleSettings = RoleUtils.getRoleSettingsForService(config, PathId(a.id), rootGroup)
+      val roleSettings = RoleSettings.forService(config, PathId(a.id), rootGroup)
       val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
       implicit val validateAndNormalizeApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 

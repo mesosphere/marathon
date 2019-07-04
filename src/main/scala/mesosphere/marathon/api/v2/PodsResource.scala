@@ -27,7 +27,7 @@ import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{Pod, Raml}
 import mesosphere.marathon.state.{PathId, Timestamp, VersionInfo}
-import mesosphere.marathon.util.{RoleUtils, SemanticVersion}
+import mesosphere.marathon.util.RoleSettings
 import play.api.libs.json.Json
 
 import scala.async.Async._
@@ -53,11 +53,6 @@ class PodsResource @Inject() (
     val executionContext: ExecutionContext) extends RestResource with AuthResource {
 
   import PodsResource._
-
-  // If we change/add/upgrade the notion of a Pod and can't do it purely in the internal model,
-  // update the json first
-  //  private implicit val normalizer = PodNormalization.apply(PodNormalization.Configuration(
-  //    config.defaultNetworkName.toOption))
 
   // If we can normalize using the internal model, do that instead.
   // The version of the pod is changed here to make sure, the user has not send a version.
@@ -98,7 +93,7 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       val podDef = unmarshal(body)
 
-      val roleSettings = RoleUtils.getRoleSettingsForService(config, PathId(podDef.id), groupManager.rootGroup())
+      val roleSettings = RoleSettings.forService(config, PathId(podDef.id), groupManager.rootGroup())
       implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
       implicit val podDefValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
 
@@ -131,7 +126,7 @@ class PodsResource @Inject() (
       val podId = id.toRootPath
       val podDef = unmarshal(body)
 
-      val roleSettings = RoleUtils.getRoleSettingsForService(config, PathId(podDef.id), groupManager.rootGroup())
+      val roleSettings = RoleSettings.forService(config, PathId(podDef.id), groupManager.rootGroup())
       implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
       implicit val podDefValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
 

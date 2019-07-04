@@ -18,7 +18,7 @@ trait GroupCreation {
 
     if (validate) {
       val conf = if (enabledFeatures.isEmpty) AllConf.withTestConfig() else AllConf.withTestConfig("--enable_features", enabledFeatures.mkString(","))
-      val validation = accord.validate(group)(RootGroup.rootGroupValidator(conf))
+      val validation = accord.validate(group)(RootGroup.validRootGroup(conf))
       assert(validation.isSuccess, s"Provided test root group was not valid: ${validation.toString}")
     }
 

@@ -146,11 +146,6 @@ trait PodsValidation extends GeneralPurposeCombinators {
     artifact.destPath.map(_.length).getOrElse(1) is between(1, 1024)
   }
 
-  // TODO: This is unused???
-  private val lifeCycleValidator = validator[Lifecycle] { lc =>
-    lc.killGracePeriodSeconds.getOrElse(0.0) should be > 0.0
-  }
-
   private def containerValidator(pod: Pod, enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[PodContainer] =
     validator[PodContainer] { container =>
       container.name is notEqualTo(Task.Id.Names.anonymousContainer)
@@ -230,7 +225,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
   def podValidator(config: MarathonConf, mesosMasterVersion: Option[SemanticVersion] = Some(SemanticVersion.zero), roleSettings: RoleSettings): Validator[Pod] =
     podValidator(config.availableFeatures, mesosMasterVersion.getOrElse(SemanticVersion.zero), config.defaultNetworkName.toOption, roleSettings)
 
-  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String], roleEnforcement: RoleSettings): Validator[Pod] = validator[Pod] { pod =>
+  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String], roleSettings: RoleSettings): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
@@ -253,19 +248,19 @@ trait PodsValidation extends GeneralPurposeCombinators {
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
     pod should complyWithPodUpgradeStrategyRules
     pod should haveUnreachableDisabledForResidentPods
-    pod should haveValidAcceptedResourceRoles(roleEnforcement.validRoles)
-    pod is validWithRoleEnforcement(roleEnforcement)
+    pod should haveValidAcceptedResourceRoles(roleSettings.validRoles)
+    pod is validWithRoleEnforcement(roleSettings)
   }
 
-  private def validWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[Pod] = validator[Pod] { pod =>
-    if (roleEnforcement.enforceRole) {
+  private def validWithRoleEnforcement(roleSettings: RoleSettings): Validator[Pod] = validator[Pod] { pod =>
+    if (roleSettings.enforceRole) {
       pod.role must notEmpty
-      pod.role.orNull as "role" is in(roleEnforcement.validRoles) // We need to use orNull here, as accord validator-and does not short-circuit
-      podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
+      pod.role as "role" is optional(in(roleSettings.validRoles))
+      podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is valid(ResourceRole.validForRole(roleSettings.validRoles))
     } else {
       if (pod.role.isDefined) {
-        pod.role.orNull as "role" is in(roleEnforcement.validRoles)
-        podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
+        pod.role as "role" is optional(in(roleSettings.validRoles))
+        podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is valid(ResourceRole.validForRole(roleSettings.validRoles))
       }
     }
   }
