@@ -137,6 +137,11 @@ trait MarathonConf
     case None => Set(ResourceRole.Unreserved)
   }
 
+  lazy val defaultEnforceGroupRole = opt[String](
+    name = "default_enforce_group_role",
+    descr = "The default for `enforceRole` in top level groups.",
+    default = Some("false"))
+
   lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.getOrElse(expectedResourceRoles)
 
   lazy val defaultAcceptedResourceRoles = opt[String](

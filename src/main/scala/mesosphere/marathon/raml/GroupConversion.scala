@@ -11,18 +11,6 @@ trait GroupConversion {
       case (op, cf) =>
         op.apply(cf)
     }
-
-  implicit val groupWritesRaml: Writes[CoreGroup, Group] =
-    Writes[CoreGroup, Group] { group =>
-      Group(
-        id = group.id.toString,
-        apps = group.apps.map { case (_, app) => Raml.toRaml(app) }(collection.breakOut),
-        pods = group.pods.map { case (_, pod) => Raml.toRaml(pod) }(collection.breakOut),
-        groups = group.groupsById.map { case (_, g) => Raml.toRaml(g) }(collection.breakOut),
-        dependencies = group.dependencies.map(_.toString),
-        version = Some(group.version.toOffsetDateTime)
-      )
-    }
 }
 
 object GroupConversion extends GroupConversion {
