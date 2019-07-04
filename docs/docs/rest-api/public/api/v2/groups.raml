@@ -191,6 +191,21 @@
       the given version.
     is: [ secured, deployable ]
 
+  patch:
+    description:
+      Updates group settings without restarting applications.
+    is: [ secured, deployable ]
+    body:
+      application/json:
+        schema: group.GroupPartialUpdate
+    responses:
+      400:
+        description: The group definition provided in the body is not valid.
+        body:
+          application/json:
+            example: |
+              {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
+
   ###
   # Versions of the group
   #

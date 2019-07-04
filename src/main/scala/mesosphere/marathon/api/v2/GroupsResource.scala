@@ -195,6 +195,24 @@ class GroupsResource @Inject() (
     update("", force, dryRun, body, req, asyncResponse)
   }
 
+  @PATCH
+  def patchRoot(
+    body: Array[Byte],
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      val raw = Json.parse(body).as[raml.GroupPartialUpdate]
+      val normalized = GroupNormalization.partialUpdateNormalization(config).normalized(raw)
+
+      val partialUpdate = validateOrThrow(normalized)(Group.validPartialUpdate)
+
+      // TODO: actually update the group in GroupManager without triggering a deployment.
+
+      ok()
+    }
+  }
+
   /**
     * Create or update a group.
     * If the path to the group does not exist, it gets created.

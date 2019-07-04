@@ -67,6 +67,12 @@ types:
         type: datetime
       enforceRole?:
         type: EnforceRole
+  GroupPartialUpdate:
+    type: object
+    properties:
+      id: strings.PathId
+      enforceRole?:
+        type: EnforceRole
   EnforceRole:
       type: string
       enum:
