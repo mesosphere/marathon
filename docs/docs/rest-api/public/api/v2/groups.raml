@@ -200,11 +200,7 @@
         schema: group.GroupPartialUpdate
     responses:
       400:
-        description: The group definition provided in the body is not valid.
-        body:
-          application/json:
-            example: |
-              {"message":"Invalid JSON","details":[{"path":"/id","errors":["error.expected.jsstring"]}]}
+        description: The group update provided in the body is not valid.
 
   ###
   # Versions of the group
