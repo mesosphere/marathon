@@ -27,9 +27,9 @@ class JsonSerializeDeserializeState {
   /**
     * The contents of the JSON mock file as a de-serialised RAML object (for serialisation)
     */
-  lazy val groupMock: raml.Group = {
+  lazy val groupMock: raml.GroupUpdate = {
     val value: JsValue = Json.parse(jsonMockContents)
-    Json.fromJson[raml.Group](value).get
+    Json.fromJson[raml.GroupUpdate](value).get
   }
 
   /**
@@ -83,13 +83,13 @@ class JsonSerializeDeserializeBenchmark extends JsonSerializeDeserializeState {
 
   @Benchmark
   def jsonDeserialise(hole: Blackhole): Unit = {
-    val value: JsValue = Json.toJson[raml.Group](groupMock)
+    val value: JsValue = Json.toJson[raml.GroupUpdate](groupMock)
     hole.consume(value)
   }
 
   @Benchmark
   def jsonDeserialiseWrite(hole: Blackhole): Unit = {
-    val value: JsValue = Json.toJson[raml.Group](groupMock)
+    val value: JsValue = Json.toJson[raml.GroupUpdate](groupMock)
     val str: String = value.toString()
     hole.consume(str)
   }
