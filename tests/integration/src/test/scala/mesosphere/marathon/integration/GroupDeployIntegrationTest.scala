@@ -359,8 +359,34 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       ping(service.id) should be < ping(frontend.id) withClue s"service was deployed at ${ping(service.id)} and frontend at ${ping(frontend.id)}"
     }
 
-    "Patching a groups fails" in temporaryGroup { gid => ???
+    "Patching second level group fails" in {
+      Given("A deployed group with more than one level")
+      val gid = nextGroupId(Some("this/group"))
+      val group = Group.emptyUpdate(gid)
+      val result = marathon.createGroup(group)
+      result should be(Created)
+      waitForDeployment(result)
 
+      When("the second level is patched")
+      val patchResult = marathon.patchGroup(gid, raml.GroupPartialUpdate(Some(raml.EnforceRole.Top)))
+
+      Then("the request fails")
+      patchResult should be(UnprocessableEntity)
+    }
+
+    "Patching top level group succeeds" in {
+      Given("A deployed group with more than one level")
+      val gid = nextGroupId(Some("other/group"))
+      val group = Group.emptyUpdate(gid)
+      val result = marathon.createGroup(group)
+      result should be(Created)
+      waitForDeployment(result)
+
+      When("the top level is patched")
+      val patchResult = marathon.patchGroup(gid.parent, raml.GroupPartialUpdate(Some(raml.EnforceRole.Top)))
+
+      Then("the request succeeds")
+      patchResult should be(OK)
     }
   }
 }
