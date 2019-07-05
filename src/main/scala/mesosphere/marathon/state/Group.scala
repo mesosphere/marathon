@@ -134,8 +134,9 @@ object Group extends StrictLogging {
     pods: Map[PathId, PodDefinition] = Group.defaultPods,
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
     dependencies: Set[PathId] = Group.defaultDependencies,
-    version: Timestamp = Group.defaultVersion): Group = {
-    if (id.parent.isRoot) new Group(id, apps, pods, groupsById, dependencies, version, Some(false))
+    version: Timestamp = Group.defaultVersion,
+    enforceRole: Option[Boolean] = None): Group = {
+    if (id.parent.isRoot) new Group(id, apps, pods, groupsById, dependencies, version, enforceRole)
     else new Group(id, apps, pods, groupsById, dependencies, version, None)
   }
 
@@ -242,12 +243,7 @@ object Group extends StrictLogging {
       }
 
       // Enforce role is not allowed to be updated.
-      val effectiveEnforceRole = group.enforceRole match {
-        case Some(raml.EnforceRole.Off) => false
-        case Some(raml.EnforceRole.Top) => true
-        case None => false
-      }
-      group.id.map(_.toPath).flatMap(originalRootGroup.group).flatMap(_.enforceRole) is optional(effectiveEnforceRole)
+      group.enforceRole is noEnforceRoleUpdate(originalRootGroup, group.id.map(_.toPath))
 
       group.version is theOnlyDefinedOptionIn(group)
       group.scaleBy is theOnlyDefinedOptionIn(group)
@@ -261,4 +257,22 @@ object Group extends StrictLogging {
       group.groups is optional(every(
         validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup)))
     }
+
+  case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[PathId]) extends Validator[Option[raml.EnforceRole]] {
+    def apply(maybeNewEnforceRole: Option[raml.EnforceRole]) = {
+      val originalGroup = updatedGroupId.flatMap(originalRootGroup.group) // TODO: why is groupUpdate.id optional? What is the semantic there?
+      (maybeNewEnforceRole, originalGroup.flatMap(_.enforceRole)) match {
+        case (None, None) => Success
+        case (Some(newEnforceRole), None) =>
+          Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated to $newEnforceRole for $updatedGroupId.")))
+        case (None, Some(_)) =>
+          Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be removed from $updatedGroupId.")))
+        case (Some(newEnforceRole), Some(oldEnforceRole)) =>
+          if (newEnforceRole == raml.EnforceRole.Off && oldEnforceRole == false) Success
+          else if (newEnforceRole == raml.EnforceRole.Top && oldEnforceRole == true) Success
+          else Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be changed from $oldEnforceRole to $newEnforceRole for $updatedGroupId.")))
+        case _ => Success
+      }
+    }
+  }
 }

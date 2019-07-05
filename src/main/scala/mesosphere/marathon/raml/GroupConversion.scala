@@ -106,13 +106,19 @@ object UpdateGroupStructureOp {
 
     val effectiveDependencies = groupUpdate.dependencies.fold(current.dependencies)(_.map(PathId(_).normalize))
 
+    val effectiveEnforceRole = groupUpdate.enforceRole.map {
+      case raml.EnforceRole.Off => false
+      case raml.EnforceRole.Top => true
+    }
+
     CoreGroup(
       id = current.id,
       apps = effectiveApps,
       pods = current.pods,
       groupsById = effectiveGroups,
       dependencies = effectiveDependencies,
-      version = timestamp)
+      version = timestamp,
+      enforceRole = effectiveEnforceRole)
   }
 }
 
