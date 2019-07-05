@@ -34,7 +34,7 @@ case class StoredGroup(
     storedGroups: Seq[StoredGroup],
     dependencies: Set[PathId],
     version: OffsetDateTime,
-    enforceRole: Option[Boolean]) extends StrictLogging {
+    enforceRole: Option[EnforceGroupRole]) extends StrictLogging {
 
   lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
   lazy val transitivePodIds: Map[PathId, OffsetDateTime] = podIds ++ storedGroups.flatMap(_.podIds)
@@ -127,7 +127,7 @@ case class StoredGroup(
     storedGroups.foreach { storedGroup => b.addGroups(storedGroup.toProto) }
     dependencies.foreach { dependency => b.addDependencies(dependency.safePath) }
 
-    enforceRole.foreach { flag => b.setEnforceRole(flag) }
+    enforceRole.foreach { flag => b.setEnforceRole(flag.name) }
 
     b.build()
   }
@@ -159,8 +159,8 @@ object StoredGroup {
 
     // Default to false for top-level group.
     val effectiveEnforceRole =
-      if (proto.hasEnforceRole()) Some(proto.getEnforceRole)
-      else if (id.parent.isRoot) Some(false)
+      if (proto.hasEnforceRole()) EnforceGroupRole.fromString(proto.getEnforceRole)
+      else if (id.parent.isRoot) Some(EnforceGroupRole.Off)
       else None
 
     val groups = proto.getGroupsList.map(StoredGroup(_))
