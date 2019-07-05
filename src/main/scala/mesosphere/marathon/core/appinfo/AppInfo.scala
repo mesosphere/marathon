@@ -5,7 +5,7 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import mesosphere.marathon.api.v2.json.JacksonSerializable
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
-import mesosphere.marathon.raml.{AppSerializer, Raml}
+import mesosphere.marathon.raml.{AppSerializer, Raml, TaskConversion, TaskCountsSerializer}
 import mesosphere.marathon.state.{AppDefinition, Identifiable, TaskFailure}
 
 import scala.collection.immutable.Seq
@@ -27,12 +27,16 @@ case class AppInfo(
   override def serializeWithJackson(value: AppInfo, gen: JsonGenerator, provider: SerializerProvider): Unit = {
     gen.writeStartObject()
 
+    implicit val taskConversion = TaskConversion.enrichedTaskRamlWrite
+    implicit val taskCountsConversion = TaskConversion.taskCountsWrite
+
     AppSerializer.serializeFields(Raml.toRaml(value.app), gen, provider)
-    // TODO Counts
-    maybeDeployments.foreach( gen.writeObjectField("deployments", _ ))
-    maybeReadinessCheckResults.foreach( gen.writeObjectField( "readinessCheckResults", _))
-    maybeTasks.foreach(gen.writeObjectField("tasks", Raml.toRaml(_)))
-    maybeLastTaskFailure.foreach( gen.writeObjectField("lastTaskFailure", _))
+    maybeCounts.foreach(counts => TaskCountsSerializer.serializeFields(Raml.toRaml(counts), gen, provider))
+
+    maybeDeployments.foreach(gen.writeObjectField("deployments", _))
+    maybeReadinessCheckResults.foreach(gen.writeObjectField("readinessCheckResults", _))
+    maybeTasks.foreach(tasks => gen.writeObjectField("tasks", Raml.toRaml(tasks)))
+    maybeLastTaskFailure.foreach(gen.writeObjectField("lastTaskFailure", _))
     maybeTaskStats.foreach(gen.writeObjectField("taskStats", _))
 
     gen.writeEndObject()

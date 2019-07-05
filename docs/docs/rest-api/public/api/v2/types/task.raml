@@ -70,3 +70,11 @@ types:
   TaskStatusCondition:
     type: string
     enum: [ running, staging ]
+
+  TaskCounts:
+    type: object
+    properties:
+      tasksStaged: number
+      tasksRunning: number
+      tasksHealthy: number
+      tasksUnhealthy: number

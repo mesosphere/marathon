@@ -48,4 +48,8 @@ object TaskConversion extends HealthConversion with DefaultConversions {
       zone = enrichedTask.agentInfo.zone
     )
   }
+
+  implicit val taskCountsWrite: Writes[core.appinfo.TaskCounts, raml.TaskCounts] = Writes { taskCounts =>
+    raml.TaskCounts(taskCounts.tasksStaged, taskCounts.tasksRunning, taskCounts.tasksHealthy, taskCounts.tasksUnhealthy)
+  }
 }

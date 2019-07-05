@@ -4,7 +4,7 @@ import mesosphere.raml.backend.NoScalaFormat
 import treehugger.forest._
 import treehuggerDSL._
 
-case class GeneratedFile(objects:Seq[GeneratedObject]) {
+case class GeneratedFile(objects: Seq[GeneratedObject]) {
 
   def generateFile(pkg: String): String = {
     val trees = objects.flatMap(o => o.trees)
