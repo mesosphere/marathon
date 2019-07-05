@@ -135,8 +135,8 @@ class GroupManagerImpl(
               from,
               changed)
 
-            logger.info("  Update Changed Group: " )
-            changed.transitiveApps.foreach( app => logger.info(" o Updated App: " + app.id + " ==> " + app.role + " ==> " + app.version ))
+            logger.info("  Update Changed Group: ")
+            changed.transitiveApps.foreach(app => logger.info(" o Updated App: " + app.id + " ==> " + app.role + " ==> " + app.version))
 
             val withVersionedApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
             val withVersionedAppsPods = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, withVersionedApps)

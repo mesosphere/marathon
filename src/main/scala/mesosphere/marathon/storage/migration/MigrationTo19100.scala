@@ -67,7 +67,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         .mapAsync(Migration.maxConcurrency) { appId => store.get(appId) }
         .collect { case Some(appProtos) if !appProtos.hasRole => appProtos }
         .map { appProtos =>
-          logger.info("  Migrate App(" + appProtos.getId + ") to role '" + defaultMesosRole + "', (Version: " + appProtos.getVersion + ")" )
+          logger.info("  Migrate App(" + appProtos.getId + ") to role '" + defaultMesosRole + "', (Version: " + appProtos.getVersion + ")")
 
           // TODO: check for slave_public
           appProtos.toBuilder.setRole(defaultMesosRole).build()

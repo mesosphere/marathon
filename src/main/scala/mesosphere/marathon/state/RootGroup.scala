@@ -244,7 +244,7 @@ class RootGroup(
     val newApp = fn(oldApp)
     require(newApp.id == appId, "app id must not be changed by `fn`.")
 
-    logger.info("UpdateApp " + appId + ", new Version: " + version + ", AppRole: " + oldApp.role + ", AppVersion: " + oldApp.version)
+    logger.info("UpdateApp " + appId + ", new Version: " + version + ", AppRole: " + oldApp.map(_.role) + ", AppVersion: " + oldApp.map(_.version))
 
     val newGroup = Group(
       id = oldGroup.id,
