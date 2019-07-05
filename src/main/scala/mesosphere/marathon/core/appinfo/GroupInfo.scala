@@ -13,6 +13,8 @@ case class GroupInfo(
     maybePods: Option[Seq[PodStatus]],
     maybeGroups: Option[Seq[GroupInfo]]) extends JacksonSerializable[GroupInfo] {
 
+  initJacksonSerializer()
+
   def transitiveApps: Option[Seq[AppInfo]] = this.maybeApps.map { apps =>
     apps ++ maybeGroups.map { _.flatMap(_.transitiveApps.getOrElse(Seq.empty)) }.getOrElse(Seq.empty)
   }

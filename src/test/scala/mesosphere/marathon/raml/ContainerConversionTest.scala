@@ -9,7 +9,7 @@ class ContainerConversionTest extends UnitTest {
 
   def convertToProtobufThenToRAML(container: => state.Container, raml: => Container): Unit = {
     "convert to protobuf, then to RAML" in {
-      val proto = ContainerSerializer.toProto(container)
+      val proto = api.serialization.ContainerSerializer.toProto(container)
       val proto2Raml = proto.toRaml
       proto2Raml should be(raml)
     }

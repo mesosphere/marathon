@@ -37,7 +37,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     value.toString()
   }
 
-  private [this] def toJsonWithJackson(app:AppDefinition):String = {
+  private[this] def toJsonWithJackson(app: AppDefinition): String = {
     val raml: App = Raml.toRaml(app)
     RamlSerializer.serializer.writeValueAsString(raml)
   }

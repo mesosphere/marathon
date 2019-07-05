@@ -489,7 +489,9 @@ trait PluginFormats {
   * @tparam T The type to be serialized, must be the class extending the trait
   */
 trait JacksonSerializable[T] {
-  RamlSerializer.addSerializer(createSerializer(getClass().asInstanceOf))
+  def initJacksonSerializer() = {
+    RamlSerializer.addSerializer(createSerializer(getClass.asInstanceOf))
+  }
 
   def serializeWithJackson(value: T, gen: JsonGenerator, provider: SerializerProvider): Unit
 
