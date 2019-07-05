@@ -445,6 +445,7 @@ trait AppAndGroupFormats {
       maybeJson.foldLeft(appJson)((result, obj) => result ++ obj)
     }
 
+  // TODO: migrate to GroupConversion
   implicit lazy val GroupInfoWrites: Writes[GroupInfo] =
     Writes { info =>
 
@@ -457,7 +458,8 @@ trait AppAndGroupFormats {
       val groupJson = Json.obj (
         "id" -> info.group.id,
         "dependencies" -> info.group.dependencies,
-        "version" -> info.group.version
+        "version" -> info.group.version,
+        "enforceRole" -> info.group.enforceRole.map(_.name)
       )
 
       maybeJson.foldLeft(groupJson)((result, obj) => result ++ obj)

@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, IntegrationHealthCheck}
 import mesosphere.marathon.raml.{App, GroupUpdate, UpgradeStrategy}
-import mesosphere.marathon.state.{Group, PathId}
+import mesosphere.marathon.state.{Group, PathId, Timestamp}
 
 import scala.concurrent.duration._
 
@@ -95,6 +95,10 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       Then("A success event is send and the application has been started")
       val tasks = waitForTasks(PathId(app.id), app.instances)
       tasks should have size 2
+
+      And("The group info is complete")
+      val groupInfo = marathon.group(id)
+//      groupInfo.value.enforceRole.value should be("foo")
     }
 
     "update a group with applications to restart" in {
