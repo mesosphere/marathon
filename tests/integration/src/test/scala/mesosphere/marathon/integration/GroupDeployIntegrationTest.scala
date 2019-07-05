@@ -281,7 +281,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       waitForDeployment(force)
     }
 
-    "Groups with Applications with circular dependencies can not get deployed" in {
+    "Groups with Applications with circular dependencies cannot get deployed" in {
       val gid = nextGroupId(Some("with-application-with-circular-dependencies-cannot-be-deployed"))
 
       Given(s"A group with id $gid with 3 circular dependent applications")
@@ -357,6 +357,22 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       ping should have size 3
       ping(db.id) should be < ping(service.id) withClue s"database was deployed at ${ping(db.id)} and service at ${ping(service.id)}"
       ping(service.id) should be < ping(frontend.id) withClue s"service was deployed at ${ping(service.id)} and frontend at ${ping(frontend.id)}"
+    }
+
+    "Groups enforce role setting cannot be changed with an update" in temporaryGroup { gid =>
+      val appId = gid / nextAppId()
+
+      Given(s"A group with one application started with id $appId")
+      val app1V1 = appProxy(appId, "v1", 2, healthCheck = None)
+      waitForDeployment(marathon.createGroup(GroupUpdate(Some(gid.toString), Some(Set(app1V1)))))
+      waitForTasks(PathId(app1V1.id), app1V1.instances)
+      val tasks = marathon.tasks(appId)
+
+      When("The group is updated to change the enforce role setting")
+      val result = marathon.updateGroup(gid, GroupUpdate(id = Some(gid.toString), apps = Some(Set(app1V1)), enforceRole = Some(raml.EnforceRole.Top)))
+
+      Then("The update fails")
+      result should be(UnprocessableEntity)
     }
 
     "Patching second level group fails" in {

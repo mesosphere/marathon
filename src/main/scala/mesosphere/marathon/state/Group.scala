@@ -232,7 +232,7 @@ object Group extends StrictLogging {
   def emptyUpdate(id: PathId): raml.GroupUpdate = raml.GroupUpdate(Some(id.toString))
 
   /** requires that apps are in canonical form */
-  def validNestedGroupUpdateWithBase(base: PathId): Validator[raml.GroupUpdate] =
+  def validNestedGroupUpdateWithBase(base: PathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] =
     validator[raml.GroupUpdate] { group =>
       group is notNull
 
@@ -241,7 +241,13 @@ object Group extends StrictLogging {
         group.id.map(_.toPath) is optional(PathId.topLevel)
       }
 
-      // TODO: Should we allow enforceRole changes via put?
+      // Enforce role is not allowed to be updated.
+      val effectiveEnforceRole = group.enforceRole match {
+        case Some(raml.EnforceRole.Off) => false
+        case Some(raml.EnforceRole.Top) => true
+        case None => false
+      }
+      group.id.map(_.toPath).flatMap(originalRootGroup.group).flatMap(_.enforceRole) is optional(effectiveEnforceRole)
 
       group.version is theOnlyDefinedOptionIn(group)
       group.scaleBy is theOnlyDefinedOptionIn(group)
@@ -253,6 +259,6 @@ object Group extends StrictLogging {
       group.apps is optional(every(
         AppValidation.validNestedApp(group.id.fold(base)(PathId(_).canonicalPath(base)))))
       group.groups is optional(every(
-        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)))))
+        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup)))
     }
 }
