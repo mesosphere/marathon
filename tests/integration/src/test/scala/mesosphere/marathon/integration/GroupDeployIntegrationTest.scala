@@ -358,5 +358,9 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       ping(db.id) should be < ping(service.id) withClue s"database was deployed at ${ping(db.id)} and service at ${ping(service.id)}"
       ping(service.id) should be < ping(frontend.id) withClue s"service was deployed at ${ping(service.id)} and frontend at ${ping(frontend.id)}"
     }
+
+    "Patching a groups fails" in temporaryGroup { gid => ???
+
+    }
   }
 }

@@ -209,11 +209,9 @@
             application/json:
               example: |
                 [ "2015-09-25T15:13:48.343Z", "2015-09-11T11:11:22.692Z", "2015-09-11T10:47:21.241Z" ]
-
-/{group_id}:
   patch:
     description:
-      Updates group settings without restarting applications.
+      Updates group settings without restarting applications. This operation is only allowed for top-level groups.
     is: [ secured, deployable ]
     body:
       application/json:
