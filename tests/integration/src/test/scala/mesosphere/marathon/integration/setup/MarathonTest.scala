@@ -358,6 +358,9 @@ trait MarathonAppFixtures {
   def appMockCmd(appId: PathId, versionId: String): String = {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val appMock: File = new File(projectDir, "src/test/resources/python/app_mock.py")
+    if (!appMock.exists()) {
+      throw new IllegalStateException("Failed to locate app_mock.py (" + appMock.getAbsolutePath + ")")
+    }
     s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
       s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}"""
   }
@@ -466,7 +469,7 @@ trait MarathonAppFixtures {
 
   def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1): PodDefinition = PodDefinition(
     id = testBasePath / s"$podId",
-    role = "*",
+    role = "foo",
     containers = Seq(
       MesosContainer(
         name = "task1",
@@ -492,7 +495,7 @@ trait MarathonAppFixtures {
 
     val pod = PodDefinition(
       id = testBasePath / id,
-      role = "*",
+      role = "foo",
       containers = Seq(
         MesosContainer(
           name = "task1",

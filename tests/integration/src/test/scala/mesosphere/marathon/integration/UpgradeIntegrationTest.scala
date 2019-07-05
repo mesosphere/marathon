@@ -174,7 +174,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       And("new pods in Marathon 1.6.549 are added")
       val resident_pod_16549 = PodDefinition(
         id = testBasePath / "resident-pod-16549",
-        role = "*",
+        role = "foo",
         containers = Seq(
           MesosContainer(
             name = "task1",
