@@ -215,10 +215,9 @@ class AppsResource @Inject() (
   def canonicalAppUpdatesFromJson(body: Array[Byte], partialUpdate: Boolean): Seq[raml.AppUpdate] = {
     if (partialUpdate) {
       Json.parse(body).as[Seq[raml.AppUpdate]].map { appUpdate =>
-        // TODO AN: Are we sure that ID is set here?
-        val appId = appUpdate.id.get
+        require(appUpdate.id.isDefined, "App Update must have app id set")
 
-        implicit val (normalizer, _) = createValidatorAndNormalizerForAppUpdate(PathId(appId))
+        implicit val (normalizer, _) = createValidatorAndNormalizerForAppUpdate(PathId(appUpdate.id.get))
         appUpdate.normalize
       }
     } else {
@@ -244,7 +243,6 @@ class AppsResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-
       await(update(id, body, force, partialUpdate, req, allowCreation = true))
     }
   }
@@ -259,7 +257,6 @@ class AppsResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-
       await(update(id, body, force, partialUpdate = true, req, allowCreation = false))
     }
   }
@@ -285,7 +282,6 @@ class AppsResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-
       await(updateMultiple(force, partialUpdate = true, body, allowCreation = false))
     }
   }
