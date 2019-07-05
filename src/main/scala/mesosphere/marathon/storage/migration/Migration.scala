@@ -44,8 +44,7 @@ trait MigrationStep {
   */
 class Migration(
     private[migration] val availableFeatures: Set[String],
-    private[migration] val defaultNetworkName: Option[String],
-    private[migration] val mesosBridgeName: String,
+    private[migration] val defaultMesosRole: String,
     private[migration] val persistenceStore: PersistenceStore[_, _, _],
     private[migration] val appRepository: AppRepository,
     private[migration] val podRepository: PodRepository,
@@ -213,7 +212,8 @@ object Migration {
       StorageVersions(17) -> { (migration) => new MigrationTo17(migration.instanceRepo, migration.persistenceStore) },
       StorageVersions(18) -> { (migration) => new MigrationTo18(migration.instanceRepo, migration.persistenceStore) },
       StorageVersions(18, 100) -> { (migration) => new MigrationTo18100(migration.instanceRepo, migration.persistenceStore) },
-      StorageVersions(18, 200) -> { (migration) => new MigrationTo18200(migration.instanceRepo, migration.persistenceStore) }
+      StorageVersions(18, 200) -> { (migration) => new MigrationTo18200(migration.instanceRepo, migration.persistenceStore) },
+      StorageVersions(19, 100) -> { (migration) => new MigrationTo19100(migration.defaultMesosRole, migration.appRepository, migration.podRepository, migration.persistenceStore) }
     )
 }
 

@@ -189,6 +189,7 @@ case class AppDefinition(
       .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto).asJava)
       .setUnreachableStrategy(unreachableStrategy.toProto)
       .setKillSelection(killSelection.toProto)
+      .setRole(role)
 
     check.foreach { c => builder.setCheck(c.toProto) }
 
@@ -217,8 +218,6 @@ case class AppDefinition(
         builder.setLastConfigChangeAt(fullInfo.lastConfigChangeAt.millis)
       case _ => // ignore
     }
-
-    builder.setRole(role)
 
     builder.build
   }
@@ -262,6 +261,8 @@ case class AppDefinition(
 
     val tty: Option[Boolean] = if (proto.hasTty) Some(proto.getTty) else AppDefinition.DefaultTTY
 
+    val role: String = proto.getRole()
+
     // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
     // until the deprecation cycle is complete.
     val portDefinitions =
@@ -284,8 +285,6 @@ case class AppDefinition(
         disk = executorResourcesMap.getOrElse(Resource.DISK, r.disk)
       ))
     }
-
-    val role = proto.getRole
 
     AppDefinition(
       id = PathId(proto.getId),
@@ -467,6 +466,8 @@ object AppDefinition extends GeneralPurposeCombinators {
   val DefaultAcceptedResourceRoles = Set.empty[String]
 
   val DefaultTTY: Option[Boolean] = None
+
+  val DefaultRole: String = "*" // TODO: use --mesos_role or top-level group
 
   /**
     * should be kept in sync with `Apps.DefaultNetworks`

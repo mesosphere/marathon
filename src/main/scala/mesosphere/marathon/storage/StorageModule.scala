@@ -31,16 +31,16 @@ trait StorageModule {
 }
 
 object StorageModule {
-  def apply(metrics: Metrics, conf: StorageConf with NetworkConf, curatorFramework: RichCuratorFramework)(
+  def apply(metrics: Metrics, conf: MarathonConf, curatorFramework: RichCuratorFramework)(
     implicit
     mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
     val currentConfig = StorageConfig(conf, curatorFramework)
-    apply(metrics, currentConfig, conf.mesosBridgeName())
+    apply(metrics, currentConfig, conf.mesosRole())
   }
 
   def apply(
-    metrics: Metrics, config: StorageConfig, mesosBridgeName: String)(
+    metrics: Metrics, config: StorageConfig, defaultMesosRole: String)(
     implicit
     mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
@@ -67,7 +67,7 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(store)
-        val migration = new Migration(zk.availableFeatures, zk.defaultNetworkName, mesosBridgeName, store, appRepository, podRepository, groupRepository,
+        val migration = new Migration(zk.availableFeatures, defaultMesosRole, store, appRepository, podRepository, groupRepository,
           deploymentRepository, instanceRepository,
           taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.zkRepository(store), runtimeConfigurationRepository, backup, config)
 
@@ -103,7 +103,7 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(store)
-        val migration = new Migration(mem.availableFeatures, mem.defaultNetworkName, mesosBridgeName, store, appRepository, podRepository, groupRepository,
+        val migration = new Migration(mem.availableFeatures, defaultMesosRole, store, appRepository, podRepository, groupRepository,
           deploymentRepository, instanceRepository,
           taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.inMemRepository(store), runtimeConfigurationRepository, backup, config)
 

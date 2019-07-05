@@ -66,6 +66,8 @@ trait RunSpec extends plugin.RunSpec {
   val networks: Seq[Network]
   val role: String
 
+  val role: String
+
   final def ref: RunSpecRef = RunSpecRef(id, version)
   /**
     * Reference to the last config ref
