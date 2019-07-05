@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package state
 
+import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
@@ -24,13 +25,13 @@ class RootGroup(
     pods: Map[PathId, PodDefinition] = Group.defaultPods,
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
     dependencies: Set[PathId] = Group.defaultDependencies,
-    version: Timestamp = Group.defaultVersion) extends Group(
+    version: Timestamp = Group.defaultVersion) extends Group (
   PathId.empty,
   apps,
   pods,
   groupsById,
   dependencies,
-  version) {
+  version) with StrictLogging {
   require(
     groupsById.forall {
       case (_, _: RootGroup) => false
@@ -239,8 +240,12 @@ class RootGroup(
   def updateApp(
     appId: PathId, fn: Option[AppDefinition] => AppDefinition, version: Timestamp = Group.defaultVersion): RootGroup = {
     val oldGroup = group(appId.parent).getOrElse(Group.empty(appId.parent))
-    val newApp = fn(app(appId))
+    val oldApp = app(appId)
+    val newApp = fn(oldApp)
     require(newApp.id == appId, "app id must not be changed by `fn`.")
+
+    logger.info("UpdateApp " + appId + ", new Version: " + version + ", AppRole: " + oldApp.role + ", AppVersion: " + oldApp.version)
+
     val newGroup = Group(
       id = oldGroup.id,
       // replace potentially existing app definition
