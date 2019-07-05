@@ -67,7 +67,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         .mapAsync(Migration.maxConcurrency) { appId => store.get(appId) }
         .collect { case Some(appProtos) if !appProtos.hasRole => appProtos }
         .map { appProtos =>
-          logger.debug("  Migrate App(" + appProtos.getId + ") to role '" + defaultMesosRole + "'")
+          logger.info("  Migrate App(" + appProtos.getId + ") to role '" + defaultMesosRole + "', (Version: " + appProtos.getVersion + ")" )
 
           // TODO: check for slave_public
           appProtos.toBuilder.setRole(defaultMesosRole).build()
@@ -109,7 +109,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         .mapAsync(Migration.maxConcurrency) { podId => store.get(podId) }
         .collect { case Some(podRaml) if !podRaml.role.isDefined => podRaml }
         .map { podRaml =>
-          logger.debug("  Migrate Pod(" + podRaml.id + ") to role '" + defaultMesosRole + "'")
+          logger.info("  Migrate Pod(" + podRaml.id + ") to role '" + defaultMesosRole + "', (Version: " + podRaml.version + ")")
 
           // TODO: check for slave_public
           podRaml.copy(role = Some(defaultMesosRole))
