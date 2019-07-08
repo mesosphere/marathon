@@ -5,83 +5,165 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstancesSnapshot
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.state.RunSpecConfigRef
+import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.{HungryInstance, ReviveReason}
 
 /**
   * Holds the current state and defines the revive logic.
   *
-  * @param scheduledInstances All scheduled instance requiring offers and their run spec ref.
-  * @param terminalReservations Ids of terminal resident instance with [[Goal.Decommissioned]].
-  * @param activeDelays Delays for run specs.
-  * @param forceExpungedResidentInstances Counts how many resident instances have been force expunged.
+  * @param hungryInstances All scheduled instance requiring offers and their run spec ref.
+  * @param activeDelays    Delays for run specs.
   */
 case class ReviveOffersState(
-    scheduledInstances: Map[Instance.Id, RunSpecConfigRef],
-    terminalReservations: Set[Instance.Id],
+    hungryInstances: Map[String, Map[Instance.Id, HungryInstance]],
+    allInstanceIdsByRole: Map[String, Set[Instance.Id]],
     activeDelays: Set[RunSpecConfigRef],
-    forceExpungedResidentInstances: Long) extends StrictLogging {
+    version: Long) extends StrictLogging {
 
   /** whether the instance has a reservation that should be freed. */
   private def shouldUnreserve(instance: Instance): Boolean = {
     instance.reservation.nonEmpty && instance.state.goal == Goal.Decommissioned && instance.state.condition.isTerminal
   }
 
+  private def update(
+    hungryInstances: Map[String, Map[Instance.Id, HungryInstance]] = hungryInstances,
+    allInstanceIdsByRole: Map[String, Set[Instance.Id]] = allInstanceIdsByRole,
+    activeDelays: Set[RunSpecConfigRef] = activeDelays): ReviveOffersState = {
+
+    copy(hungryInstances, allInstanceIdsByRole, activeDelays, version + 1)
+  }
+
   def withSnapshot(snapshot: InstancesSnapshot): ReviveOffersState = {
-    copy(
-      scheduledInstances = snapshot.instances.view.filter(_.isScheduled).map(i => i.instanceId -> i.runSpec.configRef).toMap,
-      terminalReservations = snapshot.instances.view.filter(shouldUnreserve).map(_.instanceId).toSet)
+    update(
+      hungryInstances = snapshot.instances.view.filter(isHungry).groupBy(_.role).map {
+        case (role, instances) =>
+          role -> instances.map { i => i.instanceId -> toHungryInstance(i) }.toMap
+      },
+      allInstanceIdsByRole = snapshot.instances.view.groupBy(_.role).map { case (role, instances) => role -> instances.map(_.instanceId).toSet })
+  }
+
+  private def hasInstance(role: String, instanceId: Instance.Id): Boolean = {
+    hungryInstances.getOrElse(role, Map.empty).contains(instanceId)
+  }
+
+  private def updateInstanceState(role: String, instanceId: Instance.Id, newState: Option[Instance]): ReviveOffersState = {
+    val newHungryState = newState.filter(isHungry).map(toHungryInstance)
+
+    val newHungryInstances: Map[String, Map[Instance.Id, HungryInstance]] = newHungryState match {
+      case Some(hungryInstance) =>
+        hungryInstance.reason match {
+          case ReviveReason.Launching =>
+            logger.debug(s"Adding ${instanceId} to scheduled instances.")
+          case ReviveReason.CleaningUpReservations =>
+            logger.debug(s"$instanceId is terminal but has a reservation.")
+        }
+        val newRoleHungryInstances = hungryInstances.getOrElse(role, Map.empty) + (instanceId -> hungryInstance)
+        hungryInstances + (role -> newRoleHungryInstances)
+      case None =>
+        if (hasInstance(role, instanceId))
+          logger.debug(s"Removing ${instanceId} from instances wanting offers.")
+        val newRoleHungryInstances = hungryInstances.getOrElse(role, Map.empty) - instanceId
+        val newHungryInstances =
+          if (newRoleHungryInstances.isEmpty)
+            hungryInstances - role
+          else
+            hungryInstances + (role -> newRoleHungryInstances)
+
+        newHungryInstances
+    }
+
+    val newAllInstanceIdsByRole = if (newState.nonEmpty) {
+      val withInstanceIdAdded = allInstanceIdsByRole.getOrElse(role, Set.empty) + instanceId
+      allInstanceIdsByRole + (role -> withInstanceIdAdded)
+    } else {
+      val withInstanceIdRemoved = allInstanceIdsByRole.getOrElse(role, Set.empty) - instanceId
+      if (withInstanceIdRemoved.isEmpty)
+        allInstanceIdsByRole - role
+      else
+        allInstanceIdsByRole + (role -> withInstanceIdRemoved)
+    }
+
+    update(hungryInstances = newHungryInstances, allInstanceIdsByRole = newAllInstanceIdsByRole)
   }
 
   /** @return this state updated with an instance. */
   def withInstanceUpdated(instance: Instance): ReviveOffersState = {
-    logger.debug(s"${instance.instanceId} updated to ${instance.state}")
-    if (instance.isScheduled) {
-      logger.debug(s"Adding ${instance.instanceId} to scheduled instances.")
-      copy(scheduledInstances = scheduledInstances.updated(instance.instanceId, instance.runSpec.configRef))
-    } else if (shouldUnreserve(instance)) {
-      logger.debug(s"$instance is terminal but has a reservation.")
-      copy(scheduledInstances = scheduledInstances - instance.instanceId, terminalReservations = terminalReservations + instance.instanceId)
-    } else if (!instance.isScheduled) {
-      logger.debug(s"Removing ${instance.instanceId} from scheduled instances.")
-      copy(scheduledInstances = scheduledInstances - instance.instanceId)
-    } else this
+    updateInstanceState(instance.role, instance.instanceId, Some(instance))
   }
 
-  /** @return this state with passed instance removed from [[scheduledInstances]] and [[terminalReservations]]. */
+  private def isHungry(instance: Instance): Boolean = {
+    instance.isScheduled || shouldUnreserve(instance)
+  }
+
+  private def toHungryInstance(instance: Instance): HungryInstance = {
+    HungryInstance(
+      version,
+      if (shouldUnreserve(instance)) ReviveReason.CleaningUpReservations else ReviveReason.Launching,
+      instance.runSpec.configRef)
+  }
+
+  /** @return this state with passed instance removed from [[hungryInstances]] and [[terminalReservations]]. */
   def withInstanceDeleted(instance: Instance): ReviveOffersState = {
-    logger.debug(s"${instance.instanceId} deleted.")
-    if (instance.reservation.nonEmpty) {
-      logger.debug(s"Resident ${instance.instanceId} was force expunged.")
-      copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId, forceExpungedResidentInstances = forceExpungedResidentInstances + 1)
-    } else {
-      copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId)
-    }
+    updateInstanceState(instance.role, instance.instanceId, Some(instance))
   }
 
   /** @return this state with removed ref from [[activeDelays]]. */
   def withoutDelay(ref: RunSpecConfigRef): ReviveOffersState = {
     logger.debug(s"Marking $ref as no longer actively delayed")
-    copy(activeDelays = activeDelays - ref)
+
+    // This is not optimized
+    val bumpedVersions = hungryInstances.map {
+      case (role, hungryInstances) =>
+        role -> hungryInstances.map {
+          case (instanceId, hungryInstance) =>
+            if (hungryInstance.ref == ref)
+              instanceId -> hungryInstance.copy(version = this.version)
+            else
+              instanceId -> hungryInstance
+        }
+    }
+    update(hungryInstances = bumpedVersions, activeDelays = activeDelays - ref)
   }
 
   /** @return this state with updated [[activeDelays]]. */
   def withDelay(ref: RunSpecConfigRef): ReviveOffersState = {
     logger.debug(s"Marking $ref as actively delayed")
-    copy(activeDelays = activeDelays + ref)
+    update(activeDelays = activeDelays + ref)
   }
 
   /** scheduled instances that should be launched. */
-  lazy val scheduledInstancesWithoutBackoff: Set[Instance.Id] =
-    scheduledInstances.view.filter(kv => launchAllowed(kv._2)).map(_._1).toSet
-
-  /** @return true if a instance has no active delay. */
-  def launchAllowed(ref: RunSpecConfigRef): Boolean = {
-    !activeDelays.contains(ref)
+  lazy val roleReviveVersions: Map[String, RoleOfferState] = {
+    allInstanceIdsByRole.keysIterator.map { role =>
+      role -> hungryInstances.getOrElse(role, Map.empty).values
+        .iterator
+        .filter(launchAllowed)
+        .foldLeft(OffersNotWanted: RoleOfferState) {
+          case (op @ OffersWanted(version), hungryInstance) if hungryInstance.version < version =>
+            op
+          case (_, hungryInstance) =>
+            OffersWanted(hungryInstance.version)
+        }
+    }.toMap
   }
 
-  /** @return true there are no scheduled instances nor terminal instances with reservations. */
-  def isEmpty: Boolean = scheduledInstancesWithoutBackoff.isEmpty && terminalReservations.isEmpty
+  /** @return true if a instance has no active delay. */
+  def launchAllowed(hungryInstance: HungryInstance): Boolean = {
+    hungryInstance.reason == ReviveReason.CleaningUpReservations || !activeDelays.contains(hungryInstance.ref)
+  }
 }
 
 object ReviveOffersState {
-  def empty = ReviveOffersState(Map.empty, Set.empty, Set.empty, 0)
+  def empty = ReviveOffersState(Map.empty, Map.empty, Set.empty, 0)
+
+  case class HungryInstance(version: Long, reason: ReviveReason, ref: RunSpecConfigRef)
+
+  sealed trait ReviveReason
+
+  case object ReviveReason {
+
+    case object CleaningUpReservations extends ReviveReason
+
+    case object Launching extends ReviveReason
+
+  }
+
 }

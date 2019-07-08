@@ -18,7 +18,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
   val monitoringApp = AppDefinition(id = PathId("/test2"), role = "*")
 
   val inputSourceQueue = Source.queue[Either[InstanceChangeOrSnapshot, DelayedStatus]](16, OverflowStrategy.fail)
-  val outputSinkQueue = Sink.queue[Op]()
+  val outputSinkQueue = Sink.queue[RoleOfferState]()
 
   "Suppress and revive" should {
     "combine 3 revive-worth events received within the throttle window in to a two throttle events" in {
@@ -36,10 +36,10 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
       input.complete()
 
       // revives from the first instance
-      Seq.fill(3){ output.pull().futureValue }.flatten shouldBe Seq(Revive, Revive, Revive)
+      Seq.fill(3){ output.pull().futureValue }.flatten shouldBe Seq(OffersWanted, OffersWanted, OffersWanted)
 
       // set of revives for instance 2 and 3
-      Seq.fill(3){ output.pull().futureValue }.flatten shouldBe Seq(Revive, Revive, Revive)
+      Seq.fill(3){ output.pull().futureValue }.flatten shouldBe Seq(OffersWanted, OffersWanted, OffersWanted)
 
       output.pull().futureValue shouldBe None // should be EOS
     }
@@ -57,7 +57,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
 
   "Suppress and revive without throttling" should {
     // Many of these components are more easily tested without throttling logic
-    val suppressReviveFlow: Flow[Either[InstanceChangeOrSnapshot, ReviveOffersStreamLogic.DelayedStatus], Op, NotUsed] =
+    val suppressReviveFlow: Flow[Either[InstanceChangeOrSnapshot, ReviveOffersStreamLogic.DelayedStatus], RoleOfferState, NotUsed] =
       ReviveOffersStreamLogic
         .reviveStateFromInstancesAndDelays
         .via(ReviveOffersStreamLogic.suppressOrReviveFromDiff)
@@ -69,7 +69,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .runWith(Sink.seq)
         .futureValue
 
-      results shouldBe Vector(Suppress)
+      results shouldBe Vector(OffersNotWanted)
     }
 
     "emit three revives for a snapshot with multiple instances to launch" in {
@@ -80,7 +80,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(Revive, Revive, Revive)
+      results shouldBe Vector(OffersWanted, OffersWanted, OffersWanted)
     }
 
     "emit a revive for each new scheduled instance added" in {
@@ -95,7 +95,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(Suppress, Revive, Revive, Revive, Revive, Revive, Revive)
+      results shouldBe Vector(OffersNotWanted, OffersWanted, OffersWanted, OffersWanted, OffersWanted, OffersWanted, OffersWanted)
     }
 
     "does not emit a revive for updates to existing scheduled instances" in {
@@ -109,7 +109,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(Suppress, Revive, Revive, Revive)
+      results shouldBe Vector(OffersNotWanted, OffersWanted, OffersWanted, OffersWanted)
     }
 
     "does not revive if an instance is backed off" in {
@@ -123,7 +123,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(Suppress)
+      results shouldBe Vector(OffersNotWanted)
     }
 
     "suppresses if an instance becomes backed off, and re-revives when it is available again" in {
@@ -138,7 +138,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(Suppress, Revive, Revive, Revive, Suppress, Revive, Revive, Revive)
+      results shouldBe Vector(OffersNotWanted, OffersWanted, OffersWanted, OffersWanted, OffersNotWanted, OffersWanted, OffersWanted, OffersWanted)
     }
 
     "does not suppress if a backoff occurs for one instance, but there is still a scheduled instance" in {
@@ -152,7 +152,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(Revive, Revive, Revive)
+      results shouldBe Vector(OffersWanted, OffersWanted, OffersWanted)
     }
   }
 }
