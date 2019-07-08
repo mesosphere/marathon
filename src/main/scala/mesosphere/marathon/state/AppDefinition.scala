@@ -287,7 +287,6 @@ case class AppDefinition(
       ))
     }
 
-
     logger.info("AppDefinition.mergeFromProto: " + proto.getId + " // " + versionInfo + " Role: '" + role + "'")
 
     AppDefinition(

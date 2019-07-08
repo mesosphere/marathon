@@ -25,7 +25,7 @@ class RootGroup(
     pods: Map[PathId, PodDefinition] = Group.defaultPods,
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
     dependencies: Set[PathId] = Group.defaultDependencies,
-    version: Timestamp = Group.defaultVersion) extends Group (
+    version: Timestamp = Group.defaultVersion) extends Group(
   PathId.empty,
   apps,
   pods,

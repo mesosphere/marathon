@@ -2,7 +2,6 @@ package mesosphere.marathon
 package storage.migration
 
 import java.nio.charset.StandardCharsets
-import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
@@ -63,22 +62,22 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
       }
 
     maybeStore(persistenceStore).map { store =>
-//      appRepository
-//        .ids()
-//        .flatMapConcat { appId => store.versions(appId).map(v => (appId, v)) }
-//        .mapAsync(Migration.maxConcurrency) { case (appId: PathId, v: OffsetDateTime) => store.get(appId, v) }
-//        .collect { case Some(appProtos) if !appProtos.hasRole => appProtos }
-//        .map { appProtos =>
-//          logger.info("  Migrate App(" + appProtos.getId + ") to role '" + defaultMesosRole + "', (Version: " + appProtos.getVersion + ")")
-//
-//          // TODO: check for slave_public
-//          appProtos.toBuilder.setRole(defaultMesosRole).build()
-//        }
-//        .mapAsync(Migration.maxConcurrency) { appProtos =>
-//          store.store(PathId(appProtos.getId), appProtos, appIdResolver.version(appProtos))
-//        }
-//        .alsoTo(countingSink)
-//        .runWith(Sink.ignore)
+      //      appRepository
+      //        .ids()
+      //        .flatMapConcat { appId => store.versions(appId).map(v => (appId, v)) }
+      //        .mapAsync(Migration.maxConcurrency) { case (appId: PathId, v: OffsetDateTime) => store.get(appId, v) }
+      //        .collect { case Some(appProtos) if !appProtos.hasRole => appProtos }
+      //        .map { appProtos =>
+      //          logger.info("  Migrate App(" + appProtos.getId + ") to role '" + defaultMesosRole + "', (Version: " + appProtos.getVersion + ")")
+      //
+      //          // TODO: check for slave_public
+      //          appProtos.toBuilder.setRole(defaultMesosRole).build()
+      //        }
+      //        .mapAsync(Migration.maxConcurrency) { appProtos =>
+      //          store.store(PathId(appProtos.getId), appProtos, appIdResolver.version(appProtos))
+      //        }
+      //        .alsoTo(countingSink)
+      //        .runWith(Sink.ignore)
       appRepository
         .ids()
         .mapAsync(Migration.maxConcurrency) { case appId: PathId => store.get(appId) }

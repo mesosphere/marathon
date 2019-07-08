@@ -48,7 +48,7 @@ case class StoredGroup(
           logger.error(s"Failed to load $appId:$appVersion for group $id ($version)", ex)
           throw ex
       }.map { maybeAppDef =>
-        logger.info("Resolving Group AppRefs: " + appId + " ==> " + maybeAppDef + " ==> " + maybeAppDef.map( app => app.version + " // " + app.role ))
+        logger.info("Resolving Group AppRefs: " + appId + " ==> " + maybeAppDef + " ==> " + maybeAppDef.map(app => app.version + " // " + app.role))
         (appId, maybeAppDef)
       }
     }
