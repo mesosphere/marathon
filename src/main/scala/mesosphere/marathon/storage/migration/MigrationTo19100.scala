@@ -63,6 +63,23 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
       }
 
     maybeStore(persistenceStore).map { store =>
+      Future.sequence(
+      appRepository
+        .ids()
+        .mapAsync(Migration.maxConcurrency) { case appId: PathId => store.get(appId) }
+        .collect { case Some(appProtos) if !appProtos.hasRole => appProtos }
+        .map { appProtos =>
+          logger.info("  Migrate Current App(" + appProtos.getId + ") to role '" + defaultMesosRole + "', (Version: " + appProtos.getVersion + ")")
+
+          // TODO: check for slave_public
+          appProtos.toBuilder.setRole(defaultMesosRole).build()
+        }
+        .mapAsync(Migration.maxConcurrency) { appProtos =>
+          store.store(PathId(appProtos.getId), appProtos)
+        }
+        .alsoTo(countingSink)
+        .runWith(Sink.ignore)
+      ,
       appRepository
         .ids()
         .flatMapConcat { appId => store.versions(appId).map(v => (appId, v)) }
@@ -79,6 +96,8 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         }
         .alsoTo(countingSink)
         .runWith(Sink.ignore)
+      )
+
     }.getOrElse {
       Future.successful(Done)
     }
