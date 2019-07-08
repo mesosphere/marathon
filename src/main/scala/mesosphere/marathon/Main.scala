@@ -28,7 +28,10 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   SLF4JBridgeHandler.install()
   Thread.setDefaultUncaughtExceptionHandler((thread: Thread, throwable: Throwable) => {
     logger.error(s"Terminating due to uncaught exception in thread ${thread.getName}:${thread.getId}", throwable)
-    Runtime.getRuntime.asyncExit(CrashStrategy.UncaughtException.code)
+    throwable match {
+      case e: java.net.BindException => Runtime.getRuntime.asyncExit(CrashStrategy.BindingError.code)
+      case other => Runtime.getRuntime.asyncExit(CrashStrategy.UncaughtException.code)
+    }
   })
 
   if (LibMesos.isCompatible) {
