@@ -1,6 +1,10 @@
 package mesosphere.marathon
 package state
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.SerializerProvider
+import mesosphere.marathon.api.v2.json.JacksonSerializable
+
 sealed trait VersionInfo {
   def version: Timestamp
   def lastConfigChangeVersion: Timestamp
@@ -14,7 +18,7 @@ sealed trait VersionInfo {
   }
 }
 
-object VersionInfo {
+object VersionInfo extends JacksonSerializable[VersionInfo] {
 
   /**
     * This should only be used for new [[mesosphere.marathon.state.RunSpec]]s.
@@ -57,4 +61,12 @@ object VersionInfo {
     lastScalingAt = newVersion,
     lastConfigChangeAt = newVersion
   )
+
+  override def serializeWithJackson(value: VersionInfo, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    value match {
+      case OnlyVersion(timestamp) => gen.writeObject(timestamp)
+      case FullVersionInfo(version, _, _) => gen.writeObject(version)
+      case NoVersion =>
+    }
+  }
 }

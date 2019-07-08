@@ -50,6 +50,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
         "tasksUnhealthy" -> 1
       )
       JsonTestHelper.assertThatJsonOf(extended).correspondsToJsonOf(expectedJson)
+      JsonTestHelper.assertThatJacksonJsonOf(extended).correspondsToJsonOf(expectedJson)
     }
 
     "app with deployments" in {
@@ -61,6 +62,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
         "deployments" -> Seq(Json.obj("id" -> "deployment1"))
       )
       JsonTestHelper.assertThatJsonOf(extended).correspondsToJsonOf(expectedJson)
+      JsonTestHelper.assertThatJacksonJsonOf(extended).correspondsToJsonOf(expectedJson)
     }
 
     "app with readiness results" in {
@@ -81,6 +83,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
         ))
       )
       JsonTestHelper.assertThatJsonOf(extended).correspondsToJsonOf(expectedJson)
+      JsonTestHelper.assertThatJacksonJsonOf(extended).correspondsToJsonOf(expectedJson)
     }
 
     "app with taskCounts + deployments (show that combinations work)" in {
@@ -99,6 +102,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
               "deployments" -> Seq(Json.obj("id" -> "deployment1"))
             )
       JsonTestHelper.assertThatJsonOf(extended).correspondsToJsonOf(expectedJson)
+      JsonTestHelper.assertThatJacksonJsonOf(extended).correspondsToJsonOf(expectedJson)
     }
 
     "app with lastTaskFailure" in {
@@ -133,6 +137,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
        |""".stripMargin('|')).as[JsObject]
       val expectedJson = Json.toJson(app).as[JsObject] ++ lastTaskFailureJson
       JsonTestHelper.assertThatJsonOf(extended).correspondsToJsonOf(expectedJson)
+      JsonTestHelper.assertThatJacksonJsonOf(extended).correspondsToJsonOf(expectedJson)
     }
   }
 }

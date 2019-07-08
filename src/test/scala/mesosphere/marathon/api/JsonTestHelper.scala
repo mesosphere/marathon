@@ -42,6 +42,11 @@ object JsonTestHelper extends Assertions with Matchers {
     AssertThatJsonString(Json.prettyPrint(Json.toJson(value)))
   }
 
+  def assertThatJacksonJsonOf[T](value: T): AssertThatJsonString = {
+    val jsonJackson = RamlSerializer.serializer.writeValueAsString(value)
+    AssertThatJsonString(jsonJackson)
+  }
+
   def assertThatJsonString(actual: String): AssertThatJsonString = {
     AssertThatJsonString(actual)
   }

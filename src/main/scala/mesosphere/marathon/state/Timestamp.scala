@@ -5,6 +5,9 @@ import java.time.format.{DateTimeFormatter, DateTimeParseException}
 import java.time.{Duration, Instant, OffsetDateTime, ZoneOffset}
 import java.util.concurrent.TimeUnit
 
+import com.fasterxml.jackson.core.JsonGenerator
+import com.fasterxml.jackson.databind.SerializerProvider
+import mesosphere.marathon.api.v2.json.JacksonSerializable
 import org.apache.mesos
 
 import scala.concurrent.duration.FiniteDuration
@@ -51,7 +54,8 @@ abstract case class Timestamp private (private val instant: Instant) extends Ord
   def -(duration: FiniteDuration): Timestamp = Timestamp(instant.minusMillis(duration.toMillis))
 }
 
-object Timestamp {
+object Timestamp extends JacksonSerializable[Timestamp] {
+
   def apply(offsetDateTime: OffsetDateTime): Timestamp =
     apply(offsetDateTime.toInstant)
 
@@ -106,4 +110,8 @@ object Timestamp {
    * .toString in java.time is truncating zeros in millis part, so we use custom formatter to keep them
    */
   val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
+
+  override def serializeWithJackson(value: Timestamp, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeString(formatter.format(value.toOffsetDateTime))
+  }
 }

@@ -355,13 +355,17 @@ object RamlTypeGenerator {
       IMPORT("com.fasterxml.jackson.databind.ObjectMapper"),
       IMPORT("com.fasterxml.jackson.databind.module.SimpleModule"),
       IMPORT("com.fasterxml.jackson.module.scala.DefaultScalaModule"),
+      IMPORT("com.fasterxml.jackson.datatype.jsr310.JavaTimeModule"),
       IMPORT("com.fasterxml.jackson.databind.ser.std.StdSerializer"),
 
       OBJECTDEF("RamlSerializer") := BLOCK(
 
         PROC("addSerializer")
           .withTypeParams(TYPEVAR("T"))
-          .withParams(VAL("s", TYPE_REF("StdSerializer[T]"))) := BLOCK(
+          .withParams(
+            VAL("classType", TYPE_REF("Class[T]")),
+            VAL("s", TYPE_REF("StdSerializer[T]"))
+          ) := BLOCK(
             REF("module") DOT "addSerializer" APPLY (REF("s"))
           ),
 
@@ -370,7 +374,6 @@ object RamlTypeGenerator {
 
         VAL("serializer", "ObjectMapper") := BLOCK(
           Seq(VAL("mapper") := NEW("ObjectMapper").APPLY()) ++
-          Seq(VAL("module") := NEW("SimpleModule").APPLY()) ++
 
           generatedFiles.values.flatMap( gf => gf.objects ).collect {
             case GeneratedObject(name, _, Some(serializer)) =>
@@ -380,7 +383,8 @@ object RamlTypeGenerator {
           } ++
 
           Seq(REF("mapper") DOT "registerModule" APPLY REF("module")) ++
-          Seq(REF("mapper") DOT "registerModule" APPLY REF("DefaultScalaModule"))
+          Seq(REF("mapper") DOT "registerModule" APPLY REF("DefaultScalaModule")) ++
+          Seq(REF("mapper") DOT "registerModule" APPLY NEW("JavaTimeModule").APPLY())
         ).withComment("ObjectMapper is thread safe, we have a single shared instance here")
       )
     ).inPackage(pkg)
