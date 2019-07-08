@@ -2,6 +2,7 @@ package mesosphere.marathon
 package storage.migration
 
 import java.nio.charset.StandardCharsets
+import java.time.OffsetDateTime
 
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
@@ -64,7 +65,8 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
     maybeStore(persistenceStore).map { store =>
       appRepository
         .ids()
-        .mapAsync(Migration.maxConcurrency) { appId => store.get(appId) }
+        .flatMapConcat { appId => store.versions(appId).map(v => (appId, v)) }
+        .mapAsync(Migration.maxConcurrency) { case (appId: PathId, v: OffsetDateTime) => store.get(appId, v) }
         .collect { case Some(appProtos) if !appProtos.hasRole => appProtos }
         .map { appProtos =>
           logger.info("  Migrate App(" + appProtos.getId + ") to role '" + defaultMesosRole + "', (Version: " + appProtos.getVersion + ")")
@@ -73,7 +75,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
           appProtos.toBuilder.setRole(defaultMesosRole).build()
         }
         .mapAsync(Migration.maxConcurrency) { appProtos =>
-          store.store(PathId(appProtos.getId), appProtos)
+          store.store(PathId(appProtos.getId), appProtos, appIdResolver.version(appProtos))
         }
         .alsoTo(countingSink)
         .runWith(Sink.ignore)
