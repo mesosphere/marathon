@@ -192,6 +192,7 @@ class GroupManagerImpl(
   }
 
   override def invalidateGroupCache(): Future[Done] = async {
+    logger.info("Invalidate Root Group Cache...")
     root := None
 
     // propagation of reset group caches on repository is needed,

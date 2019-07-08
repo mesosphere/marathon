@@ -288,7 +288,7 @@ case class AppDefinition(
     }
 
 
-    logger.info("AppDefinition.mergeFromProto: " + proto.getId + " // " + versionInfo + " Role: " + role )
+    logger.info("AppDefinition.mergeFromProto: " + proto.getId + " // " + versionInfo + " Role: '" + role + "'")
 
     AppDefinition(
       id = PathId(proto.getId),
@@ -470,8 +470,6 @@ object AppDefinition extends GeneralPurposeCombinators {
   val DefaultAcceptedResourceRoles = Set.empty[String]
 
   val DefaultTTY: Option[Boolean] = None
-
-  val DefaultRole: String = "*" // TODO: use --mesos_role or top-level group
 
   /**
     * should be kept in sync with `Apps.DefaultNetworks`

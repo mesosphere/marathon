@@ -267,14 +267,18 @@ class MarathonSchedulerService @Inject() (
     // Actually we need to do the fresh twice, before the migration, to perform the migration on the current zk state and after
     // the migration to have marathon loaded the current valid state to the internal caches.
 
+    logger.info("RefreshCaches before migration")
     // refresh group repository cache
     Await.result(groupManager.invalidateGroupCache(), Duration.Inf)
 
+    logger.info("Run migrations now...")
     // execute tasks, only the leader is allowed to
     migration.migrate()
 
+    logger.info("Refresh Caches after migration")
     // refresh group repository again - migration or restore might changed zk state, this needs to be re-loaded
     Await.result(groupManager.invalidateGroupCache(), Duration.Inf)
+    logger.info("Done with refresh caches...")
   }
 
   override def stopLeadership(): Unit = synchronized {
