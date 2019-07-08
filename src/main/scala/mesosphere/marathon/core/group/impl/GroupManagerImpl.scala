@@ -121,6 +121,7 @@ class GroupManagerImpl(
       logger.info(s"Upgrade root group version:$version with force:$force")
 
       val from = rootGroup()
+      from.transitiveApps.foreach(app => logger.info(" o From App: " + app.id + " ==> " + app.role + " ==> " + app.version))
       async {
         await(checkMaxRunningDeployments())
 
