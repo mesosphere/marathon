@@ -46,7 +46,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
   def migrateApps(defaultMesosRole: String, persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     implicit val appProtosUnmarshaller: Unmarshaller[ZkSerialized, Protos.ServiceDefinition] =
       Unmarshaller.strict {
-        case ZkSerialized(byteString) => Protos.ServiceDefinition.PARSER.parseFrom(byteString.toArray)
+        case ZkSerialized(byteString) => Protos.ServiceDefinition.parseFrom(byteString.toArray)
       }
 
     implicit val appProtosMarshaller: Marshaller[Protos.ServiceDefinition, ZkSerialized] =
@@ -72,7 +72,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         .collect{ case (Some(appProtos), optVersion) if !appProtos.hasRole => (appProtos, optVersion) }
         .map{
           case (appProtos, optVersion) =>
-            logger.info("  Migrate App(" + appProtos.getId + ") with store version " + optVersion + " to role '" + defaultMesosRole + "', (AppVersion: " + appProtos.getVersion + ")")
+            logger.info(s"Migrate App(${appProtos.getId}) with store version $optVersion to role '$defaultMesosRole' (AppVersion: ${appProtos.getVersion})")
 
             // TODO: check for slave_public
             val newAppProtos = appProtos.toBuilder.setRole(defaultMesosRole).build()
@@ -122,7 +122,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         .collect{ case (Some(podRaml), optVersion) if podRaml.role.isEmpty => (podRaml, optVersion) }
         .map{
           case (podRaml, optVersion) =>
-            logger.info("  Migrate Pod(" + podRaml.id + ") with store version " + optVersion + " to role '" + defaultMesosRole + "', (Version: " + podRaml.version + ")")
+            logger.info(s"Migrate Pod(${podRaml.id}) with store version $optVersion to role '$defaultMesosRole', (Version: ${podRaml.version})")
 
             // TODO: check for slave_public
             val newPod = podRaml.copy(role = Some(defaultMesosRole))
