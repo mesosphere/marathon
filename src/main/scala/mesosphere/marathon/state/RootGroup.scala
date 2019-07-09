@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package state
 
-import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._

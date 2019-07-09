@@ -4,21 +4,20 @@ package storage.migration
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.Done
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
-import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
+import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.state.RootGroup
-import mesosphere.marathon.storage.{InMem, StorageConfig}
+import mesosphere.marathon.storage.migration.Migration.MigrationAction
 import mesosphere.marathon.storage.migration.StorageVersions._
 import mesosphere.marathon.storage.repository._
+import mesosphere.marathon.storage.{InMem, StorageConfig}
 import mesosphere.marathon.test.{Mockito, SettableClock, SimulatedScheduler}
 import org.scalatest.GivenWhenThen
-import Migration.MigrationAction
-import akka.stream.Materializer
-import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
