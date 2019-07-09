@@ -284,6 +284,7 @@ case class AppDefinition(
         mem = executorResourcesMap.getOrElse(Resource.MEM, r.mem),
         disk = executorResourcesMap.getOrElse(Resource.DISK, r.disk)
       ))
+    }
 
     AppDefinition(
       id = PathId(proto.getId),
