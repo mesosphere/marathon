@@ -121,7 +121,6 @@ class GroupManagerImpl(
       logger.info(s"Upgrade root group version:$version with force:$force")
 
       val from = rootGroup()
-      from.transitiveApps.foreach(app => logger.info(" o From App: " + app.id + " ==> " + app.role + " ==> " + app.version))
       async {
         await(checkMaxRunningDeployments())
 
@@ -135,9 +134,6 @@ class GroupManagerImpl(
               Range.inclusive(config.localPortMin(), config.localPortMax()),
               from,
               changed)
-
-            logger.info("  Update Changed Group: ")
-            changed.transitiveApps.foreach(app => logger.info(" o Updated App: " + app.id + " ==> " + app.role + " ==> " + app.version))
 
             val withVersionedApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
             val withVersionedAppsPods = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, withVersionedApps)
@@ -192,7 +188,6 @@ class GroupManagerImpl(
   }
 
   override def invalidateGroupCache(): Future[Done] = async {
-    logger.info("Invalidate Root Group Cache...")
     root := None
 
     // propagation of reset group caches on repository is needed,

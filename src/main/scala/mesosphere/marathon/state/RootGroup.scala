@@ -31,7 +31,7 @@ class RootGroup(
   pods,
   groupsById,
   dependencies,
-  version) with StrictLogging {
+  version) {
   require(
     groupsById.forall {
       case (_, _: RootGroup) => false
@@ -240,12 +240,8 @@ class RootGroup(
   def updateApp(
     appId: PathId, fn: Option[AppDefinition] => AppDefinition, version: Timestamp = Group.defaultVersion): RootGroup = {
     val oldGroup = group(appId.parent).getOrElse(Group.empty(appId.parent))
-    val oldApp = app(appId)
-    val newApp = fn(oldApp)
+    val newApp = fn(app(appId))
     require(newApp.id == appId, "app id must not be changed by `fn`.")
-
-    logger.info("UpdateApp " + appId + ", new Version: " + version + ", AppRole: " + oldApp.map(_.role) + ", AppVersion: " + oldApp.map(_.version))
-
     val newGroup = Group(
       id = oldGroup.id,
       // replace potentially existing app definition

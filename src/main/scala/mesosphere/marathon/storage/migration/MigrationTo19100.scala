@@ -149,36 +149,60 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
     maybeStore(persistenceStore).map { store =>
       podRepository
         .ids()
-        .flatMapConcat { podId => store.versions(podId).map(v => (podId, v)) }
-        .mapAsync(Migration.maxConcurrency) { case (podId: PathId, v: OffsetDateTime) => store.get(podId, v) }
-        .collect { case Some(podRaml) if !podRaml.role.isDefined => podRaml }
-        .map { podRaml =>
-          logger.info("  Migrate versioned Pod(" + podRaml.id + ") to role '" + defaultMesosRole + "', (Version: " + podRaml.version + ")")
-
-          // TODO: check for slave_public
-          podRaml.copy(role = Some(defaultMesosRole))
+        .flatMapConcat(podId => store.versions(podId).map(v => (podId, Some(v))) ++ Source.single((podId, Option.empty[OffsetDateTime])))
+        .mapAsync(Migration.maxConcurrency) {
+          case (podId, Some(version)) => store.get(podId, version).map(pod => (pod, Some(version)))
+          case (podId, None) => store.get(podId).map(pod => (pod, Option.empty[OffsetDateTime]))
         }
-        .mapAsync(Migration.maxConcurrency) { podRaml =>
-          store.store(PathId(podRaml.id), podRaml, podIdResolver.version(podRaml))
+        .collect{ case (optPod, optVersion) if optPod.isDefined && !optPod.get.role.isDefined => (optPod.get, optVersion) }
+        .map{
+          case (podRaml, optVersion) =>
+            logger.info("  Migrate Pod(" + podRaml.id + ") with store version " + optVersion + " to role '" + defaultMesosRole + "', (Version: " + podRaml.version + ")")
+
+            // TODO: check for slave_public
+            val newPod = podRaml.copy(role = Some(defaultMesosRole))
+
+            (newPod, optVersion)
+        }
+        .mapAsync(Migration.maxConcurrency) {
+          case (podRaml, Some(version)) => store.store(PathId(podRaml.id), podRaml, version)
+          case (podRaml, None) => store.store(PathId(podRaml.id), podRaml)
         }
         .alsoTo(countingSink)
         .runWith(Sink.ignore)
 
-      podRepository
-        .ids()
-        .mapAsync(Migration.maxConcurrency) { podId => store.get(podId) }
-        .collect { case Some(podRaml) if !podRaml.role.isDefined => podRaml }
-        .map { podRaml =>
-          logger.info("  Migrate current Pod(" + podRaml.id + ") to role '" + defaultMesosRole + "', (Version: " + podRaml.version + ")")
-
-          // TODO: check for slave_public
-          podRaml.copy(role = Some(defaultMesosRole))
-        }
-        .mapAsync(Migration.maxConcurrency) { podRaml =>
-          store.store(PathId(podRaml.id), podRaml)
-        }
-        .alsoTo(countingSink)
-        .runWith(Sink.ignore)
+//      podRepository
+//        .ids()
+//        .flatMapConcat { podId => store.versions(podId).map(v => (podId, v)) }
+//        .mapAsync(Migration.maxConcurrency) { case (podId: PathId, v: OffsetDateTime) => store.get(podId, v) }
+//        .collect { case Some(podRaml) if !podRaml.role.isDefined => podRaml }
+//        .map { podRaml =>
+//          logger.info("  Migrate versioned Pod(" + podRaml.id + ") to role '" + defaultMesosRole + "', (Version: " + podRaml.version + ")")
+//
+//          // TODO: check for slave_public
+//          podRaml.copy(role = Some(defaultMesosRole))
+//        }
+//        .mapAsync(Migration.maxConcurrency) { podRaml =>
+//          store.store(PathId(podRaml.id), podRaml, podIdResolver.version(podRaml))
+//        }
+//        .alsoTo(countingSink)
+//        .runWith(Sink.ignore)
+//
+//      podRepository
+//        .ids()
+//        .mapAsync(Migration.maxConcurrency) { podId => store.get(podId) }
+//        .collect { case Some(podRaml) if !podRaml.role.isDefined => podRaml }
+//        .map { podRaml =>
+//          logger.info("  Migrate current Pod(" + podRaml.id + ") to role '" + defaultMesosRole + "', (Version: " + podRaml.version + ")")
+//
+//          // TODO: check for slave_public
+//          podRaml.copy(role = Some(defaultMesosRole))
+//        }
+//        .mapAsync(Migration.maxConcurrency) { podRaml =>
+//          store.store(PathId(podRaml.id), podRaml)
+//        }
+//        .alsoTo(countingSink)
+//        .runWith(Sink.ignore)
     }.getOrElse {
       Future.successful(Done)
     }

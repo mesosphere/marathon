@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package state
 
-import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord._
 import com.wix.accord.combinators.GeneralPurposeCombinators
 import com.wix.accord.dsl._
@@ -90,7 +89,7 @@ case class AppDefinition(
     tty: Option[Boolean] = AppDefinition.DefaultTTY,
 
     role: String) extends RunSpec
-  with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] with StrictLogging {
+  with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
     * As an optimization, we precompute and cache the hash of this object
@@ -285,9 +284,6 @@ case class AppDefinition(
         mem = executorResourcesMap.getOrElse(Resource.MEM, r.mem),
         disk = executorResourcesMap.getOrElse(Resource.DISK, r.disk)
       ))
-    }
-
-    logger.info("AppDefinition.mergeFromProto: " + proto.getId + " // " + versionInfo + " Role: '" + role + "'")
 
     AppDefinition(
       id = PathId(proto.getId),
