@@ -29,8 +29,8 @@ class MigrationTo19100(
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = async {
     logger.info("Starting migration to 1.9.100")
-    await(MigrationTo19100.migrateApps(defaultMesosRole, persistenceStore, appRepository))
-    await(MigrationTo19100.migratePods(defaultMesosRole, persistenceStore, podRepository))
+    await(MigrationTo19100.migrateApps(defaultMesosRole, persistenceStore))
+    await(MigrationTo19100.migratePods(defaultMesosRole, persistenceStore))
   }
 }
 
@@ -41,10 +41,9 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
     *
     * @param defaultMesosRole The Mesos role define by [[MarathonConf.mesosRole]].
     * @param persistenceStore The ZooKeeper storage.
-    * @param appRepository The app repository is required to load all app ids.
     * @return Successful future when done.
     */
-  def migrateApps(defaultMesosRole: String, persistenceStore: PersistenceStore[ZkId, String, ZkSerialized], appRepository: AppRepository)(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+  def migrateApps(defaultMesosRole: String, persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     implicit val appProtosUnmarshaller: Unmarshaller[ZkSerialized, Protos.ServiceDefinition] =
       Unmarshaller.strict {
         case ZkSerialized(byteString) => Protos.ServiceDefinition.PARSER.parseFrom(byteString.toArray)
@@ -62,7 +61,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         NotUsed
       }
 
-    appRepository
+    persistenceStore
       .ids()
       .flatMapConcat(appId => persistenceStore.versions(appId).map(v => (appId, Some(v))) ++ Source.single((appId, Option.empty[OffsetDateTime])))
       .mapAsync(Migration.maxConcurrency) {
@@ -87,7 +86,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
       .runWith(Sink.ignore)
   }
 
-  def migratePods(defaultMesosRole: String, persistenceStore: PersistenceStore[ZkId, String, ZkSerialized], podRepository: PodRepository)(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+  def migratePods(defaultMesosRole: String, persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
 
     implicit val podIdResolver =
       new ZkStoreSerialization.ZkPathIdResolver[raml.Pod]("pods", true, _.version.getOrElse(Timestamp.now().toOffsetDateTime))
@@ -108,7 +107,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         NotUsed
       }
 
-    podRepository
+    persistenceStore
       .ids()
       .flatMapConcat(podId => persistenceStore.versions(podId).map(v => (podId, Some(v))) ++ Source.single((podId, Option.empty[OffsetDateTime])))
       .mapAsync(Migration.maxConcurrency) {
