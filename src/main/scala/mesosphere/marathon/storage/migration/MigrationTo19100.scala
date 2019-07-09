@@ -12,7 +12,7 @@ import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
-import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
+import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkPersistenceStore, ZkSerialized}
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.storage.repository.{AppRepository, PodRepository}
 import mesosphere.marathon.storage.store.ZkStoreSerialization
@@ -61,14 +61,16 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         NotUsed
       }
 
-    persistenceStore
+    val zkStore:ZkPersistenceStore = maybeStore(persistenceStore).getOrElse(throw new IllegalStateException("Failed to access zkStore for migration"))
+
+    zkStore
       .ids()
-      .flatMapConcat(appId => persistenceStore.versions(appId).map(v => (appId, Some(v))) ++ Source.single((appId, Option.empty[OffsetDateTime])))
+      .flatMapConcat(appId => zkStore.versions(appId).map(v => (appId, Some(v))) ++ Source.single((appId, Option.empty[OffsetDateTime])))
       .mapAsync(Migration.maxConcurrency) {
-        case (appId, Some(version)) => persistenceStore.get(appId, version).map(app => (app, Some(version)))
-        case (appId, None) => persistenceStore.get(appId).map(app => (app, Option.empty[OffsetDateTime]))
+        case (appId, Some(version)) => zkStore.get(appId, version).map(app => (app, Some(version)))
+        case (appId, None) => zkStore.get(appId).map(app => (app, Option.empty[OffsetDateTime]))
       }
-      .collect{ case (optAppProtos, optVersion) if optAppProtos.isDefined && !optAppProtos.get.hasRole => (optAppProtos.get, optVersion) }
+      .collect{ case (Some(appProtos), optVersion) if !appProtos.hasRole => (appProtos, optVersion) }
       .map{
         case (appProtos, optVersion) =>
           logger.info("  Migrate App(" + appProtos.getId + ") with store version " + optVersion + " to role '" + defaultMesosRole + "', (AppVersion: " + appProtos.getVersion + ")")
@@ -79,8 +81,8 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
           (newAppProtos, optVersion)
       }
       .mapAsync(Migration.maxConcurrency) {
-        case (appProtos, Some(version)) => persistenceStore.store(PathId(appProtos.getId), appProtos, version)
-        case (appProtos, None) => persistenceStore.store(PathId(appProtos.getId), appProtos)
+        case (appProtos, Some(version)) => zkStore.store(PathId(appProtos.getId), appProtos, version)
+        case (appProtos, None) => zkStore.store(PathId(appProtos.getId), appProtos)
       }
       .alsoTo(countingSink)
       .runWith(Sink.ignore)
@@ -107,14 +109,16 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         NotUsed
       }
 
-    persistenceStore
+    val zkStore:ZkPersistenceStore = maybeStore(persistenceStore).getOrElse(throw new IllegalStateException("Failed to access zkStore for migration"))
+
+    zkStore
       .ids()
-      .flatMapConcat(podId => persistenceStore.versions(podId).map(v => (podId, Some(v))) ++ Source.single((podId, Option.empty[OffsetDateTime])))
+      .flatMapConcat(podId => zkStore.versions(podId).map(v => (podId, Some(v))) ++ Source.single((podId, Option.empty[OffsetDateTime])))
       .mapAsync(Migration.maxConcurrency) {
-        case (podId, Some(version)) => persistenceStore.get(podId, version).map(pod => (pod, Some(version)))
-        case (podId, None) => persistenceStore.get(podId).map(pod => (pod, Option.empty[OffsetDateTime]))
+        case (podId, Some(version)) => zkStore.get(podId, version).map(pod => (pod, Some(version)))
+        case (podId, None) => zkStore.get(podId).map(pod => (pod, Option.empty[OffsetDateTime]))
       }
-      .collect{ case (optPod, optVersion) if optPod.isDefined && !optPod.get.role.isDefined => (optPod.get, optVersion) }
+      .collect{ case (Some(podRaml), optVersion) if podRaml.role.isEmpty => (podRaml, optVersion) }
       .map{
         case (podRaml, optVersion) =>
           logger.info("  Migrate Pod(" + podRaml.id + ") with store version " + optVersion + " to role '" + defaultMesosRole + "', (Version: " + podRaml.version + ")")
@@ -125,8 +129,8 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
           (newPod, optVersion)
       }
       .mapAsync(Migration.maxConcurrency) {
-        case (podRaml, Some(version)) => persistenceStore.store(PathId(podRaml.id), podRaml, version)
-        case (podRaml, None) => persistenceStore.store(PathId(podRaml.id), podRaml)
+        case (podRaml, Some(version)) => zkStore.store(PathId(podRaml.id), podRaml, version)
+        case (podRaml, None) => zkStore.store(PathId(podRaml.id), podRaml)
       }
       .alsoTo(countingSink)
       .runWith(Sink.ignore)
