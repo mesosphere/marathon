@@ -267,9 +267,9 @@ class MarathonSchedulerService @Inject() (
     // Actually we need to do the fresh twice, before the migration, to perform the migration on the current zk state and after
     // the migration to have marathon loaded the current valid state to the internal caches.
 
-    logger.info("RefreshCaches before migration")
-    // refresh group repository cache
-    Await.result(groupManager.invalidateGroupCache(), Duration.Inf)
+    //    logger.info("RefreshCaches before migration")
+    //    // refresh group repository cache
+    //    Await.result(groupManager.invalidateGroupCache(), Duration.Inf)
 
     logger.info("Run migrations now...")
     // execute tasks, only the leader is allowed to

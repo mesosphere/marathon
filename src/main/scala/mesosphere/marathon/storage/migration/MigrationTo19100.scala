@@ -7,7 +7,7 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.Sink
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
@@ -65,36 +65,60 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
     maybeStore(persistenceStore).map { store =>
       appRepository
         .ids()
-        .flatMapConcat { appId => store.versions(appId).map(v => (appId, v)) }
-        .mapAsync(Migration.maxConcurrency) { case (appId: PathId, v: OffsetDateTime) => store.get(appId, v) }
-        .collect { case Some(appProtos) if !appProtos.hasRole => appProtos }
-        .map { appProtos =>
-          logger.info("  Migrate Versioned App(" + appProtos.getId + ") to role '" + defaultMesosRole + "', (Version: " + appProtos.getVersion + ")")
-
-          // TODO: check for slave_public
-          appProtos.toBuilder.setRole(defaultMesosRole).build()
+        .flatMapConcat(appId => store.versions(appId).map(v => (appId, Some(v))) ++ Source.single((appId, Option.empty[OffsetDateTime])))
+        .mapAsync(Migration.maxConcurrency) {
+          case (appId, Some(version)) => store.get(appId, version).map(app => (app, Some(version)))
+          case (appId, None) => store.get(appId).map(app => (app, Option.empty[OffsetDateTime]))
         }
-        .mapAsync(Migration.maxConcurrency) { appProtos =>
-          store.store(PathId(appProtos.getId), appProtos, appIdResolver.version(appProtos))
+        .collect{ case (optAppProtos, optVersion) if optAppProtos.isDefined && !optAppProtos.get.hasRole => (optAppProtos.get, optVersion) }
+        .map{
+          case (appProtos, optVersion) =>
+            logger.info("  Migrate App(" + appProtos.getId + ") with store version " + optVersion + " to role '" + defaultMesosRole + "', (AppVersion: " + appProtos.getVersion + ")")
+
+            // TODO: check for slave_public
+            val newAppProtos = appProtos.toBuilder.setRole(defaultMesosRole).build()
+
+            (newAppProtos, optVersion)
+        }
+        .mapAsync(Migration.maxConcurrency) {
+          case (appProtos, Some(version)) => store.store(PathId(appProtos.getId), appProtos, version)
+          case (appProtos, None) => store.store(PathId(appProtos.getId), appProtos)
         }
         .alsoTo(countingSink)
         .runWith(Sink.ignore)
 
-      appRepository
-        .ids()
-        .mapAsync(Migration.maxConcurrency) { case appId: PathId => store.get(appId) }
-        .collect { case Some(appProtos) if !appProtos.hasRole => appProtos }
-        .map { appProtos =>
-          logger.info("  Migrate Current App(" + appProtos.getId + ") to role '" + defaultMesosRole + "', (Version: " + appProtos.getVersion + ")")
-
-          // TODO: check for slave_public
-          appProtos.toBuilder.setRole(defaultMesosRole).build()
-        }
-        .mapAsync(Migration.maxConcurrency) { appProtos =>
-          store.store(PathId(appProtos.getId), appProtos)
-        }
-        .alsoTo(countingSink)
-        .runWith(Sink.ignore)
+      //      appRepository
+      //        .ids()
+      //        .flatMapConcat { appId => store.versions(appId).map(v => (appId, v)) }
+      //        .mapAsync(Migration.maxConcurrency) { case (appId: PathId, v: OffsetDateTime) => store.get(appId, v) }
+      //        .collect { case Some(appProtos) if !appProtos.hasRole => appProtos }
+      //        .map { appProtos =>
+      //          logger.info("  Migrate Versioned App(" + appProtos.getId + ") to role '" + defaultMesosRole + "', (Version: " + appProtos.getVersion + ")")
+      //
+      //          // TODO: check for slave_public
+      //          appProtos.toBuilder.setRole(defaultMesosRole).build()
+      //        }
+      //        .mapAsync(Migration.maxConcurrency) { appProtos =>
+      //          store.store(PathId(appProtos.getId), appProtos, appIdResolver.version(appProtos))
+      //        }
+      //        .alsoTo(countingSink)
+      //        .runWith(Sink.ignore)
+      //
+      //      appRepository
+      //        .ids()
+      //        .mapAsync(Migration.maxConcurrency) { case appId: PathId => store.get(appId) }
+      //        .collect { case Some(appProtos) if !appProtos.hasRole => appProtos }
+      //        .map { appProtos =>
+      //          logger.info("  Migrate Current App(" + appProtos.getId + ") to role '" + defaultMesosRole + "', (Version: " + appProtos.getVersion + ")")
+      //
+      //          // TODO: check for slave_public
+      //          appProtos.toBuilder.setRole(defaultMesosRole).build()
+      //        }
+      //        .mapAsync(Migration.maxConcurrency) { appProtos =>
+      //          store.store(PathId(appProtos.getId), appProtos)
+      //        }
+      //        .alsoTo(countingSink)
+      //        .runWith(Sink.ignore)
 
     }.getOrElse {
       Future.successful(Done)
