@@ -61,31 +61,33 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         NotUsed
       }
 
-    val zkStore:ZkPersistenceStore = maybeStore(persistenceStore).getOrElse(throw new IllegalStateException("Failed to access zkStore for migration"))
+    maybeStore(persistenceStore).map{ zkStore =>
+      zkStore
+        .ids()
+        .flatMapConcat(appId => zkStore.versions(appId).map(v => (appId, Some(v))) ++ Source.single((appId, Option.empty[OffsetDateTime])))
+        .mapAsync(Migration.maxConcurrency) {
+          case (appId, Some(version)) => zkStore.get(appId, version).map(app => (app, Some(version)))
+          case (appId, None) => zkStore.get(appId).map(app => (app, Option.empty[OffsetDateTime]))
+        }
+        .collect{ case (Some(appProtos), optVersion) if !appProtos.hasRole => (appProtos, optVersion) }
+        .map{
+          case (appProtos, optVersion) =>
+            logger.info("  Migrate App(" + appProtos.getId + ") with store version " + optVersion + " to role '" + defaultMesosRole + "', (AppVersion: " + appProtos.getVersion + ")")
 
-    zkStore
-      .ids()
-      .flatMapConcat(appId => zkStore.versions(appId).map(v => (appId, Some(v))) ++ Source.single((appId, Option.empty[OffsetDateTime])))
-      .mapAsync(Migration.maxConcurrency) {
-        case (appId, Some(version)) => zkStore.get(appId, version).map(app => (app, Some(version)))
-        case (appId, None) => zkStore.get(appId).map(app => (app, Option.empty[OffsetDateTime]))
-      }
-      .collect{ case (Some(appProtos), optVersion) if !appProtos.hasRole => (appProtos, optVersion) }
-      .map{
-        case (appProtos, optVersion) =>
-          logger.info("  Migrate App(" + appProtos.getId + ") with store version " + optVersion + " to role '" + defaultMesosRole + "', (AppVersion: " + appProtos.getVersion + ")")
+            // TODO: check for slave_public
+            val newAppProtos = appProtos.toBuilder.setRole(defaultMesosRole).build()
 
-          // TODO: check for slave_public
-          val newAppProtos = appProtos.toBuilder.setRole(defaultMesosRole).build()
-
-          (newAppProtos, optVersion)
-      }
-      .mapAsync(Migration.maxConcurrency) {
-        case (appProtos, Some(version)) => zkStore.store(PathId(appProtos.getId), appProtos, version)
-        case (appProtos, None) => zkStore.store(PathId(appProtos.getId), appProtos)
-      }
-      .alsoTo(countingSink)
-      .runWith(Sink.ignore)
+            (newAppProtos, optVersion)
+        }
+        .mapAsync(Migration.maxConcurrency) {
+          case (appProtos, Some(version)) => zkStore.store(PathId(appProtos.getId), appProtos, version)
+          case (appProtos, None) => zkStore.store(PathId(appProtos.getId), appProtos)
+        }
+        .alsoTo(countingSink)
+        .runWith(Sink.ignore)
+    }.getOrElse {
+      Future.successful(Done)
+    }
   }
 
   def migratePods(defaultMesosRole: String, persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
@@ -109,30 +111,32 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         NotUsed
       }
 
-    val zkStore:ZkPersistenceStore = maybeStore(persistenceStore).getOrElse(throw new IllegalStateException("Failed to access zkStore for migration"))
+    maybeStore(persistenceStore).map{ zkStore =>
+      zkStore
+        .ids()
+        .flatMapConcat(podId => zkStore.versions(podId).map(v => (podId, Some(v))) ++ Source.single((podId, Option.empty[OffsetDateTime])))
+        .mapAsync(Migration.maxConcurrency) {
+          case (podId, Some(version)) => zkStore.get(podId, version).map(pod => (pod, Some(version)))
+          case (podId, None) => zkStore.get(podId).map(pod => (pod, Option.empty[OffsetDateTime]))
+        }
+        .collect{ case (Some(podRaml), optVersion) if podRaml.role.isEmpty => (podRaml, optVersion) }
+        .map{
+          case (podRaml, optVersion) =>
+            logger.info("  Migrate Pod(" + podRaml.id + ") with store version " + optVersion + " to role '" + defaultMesosRole + "', (Version: " + podRaml.version + ")")
 
-    zkStore
-      .ids()
-      .flatMapConcat(podId => zkStore.versions(podId).map(v => (podId, Some(v))) ++ Source.single((podId, Option.empty[OffsetDateTime])))
-      .mapAsync(Migration.maxConcurrency) {
-        case (podId, Some(version)) => zkStore.get(podId, version).map(pod => (pod, Some(version)))
-        case (podId, None) => zkStore.get(podId).map(pod => (pod, Option.empty[OffsetDateTime]))
-      }
-      .collect{ case (Some(podRaml), optVersion) if podRaml.role.isEmpty => (podRaml, optVersion) }
-      .map{
-        case (podRaml, optVersion) =>
-          logger.info("  Migrate Pod(" + podRaml.id + ") with store version " + optVersion + " to role '" + defaultMesosRole + "', (Version: " + podRaml.version + ")")
+            // TODO: check for slave_public
+            val newPod = podRaml.copy(role = Some(defaultMesosRole))
 
-          // TODO: check for slave_public
-          val newPod = podRaml.copy(role = Some(defaultMesosRole))
-
-          (newPod, optVersion)
-      }
-      .mapAsync(Migration.maxConcurrency) {
-        case (podRaml, Some(version)) => zkStore.store(PathId(podRaml.id), podRaml, version)
-        case (podRaml, None) => zkStore.store(PathId(podRaml.id), podRaml)
-      }
-      .alsoTo(countingSink)
-      .runWith(Sink.ignore)
+            (newPod, optVersion)
+        }
+        .mapAsync(Migration.maxConcurrency) {
+          case (podRaml, Some(version)) => zkStore.store(PathId(podRaml.id), podRaml, version)
+          case (podRaml, None) => zkStore.store(PathId(podRaml.id), podRaml)
+        }
+        .alsoTo(countingSink)
+        .runWith(Sink.ignore)
+    }.getOrElse {
+      Future.successful(Done)
+    }
   }
 }
