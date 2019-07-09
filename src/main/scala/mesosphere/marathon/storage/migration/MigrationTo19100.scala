@@ -125,10 +125,27 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
     maybeStore(persistenceStore).map { store =>
       podRepository
         .ids()
+        .flatMapConcat { podId => store.versions(podId).map(v => (podId, v)) }
+        .mapAsync(Migration.maxConcurrency) { case (podId: PathId, v: OffsetDateTime) => store.get(podId, v) }
+        .collect { case Some(podRaml) if !podRaml.role.isDefined => podRaml }
+        .map { podRaml =>
+          logger.info("  Migrate versioned Pod(" + podRaml.id + ") to role '" + defaultMesosRole + "', (Version: " + podRaml.version + ")")
+
+          // TODO: check for slave_public
+          podRaml.copy(role = Some(defaultMesosRole))
+        }
+        .mapAsync(Migration.maxConcurrency) { podRaml =>
+          store.store(PathId(podRaml.id), podRaml, podIdResolver.version(podRaml))
+        }
+        .alsoTo(countingSink)
+        .runWith(Sink.ignore)
+
+      podRepository
+        .ids()
         .mapAsync(Migration.maxConcurrency) { podId => store.get(podId) }
         .collect { case Some(podRaml) if !podRaml.role.isDefined => podRaml }
         .map { podRaml =>
-          logger.info("  Migrate Pod(" + podRaml.id + ") to role '" + defaultMesosRole + "', (Version: " + podRaml.version + ")")
+          logger.info("  Migrate current Pod(" + podRaml.id + ") to role '" + defaultMesosRole + "', (Version: " + podRaml.version + ")")
 
           // TODO: check for slave_public
           podRaml.copy(role = Some(defaultMesosRole))
