@@ -184,7 +184,13 @@ case class LazyCachingPersistenceStore[K, Category, Serialized](
 
   override def startMigration(): Future[Done] = store.startMigration()
 
-  override def endMigration(): Future[Done] = store.endMigration()
+  override def endMigration(): Future[Done] = {
+    // TODO AN: Do we need to lock here?
+    // Clear caches after a migration, some migrations might act on the store directly
+    valueCache.clear()
+    idCache.clear()
+    store.endMigration()
+  }
 
   override def toString: String = s"LazyCachingPersistenceStore($store)"
 }
@@ -369,7 +375,12 @@ case class LazyVersionCachingPersistentStore[K, Category, Serialized](
 
   override def startMigration(): Future[Done] = store.startMigration()
 
-  override def endMigration(): Future[Done] = store.endMigration()
+  override def endMigration(): Future[Done] = {
+    // Clear caches after a migration, some migrations might act on the store directly
+    versionCache.clear()
+    versionedValueCache.clear()
+    store.endMigration()
+  }
 
   override def toString: String = s"LazyVersionCachingPersistenceStore($store)"
 }
