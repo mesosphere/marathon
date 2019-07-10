@@ -9,7 +9,6 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstanceChangeOrSnapshot
-import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.UpdateFramework.Suppressed
 import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.{IssueRevive, RoleDirective, UpdateFramework}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
@@ -20,7 +19,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 sealed trait RoleOfferState { def isWanted: Boolean }
-case class OffersWanted(version: Long) extends RoleOfferState { def isWanted = true }
+case object OffersWanted extends RoleOfferState { def isWanted = true }
 case object OffersNotWanted extends RoleOfferState { def isWanted = false }
 
 /**
@@ -81,7 +80,7 @@ class ReviveOffersActor(
             driverHolder.driver.foreach { d =>
               val newInfo = frameworkInfoWithRoles(frameworkInfo, roleState.keys)
               val suppressedRoles = roleState.iterator
-                .collect { case (role, Suppressed) => role }
+                .collect { case (role, OffersNotWanted) => role }
                 .toSeq
               d.updateFramework(newInfo, suppressedRoles.asJava)
             }

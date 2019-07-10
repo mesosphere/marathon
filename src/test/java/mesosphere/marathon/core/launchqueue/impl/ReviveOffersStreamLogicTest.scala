@@ -42,7 +42,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
       Then("An update framework event is issued with the role suppressed")
       inside(output.pull().futureValue) {
         case Some(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
-          roleState shouldBe Map("web" -> UpdateFramework.Suppressed)
+          roleState shouldBe Map("web" -> OffersNotWanted)
           newlyRevived shouldBe Set.empty
           newlySuppressed shouldBe Set.empty
       }
@@ -55,7 +55,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
       Then("The revives get combined in to a single update framework call")
       inside(output.pull().futureValue) {
         case Some(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
-          roleState shouldBe Map("web" -> UpdateFramework.Unsuppressed)
+          roleState shouldBe Map("web" -> OffersWanted)
           newlyRevived shouldBe Set("web")
           newlySuppressed shouldBe Set.empty
       }
@@ -83,7 +83,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
 
       inside(result) {
         case Seq(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
-          roleState shouldBe Map("web" -> UpdateFramework.Unsuppressed)
+          roleState shouldBe Map("web" -> OffersWanted)
           newlyRevived shouldBe Set("web")
           newlySuppressed shouldBe Set.empty
       }
@@ -94,7 +94,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
     "send a repeat after the second tick for roles newly revived by UpdateFramework" in {
       val logic = new ReviveOffersStreamLogic.ReviveRepeaterLogic
 
-      logic.processRoleDirective(UpdateFramework(Map("role" -> UpdateFramework.Unsuppressed), Set("role"), Set.empty))
+      logic.processRoleDirective(UpdateFramework(Map("role" -> OffersWanted), Set("role"), Set.empty))
 
       logic.handleTick() shouldBe Nil
       logic.handleTick() shouldBe List(IssueRevive(Set("role")))
@@ -103,10 +103,10 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
     "does not repeat revives for roles that become suppressed" in {
       val logic = new ReviveOffersStreamLogic.ReviveRepeaterLogic
 
-      logic.processRoleDirective(UpdateFramework(Map("role" -> UpdateFramework.Unsuppressed), Set("role"), Set.empty))
+      logic.processRoleDirective(UpdateFramework(Map("role" -> OffersWanted), Set("role"), Set.empty))
       logic.handleTick() shouldBe Nil
 
-      logic.processRoleDirective(UpdateFramework(Map("role" -> UpdateFramework.Suppressed), Set.empty, Set("role")))
+      logic.processRoleDirective(UpdateFramework(Map("role" -> OffersNotWanted), Set.empty, Set("role")))
 
       logic.handleTick() shouldBe Nil
       logic.handleTick() shouldBe Nil
@@ -130,7 +130,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
 
       inside(results) {
         case Seq(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
-          roleState shouldBe Map("web" -> UpdateFramework.Suppressed)
+          roleState shouldBe Map("web" -> OffersNotWanted)
           newlyRevived shouldBe Set.empty
           newlySuppressed shouldBe Set.empty
       }
@@ -146,7 +146,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
         .futureValue
       inside(results) {
         case Seq(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
-          roleState shouldBe Map("web" -> UpdateFramework.Unsuppressed)
+          roleState shouldBe Map("web" -> OffersWanted)
           newlyRevived shouldBe Set("web")
           newlySuppressed shouldBe Set.empty
       }
@@ -167,9 +167,9 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
 
       inside(results) {
         case Seq(updateFramework: UpdateFramework, updateToReviveForFirstInstance: UpdateFramework, reviveForSecondInstance: IssueRevive) =>
-          updateFramework.roleState shouldBe Map("web" -> UpdateFramework.Suppressed)
+          updateFramework.roleState shouldBe Map("web" -> OffersNotWanted)
 
-          updateToReviveForFirstInstance.roleState shouldBe Map("web" -> UpdateFramework.Unsuppressed)
+          updateToReviveForFirstInstance.roleState shouldBe Map("web" -> OffersWanted)
           updateToReviveForFirstInstance.newlyRevived shouldBe Set("web")
 
           reviveForSecondInstance.roles shouldBe Set("web")
@@ -190,9 +190,9 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
 
       inside(results) {
         case Seq(updateFramework: UpdateFramework, updateToReviveForFirstInstance: UpdateFramework) =>
-          updateFramework.roleState shouldBe Map("web" -> UpdateFramework.Suppressed)
+          updateFramework.roleState shouldBe Map("web" -> OffersNotWanted)
 
-          updateToReviveForFirstInstance.roleState shouldBe Map("web" -> UpdateFramework.Unsuppressed)
+          updateToReviveForFirstInstance.roleState shouldBe Map("web" -> OffersWanted)
           updateToReviveForFirstInstance.newlyRevived shouldBe Set("web")
       }
     }
@@ -211,7 +211,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
 
       inside(results) {
         case Seq(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
-          roleState shouldBe Map("web" -> UpdateFramework.Suppressed)
+          roleState shouldBe Map("web" -> OffersNotWanted)
       }
     }
 
@@ -230,9 +230,9 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
 
       inside(results) {
         case Seq(update1: UpdateFramework, update2: UpdateFramework, update3: UpdateFramework) =>
-          update1.roleState("web") shouldBe UpdateFramework.Unsuppressed
-          update2.roleState("web") shouldBe UpdateFramework.Suppressed
-          update3.roleState("web") shouldBe UpdateFramework.Unsuppressed
+          update1.roleState("web") shouldBe OffersWanted
+          update2.roleState("web") shouldBe OffersNotWanted
+          update3.roleState("web") shouldBe OffersWanted
       }
     }
 
@@ -251,12 +251,12 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
       inside(results) {
         case Seq(update1: UpdateFramework, update2: UpdateFramework) =>
           update1.roleState shouldBe Map(
-            "monitoring" -> UpdateFramework.Unsuppressed,
-            "web" -> UpdateFramework.Unsuppressed)
+            "monitoring" -> OffersWanted,
+            "web" -> OffersWanted)
 
           update2.roleState shouldBe Map(
-            "monitoring" -> UpdateFramework.Unsuppressed,
-            "web" -> UpdateFramework.Suppressed)
+            "monitoring" -> OffersWanted,
+            "web" -> OffersNotWanted)
       }
     }
   }

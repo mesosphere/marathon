@@ -6,6 +6,7 @@ import mesosphere.marathon.core.instance.update.InstancesSnapshot
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.state.RunSpecConfigRef
 import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.{HungryInstance, ReviveReason}
+import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.VersionedRoleState
 
 /**
   * Holds the current state and defines the revive logic.
@@ -121,16 +122,16 @@ case class ReviveOffersState(
   }
 
   /** scheduled instances that should be launched. */
-  lazy val roleReviveVersions: Map[String, RoleOfferState] = {
+  lazy val roleReviveVersions: Map[String, VersionedRoleState] = {
     hungryInstances.keysIterator.map { role =>
       val iterator = hungryInstances.getOrElse(role, Map.empty).values
         .iterator
         .filter(launchAllowed)
 
       if (iterator.isEmpty)
-        role -> OffersNotWanted
+        role -> VersionedRoleState(version, OffersNotWanted)
       else
-        role -> OffersWanted(iterator.map(_.version).max)
+        role -> VersionedRoleState(iterator.map(_.version).max, OffersWanted)
     }.toMap
   }
 
