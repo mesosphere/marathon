@@ -1,141 +1,77 @@
-# Service groups
+# Service Groups
 
 ## What is a service group?
 
- Marathon keeps all its [services](services.md) in a tree-like structure called a service group. Let's consider a few existing services e.g. `/frontend`, `/backend/mysql`, `/backend/cache` and `/backend/service`. The resulting service group will look like following:
+Service groups are used to contain [services](services.md) that semantically belong together. Groups are inferred from a service's ID, which designates a path.
+
+If you create two services, an [app](applications.md) with ID `/backend/cache` and a [pod](pods.md) with ID `/backend/service`, both services will be located within the group `backend`, while `backend` itself is is located underneath the root group `/`. Both `/` and `backend` will be created implicitly once the first one of these services is created; i.e. you don't have to create either of them explicitly before you can add services. A service called `/test` is simply located within the root `/`. If you would create all these mentioned services, resulting service group tree would look like following:
 
 ```
-/frontend
-/backend
-   /cache
-   /mysql
-   /service
-```
-where e.g. `/frontend` exists in the tree root `/` (also refered as "root group") while e.g. `/cache` is a service in the group `/backend`. Note that while `/frontend` is an actual service (with existing service definition), `/backend` is merely a group holding its child services together. Services and groups may not share names; in this example, you could not also have a service named `/backend`.
-
-Current service groups can be fetched using the Rest API [v2/groups](api.md) endpoint. For the above example, the result would look something like:
-
-```
-{
-    "id": "/",
-    "dependencies": [],
-    "apps": [
-        {
-            "id": "/frontend",
-            ...
-        }
-    ],
-    "pods": [],
-    "groups": [
-        {
-            "id": "/backend",
-            "dependencies": [],
-            "apps": [
-                {
-                    "id": "/backend/cache",
-                    ...
-                },
-                {
-                    "id": "/backend/mysql",
-                    ...
-                },
-                {
-                    "id": "/backend/service",
-                    ...
-                }
-            ],
-            "groups": [],
-            "pods": []
-        }
-    ]
-}
+/
+  frontend
+  backend/
+   cache
+   service
 ```
 
-This is a JSON representation of the service group tree (the example omits service definition details for brevity). Note that [apps](apps.md) and [pods](pods.md) are held separately (mostly for historic reasons). There is also a `dependencies` field which is explained below.
+Note that while `frontend` is a service, `backend` is merely a group holding its children together. Services and groups may not share names; in this example, you could not also have a service named `backend`, and you could not have a group called `frontend` within the root.
+
+In a bigger organization, where a cluster is shared between different departments, a structure normally looks something like `/$department/$project/$service-group$/$service` (e.g. `/engineering/shop/backend/database`).
+
+## Implications
+
+### DNS
+
+A service's DNS name will be resolved using its full path. That means, groups are reflected within your service's networking addresses. In order to do this, the hostname for instances of a service will be populated using its path. For a service `/dev/backend/server`, the advertised hostname will be `server.backend.dev`.  
+
+### Permissions
+
+Permissions are resolved based on groups via Access Control Lists in DC/OS. That means that you can restrict access to services inside a folder to people that have access to that group. Note that this requires a plugin to be used with Marathon, which is not publicly available at this point.
+
+// TODO: link to permissions in DC/OS
 
 ## How can I use service groups?
 
-Similar to how folders can be used to group related files together, service groups can be used to group similar services. In a bigger organization, where a production cluster is shared between different departments, a structure can looks something like `/$department/$project/$service-group$/$service` (e.g. `/engineering/shop/backend/database`). The advantages of the service groups go beyond simple grouping:
+Service groups are mainly an implementation detail, but you can operate on this model to a certain extent. The functionality of service groups goes beyond simple grouping, however all of the advanced features should be used with caution. At a glance, the [v2/groups](api.md#groups) endpoint allows you to
 
-- Group deployment: a service group (and all its recursive children) can be deployed and removed together using one API request. For more information on this topic, see [deployments](deployments.md).
-- All services within the group can by [scaled](scaling.md) up or down by some factor (see below).
-- Groups can have dependencies on each other (see below).
+* [read](api.md#querying-groups) both apps and pods
+* [create](api.md#creating-groups), [update](api.md#updating-groups) and [delete](api.md#deleting-groups) one or [multiple](deployments.md#group-deployments) apps at once, including apps in nested groups
+* deploy multiple apps with [dependencies](api.md#group-dependencies)
+* [scale](api.md#group-scaling) all apps inside a group by a factor
 
-### Group dependencies
+However, you *cannot*
 
-Let's assume that we have a a backend service that needs a database to start. This can be modelled by putting database and backend services in two different groups and defining dependencies between those two:
+* create, update or delete pods
+* deploy multiple pods at once
+* deploy multiple apps with dependencies
+* scale pods inside a group by a factor
 
-```
-/product
-   /database
-     /mysql
-     /mongo
-   /service
-     /rails-app
-     /play-app
+## Important caveats
 
-```
+**TODO**
 
-All services can be deployed by POSTing a group definition to `/v2/groups` REST API endpoint (concrete service definitions are omitted from this example):
+### You cannot create pods via the groups endpoint
 
-```
-{
-  "id": "/product",
-  "groups": [
-    {
-      "id": "/product/database",
-      "apps": [
-         { "id": "/product/database/mongo",
-            ...
-         },
-         { "id": "/product/database/mysql",
-            ...
-         }
-       ]
-    },{
-      "id": "/product/service",
-      "dependencies": ["/product/database"],
-      "apps": [
-         { "id": "/product/service/rails-app",
-            ...
-         },
-         { "id": "/product/service/play-app",
-            ...
-         }
-      ]
-    }
-  ]
-}
-```
+**TODO**
 
-Note that `/product/service` group has a defined dependency on `/product/database`. This means that Marathon will deploy all services in the `/product/database` group and wait for them to become ready, before proceeding with deploying any services in the group `/product/service`. In this case, ready is defined as all the corresponding tasks are started, and that they are healthy should health checks be defined.
+### Groups don't support PATCH operations
 
-**Note:** Marathon service group dependencies are "deployment time dependencies", meaning they are respected only during the initial deployment of the services. Should any of the services fail during their respective life-cycle, they are restarted independent of defined dependecies.
+The groups endpoint provides http POST and PUT operations. POST can only be used ot create groups that do not exist, while PUT operations replace an existing group with the provided structure – in contrast to the default for PUT on apps, which has a PATCH behavior. That means
 
-### Service group scaling
-
-A service group and all of its trasitive services can be scaled up or down by a given factor by POSTing following payload to `/v2/groups/{group}` (e.g. `/v2/groups/product/service`):
-
-```
-{
-   "scaleBy": 2
-}
-```
-
-This can come in handy when scaling a group of product services due to e.g. change in traffic.
-
-## IMPORTANT CAVEATS
-
-### Deploying an entire service group
-
-When deploying a service group, it will replace **all** existing services for the given path transitively.
+* apps will be replaced with the configuration as provided in the request payload.
+* apps not contained in the request payload *will be removed*.
+* groups not contained in the request payload *will be removed* transitively, including any apps contained within them.
+* any pods within the provided structure will be left untouched, since pods [cannot be modified](#you-cannot-create-pods-via-the-groups-endpoint) using the groups endpoint. 
 
 For the sake of example, say you have the following existing services:
 
-* `/product/service/rails-app`
-* `/product/service/play-app`
+```
+/product/service
+  /rails-app
+  /play-app
+```
 
-If you post the following service group definition to the `/v2/groups` REST endpoint, then `/product/service/rails-app` will be removed:
+If you PUT the following service group definition to the `/v2/groups` REST endpoint, then `/product/service/rails-app` will be removed:
 
 ```
 {
@@ -151,8 +87,8 @@ If you post the following service group definition to the `/v2/groups` REST endp
 
 ## Links
 
-* [Deployments](deployments.md)
+* [Groups API](api.md#groups)
 * [Services](services.md)
-* [Apps](apps.md)
+* [Apps](applications.md)
 * [Pods](pods.md)
-* [Rest API](api.md)
+* [Deployments](deployments.md)
