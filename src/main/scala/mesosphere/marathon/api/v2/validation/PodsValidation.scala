@@ -249,20 +249,11 @@ trait PodsValidation extends GeneralPurposeCombinators {
     pod should complyWithPodUpgradeStrategyRules
     pod should haveUnreachableDisabledForResidentPods
     pod should haveValidAcceptedResourceRoles(roleSettings.validRoles)
-    pod is validWithRoleEnforcement(roleSettings)
   }
 
-  private def validWithRoleEnforcement(roleSettings: RoleSettings): Validator[Pod] = validator[Pod] { pod =>
-    if (roleSettings.enforceRole) {
-      pod.role must notEmpty
-      pod.role as "role" is optional(in(roleSettings.validRoles))
-      podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is valid(ResourceRole.validForRole(roleSettings.validRoles))
-    } else {
-      if (pod.role.isDefined) {
-        pod.role as "role" is optional(in(roleSettings.validRoles))
-        podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is valid(ResourceRole.validForRole(roleSettings.validRoles))
-      }
-    }
+  def podDefValidator(pluginManager: PluginManager, roleSettings: RoleSettings): Validator[PodDefinition] = validator[PodDefinition] { podDef =>
+    podDef is pluginValidators(pluginManager)
+    podDef is validPodDefinitionWithRoleEnforcement(roleSettings)
   }
 
   def validPodDefinitionWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[PodDefinition] = validator[PodDefinition] { pod =>

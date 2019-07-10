@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.v2.validation
 
 import com.wix.accord.{Failure, Result, Validator}
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.raml.{Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, Image, ImageType, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodEphemeralVolume, PodPersistentVolume, PodPlacementPolicy, PodSchedulingPolicy, PodSecretVolume, PodUpgradeStrategy, Resources, SecretDef, UnreachableDisabled, UnreachableEnabled, VolumeMount}
 import mesosphere.marathon.state.PersistentVolume
 import mesosphere.marathon.util.{RoleSettings, SemanticVersion}
@@ -208,36 +209,26 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
 
   "roleValidation" should {
 
-    "be valid without role and no role enforcement" in new Fixture {
-      val pod = podWithoutRole
-      validator(pod) should be(aSuccess)
+    "be invalid without role and role setting" in new Fixture {
+      val podDef = podWithoutRole.copy(role = Some("dev")).fromRaml.copy(role = null)
+      podDefValidatorWithRoleEnforcement(podDef) should haveViolations(
+        "/role" -> "got null, expected one of: [dev]")
     }
 
-    "be valid without role and valid roles list" in new Fixture {
-      val pod = podWithoutRole
-      validatorWithValidRolesList(pod) should be(aSuccess)
-    }
-
-    "be invalid without role and role enforcement" in new Fixture {
-      val pod = podWithoutRole
-      validatorWithRoleEnforcement(pod) should haveViolations(
-        "/role" -> "must not be empty")
-    }
-
-    "be valid when the role is the same as the role enforcement" in new Fixture {
-      val pod = podWithoutRole.copy(role = Some("dev"))
-      validatorWithValidRolesList(pod) should be(aSuccess)
+    "be valid when the role is the same as the role setting" in new Fixture {
+      val podDef = podWithoutRole.copy(role = Some("dev")).fromRaml
+      podDefValidatorWithValidRolesList(podDef) should be(aSuccess)
     }
 
     "be invalid when the role is not in the the role enforcement" in new Fixture {
-      val pod = podWithoutRole.copy(role = Some("anotherRole"))
-      validatorWithValidRolesList(pod) should haveViolations(
+      val podDef = podWithoutRole.copy(role = Some("anotherRole")).fromRaml
+      podDefValidatorWithValidRolesList(podDef) should haveViolations(
         "/role" -> "got anotherRole, expected one of: [dev]")
     }
 
     "be invalid when acceptedResource role is different from the role" in new Fixture {
-      val pod = podWithoutRole.copy(role = Some("dev"), scheduling = Some(PodSchedulingPolicy(placement = Some(PodPlacementPolicy(acceptedResourceRoles = Seq("differentRole"))))))
-      validatorWithValidRolesList(pod) should haveViolations(
+      val podDef = podWithoutRole.copy(role = Some("dev"), scheduling = Some(PodSchedulingPolicy(placement = Some(PodPlacementPolicy(acceptedResourceRoles = Seq("differentRole")))))).fromRaml
+      podDefValidatorWithValidRolesList(podDef) should haveViolations(
         "/acceptedResourceRoles" -> "acceptedResourceRoles must be either [*] or one of [dev]"
       )
     }
@@ -284,11 +275,13 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
     val features: Set[String] = if (validateSecrets) Set(Features.SECRETS) else Set.empty
     implicit val validator: Validator[Pod] = podValidator(features, SemanticVersion.zero, None, RoleSettings.forTest)
 
+    val pluginManager: PluginManager = PluginManager.None
+
     val validRolesForRoleDev = RoleSettings(enforceRole = false, validRoles = Set("dev"), defaultRole = "dev")
-    val validatorWithValidRolesList = podValidator(features, SemanticVersion.zero, None, validRolesForRoleDev)
+    val podDefValidatorWithValidRolesList = podDefValidator(pluginManager, validRolesForRoleDev)
 
     val validRolesForRoleDevAndEnforcement = RoleSettings(enforceRole = true, validRoles = Set("dev"), defaultRole = "dev")
-    val validatorWithRoleEnforcement = podValidator(features, SemanticVersion.zero, None, validRolesForRoleDevAndEnforcement)
+    val podDefValidatorWithRoleEnforcement = podDefValidator(pluginManager, validRolesForRoleDevAndEnforcement)
   }
 
   "network validation" when {

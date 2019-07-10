@@ -91,23 +91,24 @@ class PodsResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val podDef = unmarshal(body)
+      val podRaml = unmarshal(body)
 
-      val roleSettings = RoleSettings.forService(config, PathId(podDef.id), groupManager.rootGroup())
+      val roleSettings = RoleSettings.forService(config, PathId(podRaml.id), groupManager.rootGroup())
       implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
-      implicit val podDefValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
+      implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
+      implicit val podDefValidator: Validator[PodDefinition] = PodsValidation.podDefValidator(pluginManager, roleSettings)
 
-      validateOrThrow(podDef)
-      val pod = normalize(Raml.fromRaml(podDef.normalize))
-      validateOrThrow(pod)(PodsValidation.pluginValidators)
+      validateOrThrow(podRaml)
+      val podDef = normalize(Raml.fromRaml(podRaml.normalize))
+      validateOrThrow(podDef)(podDefValidator)
 
-      checkAuthorization(CreateRunSpec, pod)
-      val deployment = await(podSystem.create(pod, force))
+      checkAuthorization(CreateRunSpec, podDef)
+      val deployment = await(podSystem.create(podDef, force))
       eventBus.publish(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Created))
 
-      Response.created(new URI(pod.id.toString))
+      Response.created(new URI(podDef.id.toString))
         .header(RestResource.DeploymentHeader, deployment.id)
-        .entity(marshal(pod))
+        .entity(marshal(podDef))
         .build()
     }
   }
