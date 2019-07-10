@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2.json
 
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
+import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization, ValidationHelper}
 import mesosphere.marathon.core.check.MesosCommandCheck
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.plugin.PluginManager
@@ -23,12 +23,12 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
   val enabledFeatures = Set("secrets")
   val enforcedrole = "*"
 
-  val validator = AppDefinition.validAppDefinition(enabledFeatures, RoleSettings.forTest)(PluginManager.None)
+  val validator = AppDefinition.validAppDefinition(enabledFeatures, ValidationHelper.roleSettings)(PluginManager.None)
 
   val validatorWithRole = AppDefinition.validAppDefinition(enabledFeatures, RoleSettings(enforceRole = true, validRoles = Set("someRole"), defaultRole = "someRole"))(PluginManager.None)
 
   private[this] def appNormalization(app: raml.App): raml.App =
-    AppHelpers.appNormalization(AppNormalization.Configuration(None, "mesos-bridge-name", enabledFeatures, RoleSettings.forTest)).normalized(app)
+    AppHelpers.appNormalization(AppNormalization.Configuration(None, "mesos-bridge-name", enabledFeatures, ValidationHelper.roleSettings)).normalized(app)
 
   private[this] def fromJson(json: String): AppDefinition = {
     val raw: raml.App = Json.parse(json).as[raml.App]
@@ -196,7 +196,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       validator(app.copy(resources = Resources(gpus = 1))) should haveViolations("/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
 
       {
-        val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"), RoleSettings.forTest)(PluginManager.None)
+        val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"), ValidationHelper.roleSettings)(PluginManager.None)
         appValidator(app.copy(resources = Resources(gpus = 1))) shouldNot haveViolations(
           "/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
       }

@@ -2,16 +2,15 @@ package mesosphere.marathon
 package api.v2.validation
 
 import com.wix.accord.Validator
-import mesosphere.marathon.api.v2.AppNormalization
+import mesosphere.marathon.api.v2.{AppNormalization, ValidationHelper}
 import mesosphere.marathon.raml._
-import mesosphere.marathon.util.RoleSettings
 import mesosphere.{UnitTest, ValidationTestLike}
 import org.scalatest.prop.TableDrivenPropertyChecks
 
 class AppValidationTest extends UnitTest with ValidationTestLike with TableDrivenPropertyChecks {
 
-  val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), RoleSettings.forTest)
-  val configWithDefaultNetworkName = AppNormalization.Configuration(Some("defaultNetworkName"), "mesos-bridge-name", Set(), RoleSettings.forTest)
+  val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings)
+  val configWithDefaultNetworkName = AppNormalization.Configuration(Some("defaultNetworkName"), "mesos-bridge-name", Set(), ValidationHelper.roleSettings)
   val basicValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)
   val withSecretsValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set("secrets"), () => config.defaultNetworkName)
   val withDefaultNetworkNameValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => configWithDefaultNetworkName.defaultNetworkName)

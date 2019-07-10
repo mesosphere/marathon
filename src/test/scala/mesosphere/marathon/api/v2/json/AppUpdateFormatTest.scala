@@ -2,17 +2,16 @@ package mesosphere.marathon
 package api.v2.json
 
 import mesosphere.UnitTest
-import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
+import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization, ValidationHelper}
 import mesosphere.marathon.raml.AppUpdate
 import mesosphere.marathon.state.ResourceRole
-import mesosphere.marathon.util.RoleSettings
 import play.api.libs.json.Json
 
 class AppUpdateFormatTest extends UnitTest {
 
   def normalizedAndValidated(appUpdate: AppUpdate): AppUpdate =
     AppHelpers.appUpdateNormalization(
-      AppNormalization.Configuration(None, "mesos-bridge-name", Set(), RoleSettings.forTest)).normalized(appUpdate)
+      AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings)).normalized(appUpdate)
 
   def fromJson(json: String): AppUpdate =
     normalizedAndValidated(Json.parse(json).as[AppUpdate])

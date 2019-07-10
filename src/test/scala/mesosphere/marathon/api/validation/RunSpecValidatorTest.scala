@@ -3,7 +3,7 @@ package api.validation
 
 import com.wix.accord.validate
 import mesosphere.{UnitTest, ValidationTestLike}
-import mesosphere.marathon.api.v2.AppNormalization
+import mesosphere.marathon.api.v2.{AppNormalization, ValidationHelper}
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, MesosCommandHealthCheck}
 import mesosphere.marathon.core.plugin.{PluginDefinitions, PluginManager}
@@ -11,7 +11,6 @@ import mesosphere.marathon.core.pod.{HostNetwork, Network}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.raml.{App, Apps, Raml, Resources}
 import mesosphere.marathon.state._
-import mesosphere.marathon.util.RoleSettings
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
@@ -19,7 +18,7 @@ import scala.reflect.ClassTag
 
 class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
-  val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), RoleSettings.forTest)
+  val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings)
   private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set(), () => config.defaultNetworkName)
   private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), config.roleSettings)(PluginManager.None)
   private def validContainer(networks: Seq[Network] = Nil) = Container.validContainer(networks, Set())
@@ -592,7 +591,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
       val f = new Fixture
       val app = Json.parse(f.cassandraWithoutResidency).as[App]
-      val config = AppNormalization.Configuration(None, "bridge-name", Set(), RoleSettings.forTest)
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings)
       val result = validAppDefinition(Raml.fromRaml(
         AppNormalization(config).normalized(
           validateOrThrow(
@@ -605,7 +604,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       val f = new Fixture
       val base = Json.parse(f.cassandraWithoutResidency).as[App]
       val app = base.copy(upgradeStrategy = Some(raml.UpgradeStrategy(0, 0)))
-      val config = AppNormalization.Configuration(None, "bridge-name", Set(), RoleSettings.forTest)
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings)
       val result = validAppDefinition(Raml.fromRaml(
         AppNormalization(config).normalized(
           validateOrThrow(
@@ -639,7 +638,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         }
         def definitions: PluginDefinitions = PluginDefinitions.None
       }
-      AppDefinition.validAppDefinition(Set(), RoleSettings.forTest)(pm)(app).isFailure shouldBe true
+      AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings)(pm)(app).isFailure shouldBe true
 
       Given("An app without an invalid label")
       val app2 = AppDefinition(
@@ -652,7 +651,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         ))
       )
       Then("the validation succeeds")
-      AppDefinition.validAppDefinition(Set(), RoleSettings.forTest)(pm)(app2).isSuccess shouldBe true
+      AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings)(pm)(app2).isSuccess shouldBe true
     }
 
     class Fixture {

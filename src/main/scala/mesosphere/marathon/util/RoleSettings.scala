@@ -17,8 +17,6 @@ case class RoleSettings(enforceRole: Boolean, validRoles: Set[String], defaultRo
 }
 
 object RoleSettings {
-  def forTest = RoleSettings(enforceRole = false, validRoles = Set(ResourceRole.Unreserved), defaultRole = ResourceRole.Unreserved)
-
   /**
     * Returns the role settings for the service with the specified ID, based on the top-level group and the global config
     *

@@ -99,7 +99,7 @@ class AppNormalizationTest extends UnitTest {
 
     def normalizer(defaultNetworkName: Option[String] = None, mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName, role: Option[String] = None) = {
 
-      val roleSettings = role.map(r => RoleSettings(enforceRole = false, validRoles = Set(r), defaultRole = r)).getOrElse(RoleSettings.forTest)
+      val roleSettings = role.map(r => RoleSettings(enforceRole = false, validRoles = Set(r), defaultRole = r)).getOrElse(ValidationHelper.roleSettings)
 
       val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName, Set(), roleSettings)
       Normalization[App] { app =>
@@ -108,7 +108,7 @@ class AppNormalizationTest extends UnitTest {
     }
 
     def updateNormalizer(defaultNetworkName: Option[String], mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName) = {
-      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName, Set(), RoleSettings.forTest)
+      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName, Set(), ValidationHelper.roleSettings)
       Normalization[AppUpdate] { app =>
         AppNormalization.forUpdates(config)
           .normalized(AppNormalization.forDeprecatedUpdates(config).normalized(app))

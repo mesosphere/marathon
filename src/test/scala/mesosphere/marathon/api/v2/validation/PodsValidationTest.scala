@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.v2.validation
 
 import com.wix.accord.{Failure, Result, Validator}
+import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.raml.{Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, Image, ImageType, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodEphemeralVolume, PodPersistentVolume, PodPlacementPolicy, PodSchedulingPolicy, PodSecretVolume, PodUpgradeStrategy, Resources, SecretDef, UnreachableDisabled, UnreachableEnabled, VolumeMount}
 import mesosphere.marathon.state.PersistentVolume
@@ -273,7 +274,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
         unreachableStrategy = Some(UnreachableDisabled()))))
 
     val features: Set[String] = if (validateSecrets) Set(Features.SECRETS) else Set.empty
-    implicit val validator: Validator[Pod] = podValidator(features, SemanticVersion.zero, None, RoleSettings.forTest)
+    implicit val validator: Validator[Pod] = podValidator(features, SemanticVersion.zero, None, ValidationHelper.roleSettings)
 
     val pluginManager: PluginManager = PluginManager.None
 
@@ -285,7 +286,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
   }
 
   "network validation" when {
-    implicit val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero, Some("default-network-name"), RoleSettings.forTest)
+    implicit val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero, Some("default-network-name"), ValidationHelper.roleSettings)
 
     def podContainer(name: String = "ct1", resources: Resources = Resources(), endpoints: Seq[Endpoint]) =
       PodContainer(

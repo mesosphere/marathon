@@ -2,10 +2,10 @@ package mesosphere.marathon
 package api.validation
 
 import com.wix.accord.Validator
+import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.state._
-import mesosphere.marathon.util.RoleSettings
 
 class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
   import AppDefinition._
@@ -110,7 +110,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
   }
 
   class Fixture {
-    implicit val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(Set.empty, RoleSettings.forTest)(PluginManager.None)
+    implicit val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(Set.empty, ValidationHelper.roleSettings)(PluginManager.None)
     def validApp = AppDefinition(
       id = PathId("/a/b/c/d"),
       role = "*",

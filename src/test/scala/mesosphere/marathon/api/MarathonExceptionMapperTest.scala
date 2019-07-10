@@ -5,14 +5,14 @@ import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonMappingException
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.{AppDefinition, PathId}
-import mesosphere.marathon.util.RoleSettings
 import play.api.libs.json.{JsObject, JsResultException, Json}
 
 class MarathonExceptionMapperTest extends UnitTest {
-  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set.empty[String], RoleSettings.forTest)(PluginManager.None)
+  implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set.empty[String], ValidationHelper.roleSettings)(PluginManager.None)
 
   "MarathonExceptionMapper" should {
     "Render js result exception correctly" in {

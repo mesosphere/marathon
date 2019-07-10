@@ -3,18 +3,17 @@ package api.v2.json
 
 import com.wix.accord.validate
 import mesosphere.UnitTest
-import mesosphere.marathon.api.v2.AppNormalization
+import mesosphere.marathon.api.v2.{AppNormalization, ValidationHelper}
 import mesosphere.marathon.raml.{App, GroupConversion, GroupUpdate, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
-import mesosphere.marathon.util.RoleSettings
 
 class GroupUpdateTest extends UnitTest with GroupCreation {
   val noEnabledFeatures = AllConf.withTestConfig()
   val appConversionFunc: (App => AppDefinition) = { app =>
     // assume canonical form and that the app is valid
-    Raml.fromRaml(AppNormalization.apply(AppNormalization.Configuration(None, "bridge-name", Set(), RoleSettings.forTest)).normalized(app))
+    Raml.fromRaml(AppNormalization.apply(AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings)).normalized(app))
   }
   implicit val groupUpdateRamlReader = raml.GroupConversion.groupUpdateRamlReads // HACK: workaround bogus compiler error?!
 

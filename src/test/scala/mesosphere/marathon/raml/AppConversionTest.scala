@@ -1,11 +1,10 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
+import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization, ValidationHelper}
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{BridgeNetwork, HostNetwork}
 import mesosphere.marathon.state._
-import mesosphere.marathon.util.RoleSettings
 import mesosphere.{UnitTest, ValidationTestLike}
 import org.apache.mesos.{Protos => Mesos}
 
@@ -87,7 +86,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val readApp: AppDefinition = withValidationClue {
         Raml.fromRaml(
           AppHelpers.appNormalization(
-            AppNormalization.Configuration(None, "bridge-name", features, RoleSettings.forTest)).normalized(ramlApp)
+            AppNormalization.Configuration(None, "bridge-name", features, ValidationHelper.roleSettings)).normalized(ramlApp)
         )
       }
       Then("The app is identical")
@@ -104,7 +103,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val protoRamlApp = app.toProto.toRaml[App]
 
       Then("The direct and indirect RAML conversions are identical")
-      val config = AppNormalization.Configuration(None, "bridge-name", Set(), RoleSettings.forTest)
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings)
       val normalizedProtoRamlApp = AppNormalization(
         config).normalized(AppNormalization.forDeprecated(config).normalized(protoRamlApp))
       normalizedProtoRamlApp should be(ramlApp)
