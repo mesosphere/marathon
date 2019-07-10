@@ -9,11 +9,10 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstanceChangeOrSnapshot
-import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.UpdateFramework.{RoleState, Suppressed, Unsuppressed}
+import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.UpdateFramework.Suppressed
 import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.{IssueRevive, RoleDirective, UpdateFramework}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
-import mesosphere.marathon.stream.EnrichedSink
 import org.apache.mesos.Protos.FrameworkInfo
 
 import scala.collection.JavaConverters._
@@ -78,7 +77,7 @@ class ReviveOffersActor(
         .via(suppressReviveFlow)
         .wireTap(reviveSuppressMetrics)
         .runWith(Sink.foreach {
-          case UpdateFramework(roleState) =>
+          case UpdateFramework(roleState, _, _) =>
             driverHolder.driver.foreach { d =>
               val newInfo = frameworkInfoWithRoles(frameworkInfo, roleState.keys)
               val suppressedRoles = roleState.iterator
@@ -90,40 +89,31 @@ class ReviveOffersActor(
           case IssueRevive(roles) =>
             suppressCountMetric.increment()
             driverHolder.driver.foreach { d =>
-              val newInfo = frameworkInfoWithRoles(frameworkInfo, Seq(defaultMesosRole))
-              d.updateFramework(newInfo, Seq(defaultMesosRole).asJava)
+              d.reviveOffers(roles.asJava)
             }
-
         })
     }
 
     done.pipeTo(self)
   }
 
-  val reviveSuppressMetrics: Sink[RoleDirective, Future[Done]] = EnrichedSink.statefulForeach { () =>
-    var lastState = Map.empty[String, RoleState]
+  val reviveSuppressMetrics: Sink[RoleDirective, Future[Done]] = Sink.foreach {
+    case UpdateFramework(newState, newlyRevived, newlySuppressed) =>
+      newlyRevived.foreach { role =>
+        logger.info(s"Role ${role} newly revived via update framework call")
+        reviveCountMetric.increment()
+      }
 
-    {
-      case UpdateFramework(newState) =>
-        newState.foreach {
-          case (role, Suppressed) =>
-            if (lastState.get(role).contains(Unsuppressed)) {
-              logger.info(s"Role ${role} newly suppressed via update framework call")
-              suppressCountMetric.increment()
-            }
-          case (role, Unsuppressed) =>
-            if (lastState.get(role).contains(Suppressed)) {
-              logger.info(s"Role ${role} newly revived via update framework call")
-              reviveCountMetric.increment()
-            }
-        }
-        lastState = newState
-      case IssueRevive(roles) =>
-        roles.foreach { role =>
-          reviveCountMetric.increment()
-          logger.info(s"Role ${role} explicitly revived")
-        }
-    }
+      newlySuppressed.foreach { role =>
+        logger.info(s"Role ${role} newly suppressed via update framework call")
+        suppressCountMetric.increment()
+      }
+
+    case IssueRevive(roles) =>
+      roles.foreach { role =>
+        reviveCountMetric.increment()
+        logger.info(s"Role ${role} explicitly revived")
+      }
   }
 
   override def receive: Receive = LoggingReceive {

@@ -15,7 +15,6 @@ import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.{HungryInstan
   */
 case class ReviveOffersState(
     hungryInstances: Map[String, Map[Instance.Id, HungryInstance]],
-    allInstanceIdsByRole: Map[String, Set[Instance.Id]],
     activeDelays: Set[RunSpecConfigRef],
     version: Long) extends StrictLogging {
 
@@ -24,24 +23,23 @@ case class ReviveOffersState(
     instance.reservation.nonEmpty && instance.state.goal == Goal.Decommissioned && instance.state.condition.isTerminal
   }
 
-  private def update(
+  private def copyBumpingVersion(
     hungryInstances: Map[String, Map[Instance.Id, HungryInstance]] = hungryInstances,
-    allInstanceIdsByRole: Map[String, Set[Instance.Id]] = allInstanceIdsByRole,
     activeDelays: Set[RunSpecConfigRef] = activeDelays): ReviveOffersState = {
 
-    copy(hungryInstances, allInstanceIdsByRole, activeDelays, version + 1)
+    copy(hungryInstances, activeDelays, version + 1)
   }
 
   def withSnapshot(snapshot: InstancesSnapshot): ReviveOffersState = {
-    update(
-      hungryInstances = snapshot.instances.view.filter(isHungry).groupBy(_.role).map {
-        case (role, instances) =>
-          role -> instances.map { i => i.instanceId -> toHungryInstance(i) }.toMap
-      },
-      allInstanceIdsByRole = snapshot.instances.view.groupBy(_.role).map { case (role, instances) => role -> instances.map(_.instanceId).toSet })
+    val hungryInstances = snapshot.instances.groupBy(_.role).map {
+      case (role, instances) =>
+        role -> instances.view.filter(isHungry).map { i => i.instanceId -> toHungryInstance(i) }.toMap
+    }
+    // Note - we take all known roles, whether offers are wanted or not, and create at least an empty map entry in the hungryInstances map
+    copyBumpingVersion(hungryInstances = hungryInstances)
   }
 
-  private def hasInstance(role: String, instanceId: Instance.Id): Boolean = {
+  private def hasHungryInstance(role: String, instanceId: Instance.Id): Boolean = {
     hungryInstances.getOrElse(role, Map.empty).contains(instanceId)
   }
 
@@ -59,35 +57,27 @@ case class ReviveOffersState(
         val newRoleHungryInstances = hungryInstances.getOrElse(role, Map.empty) + (instanceId -> hungryInstance)
         hungryInstances + (role -> newRoleHungryInstances)
       case None =>
-        if (hasInstance(role, instanceId))
+        if (hasHungryInstance(role, instanceId))
           logger.debug(s"Removing ${instanceId} from instances wanting offers.")
         val newRoleHungryInstances = hungryInstances.getOrElse(role, Map.empty) - instanceId
-        val newHungryInstances =
-          if (newRoleHungryInstances.isEmpty)
-            hungryInstances - role
-          else
-            hungryInstances + (role -> newRoleHungryInstances)
 
-        newHungryInstances
+        /* we don't clean up empty entries on purpose; this allows us to continue to signal that at one point in time,
+         * either via the initial snapshot or later down the road, offers were wanted for an instance. Marathon will
+         * remove any totally unused roles (for which no instances are defined) when a new leader is instated
+         */
+        hungryInstances + (role -> newRoleHungryInstances)
     }
 
-    val newAllInstanceIdsByRole = if (newState.nonEmpty) {
-      val withInstanceIdAdded = allInstanceIdsByRole.getOrElse(role, Set.empty) + instanceId
-      allInstanceIdsByRole + (role -> withInstanceIdAdded)
-    } else {
-      val withInstanceIdRemoved = allInstanceIdsByRole.getOrElse(role, Set.empty) - instanceId
-      if (withInstanceIdRemoved.isEmpty)
-        allInstanceIdsByRole - role
-      else
-        allInstanceIdsByRole + (role -> withInstanceIdRemoved)
-    }
-
-    update(hungryInstances = newHungryInstances, allInstanceIdsByRole = newAllInstanceIdsByRole)
+    copyBumpingVersion(hungryInstances = newHungryInstances)
   }
 
   /** @return this state updated with an instance. */
-  def withInstanceUpdated(instance: Instance): ReviveOffersState = {
-    updateInstanceState(instance.role, instance.instanceId, Some(instance))
+  def withInstanceAddedOrUpdated(instance: Instance): ReviveOffersState = {
+    if (hasHungryInstance(instance.role, instance.instanceId)) {
+      this
+    } else {
+      updateInstanceState(instance.role, instance.instanceId, Some(instance))
+    }
   }
 
   private def isHungry(instance: Instance): Boolean = {
@@ -121,27 +111,26 @@ case class ReviveOffersState(
               instanceId -> hungryInstance
         }
     }
-    update(hungryInstances = bumpedVersions, activeDelays = activeDelays - ref)
+    copyBumpingVersion(hungryInstances = bumpedVersions, activeDelays = activeDelays - ref)
   }
 
   /** @return this state with updated [[activeDelays]]. */
   def withDelay(ref: RunSpecConfigRef): ReviveOffersState = {
     logger.debug(s"Marking $ref as actively delayed")
-    update(activeDelays = activeDelays + ref)
+    copyBumpingVersion(activeDelays = activeDelays + ref)
   }
 
   /** scheduled instances that should be launched. */
   lazy val roleReviveVersions: Map[String, RoleOfferState] = {
-    allInstanceIdsByRole.keysIterator.map { role =>
-      role -> hungryInstances.getOrElse(role, Map.empty).values
+    hungryInstances.keysIterator.map { role =>
+      val iterator = hungryInstances.getOrElse(role, Map.empty).values
         .iterator
         .filter(launchAllowed)
-        .foldLeft(OffersNotWanted: RoleOfferState) {
-          case (op @ OffersWanted(version), hungryInstance) if hungryInstance.version < version =>
-            op
-          case (_, hungryInstance) =>
-            OffersWanted(hungryInstance.version)
-        }
+
+      if (iterator.isEmpty)
+        role -> OffersNotWanted
+      else
+        role -> OffersWanted(iterator.map(_.version).max)
     }.toMap
   }
 
@@ -152,7 +141,7 @@ case class ReviveOffersState(
 }
 
 object ReviveOffersState {
-  def empty = ReviveOffersState(Map.empty, Map.empty, Set.empty, 0)
+  def empty = ReviveOffersState(Map.empty, Set.empty, 0)
 
   case class HungryInstance(version: Long, reason: ReviveReason, ref: RunSpecConfigRef)
 

@@ -61,7 +61,7 @@ case class Instance(
 
   override def region: Option[String] = agentInfo.flatMap(_.region)
 
-  def role: String = Instance.wipDefaultRole
+  def role: String = runSpec.role
 
   /**
     * Factory method for creating provisioned instance from Scheduled instance
@@ -91,8 +91,6 @@ case class Instance(
 object Instance {
 
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-
-  var wipDefaultRole = "undefined"
 
   def instancesById(instances: Seq[Instance]): Map[Instance.Id, Instance] =
     instances.map(instance => instance.instanceId -> instance)(collection.breakOut)

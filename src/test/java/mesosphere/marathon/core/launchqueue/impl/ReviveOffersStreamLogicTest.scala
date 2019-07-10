@@ -5,20 +5,25 @@ import akka.NotUsed
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.update.{InstanceChangeOrSnapshot, InstanceUpdated, InstancesSnapshot}
-import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.DelayedStatus
+import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.{DelayedStatus, IssueRevive, RoleDirective, UpdateFramework}
 import mesosphere.marathon.state.{AppDefinition, PathId}
+import org.scalatest.Inside
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class ReviveOffersStreamLogicTest extends AkkaUnitTest {
+class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
+
   import ReviveOffersStreamLogic.{Delayed, NotDelayed}
-  val webApp = AppDefinition(id = PathId("/test"), role = "*")
-  val monitoringApp = AppDefinition(id = PathId("/test2"), role = "*")
+
+  val webApp = AppDefinition(id = PathId("/test"), role = "web")
+  val monitoringApp = AppDefinition(id = PathId("/test2"), role = "monitoring")
 
   val inputSourceQueue = Source.queue[Either[InstanceChangeOrSnapshot, DelayedStatus]](16, OverflowStrategy.fail)
-  val outputSinkQueue = Sink.queue[RoleOfferState]()
+  val outputSinkQueue = Sink.queue[RoleDirective]()
+  val launchedInstance = TestInstanceBuilder.newBuilderForRunSpec(webApp).addTaskLaunched().instance
 
   "Suppress and revive" should {
     "combine 3 revive-worth events received within the throttle window in to a two throttle events" in {
@@ -26,53 +31,112 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
       val instance2 = Instance.scheduled(webApp)
       val instance3 = Instance.scheduled(webApp)
 
+      Given("A suppress/revive flow with suppression enabled and 200 millis revive interval")
       val suppressReviveFlow = ReviveOffersStreamLogic.suppressAndReviveFlow(minReviveOffersInterval = 200.millis, enableSuppress = true)
 
       val (input, output) = inputSourceQueue.via(suppressReviveFlow).toMat(outputSinkQueue)(Keep.both).run
 
-      input.offer(Left(InstanceUpdated(instance1, None, Nil))).futureValue
-      input.offer(Left(InstanceUpdated(instance2, None, Nil))).futureValue
-      input.offer(Left(InstanceUpdated(instance3, None, Nil))).futureValue
+      When("An initial snapshot with a launched instance is offered")
+      input.offer(Left(InstancesSnapshot(List(launchedInstance)))).futureValue
+
+      Then("An update framework event is issued with the role suppressed")
+      inside(output.pull().futureValue) {
+        case Some(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
+          roleState shouldBe Map("web" -> UpdateFramework.Suppressed)
+          newlyRevived shouldBe Set.empty
+          newlySuppressed shouldBe Set.empty
+      }
+
+      When("3 instance updates are sent for the role 'web'")
+      Future.sequence(Seq(instance1, instance2, instance3).map { i =>
+        input.offer(Left(InstanceUpdated(i, None, Nil)))
+      }).futureValue
+
+      Then("The revives get combined in to a single update framework call")
+      inside(output.pull().futureValue) {
+        case Some(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
+          roleState shouldBe Map("web" -> UpdateFramework.Unsuppressed)
+          newlyRevived shouldBe Set("web")
+          newlySuppressed shouldBe Set.empty
+      }
+
+      And("the revive is eventually repeated")
+      inside(output.pull().futureValue) {
+        case Some(IssueRevive(roles)) =>
+          roles shouldBe Set("web")
+      }
+
+      When("the stream is closed")
       input.complete()
 
-      // revives from the first instance
-      Seq.fill(3){ output.pull().futureValue }.flatten shouldBe Seq(OffersWanted, OffersWanted, OffersWanted)
-
-      // set of revives for instance 2 and 3
-      Seq.fill(3){ output.pull().futureValue }.flatten shouldBe Seq(OffersWanted, OffersWanted, OffersWanted)
-
+      Then("no further events are emitted")
       output.pull().futureValue shouldBe None // should be EOS
     }
 
-    "drops suppress elements if enableSuppress is disabled" in {
+    "does not send suppress if enableSuppress is disabled" in {
       val suppressReviveFlow = ReviveOffersStreamLogic.suppressAndReviveFlow(minReviveOffersInterval = 200.millis, enableSuppress = false)
 
-      val result = Source(List(Left(InstancesSnapshot(Nil))))
+      val result = Source(List(Left(InstancesSnapshot(List(launchedInstance)))))
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
+        .futureValue
 
-      result.futureValue shouldBe Nil
+      inside(result) {
+        case Seq(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
+          roleState shouldBe Map("web" -> UpdateFramework.Unsuppressed)
+          newlyRevived shouldBe Set("web")
+          newlySuppressed shouldBe Set.empty
+      }
+    }
+  }
+
+  "ReviveRepeaterLogic" should {
+    "send a repeat after the second tick for roles newly revived by UpdateFramework" in {
+      val logic = new ReviveOffersStreamLogic.ReviveRepeaterLogic
+
+      logic.processRoleDirective(UpdateFramework(Map("role" -> UpdateFramework.Unsuppressed), Set("role"), Set.empty))
+
+      logic.handleTick() shouldBe Nil
+      logic.handleTick() shouldBe List(IssueRevive(Set("role")))
+    }
+
+    "does not repeat revives for roles that become suppressed" in {
+      val logic = new ReviveOffersStreamLogic.ReviveRepeaterLogic
+
+      logic.processRoleDirective(UpdateFramework(Map("role" -> UpdateFramework.Unsuppressed), Set("role"), Set.empty))
+      logic.handleTick() shouldBe Nil
+
+      logic.processRoleDirective(UpdateFramework(Map("role" -> UpdateFramework.Suppressed), Set.empty, Set("role")))
+
+      logic.handleTick() shouldBe Nil
+      logic.handleTick() shouldBe Nil
+
     }
   }
 
   "Suppress and revive without throttling" should {
     // Many of these components are more easily tested without throttling logic
-    val suppressReviveFlow: Flow[Either[InstanceChangeOrSnapshot, ReviveOffersStreamLogic.DelayedStatus], RoleOfferState, NotUsed] =
+    val suppressReviveFlow: Flow[Either[InstanceChangeOrSnapshot, ReviveOffersStreamLogic.DelayedStatus], RoleDirective, NotUsed] =
       ReviveOffersStreamLogic
         .reviveStateFromInstancesAndDelays
-        .via(ReviveOffersStreamLogic.suppressOrReviveFromDiff)
-        .via(ReviveOffersStreamLogic.deduplicateSuppress)
+        .map(_.roleReviveVersions)
+        .via(ReviveOffersStreamLogic.reviveDirectiveFlow(enableSuppress = true))
 
-    "issue a suppress in response to an empty snapshot with no updates" in {
-      val results = Source(List(Left(InstancesSnapshot(Nil))))
+    "issue a suppress in response to an snapshot with a single lanched instance, and no updates" in {
+      val results = Source(List(Left(InstancesSnapshot(List(launchedInstance)))))
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
 
-      results shouldBe Vector(OffersNotWanted)
+      inside(results) {
+        case Seq(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
+          roleState shouldBe Map("web" -> UpdateFramework.Suppressed)
+          newlyRevived shouldBe Set.empty
+          newlySuppressed shouldBe Set.empty
+      }
     }
 
-    "emit three revives for a snapshot with multiple instances to launch" in {
+    "emit a single revive for a snapshot with multiple instances to launch" in {
       val instance1 = Instance.scheduled(webApp)
       val instance2 = Instance.scheduled(webApp)
 
@@ -80,7 +144,12 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(OffersWanted, OffersWanted, OffersWanted)
+      inside(results) {
+        case Seq(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
+          roleState shouldBe Map("web" -> UpdateFramework.Unsuppressed)
+          newlyRevived shouldBe Set("web")
+          newlySuppressed shouldBe Set.empty
+      }
     }
 
     "emit a revive for each new scheduled instance added" in {
@@ -89,27 +158,43 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
 
       val results = Source(
         List(
-          Left(InstancesSnapshot(Nil)),
+          Left(InstancesSnapshot(List(launchedInstance))),
           Left(InstanceUpdated(instance1, None, Nil)),
           Left(InstanceUpdated(instance2, None, Nil))))
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(OffersNotWanted, OffersWanted, OffersWanted, OffersWanted, OffersWanted, OffersWanted, OffersWanted)
+
+      inside(results) {
+        case Seq(updateFramework: UpdateFramework, updateToReviveForFirstInstance: UpdateFramework, reviveForSecondInstance: IssueRevive) =>
+          updateFramework.roleState shouldBe Map("web" -> UpdateFramework.Suppressed)
+
+          updateToReviveForFirstInstance.roleState shouldBe Map("web" -> UpdateFramework.Unsuppressed)
+          updateToReviveForFirstInstance.newlyRevived shouldBe Set("web")
+
+          reviveForSecondInstance.roles shouldBe Set("web")
+      }
     }
 
-    "does not emit a revive for updates to existing scheduled instances" in {
+    "does not emit a new revive for updates to existing scheduled instances" in {
       val instance1 = Instance.scheduled(webApp)
 
       val results = Source(
         List(
-          Left(InstancesSnapshot(Nil)),
+          Left(InstancesSnapshot(List(launchedInstance))),
           Left(InstanceUpdated(instance1, None, Nil)),
           Left(InstanceUpdated(instance1, None, Nil))))
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(OffersNotWanted, OffersWanted, OffersWanted, OffersWanted)
+
+      inside(results) {
+        case Seq(updateFramework: UpdateFramework, updateToReviveForFirstInstance: UpdateFramework) =>
+          updateFramework.roleState shouldBe Map("web" -> UpdateFramework.Suppressed)
+
+          updateToReviveForFirstInstance.roleState shouldBe Map("web" -> UpdateFramework.Unsuppressed)
+          updateToReviveForFirstInstance.newlyRevived shouldBe Set("web")
+      }
     }
 
     "does not revive if an instance is backed off" in {
@@ -123,7 +208,11 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(OffersNotWanted)
+
+      inside(results) {
+        case Seq(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
+          roleState shouldBe Map("web" -> UpdateFramework.Suppressed)
+      }
     }
 
     "suppresses if an instance becomes backed off, and re-revives when it is available again" in {
@@ -138,7 +227,13 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(OffersNotWanted, OffersWanted, OffersWanted, OffersWanted, OffersNotWanted, OffersWanted, OffersWanted, OffersWanted)
+
+      inside(results) {
+        case Seq(update1: UpdateFramework, update2: UpdateFramework, update3: UpdateFramework) =>
+          update1.roleState("web") shouldBe UpdateFramework.Unsuppressed
+          update2.roleState("web") shouldBe UpdateFramework.Suppressed
+          update3.roleState("web") shouldBe UpdateFramework.Unsuppressed
+      }
     }
 
     "does not suppress if a backoff occurs for one instance, but there is still a scheduled instance" in {
@@ -152,7 +247,17 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
-      results shouldBe Vector(OffersWanted, OffersWanted, OffersWanted)
+
+      inside(results) {
+        case Seq(update1: UpdateFramework, update2: UpdateFramework) =>
+          update1.roleState shouldBe Map(
+            "monitoring" -> UpdateFramework.Unsuppressed,
+            "web" -> UpdateFramework.Unsuppressed)
+
+          update2.roleState shouldBe Map(
+            "monitoring" -> UpdateFramework.Unsuppressed,
+            "web" -> UpdateFramework.Suppressed)
+      }
     }
   }
 }
