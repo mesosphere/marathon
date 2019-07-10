@@ -45,6 +45,9 @@ object AppHelpers {
       .unreachableStrategy.map(Raml.fromRaml(_))
       .getOrElse(UnreachableStrategy.default(hasPersistentVols))
 
+    // We're using orNull here, as the AppDefinition is only used as a template to create an raml.App from
+    // If we don't have a role in the AppUpdate, we get an Empty role in the raml.App, which then gets defaulted
+    // in the normalization
     val role = update.role.orNull
 
     val template = AppDefinition(

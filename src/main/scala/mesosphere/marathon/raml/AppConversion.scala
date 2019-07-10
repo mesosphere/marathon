@@ -82,7 +82,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       killSelection = app.killSelection.toRaml,
       tty = app.tty,
       executorResources = app.executorResources.toRaml,
-      role = Some(app.role)
+      role = Option(app.role)
     )
   }
 

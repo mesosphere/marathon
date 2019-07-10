@@ -473,6 +473,8 @@ object AppDefinition extends GeneralPurposeCombinators {
   val DefaultNetworks = Seq[Network](HostNetwork)
 
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
+    // We're setting null here, this is - as the id - always overwritten
+    // in mergeFromProto
     AppDefinition(id = DefaultId, role = null).mergeFromProto(proto)
 
   def versionInfoFrom(proto: Protos.ServiceDefinition): VersionInfo = {
