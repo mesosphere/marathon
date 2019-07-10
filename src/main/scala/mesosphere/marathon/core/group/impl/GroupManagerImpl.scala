@@ -187,7 +187,7 @@ class GroupManagerImpl(
     Done
   }
 
-  override def invalidateGroupCache(): Future[Done] = async {
+  override def invalidateAndRefreshGroupCache(): Future[Done] = async {
     root := None
 
     // propagation of reset group caches on repository is needed,
@@ -196,6 +196,15 @@ class GroupManagerImpl(
 
     // force fetching of the root group from the group repository
     rootGroup()
+    Done
+  }
+
+  override def invalidateGroupCache(): Future[Done] = async {
+    root := None
+    // propagation of reset group caches on repository is needed,
+    // because manager and repository are holding own caches
+    await(groupRepository.invalidateGroupCache())
+
     Done
   }
 

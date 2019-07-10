@@ -36,6 +36,22 @@ class MigrationTo19100(
 
 object MigrationTo19100 extends MaybeStore with StrictLogging {
 
+  def migrateApp(appProtos: Protos.ServiceDefinition, optVersion: Option[OffsetDateTime], defaultMesosRole: String): (Protos.ServiceDefinition, Option[OffsetDateTime]) = {
+    logger.info(s"Migrate App(${appProtos.getId}) with store version $optVersion to role '$defaultMesosRole' (AppVersion: ${appProtos.getVersion})")
+
+    val newAppProtos = appProtos.toBuilder.setRole(defaultMesosRole).build()
+
+    (newAppProtos, optVersion)
+  }
+
+  def migratePod(podRaml: raml.Pod, optVersion: Option[OffsetDateTime], defaultMesosRole: String): (raml.Pod, Option[OffsetDateTime]) = {
+    logger.info(s"Migrate Pod(${podRaml.id}) with store version $optVersion to role '$defaultMesosRole', (Version: ${podRaml.version})")
+
+    val newPod = podRaml.copy(role = Some(defaultMesosRole))
+
+    (newPod, optVersion)
+  }
+
   /**
     * Loads all app definition from store and sets the role to Marathon's default role.
     *
@@ -71,13 +87,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         }
         .collect{ case (Some(appProtos), optVersion) if !appProtos.hasRole => (appProtos, optVersion) }
         .map{
-          case (appProtos, optVersion) =>
-            logger.info(s"Migrate App(${appProtos.getId}) with store version $optVersion to role '$defaultMesosRole' (AppVersion: ${appProtos.getVersion})")
-
-            // TODO: check for slave_public
-            val newAppProtos = appProtos.toBuilder.setRole(defaultMesosRole).build()
-
-            (newAppProtos, optVersion)
+          case (appProtos, optVersion) => migrateApp(appProtos, optVersion, defaultMesosRole)
         }
         .mapAsync(Migration.maxConcurrency) {
           case (appProtos, Some(version)) => zkStore.store(PathId(appProtos.getId), appProtos, version)
@@ -121,13 +131,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
         }
         .collect{ case (Some(podRaml), optVersion) if podRaml.role.isEmpty => (podRaml, optVersion) }
         .map{
-          case (podRaml, optVersion) =>
-            logger.info(s"Migrate Pod(${podRaml.id}) with store version $optVersion to role '$defaultMesosRole', (Version: ${podRaml.version})")
-
-            // TODO: check for slave_public
-            val newPod = podRaml.copy(role = Some(defaultMesosRole))
-
-            (newPod, optVersion)
+          case (podRaml, optVersion) => migratePod(podRaml, optVersion, defaultMesosRole)
         }
         .mapAsync(Migration.maxConcurrency) {
           case (podRaml, Some(version)) => zkStore.store(PathId(podRaml.id), podRaml, version)
