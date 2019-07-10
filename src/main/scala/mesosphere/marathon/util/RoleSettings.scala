@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package util
 
-import mesosphere.marathon.state.{PathId, ResourceRole, RootGroup}
+import mesosphere.marathon.state.{PathId, RootGroup}
 
 /**
   * Configures role enforcement on runSpecs, used for validation.

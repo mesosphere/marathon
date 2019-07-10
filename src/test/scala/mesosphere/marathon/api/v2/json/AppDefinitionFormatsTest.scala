@@ -9,7 +9,6 @@ import mesosphere.marathon.raml.{EnvVarSecret, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state._
-import mesosphere.marathon.util.RoleSettings
 import mesosphere.{UnitTest, ValidationTestLike}
 import org.scalatest.Matchers
 import play.api.libs.json._
