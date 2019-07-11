@@ -9,6 +9,7 @@ import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.state.{PathId, Timestamp}
+import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus.Reason
 import org.apache.mesos.Protos.{TaskState, TaskStatus}
 
@@ -135,10 +136,11 @@ object TaskStatusUpdateTestHelper {
     }
   }
 
-  def killed(instance: Instance = defaultInstance) = {
+  def killed(instance: Instance = defaultInstance, draining: Boolean = false) = {
     // TODO(PODS): the method signature should allow passing a taskId
     val (taskId, _) = instance.tasksMap.head
-    val status = MesosTaskStatusTestHelper.killed(taskId)
+    val maybeReason = if (draining) Some(mesos.Protos.TaskStatus.Reason.REASON_SLAVE_DRAINING) else None
+    val status = MesosTaskStatusTestHelper.killed(taskId, maybeReason)
     taskUpdateFor(instance, Condition.Killed, status)
   }
 
@@ -163,9 +165,10 @@ object TaskStatusUpdateTestHelper {
     taskUpdateFor(instance, Condition.Gone, status)
   }
 
-  def goneByOperator(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+  def goneByOperator(instance: Instance = defaultInstance, container: Option[MesosContainer] = None, draining: Boolean = false) = {
     val taskId = Task.Id(instance.instanceId, container)
-    val status = MesosTaskStatusTestHelper.goneByOperator(taskId)
+    val maybeReason = if (draining) Some(mesos.Protos.TaskStatus.Reason.REASON_SLAVE_DRAINING) else None
+    val status = MesosTaskStatusTestHelper.goneByOperator(taskId, maybeReason = maybeReason)
     taskUpdateFor(instance, Condition.Gone, status)
   }
 

@@ -4,6 +4,7 @@ package core.task.update.impl
 import akka.Done
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder
+import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
@@ -60,6 +61,34 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
         Then("initiate the task kill")
         val (taskId, _) = instanceToUpdate.tasksMap.head
         verify(killService).killUnknownTask(taskId, KillReason.Unknown)
+        Then("acknowledge the update")
+        verify(schedulerDriver).acknowledgeStatusUpdate(status)
+        Then("not do anything else")
+        verifyNoMoreInteractions()
+      }
+    }
+
+    for {
+      (origUpdate, name) <- Seq(
+        (TaskStatusUpdateTestHelper.killed(draining = true), "killed"),
+        (TaskStatusUpdateTestHelper.goneByOperator(draining = true), "goneByOperator")
+      )
+    } {
+      s"receiving a $name with REASON_SLAVE_DRAINING" in new Fixture {
+        val instance = origUpdate.wrapped.instance
+        val status = origUpdate.status
+
+        instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
+        instanceTracker.updateStatus(instance, status, clock.now()) returns Future.successful(Done)
+
+        updateProcessor.publish(status).futureValue
+
+        When("load the task in the task tracker")
+        verify(instanceTracker).instance(instance.instanceId)
+        Then("pass the the MesosStatusUpdateEvent to the instance tracker")
+        verify(instanceTracker).updateStatus(instance, status, clock.now())
+        Then("reset any delay for this runSpec")
+        verify(launchQueue).resetDelay(instance.runSpec)
         Then("acknowledge the update")
         verify(schedulerDriver).acknowledgeStatusUpdate(status)
         Then("not do anything else")
@@ -293,6 +322,7 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
     lazy val instanceTracker: InstanceTracker = mock[InstanceTracker]
     lazy val schedulerDriver: SchedulerDriver = mock[SchedulerDriver]
     lazy val killService: KillService = mock[KillService]
+    lazy val launchQueue: LaunchQueue = mock[LaunchQueue]
     lazy val marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder = {
       val holder = new MarathonSchedulerDriverHolder
       holder.driver = Some(schedulerDriver)
@@ -305,6 +335,7 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       instanceTracker,
       marathonSchedulerDriverHolder,
       killService,
+      launchQueue,
       eventStream = system.eventStream
     )
 
