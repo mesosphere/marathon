@@ -138,7 +138,7 @@ case class ReviveOffersState(
     }.toMap
   }
 
-  /** @return true if a instance has no active delay. */
+  /** @return true if a instance has no active delay, or the instance requires clean up. */
   def launchAllowed(hungryInstance: HungryInstance): Boolean = {
     hungryInstance.reason == ReviveReason.CleaningUpReservations || !activeDelays.contains(hungryInstance.ref)
   }
