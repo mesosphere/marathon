@@ -114,6 +114,28 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       (body, plan)
     }
 
+    def prepareGroup(groupId: String, groupManager: GroupManager) = {
+      def buildParentGroup(path: PathId, childGroup: Group): Group = {
+        val group = createGroup(path, groups = Set(childGroup))
+        groupManager.group(path) returns Some(group)
+        if (path.parent.isRoot) group else buildParentGroup(path.parent, group)
+      }
+
+      def buildGroup(path: PathId): Group = {
+        val group = createGroup(path)
+        groupManager.group(path) returns Some(group)
+        if (path.parent.isRoot) group else buildParentGroup(path.parent, group)
+      }
+
+      val groupPath = PathId(groupId)
+      val group = buildGroup(groupPath)
+
+      val rootGroup = createRootGroup(groups = Set(group), validate = false, enabledFeatures = Set.empty)
+      val plan = DeploymentPlan(rootGroup, rootGroup)
+      groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
+      groupManager.rootGroup() returns rootGroup
+    }
+
     def createAppWithVolumes(`type`: String, volumes: String, groupManager: GroupManager, appsResource: AppsResource, auth: TestAuthFixture): Response = {
       val app = App(id = "/app", cmd = Some(
         "foo"))
@@ -1948,7 +1970,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new app inside a group with a custom role defined should reject " in new Fixture() {
       Given("An app with non-default role")
       val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("NotTheDefaultRole"))
-      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
+
+      prepareGroup("/dev", groupManager)
+
+      val body = Json.stringify(Json.toJson(normalize(app))).getBytes("UTF-8")
+      //      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
       clock += 5.seconds
@@ -1962,6 +1988,52 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         response.getStatus should be(422)
         response.getEntity.toString should include("/role")
         response.getEntity.toString should include("got NotTheDefaultRole, expected ")
+      }
+    }
+
+    "Update an app inside a group with a custom role defined should accept if custom role is the same " in new Fixture() {
+      Given("An app with non-default role")
+      val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("NotTheDefaultRole"))
+
+      prepareGroup("/dev", groupManager)
+
+      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
+        Then("The return code indicates success")
+        response.getStatus should be(201)
+      }
+    }
+
+    "Update an app inside a group with a different custom role should reject " in new Fixture() {
+      Given("An app with non-default role")
+      val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("NotTheDefaultRole"))
+
+      prepareGroup("/dev", groupManager)
+
+      prepareAppInGroup(app, groupManager, validate = false)
+      val appWithDifferentCustomRole = app.copy(role = Some("differentCustomRole"))
+      val body = Json.stringify(Json.toJson(normalize(appWithDifferentCustomRole))).getBytes("UTF-8")
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
+        Then("The return code indicates a validation error")
+        response.getStatus should be(422)
+        response.getEntity.toString should include("/role")
+        response.getEntity.toString should include("got differentCustomRole, expected one of: [*, dev, NotTheDefaultRole]")
       }
     }
 
@@ -2004,7 +2076,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new app inside a sub group with the sub-group name as role defined should reject " in new Fixture() {
       Given("An app with the dev role inside a group dev")
       val app = App(id = "/dev/sub/something/app", cmd = Some("cmd"), role = Some("sub"))
-      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
+
+      val body = Json.stringify(Json.toJson(normalize(app))).getBytes("UTF-8")
+
+      prepareGroup("/dev/sub/something", groupManager)
+      //      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
       clock += 5.seconds

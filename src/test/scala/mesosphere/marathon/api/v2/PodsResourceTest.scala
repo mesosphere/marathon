@@ -23,7 +23,7 @@ import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition, PodManager}
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 import mesosphere.marathon.raml.{EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, PersistentVolumeInfo, PersistentVolumeType, Pod, PodPersistentVolume, PodSecretVolume, PodState, PodStatus, Raml, Resources, VolumeMount}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, PathId, ResourceRole, Timestamp, UnreachableStrategy, VersionInfo}
+import mesosphere.marathon.state.{AppDefinition, Group, PathId, ResourceRole, Timestamp, UnreachableStrategy, VersionInfo}
 import mesosphere.marathon.test.{GroupCreation, JerseyTest, Mockito, SettableClock}
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
@@ -988,6 +988,83 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         }
       }
 
+      "A pod update with a custom role should fail if the existing pod has a different custom role" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val existingPodId = PathId("/dev/pod")
+        f.prepareGroup("/dev", pods = Map(existingPodId -> PodDefinition(id = existingPodId, role = "differentCustomRole")))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/dev/pod",
+            |    "role": "someCustomRole",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.update("/dev/pod", podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(422)
+          response.getEntity.toString should include("expected one of: ")
+        }
+      }
+
+      "A pod update with a custom role should be success if the existing pod has the same role" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val existingPodId = PathId("/dev/pod")
+        f.prepareGroup("/dev", pods = Map(existingPodId -> PodDefinition(id = existingPodId, role = "someCustomRole")))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/dev/pod",
+            |    "role": "someCustomRole",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.update("/dev/pod", podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(200)
+        }
+      }
+
     }
 
     "Support seccomp" when {
@@ -1433,10 +1510,10 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       groupManager: GroupManager
   ) extends GroupCreation {
 
-    def prepareGroup(groupId: String): Unit = {
+    def prepareGroup(groupId: String, pods: Map[PathId, PodDefinition] = Group.defaultPods): Unit = {
       val groupPath = PathId(groupId)
 
-      val group = createGroup(groupPath)
+      val group = createGroup(groupPath, pods = pods)
 
       val root = createRootGroup(groups = Set(group))
 

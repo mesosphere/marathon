@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package util
 
+import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.state.{PathId, RootGroup}
 
 /**
@@ -15,7 +16,7 @@ case class RoleSettings(validRoles: Set[String], defaultRole: String) {
   require(validRoles(defaultRole))
 }
 
-object RoleSettings {
+object RoleSettings extends StrictLogging {
   /**
     * Returns the role settings for the service with the specified ID, based on the top-level group and the global config
     *
@@ -35,24 +36,34 @@ object RoleSettings {
       val topLevelGroupPath = servicePathId.rootPath
       val topLevelGroup = rootGroup.group(topLevelGroupPath)
 
-      if (topLevelGroup.isEmpty) {
-        // We don't have a top-level group, so we use just the default Role
-        RoleSettings(validRoles = Set(defaultRole), defaultRole = defaultRole)
-      } else {
-        val group = topLevelGroup.get
-        val defaultForEnforceFromConfig = false // TODO: Use value from config instead
-        val enforceRole = group.enforceRole.getOrElse(defaultForEnforceFromConfig)
+      val roleSettings =
+        if (topLevelGroup.isEmpty) {
+          // TODO: If the topLevelGroup is empty, we might have run into the case where a user creates
+          // a group with runSpecs in a single action. The group isn't yet created, therefore we can't lookup
+          // the group-role and the enforceRole flag. For now we just use the default
+          logger.warn(s"Calculating role settings for $servicePathId, but unable to access top level group $topLevelGroupPath, using defaultRole $defaultRole")
 
-        if (enforceRole) {
-          // With enforceRole, we only allow the service to use the group-role
-          RoleSettings(validRoles = Set(group.id.root), defaultRole = group.id.root)
+          // We don't have a top-level group, so we use just the default Role
+          RoleSettings(validRoles = Set(defaultRole), defaultRole = defaultRole)
         } else {
-          // Without enforce role, we allow both default and top-level group role
-          // The default role depends on the config parameter
-          val defaultRoleToUse = if (defaultForEnforceFromConfig) group.id.root else defaultRole
-          RoleSettings(validRoles = Set(defaultRole, group.id.root), defaultRole = defaultRoleToUse)
+          val group = topLevelGroup.get
+          val defaultForEnforceFromConfig = false // TODO: Use value from config instead
+          val enforceRole = group.enforceRole.getOrElse(defaultForEnforceFromConfig)
+
+          if (enforceRole) {
+            // With enforceRole, we only allow the service to use the group-role
+            RoleSettings(validRoles = Set(group.id.root), defaultRole = group.id.root)
+          } else {
+            // Without enforce role, we allow both default and top-level group role
+            // The default role depends on the config parameter
+            val defaultRoleToUse = if (defaultForEnforceFromConfig) group.id.root else defaultRole
+            RoleSettings(validRoles = Set(defaultRole, group.id.root), defaultRole = defaultRoleToUse)
+          }
         }
-      }
+
+      // Look up any previously set group on the specified runSpec, and add that to the validRoles set if it exists
+      val existingRole = rootGroup.runSpec(servicePathId).map(_.role)
+      existingRole.map(role => roleSettings.copy(validRoles = roleSettings.validRoles + role)).getOrElse(roleSettings)
     }
   }
 

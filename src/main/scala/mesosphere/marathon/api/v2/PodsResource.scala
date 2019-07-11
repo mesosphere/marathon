@@ -125,30 +125,31 @@ class PodsResource @Inject() (
       import PathId._
 
       val podId = id.toRootPath
-      val podDef = unmarshal(body)
+      val podRaml = unmarshal(body)
 
-      val roleSettings = RoleSettings.forService(config, PathId(podDef.id), groupManager.rootGroup())
+      val roleSettings = RoleSettings.forService(config, PathId(podRaml.id), groupManager.rootGroup())
       implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
-      implicit val podDefValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
+      implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
+      implicit val podDefValidator: Validator[PodDefinition] = PodsValidation.podDefValidator(pluginManager, roleSettings)
 
-      validateOrThrow(podDef)
-      if (podId != podDef.id.toRootPath) {
+      validateOrThrow(podRaml)
+      if (podId != podRaml.id.toRootPath) {
         Response.status(Status.BAD_REQUEST).entity(
           s"""
-            |{"message": "'$podId' does not match definition's id ('${podDef.id}')" }
+            |{"message": "'$podId' does not match definition's id ('${podRaml.id}')" }
           """.stripMargin
         ).build()
       } else {
-        val pod = normalize(Raml.fromRaml(podDef.normalize))
-        validateOrThrow(pod)(PodsValidation.pluginValidators)
+        val podDef = normalize(Raml.fromRaml(podRaml.normalize))
+        validateOrThrow(podDef)
 
-        checkAuthorization(UpdateRunSpec, pod)
-        val deployment = await(podSystem.update(pod, force))
+        checkAuthorization(UpdateRunSpec, podDef)
+        val deployment = await(podSystem.update(podDef, force))
         eventBus.publish(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Updated))
 
         val builder = Response
-          .ok(new URI(pod.id.toString))
-          .entity(marshal(pod))
+          .ok(new URI(podDef.id.toString))
+          .entity(marshal(podDef))
           .header(RestResource.DeploymentHeader, deployment.id)
         builder.build()
       }

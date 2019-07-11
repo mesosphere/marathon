@@ -269,7 +269,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     case PodPersistentVolume(name, _) => name
   }
 
-  def pluginValidators(implicit pluginManager: PluginManager): Validator[PodDefinition] =
+  private def pluginValidators(implicit pluginManager: PluginManager): Validator[PodDefinition] =
     new Validator[PodDefinition] {
       override def apply(pod: PodDefinition): Result = {
         val plugins = pluginManager.plugins[RunSpecValidator]
