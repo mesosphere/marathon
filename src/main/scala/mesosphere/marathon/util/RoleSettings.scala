@@ -45,7 +45,7 @@ object RoleSettings {
         val enforceRole = group.enforceRole.getOrElse(defaultForEnforceFromConfig)
 
         if (enforceRole) {
-          // With enforceRole, we only allow the top-level group role
+          // With enforceRole, we only allow the service to use the group-role
           RoleSettings(enforceRole = true, validRoles = Set(group.id.root), defaultRole = group.id.root)
         } else {
           // Without enforce role, we allow both default and top-level group role
