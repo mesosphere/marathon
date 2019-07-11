@@ -221,7 +221,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       podDefValidatorWithValidRolesList(podDef) should be(aSuccess)
     }
 
-    "be invalid when the role is not in the the role enforcement" in new Fixture {
+    "be invalid when the role is neither the group-role nor the default role (and enforcerole is off)" in new Fixture {
       val podDef = podWithoutRole.copy(role = Some("anotherRole")).fromRaml
       podDefValidatorWithValidRolesList(podDef) should haveViolations(
         "/role" -> "got anotherRole, expected one of: [dev]")
