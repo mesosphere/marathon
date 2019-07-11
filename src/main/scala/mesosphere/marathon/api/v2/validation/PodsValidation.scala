@@ -258,7 +258,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
 
   def validPodDefinitionWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[PodDefinition] = validator[PodDefinition] { pod =>
     pod.role is in(roleEnforcement.validRoles)
-    pod.acceptedResourceRoles is valid(ResourceRole.validForRole(roleEnforcement.validRoles))
+    pod.acceptedResourceRoles is valid(ResourceRole.validForRole(Set(pod.role)))
   }
 
   private def volumeNames(volumes: Seq[PodVolume]): Seq[String] = volumes.map(volumeName)
