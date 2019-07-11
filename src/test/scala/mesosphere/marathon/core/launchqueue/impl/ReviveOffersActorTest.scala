@@ -150,7 +150,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
     val initialFrameworkInfo = FrameworkInfo.newBuilder().setUser("test").setName("test").build
 
     lazy val actorRef: TestActorRef[ReviveOffersActor] = TestActorRef[ReviveOffersActor](
-      ReviveOffersActor.props(metrics, Future.successful(initialFrameworkInfo), defaultRole, minReviveOffersInterval = 100.millis,
+      ReviveOffersActor.props(metrics, Future.successful(initialFrameworkInfo), defaultRole, minReviveOffersInterval = 500.millis,
         instanceUpdates = instanceUpdates, rateLimiterUpdates = delayUpdates, driverHolder = driverHolder, enableSuppress = enableSuppress)
     )
 

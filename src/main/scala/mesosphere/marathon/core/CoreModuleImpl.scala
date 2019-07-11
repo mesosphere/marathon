@@ -52,7 +52,7 @@ import scala.util.Random
   */
 class CoreModuleImpl @Inject() (
     // external dependencies still wired by guice
-                               httpConf: HttpConf,
+    httpConf: HttpConf,
     marathonConf: MarathonConf,
     eventStream: EventStream,
     @Named(ModuleNames.HOST_PORT) hostPort: String,
