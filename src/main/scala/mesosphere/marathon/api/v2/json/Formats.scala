@@ -459,7 +459,7 @@ trait AppAndGroupFormats {
         "id" -> info.group.id,
         "dependencies" -> info.group.dependencies,
         "version" -> info.group.version,
-        "enforceRole" -> info.group.enforceRole.map(_.name)
+        "enforceRole" -> info.group.enforceRole
       )
 
       maybeJson.foldLeft(groupJson)((result, obj) => result ++ obj)

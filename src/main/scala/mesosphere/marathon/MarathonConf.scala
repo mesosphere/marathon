@@ -137,10 +137,11 @@ trait MarathonConf
     case None => Set(ResourceRole.Unreserved)
   }
 
-  lazy val defaultEnforceGroupRole = opt[EnforceGroupRole](
-    name = "default_enforce_group_role",
-    descr = "The default for `enforceRole` in top level groups.",
-    default = Some(EnforceGroupRole.Off))(enforceGroupRoleConverter)
+  lazy val groupRoleBehavior = opt[GroupRoleBehavior](
+    name = "group_role_behavior",
+    descr = "Defines the behavior for group roles. 'Top' means that all child apps and pods are launched" +
+      "with the role of the top-level group.",
+    default = Some(GroupRoleBehavior.Off))(groupRoleBehaviorConverter)
 
   lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.getOrElse(expectedResourceRoles)
 
@@ -372,14 +373,14 @@ object MarathonConf extends StrictLogging {
 
   }
 
-  val enforceGroupRoleConverter = new ValueConverter[EnforceGroupRole] {
+  val groupRoleBehaviorConverter = new ValueConverter[GroupRoleBehavior] {
     val argType = org.rogach.scallop.ArgType.SINGLE
 
-    override def parse(s: List[(String, List[String])]): Either[String, Option[EnforceGroupRole]] = s match {
+    override def parse(s: List[(String, List[String])]): Either[String, Option[GroupRoleBehavior]] = s match {
       case (_, enforceGroupRole :: Nil) :: Nil =>
-        EnforceGroupRole.fromString(enforceGroupRole) match {
+        GroupRoleBehavior.fromString(enforceGroupRole) match {
           case o @ Some(_) => Right(o)
-          case None => Left(s"Setting $enforceGroupRole is invalid. Valid settings are ${EnforceGroupRole.all.map(_.name).mkString(", ")}")
+          case None => Left(s"Setting $enforceGroupRole is invalid. Valid settings are ${GroupRoleBehavior.all.map(_.name).mkString(", ")}")
         }
       case Nil =>
         Right(None)

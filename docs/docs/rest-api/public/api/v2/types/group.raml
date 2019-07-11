@@ -43,7 +43,7 @@ types:
       version?:
         type: datetime
       enforceRole?:
-        type: EnforceRole
+        type: boolean
   GroupUpdate:
     type: object
     (pragma.asUpdateType):
@@ -68,14 +68,9 @@ types:
       version?:
         type: datetime
       enforceRole?:
-        type: EnforceRole
+        type: boolean
   GroupPartialUpdate:
     type: object
     properties:
       enforceRole?:
-        type: EnforceRole
-  EnforceRole:
-      type: string
-      enum:
-        - Off
-        - Top
+        type: boolean

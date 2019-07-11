@@ -22,7 +22,7 @@ class Group(
     val groupsById: Map[Group.GroupKey, Group] = defaultGroups,
     val dependencies: Set[PathId] = defaultDependencies,
     val version: Timestamp = defaultVersion,
-    val enforceRole: Option[EnforceGroupRole] = None) extends IGroup {
+    val enforceRole: Option[Boolean] = None) extends IGroup {
 
   require((id.parent.isRoot && enforceRole.isDefined) || enforceRole.isEmpty, "Only top-level groups can define the enforce role parameter.")
 
@@ -135,7 +135,7 @@ object Group extends StrictLogging {
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
     dependencies: Set[PathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
-    enforceRole: Option[EnforceGroupRole] = None): Group = {
+    enforceRole: Option[Boolean] = None): Group = {
     if (id.parent.isRoot) new Group(id, apps, pods, groupsById, dependencies, version, enforceRole)
     else new Group(id, apps, pods, groupsById, dependencies, version, None)
   }
@@ -238,7 +238,7 @@ object Group extends StrictLogging {
       group is notNull
 
       // Only top-level groups are allowed to set the enforce role parameter.
-      if (group.enforceRole.isDefined) {
+      if (group.enforceRole.contains(true)) {
         group.id.map(_.toPath) is optional(PathId.topLevel)
       }
 
@@ -258,12 +258,9 @@ object Group extends StrictLogging {
         validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup)))
     }
 
-  case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[PathId]) extends Validator[Option[raml.EnforceRole]] {
+  case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[PathId]) extends Validator[Option[Boolean]] {
 
-    def noChange(newEnforceRole: raml.EnforceRole, oldEnforceRole: EnforceGroupRole): Boolean =
-      (newEnforceRole == raml.EnforceRole.Off && oldEnforceRole == EnforceGroupRole.Off) || (newEnforceRole == raml.EnforceRole.Top && oldEnforceRole == EnforceGroupRole.Top)
-
-    def apply(maybeNewEnforceRole: Option[raml.EnforceRole]) = {
+    def apply(maybeNewEnforceRole: Option[Boolean]) = {
       val originalGroup = updatedGroupId.flatMap(originalRootGroup.group) // TODO: why is groupUpdate.id optional? What is the semantic there?
       (maybeNewEnforceRole, originalGroup.flatMap(_.enforceRole)) match {
         case (None, None) => Success
@@ -272,7 +269,7 @@ object Group extends StrictLogging {
         case (None, Some(_)) =>
           Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be removed from $updatedGroupId.")))
         case (Some(newEnforceRole), Some(oldEnforceRole)) =>
-          if (noChange(newEnforceRole, oldEnforceRole)) Success
+          if (newEnforceRole == oldEnforceRole) Success
           else Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be changed from $oldEnforceRole to $newEnforceRole for $updatedGroupId.")))
         case _ => Success
       }

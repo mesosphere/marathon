@@ -38086,18 +38086,13 @@ public final class Protos {
         int index);
 
     /**
-     * <code>optional string enforceRole = 9;</code>
+     * <code>optional bool enforceRole = 9;</code>
      */
     boolean hasEnforceRole();
     /**
-     * <code>optional string enforceRole = 9;</code>
+     * <code>optional bool enforceRole = 9;</code>
      */
-    java.lang.String getEnforceRole();
-    /**
-     * <code>optional string enforceRole = 9;</code>
-     */
-    com.google.protobuf.ByteString
-        getEnforceRoleBytes();
+    boolean getEnforceRole();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.GroupDefinition}
@@ -38120,7 +38115,7 @@ public final class Protos {
       dependencies_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       apps_ = java.util.Collections.emptyList();
       pods_ = java.util.Collections.emptyList();
-      enforceRole_ = "";
+      enforceRole_ = false;
     }
 
     @java.lang.Override
@@ -38220,10 +38215,9 @@ public final class Protos {
                   input.readMessage(mesosphere.marathon.Protos.Json.PARSER, extensionRegistry));
               break;
             }
-            case 74: {
-              com.google.protobuf.ByteString bs = input.readBytes();
+            case 72: {
               bitField0_ |= 0x00000004;
-              enforceRole_ = bs;
+              enforceRole_ = input.readBool();
               break;
             }
           }
@@ -39315,45 +39309,18 @@ public final class Protos {
     }
 
     public static final int ENFORCEROLE_FIELD_NUMBER = 9;
-    private volatile java.lang.Object enforceRole_;
+    private boolean enforceRole_;
     /**
-     * <code>optional string enforceRole = 9;</code>
+     * <code>optional bool enforceRole = 9;</code>
      */
     public boolean hasEnforceRole() {
       return ((bitField0_ & 0x00000004) == 0x00000004);
     }
     /**
-     * <code>optional string enforceRole = 9;</code>
+     * <code>optional bool enforceRole = 9;</code>
      */
-    public java.lang.String getEnforceRole() {
-      java.lang.Object ref = enforceRole_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        if (bs.isValidUtf8()) {
-          enforceRole_ = s;
-        }
-        return s;
-      }
-    }
-    /**
-     * <code>optional string enforceRole = 9;</code>
-     */
-    public com.google.protobuf.ByteString
-        getEnforceRoleBytes() {
-      java.lang.Object ref = enforceRole_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        enforceRole_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public boolean getEnforceRole() {
+      return enforceRole_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -39431,7 +39398,7 @@ public final class Protos {
         output.writeMessage(8, deprecatedPods_.get(i));
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 9, enforceRole_);
+        output.writeBool(9, enforceRole_);
       }
       unknownFields.writeTo(output);
     }
@@ -39476,7 +39443,8 @@ public final class Protos {
           .computeMessageSize(8, deprecatedPods_.get(i));
       }
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(9, enforceRole_);
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(9, enforceRole_);
       }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
@@ -39518,8 +39486,8 @@ public final class Protos {
           .equals(other.getPodsList());
       result = result && (hasEnforceRole() == other.hasEnforceRole());
       if (hasEnforceRole()) {
-        result = result && getEnforceRole()
-            .equals(other.getEnforceRole());
+        result = result && (getEnforceRole()
+            == other.getEnforceRole());
       }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
@@ -39566,7 +39534,8 @@ public final class Protos {
       }
       if (hasEnforceRole()) {
         hash = (37 * hash) + ENFORCEROLE_FIELD_NUMBER;
-        hash = (53 * hash) + getEnforceRole().hashCode();
+        hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+            getEnforceRole());
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -39738,7 +39707,7 @@ public final class Protos {
         } else {
           podsBuilder_.clear();
         }
-        enforceRole_ = "";
+        enforceRole_ = false;
         bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
@@ -40019,9 +39988,7 @@ public final class Protos {
           }
         }
         if (other.hasEnforceRole()) {
-          bitField0_ |= 0x00000100;
-          enforceRole_ = other.enforceRole_;
-          onChanged();
+          setEnforceRole(other.getEnforceRole());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -41599,78 +41566,34 @@ public final class Protos {
         return podsBuilder_;
       }
 
-      private java.lang.Object enforceRole_ = "";
+      private boolean enforceRole_ ;
       /**
-       * <code>optional string enforceRole = 9;</code>
+       * <code>optional bool enforceRole = 9;</code>
        */
       public boolean hasEnforceRole() {
         return ((bitField0_ & 0x00000100) == 0x00000100);
       }
       /**
-       * <code>optional string enforceRole = 9;</code>
+       * <code>optional bool enforceRole = 9;</code>
        */
-      public java.lang.String getEnforceRole() {
-        java.lang.Object ref = enforceRole_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            enforceRole_ = s;
-          }
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      public boolean getEnforceRole() {
+        return enforceRole_;
       }
       /**
-       * <code>optional string enforceRole = 9;</code>
+       * <code>optional bool enforceRole = 9;</code>
        */
-      public com.google.protobuf.ByteString
-          getEnforceRoleBytes() {
-        java.lang.Object ref = enforceRole_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          enforceRole_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>optional string enforceRole = 9;</code>
-       */
-      public Builder setEnforceRole(
-          java.lang.String value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000100;
+      public Builder setEnforceRole(boolean value) {
+        bitField0_ |= 0x00000100;
         enforceRole_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>optional string enforceRole = 9;</code>
+       * <code>optional bool enforceRole = 9;</code>
        */
       public Builder clearEnforceRole() {
         bitField0_ = (bitField0_ & ~0x00000100);
-        enforceRole_ = getDefaultInstance().getEnforceRole();
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>optional string enforceRole = 9;</code>
-       */
-      public Builder setEnforceRoleBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000100;
-        enforceRole_ = value;
+        enforceRole_ = false;
         onChanged();
         return this;
       }
@@ -49286,7 +49209,7 @@ public final class Protos {
       "rathon.GroupDefinition.AppReference\022?\n\004p" +
       "ods\030\007 \003(\01321.mesosphere.marathon.GroupDef" +
       "inition.AppReference\022\023\n\013enforceRole\030\t \001(" +
-      "\t\032+\n\014AppReference\022\n\n\002id\030\001 \002(\t\022\017\n\007version" +
+      "\010\032+\n\014AppReference\022\n\n\002id\030\001 \002(\t\022\017\n\007version" +
       "\030\002 \002(\t\"\371\001\n\030DeploymentPlanDefinition\022\n\n\002i" +
       "d\030\001 \002(\t\022\021\n\ttimestamp\030\002 \001(\t\022A\n\023deprecated" +
       "_original\030\004 \001(\0132$.mesosphere.marathon.Gr" +
