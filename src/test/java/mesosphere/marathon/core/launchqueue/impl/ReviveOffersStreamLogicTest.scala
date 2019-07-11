@@ -32,14 +32,19 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
       val instance3 = Instance.scheduled(webApp)
 
       Given("A suppress/revive flow with suppression enabled and 200 millis revive interval")
-      val suppressReviveFlow = ReviveOffersStreamLogic.suppressAndReviveFlow(minReviveOffersInterval = 200.millis, enableSuppress = true)
+      val suppressReviveFlow = ReviveOffersStreamLogic.suppressAndReviveFlow(minReviveOffersInterval = 200.millis, enableSuppress = true, defaultRole = "web")
 
       val (input, output) = inputSourceQueue.via(suppressReviveFlow).toMat(outputSinkQueue)(Keep.both).run
 
       When("An initial snapshot with a launched instance is offered")
       input.offer(Left(InstancesSnapshot(List(launchedInstance)))).futureValue
 
-      Then("An update framework event is issued with the role suppressed")
+      And("3 instance updates are sent for the role 'web'")
+      Future.sequence(Seq(instance1, instance2, instance3).map { i =>
+        input.offer(Left(InstanceUpdated(i, None, Nil)))
+      }).futureValue
+
+      Then("An update framework event is issued with the role suppressed in response to the snapshot")
       inside(output.pull().futureValue) {
         case Some(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
           roleState shouldBe Map("web" -> OffersNotWanted)
@@ -47,12 +52,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
           newlySuppressed shouldBe Set.empty
       }
 
-      When("3 instance updates are sent for the role 'web'")
-      Future.sequence(Seq(instance1, instance2, instance3).map { i =>
-        input.offer(Left(InstanceUpdated(i, None, Nil)))
-      }).futureValue
-
-      Then("The revives get combined in to a single update framework call")
+      Then("The revives from the instances get combined in to a single update framework call")
       inside(output.pull().futureValue) {
         case Some(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
           roleState shouldBe Map("web" -> OffersWanted)
@@ -74,7 +74,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
     }
 
     "does not send suppress if enableSuppress is disabled" in {
-      val suppressReviveFlow = ReviveOffersStreamLogic.suppressAndReviveFlow(minReviveOffersInterval = 200.millis, enableSuppress = false)
+      val suppressReviveFlow = ReviveOffersStreamLogic.suppressAndReviveFlow(minReviveOffersInterval = 200.millis, enableSuppress = false, defaultRole = "web")
 
       val result = Source(List(Left(InstancesSnapshot(List(launchedInstance)))))
         .via(suppressReviveFlow)
@@ -118,12 +118,12 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
     // Many of these components are more easily tested without throttling logic
     val suppressReviveFlow: Flow[Either[InstanceChangeOrSnapshot, ReviveOffersStreamLogic.DelayedStatus], RoleDirective, NotUsed] =
       ReviveOffersStreamLogic
-        .reviveStateFromInstancesAndDelays
+        .reviveStateFromInstancesAndDelays("web")
         .map(_.roleReviveVersions)
         .via(ReviveOffersStreamLogic.reviveDirectiveFlow(enableSuppress = true))
 
-    "issue a suppress in response to an snapshot with a single lanched instance, and no updates" in {
-      val results = Source(List(Left(InstancesSnapshot(List(launchedInstance)))))
+    "issues a suppress for the default role in response to an empty snapshot" in {
+      val results = Source(List(Left(InstancesSnapshot(Nil))))
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
@@ -229,7 +229,8 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
         .futureValue
 
       inside(results) {
-        case Seq(update1: UpdateFramework, update2: UpdateFramework, update3: UpdateFramework) =>
+        case Seq(initialUpdate: UpdateFramework, update1: UpdateFramework, update2: UpdateFramework, update3: UpdateFramework) =>
+          initialUpdate.roleState("web") shouldBe OffersNotWanted
           update1.roleState("web") shouldBe OffersWanted
           update2.roleState("web") shouldBe OffersNotWanted
           update3.roleState("web") shouldBe OffersWanted

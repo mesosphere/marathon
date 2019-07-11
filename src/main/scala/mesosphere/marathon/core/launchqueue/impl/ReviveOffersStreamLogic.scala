@@ -37,9 +37,9 @@ object ReviveOffersStreamLogic extends StrictLogging {
       case TimedEmitter.Inactive(ref) => NotDelayed(ref)
     }
 
-  val reviveStateFromInstancesAndDelays: Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], ReviveOffersState, NotUsed] = {
+  def reviveStateFromInstancesAndDelays(defaultRole: String): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], ReviveOffersState, NotUsed] = {
     Flow[Either[InstanceChangeOrSnapshot, DelayedStatus]].scan(ReviveOffersState.empty) {
-      case (current, Left(snapshot: InstancesSnapshot)) => current.withSnapshot(snapshot)
+      case (current, Left(snapshot: InstancesSnapshot)) => current.withSnapshot(snapshot, defaultRole)
       case (current, Left(InstanceUpdated(updated, _, _))) => current.withInstanceAddedOrUpdated(updated)
       case (current, Left(InstanceDeleted(deleted, _, _))) => current.withInstanceDeleted(deleted)
       case (current, Right(Delayed(configRef))) => current.withDelay(configRef)
@@ -59,15 +59,17 @@ object ReviveOffersStreamLogic extends StrictLogging {
     * @return
     */
   def suppressAndReviveFlow(
+
     minReviveOffersInterval: FiniteDuration,
-    enableSuppress: Boolean): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], RoleDirective, NotUsed] = {
+    enableSuppress: Boolean,
+    defaultRole: String): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], RoleDirective, NotUsed] = {
 
     val reviveRepeaterWithTicks = Flow[RoleDirective]
       .map(Left(_))
       .merge(Source.tick(minReviveOffersInterval, minReviveOffersInterval, Right(Tick)), eagerComplete = true)
       .via(reviveRepeater)
 
-    reviveStateFromInstancesAndDelays
+    reviveStateFromInstancesAndDelays(defaultRole)
       .buffer(1, OverflowStrategy.dropHead) // While we are back-pressured, we drop older interim frames
       .throttle(1, minReviveOffersInterval)
       .map(_.roleReviveVersions)

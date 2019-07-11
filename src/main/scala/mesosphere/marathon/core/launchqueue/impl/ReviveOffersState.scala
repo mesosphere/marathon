@@ -31,13 +31,15 @@ case class ReviveOffersState(
     copy(hungryInstances, activeDelays, version + 1)
   }
 
-  def withSnapshot(snapshot: InstancesSnapshot): ReviveOffersState = {
+  def withSnapshot(snapshot: InstancesSnapshot, defaultRole: String): ReviveOffersState = {
     val hungryInstances = snapshot.instances.groupBy(_.role).map {
       case (role, instances) =>
         role -> instances.view.filter(isHungry).map { i => i.instanceId -> toHungryInstance(i) }.toMap
     }
+    val defaultRoleEntry: Map[String, Map[Instance.Id, HungryInstance]] = Map(defaultRole -> Map.empty)
+
     // Note - we take all known roles, whether offers are wanted or not, and create at least an empty map entry in the hungryInstances map
-    copyBumpingVersion(hungryInstances = hungryInstances)
+    copyBumpingVersion(hungryInstances = defaultRoleEntry ++ hungryInstances)
   }
 
   private def hasHungryInstance(role: String, instanceId: Instance.Id): Boolean = {
@@ -74,7 +76,7 @@ case class ReviveOffersState(
 
   /** @return this state updated with an instance. */
   def withInstanceAddedOrUpdated(instance: Instance): ReviveOffersState = {
-    if (hasHungryInstance(instance.role, instance.instanceId)) {
+    if (isHungry(instance) && hasHungryInstance(instance.role, instance.instanceId)) {
       this
     } else {
       updateInstanceState(instance.role, instance.instanceId, Some(instance))

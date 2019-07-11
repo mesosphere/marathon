@@ -68,7 +68,9 @@ class ReviveOffersActor(
 
     val suppressReviveFlow = ReviveOffersStreamLogic.suppressAndReviveFlow(
       minReviveOffersInterval = minReviveOffersInterval,
-      enableSuppress = enableSuppress)
+      enableSuppress = enableSuppress,
+      defaultMesosRole
+    )
 
     val done: Future[Done] = initialFrameworkInfo.flatMap { frameworkInfo =>
       flattenedInstanceUpdates.map(Left(_))
