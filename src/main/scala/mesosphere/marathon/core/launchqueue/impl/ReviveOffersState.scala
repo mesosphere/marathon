@@ -4,18 +4,19 @@ package core.launchqueue.impl
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstancesSnapshot
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.state.RunSpecConfigRef
-import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.{HungryInstance, ReviveReason}
+import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.{HungryInstance, ReviveReason, Role}
 import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.VersionedRoleState
+import mesosphere.marathon.state.RunSpecConfigRef
 
 /**
   * Holds the current state and defines the revive logic.
   *
-  * @param hungryInstances All scheduled instance requiring offers and their run spec ref.
+  * @param hungryInstances All scheduled instances, grouped by role, requiring offers and their RunSpec ref.
   * @param activeDelays    Delays for run specs.
+  * @param version         Monotonically increasing number, used ultimately so that we can tell if new instances for a role want offers
   */
 case class ReviveOffersState(
-    hungryInstances: Map[String, Map[Instance.Id, HungryInstance]],
+    hungryInstances: Map[Role, Map[Instance.Id, HungryInstance]],
     activeDelays: Set[RunSpecConfigRef],
     version: Long) extends StrictLogging {
 
@@ -25,31 +26,31 @@ case class ReviveOffersState(
   }
 
   private def copyBumpingVersion(
-    hungryInstances: Map[String, Map[Instance.Id, HungryInstance]] = hungryInstances,
+    hungryInstances: Map[Role, Map[Instance.Id, HungryInstance]] = hungryInstances,
     activeDelays: Set[RunSpecConfigRef] = activeDelays): ReviveOffersState = {
 
     copy(hungryInstances, activeDelays, version + 1)
   }
 
-  def withSnapshot(snapshot: InstancesSnapshot, defaultRole: String): ReviveOffersState = {
+  def withSnapshot(snapshot: InstancesSnapshot, defaultRole: Role): ReviveOffersState = {
     val hungryInstances = snapshot.instances.groupBy(_.role).map {
       case (role, instances) =>
         role -> instances.view.filter(isHungry).map { i => i.instanceId -> toHungryInstance(i) }.toMap
     }
-    val defaultRoleEntry: Map[String, Map[Instance.Id, HungryInstance]] = Map(defaultRole -> Map.empty)
+    val defaultRoleEntry: Map[Role, Map[Instance.Id, HungryInstance]] = Map(defaultRole -> Map.empty)
 
     // Note - we take all known roles, whether offers are wanted or not, and create at least an empty map entry in the hungryInstances map
     copyBumpingVersion(hungryInstances = defaultRoleEntry ++ hungryInstances)
   }
 
-  private def hasHungryInstance(role: String, instanceId: Instance.Id): Boolean = {
+  private def hasHungryInstance(role: Role, instanceId: Instance.Id): Boolean = {
     hungryInstances.getOrElse(role, Map.empty).contains(instanceId)
   }
 
-  private def updateInstanceState(role: String, instanceId: Instance.Id, newState: Option[Instance]): ReviveOffersState = {
+  private def updateInstanceState(role: Role, instanceId: Instance.Id, newState: Option[Instance]): ReviveOffersState = {
     val newHungryState = newState.filter(isHungry).map(toHungryInstance)
 
-    val newHungryInstances: Map[String, Map[Instance.Id, HungryInstance]] = newHungryState match {
+    val newHungryInstances: Map[Role, Map[Instance.Id, HungryInstance]] = newHungryState match {
       case Some(hungryInstance) =>
         hungryInstance.reason match {
           case ReviveReason.Launching =>
@@ -124,7 +125,7 @@ case class ReviveOffersState(
   }
 
   /** scheduled instances that should be launched. */
-  lazy val roleReviveVersions: Map[String, VersionedRoleState] = {
+  lazy val roleReviveVersions: Map[Role, VersionedRoleState] = {
     hungryInstances.keysIterator.map { role =>
       val iterator = hungryInstances.getOrElse(role, Map.empty).values
         .iterator
@@ -144,6 +145,7 @@ case class ReviveOffersState(
 }
 
 object ReviveOffersState {
+  type Role = String
   def empty = ReviveOffersState(Map.empty, Set.empty, 0)
 
   case class HungryInstance(version: Long, reason: ReviveReason, ref: RunSpecConfigRef)

@@ -6,6 +6,7 @@ import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Flow, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{InstanceChangeOrSnapshot, InstanceDeleted, InstanceUpdated, InstancesSnapshot}
+import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.Role
 import mesosphere.marathon.state.RunSpecConfigRef
 import mesosphere.marathon.stream.TimedEmitter
 
@@ -37,7 +38,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
       case TimedEmitter.Inactive(ref) => NotDelayed(ref)
     }
 
-  def reviveStateFromInstancesAndDelays(defaultRole: String): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], ReviveOffersState, NotUsed] = {
+  def reviveStateFromInstancesAndDelays(defaultRole: Role): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], ReviveOffersState, NotUsed] = {
     Flow[Either[InstanceChangeOrSnapshot, DelayedStatus]].scan(ReviveOffersState.empty) {
       case (current, Left(snapshot: InstancesSnapshot)) => current.withSnapshot(snapshot, defaultRole)
       case (current, Left(InstanceUpdated(updated, _, _))) => current.withInstanceAddedOrUpdated(updated)
@@ -62,7 +63,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
 
     minReviveOffersInterval: FiniteDuration,
     enableSuppress: Boolean,
-    defaultRole: String): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], RoleDirective, NotUsed] = {
+    defaultRole: Role): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], RoleDirective, NotUsed] = {
 
     val reviveRepeaterWithTicks = Flow[RoleDirective]
       .map(Left(_))
@@ -73,13 +74,15 @@ object ReviveOffersStreamLogic extends StrictLogging {
       .buffer(1, OverflowStrategy.dropHead) // While we are back-pressured, we drop older interim frames
       .throttle(1, minReviveOffersInterval)
       .map(_.roleReviveVersions)
+      .map(l => { logger.info(s"roleReviveVersions = ${l}"); l })
       .via(reviveDirectiveFlow(enableSuppress))
+      .map(l => { logger.info(s"reviveDirectiveFlow = ${l}"); l })
       .via(reviveRepeaterWithTicks)
   }
 
-  def reviveDirectiveFlow(enableSuppress: Boolean): Flow[Map[String, VersionedRoleState], RoleDirective, NotUsed] = {
+  def reviveDirectiveFlow(enableSuppress: Boolean): Flow[Map[Role, VersionedRoleState], RoleDirective, NotUsed] = {
     val logic = if (enableSuppress) new ReviveDirectiveFlowLogicWithSuppression else new ReviveDirectiveFlowLogicWithoutSuppression
-    Flow[Map[String, VersionedRoleState]]
+    Flow[Map[Role, VersionedRoleState]]
       .sliding(2)
       .mapConcat({
         case Seq(lastState, newState) =>
@@ -91,15 +94,15 @@ object ReviveOffersStreamLogic extends StrictLogging {
   }
 
   trait ReviveDirectiveFlowLogic {
-    def lastOffersWantedVersion(lastState: Map[String, VersionedRoleState], role: String): Option[Long] =
+    def lastOffersWantedVersion(lastState: Map[Role, VersionedRoleState], role: Role): Option[Long] =
       lastState.get(role).collect { case VersionedRoleState(version, OffersWanted) => version }
 
-    def directivesForDiff(lastState: Map[String, VersionedRoleState], newState: Map[String, VersionedRoleState]): List[RoleDirective]
+    def directivesForDiff(lastState: Map[Role, VersionedRoleState], newState: Map[Role, VersionedRoleState]): List[RoleDirective]
   }
 
   class ReviveDirectiveFlowLogicWithoutSuppression extends ReviveDirectiveFlowLogic {
 
-    def directivesForDiff(lastState: Map[String, VersionedRoleState], newState: Map[String, VersionedRoleState]): List[RoleDirective] = {
+    def directivesForDiff(lastState: Map[Role, VersionedRoleState], newState: Map[Role, VersionedRoleState]): List[RoleDirective] = {
       val rolesChanged = lastState.keySet != newState.keySet
       val directives = List.newBuilder[RoleDirective]
 
@@ -130,16 +133,16 @@ object ReviveOffersStreamLogic extends StrictLogging {
 
   class ReviveDirectiveFlowLogicWithSuppression extends ReviveDirectiveFlowLogic {
 
-    private def offersNotWantedRoles(state: Map[String, VersionedRoleState]): Set[String] =
+    private def offersNotWantedRoles(state: Map[Role, VersionedRoleState]): Set[Role] =
       state.collect { case (role, VersionedRoleState(_, OffersNotWanted)) => role }.toSet
 
-    def updateFrameworkNeeded(lastState: Map[String, VersionedRoleState], newState: Map[String, VersionedRoleState]) = {
+    def updateFrameworkNeeded(lastState: Map[Role, VersionedRoleState], newState: Map[Role, VersionedRoleState]) = {
       val rolesChanged = lastState.keySet != newState.keySet
       val suppressedChanged = offersNotWantedRoles(lastState) != offersNotWantedRoles(newState)
       rolesChanged || suppressedChanged
     }
 
-    def directivesForDiff(lastState: Map[String, VersionedRoleState], newState: Map[String, VersionedRoleState]): List[RoleDirective] = {
+    def directivesForDiff(lastState: Map[Role, VersionedRoleState], newState: Map[Role, VersionedRoleState]): List[RoleDirective] = {
       val directives = List.newBuilder[RoleDirective]
 
       if (updateFrameworkNeeded(lastState, newState)) {
@@ -184,10 +187,10 @@ object ReviveOffersStreamLogic extends StrictLogging {
     }
 
   private[impl] class ReviveRepeaterLogic {
-    var currentRoleState: Map[String, RoleOfferState] = Map.empty
-    var repeatIn: Map[String, Int] = Map.empty
+    var currentRoleState: Map[Role, RoleOfferState] = Map.empty
+    var repeatIn: Map[Role, Int] = Map.empty
 
-    def markRolesForRepeat(roles: Iterable[String]): Unit =
+    def markRolesForRepeat(roles: Iterable[Role]): Unit =
       roles.foreach {
         role =>
           repeatIn += role -> 2
