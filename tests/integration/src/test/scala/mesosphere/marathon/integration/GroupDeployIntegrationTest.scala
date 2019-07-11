@@ -98,7 +98,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       And("The group info is complete")
       val groupInfo = marathon.group(id)
-//      groupInfo.value.enforceRole.value should be("foo")
+      //groupInfo.value.enforceRole.value should be(true)
     }
 
     "update a group with applications to restart" in {
@@ -373,11 +373,11 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val tasks = marathon.tasks(appId)
 
       When("The group is updated to change the enforce role setting")
-      val result = marathon.updateGroup(gid, GroupUpdate(id = Some(gid.toString), apps = Some(Set(app1V1)), enforceRole = Some(raml.EnforceRole.Top)))
+      val result = marathon.updateGroup(gid, GroupUpdate(id = Some(gid.toString), apps = Some(Set(app1V1)), enforceRole = Some(true)))
 
       Then("The update fails")
       result should be(UnprocessableEntity)
-      result.entityString should include("enforce role cannot be updated to Top")
+      result.entityString should include("enforce role cannot be updated to true")
     }
 
     "Patching second level group fails" in {
@@ -389,7 +389,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       waitForDeployment(result)
 
       When("the second level is patched")
-      val patchResult = marathon.patchGroup(gid, raml.GroupPartialUpdate(Some(raml.EnforceRole.Top)))
+      val patchResult = marathon.patchGroup(gid, raml.GroupPartialUpdate(Some(true)))
 
       Then("the request fails")
       patchResult should be(UnprocessableEntity)
@@ -404,7 +404,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       waitForDeployment(result)
 
       When("the top level is patched")
-      val patchResult = marathon.patchGroup(gid.parent, raml.GroupPartialUpdate(Some(raml.EnforceRole.Top)))
+      val patchResult = marathon.patchGroup(gid.parent, raml.GroupPartialUpdate(Some(true)))
 
       Then("the request succeeds")
       patchResult should be(OK)
