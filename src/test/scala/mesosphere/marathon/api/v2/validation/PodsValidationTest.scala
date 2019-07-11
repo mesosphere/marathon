@@ -216,7 +216,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
         "/role" -> "got null, expected one of: [dev]")
     }
 
-    "be valid when the role is the same as the role setting" in new Fixture {
+    "be valid when the role matches the group-role" in new Fixture {
       val podDef = podWithoutRole.copy(role = Some("dev")).fromRaml
       podDefValidatorWithValidRolesList(podDef) should be(aSuccess)
     }
