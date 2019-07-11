@@ -48,9 +48,9 @@ case class ReviveOffersState(
   }
 
   private def updateInstanceState(role: Role, instanceId: Instance.Id, newState: Option[Instance]): ReviveOffersState = {
-    val newHungryState = newState.filter(isHungry).map(toHungryInstance)
+    val newHungryInstance = newState.filter(isHungry).map(toHungryInstance)
 
-    val newHungryInstances: Map[Role, Map[Instance.Id, HungryInstance]] = newHungryState match {
+    val newHungryInstances: Map[Role, Map[Instance.Id, HungryInstance]] = newHungryInstance match {
       case Some(hungryInstance) =>
         hungryInstance.reason match {
           case ReviveReason.Launching =>
