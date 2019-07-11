@@ -1,9 +1,14 @@
 package mesosphere.marathon
 package api.v2.json
 
+import java.time.{OffsetDateTime, ZoneOffset}
+import java.time.format.DateTimeFormatter
+
 import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.SerializerProvider
+import com.fasterxml.jackson.databind.{SerializationFeature, SerializerProvider}
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.datatype.jsr310.ser.OffsetDateTimeSerializer
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.{DeploymentAction, DeploymentPlan, DeploymentStep, DeploymentStepInfo}
 import mesosphere.marathon.core.event._
@@ -48,6 +53,18 @@ object Formats extends Formats {
         _.toSeconds
       )
   }
+
+  def configureJacksonSerializer(): Unit = {
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
+    val s = new OffsetDateTimeSerializer(OffsetDateTimeSerializer.INSTANCE, false, formatter) {}
+
+    val jtm = new JavaTimeModule()
+    jtm.addSerializer(classOf[OffsetDateTime], s)
+
+    RamlSerializer.serializer.registerModule(jtm)
+    RamlSerializer.serializer.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+  }
+
 }
 
 trait Formats
@@ -488,20 +505,20 @@ trait PluginFormats {
   *
   * @tparam T The type to be serialized, must be the class extending the trait
   */
-trait JacksonSerializable[T] {
+trait JacksonSerializable[T <: JacksonSerializable[T]] {
   val classType = getClass.asInstanceOf[Class[T]]
   RamlSerializer.addSerializer(classType, createSerializer(classType))
 
   private def createSerializer(clazz: Class[T]): StdSerializer[T] = {
     class Serializer extends StdSerializer[T](clazz) {
       override def serialize(value: T, gen: JsonGenerator, provider: SerializerProvider): Unit = {
-        serializeWithJackson(value, gen, provider)
+        value.serializeWithJackson(gen, provider)
       }
     }
     new Serializer()
   }
 
-  def serializeWithJackson(value: T, gen: JsonGenerator, provider: SerializerProvider): Unit
+  def serializeWithJackson(gen: JsonGenerator, provider: SerializerProvider): Unit
 
 }
 

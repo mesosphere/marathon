@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import mesosphere.marathon.api.v2.json.JacksonSerializable
+import mesosphere.marathon.state.Timestamp.formatter
 import org.apache.mesos
 
 import scala.concurrent.duration.FiniteDuration
@@ -18,7 +19,7 @@ import scala.util.{Failure, Success, Try}
 /**
   * An ordered wrapper for UTC timestamps.
   */
-abstract case class Timestamp private (private val instant: Instant) extends Ordered[Timestamp] {
+abstract case class Timestamp private (private val instant: Instant) extends Ordered[Timestamp] with JacksonSerializable[Timestamp] {
   def toOffsetDateTime: OffsetDateTime =
     OffsetDateTime.ofInstant(
       instant,
@@ -52,9 +53,13 @@ abstract case class Timestamp private (private val instant: Instant) extends Ord
 
   def +(duration: FiniteDuration): Timestamp = Timestamp(instant.plusMillis(duration.toMillis))
   def -(duration: FiniteDuration): Timestamp = Timestamp(instant.minusMillis(duration.toMillis))
+
+  override def serializeWithJackson(gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeString(formatter.format(toOffsetDateTime))
+  }
 }
 
-object Timestamp extends JacksonSerializable[Timestamp] {
+object Timestamp {
 
   def apply(offsetDateTime: OffsetDateTime): Timestamp =
     apply(offsetDateTime.toInstant)
@@ -111,7 +116,4 @@ object Timestamp extends JacksonSerializable[Timestamp] {
    */
   val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
 
-  override def serializeWithJackson(value: Timestamp, gen: JsonGenerator, provider: SerializerProvider): Unit = {
-    gen.writeString(formatter.format(value.toOffsetDateTime))
-  }
 }

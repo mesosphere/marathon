@@ -24,13 +24,13 @@ case class AppInfo(
     maybeLastTaskFailure: Option[TaskFailure] = None,
     maybeTaskStats: Option[TaskStatsByVersion] = None) extends JacksonSerializable[AppInfo] {
 
-  override def serializeWithJackson(value: AppInfo, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+  override def serializeWithJackson(gen: JsonGenerator, provider: SerializerProvider): Unit = {
     gen.writeStartObject()
 
     implicit val taskConversion = TaskConversion.enrichedTaskRamlWrite
     implicit val taskCountsConversion = TaskConversion.taskCountsWrite
 
-    AppSerializer.serializeFields(Raml.toRaml(value.app), gen, provider)
+    AppSerializer.serializeFields(Raml.toRaml(app), gen, provider)
     maybeCounts.foreach(counts => TaskCountsSerializer.serializeFields(Raml.toRaml(counts), gen, provider))
 
     maybeDeployments.foreach(gen.writeObjectField("deployments", _))

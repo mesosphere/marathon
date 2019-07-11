@@ -17,6 +17,8 @@ import scala.collection.immutable.Seq
 class AppDefinitionAppInfoTest extends UnitTest {
   import Formats._
 
+  Formats.configureJacksonSerializer()
+
   val app = AppDefinition(PathId("/test"), cmd = Some("sleep 123"), labels = Map("Some" -> "label"))
 
   val counts = TaskCounts(
