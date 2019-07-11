@@ -8,12 +8,11 @@ import mesosphere.marathon.state.{PathId, RootGroup}
   *
   * If enforce role is false, the role must be set, but no further checking is done.
   *
-  * @param enforceRole If true, the role on the runSpec must match the specified role, additionally the
-  *                    acceptedResourceRole field can only contain one of ['*', &lt;role&gt;]
   * @param validRoles List of valid roles
   * @param defaultRole The default role to use if no role is specified on the service. Defaults to '*'
   */
-case class RoleSettings(enforceRole: Boolean, validRoles: Set[String], defaultRole: String) {
+case class RoleSettings(validRoles: Set[String], defaultRole: String) {
+  require(validRoles(defaultRole))
 }
 
 object RoleSettings {
@@ -31,14 +30,14 @@ object RoleSettings {
 
     if (servicePathId.parent.isRoot) {
       // We have a service in the root group, no enforced role here
-      RoleSettings(enforceRole = false, validRoles = Set(defaultRole), defaultRole = defaultRole)
+      RoleSettings(validRoles = Set(defaultRole), defaultRole = defaultRole)
     } else {
       val topLevelGroupPath = servicePathId.rootPath
       val topLevelGroup = rootGroup.group(topLevelGroupPath)
 
       if (topLevelGroup.isEmpty) {
         // We don't have a top-level group, so we use just the default Role
-        RoleSettings(enforceRole = false, validRoles = Set(defaultRole), defaultRole = defaultRole)
+        RoleSettings(validRoles = Set(defaultRole), defaultRole = defaultRole)
       } else {
         val group = topLevelGroup.get
         val defaultForEnforceFromConfig = false // TODO: Use value from config instead
@@ -46,12 +45,12 @@ object RoleSettings {
 
         if (enforceRole) {
           // With enforceRole, we only allow the service to use the group-role
-          RoleSettings(enforceRole = true, validRoles = Set(group.id.root), defaultRole = group.id.root)
+          RoleSettings(validRoles = Set(group.id.root), defaultRole = group.id.root)
         } else {
           // Without enforce role, we allow both default and top-level group role
           // The default role depends on the config parameter
           val defaultRoleToUse = if (defaultForEnforceFromConfig) group.id.root else defaultRole
-          RoleSettings(enforceRole = false, validRoles = Set(defaultRole, group.id.root), defaultRole = defaultRoleToUse)
+          RoleSettings(validRoles = Set(defaultRole, group.id.root), defaultRole = defaultRoleToUse)
         }
       }
     }

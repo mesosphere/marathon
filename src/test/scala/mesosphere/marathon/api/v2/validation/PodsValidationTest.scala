@@ -210,12 +210,6 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
 
   "roleValidation" should {
 
-    "be invalid without role and role setting" in new Fixture {
-      val podDef = podWithoutRole.copy(role = Some("dev")).fromRaml.copy(role = null)
-      podDefValidatorWithRoleEnforcement(podDef) should haveViolations(
-        "/role" -> "got null, expected one of: [dev]")
-    }
-
     "be valid when the role matches the group-role" in new Fixture {
       val podDef = podWithoutRole.copy(role = Some("dev")).fromRaml
       podDefValidatorWithValidRolesList(podDef) should be(aSuccess)
@@ -278,11 +272,8 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
 
     val pluginManager: PluginManager = PluginManager.None
 
-    val validRolesForRoleDev = RoleSettings(enforceRole = false, validRoles = Set("dev"), defaultRole = "dev")
+    val validRolesForRoleDev = RoleSettings(validRoles = Set("dev"), defaultRole = "dev")
     val podDefValidatorWithValidRolesList = podDefValidator(pluginManager, validRolesForRoleDev)
-
-    val validRolesForRoleDevAndEnforcement = RoleSettings(enforceRole = true, validRoles = Set("dev"), defaultRole = "dev")
-    val podDefValidatorWithRoleEnforcement = podDefValidator(pluginManager, validRolesForRoleDevAndEnforcement)
   }
 
   "network validation" when {

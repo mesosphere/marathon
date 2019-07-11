@@ -25,7 +25,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
   val validator = AppDefinition.validAppDefinition(enabledFeatures, ValidationHelper.roleSettings)(PluginManager.None)
 
-  val validatorWithRole = AppDefinition.validAppDefinition(enabledFeatures, RoleSettings(enforceRole = true, validRoles = Set("someRole"), defaultRole = "someRole"))(PluginManager.None)
+  val validatorWithRole = AppDefinition.validAppDefinition(enabledFeatures, RoleSettings(validRoles = Set("someRole"), defaultRole = "someRole"))(PluginManager.None)
 
   private[this] def appNormalization(app: raml.App): raml.App =
     AppHelpers.appNormalization(AppNormalization.Configuration(None, "mesos-bridge-name", enabledFeatures, ValidationHelper.roleSettings)).normalized(app)
