@@ -34,36 +34,32 @@ object RoleSettings extends StrictLogging {
       RoleSettings(validRoles = Set(defaultRole), defaultRole = defaultRole)
     } else {
       val topLevelGroupPath = servicePathId.rootPath
+      val groupRole = topLevelGroupPath.root
       val topLevelGroup = rootGroup.group(topLevelGroupPath)
 
-      val roleSettings =
-        if (topLevelGroup.isEmpty) {
-          // TODO: If the topLevelGroup is empty, we might have run into the case where a user creates
-          // a group with runSpecs in a single action. The group isn't yet created, therefore we can't lookup
-          // the group-role and the enforceRole flag. For now we just use the default
-          logger.warn(s"Calculating role settings for $servicePathId, but unable to access top level group $topLevelGroupPath, using defaultRole $defaultRole")
+      val defaultForEnforceFromConfig: Boolean = false // TODO: Use value from config instead
+      val enforceRole = topLevelGroup.flatMap(_.enforceRole).getOrElse(defaultForEnforceFromConfig)
 
-          // We don't have a top-level group, so we use just the default Role
-          RoleSettings(validRoles = Set(defaultRole), defaultRole = defaultRole)
-        } else {
-          val group = topLevelGroup.get
-          val defaultForEnforceFromConfig = false // TODO: Use value from config instead
-          val enforceRole = group.enforceRole.getOrElse(defaultForEnforceFromConfig)
-
-          if (enforceRole) {
-            // With enforceRole, we only allow the service to use the group-role
-            RoleSettings(validRoles = Set(group.id.root), defaultRole = group.id.root)
-          } else {
-            // Without enforce role, we allow both default and top-level group role
-            // The default role depends on the config parameter
-            val defaultRoleToUse = if (defaultForEnforceFromConfig) group.id.root else defaultRole
-            RoleSettings(validRoles = Set(defaultRole, group.id.root), defaultRole = defaultRoleToUse)
-          }
-        }
+      if (topLevelGroup.isEmpty) {
+        // TODO: Fetch top-level group even if it's in the process of creation
+        // If the topLevelGroup is empty, we might have run into the case where a user creates
+        // a group with runSpecs in a single action. The group isn't yet created, therefore we can't lookup
+        // the enforceRole flag.
+        logger.warn(s"Calculating role settings for $servicePathId, but unable to access top level group $topLevelGroupPath, using default for enforceRole flag: $enforceRole")
+      }
 
       // Look up any previously set group on the specified runSpec, and add that to the validRoles set if it exists
-      val existingRole = rootGroup.runSpec(servicePathId).map(_.role)
-      existingRole.map(role => roleSettings.copy(validRoles = roleSettings.validRoles + role)).getOrElse(roleSettings)
+      val maybeExistingRole: Option[String] = rootGroup.runSpec(servicePathId).map(_.role)
+
+      if (enforceRole) {
+        // With enforceRole, we only allow the service to use the group-role or an existing role
+        RoleSettings(validRoles = Set(groupRole) ++ maybeExistingRole, defaultRole = groupRole)
+      } else {
+        // Without enforce role, we allow default role, group role and already existing role
+        // The default role depends on the config parameter
+        val defaultRoleToUse = if (defaultForEnforceFromConfig) groupRole else defaultRole
+        RoleSettings(validRoles = Set(defaultRole, groupRole) ++ maybeExistingRole, defaultRole = defaultRoleToUse)
+      }
     }
   }
 

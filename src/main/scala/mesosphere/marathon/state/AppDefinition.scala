@@ -505,7 +505,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   def validWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.role is in(roleEnforcement.validRoles)
-    app.acceptedResourceRoles is ResourceRole.validForRole(Set(app.role))
+    app.acceptedResourceRoles is ResourceRole.validForRole(app.role)
   }
 
   private def pluginValidators(implicit pluginManager: PluginManager): Validator[AppDefinition] =

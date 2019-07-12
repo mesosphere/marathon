@@ -228,6 +228,13 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       )
     }
 
+    "be invalid when acceptedResource role is different from the role and role is *" in new Fixture {
+      val podDef = podWithoutRole.copy(role = Some("*"), scheduling = Some(PodSchedulingPolicy(placement = Some(PodPlacementPolicy(acceptedResourceRoles = Seq("differentRole")))))).fromRaml
+      podDefValidatorWithValidRolesList(podDef) should haveViolations(
+        "/acceptedResourceRoles" -> "acceptedResourceRoles can only contain *"
+      )
+    }
+
   }
 
   class Fixture(validateSecrets: Boolean = false) {

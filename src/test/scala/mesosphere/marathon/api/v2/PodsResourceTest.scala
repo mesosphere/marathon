@@ -913,7 +913,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         }
       }
 
-      "A pod definition in a top-level group no role defined should have the default role" in {
+      "A pod definition in a top-level group with no role defined should have the default role" in {
         implicit val podSystem = mock[PodManager]
         val f = Fixture()
 
@@ -958,6 +958,43 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
         f.prepareGroup("/dev")
+
+        val podJson =
+          """
+            |{
+            |    "id": "/dev/pod",
+            |    "role": "dev",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "A pod definition in a top-level group with the group role defined should be success, even if group does not exist" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        f.prepareRootGroup()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
         val podJson =
           """
@@ -1518,6 +1555,11 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       val root = createRootGroup(groups = Set(group))
 
       groupManager.group(groupPath) returns Some(group)
+      groupManager.rootGroup() returns root
+    }
+
+    def prepareRootGroup(): Unit = {
+      val root = createRootGroup()
       groupManager.rootGroup() returns root
     }
   }
