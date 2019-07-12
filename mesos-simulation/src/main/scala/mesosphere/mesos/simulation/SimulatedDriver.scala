@@ -119,6 +119,9 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver with StrictLog
     }
   }
 
-  override def updateFramework(frameworkInfo: FrameworkInfo): Status = ???
+  override def reviveOffers(roles: util.Collection[String]): Status = ???
 
+  override def suppressOffers(roles: util.Collection[String]): Status = ???
+
+  override def updateFramework(frameworkInfo: FrameworkInfo, suppressedRoles: util.Collection[String]): Status = ???
 }
