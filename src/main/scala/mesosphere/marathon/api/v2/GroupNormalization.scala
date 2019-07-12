@@ -10,8 +10,11 @@ object GroupNormalization {
   }
 
   def updateNormalization(conf: MarathonConf, id: PathId): Normalization[raml.GroupUpdate] = Normalization { update =>
-    if (id.parent.isRoot) {
-      update.copy(enforceRole = Some(effectiveEnforceRole(conf, update.enforceRole)))
+    // Only update if this is not a scale or rollback
+    if (update.version.isEmpty && update.scaleBy.isEmpty) {
+      if (id.parent.isRoot) {
+        update.copy(enforceRole = Some(effectiveEnforceRole(conf, update.enforceRole)))
+      } else update
     } else update
   }
 
