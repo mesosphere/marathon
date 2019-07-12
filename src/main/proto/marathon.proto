@@ -404,6 +404,7 @@ message GroupDefinition {
   repeated string dependencies = 5;
   repeated AppReference apps = 6;
   repeated AppReference pods = 7;
+  optional bool enforceRole = 9;
 }
 
 message DeploymentPlanDefinition {

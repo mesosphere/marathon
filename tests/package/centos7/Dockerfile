@@ -3,7 +3,7 @@ FROM centos:7
 COPY ./mesos-version /mesos-version
 
 RUN rpm -Uvh http://repos.mesosphere.com/el/7/noarch/RPMS/mesosphere-el-repo-7-3.noarch.rpm && \
-  yum install -y mesos-$(cat /mesos-version) && \
+  yum install -y "mesos-$(cat /mesos-version).el7" && \
   systemctl disable mesos-master && \
   systemctl disable mesos-slave && \
   yum install -y java-1.8.0-openjdk-headless && \

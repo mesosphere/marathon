@@ -21,7 +21,10 @@ class Group(
     val pods: Map[PathId, PodDefinition] = defaultPods,
     val groupsById: Map[Group.GroupKey, Group] = defaultGroups,
     val dependencies: Set[PathId] = defaultDependencies,
-    val version: Timestamp = defaultVersion) extends IGroup {
+    val version: Timestamp = defaultVersion,
+    val enforceRole: Option[Boolean] = None) extends IGroup {
+
+  require((id.parent.isRoot && enforceRole.isDefined) || enforceRole.isEmpty, "Only top-level groups can define the enforce role parameter.")
 
   /**
     * Get app from this group or any child group.
@@ -131,8 +134,10 @@ object Group extends StrictLogging {
     pods: Map[PathId, PodDefinition] = Group.defaultPods,
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
     dependencies: Set[PathId] = Group.defaultDependencies,
-    version: Timestamp = Group.defaultVersion): Group =
-    new Group(id, apps, pods, groupsById, dependencies, version)
+    version: Timestamp = Group.defaultVersion): Group = {
+    if (id.parent.isRoot) new Group(id, apps, pods, groupsById, dependencies, version, Some(false))
+    else new Group(id, apps, pods, groupsById, dependencies, version, None)
+  }
 
   def empty(id: PathId): Group =
     Group(id = id, version = Timestamp(0))
