@@ -11,7 +11,7 @@ import mesosphere.marathon.api.v2.json.JacksonSerializable
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
 
-case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[PathId] with plugin.PathId with JacksonSerializable[PathId] {
+case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[PathId] with plugin.PathId {
 
   def root: String = path.headOption.getOrElse("")
 
@@ -98,12 +98,13 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
 
   override val hashCode: Int = scala.util.hashing.MurmurHash3.productHash(this)
 
-  override def serializeWithJackson(gen: JsonGenerator, provider: SerializerProvider): Unit = {
-    gen.writeString(toString)
-  }
 }
 
-object PathId {
+object PathId extends JacksonSerializable[PathId] {
+
+  override def serializeWithJackson(value: PathId, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeString(value.toString)
+  }
 
   def fromSafePath(in: String): PathId = {
     if (in.isEmpty) PathId.empty

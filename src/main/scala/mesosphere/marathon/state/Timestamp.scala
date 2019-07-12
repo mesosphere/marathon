@@ -19,7 +19,7 @@ import scala.util.{Failure, Success, Try}
 /**
   * An ordered wrapper for UTC timestamps.
   */
-abstract case class Timestamp private (private val instant: Instant) extends Ordered[Timestamp] with JacksonSerializable[Timestamp] {
+abstract case class Timestamp private (private val instant: Instant) extends Ordered[Timestamp] {
   def toOffsetDateTime: OffsetDateTime =
     OffsetDateTime.ofInstant(
       instant,
@@ -54,12 +54,13 @@ abstract case class Timestamp private (private val instant: Instant) extends Ord
   def +(duration: FiniteDuration): Timestamp = Timestamp(instant.plusMillis(duration.toMillis))
   def -(duration: FiniteDuration): Timestamp = Timestamp(instant.minusMillis(duration.toMillis))
 
-  override def serializeWithJackson(gen: JsonGenerator, provider: SerializerProvider): Unit = {
-    gen.writeString(formatter.format(toOffsetDateTime))
-  }
 }
 
-object Timestamp {
+object Timestamp extends JacksonSerializable[Timestamp] {
+
+  override def serializeWithJackson(value: Timestamp, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeObject(value.toOffsetDateTime)
+  }
 
   def apply(offsetDateTime: OffsetDateTime): Timestamp =
     apply(offsetDateTime.toInstant)

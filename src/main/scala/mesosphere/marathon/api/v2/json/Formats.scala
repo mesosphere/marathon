@@ -1,12 +1,11 @@
 package mesosphere.marathon
 package api.v2.json
 
-import java.time.{OffsetDateTime, ZoneOffset}
-import java.time.format.DateTimeFormatter
+import java.time.OffsetDateTime
 
 import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.{SerializationFeature, SerializerProvider}
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
+import com.fasterxml.jackson.databind.{SerializationFeature, SerializerProvider}
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.datatype.jsr310.ser.OffsetDateTimeSerializer
 import mesosphere.marathon.core.appinfo._
@@ -18,16 +17,17 @@ import mesosphere.marathon.core.plugin.{PluginDefinition, PluginDefinitions}
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.{Raml, RamlSerializer}
 import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
+import mesosphere.marathon.raml.{Raml, RamlSerializer}
 import mesosphere.marathon.state._
 import org.apache.mesos.{Protos => mesos}
-import play.api.libs.json.JsonValidationError
 import play.api.libs.functional.syntax._
-import play.api.libs.json._
+import play.api.libs.json.{JsonValidationError, _}
 
 import scala.concurrent.duration._
+import scala.reflect.runtime._
+import scala.reflect.runtime.universe._
 
 // TODO: We should replace this entire thing with the auto-generated formats from the RAML.
 // See https://mesosphere.atlassian.net/browse/MARATHON-1291
@@ -55,8 +55,7 @@ object Formats extends Formats {
   }
 
   def configureJacksonSerializer(): Unit = {
-    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
-    val s = new OffsetDateTimeSerializer(OffsetDateTimeSerializer.INSTANCE, false, formatter) {}
+    val s = new OffsetDateTimeSerializer(OffsetDateTimeSerializer.INSTANCE, false, Timestamp.formatter) {}
 
     val jtm = new JavaTimeModule()
     jtm.addSerializer(classOf[OffsetDateTime], s)
@@ -505,20 +504,31 @@ trait PluginFormats {
   *
   * @tparam T The type to be serialized, must be the class extending the trait
   */
-trait JacksonSerializable[T <: JacksonSerializable[T]] {
-  val classType = getClass.asInstanceOf[Class[T]]
-  RamlSerializer.addSerializer(classType, createSerializer(classType))
+trait JacksonSerializable[T] {
+
+  // Reflection magic to find the concrete value of the generic T
+  // We can't simply use a classTag here, as we can't pass any implicit to a trait
+  val traitClassSym = symbolOf[JacksonSerializable[_]].asClass
+  val thisClassSym = currentMirror.reflect(this).symbol
+  val thisParentTraitType = thisClassSym.baseClasses.find(s => s.asClass == traitClassSym).get.asType
+  val actualTypeOfT = thisParentTraitType.typeParams.head.asType.toTypeIn(thisClassSym.toType)
+
+  val classTypeOfT = currentMirror.runtimeClass(actualTypeOfT).asInstanceOf[Class[T]]
+
+  println("Register Serializer for " + classTypeOfT)
+
+  RamlSerializer.addSerializer(classTypeOfT, createSerializer(classTypeOfT))
 
   private def createSerializer(clazz: Class[T]): StdSerializer[T] = {
     class Serializer extends StdSerializer[T](clazz) {
       override def serialize(value: T, gen: JsonGenerator, provider: SerializerProvider): Unit = {
-        value.serializeWithJackson(gen, provider)
+        serializeWithJackson(value, gen, provider)
       }
     }
     new Serializer()
   }
 
-  def serializeWithJackson(gen: JsonGenerator, provider: SerializerProvider): Unit
+  def serializeWithJackson(value: T, gen: JsonGenerator, provider: SerializerProvider): Unit
 
 }
 

@@ -11,7 +11,7 @@ case class ReadinessCheckResult(
     name: String,
     taskId: Task.Id,
     ready: Boolean,
-    lastResponse: Option[HttpResponse]) extends JacksonSerializable[ReadinessCheckResult] {
+    lastResponse: Option[HttpResponse]) {
 
   def summary: String = {
     val responseSummary = lastResponse.fold("") { response =>
@@ -31,17 +31,9 @@ case class ReadinessCheckResult(
     s"${if (ready) "READY" else "NOT READY"}$responseSummary returned by $taskId readiness check '$name'$bodySummary"
   }
 
-  override def serializeWithJackson(gen: JsonGenerator, provider: SerializerProvider): Unit = {
-    gen.writeStartObject()
-    gen.writeObjectField("name", name)
-    gen.writeObjectField("taskId", taskId.idString)
-    gen.writeObjectField("ready", ready)
-    gen.writeObjectField("lastResponse", lastResponse.orNull)
-    gen.writeEndObject()
-  }
 }
 
-object ReadinessCheckResult {
+object ReadinessCheckResult extends JacksonSerializable[ReadinessCheckResult] {
   private val SummaryBodyLength = 40
 
   def forSpecAndResponse(check: ReadinessCheckSpec, response: HttpResponse): ReadinessCheckResult = {
@@ -51,6 +43,15 @@ object ReadinessCheckResult {
       ready = check.httpStatusCodesForReady(response.status),
       lastResponse = if (check.preserveLastResponse) Some(response) else None
     )
+  }
+
+  override def serializeWithJackson(value: ReadinessCheckResult, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeStartObject()
+    gen.writeObjectField("name", value.name)
+    gen.writeObjectField("taskId", value.taskId.idString)
+    gen.writeObjectField("ready", value.ready)
+    gen.writeObjectField("lastResponse", value.lastResponse.orNull)
+    gen.writeEndObject()
   }
 }
 

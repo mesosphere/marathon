@@ -11,7 +11,7 @@ case class GroupInfo(
     group: Group,
     maybeApps: Option[Seq[AppInfo]],
     maybePods: Option[Seq[PodStatus]],
-    maybeGroups: Option[Seq[GroupInfo]]) extends JacksonSerializable[GroupInfo] {
+    maybeGroups: Option[Seq[GroupInfo]]) {
 
   def transitiveApps: Option[Seq[AppInfo]] = this.maybeApps.map { apps =>
     apps ++ maybeGroups.map { _.flatMap(_.transitiveApps.getOrElse(Seq.empty)) }.getOrElse(Seq.empty)
@@ -20,32 +20,9 @@ case class GroupInfo(
     groups ++ maybeGroups.map { _.flatMap(_.transitiveGroups.getOrElse(Seq.empty)) }.getOrElse(Seq.empty)
   }
 
-  override def serializeWithJackson(gen: JsonGenerator, provider: SerializerProvider): Unit = {
-    gen.writeStartObject()
-    gen.writeObjectField("id", group.id)
-    gen.writeObjectField("dependencies", group.dependencies)
-    gen.writeObjectField("version", group.version)
-
-    maybeApps.foreach(apps => {
-      gen.writeArrayFieldStart("apps")
-      apps.foreach(gen.writeObject)
-      gen.writeEndArray()
-    })
-    maybeGroups.foreach(groups => {
-      gen.writeArrayFieldStart("groups")
-      groups.foreach(gen.writeObject)
-      gen.writeEndArray()
-    })
-    maybePods.foreach(pods => {
-      gen.writeArrayFieldStart("pods")
-      pods.foreach(gen.writeObject)
-      gen.writeEndArray()
-    })
-    gen.writeEndObject()
-  }
 }
 
-object GroupInfo {
+object GroupInfo extends JacksonSerializable[GroupInfo] {
   sealed trait Embed
   object Embed {
     case object Groups extends Embed
@@ -54,5 +31,28 @@ object GroupInfo {
   }
   lazy val empty: GroupInfo = GroupInfo(RootGroup.empty, None, None, None)
 
+  override def serializeWithJackson(value: GroupInfo, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeStartObject()
+    gen.writeObjectField("id", value.group.id)
+    gen.writeObjectField("dependencies", value.group.dependencies)
+    gen.writeObjectField("version", value.group.version)
+
+    value.maybeApps.foreach(apps => {
+      gen.writeArrayFieldStart("apps")
+      apps.foreach(gen.writeObject)
+      gen.writeEndArray()
+    })
+    value.maybeGroups.foreach(groups => {
+      gen.writeArrayFieldStart("groups")
+      groups.foreach(gen.writeObject)
+      gen.writeEndArray()
+    })
+    value.maybePods.foreach(pods => {
+      gen.writeArrayFieldStart("pods")
+      pods.foreach(gen.writeObject)
+      gen.writeEndArray()
+    })
+    gen.writeEndObject()
+  }
 }
 

@@ -109,6 +109,8 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
     "app with lastTaskFailure" in {
       Given("an app with a lastTaskFailure")
+      TaskFailure.empty
+
       val lastTaskFailure = new TaskFailure(
         appId = PathId("/myapp"),
         taskId = mesos.TaskID.newBuilder().setValue("myapp.2da6109e-4cce-11e5-98c1-be5b2935a987").build(),

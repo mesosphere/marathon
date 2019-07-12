@@ -18,7 +18,7 @@ case class TaskFailure(
     version: Timestamp = Timestamp.now(),
     timestamp: Timestamp = Timestamp.now(),
     slaveId: Option[mesos.SlaveID] = None)
-  extends MarathonState[Protos.TaskFailure, TaskFailure] with JacksonSerializable[TaskFailure] {
+  extends MarathonState[Protos.TaskFailure, TaskFailure] {
 
   override def mergeFromProto(proto: Protos.TaskFailure): TaskFailure =
     TaskFailure(proto)
@@ -41,32 +41,9 @@ case class TaskFailure(
     taskFailureBuilder.build
   }
 
-  override def serializeWithJackson(gen: JsonGenerator, provider: SerializerProvider): Unit = {
-    gen.writeStartObject()
-    gen.writeObjectField("appId", appId)
-    gen.writeObjectField("host", host)
-    gen.writeObjectField("message", message)
-    gen.writeObjectField("state", state.name())
-    gen.writeObjectField("taskId", taskId.getValue)
-    gen.writeObjectField("timestamp", timestamp)
-    gen.writeObjectField("version", version)
-    gen.writeObjectField("slaveId", slaveId.map(_.getValue).orNull)
-    gen.writeEndObject()
-
-    //    Json.obj(
-    //      "appId" -> failure.appId,
-    //      "host" -> failure.host,
-    //      "message" -> failure.message,
-    //      "state" -> failure.state.name(),
-    //      "taskId" -> failure.taskId.getValue,
-    //      "timestamp" -> failure.timestamp,
-    //      "version" -> failure.version,
-    //      "slaveId" -> failure.slaveId.fold[JsValue](JsNull){ slaveId => JsString(slaveId.getValue) }
-    //    )
-  }
 }
 
-object TaskFailure {
+object TaskFailure extends JacksonSerializable[TaskFailure] {
 
   import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 
@@ -147,5 +124,30 @@ object TaskFailure {
         TASK_LOST | TASK_DROPPED | TASK_GONE | TASK_GONE_BY_OPERATOR | TASK_UNKNOWN => true
       case _ => false
     }
+  }
+
+  override def serializeWithJackson(value: TaskFailure, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    println("Serialize TaskFAilure: " + value)
+    gen.writeStartObject()
+    gen.writeObjectField("appId", value.appId)
+    gen.writeObjectField("host", value.host)
+    gen.writeObjectField("message", value.message)
+    gen.writeObjectField("state", value.state.name())
+    gen.writeObjectField("taskId", value.taskId.getValue)
+    gen.writeObjectField("timestamp", value.timestamp)
+    gen.writeObjectField("version", value.version)
+    gen.writeObjectField("slaveId", value.slaveId.map(_.getValue).orNull)
+    gen.writeEndObject()
+
+    //    Json.obj(
+    //      "appId" -> failure.appId,
+    //      "host" -> failure.host,
+    //      "message" -> failure.message,
+    //      "state" -> failure.state.name(),
+    //      "taskId" -> failure.taskId.getValue,
+    //      "timestamp" -> failure.timestamp,
+    //      "version" -> failure.version,
+    //      "slaveId" -> failure.slaveId.fold[JsValue](JsNull){ slaveId => JsString(slaveId.getValue) }
+    //    )
   }
 }
