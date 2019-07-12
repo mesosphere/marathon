@@ -185,6 +185,16 @@ class GroupManagerImpl(
     Done
   }
 
+  override def patchRoot(change: RootGroup => RootGroup): Future[Done] = {
+    val from = rootGroup()
+    async {
+      val changedGroup = change(from)
+      await(groupRepository.storeRoot(changedGroup, Seq.empty, Seq.empty, Seq.empty, Seq.empty))
+      root := Option(changedGroup)
+      Done
+    }
+  }
+
   override def invalidateGroupCache(): Future[Done] = async {
     root := None
 

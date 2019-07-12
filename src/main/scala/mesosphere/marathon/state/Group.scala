@@ -121,8 +121,16 @@ class Group(
     val summarizedGroups = summarize(groupsById.valuesIterator.map(_.id))
     val summarizedDependencies = summarize(dependencies.iterator)
 
-    s"Group($id, apps = $summarizedApps, pods = $summarizedPods, groups = $summarizedGroups, dependencies = $summarizedDependencies, version = $version)"
+    s"Group($id, apps = $summarizedApps, pods = $summarizedPods, groups = $summarizedGroups, dependencies = $summarizedDependencies, version = $version, enforceRole = $enforceRole)"
   }
+
+  /** @return a copy of this group with an updated `enforceRole` field. */
+  def withEnforceRole(enforceRole: Boolean): Group =
+    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, Some(enforceRole))
+
+  /** @return a copy of this group with the removed `enforceRole` field. */
+  def withoutEnforceRole(): Group =
+    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, None)
 }
 
 object Group extends StrictLogging {
@@ -264,8 +272,7 @@ object Group extends StrictLogging {
       val originalGroup = updatedGroupId.flatMap(originalRootGroup.group) // TODO: why is groupUpdate.id optional? What is the semantic there?
       (maybeNewEnforceRole, originalGroup.flatMap(_.enforceRole)) match {
         case (None, None) => Success
-        case (Some(newEnforceRole), None) =>
-          Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated to $newEnforceRole for $updatedGroupId.")))
+        case (Some(newEnforceRole), None) => Success
         case (None, Some(_)) =>
           Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be removed from $updatedGroupId.")))
         case (Some(newEnforceRole), Some(oldEnforceRole)) =>

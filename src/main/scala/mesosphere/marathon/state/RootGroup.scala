@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package state
 
+import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
@@ -28,7 +29,7 @@ class RootGroup(
   pods,
   groupsById,
   dependencies,
-  version) {
+  version) with StrictLogging {
   require(
     groupsById.forall {
       case (_, _: RootGroup) => false
@@ -100,7 +101,8 @@ class RootGroup(
   def putGroup(newGroup: Group, version: Timestamp = Group.defaultVersion): RootGroup = {
     @tailrec def rebuildTree(allParents: List[PathId], result: Group): Group = {
       allParents match {
-        case Nil => result
+        case Nil =>
+          result
         case head :: tail =>
           val oldParent = group(head).getOrElse(Group.empty(head))
           val newParent = Group(
@@ -109,7 +111,8 @@ class RootGroup(
             pods = oldParent.pods,
             groupsById = oldParent.groupsById + (result.id -> result),
             dependencies = oldParent.dependencies,
-            version = version)
+            version = version,
+            enforceRole = oldParent.enforceRole)
           rebuildTree(tail, newParent)
       }
     }
@@ -214,7 +217,8 @@ class RootGroup(
       pods = oldGroup.pods,
       groupsById = oldGroup.groupsById,
       dependencies = newDependencies,
-      version = version
+      version = version,
+      enforceRole = oldGroup.enforceRole
     )
     putGroup(newGroup, version)
   }
@@ -289,6 +293,21 @@ class RootGroup(
     putGroup(newGroup, version)
   }
 
+  /**
+    * Update a group with the specified group id by applying the update function.
+    *
+    * It has the same semantics as [[updateApp()]] and [[updatePod()]]. If the group does not exist
+    * it will be created. The update does *not* change the group version.
+    *
+    * @param groupId the if od the group to be updated.
+    * @param fn the update function.
+    * @return the new root group with the update group.
+    */
+  def updateGroup(groupId: PathId, fn: Option[Group] => Group): RootGroup = {
+    val updatedGroup = fn(group(groupId))
+    putGroup(updatedGroup, updatedGroup.version)
+  }
+
   private def updateVersion(group: Group, version: Timestamp): Group = {
     Group(
       id = group.id,
@@ -296,7 +315,8 @@ class RootGroup(
       pods = group.pods,
       groupsById = group.groupsById.map { case (subGroupId, subGroup) => subGroupId -> updateVersion(subGroup, version) },
       dependencies = group.dependencies,
-      version = version)
+      version = version,
+      enforceRole = group.enforceRole)
   }
 
   /**

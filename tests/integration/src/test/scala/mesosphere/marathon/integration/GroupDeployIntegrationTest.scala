@@ -82,7 +82,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     }
 
     "create a group with applications to start" in {
-      val id = "group-with-appication-to-start".toRootTestPath
+      val id = "group-with-application-to-start".toRootTestPath
       val appId = id / nextAppId()
 
       Given(s"A group with one application with id $appId")
@@ -96,9 +96,9 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val tasks = waitForTasks(PathId(app.id), app.instances)
       tasks should have size 2
 
-      And("The group info is complete")
+      And(s"The group info for $id is complete")
       val groupInfo = marathon.group(id)
-      //groupInfo.value.enforceRole.value should be(true)
+      groupInfo.value.enforceRole.value should be(true)
     }
 
     "update a group with applications to restart" in {

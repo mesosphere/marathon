@@ -150,6 +150,14 @@ trait GroupManager {
     toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[Either[T, DeploymentPlan]]
 
   /**
+    * Updates with root group without triggering a deployment.
+    *
+    * @param fn The update function applied to the root group.
+    * @return done
+    */
+  def patchRoot(fn: RootGroup => RootGroup): Future[Done]
+
+  /**
     * Update application with given identifier and update function.
     * The change could take time to get deployed.
     * For this reason, we return the DeploymentPlan as result, which can be queried in the marathon scheduler.

@@ -606,5 +606,44 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val updated = RootGroup.empty.putGroup(groupUpdate, newVersion)
       updated.transitiveAppIds should contain(appPath)
     }
+
+    "update a mid-level Group dependency" in {
+      Given("a three level hierarchy")
+      val current: RootGroup = createRootGroup(
+        groups = Set(
+          createGroup("/top".toPath, groups = Set(
+            createGroup("/top/mid".toPath, groups = Set(
+              createGroup("/top/mid/end".toPath)
+            ))
+          )),
+          createGroup("/side".toPath)
+        ))
+
+      When("we update the dependency of the mid-level group")
+      val updatedRoot = current.updateDependencies("/top/mid".toPath, _ => Set("/side".toPath))
+
+      Then("the update should be reflected in the new root group")
+      updatedRoot.group("/top/mid".toPath).value.dependencies should be(Set("/side".toPath))
+    }
+
+    "update a top-level group parameter" in {
+      Given("a three level hierarchy")
+      val current: RootGroup = createRootGroup(
+        groups = Set(
+          createGroup("/top".toPath, groups = Set(
+            createGroup("/top/mid".toPath, groups = Set(
+              createGroup("/top/mid/end".toPath)
+            ))
+          )),
+          createGroup("/side".toPath)
+        ))
+
+      When("we update the enforce role parameter of the mid-level group")
+      val groupUpdate = current.group("/top".toPath).value.withEnforceRole(true)
+      val updatedRoot = current.putGroup(groupUpdate)
+
+      Then("the update should be reflected in the new root group")
+      updatedRoot.group("/top".toPath).value.enforceRole.value should be(true)
+    }
   }
 }

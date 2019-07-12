@@ -158,13 +158,14 @@ class GroupsResource @Inject() (
       val rootPath = validateOrThrow(id.toRootPath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
+      val normalized = GroupNormalization.updateNormalization(config, effectivePath).normalized(raw)
 
       val rootGroup = groupManager.rootGroup()
       val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath, rootGroup)
       val groupUpdate = validateOrThrow(
         normalizeApps(
           rootPath,
-          raw
+          normalized
         ))(groupValidator)
 
       def throwIfConflicting[A](conflict: Option[Any], msg: String) = {
@@ -206,11 +207,23 @@ class GroupsResource @Inject() (
       val raw = Json.parse(body).as[raml.GroupPartialUpdate]
       val normalized = GroupNormalization.partialUpdateNormalization(config).normalized(raw)
 
-      validateOrThrow(PathId(id))(PathId.topLevel)
+      val groupId = id.toRootPath
+      validateOrThrow(groupId)(PathId.topLevel)
 
-      // TODO: actually update the group in GroupManager without triggering a deployment.
+      if (groupManager.group(groupId).isEmpty) {
+        unknownGroup(groupId)
+      } else {
 
-      ok()
+        def updateGroup(maybeGroup: Option[Group]): Group = {
+          maybeGroup match {
+            case Some(group) => normalized.enforceRole.fold(group.withoutEnforceRole())(group.withEnforceRole(_))
+            case None => throw new RuntimeException(s"This is a bug. Group $id was not found this should have been caught by the validation.")
+          }
+        }
+
+        await(groupManager.patchRoot(_.updateGroup(groupId, updateGroup)))
+        ok()
+      }
     }
   }
 
@@ -236,13 +249,14 @@ class GroupsResource @Inject() (
       val rootPath = validateOrThrow(id.toRootPath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
+      val normalized = GroupNormalization.updateNormalization(config, effectivePath).normalized(raw)
 
       val originalRootGroup = groupManager.rootGroup()
       val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath, originalRootGroup)
       val groupUpdate = validateOrThrow(
         normalizeApps(
           effectivePath,
-          raw
+          normalized
         ))(groupValidator)
 
       if (dryRun) {
