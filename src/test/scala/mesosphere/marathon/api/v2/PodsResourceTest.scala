@@ -1133,7 +1133,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
         withClue(s"response body: ${response.getEntity}") {
           response.getStatus should be(422)
-          response.getEntity.toString should include("ipcInfo shmShize can NOT be set when mode is SHARE_PARENT")
+          response.getEntity.toString should include("ipcInfo shmSize can NOT be set when mode is SHARE_PARENT")
         }
       }
 
@@ -1313,7 +1313,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
         withClue(s"response body: ${response.getEntity}") {
           response.getStatus should be(422)
-          response.getEntity.toString should include("ipcInfo shmShize can NOT be set when mode is SHARE_PARENT")
+          response.getEntity.toString should include("ipcInfo shmSize can NOT be set when mode is SHARE_PARENT")
         }
       }
 

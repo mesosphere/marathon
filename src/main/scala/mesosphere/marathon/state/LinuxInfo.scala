@@ -54,7 +54,7 @@ object LinuxInfo {
     override def apply(ipcInfoOpt: Option[raml.IPCInfo]): Result = {
       ipcInfoOpt match {
         case Some(ipcInfo) =>
-          if (ipcInfo.mode == raml.IPCMode.ShareParent && ipcInfo.shmSize.isDefined) Failure(Set(RuleViolation(ipcInfo, "ipcInfo shmShize can NOT be set when mode is SHARE_PARENT")))
+          if (ipcInfo.mode == raml.IPCMode.ShareParent && ipcInfo.shmSize.isDefined) Failure(Set(RuleViolation(ipcInfo, "ipcInfo shmSize can NOT be set when mode is SHARE_PARENT")))
           else Success
         case None => Success
       }

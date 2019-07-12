@@ -452,7 +452,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Then("It fails")
       withClue(s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}") {
         response.getStatus shouldBe 422
-        response.getEntity.toString should include("ipcInfo shmShize can NOT be set when mode is SHARE_PARENT")
+        response.getEntity.toString should include("ipcInfo shmSize can NOT be set when mode is SHARE_PARENT")
       }
     }
 
