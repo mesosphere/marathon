@@ -1137,7 +1137,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         }
       }
 
-      "Accept a pod definition with shared Parent IPC and shm size defined" in {
+      "Accept a pod definition with shared Parent IPC and shm size NOT defined" in {
         implicit val podSystem = mock[PodManager]
         val f = Fixture()
 

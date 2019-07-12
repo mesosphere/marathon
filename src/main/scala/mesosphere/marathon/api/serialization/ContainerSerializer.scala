@@ -464,14 +464,14 @@ object LinuxInfoSerializer {
       builder.setSeccomp(seccompBuilder)
     }
 
-    linuxInfo.ipcInfo.foreach(ipcInfo => {
+    linuxInfo.ipcInfo.foreach { ipcInfo =>
 
       val ipcInfoBuilder = Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.newBuilder
       ipcInfoBuilder.setIpcMode(ipcInfo.ipcMode.toProto)
       ipcInfo.shmSize.foreach(ipcInfoBuilder.setShmSize)
 
       builder.setIpcInfo(ipcInfoBuilder)
-    })
+    }
 
     builder.build
   }
@@ -487,10 +487,10 @@ object LinuxInfoSerializer {
 
       linuxBuilder.setSeccomp(seccompBuilder)
     }
-    linuxInfo.ipcInfo.foreach(ipcInfo => {
+    linuxInfo.ipcInfo.foreach { ipcInfo =>
       ipcInfo.shmSize.foreach(linuxBuilder.setShmSize)
       linuxBuilder.setIpcMode(ipcInfo.ipcMode.toMesos)
-    })
+    }
 
     linuxBuilder.build
   }

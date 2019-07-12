@@ -183,11 +183,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("An app with a Docker config.json")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(
+        docker = Some(DockerContainer(
           image = "private/image",
-          pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
+          pullConfig = Some(DockerPullConfig("pullConfigSecret")))))
       val app = App(
-        id = "/app", cmd = Some("cmd"), container = Option(container),
+        id = "/app", cmd = Some("cmd"), container = Some(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
@@ -206,11 +206,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("An app with a Docker config.json")
       val container = RamlContainer(
         `type` = EngineType.Docker,
-        docker = Option(DockerContainer(
+        docker = Some(DockerContainer(
           image = "private/image",
           pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
       val app = App(
-        id = "/app", cmd = Some("cmd"), container = Option(container),
+        id = "/app", cmd = Some("cmd"), container = Some(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
@@ -230,11 +230,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("An app with a Docker config.json")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(
+        docker = Some(DockerContainer(
           image = "private/image",
           pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
       val app = App(
-        id = "/app", cmd = Some("cmd"), container = Option(container))
+        id = "/app", cmd = Some("cmd"), container = Some(container))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -253,10 +253,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("An app with a Docker config.json")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(
+        docker = Some(DockerContainer(
           image = "private/image",
           pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
-      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -279,16 +279,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("an app with seccomp profile defined and unconfined = false")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(image = "private/image")),
-        linuxInfo = Option(LinuxInfo(
-          seccomp = Option(Seccomp(
-            profileName = Option("foo"),
+        docker = Some(DockerContainer(image = "private/image")),
+        linuxInfo = Some(LinuxInfo(
+          seccomp = Some(Seccomp(
+            profileName = Some("foo"),
             unconfined = false
           ))
         ))
       )
 
-      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -304,15 +304,15 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("an app with seccomp profile defined and unconfined = true")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(image = "private/image")),
-        linuxInfo = Option(LinuxInfo(
-          seccomp = Option(Seccomp(
+        docker = Some(DockerContainer(image = "private/image")),
+        linuxInfo = Some(LinuxInfo(
+          seccomp = Some(Seccomp(
             unconfined = true
           ))
         ))
       )
 
-      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -328,16 +328,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("an app with seccomp profile defined and unconfined = true")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(image = "private/image")),
-        linuxInfo = Option(LinuxInfo(
-          seccomp = Option(Seccomp(
-            profileName = Option("foo"),
+        docker = Some(DockerContainer(image = "private/image")),
+        linuxInfo = Some(LinuxInfo(
+          seccomp = Some(Seccomp(
+            profileName = Some("foo"),
             unconfined = true
           ))
         ))
       )
 
-      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
 
       When("The create request is made")
       val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
@@ -356,15 +356,15 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("an app without seccomp profile defined and unconfined = false")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(image = "private/image")),
-        linuxInfo = Option(LinuxInfo(
-          seccomp = Option(Seccomp(
+        docker = Some(DockerContainer(image = "private/image")),
+        linuxInfo = Some(LinuxInfo(
+          seccomp = Some(Seccomp(
             unconfined = false
           ))
         ))
       )
 
-      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
 
       When("The create request is made")
       val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
@@ -383,16 +383,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("an app with ipcMode defined private and shmSize set")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(image = "private/image")),
-        linuxInfo = Option(LinuxInfo(
-          ipcInfo = Option(raml.IPCInfo(
+        docker = Some(DockerContainer(image = "private/image")),
+        linuxInfo = Some(LinuxInfo(
+          ipcInfo = Some(raml.IPCInfo(
             mode = raml.IPCMode.Private,
             shmSize = Some(16)
           ))
         ))
       )
 
-      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -408,15 +408,15 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("an app with ipcMode defined private and shmSize set")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(image = "private/image")),
-        linuxInfo = Option(LinuxInfo(
-          ipcInfo = Option(raml.IPCInfo(
+        docker = Some(DockerContainer(image = "private/image")),
+        linuxInfo = Some(LinuxInfo(
+          ipcInfo = Some(raml.IPCInfo(
             mode = raml.IPCMode.Private
           ))
         ))
       )
 
-      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -432,16 +432,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("an app with ipcMode defined sharedParent and shmSize set")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(image = "private/image")),
-        linuxInfo = Option(LinuxInfo(
-          ipcInfo = Option(raml.IPCInfo(
+        docker = Some(DockerContainer(image = "private/image")),
+        linuxInfo = Some(LinuxInfo(
+          ipcInfo = Some(raml.IPCInfo(
             mode = raml.IPCMode.ShareParent,
             shmSize = Some(16)
           ))
         ))
       )
 
-      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
 
       When("The create request is made")
       val body = Json.stringify(Json.toJson(app)).getBytes("UTF-8")
@@ -460,15 +460,15 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("an app with ipcMode defined sharedParent and shmSize NOT set")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(image = "private/image")),
-        linuxInfo = Option(LinuxInfo(
-          ipcInfo = Option(raml.IPCInfo(
+        docker = Some(DockerContainer(image = "private/image")),
+        linuxInfo = Some(LinuxInfo(
+          ipcInfo = Some(raml.IPCInfo(
             mode = raml.IPCMode.ShareParent
           ))
         ))
       )
 
-      val app = App(id = "/app", cmd = Some("cmd"), container = Option(container))
+      val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -743,7 +743,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         container = Some(raml.Container(
           `type` = EngineType.Docker,
           docker = Some(DockerContainer(
-            portMappings = Option(Seq(
+            portMappings = Some(Seq(
               ContainerPortMapping(containerPort = 0))),
             image = "jdef/helpme",
             network = Some(DockerNetwork.User)
@@ -778,7 +778,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val container = DockerContainer(
         network = Some(DockerNetwork.Bridge),
         image = "jdef/helpme",
-        portMappings = Option(Seq(
+        portMappings = Some(Seq(
           ContainerPortMapping(containerPort = 0)
         ))
       )
@@ -1000,7 +1000,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val secretVolume = AppSecretVolume("/path", "bar")
       val containers = raml.Container(`type` = EngineType.Mesos, volumes = Seq(secretVolume))
       val app = App(id = "/app", cmd = Some("cmd"),
-        container = Option(containers),
+        container = Some(containers),
         secrets = Map("bar" -> SecretDef("foo"))
       )
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
@@ -1886,10 +1886,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("An app with a network name with underscore")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(
+        docker = Some(DockerContainer(
           image = "image")))
       val app = App(
-        id = "/app", cmd = Some("cmd"), container = Option(container),
+        id = "/app", cmd = Some("cmd"), container = Some(container),
         networks = Seq(Network(name = Some("name_with_underscore"), mode = NetworkMode.Container)))
       val (body, plan) = prepareApp(app, groupManager)
 

@@ -60,8 +60,8 @@ See Mesos documentation for shared memory configuration for details.
   "container": {
     "type": "MESOS",
     "linuxInfo": {
-      "IPCInfo": {
-        "IPCMode": "PRIVATE",
+      "ipcInfo": {
+        "mode": "PRIVATE",
         "shmSize": 16
       }
     }

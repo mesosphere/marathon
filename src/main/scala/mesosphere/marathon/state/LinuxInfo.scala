@@ -32,14 +32,12 @@ case class LinuxInfo(seccomp: Option[Seccomp], ipcInfo: Option[IPCInfo])
 
 object LinuxInfo {
 
-  //  /*
   //  rules:  if seccomp not defined = valid
   //          if profile is empty unconfined must be true to be valid
   //          if profile is not empty unconfined must be false to be valid
   //          AND
   //          if sharedMem not defined = valid
   //          if ipcMode share_parent, shmSize must be undefined to be valid
-  //   */
 
   private[this] implicit val validIpcInfoState: Validator[Option[state.IPCInfo]] = new Validator[Option[state.IPCInfo]] {
     override def apply(ipcInfoOpt: Option[state.IPCInfo]): Result = {
