@@ -272,7 +272,8 @@ object Group extends StrictLogging {
       val originalGroup = updatedGroupId.flatMap(originalRootGroup.group) // TODO: why is groupUpdate.id optional? What is the semantic there?
       (maybeNewEnforceRole, originalGroup.flatMap(_.enforceRole)) match {
         case (None, None) => Success
-        case (Some(newEnforceRole), None) => Success
+        case (Some(newEnforceRole), None) if originalGroup.nonEmpty =>
+          Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated to $newEnforceRole for $updatedGroupId. Use a partial update instead.")))
         case (None, Some(_)) =>
           Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be removed from $updatedGroupId.")))
         case (Some(newEnforceRole), Some(oldEnforceRole)) =>

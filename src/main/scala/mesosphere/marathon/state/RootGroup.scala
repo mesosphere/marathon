@@ -254,7 +254,8 @@ class RootGroup(
         case (_, group) => group.id != newApp.id || group.containsApps || group.containsPods
       },
       dependencies = oldGroup.dependencies,
-      version = version)
+      version = version,
+      enforceRole = oldGroup.enforceRole)
     putGroup(newGroup, version)
   }
 
@@ -289,7 +290,8 @@ class RootGroup(
         case (_, group) => group.id != newPod.id || group.containsApps || group.containsPods
       },
       dependencies = oldGroup.dependencies,
-      version = version)
+      version = version,
+      enforceRole = oldGroup.enforceRole)
     putGroup(newGroup, version)
   }
 
@@ -348,7 +350,8 @@ class RootGroup(
           pods = oldParent.pods,
           groupsById = oldParent.groupsById - oldGroup.id,
           dependencies = oldParent.dependencies,
-          version = version), version)
+          version = version,
+          enforceRole = oldParent.enforceRole), version)
     }
   }
 
@@ -370,7 +373,8 @@ class RootGroup(
         pods = oldGroup.pods,
         groupsById = oldGroup.groupsById,
         dependencies = oldGroup.dependencies,
-        version = version), version)
+        version = version,
+        enforceRole = oldGroup.enforceRole), version)
     }
   }
 
@@ -392,7 +396,8 @@ class RootGroup(
         pods = oldGroup.pods - oldPod.id,
         groupsById = oldGroup.groupsById,
         dependencies = oldGroup.dependencies,
-        version = version), version)
+        version = version,
+        enforceRole = oldGroup.enforceRole), version)
     }
   }
 
@@ -407,7 +412,8 @@ class RootGroup(
         pods = group.pods.map { case (podId, pod) => podId -> pod.copy(versionInfo = VersionInfo.NoVersion) },
         groupsById = group.groupsById.map { case (subGroupId, subGroup) => subGroupId -> in(subGroup) },
         dependencies = group.dependencies,
-        version = Timestamp(0))
+        version = Timestamp(0),
+        enforceRole = group.enforceRole)
     }
     RootGroup.fromGroup(in(this))
   }

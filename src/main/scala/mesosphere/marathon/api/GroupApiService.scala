@@ -50,13 +50,9 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
       val updatedGroup: Group = Raml.fromRaml(
         GroupConversion(groupUpdate, group, newVersion) -> appConversionFunc)
 
-      logger.info(s"Update Group to: $updatedGroup")
-
       if (maybeExistingGroup.isEmpty) checkAuthorizationOrThrow(CreateGroup, updatedGroup)
 
-      val r = rootGroup.putGroup(updatedGroup, newVersion)
-      logger.info(s"Top-level groups after update: ${r.transitiveGroupValues.toIndexedSeq}")
-      r
+      rootGroup.putGroup(updatedGroup, newVersion)
     }
 
     await(revertToOlderVersion)

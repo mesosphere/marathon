@@ -98,7 +98,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       And(s"The group info for $id is complete")
       val groupInfo = marathon.group(id)
-      groupInfo.value.enforceRole.value should be(true)
+      groupInfo.value.enforceRole.value should be(false)
     }
 
     "update a group with applications to restart" in {
