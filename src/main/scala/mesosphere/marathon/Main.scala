@@ -3,7 +3,7 @@ package mesosphere.marathon
 import java.util.concurrent.TimeUnit
 
 import akka.actor.ActorSystem
-import com.google.common.util.concurrent.ServiceManager
+import com.google.common.util.concurrent.{Service, ServiceManager}
 import com.google.inject.{Guice, Module}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.LeaderProxyFilterModule
@@ -94,6 +94,18 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     try {
       serviceManager.foreach(_.awaitHealthy())
     } catch {
+      case ie: IllegalStateException =>
+        logger.error(s"Failed to start all services. Services by state: ${serviceManager.map(_.servicesByState()).getOrElse("[]")}", ie)
+
+        // Try to find a failed service, if we have one, rethrow the failure cause to handle it in the
+        // unchecked exception handler.
+        services.find(_.state() == Service.State.FAILED).foreach(failedService => {
+          throw failedService.failureCause()
+        })
+
+        // Otherwise just shutdown and rethrow the original exception
+        shutdownAndWait()
+        throw ie
       case e: Exception =>
         logger.error(s"Failed to start all services. Services by state: ${serviceManager.map(_.servicesByState()).getOrElse("[]")}", e)
         shutdownAndWait()
