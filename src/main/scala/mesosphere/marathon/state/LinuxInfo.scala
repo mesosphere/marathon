@@ -26,7 +26,7 @@ case class IPCInfo(ipcMode: state.IpcMode, shmSize: Option[Int])
   * and shared pid namespaces.
   *
   * @param seccomp The seccomp mode to use, either unconfined or which profile.
-  * @param ipcInfo The IPCConfig to use
+  * @param ipcInfo The IPC configuration to use
   */
 case class LinuxInfo(seccomp: Option[Seccomp], ipcInfo: Option[IPCInfo])
 
