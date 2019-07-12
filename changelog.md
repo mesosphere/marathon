@@ -2,6 +2,31 @@
 
 ### `undefined` is an Illegal `--gpu_scheduling_behavior` Parameter
 
+### Introduce SharedMemory/IPC configuration to Marathon Apps and Pods
+
+When running Marathon Apps or Pods it is now possible to configure the IPC separation level and shared memory size.
+Each container or executor can have their IPC mode set to either private or share the parents namespace. If set to
+private, the shared memory size can also be configured.
+See Mesos documentation for shared memory configuration for details.
+
+```
+{
+  "id": "/mesos-shared-memory-app",
+  "cmd": "sleep 1000",
+  "cpus": 0.1,
+  "mem": 32,
+  "container": {
+    "type": "MESOS",
+    "linuxInfo": {
+      "ipcInfo": {
+        "mode": "PRIVATE",
+        "shmSize": 16
+      }
+    }
+  }
+}
+``` 
+
 As described [in an earlies note](#--gpu_scheduling_behavior-default-is-now-restricted-undefined-is-deprecated-and-will-be-removed) `undefined`
 is removed with `1.9.x`.
 
@@ -43,32 +68,6 @@ when Marathon fails to clean up reservation which requires offers being sent.
 
 ### AppC is now deprecated
 AppC is now deprecated and will be removed in Marathon 1.9
-
-### Introduce SharedMemory/IPC configuration to Marathon Apps and Pods
-
-When running Marathon Apps or Pods it is now possible to configure the IPC separation level and shared memory size.
-Each container or executor can have their IPC mode set to either private or share the parents namespace. If set to
-private, the shared memory size can also be configured.
-See Mesos documentation for shared memory configuration for details.
-
-```
-{
-  "id": "/mesos-shared-memory-app",
-  "cmd": "sleep 1000",
-  "cpus": 0.1,
-  "mem": 32,
-  "container": {
-    "type": "MESOS",
-    "linuxInfo": {
-      "ipcInfo": {
-        "mode": "PRIVATE",
-        "shmSize": 16
-      }
-    }
-  }
-}
-``` 
-/
 
 ### Introducing Seccomp capabilities to Marathon Apps and Pods
 
