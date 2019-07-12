@@ -377,7 +377,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       Then("The update fails")
       result should be(UnprocessableEntity)
-      result.entityString should include("enforce role cannot be updated to true")
+      result.entityString should include("enforce role cannot be changed from false to true")
     }
 
     "Patching second level group fails" in {
