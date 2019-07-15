@@ -28,7 +28,6 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
     def appMockCommand(port: String) =
       s"""
          |echo APP PROXY $$MESOS_TASK_ID RUNNING; \\
-         |echo "hello" >> $containerDir/data/test && \\
          |$containerDir/python/app_mock.py $port $id v1 http://httpbin.org/anything
         """.stripMargin
 
