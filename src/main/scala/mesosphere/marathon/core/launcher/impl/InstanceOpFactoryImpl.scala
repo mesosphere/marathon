@@ -237,7 +237,7 @@ class InstanceOpFactoryImpl(
     maybeLaunchOnReservation(request)
       .orElse(maybeReserveAndCreateVolumes(request))
       .getOrElse {
-        logger.warn(s"No need to reserve or launch and offer request for resident app ${scheduledInstance.runSpecId} and instance ${scheduledInstance.instanceId}")
+        logger.warn(s"No need to reserve or launch -> no match on offer for resident app ${scheduledInstance.runSpecId} and instance ${scheduledInstance.instanceId}")
         OfferMatchResult.NoMatch(scheduledInstance.runSpec, request.offer,
           Seq(NoOfferMatchReason.NoCorrespondingReservationFound), clock.now())
       }
