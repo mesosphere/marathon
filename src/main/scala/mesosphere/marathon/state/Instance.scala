@@ -21,7 +21,7 @@ case class Instance(
     tasksMap: Map[Task.Id, Task],
     runSpecVersion: Timestamp,
     reservation: Option[Reservation],
-    role: String) extends MarathonState[Protos.Json, Instance] {
+    role: Option[String]) extends MarathonState[Protos.Json, Instance] {
 
   def hasReservation: Boolean = reservation.isDefined
 
@@ -42,7 +42,10 @@ case class Instance(
     * @param runSpec The run spec belonging to this instance.
     * @return This instance in core model.
     */
-  def toCoreInstance(runSpec: RunSpec) = CoreInstance(instanceId, agentInfo, state, tasksMap, runSpec, reservation, role)
+  def toCoreInstance(runSpec: RunSpec) = {
+    require(role.isDefined, "Stored Instances must have a defined role")
+    CoreInstance(instanceId, agentInfo, state, tasksMap, runSpec, reservation, role.get)
+  }
 }
 
 object Instance {
@@ -51,7 +54,7 @@ object Instance {
     * @return storage model instance of the core instance.
     */
   def fromCoreInstance(instance: CoreInstance): Instance =
-    Instance(instance.instanceId, instance.agentInfo, instance.state, instance.tasksMap, instance.runSpecVersion, instance.reservation, instance.role)
+    Instance(instance.instanceId, instance.agentInfo, instance.state, instance.tasksMap, instance.runSpecVersion, instance.reservation, Some(instance.role))
 
   // Formats
 
@@ -66,7 +69,7 @@ object Instance {
       (__ \ "runSpecVersion").write[Timestamp] ~
       (__ \ "state").write[InstanceState] ~
       (__ \ "reservation").writeNullable[Reservation] ~
-      (__ \ "role").write[String]
+      (__ \ "role").writeNullable[String]
     ) { (i) =>
         (i.instanceId, i.agentInfo, i.tasksMap, i.runSpecVersion, i.state, i.reservation, i.role)
       }
@@ -80,7 +83,7 @@ object Instance {
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[InstanceState] ~
       (__ \ "reservation").readNullable[Reservation] ~
-      (__ \ "role").read[String]
+      (__ \ "role").readNullable[String]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation, role) =>
         new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, reservation, role)
       }
