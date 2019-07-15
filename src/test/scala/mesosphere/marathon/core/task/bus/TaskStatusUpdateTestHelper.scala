@@ -50,7 +50,7 @@ object TaskStatusUpdateTestHelper {
   lazy val defaultInstance = TestInstanceBuilder.newBuilder(PathId("/app")).addTaskStaged().getInstance()
   lazy val defaultTimestamp = Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC))
 
-  def provision(instance: Instance, timestamp: Timestamp = defaultTimestamp) = {
+  def provision(instance: Instance = defaultInstance, timestamp: Timestamp = defaultTimestamp) = {
     val dummy = TestInstanceBuilder.newBuilderWithInstanceId(instance.instanceId, timestamp).addTaskProvisioned().getInstance()
     val operation = InstanceUpdateOperation.Provision(instance.instanceId, dummy.agentInfo.get, dummy.runSpec, dummy.tasksMap, timestamp)
     val provisioned = instance.provisioned(dummy.agentInfo.get, dummy.runSpec, dummy.tasksMap, timestamp)
@@ -103,6 +103,12 @@ object TaskStatusUpdateTestHelper {
     val taskId = Task.Id(instance.instanceId)
     val status = MesosTaskStatusTestHelper.staging(taskId)
     taskUpdateFor(instance, Condition.Staging, status)
+  }
+
+  def starting(instance: Instance = defaultInstance) = {
+    val taskId = Task.Id(instance.instanceId)
+    val status = MesosTaskStatusTestHelper.starting(taskId)
+    taskUpdateFor(instance, Condition.Starting, status)
   }
 
   def finished(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {

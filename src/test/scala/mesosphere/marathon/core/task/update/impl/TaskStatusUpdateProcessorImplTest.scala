@@ -68,34 +68,6 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       }
     }
 
-    for {
-      (origUpdate, name) <- Seq(
-        (TaskStatusUpdateTestHelper.killed(draining = true), "killed"),
-        (TaskStatusUpdateTestHelper.goneByOperator(draining = true), "goneByOperator")
-      )
-    } {
-      s"receiving a $name with REASON_SLAVE_DRAINING" in new Fixture {
-        val instance = origUpdate.wrapped.instance
-        val status = origUpdate.status
-
-        instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
-        instanceTracker.updateStatus(instance, status, clock.now()) returns Future.successful(Done)
-
-        updateProcessor.publish(status).futureValue
-
-        When("load the task in the task tracker")
-        verify(instanceTracker).instance(instance.instanceId)
-        Then("pass the the MesosStatusUpdateEvent to the instance tracker")
-        verify(instanceTracker).updateStatus(instance, status, clock.now())
-        Then("reset any delay for this runSpec")
-        verify(launchQueue).resetDelay(instance.runSpec)
-        Then("acknowledge the update")
-        verify(schedulerDriver).acknowledgeStatusUpdate(status)
-        Then("not do anything else")
-        verifyNoMoreInteractions()
-      }
-    }
-
     "receiving a TASK_KILLING task status update for a running task" in new Fixture {
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val origUpdate = TaskStatusUpdateTestHelper.killing(instance)
@@ -322,7 +294,6 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
     lazy val instanceTracker: InstanceTracker = mock[InstanceTracker]
     lazy val schedulerDriver: SchedulerDriver = mock[SchedulerDriver]
     lazy val killService: KillService = mock[KillService]
-    lazy val launchQueue: LaunchQueue = mock[LaunchQueue]
     lazy val marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder = {
       val holder = new MarathonSchedulerDriverHolder
       holder.driver = Some(schedulerDriver)
@@ -335,7 +306,6 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
       instanceTracker,
       marathonSchedulerDriverHolder,
       killService,
-      launchQueue,
       eventStream = system.eventStream
     )
 
