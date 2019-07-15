@@ -109,7 +109,7 @@ class PostToEventStreamStepImplTest extends UnitTest {
     val agentInfo = Instance.AgentInfo("localhost", None, None, None, Seq.empty)
     val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), healthy = None, Goal.Running)
     val app = AppDefinition(PathId("/my/app"), role = "*")
-    val instance = Instance(Instance.Id.forRunSpec(app.id), Some(agentInfo), instanceState, Map.empty, app, None, Instance.defaultMesosRole)
+    val instance = Instance(Instance.Id.forRunSpec(app.id), Some(agentInfo), instanceState, Map.empty, app, None, "*")
     val eventStream = mock[EventStream]
 
     val step = new PostToEventStreamStepImpl(eventStream)

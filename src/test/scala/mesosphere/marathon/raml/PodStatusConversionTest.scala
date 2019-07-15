@@ -531,7 +531,7 @@ object PodStatusConversionTest {
       ).map(t => t.taskId -> t)(collection.breakOut),
       runSpec = pod,
       reservation = maybeReservation,
-      role = core.instance.Instance.defaultMesosRole
+      role = "*"
     )
 
     InstanceFixture(since, agentInfo, taskIds, instance)

@@ -421,8 +421,4 @@ object Instance {
     }
   )
 
-  /**
-    * This is the default role that mesos uses when no role is specified by marathon.
-    */
-  val defaultMesosRole = "TBD"
 }

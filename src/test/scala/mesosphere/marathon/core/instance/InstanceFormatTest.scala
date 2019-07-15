@@ -33,7 +33,7 @@ class InstanceFormatTest extends UnitTest {
 
     "not write out the unreachable strategy" in {
       val state = InstanceState(Condition.Running, Timestamp.now(), None, None, Goal.Running)
-      val instance = Instance(Id.forRunSpec(PathId("/app")), None, state, Map.empty, Timestamp.now(), None, core.instance.Instance.defaultMesosRole)
+      val instance = Instance(Id.forRunSpec(PathId("/app")), None, state, Map.empty, Timestamp.now(), None, "*")
 
       val json = Json.toJson(instance)
 
