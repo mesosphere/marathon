@@ -47,7 +47,7 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
           linuxInfo = Some(state.LinuxInfo(
             seccomp = None,
             ipcInfo = Some(state.IPCInfo(
-              ipcMode = state.IpcMode.ShareParent,
+              ipcMode = state.IpcMode.Private,
               shmSize = Some(11)
             ))
           ))
