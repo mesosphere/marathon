@@ -31,7 +31,7 @@ class HealthCheckWorkerTest extends AkkaUnitTest with ImplicitSender {
       }
 
       val appId = PathId(s"/app-with-tcp-health-check-${UUID.randomUUID()}")
-      val app = AppDefinition(id = appId, portDefinitions = Seq(PortDefinition(0)))
+      val app = AppDefinition(id = appId, role = "*", portDefinitions = Seq(PortDefinition(0)))
       val hostName = InetAddress.getLocalHost.getCanonicalHostName
       val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), region = None, zone = None, attributes = Nil)
       val task = {
@@ -75,7 +75,7 @@ class HealthCheckWorkerTest extends AkkaUnitTest with ImplicitSender {
 
       val hostName = "localhost"
       val appId = PathId(s"/app-with-http-health-check-${UUID.randomUUID()}")
-      val app = AppDefinition(id = appId, portDefinitions = Seq(PortDefinition(0)))
+      val app = AppDefinition(id = appId, role = "*", portDefinitions = Seq(PortDefinition(0)))
       val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), region = None, zone = None, attributes = Nil)
       val task = {
         val t: Task = TestTaskBuilder.Helper.runningTaskForApp(appId)

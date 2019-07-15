@@ -3,7 +3,7 @@ package api.validation
 
 import com.wix.accord.validate
 import mesosphere.UnitTest
-import mesosphere.marathon.api.v2.AppNormalization
+import mesosphere.marathon.api.v2.{AppNormalization, ValidationHelper}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.raml.{App, AppUpdate, Raml}
 import mesosphere.marathon.state.AppDefinition
@@ -12,7 +12,7 @@ import play.api.libs.json.Json
 
 class AppUpdateValidatorTest extends UnitTest with Matchers {
 
-  implicit val validAppDefinition = AppDefinition.validAppDefinition(Set.empty)(PluginManager.None)
+  implicit val validAppDefinition = AppDefinition.validAppDefinition(Set.empty, ValidationHelper.roleSettings)(PluginManager.None)
 
   "validation for network type changes" should {
     // regression test for DCOS-10641
@@ -52,7 +52,7 @@ class AppUpdateValidatorTest extends UnitTest with Matchers {
           |}
         """.stripMargin).as[App]
 
-      val config = AppNormalization.Configuration(None, "mesos-bridge-name")
+      val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings)
       val appDef = Raml.fromRaml(
         AppNormalization.apply(config)
           .normalized(AppNormalization.forDeprecated(config).normalized(originalApp)))

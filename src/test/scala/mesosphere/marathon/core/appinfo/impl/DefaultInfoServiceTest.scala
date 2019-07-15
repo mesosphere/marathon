@@ -217,9 +217,9 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       Given("a nested group with access to only nested app /group/app1")
       val f = new Fixture
       val rootId = PathId.empty
-      val rootApp = AppDefinition(PathId("/app"), cmd = Some("sleep"))
-      val nestedApp1 = AppDefinition(PathId("/group/app1"), cmd = Some("sleep"))
-      val nestedApp2 = AppDefinition(PathId("/group/app2"), cmd = Some("sleep"))
+      val rootApp = AppDefinition(PathId("/app"), cmd = Some("sleep"), role = "*")
+      val nestedApp1 = AppDefinition(PathId("/group/app1"), cmd = Some("sleep"), role = "*")
+      val nestedApp2 = AppDefinition(PathId("/group/app2"), cmd = Some("sleep"), role = "*")
       val nestedGroup = createGroup(PathId("/group"), Map(nestedApp1.id -> nestedApp1, nestedApp2.id -> nestedApp2))
       val rootGroup = createRootGroup(Map(rootApp.id -> rootApp), groups = Set(nestedGroup))
 
@@ -257,10 +257,10 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     }
   }
 
-  private val app1: AppDefinition = AppDefinition(PathId("/test1"), cmd = Some("sleep"))
+  private val app1: AppDefinition = AppDefinition(PathId("/test1"), cmd = Some("sleep"), role = "*")
   val someApps = {
-    val app2 = AppDefinition(PathId("/test2"), cmd = Some("sleep"))
-    val app3 = AppDefinition(PathId("/test3"), cmd = Some("sleep"))
+    val app2 = AppDefinition(PathId("/test2"), cmd = Some("sleep"), role = "*")
+    val app3 = AppDefinition(PathId("/test3"), cmd = Some("sleep"), role = "*")
     Map(
       app1.id -> app1,
       app2.id -> app2,
@@ -269,8 +269,8 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
   }
 
   val someNestedApps = {
-    val nestedApp1 = AppDefinition(PathId("/nested/test1"), cmd = Some("sleep"))
-    val nestedApp2 = AppDefinition(PathId("/nested/test2"), cmd = Some("sleep"))
+    val nestedApp1 = AppDefinition(PathId("/nested/test1"), cmd = Some("sleep"), role = "*")
+    val nestedApp2 = AppDefinition(PathId("/nested/test2"), cmd = Some("sleep"), role = "*")
     Map(
       (nestedApp1.id, nestedApp1),
       (nestedApp2.id, nestedApp2)
@@ -287,13 +287,13 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     ))
 
   val nestedGroup = {
-    val app1 = AppDefinition(PathId("/app1"), cmd = Some("sleep"))
-    val visibleApp1 = AppDefinition(PathId("/visible/app1"), cmd = Some("sleep"))
-    val visibleGroupApp1 = AppDefinition(PathId("/visible/group/app1"), cmd = Some("sleep"))
-    val secureApp1 = AppDefinition(PathId("/secure/app1"), cmd = Some("sleep"))
-    val secureGroupApp1 = AppDefinition(PathId("/secure/group/app1"), cmd = Some("sleep"))
-    val otherApp1 = AppDefinition(PathId("/other/app1"), cmd = Some("sleep"))
-    val otherGroupApp1 = AppDefinition(PathId("/other/group/app1"), cmd = Some("sleep"))
+    val app1 = AppDefinition(PathId("/app1"), cmd = Some("sleep"), role = "*")
+    val visibleApp1 = AppDefinition(PathId("/visible/app1"), cmd = Some("sleep"), role = "*")
+    val visibleGroupApp1 = AppDefinition(PathId("/visible/group/app1"), cmd = Some("sleep"), role = "*")
+    val secureApp1 = AppDefinition(PathId("/secure/app1"), cmd = Some("sleep"), role = "*")
+    val secureGroupApp1 = AppDefinition(PathId("/secure/group/app1"), cmd = Some("sleep"), role = "*")
+    val otherApp1 = AppDefinition(PathId("/other/app1"), cmd = Some("sleep"), role = "*")
+    val otherGroupApp1 = AppDefinition(PathId("/other/group/app1"), cmd = Some("sleep"), role = "*")
 
     createRootGroup(Map(app1.id -> app1), groups = Set(
       createGroup(PathId("/visible"), Map(visibleApp1.id -> visibleApp1), groups = Set(

@@ -15,7 +15,7 @@ class RateLimiterTest extends UnitTest {
   "RateLimiter" should {
     "addDelay" in {
       val limiter = new RateLimiter(clock)
-      val app = AppDefinition(id = "test".toPath, backoffStrategy = BackoffStrategy(backoff = 10.seconds))
+      val app = AppDefinition(id = "test".toPath, role = "*", backoffStrategy = BackoffStrategy(backoff = 10.seconds))
 
       limiter.addDelay(app)
 
@@ -24,7 +24,7 @@ class RateLimiterTest extends UnitTest {
 
     "addDelay for existing delay" in {
       val limiter = new RateLimiter(clock)
-      val app = AppDefinition(id = "test".toPath, backoffStrategy = BackoffStrategy(backoff = 10.seconds, factor = 2.0))
+      val app = AppDefinition(id = "test".toPath, role = "*", backoffStrategy = BackoffStrategy(backoff = 10.seconds, factor = 2.0))
 
       limiter.addDelay(app) // linter:ignore:IdenticalStatements
       limiter.addDelay(app)
@@ -39,11 +39,13 @@ class RateLimiterTest extends UnitTest {
 
       val appWithOverdueDelay = AppDefinition(
         id = "overdue".toPath,
+        role = "*",
         backoffStrategy = BackoffStrategy(backoff = 10.seconds, maxLaunchDelay = threshold))
       limiter.addDelay(appWithOverdueDelay)
 
       val appWithValidDelay = AppDefinition(
         id = "valid".toPath,
+        role = "*",
         backoffStrategy = BackoffStrategy(backoff = 20.seconds, maxLaunchDelay = threshold + 10.seconds))
       limiter.addDelay(appWithValidDelay)
 
@@ -57,7 +59,7 @@ class RateLimiterTest extends UnitTest {
 
     "resetDelay" in {
       val limiter = new RateLimiter(clock)
-      val app = AppDefinition(id = "test".toPath, backoffStrategy = BackoffStrategy(backoff = 10.seconds))
+      val app = AppDefinition(id = "test".toPath, role = "*", backoffStrategy = BackoffStrategy(backoff = 10.seconds))
 
       limiter.addDelay(app)
       limiter.resetDelay(app)

@@ -190,9 +190,18 @@ trait GroupManager {
 
   /**
     * Refresh the internal root group cache. When calling this function, the internal hold cached root group will be dropped
-    * and loaded when accessing the next time.
+    * and reloaded directly
     *
     * @return Done if refresh was successful
     */
+  def invalidateAndRefreshGroupCache(): Future[Done]
+
+  /**
+    * Invalidate the internal root group cache. When calling this function, the internal hold cached root group will be dropped
+    * and only be reloaded if accessed the next time
+    *
+    * @return Done if invalidation was successful
+    */
   def invalidateGroupCache(): Future[Done]
+
 }

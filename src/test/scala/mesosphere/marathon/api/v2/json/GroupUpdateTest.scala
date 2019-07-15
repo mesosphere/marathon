@@ -3,17 +3,17 @@ package api.v2.json
 
 import com.wix.accord.validate
 import mesosphere.UnitTest
-import mesosphere.marathon.api.v2.AppNormalization
+import mesosphere.marathon.api.v2.{AppNormalization, ValidationHelper}
 import mesosphere.marathon.raml.{App, GroupConversion, GroupUpdate, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 
 class GroupUpdateTest extends UnitTest with GroupCreation {
-  val noEnabledFeatures = Set.empty[String]
+  val noEnabledFeatures = AllConf.withTestConfig()
   val appConversionFunc: (App => AppDefinition) = { app =>
     // assume canonical form and that the app is valid
-    Raml.fromRaml(AppNormalization.apply(AppNormalization.Configuration(None, "bridge-name")).normalized(app))
+    Raml.fromRaml(AppNormalization.apply(AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings)).normalized(app))
   }
   implicit val groupUpdateRamlReader = raml.GroupConversion.groupUpdateRamlReads // HACK: workaround bogus compiler error?!
 
@@ -38,7 +38,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       When("The update is performed")
       val result: Group = Raml.fromRaml(GroupConversion(update, rootGroup, timestamp) -> appConversionFunc)
 
-      validate(RootGroup.fromGroup(result))(RootGroup.rootGroupValidator(noEnabledFeatures)).isSuccess should be(true)
+      validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
       Then("The update is applied correctly")
       result.id should be(PathId.empty)
@@ -56,7 +56,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
 
     "A group update can be applied to existing entries" in {
       Given("A group with updates of existing nodes")
-      val blaApp = AppDefinition("/test/bla".toPath, Some("foo"))
+      val blaApp = AppDefinition("/test/bla".toPath, Some("foo"), role = "*")
       val actual = createRootGroup(groups = Set(
         createGroup("/test".toPath, apps = Map(blaApp.id -> blaApp)),
         createGroup("/apps".toPath, groups = Set(createGroup("/apps/foo".toPath)))
@@ -83,7 +83,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val result: RootGroup = RootGroup.fromGroup(Raml.fromRaml(
         GroupConversion(update, actual, timestamp) -> appConversionFunc))
 
-      validate(result)(RootGroup.rootGroupValidator(Set())).isSuccess should be(true)
+      validate(result)(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
       Then("The update is applied correctly")
       result.id should be(PathId.empty)
@@ -103,8 +103,8 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
 
     "GroupUpdate will update a Group correctly" in {
       Given("An existing group with two subgroups")
-      val app1 = AppDefinition("/test/group1/app1".toPath, Some("foo"))
-      val app2 = AppDefinition("/test/group2/app2".toPath, Some("foo"))
+      val app1 = AppDefinition("/test/group1/app1".toPath, Some("foo"), role = "*")
+      val app2 = AppDefinition("/test/group2/app2".toPath, Some("foo"), role = "*")
       val current = createGroup(
         "/test".toPath,
         groups = Set(
@@ -133,7 +133,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val next = Raml.fromRaml(GroupConversion(update, current, timestamp) -> appConversionFunc)
       val result = createRootGroup(groups = Set(next))
 
-      validate(result)(RootGroup.rootGroupValidator(Set())).isSuccess should be(true)
+      validate(result)(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
       Then("The update is reflected in the current group")
       result.id.toString should be("/")
@@ -179,7 +179,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val result = Raml.fromRaml(
         GroupConversion(update, createRootGroup(), Timestamp.now()) -> appConversionFunc)
 
-      validate(RootGroup.fromGroup(result))(RootGroup.rootGroupValidator(noEnabledFeatures)).isSuccess should be(true)
+      validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
       Then("The update is applied correctly")
       val group = result.group("test-group".toRootPath)

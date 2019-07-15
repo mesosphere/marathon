@@ -80,9 +80,9 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
     }
   }
 
-  val app = AppDefinition(PathId("/test"))
-  val other = AppDefinition(PathId("/other"))
-  val pod = PodDefinition(id = PathId("/pod"), networks = Seq(HostNetwork), containers = Seq(
+  val app = AppDefinition(PathId("/test"), role = "*")
+  val other = AppDefinition(PathId("/other"), role = "*")
+  val pod = PodDefinition(id = PathId("/pod"), role = "*", networks = Seq(HostNetwork), containers = Seq(
     MesosContainer(name = "ct1", resources = Resources(0.01, 32))
   ))
 

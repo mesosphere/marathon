@@ -4,6 +4,7 @@ package api.v2
 import mesosphere.UnitTest
 import mesosphere.marathon.raml.{Endpoint, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodPersistentVolume, PodSchedulingPolicy, PodUpgradeStrategy, Resources, UnreachableDisabled, VolumeMount}
 import Normalization._
+import mesosphere.marathon.util.RoleSettings
 import org.scalatest.Inside
 
 class PodNormalizationTest extends UnitTest with Inside {
@@ -64,7 +65,7 @@ class PodNormalizationTest extends UnitTest with Inside {
             net.name.value shouldBe "net1"
         }
       }
-      "with default network name" in new Fixture(PodNormalization.Configuration(Some("default1"))) {
+      "with default network name" in new Fixture(PodNormalization.Configuration(defaultNetworkName = Some("default1"), ValidationHelper.roleSettings)) {
         // replace empty network name with the default
         val withoutNetworkName = template.copy(networks = Seq(Network()))
         inside(withoutNetworkName.normalize.networks) {
@@ -107,9 +108,39 @@ class PodNormalizationTest extends UnitTest with Inside {
         }
       }
     }
+
+    "normalizing a pod with a role" should {
+      val template = Pod(
+        id = "foo",
+        containers = Seq(PodContainer(name = "c", resources = Resources()))
+      )
+
+      "return default role for pods without a role" in new Fixture() {
+        inside(template.normalize.role) {
+          case Some(role) =>
+            role shouldBe "*"
+        }
+      }
+
+      "return the configured role for pods without a role" in new Fixture(config = PodNormalization.Configuration(None, RoleSettings(validRoles = Set("customDefault"), defaultRole = "customDefault"))) {
+        inside(template.normalize.role) {
+          case Some(role) =>
+            role shouldBe "customDefault"
+        }
+      }
+
+      "return the defined role for pods with a role" in new Fixture() {
+        val pod = template.copy(role = Some("someCustomRole"))
+        inside(pod.normalize.role) {
+          case Some(role) => role shouldBe "someCustomRole"
+        }
+      }
+
+    }
+
   }
 
-  abstract class Fixture(config: PodNormalization.Config = PodNormalization.Configuration(None)) {
+  abstract class Fixture(config: PodNormalization.Config = PodNormalization.Configuration(None, ValidationHelper.roleSettings)) {
     protected implicit val normalization: Normalization[Pod] = PodNormalization(config)
   }
 }

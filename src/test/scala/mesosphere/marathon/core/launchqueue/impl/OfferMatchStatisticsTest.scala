@@ -125,9 +125,9 @@ class OfferMatchStatisticsActorTest extends AkkaUnitTest with Eventually with In
     .toMat(OfferMatchStatistics.noMatchStatisticsSink)(Keep.both)
 
   class Fixture {
-    val runSpecA = AppDefinition(PathId("/a"))
-    val runSpecB = AppDefinition(PathId("/b"))
-    val runSpecC = AppDefinition(PathId("/c"))
+    val runSpecA = AppDefinition(PathId("/a"), role = "*")
+    val runSpecB = AppDefinition(PathId("/b"), role = "*")
+    val runSpecC = AppDefinition(PathId("/c"), role = "*")
     def offerFrom(agent: String, cpus: Double = 4) = MarathonTestHelper.makeBasicOffer(cpus = cpus).setSlaveId(Mesos.SlaveID.newBuilder().setValue(agent)).build()
     val instanceOp = mock[InstanceOp]
     import mesosphere.mesos.NoOfferMatchReason._

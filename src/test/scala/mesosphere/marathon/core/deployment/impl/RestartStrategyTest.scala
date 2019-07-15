@@ -18,6 +18,7 @@ class RestartStrategyTest extends UnitTest {
       Given("A resident app")
       val app = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         instances = 1,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
         container = container)
@@ -36,6 +37,7 @@ class RestartStrategyTest extends UnitTest {
       Given("A resident app")
       val app = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         instances = 1,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
         container = container)
@@ -54,6 +56,7 @@ class RestartStrategyTest extends UnitTest {
       Given("A resident app")
       val app = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         instances = 5,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
         container = container)
@@ -72,6 +75,7 @@ class RestartStrategyTest extends UnitTest {
       Given("A resident app")
       val app = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
         container = container)
@@ -90,6 +94,7 @@ class RestartStrategyTest extends UnitTest {
       Given("A resident app")
       val app = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
         container = container)
@@ -108,6 +113,7 @@ class RestartStrategyTest extends UnitTest {
       Given("A resident app")
       val app = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
         container = container)
@@ -126,6 +132,7 @@ class RestartStrategyTest extends UnitTest {
       Given("A normal app")
       val app = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         instances = 1,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
 
@@ -143,6 +150,7 @@ class RestartStrategyTest extends UnitTest {
       Given("A normal app")
       val app = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         instances = 1,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
 
@@ -160,6 +168,7 @@ class RestartStrategyTest extends UnitTest {
       Given("A normal app")
       val app = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         instances = 2,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
 
@@ -177,6 +186,7 @@ class RestartStrategyTest extends UnitTest {
       Given("A normal app")
       val app = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         instances = 10,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.1, maximumOverCapacity = 0))
 
@@ -194,6 +204,7 @@ class RestartStrategyTest extends UnitTest {
       Given("A normal app")
       val app = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         instances = 10,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.1, maximumOverCapacity = 1.0))
 
@@ -211,6 +222,7 @@ class RestartStrategyTest extends UnitTest {
       Given("A normal app")
       val app = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         instances = 10,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 1.0))
 

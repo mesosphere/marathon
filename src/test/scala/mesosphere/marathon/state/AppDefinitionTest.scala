@@ -21,6 +21,7 @@ class AppDefinitionTest extends UnitTest {
     "ToProto with port definitions" in {
       val app1 = AppDefinition(
         id = "play".toPath,
+        role = "*",
         cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
         resources = Resources(cpus = 4.0, mem = 256.0),
         instances = 5,
@@ -48,6 +49,7 @@ class AppDefinitionTest extends UnitTest {
 
       val app2 = AppDefinition(
         id = "play".toPath,
+        role = "*",
         cmd = None,
         args = Seq("a", "b", "c"),
         container = Some(Container.Docker(image = "group/image")),
@@ -77,6 +79,7 @@ class AppDefinitionTest extends UnitTest {
     "CMD to proto and back again" in {
       val app = AppDefinition(
         id = "play".toPath,
+        role = "*",
         cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
         versionInfo = fullVersion
       )
@@ -87,13 +90,14 @@ class AppDefinitionTest extends UnitTest {
       proto.getCmd.getShell should be(true)
       proto.getCmd.getValue should be("bash foo-*/start -Dhttp.port=$PORT")
 
-      val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
+      val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto)
       read should be(app)
     }
 
     "ARGS to proto and back again" in {
       val app = AppDefinition(
         id = "play".toPath,
+        role = "*",
         args = Seq("bash", "foo-*/start", "-Dhttp.port=$PORT"),
         versionInfo = fullVersion
       )
@@ -105,13 +109,14 @@ class AppDefinitionTest extends UnitTest {
       proto.getCmd.getValue should be("bash")
       proto.getCmd.getArgumentsList should contain theSameElementsInOrderAs Seq("bash", "foo-*/start", "-Dhttp.port=$PORT")
 
-      val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
+      val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto)
       read should be(app)
     }
 
     "app w/ basic container network to proto and back again" in {
       val app = AppDefinition(
         id = "app-with-ip-address".toPath,
+        role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
         networks = Seq(
@@ -129,13 +134,14 @@ class AppDefinitionTest extends UnitTest {
       proto.getId should be("app-with-ip-address")
       assert(proto.getNetworksCount > 0)
 
-      val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
+      val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto)
       read should be(app)
     }
 
     "app to proto and back again w/ Docker container w/ virtual networking" in {
       val app = AppDefinition(
         id = "app-with-port-mappings".toPath,
+        role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
         networks = Seq(
@@ -163,13 +169,14 @@ class AppDefinitionTest extends UnitTest {
       proto.getId should be("app-with-port-mappings")
       assert(proto.getNetworksCount > 0)
 
-      val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
+      val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto)
       read should be(app)
     }
 
     "ipAddress to proto and back again w/ Docker container w/ bridge" in {
       val app = AppDefinition(
         id = "app-with-ip-address".toPath,
+        role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
         networks = Seq(BridgeNetwork()), container = Some(Container.Docker(
@@ -186,13 +193,14 @@ class AppDefinitionTest extends UnitTest {
       val proto = app.toProto
       proto.getId should be("app-with-ip-address")
 
-      val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
+      val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto)
       read should be(app)
     }
 
     "ipAddress discovery to proto and back again" in {
       val app = AppDefinition(
         id = "app-with-ip-address".toPath,
+        role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
         networks = Seq(ContainerNetwork(
@@ -216,7 +224,7 @@ class AppDefinitionTest extends UnitTest {
 
       val container = proto.getContainer
       assert(container.getPortMappingsCount > 0)
-      val read = AppDefinition(id = runSpecId).mergeFromProto(proto)
+      val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto)
       read should equal(app)
     }
 
@@ -232,7 +240,7 @@ class AppDefinitionTest extends UnitTest {
         .setVersion(Timestamp.now().toString)
         .build
 
-      val app1 = AppDefinition(id = runSpecId).mergeFromProto(proto1)
+      val app1 = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto1)
 
       assert("play" == app1.id.toString)
       assert(3 == app1.instances)
@@ -253,7 +261,7 @@ class AppDefinitionTest extends UnitTest {
         .addPorts(1001)
         .build
 
-      val app = AppDefinition(id = runSpecId).mergeFromProto(proto1)
+      val app = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto1)
 
       assert(PortDefinitions(1000, 1001) == app.portDefinitions)
     }
@@ -261,6 +269,7 @@ class AppDefinitionTest extends UnitTest {
     "ProtoRoundtrip" in {
       val app1 = AppDefinition(
         id = "play".toPath,
+        role = "*",
         cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
         resources = Resources(cpus = 4.0, mem = 256.0),
         instances = 5,
@@ -275,22 +284,24 @@ class AppDefinitionTest extends UnitTest {
         unreachableStrategy = UnreachableEnabled(inactiveAfter = 998.seconds, expungeAfter = 999.seconds),
         killSelection = KillSelection.OldestFirst
       )
-      val result1 = AppDefinition(id = runSpecId).mergeFromProto(app1.toProto)
+      val result1 = AppDefinition(id = runSpecId, role = "*").mergeFromProto(app1.toProto)
       assert(result1 == app1)
 
       val app2 = AppDefinition(
         id = runSpecId,
+        role = "*",
         cmd = None,
         args = Seq("a", "b", "c"),
         versionInfo = fullVersion
       )
-      val result2 = AppDefinition(id = runSpecId).mergeFromProto(app2.toProto)
+      val result2 = AppDefinition(id = runSpecId, role = "*").mergeFromProto(app2.toProto)
       assert(result2 == app2)
     }
 
     "ProtoRoundtrip for secrets" in {
       val app = AppDefinition(
         id = runSpecId,
+        role = "*",
         cmd = None,
         secrets = Map[String, Secret](
           "psst" -> Secret("/something/secret")
@@ -301,54 +312,59 @@ class AppDefinitionTest extends UnitTest {
         ),
         versionInfo = fullVersion
       )
-      val result = AppDefinition(id = runSpecId).mergeFromProto(app.toProto)
+      val result = AppDefinition(id = runSpecId, role = "*").mergeFromProto(app.toProto)
       assert(result == app, s"expected $app instead of $result")
     }
 
     "Proto round trip for tty" in {
       val app = AppDefinition(
         id = runSpecId,
+        role = "*",
         cmd = Some("true"),
         tty = Some(true),
         versionInfo = fullVersion
       )
-      val result = AppDefinition(id = runSpecId).mergeFromProto(app.toProto)
+      val result = AppDefinition(id = runSpecId, role = "*").mergeFromProto(app.toProto)
       assert(result == app, s"expected $app instead of $result")
     }
 
     "Proto round trip for executor resources added" in {
       val app = AppDefinition(
         id = runSpecId,
+        role = "*",
         cmd = Some("true"),
         versionInfo = fullVersion,
         executorResources = Some(Resources(
           cpus = 0.1, mem = 32.0, disk = 10
         ))
       )
-      val result = AppDefinition(id = runSpecId).mergeFromProto(app.toProto)
+      val result = AppDefinition(id = runSpecId, role = "*").mergeFromProto(app.toProto)
       assert(result == app, s"expected $app instead of $result")
     }
 
     "Proto round trip for executor resources left untouched" in {
       val app = AppDefinition(
         id = runSpecId,
+        role = "*",
         executorResources = Some(Resources(
           cpus = 0.1, mem = 32.0, disk = 10
         ))
       )
-      val result = app.mergeFromProto(AppDefinition(id = runSpecId).toProto)
+      val result = app.mergeFromProto(AppDefinition(id = runSpecId, role = "*").toProto)
       assert(result.executorResources == app.executorResources, s"expected $app instead of $result")
     }
 
     "Proto round trip for executor resources CPU upgrade" in {
       val app = AppDefinition(
         id = runSpecId,
+        role = "*",
         executorResources = Some(Resources(
           cpus = 0.1, mem = 32.0, disk = 10
         ))
       )
       val update = AppDefinition(
         id = runSpecId,
+        role = "*",
         executorResources = Some(Resources(
           cpus = 0.2
         ))

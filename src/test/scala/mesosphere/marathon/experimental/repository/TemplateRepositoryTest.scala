@@ -41,7 +41,7 @@ class TemplateRepositoryTest
 
   val rand = new Random()
 
-  def appDef(pathId: PathId): AppDefinition = AppDefinition(id = pathId)
+  def appDef(pathId: PathId): AppDefinition = AppDefinition(id = pathId, role = "*")
   def randomApp(): AppDefinition = appDef(randomPath())
   def randomPath(prefix: String = "/test"): PathId = PathId(s"$prefix${rand.nextInt}")
 
@@ -95,7 +95,7 @@ class TemplateRepositoryTest
 
         apps.foreach { app =>
           val read = repo.trie.getNodeData(repo.storePath(app))
-          repo.toTemplate(read, AppDefinition(id = app.id)).get shouldBe app
+          repo.toTemplate(read, AppDefinition(id = app.id, role = "*")).get shouldBe app
         }
       }
     }
@@ -163,7 +163,7 @@ class TemplateRepositoryTest
         repo.create(created).futureValue
 
         Then("it can be read and parsed successfully")
-        val dummy = AppDefinition(id = created.id)
+        val dummy = AppDefinition(id = created.id, role = "*")
         val Success(read) = repo.read(dummy, repo.version(created))
         read shouldBe created
       }

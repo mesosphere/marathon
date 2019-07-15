@@ -31,8 +31,9 @@ private[launchqueue] class LaunchQueueDelegate(
   override def notifyOfInstanceUpdate(update: InstanceChange): Future[Done] =
     askQueueActorFuture[InstanceChange, Done]("notifyOfInstanceUpdate")(update)
 
-  override def add(runSpec: RunSpec, count: Int): Future[Done] =
+  override def add(runSpec: RunSpec, count: Int): Future[Done] = {
     askQueueActorFuture[LaunchQueueDelegate.Request, Done]("add")(LaunchQueueDelegate.Add(runSpec, count))
+  }
 
   private[this] def askQueueActorFuture[T, R: ClassTag](
     method: String,
