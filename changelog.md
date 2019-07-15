@@ -5,7 +5,7 @@
 When running Marathon Apps or Pods it is now possible to configure the IPC separation level and shared memory size.
 Each container or executor can have their IPC mode set to either private or share the parents namespace. If set to
 private, the shared memory size can also be configured.
-See Mesos documentation for shared memory configuration for details.
+See [Mesos documentation](http://mesos.apache.org/documentation/latest/isolators/namespaces-ipc/) for shared memory configuration for details.
 
 ```
 {
