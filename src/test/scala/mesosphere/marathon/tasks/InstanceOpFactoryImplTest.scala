@@ -35,7 +35,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
         .setSlaveId(SlaveID("some slave ID"))
         .build()
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, f.clock.now()).getInstance()
-      val app: AppDefinition = AppDefinition(id = appId, portDefinitions = List())
+      val app: AppDefinition = AppDefinition(id = appId, portDefinitions = List(), role = "*")
       val scheduledInstance = Instance.scheduled(app, Instance.Id.forRunSpec(appId))
       val runningInstances = Map(instance.instanceId -> instance)
 
@@ -211,7 +211,8 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         volumeMounts = Seq(VolumeMount(volumeName = Some("pst"), mountPath = "persistent-volume")))
       ),
-      volumes = Seq(PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(10)))
+      volumes = Seq(PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(10))),
+      role = "*"
     )
 
     def scheduledReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) =

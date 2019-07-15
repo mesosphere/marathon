@@ -189,7 +189,7 @@ class TaskCountsTest extends UnitTest {
 object Fixture {
   implicit class TaskImplicits(val task: Task) extends AnyVal {
     def toInstance: Instance = {
-      val app = AppDefinition(task.taskId.runSpecId)
+      val app = AppDefinition(task.taskId.runSpecId, role = "*")
       val tasksMap = Map(task.taskId -> task)
 
       new Instance(

@@ -93,10 +93,10 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
   "DeploymentActor" should {
     "Deploy" in new Fixture {
       val managerProbe = TestProbe()
-      val app1 = AppDefinition(id = PathId("/foo/app1"), cmd = Some("cmd"), instances = 2)
-      val app2 = AppDefinition(id = PathId("/foo/app2"), cmd = Some("cmd"), instances = 1)
-      val app3 = AppDefinition(id = PathId("/foo/app3"), cmd = Some("cmd"), instances = 1)
-      val app4 = AppDefinition(id = PathId("/foo/app4"), cmd = Some("cmd"))
+      val app1 = AppDefinition(id = PathId("/foo/app1"), role = "*", cmd = Some("cmd"), instances = 2)
+      val app2 = AppDefinition(id = PathId("/foo/app2"), role = "*", cmd = Some("cmd"), instances = 1)
+      val app3 = AppDefinition(id = PathId("/foo/app3"), role = "*", cmd = Some("cmd"), instances = 1)
+      val app4 = AppDefinition(id = PathId("/foo/app4"), role = "*", cmd = Some("cmd"))
       val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(
         app1.id -> app1,
         app2.id -> app2,
@@ -174,7 +174,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
     "Restart app" in new Fixture {
       val managerProbe = TestProbe()
-      val app = AppDefinition(id = PathId("/foo/app1"), cmd = Some("cmd"), instances = 2)
+      val app = AppDefinition(id = PathId("/foo/app1"), role = "*", cmd = Some("cmd"), instances = 2)
       val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
 
       val version2 = VersionInfo.forNewConfig(Timestamp(1000))
@@ -214,7 +214,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
     "Restart suspended app" in new Fixture {
       val managerProbe = TestProbe()
 
-      val app = AppDefinition(id = PathId("/foo/app1"), cmd = Some("cmd"), instances = 0)
+      val app = AppDefinition(id = PathId("/foo/app1"), role = "*", cmd = Some("cmd"), instances = 0)
       val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
 
       val version2 = VersionInfo.forNewConfig(Timestamp(1000))
@@ -235,7 +235,7 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
     "Scale with tasksToKill" in new Fixture {
       val managerProbe = TestProbe()
-      val app1 = AppDefinition(id = PathId("/foo/app1"), cmd = Some("cmd"), instances = 3)
+      val app1 = AppDefinition(id = PathId("/foo/app1"), role = "*", cmd = Some("cmd"), instances = 3)
       val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app1.id -> app1))))
 
       val version2 = VersionInfo.forNewConfig(Timestamp(1000))

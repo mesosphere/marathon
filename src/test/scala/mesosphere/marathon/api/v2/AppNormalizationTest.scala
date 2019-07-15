@@ -3,6 +3,7 @@ package api.v2
 
 import mesosphere.UnitTest
 import mesosphere.marathon.raml._
+import mesosphere.marathon.util.RoleSettings
 
 class AppNormalizationTest extends UnitTest {
 
@@ -96,15 +97,18 @@ class AppNormalizationTest extends UnitTest {
       }
     }
 
-    def normalizer(defaultNetworkName: Option[String] = None, mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName) = {
-      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName)
+    def normalizer(defaultNetworkName: Option[String] = None, mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName, role: Option[String] = None) = {
+
+      val roleSettings = role.map(r => RoleSettings(validRoles = Set(r), defaultRole = r)).getOrElse(ValidationHelper.roleSettings)
+
+      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName, Set(), roleSettings)
       Normalization[App] { app =>
         AppNormalization(config).normalized(AppNormalization.forDeprecated(config).normalized(app))
       }
     }
 
     def updateNormalizer(defaultNetworkName: Option[String], mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName) = {
-      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName)
+      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName, Set(), ValidationHelper.roleSettings)
       Normalization[AppUpdate] { app =>
         AppNormalization.forUpdates(config)
           .normalized(AppNormalization.forDeprecatedUpdates(config).normalized(app))
@@ -185,6 +189,7 @@ class AppNormalizationTest extends UnitTest {
         )
         val normalDockerApp = App(
           "/foo",
+          role = Some("*"),
           container = Some(Container(
             `type` = EngineType.Docker,
             docker = Some(DockerContainer(image = "image0")),
@@ -228,6 +233,7 @@ class AppNormalizationTest extends UnitTest {
         )
         val normalDockerApp = App(
           "/foo",
+          role = Some("*"),
           container = Some(Container(
             `type` = EngineType.Docker,
             docker = Some(DockerContainer(image = "image0"))
@@ -250,6 +256,7 @@ class AppNormalizationTest extends UnitTest {
         )
         val normalDockerApp = App(
           "/foo",
+          role = Some("*"),
           container = Some(Container(
             `type` = EngineType.Docker,
             docker = Some(DockerContainer(image = "image0")),
@@ -275,6 +282,7 @@ class AppNormalizationTest extends UnitTest {
         a[NormalizationException] should be thrownBy {
           App(
             "/foo",
+            role = Some("*"),
             container = Some(Container(
               `type` = EngineType.Docker,
               docker = Some(DockerContainer(network = Some(DockerNetwork.None), image = "image0", portMappings = Some(Nil)))
@@ -389,6 +397,7 @@ class AppNormalizationTest extends UnitTest {
       "app w/ host networking preserves requirePorts" in new Fixture {
         val raw = App(
           id = "/foo",
+          role = Some("*"),
           cmd = Option("sleep"),
           networks = Apps.DefaultNetworks,
           unreachableStrategy = Option(UnreachableEnabled.Default),
@@ -406,6 +415,7 @@ class AppNormalizationTest extends UnitTest {
       "inject default ports for an app w/ container networking but w/o a container" in {
         val raw = App(
           id = "/foo",
+          role = Some("*"),
           cmd = Option("sleep"),
           networks = Seq(Network(mode = NetworkMode.ContainerBridge)),
           unreachableStrategy = Option(UnreachableEnabled.Default)
@@ -421,6 +431,7 @@ class AppNormalizationTest extends UnitTest {
       "allow a legacy docker bridge mode app to declare empty port mappings" in {
         val raw = App(
           id = "/foo",
+          role = Some("*"),
           cmd = Option("sleep"),
           container = Some(Container(
             `type` = EngineType.Docker,
@@ -444,6 +455,7 @@ class AppNormalizationTest extends UnitTest {
       "allow a legacy docker bridge mode app to declare empty port mappings at both levels" in {
         val raw = App(
           id = "/foo",
+          role = Some("*"),
           cmd = Option("sleep"),
           container = Some(Container(
             `type` = EngineType.Docker,
@@ -468,6 +480,7 @@ class AppNormalizationTest extends UnitTest {
       "allow a legacy docker bridge mode app to declare port mappings at container level if legacy mappings are empty" in {
         val raw = App(
           id = "/foo",
+          role = Some("*"),
           cmd = Option("sleep"),
           container = Some(Container(
             `type` = EngineType.Docker,
@@ -510,6 +523,7 @@ class AppNormalizationTest extends UnitTest {
       "allow a mesos app to declare empty port mappings" in {
         val raw = App(
           id = "/foo",
+          role = Some("*"),
           cmd = Option("sleep"),
           container = Some(Container(
             `type` = EngineType.Mesos,
@@ -524,6 +538,7 @@ class AppNormalizationTest extends UnitTest {
       "provide default port mappings when left unspecified for an app container w/ bridge networking" in {
         val raw = App(
           id = "/foo",
+          role = Some("*"),
           cmd = Option("sleep"),
           container = Some(Container(
             `type` = EngineType.Mesos
@@ -538,6 +553,7 @@ class AppNormalizationTest extends UnitTest {
       "provide default port mappings when left unspecified for an app container w/ container networking" in {
         val raw = App(
           id = "/foo",
+          role = Some("*"),
           cmd = Option("sleep"),
           container = Some(Container(
             `type` = EngineType.Mesos
@@ -552,6 +568,7 @@ class AppNormalizationTest extends UnitTest {
       "allow an app to declare empty port definitions" in {
         val raw = App(
           id = "/foo",
+          role = Some("*"),
           cmd = Option("sleep"),
           portDefinitions = Option(Seq.empty),
           networks = Apps.DefaultNetworks,
@@ -563,12 +580,49 @@ class AppNormalizationTest extends UnitTest {
       "provide a default port definition when no port definitions are specified" in {
         val raw = App(
           id = "/foo",
+          role = Some("*"),
           cmd = Option("sleep"),
           networks = Apps.DefaultNetworks,
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
         raw.normalize should be(raw.copy(portDefinitions = Option(Apps.DefaultPortDefinitions)))
       }
+
+      "allow an app to declare a role" in {
+        val raw = App(
+          id = "/foo",
+          role = Some("customRole"),
+          cmd = Option("sleep"),
+          networks = Apps.DefaultNetworks,
+          portDefinitions = Option(Seq.empty),
+          unreachableStrategy = Option(UnreachableEnabled.Default)
+        )
+        raw.normalize should be(raw)
+      }
+
+      "provide a default role" in {
+        val raw = App(
+          id = "/foo",
+          cmd = Option("sleep"),
+          networks = Apps.DefaultNetworks,
+          portDefinitions = Option(Seq.empty),
+          unreachableStrategy = Option(UnreachableEnabled.Default)
+        )
+        raw.normalize should be(raw.copy(role = Some("*")))
+      }
+
+      "provide the default role from normalization config" in {
+        val configuredNormalizer = normalizer(role = Some("someCustomRole"))
+        val raw = App(
+          id = "/foo",
+          cmd = Option("sleep"),
+          networks = Apps.DefaultNetworks,
+          portDefinitions = Option(Seq.empty),
+          unreachableStrategy = Option(UnreachableEnabled.Default)
+        )
+        raw.normalize(configuredNormalizer) should be(raw.copy(role = Some("someCustomRole")))
+      }
+
     }
   }
 
@@ -592,6 +646,7 @@ class AppNormalizationTest extends UnitTest {
 
     val normalizedDockerApp = App(
       id = "/foo",
+      role = Some("*"),
       container = Option(Container(
         `type` = EngineType.Docker,
         docker = Option(DockerContainer(
@@ -621,6 +676,7 @@ class AppNormalizationTest extends UnitTest {
 
     val normalizedMesosApp = App(
       id = "/foo",
+      role = Some("*"),
       container = Option(Container(
         `type` = EngineType.Mesos,
         docker = Option(DockerContainer(image = "image0")),

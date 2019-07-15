@@ -50,7 +50,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
   "InstanceTrackerImpl" should {
     "SerializeAndDeserialize" in new Fixture {
-      val originalInstance: Instance = Instance.scheduled(AppDefinition(TEST_APP_NAME))
+      val originalInstance: Instance = Instance.scheduled(AppDefinition(TEST_APP_NAME, role = "*"))
       instanceTracker.process(Schedule(originalInstance)).futureValue
 
       val deserializedInstance = instanceTracker.instance(originalInstance.instanceId).futureValue
@@ -67,11 +67,11 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     }
 
     def testList(call: InstanceTracker => InstanceTracker.InstancesBySpec)(implicit instanceTracker: InstanceTracker): Unit = {
-      val instance1 = Instance.scheduled(AppDefinition(TEST_APP_NAME / "a"))
+      val instance1 = Instance.scheduled(AppDefinition(TEST_APP_NAME / "a", role = "*"))
       instanceTracker.process(Schedule(instance1)).futureValue
-      val instance2 = Instance.scheduled(AppDefinition(TEST_APP_NAME / "b"))
+      val instance2 = Instance.scheduled(AppDefinition(TEST_APP_NAME / "b", role = "*"))
       instanceTracker.process(Schedule(instance2)).futureValue
-      val instance3 = Instance.scheduled(AppDefinition(TEST_APP_NAME / "b"))
+      val instance3 = Instance.scheduled(AppDefinition(TEST_APP_NAME / "b", role = "*"))
       instanceTracker.process(Schedule(instance3)).futureValue
 
       val testAppTasks = call(instanceTracker)
@@ -93,11 +93,11 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     }
 
     def testGetTasks(call: InstanceTracker => Seq[Instance])(implicit instanceTracker: InstanceTracker): Unit = {
-      val instance1 = Instance.scheduled(AppDefinition(TEST_APP_NAME))
+      val instance1 = Instance.scheduled(AppDefinition(TEST_APP_NAME, role = "*"))
       instanceTracker.process(Schedule(instance1)).futureValue
-      val instance2 = Instance.scheduled(AppDefinition(TEST_APP_NAME))
+      val instance2 = Instance.scheduled(AppDefinition(TEST_APP_NAME, role = "*"))
       instanceTracker.process(Schedule(instance2)).futureValue
-      val instance3 = Instance.scheduled(AppDefinition(TEST_APP_NAME))
+      val instance3 = Instance.scheduled(AppDefinition(TEST_APP_NAME, role = "*"))
       instanceTracker.process(Schedule(instance3)).futureValue
 
       val testAppInstances = call(instanceTracker)
@@ -115,7 +115,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     }
 
     def testContains(count: (InstanceTracker, PathId) => Boolean)(implicit instanceTracker: InstanceTracker): Unit = {
-      val task1 = Instance.scheduled(AppDefinition(TEST_APP_NAME / "a"))
+      val task1 = Instance.scheduled(AppDefinition(TEST_APP_NAME / "a", role = "*"))
       instanceTracker.process(Schedule(task1)).futureValue
 
       count(instanceTracker, TEST_APP_NAME / "a") should be(true)
@@ -400,7 +400,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
   }
 
   def setupTrackerWithProvisionedInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
-    val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version))
+    val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version), role = "*")
     val scheduledInstance = Instance.scheduled(app)
     // schedule
     await(instanceTracker.schedule(scheduledInstance))

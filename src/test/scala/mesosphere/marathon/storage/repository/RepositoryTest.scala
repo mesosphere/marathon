@@ -22,7 +22,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
   import PathId._
 
   def randomAppId = UUID.randomUUID().toString.toRootPath
-  def randomApp = AppDefinition(randomAppId, versionInfo = VersionInfo.OnlyVersion(Timestamp.now()))
+  def randomApp = AppDefinition(randomAppId, role = "*", versionInfo = VersionInfo.OnlyVersion(Timestamp.now()))
 
   override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(30, Seconds))
 

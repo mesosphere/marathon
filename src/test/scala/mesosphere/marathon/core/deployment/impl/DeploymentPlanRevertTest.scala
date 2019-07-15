@@ -55,7 +55,7 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
     }
   }
   private[this] def removeApp(appId: String) = Deployment(s"remove app '$appId'", _.removeApp(appId.toRootPath))
-  private[this] def addApp(appId: String) = Deployment(s"add app '$appId'", _.updateApp(appId.toRootPath, _ => AppDefinition(appId.toRootPath, cmd = Some("sleep")), Timestamp.now()))
+  private[this] def addApp(appId: String) = Deployment(s"add app '$appId'", _.updateApp(appId.toRootPath, _ => AppDefinition(appId.toRootPath, cmd = Some("sleep"), role = "*"), Timestamp.now()))
   private[this] def addGroup(groupId: String) = Deployment(s"add group '$groupId'", _.makeGroup(groupId.toRootPath))
   private[this] def removeGroup(groupId: String) = Deployment(s"remove group '$groupId'", _.removeGroup(groupId.toRootPath))
 
@@ -130,8 +130,8 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
       Given("an unrelated group")
       val unrelatedGroup = {
         val id = "unrelated".toRootPath
-        val app1 = AppDefinition(id / "app1", cmd = Some("sleep"))
-        val app2 = AppDefinition(id / "app2", cmd = Some("sleep"))
+        val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+        val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
         createGroup(
           id,
           apps = Map(
@@ -144,7 +144,7 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
       val original = createRootGroup(groups = Set(unrelatedGroup))
 
       When("we add an unrelated app and try to revert that without concurrent changes")
-      val target = RootGroup.fromGroup(original.updateApp("test".toRootPath, _ => AppDefinition("test".toRootPath), Timestamp.now()))
+      val target = RootGroup.fromGroup(original.updateApp("test".toRootPath, _ => AppDefinition("test".toRootPath, role = "*"), Timestamp.now()))
       val plan = DeploymentPlan(original, target)
       val revertToOriginal = plan.revert(target)
 
@@ -156,8 +156,8 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
       Given("an existing group with apps")
       val changeme = {
         val id = "changeme".toRootPath
-        val app1 = AppDefinition(id / "app1", cmd = Some("sleep"))
-        val app2 = AppDefinition(id / "app2", cmd = Some("sleep"))
+        val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+        val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
         createGroup(
           id,
           apps = Map(
@@ -197,8 +197,8 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
       Given("a group")
       val changeme = {
         val id = "changeme".toRootPath
-        val app1 = AppDefinition(id / "app1", cmd = Some("sleep"))
-        val app2 = AppDefinition(id / "app2", cmd = Some("sleep"))
+        val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+        val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
         createGroup(
           id,
           apps = Map(
@@ -223,8 +223,8 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
       Given("an existing group with apps")
       val existingGroup = {
         val id = "changeme".toRootPath
-        val app1 = AppDefinition(id / "app1", cmd = Some("sleep"))
-        val app2 = AppDefinition(id / "app2", cmd = Some("sleep"))
+        val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+        val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
         createGroup(
           id,
           dependencies = Set(
@@ -261,8 +261,8 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
 
     val existingGroup = {
       val id = "changeme".toRootPath
-      val app1 = AppDefinition(id / "app1", cmd = Some("sleep"))
-      val app2 = AppDefinition(id / "app2", cmd = Some("sleep"))
+      val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+      val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
       createGroup(
         id,
         dependencies = Set(
@@ -299,7 +299,7 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
             createGroup("othergroup3".toRootPath),
             {
               val id = "other".toRootPath
-              val app4 = AppDefinition(id / "app4", cmd = Some("sleep"))
+              val app4 = AppDefinition(id / "app4", cmd = Some("sleep"), role = "*")
               createGroup(
                 id,
                 apps = Map(app4.id -> app4) // app4 was added
@@ -307,8 +307,8 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
             },
             {
               val id = "changeme".toRootPath
-              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"))
-              val app3 = AppDefinition(id / "app3", cmd = Some("sleep"))
+              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+              val app3 = AppDefinition(id / "app3", cmd = Some("sleep"), role = "*")
               createGroup(
                 id,
                 dependencies = Set(
@@ -348,8 +348,8 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
             },
             {
               val id = "changeme".toRootPath
-              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"))
-              val app2 = AppDefinition(id / "app2", cmd = Some("sleep"))
+              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+              val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
               createGroup(
                 id,
                 dependencies = Set(
@@ -379,8 +379,8 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
             createGroup("othergroup3".toRootPath),
             {
               val id = "changeme".toRootPath
-              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"))
-              val app2 = AppDefinition(id / "app2", cmd = Some("sleep"))
+              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+              val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
               createGroup(
                 id,
                 dependencies = Set(
@@ -411,8 +411,8 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
             createGroup("othergroup3".toRootPath),
             {
               val id = "changeme".toRootPath
-              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"))
-              val app2 = AppDefinition(id / "app2", cmd = Some("sleep"))
+              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+              val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
               createGroup(
                 id,
                 dependencies = Set(
@@ -447,8 +447,8 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
               createGroup("othergroup3".toRootPath),
               {
                 val id = "changeme".toRootPath
-                val app1 = AppDefinition(id / "app1", cmd = Some("sleep"))
-                val app2 = AppDefinition(id / "app2", cmd = Some("sleep"))
+                val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+                val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
                 createGroup(
                   id,
                   dependencies = Set(
@@ -491,11 +491,11 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
             createGroup("othergroup3".toRootPath),
             {
               val id = "changeme".toRootPath
-              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"))
-              val app2 = AppDefinition(id / "app2", cmd = Some("sleep"))
-              val appBA = AppDefinition(id / "some" / "b" / "a", cmd = Some("sleep"))
-              val appBB = AppDefinition(id / "some" / "b" / "b", cmd = Some("sleep"))
-              val appBC = AppDefinition(id / "some" / "b" / "c", cmd = Some("sleep"))
+              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+              val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
+              val appBA = AppDefinition(id / "some" / "b" / "a", cmd = Some("sleep"), role = "*")
+              val appBB = AppDefinition(id / "some" / "b" / "b", cmd = Some("sleep"), role = "*")
+              val appBC = AppDefinition(id / "some" / "b" / "c", cmd = Some("sleep"), role = "*")
               createGroup(
                 id,
                 dependencies = Set(

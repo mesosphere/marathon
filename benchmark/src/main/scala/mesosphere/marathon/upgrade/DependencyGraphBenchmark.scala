@@ -45,6 +45,7 @@ object DependencyGraphBenchmark {
           val path = paths(groupId)(appId)
           path -> AppDefinition(
             id = path,
+            role = "someRole",
             dependencies = dependencies.toSet,
             labels = Map("ID" -> appId.toString),
             versionInfo = version1

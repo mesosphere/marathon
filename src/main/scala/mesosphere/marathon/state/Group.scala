@@ -1,19 +1,19 @@
 package mesosphere.marathon
 package state
 
-import com.wix.accord.Descriptions.Explicit
 import java.util.Objects
 
 import com.typesafe.scalalogging.StrictLogging
+import com.wix.accord.Descriptions.Explicit
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.util.summarize
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.{Group => IGroup}
 import mesosphere.marathon.state.Group.{defaultApps, defaultDependencies, defaultGroups, defaultPods, defaultVersion}
 import mesosphere.marathon.state.PathId.{StringPathId, validPathWithBase}
+import mesosphere.util.summarize
 
 class Group(
     val id: PathId,
@@ -148,12 +148,12 @@ object Group extends StrictLogging {
   def defaultDependencies: Set[PathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  def validGroup(base: PathId, enabledFeatures: Set[String]): Validator[Group] =
+  def validGroup(base: PathId, config: MarathonConf): Validator[Group] =
     validator[Group] { group =>
       group.id is validPathWithBase(base)
 
       group.transitiveApps as "apps" is everyApp(
-        AppDefinition.validBasicAppDefinition(enabledFeatures) and isChildOfParentId(group)
+        AppDefinition.validBasicAppDefinition(config.availableFeatures) and isChildOfParentId(group)
       )
 
       group is noAppsAndPodsWithSameId
@@ -183,6 +183,24 @@ object Group extends StrictLogging {
               case Failure(violations) =>
                 val scopedViolations = violations.map { violation =>
                   violation.withPath(Descriptions.Path(Explicit(app.id.toString)))
+                }
+                accum.and(Failure(scopedViolations))
+            }
+        }
+      }
+    }
+  }
+
+  implicit def everyPod(validator: Validator[PodDefinition]): Validator[Iterable[PodDefinition]] = {
+    new Validator[Iterable[PodDefinition]] {
+      override def apply(seq: Iterable[PodDefinition]): Result = {
+        seq.foldLeft[Result](Success) {
+          case (accum, (pod)) =>
+            validator(pod) match {
+              case Success => accum
+              case Failure(violations) =>
+                val scopedViolations = violations.map { violation =>
+                  violation.withPath(Descriptions.Path(Explicit(pod.id.toString)))
                 }
                 accum.and(Failure(scopedViolations))
             }

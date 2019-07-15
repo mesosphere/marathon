@@ -8,7 +8,7 @@ import mesosphere.marathon.test.GroupCreation
 class GroupVersioningUtilTest extends UnitTest with GroupCreation {
   val emptyGroup = createRootGroup(version = Timestamp(1))
 
-  val app = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"), versionInfo = VersionInfo.OnlyVersion(Timestamp.zero))
+  val app = AppDefinition(PathId("/nested/app"), role = "*", cmd = Some("sleep 123"), versionInfo = VersionInfo.OnlyVersion(Timestamp.zero))
 
   val nestedApp = createRootGroup(
     groups = Set(
@@ -21,7 +21,7 @@ class GroupVersioningUtilTest extends UnitTest with GroupCreation {
     version = Timestamp(2)
   )
 
-  val scaledApp = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 123"), instances = 2,
+  val scaledApp = AppDefinition(PathId("/nested/app"), role = "*", cmd = Some("sleep 123"), instances = 2,
     versionInfo = VersionInfo.OnlyVersion(Timestamp.zero))
 
   val nestedAppScaled = createRootGroup(
@@ -35,7 +35,7 @@ class GroupVersioningUtilTest extends UnitTest with GroupCreation {
     version = Timestamp(2)
   )
 
-  val updatedApp = AppDefinition(PathId("/nested/app"), cmd = Some("sleep 234"))
+  val updatedApp = AppDefinition(PathId("/nested/app"), role = "*", cmd = Some("sleep 234"))
 
   val nestedAppUpdated = createRootGroup(
     groups = Set(

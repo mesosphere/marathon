@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 class RateLimiterActorTest extends AkkaUnitTest {
   private val backoff = 10.seconds
   private val backoffStrategy = BackoffStrategy(backoff = backoff, factor = 2.0)
-  private[this] val app = AppDefinition(id = PathId("/test"), backoffStrategy = backoffStrategy)
+  private[this] val app = AppDefinition(id = PathId("/test"), role = "*", backoffStrategy = backoffStrategy)
 
   private[this] implicit val timeout: Timeout = 3.seconds
 

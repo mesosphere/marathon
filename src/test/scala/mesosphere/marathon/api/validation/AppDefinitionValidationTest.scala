@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.validation
 
 import com.wix.accord.Validator
+import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.state._
@@ -12,7 +13,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
   "AppDefinition" when {
     "created with the default unreachable strategy" should {
       "be valid" in new Fixture {
-        val app = AppDefinition(id = PathId("/test"), cmd = Some("sleep 1000"))
+        val app = AppDefinition(id = PathId("/test"), cmd = Some("sleep 1000"), role = "*")
         validator(app) shouldBe aSuccess
       }
     }
@@ -22,6 +23,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
       "be valid with dependencies pointing to a a subtree of this app" in new Fixture {
         val app = AppDefinition(
           id = PathId("/a/b/c/d"),
+          role = "*",
           cmd = Some("sleep 1000"),
           dependencies = Set(PathId("/a/b/c/e"))
         )
@@ -31,6 +33,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
       "be valid with dependencies pointing to a different subtree (Regression for #5024)" in new Fixture {
         val app = AppDefinition(
           id = PathId("/a/b/c/d"),
+          role = "*",
           cmd = Some("sleep 1000"),
           dependencies = Set(PathId("/x/y/z"))
         )
@@ -41,7 +44,8 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
         val app = AppDefinition(
           id = PathId("/a/b/c/d"),
           cmd = Some("sleep 1000"),
-          dependencies = Set(PathId("/a/.../"))
+          dependencies = Set(PathId("/a/.../")),
+          role = "*"
         )
 
         validator(app) should haveViolations(
@@ -106,9 +110,10 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
   }
 
   class Fixture {
-    implicit val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(Set.empty)(PluginManager.None)
+    implicit val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(Set.empty, ValidationHelper.roleSettings)(PluginManager.None)
     def validApp = AppDefinition(
       id = PathId("/a/b/c/d"),
+      role = "*",
       cmd = Some("sleep 1000"),
       portDefinitions = Seq(PortDefinition(0, name = Some("default")))
     )

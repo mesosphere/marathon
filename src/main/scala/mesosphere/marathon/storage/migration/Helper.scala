@@ -74,7 +74,7 @@ object InstanceMigration extends MaybeStore with StrictLogging {
     maybeStore(persistenceStore).map { store =>
       instanceRepository
         .ids()
-        .mapAsync(1) { instanceId =>
+        .mapAsync(Migration.maxConcurrency) { instanceId =>
           store
             .get[Id, JsValue](instanceId)
             .map(maybeValue => maybeValue.orElse { logger.error(s"Failed to load an instance for $instanceId. It will be ignored"); None })
@@ -83,7 +83,7 @@ object InstanceMigration extends MaybeStore with StrictLogging {
           case Some(jsValue) => jsValue
         }
         .via(migrationFlow)
-        .mapAsync(1) { updatedInstance =>
+        .mapAsync(Migration.maxConcurrency) { updatedInstance =>
           instanceRepository.store(updatedInstance)
         }
         .alsoTo(countingSink)

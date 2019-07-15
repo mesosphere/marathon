@@ -122,7 +122,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
   class Fixture {
     val id = "/test".toPath
-    val app = AppDefinition(id)
+    val app = AppDefinition(id, role = "*")
     val clock = new SettableClock()
 
     val agentInfo = Instance.AgentInfo("", None, None, None, Nil)

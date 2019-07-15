@@ -326,6 +326,12 @@ types:
         type: boolean
         description: |
           Describes if (pseudo) TTY sould be allocated for the process of this container.
+      role?:
+        type: string
+        minLength: 1
+        description: |
+          The role to use. If not specified, uses the role of the enclosing group, or the default role.
+          At the moment, only the default role or the group role are allowed
   AppList:
     type: object
     properties:
