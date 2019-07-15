@@ -6,6 +6,7 @@ import platform
 import signal
 import socket
 import sys
+import subprocess
 
 # Ensure compatibility with Python 2 and 3.
 # See https://github.com/JioCloud/python-six/blob/master/six.py for details.
@@ -90,6 +91,19 @@ def make_handler(app_id, version, task_id, base_url):
             logging.debug("Done processing health request.")
             return
 
+        def handle_ipc_info(self):
+            logging.debug("Reporting IPC info")
+            ipc_info = subprocess.check_output(["ipcs", "-lm"])
+
+            self.send_response(200)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+
+            self.wfile.write(ipc_info)
+
+            logging.debug("Done reporting IPC info.")
+            return
+
         def handle_suicide(self):
 
             logging.info("Received a suicide request. Sending a SIGTERM to myself.")
@@ -109,6 +123,8 @@ def make_handler(app_id, version, task_id, base_url):
                     return self.check_readiness()
                 elif self.path == '/health':
                     return self.check_health()
+                elif self.path == '/ipcinfo':
+                    return self.handle_ipc_info()
                 else:
                     return SimpleHTTPRequestHandler.do_GET(self)
             except Exception:
