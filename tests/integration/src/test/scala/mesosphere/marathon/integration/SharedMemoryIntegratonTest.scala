@@ -1,11 +1,11 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.AppMockFacade
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
 import mesosphere.marathon.state.{HostVolume, VolumeMount}
-import mesosphere.marathon.{raml, state}
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 
 import scala.collection.immutable.Seq
@@ -43,7 +43,14 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
           healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task1")), path = Some("/ping"))),
           volumeMounts = Seq(
             VolumeMount(Some("python"), s"$containerDir/python", true)
-          )
+          ),
+          linuxInfo = Some(state.LinuxInfo(
+            seccomp = None,
+            ipcInfo = Some(state.IPCInfo(
+              ipcMode = state.IpcMode.ShareParent,
+              shmSize = Some(11)
+            ))
+          ))
         )
       ),
       volumes = Seq(
@@ -59,7 +66,7 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
     val createResult = marathon.createPodV2(pod)
     createResult should be(Created)
     waitForDeployment(createResult)
-    val runningPod = eventually {
+    eventually {
       marathon.status(pod.id) should be(Stable)
       val status = marathon.status(pod.id).value
       val hosts = status.instances.flatMap(_.agentHostname)
@@ -70,7 +77,7 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
 
       val ipcInfoString = facade.get(s"/ipcinfo").futureValue
 
-      logger.info("IPCInfo is: " + ipcInfoString )
+      logger.info("IPCInfo is: " + ipcInfoString)
 
       ipcInfoString should contain("hello\n")
       facade
