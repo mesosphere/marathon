@@ -7,7 +7,7 @@ is removed with `1.9.x`.
 
 ### Marathon will auto-reset backoff delays when agents are being drained
 
-When Marathon receives a TASK_GONE_BY_OPERATOR or TASK_KILLED status update with a reason indicating that the agent is being drained, any delay for the related run spec will be deleted. This is to speed up the process of replacing tasks from drained agents.
+When Marathon receives a `TASK_GONE_BY_OPERATOR` or `TASK_KILLED` status update with a reason indicating that the agent is being drained, any delay for the related run spec will be deleted. This is to speed up the process of replacing tasks from drained agents.
 
 ## Changes from 1.8.194 to 1.8.xxx
 
