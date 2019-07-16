@@ -3,6 +3,7 @@
 
 package mesosphere.marathon;
 
+@SuppressWarnings("deprecation")
 public final class Protos {
   private Protos() {}
   public static void registerAllExtensions(
@@ -152,7 +153,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.Constraint)
       ConstraintOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use Constraint.newBuilder() to construct.
     private Constraint(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -173,9 +173,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -188,8 +185,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -587,6 +584,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -816,7 +814,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -829,12 +827,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -1112,7 +1110,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Constraint(input, extensionRegistry);
+          return new Constraint(input, extensionRegistry);
       }
     };
 
@@ -1297,7 +1295,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.HealthCheckDefinition)
       HealthCheckDefinitionOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use HealthCheckDefinition.newBuilder() to construct.
     private HealthCheckDefinition(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -1327,9 +1324,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -1342,8 +1336,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -2090,6 +2084,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -2478,7 +2473,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -2491,12 +2486,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -3264,7 +3259,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new HealthCheckDefinition(input, extensionRegistry);
+          return new HealthCheckDefinition(input, extensionRegistry);
       }
     };
 
@@ -3387,7 +3382,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.CheckDefinition)
       CheckDefinitionOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use CheckDefinition.newBuilder() to construct.
     private CheckDefinition(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -3412,9 +3406,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -3427,8 +3418,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -3868,6 +3859,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -4181,7 +4173,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -4194,12 +4186,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -4718,7 +4710,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new CheckDefinition(input, extensionRegistry);
+          return new CheckDefinition(input, extensionRegistry);
       }
     };
 
@@ -4839,7 +4831,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.ReadinessCheckDefinition)
       ReadinessCheckDefinitionOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use ReadinessCheckDefinition.newBuilder() to construct.
     private ReadinessCheckDefinition(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -4865,9 +4856,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -4880,8 +4868,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -5361,6 +5349,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -5666,7 +5655,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -5679,12 +5668,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -6218,7 +6207,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ReadinessCheckDefinition(input, extensionRegistry);
+          return new ReadinessCheckDefinition(input, extensionRegistry);
       }
     };
 
@@ -6322,7 +6311,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.ObsoleteIpAddress)
       ObsoleteIpAddressOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use ObsoleteIpAddress.newBuilder() to construct.
     private ObsoleteIpAddress(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -6343,9 +6331,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -6358,8 +6343,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -6627,6 +6612,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -6890,7 +6876,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -6903,12 +6889,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -7560,7 +7546,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ObsoleteIpAddress(input, extensionRegistry);
+          return new ObsoleteIpAddress(input, extensionRegistry);
       }
     };
 
@@ -7618,7 +7604,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.ObsoleteDiscoveryInfo)
       ObsoleteDiscoveryInfoOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use ObsoleteDiscoveryInfo.newBuilder() to construct.
     private ObsoleteDiscoveryInfo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -7637,9 +7622,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -7652,8 +7634,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -7767,6 +7749,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -7976,7 +7959,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -7989,12 +7972,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -8336,7 +8319,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ObsoleteDiscoveryInfo(input, extensionRegistry);
+          return new ObsoleteDiscoveryInfo(input, extensionRegistry);
       }
     };
 
@@ -8445,7 +8428,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.NetworkDefinition)
       NetworkDefinitionOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use NetworkDefinition.newBuilder() to construct.
     private NetworkDefinition(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -8466,9 +8448,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -8481,8 +8460,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -8833,6 +8812,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -9069,7 +9049,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -9082,12 +9062,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -9645,7 +9625,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new NetworkDefinition(input, extensionRegistry);
+          return new NetworkDefinition(input, extensionRegistry);
       }
     };
 
@@ -10327,7 +10307,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.ServiceDefinition)
       ServiceDefinitionOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use ServiceDefinition.newBuilder() to construct.
     private ServiceDefinition(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -10372,9 +10351,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       int mutable_bitField1_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
@@ -10388,8 +10364,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -12266,6 +12242,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -13169,7 +13146,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -13182,12 +13159,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -18441,7 +18418,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ServiceDefinition(input, extensionRegistry);
+          return new ServiceDefinition(input, extensionRegistry);
       }
     };
 
@@ -18505,7 +18482,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.UnreachableStrategy)
       UnreachableStrategyOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use UnreachableStrategy.newBuilder() to construct.
     private UnreachableStrategy(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -18525,9 +18501,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -18540,8 +18513,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -18666,6 +18639,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -18883,7 +18857,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -18896,12 +18870,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -19074,7 +19048,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new UnreachableStrategy(input, extensionRegistry);
+          return new UnreachableStrategy(input, extensionRegistry);
       }
     };
 
@@ -19122,7 +19096,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.Json)
       JsonOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use Json.newBuilder() to construct.
     private Json(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -19141,9 +19114,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -19156,8 +19126,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -19270,6 +19240,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -19474,7 +19445,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -19487,12 +19458,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -19647,7 +19618,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Json(input, extensionRegistry);
+          return new Json(input, extensionRegistry);
       }
     };
 
@@ -19696,7 +19667,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.ResourceRoles)
       ResourceRolesOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use ResourceRoles.newBuilder() to construct.
     private ResourceRoles(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -19715,9 +19685,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -19730,8 +19697,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -19837,6 +19804,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -20033,7 +20001,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -20046,12 +20014,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -20225,7 +20193,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ResourceRoles(input, extensionRegistry);
+          return new ResourceRoles(input, extensionRegistry);
       }
     };
 
@@ -20277,7 +20245,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.ContainerInfo)
       ContainerInfoOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use ContainerInfo.newBuilder() to construct.
     private ContainerInfo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -20297,9 +20264,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -20312,8 +20276,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -20444,6 +20408,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -20657,7 +20622,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -20670,12 +20635,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -20869,7 +20834,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ContainerInfo(input, extensionRegistry);
+          return new ContainerInfo(input, extensionRegistry);
       }
     };
 
@@ -21032,7 +20997,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.ExtendedContainerInfo)
       ExtendedContainerInfoOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use ExtendedContainerInfo.newBuilder() to construct.
     private ExtendedContainerInfo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -21053,9 +21017,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -21068,8 +21029,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -21351,7 +21312,6 @@ public final class Protos {
         com.google.protobuf.GeneratedMessageV3 implements
         // @@protoc_insertion_point(message_implements:mesosphere.marathon.ExtendedContainerInfo.DockerInfo)
         DockerInfoOrBuilder {
-    private static final long serialVersionUID = 0L;
       // Use DockerInfo.newBuilder() to construct.
       private DockerInfo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
         super(builder);
@@ -21375,9 +21335,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -21390,8 +21347,8 @@ public final class Protos {
                 done = true;
                 break;
               default: {
-                if (!parseUnknownField(
-                    input, unknownFields, extensionRegistry, tag)) {
+                if (!parseUnknownField(input, unknownFields,
+                                       extensionRegistry, tag)) {
                   done = true;
                 }
                 break;
@@ -21528,7 +21485,6 @@ public final class Protos {
           com.google.protobuf.GeneratedMessageV3 implements
           // @@protoc_insertion_point(message_implements:mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ImagePullConfig)
           ImagePullConfigOrBuilder {
-      private static final long serialVersionUID = 0L;
         // Use ImagePullConfig.newBuilder() to construct.
         private ImagePullConfig(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
           super(builder);
@@ -21547,9 +21503,6 @@ public final class Protos {
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
           this();
-          if (extensionRegistry == null) {
-            throw new java.lang.NullPointerException();
-          }
           int mutable_bitField0_ = 0;
           com.google.protobuf.UnknownFieldSet.Builder unknownFields =
               com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -21562,8 +21515,8 @@ public final class Protos {
                   done = true;
                   break;
                 default: {
-                  if (!parseUnknownField(
-                      input, unknownFields, extensionRegistry, tag)) {
+                  if (!parseUnknownField(input, unknownFields,
+                                         extensionRegistry, tag)) {
                     done = true;
                   }
                   break;
@@ -21808,6 +21761,7 @@ public final class Protos {
           return size;
         }
 
+        private static final long serialVersionUID = 0L;
         @java.lang.Override
         public boolean equals(final java.lang.Object obj) {
           if (obj == this) {
@@ -22031,7 +21985,7 @@ public final class Protos {
           }
           public Builder setField(
               com.google.protobuf.Descriptors.FieldDescriptor field,
-              java.lang.Object value) {
+              Object value) {
             return (Builder) super.setField(field, value);
           }
           public Builder clearField(
@@ -22044,12 +21998,12 @@ public final class Protos {
           }
           public Builder setRepeatedField(
               com.google.protobuf.Descriptors.FieldDescriptor field,
-              int index, java.lang.Object value) {
+              int index, Object value) {
             return (Builder) super.setRepeatedField(field, index, value);
           }
           public Builder addRepeatedField(
               com.google.protobuf.Descriptors.FieldDescriptor field,
-              java.lang.Object value) {
+              Object value) {
             return (Builder) super.addRepeatedField(field, value);
           }
           public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -22360,7 +22314,7 @@ public final class Protos {
               com.google.protobuf.CodedInputStream input,
               com.google.protobuf.ExtensionRegistryLite extensionRegistry)
               throws com.google.protobuf.InvalidProtocolBufferException {
-            return new ImagePullConfig(input, extensionRegistry);
+              return new ImagePullConfig(input, extensionRegistry);
           }
         };
 
@@ -22473,7 +22427,6 @@ public final class Protos {
           com.google.protobuf.GeneratedMessageV3 implements
           // @@protoc_insertion_point(message_implements:mesosphere.marathon.ExtendedContainerInfo.DockerInfo.ObsoleteDockerPortMapping)
           ObsoleteDockerPortMappingOrBuilder {
-      private static final long serialVersionUID = 0L;
         // Use ObsoleteDockerPortMapping.newBuilder() to construct.
         private ObsoleteDockerPortMapping(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
           super(builder);
@@ -22497,9 +22450,6 @@ public final class Protos {
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
           this();
-          if (extensionRegistry == null) {
-            throw new java.lang.NullPointerException();
-          }
           int mutable_bitField0_ = 0;
           com.google.protobuf.UnknownFieldSet.Builder unknownFields =
               com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -22512,8 +22462,8 @@ public final class Protos {
                   done = true;
                   break;
                 default: {
-                  if (!parseUnknownField(
-                      input, unknownFields, extensionRegistry, tag)) {
+                  if (!parseUnknownField(input, unknownFields,
+                                         extensionRegistry, tag)) {
                     done = true;
                   }
                   break;
@@ -22821,6 +22771,7 @@ public final class Protos {
           return size;
         }
 
+        private static final long serialVersionUID = 0L;
         @java.lang.Override
         public boolean equals(final java.lang.Object obj) {
           if (obj == this) {
@@ -23107,7 +23058,7 @@ public final class Protos {
           }
           public Builder setField(
               com.google.protobuf.Descriptors.FieldDescriptor field,
-              java.lang.Object value) {
+              Object value) {
             return (Builder) super.setField(field, value);
           }
           public Builder clearField(
@@ -23120,12 +23071,12 @@ public final class Protos {
           }
           public Builder setRepeatedField(
               com.google.protobuf.Descriptors.FieldDescriptor field,
-              int index, java.lang.Object value) {
+              int index, Object value) {
             return (Builder) super.setRepeatedField(field, index, value);
           }
           public Builder addRepeatedField(
               com.google.protobuf.Descriptors.FieldDescriptor field,
-              java.lang.Object value) {
+              Object value) {
             return (Builder) super.addRepeatedField(field, value);
           }
           public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -23737,7 +23688,7 @@ public final class Protos {
               com.google.protobuf.CodedInputStream input,
               com.google.protobuf.ExtensionRegistryLite extensionRegistry)
               throws com.google.protobuf.InvalidProtocolBufferException {
-            return new ObsoleteDockerPortMapping(input, extensionRegistry);
+              return new ObsoleteDockerPortMapping(input, extensionRegistry);
           }
         };
 
@@ -24072,6 +24023,7 @@ public final class Protos {
         return size;
       }
 
+      private static final long serialVersionUID = 0L;
       @java.lang.Override
       public boolean equals(final java.lang.Object obj) {
         if (obj == this) {
@@ -24366,7 +24318,7 @@ public final class Protos {
         }
         public Builder setField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.setField(field, value);
         }
         public Builder clearField(
@@ -24379,12 +24331,12 @@ public final class Protos {
         }
         public Builder setRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            int index, java.lang.Object value) {
+            int index, Object value) {
           return (Builder) super.setRepeatedField(field, index, value);
         }
         public Builder addRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.addRepeatedField(field, value);
         }
         public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -25428,7 +25380,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new DockerInfo(input, extensionRegistry);
+            return new DockerInfo(input, extensionRegistry);
         }
       };
 
@@ -25571,7 +25523,6 @@ public final class Protos {
         com.google.protobuf.GeneratedMessageV3 implements
         // @@protoc_insertion_point(message_implements:mesosphere.marathon.ExtendedContainerInfo.MesosDockerInfo)
         MesosDockerInfoOrBuilder {
-    private static final long serialVersionUID = 0L;
       // Use MesosDockerInfo.newBuilder() to construct.
       private MesosDockerInfo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
         super(builder);
@@ -25591,9 +25542,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -25606,8 +25554,8 @@ public final class Protos {
                 done = true;
                 break;
               default: {
-                if (!parseUnknownField(
-                    input, unknownFields, extensionRegistry, tag)) {
+                if (!parseUnknownField(input, unknownFields,
+                                       extensionRegistry, tag)) {
                   done = true;
                 }
                 break;
@@ -25901,6 +25849,7 @@ public final class Protos {
         return size;
       }
 
+      private static final long serialVersionUID = 0L;
       @java.lang.Override
       public boolean equals(final java.lang.Object obj) {
         if (obj == this) {
@@ -26169,7 +26118,7 @@ public final class Protos {
         }
         public Builder setField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.setField(field, value);
         }
         public Builder clearField(
@@ -26182,12 +26131,12 @@ public final class Protos {
         }
         public Builder setRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            int index, java.lang.Object value) {
+            int index, Object value) {
           return (Builder) super.setRepeatedField(field, index, value);
         }
         public Builder addRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.addRepeatedField(field, value);
         }
         public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -26779,7 +26728,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new MesosDockerInfo(input, extensionRegistry);
+            return new MesosDockerInfo(input, extensionRegistry);
         }
       };
 
@@ -26814,6 +26763,19 @@ public final class Protos {
        * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.Seccomp seccomp = 1;</code>
        */
       mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.SeccompOrBuilder getSeccompOrBuilder();
+
+      /**
+       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+       */
+      boolean hasIpcInfo();
+      /**
+       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+       */
+      mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo getIpcInfo();
+      /**
+       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+       */
+      mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder getIpcInfoOrBuilder();
     }
     /**
      * <pre>
@@ -26826,7 +26788,6 @@ public final class Protos {
         com.google.protobuf.GeneratedMessageV3 implements
         // @@protoc_insertion_point(message_implements:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo)
         LinuxInfoOrBuilder {
-    private static final long serialVersionUID = 0L;
       // Use LinuxInfo.newBuilder() to construct.
       private LinuxInfo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
         super(builder);
@@ -26844,9 +26805,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -26859,8 +26817,8 @@ public final class Protos {
                 done = true;
                 break;
               default: {
-                if (!parseUnknownField(
-                    input, unknownFields, extensionRegistry, tag)) {
+                if (!parseUnknownField(input, unknownFields,
+                                       extensionRegistry, tag)) {
                   done = true;
                 }
                 break;
@@ -26876,6 +26834,19 @@ public final class Protos {
                   seccomp_ = subBuilder.buildPartial();
                 }
                 bitField0_ |= 0x00000001;
+                break;
+              }
+              case 18: {
+                mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder subBuilder = null;
+                if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                  subBuilder = ipcInfo_.toBuilder();
+                }
+                ipcInfo_ = input.readMessage(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.PARSER, extensionRegistry);
+                if (subBuilder != null) {
+                  subBuilder.mergeFrom(ipcInfo_);
+                  ipcInfo_ = subBuilder.buildPartial();
+                }
+                bitField0_ |= 0x00000002;
                 break;
               }
             }
@@ -26959,7 +26930,6 @@ public final class Protos {
           com.google.protobuf.GeneratedMessageV3 implements
           // @@protoc_insertion_point(message_implements:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.Seccomp)
           SeccompOrBuilder {
-      private static final long serialVersionUID = 0L;
         // Use Seccomp.newBuilder() to construct.
         private Seccomp(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
           super(builder);
@@ -26979,9 +26949,6 @@ public final class Protos {
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
           this();
-          if (extensionRegistry == null) {
-            throw new java.lang.NullPointerException();
-          }
           int mutable_bitField0_ = 0;
           com.google.protobuf.UnknownFieldSet.Builder unknownFields =
               com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -26994,8 +26961,8 @@ public final class Protos {
                   done = true;
                   break;
                 default: {
-                  if (!parseUnknownField(
-                      input, unknownFields, extensionRegistry, tag)) {
+                  if (!parseUnknownField(input, unknownFields,
+                                         extensionRegistry, tag)) {
                     done = true;
                   }
                   break;
@@ -27158,6 +27125,7 @@ public final class Protos {
           return size;
         }
 
+        private static final long serialVersionUID = 0L;
         @java.lang.Override
         public boolean equals(final java.lang.Object obj) {
           if (obj == this) {
@@ -27374,7 +27342,7 @@ public final class Protos {
           }
           public Builder setField(
               com.google.protobuf.Descriptors.FieldDescriptor field,
-              java.lang.Object value) {
+              Object value) {
             return (Builder) super.setField(field, value);
           }
           public Builder clearField(
@@ -27387,12 +27355,12 @@ public final class Protos {
           }
           public Builder setRepeatedField(
               com.google.protobuf.Descriptors.FieldDescriptor field,
-              int index, java.lang.Object value) {
+              int index, Object value) {
             return (Builder) super.setRepeatedField(field, index, value);
           }
           public Builder addRepeatedField(
               com.google.protobuf.Descriptors.FieldDescriptor field,
-              java.lang.Object value) {
+              Object value) {
             return (Builder) super.addRepeatedField(field, value);
           }
           public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -27628,7 +27596,7 @@ public final class Protos {
               com.google.protobuf.CodedInputStream input,
               com.google.protobuf.ExtensionRegistryLite extensionRegistry)
               throws com.google.protobuf.InvalidProtocolBufferException {
-            return new Seccomp(input, extensionRegistry);
+              return new Seccomp(input, extensionRegistry);
           }
         };
 
@@ -27642,6 +27610,749 @@ public final class Protos {
         }
 
         public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.Seccomp getDefaultInstanceForType() {
+          return DEFAULT_INSTANCE;
+        }
+
+      }
+
+      public interface IpcInfoOrBuilder extends
+          // @@protoc_insertion_point(interface_extends:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo)
+          com.google.protobuf.MessageOrBuilder {
+
+        /**
+         * <pre>
+         * The ipc mode the container or executor should apply
+         * </pre>
+         *
+         * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+         */
+        boolean hasIpcMode();
+        /**
+         * <pre>
+         * The ipc mode the container or executor should apply
+         * </pre>
+         *
+         * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+         */
+        mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode getIpcMode();
+
+        /**
+         * <pre>
+         * The shared memory size in MB
+         * </pre>
+         *
+         * <code>optional uint32 shmSize = 2;</code>
+         */
+        boolean hasShmSize();
+        /**
+         * <pre>
+         * The shared memory size in MB
+         * </pre>
+         *
+         * <code>optional uint32 shmSize = 2;</code>
+         */
+        int getShmSize();
+      }
+      /**
+       * <pre>
+       * IPC configurations
+       * </pre>
+       *
+       * Protobuf type {@code mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo}
+       */
+      public  static final class IpcInfo extends
+          com.google.protobuf.GeneratedMessageV3 implements
+          // @@protoc_insertion_point(message_implements:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo)
+          IpcInfoOrBuilder {
+        // Use IpcInfo.newBuilder() to construct.
+        private IpcInfo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+          super(builder);
+        }
+        private IpcInfo() {
+          ipcMode_ = 1;
+          shmSize_ = 0;
+        }
+
+        @java.lang.Override
+        public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+          return this.unknownFields;
+        }
+        private IpcInfo(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          this();
+          int mutable_bitField0_ = 0;
+          com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+              com.google.protobuf.UnknownFieldSet.newBuilder();
+          try {
+            boolean done = false;
+            while (!done) {
+              int tag = input.readTag();
+              switch (tag) {
+                case 0:
+                  done = true;
+                  break;
+                default: {
+                  if (!parseUnknownField(input, unknownFields,
+                                         extensionRegistry, tag)) {
+                    done = true;
+                  }
+                  break;
+                }
+                case 8: {
+                  int rawValue = input.readEnum();
+                  mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode value = mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode.valueOf(rawValue);
+                  if (value == null) {
+                    unknownFields.mergeVarintField(1, rawValue);
+                  } else {
+                    bitField0_ |= 0x00000001;
+                    ipcMode_ = rawValue;
+                  }
+                  break;
+                }
+                case 16: {
+                  bitField0_ |= 0x00000002;
+                  shmSize_ = input.readUInt32();
+                  break;
+                }
+              }
+            }
+          } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            throw e.setUnfinishedMessage(this);
+          } catch (java.io.IOException e) {
+            throw new com.google.protobuf.InvalidProtocolBufferException(
+                e).setUnfinishedMessage(this);
+          } finally {
+            this.unknownFields = unknownFields.build();
+            makeExtensionsImmutable();
+          }
+        }
+        public static final com.google.protobuf.Descriptors.Descriptor
+            getDescriptor() {
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_descriptor;
+        }
+
+        protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+            internalGetFieldAccessorTable() {
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_fieldAccessorTable
+              .ensureFieldAccessorsInitialized(
+                  mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.class, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder.class);
+        }
+
+        /**
+         * Protobuf enum {@code mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode}
+         */
+        public enum IpcMode
+            implements com.google.protobuf.ProtocolMessageEnum {
+          /**
+           * <code>PRIVATE = 1;</code>
+           */
+          PRIVATE(1),
+          /**
+           * <code>SHARE_PARENT = 2;</code>
+           */
+          SHARE_PARENT(2),
+          ;
+
+          /**
+           * <code>PRIVATE = 1;</code>
+           */
+          public static final int PRIVATE_VALUE = 1;
+          /**
+           * <code>SHARE_PARENT = 2;</code>
+           */
+          public static final int SHARE_PARENT_VALUE = 2;
+
+
+          public final int getNumber() {
+            return value;
+          }
+
+          /**
+           * @deprecated Use {@link #forNumber(int)} instead.
+           */
+          @java.lang.Deprecated
+          public static IpcMode valueOf(int value) {
+            return forNumber(value);
+          }
+
+          public static IpcMode forNumber(int value) {
+            switch (value) {
+              case 1: return PRIVATE;
+              case 2: return SHARE_PARENT;
+              default: return null;
+            }
+          }
+
+          public static com.google.protobuf.Internal.EnumLiteMap<IpcMode>
+              internalGetValueMap() {
+            return internalValueMap;
+          }
+          private static final com.google.protobuf.Internal.EnumLiteMap<
+              IpcMode> internalValueMap =
+                new com.google.protobuf.Internal.EnumLiteMap<IpcMode>() {
+                  public IpcMode findValueByNumber(int number) {
+                    return IpcMode.forNumber(number);
+                  }
+                };
+
+          public final com.google.protobuf.Descriptors.EnumValueDescriptor
+              getValueDescriptor() {
+            return getDescriptor().getValues().get(ordinal());
+          }
+          public final com.google.protobuf.Descriptors.EnumDescriptor
+              getDescriptorForType() {
+            return getDescriptor();
+          }
+          public static final com.google.protobuf.Descriptors.EnumDescriptor
+              getDescriptor() {
+            return mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDescriptor().getEnumTypes().get(0);
+          }
+
+          private static final IpcMode[] VALUES = values();
+
+          public static IpcMode valueOf(
+              com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+            if (desc.getType() != getDescriptor()) {
+              throw new java.lang.IllegalArgumentException(
+                "EnumValueDescriptor is not for this type.");
+            }
+            return VALUES[desc.getIndex()];
+          }
+
+          private final int value;
+
+          private IpcMode(int value) {
+            this.value = value;
+          }
+
+          // @@protoc_insertion_point(enum_scope:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode)
+        }
+
+        private int bitField0_;
+        public static final int IPCMODE_FIELD_NUMBER = 1;
+        private int ipcMode_;
+        /**
+         * <pre>
+         * The ipc mode the container or executor should apply
+         * </pre>
+         *
+         * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+         */
+        public boolean hasIpcMode() {
+          return ((bitField0_ & 0x00000001) == 0x00000001);
+        }
+        /**
+         * <pre>
+         * The ipc mode the container or executor should apply
+         * </pre>
+         *
+         * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+         */
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode getIpcMode() {
+          mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode result = mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode.valueOf(ipcMode_);
+          return result == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode.PRIVATE : result;
+        }
+
+        public static final int SHMSIZE_FIELD_NUMBER = 2;
+        private int shmSize_;
+        /**
+         * <pre>
+         * The shared memory size in MB
+         * </pre>
+         *
+         * <code>optional uint32 shmSize = 2;</code>
+         */
+        public boolean hasShmSize() {
+          return ((bitField0_ & 0x00000002) == 0x00000002);
+        }
+        /**
+         * <pre>
+         * The shared memory size in MB
+         * </pre>
+         *
+         * <code>optional uint32 shmSize = 2;</code>
+         */
+        public int getShmSize() {
+          return shmSize_;
+        }
+
+        private byte memoizedIsInitialized = -1;
+        public final boolean isInitialized() {
+          byte isInitialized = memoizedIsInitialized;
+          if (isInitialized == 1) return true;
+          if (isInitialized == 0) return false;
+
+          if (!hasIpcMode()) {
+            memoizedIsInitialized = 0;
+            return false;
+          }
+          memoizedIsInitialized = 1;
+          return true;
+        }
+
+        public void writeTo(com.google.protobuf.CodedOutputStream output)
+                            throws java.io.IOException {
+          if (((bitField0_ & 0x00000001) == 0x00000001)) {
+            output.writeEnum(1, ipcMode_);
+          }
+          if (((bitField0_ & 0x00000002) == 0x00000002)) {
+            output.writeUInt32(2, shmSize_);
+          }
+          unknownFields.writeTo(output);
+        }
+
+        public int getSerializedSize() {
+          int size = memoizedSize;
+          if (size != -1) return size;
+
+          size = 0;
+          if (((bitField0_ & 0x00000001) == 0x00000001)) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeEnumSize(1, ipcMode_);
+          }
+          if (((bitField0_ & 0x00000002) == 0x00000002)) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeUInt32Size(2, shmSize_);
+          }
+          size += unknownFields.getSerializedSize();
+          memoizedSize = size;
+          return size;
+        }
+
+        private static final long serialVersionUID = 0L;
+        @java.lang.Override
+        public boolean equals(final java.lang.Object obj) {
+          if (obj == this) {
+           return true;
+          }
+          if (!(obj instanceof mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo)) {
+            return super.equals(obj);
+          }
+          mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo other = (mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo) obj;
+
+          boolean result = true;
+          result = result && (hasIpcMode() == other.hasIpcMode());
+          if (hasIpcMode()) {
+            result = result && ipcMode_ == other.ipcMode_;
+          }
+          result = result && (hasShmSize() == other.hasShmSize());
+          if (hasShmSize()) {
+            result = result && (getShmSize()
+                == other.getShmSize());
+          }
+          result = result && unknownFields.equals(other.unknownFields);
+          return result;
+        }
+
+        @java.lang.Override
+        public int hashCode() {
+          if (memoizedHashCode != 0) {
+            return memoizedHashCode;
+          }
+          int hash = 41;
+          hash = (19 * hash) + getDescriptor().hashCode();
+          if (hasIpcMode()) {
+            hash = (37 * hash) + IPCMODE_FIELD_NUMBER;
+            hash = (53 * hash) + ipcMode_;
+          }
+          if (hasShmSize()) {
+            hash = (37 * hash) + SHMSIZE_FIELD_NUMBER;
+            hash = (53 * hash) + getShmSize();
+          }
+          hash = (29 * hash) + unknownFields.hashCode();
+          memoizedHashCode = hash;
+          return hash;
+        }
+
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            java.nio.ByteBuffer data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return PARSER.parseFrom(data);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            java.nio.ByteBuffer data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return PARSER.parseFrom(data, extensionRegistry);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            com.google.protobuf.ByteString data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return PARSER.parseFrom(data);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            com.google.protobuf.ByteString data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return PARSER.parseFrom(data, extensionRegistry);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(byte[] data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return PARSER.parseFrom(data);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            byte[] data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return PARSER.parseFrom(data, extensionRegistry);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(java.io.InputStream input)
+            throws java.io.IOException {
+          return com.google.protobuf.GeneratedMessageV3
+              .parseWithIOException(PARSER, input);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            java.io.InputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          return com.google.protobuf.GeneratedMessageV3
+              .parseWithIOException(PARSER, input, extensionRegistry);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseDelimitedFrom(java.io.InputStream input)
+            throws java.io.IOException {
+          return com.google.protobuf.GeneratedMessageV3
+              .parseDelimitedWithIOException(PARSER, input);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseDelimitedFrom(
+            java.io.InputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          return com.google.protobuf.GeneratedMessageV3
+              .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            com.google.protobuf.CodedInputStream input)
+            throws java.io.IOException {
+          return com.google.protobuf.GeneratedMessageV3
+              .parseWithIOException(PARSER, input);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          return com.google.protobuf.GeneratedMessageV3
+              .parseWithIOException(PARSER, input, extensionRegistry);
+        }
+
+        public Builder newBuilderForType() { return newBuilder(); }
+        public static Builder newBuilder() {
+          return DEFAULT_INSTANCE.toBuilder();
+        }
+        public static Builder newBuilder(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo prototype) {
+          return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+        }
+        public Builder toBuilder() {
+          return this == DEFAULT_INSTANCE
+              ? new Builder() : new Builder().mergeFrom(this);
+        }
+
+        @java.lang.Override
+        protected Builder newBuilderForType(
+            com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+          Builder builder = new Builder(parent);
+          return builder;
+        }
+        /**
+         * <pre>
+         * IPC configurations
+         * </pre>
+         *
+         * Protobuf type {@code mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo}
+         */
+        public static final class Builder extends
+            com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+            // @@protoc_insertion_point(builder_implements:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo)
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder {
+          public static final com.google.protobuf.Descriptors.Descriptor
+              getDescriptor() {
+            return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_descriptor;
+          }
+
+          protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+              internalGetFieldAccessorTable() {
+            return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_fieldAccessorTable
+                .ensureFieldAccessorsInitialized(
+                    mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.class, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder.class);
+          }
+
+          // Construct using mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.newBuilder()
+          private Builder() {
+            maybeForceBuilderInitialization();
+          }
+
+          private Builder(
+              com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+            super(parent);
+            maybeForceBuilderInitialization();
+          }
+          private void maybeForceBuilderInitialization() {
+            if (com.google.protobuf.GeneratedMessageV3
+                    .alwaysUseFieldBuilders) {
+            }
+          }
+          public Builder clear() {
+            super.clear();
+            ipcMode_ = 1;
+            bitField0_ = (bitField0_ & ~0x00000001);
+            shmSize_ = 0;
+            bitField0_ = (bitField0_ & ~0x00000002);
+            return this;
+          }
+
+          public com.google.protobuf.Descriptors.Descriptor
+              getDescriptorForType() {
+            return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_descriptor;
+          }
+
+          public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo getDefaultInstanceForType() {
+            return mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance();
+          }
+
+          public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo build() {
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo result = buildPartial();
+            if (!result.isInitialized()) {
+              throw newUninitializedMessageException(result);
+            }
+            return result;
+          }
+
+          public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo buildPartial() {
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo result = new mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo(this);
+            int from_bitField0_ = bitField0_;
+            int to_bitField0_ = 0;
+            if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+              to_bitField0_ |= 0x00000001;
+            }
+            result.ipcMode_ = ipcMode_;
+            if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+              to_bitField0_ |= 0x00000002;
+            }
+            result.shmSize_ = shmSize_;
+            result.bitField0_ = to_bitField0_;
+            onBuilt();
+            return result;
+          }
+
+          public Builder clone() {
+            return (Builder) super.clone();
+          }
+          public Builder setField(
+              com.google.protobuf.Descriptors.FieldDescriptor field,
+              Object value) {
+            return (Builder) super.setField(field, value);
+          }
+          public Builder clearField(
+              com.google.protobuf.Descriptors.FieldDescriptor field) {
+            return (Builder) super.clearField(field);
+          }
+          public Builder clearOneof(
+              com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+            return (Builder) super.clearOneof(oneof);
+          }
+          public Builder setRepeatedField(
+              com.google.protobuf.Descriptors.FieldDescriptor field,
+              int index, Object value) {
+            return (Builder) super.setRepeatedField(field, index, value);
+          }
+          public Builder addRepeatedField(
+              com.google.protobuf.Descriptors.FieldDescriptor field,
+              Object value) {
+            return (Builder) super.addRepeatedField(field, value);
+          }
+          public Builder mergeFrom(com.google.protobuf.Message other) {
+            if (other instanceof mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo) {
+              return mergeFrom((mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo)other);
+            } else {
+              super.mergeFrom(other);
+              return this;
+            }
+          }
+
+          public Builder mergeFrom(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo other) {
+            if (other == mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance()) return this;
+            if (other.hasIpcMode()) {
+              setIpcMode(other.getIpcMode());
+            }
+            if (other.hasShmSize()) {
+              setShmSize(other.getShmSize());
+            }
+            this.mergeUnknownFields(other.unknownFields);
+            onChanged();
+            return this;
+          }
+
+          public final boolean isInitialized() {
+            if (!hasIpcMode()) {
+              return false;
+            }
+            return true;
+          }
+
+          public Builder mergeFrom(
+              com.google.protobuf.CodedInputStream input,
+              com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+              throws java.io.IOException {
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parsedMessage = null;
+            try {
+              parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+            } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+              parsedMessage = (mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo) e.getUnfinishedMessage();
+              throw e.unwrapIOException();
+            } finally {
+              if (parsedMessage != null) {
+                mergeFrom(parsedMessage);
+              }
+            }
+            return this;
+          }
+          private int bitField0_;
+
+          private int ipcMode_ = 1;
+          /**
+           * <pre>
+           * The ipc mode the container or executor should apply
+           * </pre>
+           *
+           * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+           */
+          public boolean hasIpcMode() {
+            return ((bitField0_ & 0x00000001) == 0x00000001);
+          }
+          /**
+           * <pre>
+           * The ipc mode the container or executor should apply
+           * </pre>
+           *
+           * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+           */
+          public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode getIpcMode() {
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode result = mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode.valueOf(ipcMode_);
+            return result == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode.PRIVATE : result;
+          }
+          /**
+           * <pre>
+           * The ipc mode the container or executor should apply
+           * </pre>
+           *
+           * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+           */
+          public Builder setIpcMode(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode value) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            bitField0_ |= 0x00000001;
+            ipcMode_ = value.getNumber();
+            onChanged();
+            return this;
+          }
+          /**
+           * <pre>
+           * The ipc mode the container or executor should apply
+           * </pre>
+           *
+           * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+           */
+          public Builder clearIpcMode() {
+            bitField0_ = (bitField0_ & ~0x00000001);
+            ipcMode_ = 1;
+            onChanged();
+            return this;
+          }
+
+          private int shmSize_ ;
+          /**
+           * <pre>
+           * The shared memory size in MB
+           * </pre>
+           *
+           * <code>optional uint32 shmSize = 2;</code>
+           */
+          public boolean hasShmSize() {
+            return ((bitField0_ & 0x00000002) == 0x00000002);
+          }
+          /**
+           * <pre>
+           * The shared memory size in MB
+           * </pre>
+           *
+           * <code>optional uint32 shmSize = 2;</code>
+           */
+          public int getShmSize() {
+            return shmSize_;
+          }
+          /**
+           * <pre>
+           * The shared memory size in MB
+           * </pre>
+           *
+           * <code>optional uint32 shmSize = 2;</code>
+           */
+          public Builder setShmSize(int value) {
+            bitField0_ |= 0x00000002;
+            shmSize_ = value;
+            onChanged();
+            return this;
+          }
+          /**
+           * <pre>
+           * The shared memory size in MB
+           * </pre>
+           *
+           * <code>optional uint32 shmSize = 2;</code>
+           */
+          public Builder clearShmSize() {
+            bitField0_ = (bitField0_ & ~0x00000002);
+            shmSize_ = 0;
+            onChanged();
+            return this;
+          }
+          public final Builder setUnknownFields(
+              final com.google.protobuf.UnknownFieldSet unknownFields) {
+            return super.setUnknownFields(unknownFields);
+          }
+
+          public final Builder mergeUnknownFields(
+              final com.google.protobuf.UnknownFieldSet unknownFields) {
+            return super.mergeUnknownFields(unknownFields);
+          }
+
+
+          // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo)
+        }
+
+        // @@protoc_insertion_point(class_scope:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo)
+        private static final mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo DEFAULT_INSTANCE;
+        static {
+          DEFAULT_INSTANCE = new mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo();
+        }
+
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo getDefaultInstance() {
+          return DEFAULT_INSTANCE;
+        }
+
+        @java.lang.Deprecated public static final com.google.protobuf.Parser<IpcInfo>
+            PARSER = new com.google.protobuf.AbstractParser<IpcInfo>() {
+          public IpcInfo parsePartialFrom(
+              com.google.protobuf.CodedInputStream input,
+              com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+              throws com.google.protobuf.InvalidProtocolBufferException {
+              return new IpcInfo(input, extensionRegistry);
+          }
+        };
+
+        public static com.google.protobuf.Parser<IpcInfo> parser() {
+          return PARSER;
+        }
+
+        @java.lang.Override
+        public com.google.protobuf.Parser<IpcInfo> getParserForType() {
+          return PARSER;
+        }
+
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo getDefaultInstanceForType() {
           return DEFAULT_INSTANCE;
         }
 
@@ -27669,6 +28380,27 @@ public final class Protos {
         return seccomp_ == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.Seccomp.getDefaultInstance() : seccomp_;
       }
 
+      public static final int IPCINFO_FIELD_NUMBER = 2;
+      private mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo_;
+      /**
+       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+       */
+      public boolean hasIpcInfo() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+       */
+      public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo getIpcInfo() {
+        return ipcInfo_ == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance() : ipcInfo_;
+      }
+      /**
+       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+       */
+      public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder getIpcInfoOrBuilder() {
+        return ipcInfo_ == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance() : ipcInfo_;
+      }
+
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
         byte isInitialized = memoizedIsInitialized;
@@ -27677,6 +28409,12 @@ public final class Protos {
 
         if (hasSeccomp()) {
           if (!getSeccomp().isInitialized()) {
+            memoizedIsInitialized = 0;
+            return false;
+          }
+        }
+        if (hasIpcInfo()) {
+          if (!getIpcInfo().isInitialized()) {
             memoizedIsInitialized = 0;
             return false;
           }
@@ -27690,6 +28428,9 @@ public final class Protos {
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
           output.writeMessage(1, getSeccomp());
         }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          output.writeMessage(2, getIpcInfo());
+        }
         unknownFields.writeTo(output);
       }
 
@@ -27702,11 +28443,16 @@ public final class Protos {
           size += com.google.protobuf.CodedOutputStream
             .computeMessageSize(1, getSeccomp());
         }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeMessageSize(2, getIpcInfo());
+        }
         size += unknownFields.getSerializedSize();
         memoizedSize = size;
         return size;
       }
 
+      private static final long serialVersionUID = 0L;
       @java.lang.Override
       public boolean equals(final java.lang.Object obj) {
         if (obj == this) {
@@ -27723,6 +28469,11 @@ public final class Protos {
           result = result && getSeccomp()
               .equals(other.getSeccomp());
         }
+        result = result && (hasIpcInfo() == other.hasIpcInfo());
+        if (hasIpcInfo()) {
+          result = result && getIpcInfo()
+              .equals(other.getIpcInfo());
+        }
         result = result && unknownFields.equals(other.unknownFields);
         return result;
       }
@@ -27737,6 +28488,10 @@ public final class Protos {
         if (hasSeccomp()) {
           hash = (37 * hash) + SECCOMP_FIELD_NUMBER;
           hash = (53 * hash) + getSeccomp().hashCode();
+        }
+        if (hasIpcInfo()) {
+          hash = (37 * hash) + IPCINFO_FIELD_NUMBER;
+          hash = (53 * hash) + getIpcInfo().hashCode();
         }
         hash = (29 * hash) + unknownFields.hashCode();
         memoizedHashCode = hash;
@@ -27868,6 +28623,7 @@ public final class Protos {
           if (com.google.protobuf.GeneratedMessageV3
                   .alwaysUseFieldBuilders) {
             getSeccompFieldBuilder();
+            getIpcInfoFieldBuilder();
           }
         }
         public Builder clear() {
@@ -27878,6 +28634,12 @@ public final class Protos {
             seccompBuilder_.clear();
           }
           bitField0_ = (bitField0_ & ~0x00000001);
+          if (ipcInfoBuilder_ == null) {
+            ipcInfo_ = null;
+          } else {
+            ipcInfoBuilder_.clear();
+          }
+          bitField0_ = (bitField0_ & ~0x00000002);
           return this;
         }
 
@@ -27910,6 +28672,14 @@ public final class Protos {
           } else {
             result.seccomp_ = seccompBuilder_.build();
           }
+          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+            to_bitField0_ |= 0x00000002;
+          }
+          if (ipcInfoBuilder_ == null) {
+            result.ipcInfo_ = ipcInfo_;
+          } else {
+            result.ipcInfo_ = ipcInfoBuilder_.build();
+          }
           result.bitField0_ = to_bitField0_;
           onBuilt();
           return result;
@@ -27920,7 +28690,7 @@ public final class Protos {
         }
         public Builder setField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.setField(field, value);
         }
         public Builder clearField(
@@ -27933,12 +28703,12 @@ public final class Protos {
         }
         public Builder setRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            int index, java.lang.Object value) {
+            int index, Object value) {
           return (Builder) super.setRepeatedField(field, index, value);
         }
         public Builder addRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.addRepeatedField(field, value);
         }
         public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -27955,6 +28725,9 @@ public final class Protos {
           if (other.hasSeccomp()) {
             mergeSeccomp(other.getSeccomp());
           }
+          if (other.hasIpcInfo()) {
+            mergeIpcInfo(other.getIpcInfo());
+          }
           this.mergeUnknownFields(other.unknownFields);
           onChanged();
           return this;
@@ -27963,6 +28736,11 @@ public final class Protos {
         public final boolean isInitialized() {
           if (hasSeccomp()) {
             if (!getSeccomp().isInitialized()) {
+              return false;
+            }
+          }
+          if (hasIpcInfo()) {
+            if (!getIpcInfo().isInitialized()) {
               return false;
             }
           }
@@ -28105,6 +28883,124 @@ public final class Protos {
           }
           return seccompBuilder_;
         }
+
+        private mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo_ = null;
+        private com.google.protobuf.SingleFieldBuilderV3<
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder> ipcInfoBuilder_;
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public boolean hasIpcInfo() {
+          return ((bitField0_ & 0x00000002) == 0x00000002);
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo getIpcInfo() {
+          if (ipcInfoBuilder_ == null) {
+            return ipcInfo_ == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance() : ipcInfo_;
+          } else {
+            return ipcInfoBuilder_.getMessage();
+          }
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public Builder setIpcInfo(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo value) {
+          if (ipcInfoBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ipcInfo_ = value;
+            onChanged();
+          } else {
+            ipcInfoBuilder_.setMessage(value);
+          }
+          bitField0_ |= 0x00000002;
+          return this;
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public Builder setIpcInfo(
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder builderForValue) {
+          if (ipcInfoBuilder_ == null) {
+            ipcInfo_ = builderForValue.build();
+            onChanged();
+          } else {
+            ipcInfoBuilder_.setMessage(builderForValue.build());
+          }
+          bitField0_ |= 0x00000002;
+          return this;
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public Builder mergeIpcInfo(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo value) {
+          if (ipcInfoBuilder_ == null) {
+            if (((bitField0_ & 0x00000002) == 0x00000002) &&
+                ipcInfo_ != null &&
+                ipcInfo_ != mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance()) {
+              ipcInfo_ =
+                mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.newBuilder(ipcInfo_).mergeFrom(value).buildPartial();
+            } else {
+              ipcInfo_ = value;
+            }
+            onChanged();
+          } else {
+            ipcInfoBuilder_.mergeFrom(value);
+          }
+          bitField0_ |= 0x00000002;
+          return this;
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public Builder clearIpcInfo() {
+          if (ipcInfoBuilder_ == null) {
+            ipcInfo_ = null;
+            onChanged();
+          } else {
+            ipcInfoBuilder_.clear();
+          }
+          bitField0_ = (bitField0_ & ~0x00000002);
+          return this;
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder getIpcInfoBuilder() {
+          bitField0_ |= 0x00000002;
+          onChanged();
+          return getIpcInfoFieldBuilder().getBuilder();
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder getIpcInfoOrBuilder() {
+          if (ipcInfoBuilder_ != null) {
+            return ipcInfoBuilder_.getMessageOrBuilder();
+          } else {
+            return ipcInfo_ == null ?
+                mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance() : ipcInfo_;
+          }
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        private com.google.protobuf.SingleFieldBuilderV3<
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder> 
+            getIpcInfoFieldBuilder() {
+          if (ipcInfoBuilder_ == null) {
+            ipcInfoBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+                mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder>(
+                    getIpcInfo(),
+                    getParentForChildren(),
+                    isClean());
+            ipcInfo_ = null;
+          }
+          return ipcInfoBuilder_;
+        }
         public final Builder setUnknownFields(
             final com.google.protobuf.UnknownFieldSet unknownFields) {
           return super.setUnknownFields(unknownFields);
@@ -28135,7 +29031,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new LinuxInfo(input, extensionRegistry);
+            return new LinuxInfo(input, extensionRegistry);
         }
       };
 
@@ -28263,7 +29159,6 @@ public final class Protos {
         com.google.protobuf.GeneratedMessageV3 implements
         // @@protoc_insertion_point(message_implements:mesosphere.marathon.ExtendedContainerInfo.PortMapping)
         PortMappingOrBuilder {
-    private static final long serialVersionUID = 0L;
       // Use PortMapping.newBuilder() to construct.
       private PortMapping(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
         super(builder);
@@ -28288,9 +29183,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -28303,8 +29195,8 @@ public final class Protos {
                 done = true;
                 break;
               default: {
-                if (!parseUnknownField(
-                    input, unknownFields, extensionRegistry, tag)) {
+                if (!parseUnknownField(input, unknownFields,
+                                       extensionRegistry, tag)) {
                   done = true;
                 }
                 break;
@@ -28664,6 +29556,7 @@ public final class Protos {
         return size;
       }
 
+      private static final long serialVersionUID = 0L;
       @java.lang.Override
       public boolean equals(final java.lang.Object obj) {
         if (obj == this) {
@@ -28959,7 +29852,7 @@ public final class Protos {
         }
         public Builder setField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.setField(field, value);
         }
         public Builder clearField(
@@ -28972,12 +29865,12 @@ public final class Protos {
         }
         public Builder setRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            int index, java.lang.Object value) {
+            int index, Object value) {
           return (Builder) super.setRepeatedField(field, index, value);
         }
         public Builder addRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.addRepeatedField(field, value);
         }
         public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -29692,7 +30585,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new PortMapping(input, extensionRegistry);
+            return new PortMapping(input, extensionRegistry);
         }
       };
 
@@ -29994,6 +30887,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -30314,7 +31208,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -30327,12 +31221,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -31473,7 +32367,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ExtendedContainerInfo(input, extensionRegistry);
+          return new ExtendedContainerInfo(input, extensionRegistry);
       }
     };
 
@@ -31685,7 +32579,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.Volume)
       VolumeOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use Volume.newBuilder() to construct.
     private Volume(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -31706,9 +32599,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -31721,8 +32611,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -31906,7 +32796,6 @@ public final class Protos {
         com.google.protobuf.GeneratedMessageV3 implements
         // @@protoc_insertion_point(message_implements:mesosphere.marathon.Volume.PersistentVolumeInfo)
         PersistentVolumeInfoOrBuilder {
-    private static final long serialVersionUID = 0L;
       // Use PersistentVolumeInfo.newBuilder() to construct.
       private PersistentVolumeInfo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
         super(builder);
@@ -31929,9 +32818,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -31944,8 +32830,8 @@ public final class Protos {
                 done = true;
                 break;
               default: {
-                if (!parseUnknownField(
-                    input, unknownFields, extensionRegistry, tag)) {
+                if (!parseUnknownField(input, unknownFields,
+                                       extensionRegistry, tag)) {
                   done = true;
                 }
                 break;
@@ -32206,6 +33092,7 @@ public final class Protos {
         return size;
       }
 
+      private static final long serialVersionUID = 0L;
       @java.lang.Override
       public boolean equals(final java.lang.Object obj) {
         if (obj == this) {
@@ -32478,7 +33365,7 @@ public final class Protos {
         }
         public Builder setField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.setField(field, value);
         }
         public Builder clearField(
@@ -32491,12 +33378,12 @@ public final class Protos {
         }
         public Builder setRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            int index, java.lang.Object value) {
+            int index, Object value) {
           return (Builder) super.setRepeatedField(field, index, value);
         }
         public Builder addRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.addRepeatedField(field, value);
         }
         public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -33031,7 +33918,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new PersistentVolumeInfo(input, extensionRegistry);
+            return new PersistentVolumeInfo(input, extensionRegistry);
         }
       };
 
@@ -33126,7 +34013,6 @@ public final class Protos {
         com.google.protobuf.GeneratedMessageV3 implements
         // @@protoc_insertion_point(message_implements:mesosphere.marathon.Volume.ExternalVolumeInfo)
         ExternalVolumeInfoOrBuilder {
-    private static final long serialVersionUID = 0L;
       // Use ExternalVolumeInfo.newBuilder() to construct.
       private ExternalVolumeInfo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
         super(builder);
@@ -33148,9 +34034,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -33163,8 +34046,8 @@ public final class Protos {
                 done = true;
                 break;
               default: {
-                if (!parseUnknownField(
-                    input, unknownFields, extensionRegistry, tag)) {
+                if (!parseUnknownField(input, unknownFields,
+                                       extensionRegistry, tag)) {
                   done = true;
                 }
                 break;
@@ -33422,6 +34305,7 @@ public final class Protos {
         return size;
       }
 
+      private static final long serialVersionUID = 0L;
       @java.lang.Override
       public boolean equals(final java.lang.Object obj) {
         if (obj == this) {
@@ -33679,7 +34563,7 @@ public final class Protos {
         }
         public Builder setField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.setField(field, value);
         }
         public Builder clearField(
@@ -33692,12 +34576,12 @@ public final class Protos {
         }
         public Builder setRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            int index, java.lang.Object value) {
+            int index, Object value) {
           return (Builder) super.setRepeatedField(field, index, value);
         }
         public Builder addRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.addRepeatedField(field, value);
         }
         public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -34242,7 +35126,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new ExternalVolumeInfo(input, extensionRegistry);
+            return new ExternalVolumeInfo(input, extensionRegistry);
         }
       };
 
@@ -34290,7 +35174,6 @@ public final class Protos {
         com.google.protobuf.GeneratedMessageV3 implements
         // @@protoc_insertion_point(message_implements:mesosphere.marathon.Volume.SecretVolumeInfo)
         SecretVolumeInfoOrBuilder {
-    private static final long serialVersionUID = 0L;
       // Use SecretVolumeInfo.newBuilder() to construct.
       private SecretVolumeInfo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
         super(builder);
@@ -34309,9 +35192,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -34324,8 +35204,8 @@ public final class Protos {
                 done = true;
                 break;
               default: {
-                if (!parseUnknownField(
-                    input, unknownFields, extensionRegistry, tag)) {
+                if (!parseUnknownField(input, unknownFields,
+                                       extensionRegistry, tag)) {
                   done = true;
                 }
                 break;
@@ -34438,6 +35318,7 @@ public final class Protos {
         return size;
       }
 
+      private static final long serialVersionUID = 0L;
       @java.lang.Override
       public boolean equals(final java.lang.Object obj) {
         if (obj == this) {
@@ -34642,7 +35523,7 @@ public final class Protos {
         }
         public Builder setField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.setField(field, value);
         }
         public Builder clearField(
@@ -34655,12 +35536,12 @@ public final class Protos {
         }
         public Builder setRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            int index, java.lang.Object value) {
+            int index, Object value) {
           return (Builder) super.setRepeatedField(field, index, value);
         }
         public Builder addRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.addRepeatedField(field, value);
         }
         public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -34815,7 +35696,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new SecretVolumeInfo(input, extensionRegistry);
+            return new SecretVolumeInfo(input, extensionRegistry);
         }
       };
 
@@ -35210,6 +36091,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -35541,7 +36423,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -35554,12 +36436,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -36566,7 +37448,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Volume(input, extensionRegistry);
+          return new Volume(input, extensionRegistry);
       }
     };
 
@@ -36640,7 +37522,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.StorageVersion)
       StorageVersionOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use StorageVersion.newBuilder() to construct.
     private StorageVersion(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -36662,9 +37543,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -36677,8 +37555,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -36958,6 +37836,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -37202,7 +38081,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -37215,12 +38094,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -37460,7 +38339,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new StorageVersion(input, extensionRegistry);
+          return new StorageVersion(input, extensionRegistry);
       }
     };
 
@@ -37508,7 +38387,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.UpgradeStrategyDefinition)
       UpgradeStrategyDefinitionOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use UpgradeStrategyDefinition.newBuilder() to construct.
     private UpgradeStrategyDefinition(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -37528,9 +38406,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -37543,8 +38418,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -37657,6 +38532,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -37878,7 +38754,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -37891,12 +38767,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -38040,7 +38916,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new UpgradeStrategyDefinition(input, extensionRegistry);
+          return new UpgradeStrategyDefinition(input, extensionRegistry);
       }
     };
 
@@ -38266,7 +39142,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.GroupDefinition)
       GroupDefinitionOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use GroupDefinition.newBuilder() to construct.
     private GroupDefinition(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -38293,9 +39168,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -38308,8 +39180,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -38466,7 +39338,6 @@ public final class Protos {
         com.google.protobuf.GeneratedMessageV3 implements
         // @@protoc_insertion_point(message_implements:mesosphere.marathon.GroupDefinition.AppReference)
         AppReferenceOrBuilder {
-    private static final long serialVersionUID = 0L;
       // Use AppReference.newBuilder() to construct.
       private AppReference(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
         super(builder);
@@ -38486,9 +39357,6 @@ public final class Protos {
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
         this();
-        if (extensionRegistry == null) {
-          throw new java.lang.NullPointerException();
-        }
         int mutable_bitField0_ = 0;
         com.google.protobuf.UnknownFieldSet.Builder unknownFields =
             com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -38501,8 +39369,8 @@ public final class Protos {
                 done = true;
                 break;
               default: {
-                if (!parseUnknownField(
-                    input, unknownFields, extensionRegistry, tag)) {
+                if (!parseUnknownField(input, unknownFields,
+                                       extensionRegistry, tag)) {
                   done = true;
                 }
                 break;
@@ -38673,6 +39541,7 @@ public final class Protos {
         return size;
       }
 
+      private static final long serialVersionUID = 0L;
       @java.lang.Override
       public boolean equals(final java.lang.Object obj) {
         if (obj == this) {
@@ -38888,7 +39757,7 @@ public final class Protos {
         }
         public Builder setField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.setField(field, value);
         }
         public Builder clearField(
@@ -38901,12 +39770,12 @@ public final class Protos {
         }
         public Builder setRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            int index, java.lang.Object value) {
+            int index, Object value) {
           return (Builder) super.setRepeatedField(field, index, value);
         }
         public Builder addRepeatedField(
             com.google.protobuf.Descriptors.FieldDescriptor field,
-            java.lang.Object value) {
+            Object value) {
           return (Builder) super.addRepeatedField(field, value);
         }
         public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -39145,7 +40014,7 @@ public final class Protos {
             com.google.protobuf.CodedInputStream input,
             com.google.protobuf.ExtensionRegistryLite extensionRegistry)
             throws com.google.protobuf.InvalidProtocolBufferException {
-          return new AppReference(input, extensionRegistry);
+            return new AppReference(input, extensionRegistry);
         }
       };
 
@@ -39616,6 +40485,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -39970,7 +40840,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -39983,12 +40853,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -41792,7 +42662,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new GroupDefinition(input, extensionRegistry);
+          return new GroupDefinition(input, extensionRegistry);
       }
     };
 
@@ -41931,7 +42801,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.DeploymentPlanDefinition)
       DeploymentPlanDefinitionOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use DeploymentPlanDefinition.newBuilder() to construct.
     private DeploymentPlanDefinition(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -41953,9 +42822,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -41968,8 +42834,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -42365,6 +43231,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -42658,7 +43525,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -42671,12 +43538,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -43395,7 +44262,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new DeploymentPlanDefinition(input, extensionRegistry);
+          return new DeploymentPlanDefinition(input, extensionRegistry);
       }
     };
 
@@ -43530,7 +44397,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.TaskFailure)
       TaskFailureOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use TaskFailure.newBuilder() to construct.
     private TaskFailure(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -43554,9 +44420,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -43569,8 +44432,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -44041,6 +44904,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -44363,7 +45227,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -44376,12 +45240,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -45161,7 +46025,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new TaskFailure(input, extensionRegistry);
+          return new TaskFailure(input, extensionRegistry);
       }
     };
 
@@ -45251,7 +46115,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.ZKStoreEntry)
       ZKStoreEntryOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use ZKStoreEntry.newBuilder() to construct.
     private ZKStoreEntry(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -45273,9 +46136,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -45288,8 +46148,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -45503,6 +46363,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -45756,7 +46617,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -45769,12 +46630,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -46070,7 +46931,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ZKStoreEntry(input, extensionRegistry);
+          return new ZKStoreEntry(input, extensionRegistry);
       }
     };
 
@@ -46118,7 +46979,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.ResidencyDefinition)
       ResidencyDefinitionOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use ResidencyDefinition.newBuilder() to construct.
     private ResidencyDefinition(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -46138,9 +46998,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -46153,8 +47010,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -46360,6 +47217,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -46575,7 +47433,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -46588,12 +47446,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -46738,7 +47596,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new ResidencyDefinition(input, extensionRegistry);
+          return new ResidencyDefinition(input, extensionRegistry);
       }
     };
 
@@ -46796,7 +47654,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.Secret)
       SecretOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use Secret.newBuilder() to construct.
     private Secret(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -46816,9 +47673,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -46831,8 +47685,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -47003,6 +47857,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -47218,7 +48073,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -47231,12 +48086,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -47475,7 +48330,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new Secret(input, extensionRegistry);
+          return new Secret(input, extensionRegistry);
       }
     };
 
@@ -47541,7 +48396,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.EnvVarReference)
       EnvVarReferenceOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use EnvVarReference.newBuilder() to construct.
     private EnvVarReference(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -47561,9 +48415,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -47576,8 +48427,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -47865,6 +48716,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -48103,7 +48955,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -48116,12 +48968,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -48444,7 +49296,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new EnvVarReference(input, extensionRegistry);
+          return new EnvVarReference(input, extensionRegistry);
       }
     };
 
@@ -48488,7 +49340,6 @@ public final class Protos {
       com.google.protobuf.GeneratedMessageV3 implements
       // @@protoc_insertion_point(message_implements:mesosphere.marathon.EnvVarSecretRef)
       EnvVarSecretRefOrBuilder {
-  private static final long serialVersionUID = 0L;
     // Use EnvVarSecretRef.newBuilder() to construct.
     private EnvVarSecretRef(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
       super(builder);
@@ -48507,9 +49358,6 @@ public final class Protos {
         com.google.protobuf.ExtensionRegistryLite extensionRegistry)
         throws com.google.protobuf.InvalidProtocolBufferException {
       this();
-      if (extensionRegistry == null) {
-        throw new java.lang.NullPointerException();
-      }
       int mutable_bitField0_ = 0;
       com.google.protobuf.UnknownFieldSet.Builder unknownFields =
           com.google.protobuf.UnknownFieldSet.newBuilder();
@@ -48522,8 +49370,8 @@ public final class Protos {
               done = true;
               break;
             default: {
-              if (!parseUnknownField(
-                  input, unknownFields, extensionRegistry, tag)) {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
                 done = true;
               }
               break;
@@ -48636,6 +49484,7 @@ public final class Protos {
       return size;
     }
 
+    private static final long serialVersionUID = 0L;
     @java.lang.Override
     public boolean equals(final java.lang.Object obj) {
       if (obj == this) {
@@ -48836,7 +49685,7 @@ public final class Protos {
       }
       public Builder setField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.setField(field, value);
       }
       public Builder clearField(
@@ -48849,12 +49698,12 @@ public final class Protos {
       }
       public Builder setRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          int index, java.lang.Object value) {
+          int index, Object value) {
         return (Builder) super.setRepeatedField(field, index, value);
       }
       public Builder addRepeatedField(
           com.google.protobuf.Descriptors.FieldDescriptor field,
-          java.lang.Object value) {
+          Object value) {
         return (Builder) super.addRepeatedField(field, value);
       }
       public Builder mergeFrom(com.google.protobuf.Message other) {
@@ -49009,7 +49858,7 @@ public final class Protos {
           com.google.protobuf.CodedInputStream input,
           com.google.protobuf.ExtensionRegistryLite extensionRegistry)
           throws com.google.protobuf.InvalidProtocolBufferException {
-        return new EnvVarSecretRef(input, extensionRegistry);
+          return new EnvVarSecretRef(input, extensionRegistry);
       }
     };
 
@@ -49124,6 +49973,11 @@ public final class Protos {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_Seccomp_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -49221,7 +50075,7 @@ public final class Protos {
       "X_PER\020\005\022\006\n\002IS\020\006\"\325\004\n\025HealthCheckDefinitio" +
       "n\022E\n\010protocol\030\001 \002(\01623.mesosphere.maratho" +
       "n.HealthCheckDefinition.Protocol\022\021\n\tport" +
-      "Index\030\002 \001(\r\022\036\n\022gracePeriodSeconds\030\003 \001(\r:" +
+      "Index\030\002 \001(\r\022\036\n\022gracePeriodSeconds\030\003 \001(\r:",
       "\00215\022\033\n\017intervalSeconds\030\004 \001(\r:\00210\022\032\n\016time" +
       "outSeconds\030\005 \001(\r:\00220\022\017\n\004path\030\006 \001(\t:\001/\022!\n" +
       "\026maxConsecutiveFailures\030\007 \001(\r:\0013\022#\n\007comm" +
@@ -49231,7 +50085,7 @@ public final class Protos {
       "\nipProtocol\030\r \001(\01625.mesosphere.marathon." +
       "HealthCheckDefinition.IpProtocol:\004IPv4\"e" +
       "\n\010Protocol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\022\013\n\007COMMAND" +
-      "\020\002\022\t\n\005HTTPS\020\003\022\016\n\nMESOS_HTTP\020\004\022\017\n\013MESOS_H" +
+      "\020\002\022\t\n\005HTTPS\020\003\022\016\n\nMESOS_HTTP\020\004\022\017\n\013MESOS_H",
       "TTPS\020\005\022\r\n\tMESOS_TCP\020\006\" \n\nIpProtocol\022\010\n\004I" +
       "Pv4\020\001\022\010\n\004IPv6\020\002\"\250\002\n\017CheckDefinition\022?\n\010p" +
       "rotocol\030\001 \002(\0162-.mesosphere.marathon.Chec" +
@@ -49241,7 +50095,7 @@ public final class Protos {
       "(\r\022\014\n\004port\030\006 \001(\r\022\017\n\004path\030\007 \001(\t:\001/\022#\n\007com" +
       "mand\030\010 \001(\0132\022.mesos.CommandInfo\"*\n\010Protoc" +
       "ol\022\010\n\004HTTP\020\000\022\007\n\003TCP\020\001\022\013\n\007COMMAND\020\002\"\240\002\n\030R" +
-      "eadinessCheckDefinition\022\014\n\004name\030\001 \001(\t\022H\n" +
+      "eadinessCheckDefinition\022\014\n\004name\030\001 \001(\t\022H\n",
       "\010protocol\030\002 \001(\01626.mesosphere.marathon.Re" +
       "adinessCheckDefinition.Protocol\022\014\n\004path\030" +
       "\003 \001(\t\022\020\n\010portName\030\004 \001(\t\022\026\n\016intervalMilli" +
@@ -49251,7 +50105,7 @@ public final class Protos {
       "TPS\020\001\"\231\001\n\021ObsoleteIpAddress\022\016\n\006groups\030\001 " +
       "\003(\t\022\034\n\006labels\030\002 \003(\0132\014.mesos.Label\022A\n\rdis" +
       "coveryInfo\030\003 \001(\0132*.mesosphere.marathon.O" +
-      "bsoleteDiscoveryInfo\022\023\n\013networkName\030\004 \001(" +
+      "bsoleteDiscoveryInfo\022\023\n\013networkName\030\004 \001(",
       "\t\"3\n\025ObsoleteDiscoveryInfo\022\032\n\005ports\030\001 \003(" +
       "\0132\013.mesos.Port\"\264\001\n\021NetworkDefinition\0229\n\004" +
       "mode\030\001 \001(\0162+.mesosphere.marathon.Network" +
@@ -49261,7 +50115,7 @@ public final class Protos {
       "\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002" +
       " \002(\0132\022.mesos.CommandInfo\022\021\n\tinstances\030\003 " +
       "\002(\r\022\"\n\tresources\030\004 \003(\0132\017.mesos.Resource\022" +
-      "\023\n\013description\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r\0224\n\013c" +
+      "\023\n\013description\030\005 \001(\t\022\r\n\005ports\030\006 \003(\r\0224\n\013c",
       "onstraints\030\007 \003(\0132\037.mesosphere.marathon.C" +
       "onstraint\022\022\n\010executor\030\010 \002(\t:\000\022>\n\022OBSOLET" +
       "E_container\030\n \001(\0132\".mesosphere.marathon." +
@@ -49271,7 +50125,7 @@ public final class Protos {
       "on\022\025\n\007backoff\030\r \001(\003:\0041000\022\033\n\rbackoffFact" +
       "or\030\016 \001(\001:\0041.15\022G\n\017upgradeStrategy\030\017 \001(\0132" +
       "..mesosphere.marathon.UpgradeStrategyDef" +
-      "inition\022\024\n\014dependencies\030\020 \003(\t\022\021\n\tstoreUr" +
+      "inition\022\024\n\014dependencies\030\020 \003(\t\022\021\n\tstoreUr",
       "ls\030\021 \003(\t\022\034\n\rrequire_ports\030\022 \001(\010:\005false\022=" +
       "\n\tcontainer\030\023 \001(\0132*.mesosphere.marathon." +
       "ExtendedContainerInfo\022 \n\006labels\030\024 \003(\0132\020." +
@@ -49281,7 +50135,7 @@ public final class Protos {
       "ast_scaling_at\030\027 \001(\003\022\035\n\025last_config_chan" +
       "ge_at\030\030 \001(\003\022B\n\022OBSOLETE_ipAddress\030\031 \001(\0132" +
       "&.mesosphere.marathon.ObsoleteIpAddress\022" +
-      "?\n\tresidency\030\032 \001(\0132(.mesosphere.marathon" +
+      "?\n\tresidency\030\032 \001(\0132(.mesosphere.marathon",
       ".ResidencyDefinitionB\002\030\001\022$\n\017portDefiniti" +
       "ons\030\033 \003(\0132\013.mesos.Port\022O\n\030readinessCheck" +
       "Definition\030\034 \003(\0132-.mesosphere.marathon.R" +
@@ -49291,7 +50145,7 @@ public final class Protos {
       "vVarReference\022\033\n\023taskKillGracePeriod\030\037 \001" +
       "(\003\022E\n\023unreachableStrategy\030  \001(\0132(.mesosp" +
       "here.marathon.UnreachableStrategy\022H\n\rkil" +
-      "lSelection\030! \001(\0162\".mesosphere.marathon.K" +
+      "lSelection\030! \001(\0162\".mesosphere.marathon.K",
       "illSelection:\rYoungestFirst\0228\n\010networks\030" +
       "\" \003(\0132&.mesosphere.marathon.NetworkDefin" +
       "ition\022\033\n\003tty\030# \001(\0132\016.mesos.TTYInfo\022*\n\021ex" +
@@ -49301,8 +50155,8 @@ public final class Protos {
       "Strategy\022!\n\024inactiveAfterSeconds\030\001 \001(\004:\003" +
       "900\022#\n\023expungeAfterSeconds\030\002 \001(\004:\006604800" +
       "\"\024\n\004Json\022\014\n\004json\030\001 \002(\t\"\035\n\rResourceRoles\022" +
-      "\014\n\004role\030\001 \003(\t\"1\n\rContainerInfo\022\017\n\005image\030" +
-      "\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\227\014\n\025ExtendedCon" +
+      "\014\n\004role\030\001 \003(\t\"1\n\rContainerInfo\022\017\n\005image\030",
+      "\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\204\016\n\025ExtendedCon" +
       "tainerInfo\022\'\n\004type\030\001 \002(\0162\031.mesos.Contain" +
       "erInfo.Type\022,\n\007volumes\030\002 \003(\0132\033.mesospher" +
       "e.marathon.Volume\022M\n\rport_mappings\030\006 \003(\013" +
@@ -49311,7 +50165,7 @@ public final class Protos {
       "phere.marathon.ExtendedContainerInfo.Doc" +
       "kerInfo\022O\n\013mesosDocker\030\004 \001(\0132:.mesospher" +
       "e.marathon.ExtendedContainerInfo.MesosDo" +
-      "ckerInfo\022G\n\tlinuxInfo\030\007 \001(\01324.mesosphere" +
+      "ckerInfo\022G\n\tlinuxInfo\030\007 \001(\01324.mesosphere",
       ".marathon.ExtendedContainerInfo.LinuxInf" +
       "o\032\361\004\n\nDockerInfo\022\r\n\005image\030\001 \002(\t\022G\n\020OBSOL" +
       "ETE_network\030\002 \001(\0162\'.mesos.ContainerInfo." +
@@ -49321,7 +50175,7 @@ public final class Protos {
       "DockerPortMapping\022\031\n\nprivileged\030\004 \001(\010:\005f" +
       "alse\022$\n\nparameters\030\005 \003(\0132\020.mesos.Paramet" +
       "er\022\030\n\020force_pull_image\030\006 \001(\010\032\236\001\n\017ImagePu" +
-      "llConfig\022X\n\004type\030\001 \002(\0162J.mesosphere.mara" +
+      "llConfig\022X\n\004type\030\001 \002(\0162J.mesosphere.mara",
       "thon.ExtendedContainerInfo.DockerInfo.Im" +
       "agePullConfig.Type\022\035\n\006secret\030\002 \001(\0132\r.mes" +
       "os.Secret\"\022\n\004Type\022\n\n\006SECRET\020\001\032\235\001\n\031Obsole" +
@@ -49331,78 +50185,84 @@ public final class Protos {
       "abel\022\027\n\014service_port\030d \001(\r:\0010\032\310\001\n\017MesosD" +
       "ockerInfo\022\r\n\005image\030\001 \002(\t\0220\n\025deprecated_c" +
       "redential\030\002 \001(\0132\021.mesos.Credential\022\030\n\020fo" +
-      "rce_pull_image\030\003 \001(\010\022Z\n\013pull_config\030\004 \001(" +
+      "rce_pull_image\030\003 \001(\010\022Z\n\013pull_config\030\004 \001(",
       "\0132E.mesosphere.marathon.ExtendedContaine" +
-      "rInfo.DockerInfo.ImagePullConfig\032\216\001\n\tLin" +
+      "rInfo.DockerInfo.ImagePullConfig\032\373\002\n\tLin" +
       "uxInfo\022M\n\007seccomp\030\001 \001(\0132<.mesosphere.mar" +
       "athon.ExtendedContainerInfo.LinuxInfo.Se" +
-      "ccomp\0322\n\007Seccomp\022\023\n\013profileName\030\001 \001(\t\022\022\n" +
-      "\nunconfined\030\002 \002(\010\032\246\001\n\013PortMapping\022\021\n\thos" +
-      "t_port\030\001 \001(\r\022\026\n\016container_port\030\002 \002(\r\022\020\n\010" +
-      "protocol\030\003 \001(\t\022\014\n\004name\030\004 \001(\t\022\034\n\006labels\030\005" +
-      " \003(\0132\014.mesos.Label\022\027\n\014service_port\030\006 \001(\r" +
-      ":\0010\022\025\n\rnetwork_names\030\007 \003(\t\"\366\004\n\006Volume\022 \n" +
-      "\004mode\030\003 \002(\0162\022.mesos.Volume.Mode\022\026\n\016conta" +
-      "iner_path\030\001 \002(\t\022\021\n\thost_path\030\002 \001(\t\022\033\n\005im" +
-      "age\030\004 \001(\0132\014.mesos.Image\022D\n\npersistent\030\005 " +
-      "\001(\01320.mesosphere.marathon.Volume.Persist" +
-      "entVolumeInfo\022@\n\010external\030\006 \001(\0132..mesosp" +
-      "here.marathon.Volume.ExternalVolumeInfo\022" +
-      "<\n\006secret\030\007 \001(\0132,.mesosphere.marathon.Vo" +
-      "lume.SecretVolumeInfo\032\264\001\n\024PersistentVolu" +
-      "meInfo\022\014\n\004size\030\001 \002(\004\0222\n\004type\030\002 \001(\0162$.mes" +
-      "os.Resource.DiskInfo.Source.Type\0224\n\013cons" +
-      "traints\030\003 \003(\0132\037.mesosphere.marathon.Cons" +
-      "traint\022\017\n\007maxSize\030\004 \001(\004\022\023\n\013profileName\030\005" +
-      " \001(\t\032a\n\022ExternalVolumeInfo\022\014\n\004size\030\001 \001(\004" +
-      "\022\014\n\004name\030\002 \002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007opti" +
-      "ons\030\004 \003(\0132\014.mesos.Label\032\"\n\020SecretVolumeI" +
-      "nfo\022\016\n\006secret\030\001 \002(\t\"\274\001\n\016StorageVersion\022\r" +
-      "\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 " +
-      "\002(\r\022I\n\006format\030\004 \001(\01621.mesosphere.maratho" +
-      "n.StorageVersion.StorageFormat:\006LEGACY\"2" +
-      "\n\rStorageFormat\022\n\n\006LEGACY\020\000\022\025\n\021PERSISTEN" +
-      "CE_STORE\020\001\"Z\n\031UpgradeStrategyDefinition\022" +
-      "\035\n\025minimumHealthCapacity\030\001 \002(\001\022\036\n\023maximu" +
-      "mOverCapacity\030\002 \001(\001:\0011\"\263\003\n\017GroupDefiniti" +
-      "on\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022?\n\017depre" +
-      "cated_apps\030\003 \003(\0132&.mesosphere.marathon.S" +
-      "erviceDefinition\0222\n\017deprecated_pods\030\010 \003(" +
-      "\0132\031.mesosphere.marathon.Json\0224\n\006groups\030\004" +
-      " \003(\0132$.mesosphere.marathon.GroupDefiniti" +
-      "on\022\024\n\014dependencies\030\005 \003(\t\022?\n\004apps\030\006 \003(\01321" +
-      ".mesosphere.marathon.GroupDefinition.App" +
-      "Reference\022?\n\004pods\030\007 \003(\01321.mesosphere.mar" +
-      "athon.GroupDefinition.AppReference\022\023\n\013en" +
-      "forceRole\030\t \001(\010\032+\n\014AppReference\022\n\n\002id\030\001 " +
-      "\002(\t\022\017\n\007version\030\002 \002(\t\"\371\001\n\030DeploymentPlanD" +
-      "efinition\022\n\n\002id\030\001 \002(\t\022\021\n\ttimestamp\030\002 \001(\t" +
-      "\022A\n\023deprecated_original\030\004 \001(\0132$.mesosphe" +
-      "re.marathon.GroupDefinition\022?\n\021deprecate" +
-      "d_target\030\005 \001(\0132$.mesosphere.marathon.Gro" +
-      "upDefinition\022\035\n\025original_root_version\030\006 " +
-      "\001(\t\022\033\n\023target_root_version\030\007 \001(\t\"\306\001\n\013Tas" +
-      "kFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(" +
-      "\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.mesos." +
-      "TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001" +
-      "(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\t" +
-      "\022\037\n\007slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T\n\014ZKS" +
-      "toreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n" +
-      "\005value\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005false\"" +
-      "\326\001\n\023ResidencyDefinition\022(\n relaunchEscal" +
-      "ationTimeoutSeconds\030\001 \001(\003\022S\n\020taskLostBeh" +
-      "avior\030\002 \001(\01629.mesosphere.marathon.Reside" +
-      "ncyDefinition.TaskLostBehavior\"@\n\020TaskLo" +
-      "stBehavior\022\032\n\026RELAUNCH_AFTER_TIMEOUT\020\000\022\020" +
-      "\n\014WAIT_FOREVER\020\001\"$\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016" +
-      "\n\006source\030\002 \002(\t\"\262\001\n\017EnvVarReference\0227\n\004ty" +
-      "pe\030\001 \002(\0162).mesosphere.marathon.EnvVarRef" +
-      "erence.Type\022\014\n\004name\030\002 \002(\t\0227\n\tsecretRef\030\003" +
-      " \001(\0132$.mesosphere.marathon.EnvVarSecretR" +
-      "ef\"\037\n\004Type\022\013\n\007UNKNOWN\020\000\022\n\n\006SECRET\020\001\"#\n\017E" +
-      "nvVarSecretRef\022\020\n\010secretId\030\001 \002(\t*3\n\rKill" +
-      "Selection\022\021\n\rYoungestFirst\020\001\022\017\n\013OldestFi" +
-      "rst\020\002B\035\n\023mesosphere.marathonB\006Protos"
+      "ccomp\022M\n\007ipcInfo\030\002 \001(\0132<.mesosphere.mara" +
+      "thon.ExtendedContainerInfo.LinuxInfo.Ipc" +
+      "Info\0322\n\007Seccomp\022\023\n\013profileName\030\001 \001(\t\022\022\n\n" +
+      "unconfined\030\002 \002(\010\032\233\001\n\007IpcInfo\022U\n\007ipcMode\030" +
+      "\001 \002(\0162D.mesosphere.marathon.ExtendedCont" +
+      "ainerInfo.LinuxInfo.IpcInfo.IpcMode\022\017\n\007s",
+      "hmSize\030\002 \001(\r\"(\n\007IpcMode\022\013\n\007PRIVATE\020\001\022\020\n\014" +
+      "SHARE_PARENT\020\002\032\246\001\n\013PortMapping\022\021\n\thost_p" +
+      "ort\030\001 \001(\r\022\026\n\016container_port\030\002 \002(\r\022\020\n\010pro" +
+      "tocol\030\003 \001(\t\022\014\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 \003(" +
+      "\0132\014.mesos.Label\022\027\n\014service_port\030\006 \001(\r:\0010" +
+      "\022\025\n\rnetwork_names\030\007 \003(\t\"\366\004\n\006Volume\022 \n\004mo" +
+      "de\030\003 \002(\0162\022.mesos.Volume.Mode\022\026\n\016containe" +
+      "r_path\030\001 \002(\t\022\021\n\thost_path\030\002 \001(\t\022\033\n\005image" +
+      "\030\004 \001(\0132\014.mesos.Image\022D\n\npersistent\030\005 \001(\013" +
+      "20.mesosphere.marathon.Volume.Persistent",
+      "VolumeInfo\022@\n\010external\030\006 \001(\0132..mesospher" +
+      "e.marathon.Volume.ExternalVolumeInfo\022<\n\006" +
+      "secret\030\007 \001(\0132,.mesosphere.marathon.Volum" +
+      "e.SecretVolumeInfo\032\264\001\n\024PersistentVolumeI" +
+      "nfo\022\014\n\004size\030\001 \002(\004\0222\n\004type\030\002 \001(\0162$.mesos." +
+      "Resource.DiskInfo.Source.Type\0224\n\013constra" +
+      "ints\030\003 \003(\0132\037.mesosphere.marathon.Constra" +
+      "int\022\017\n\007maxSize\030\004 \001(\004\022\023\n\013profileName\030\005 \001(" +
+      "\t\032a\n\022ExternalVolumeInfo\022\014\n\004size\030\001 \001(\004\022\014\n" +
+      "\004name\030\002 \002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007options",
+      "\030\004 \003(\0132\014.mesos.Label\032\"\n\020SecretVolumeInfo" +
+      "\022\016\n\006secret\030\001 \002(\t\"\274\001\n\016StorageVersion\022\r\n\005m" +
+      "ajor\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r" +
+      "\022I\n\006format\030\004 \001(\01621.mesosphere.marathon.S" +
+      "torageVersion.StorageFormat:\006LEGACY\"2\n\rS" +
+      "torageFormat\022\n\n\006LEGACY\020\000\022\025\n\021PERSISTENCE_" +
+      "STORE\020\001\"Z\n\031UpgradeStrategyDefinition\022\035\n\025" +
+      "minimumHealthCapacity\030\001 \002(\001\022\036\n\023maximumOv" +
+      "erCapacity\030\002 \001(\001:\0011\"\263\003\n\017GroupDefinition\022" +
+      "\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022?\n\017deprecat",
+      "ed_apps\030\003 \003(\0132&.mesosphere.marathon.Serv" +
+      "iceDefinition\0222\n\017deprecated_pods\030\010 \003(\0132\031" +
+      ".mesosphere.marathon.Json\0224\n\006groups\030\004 \003(" +
+      "\0132$.mesosphere.marathon.GroupDefinition\022" +
+      "\024\n\014dependencies\030\005 \003(\t\022?\n\004apps\030\006 \003(\01321.me" +
+      "sosphere.marathon.GroupDefinition.AppRef" +
+      "erence\022?\n\004pods\030\007 \003(\01321.mesosphere.marath" +
+      "on.GroupDefinition.AppReference\022\023\n\013enfor" +
+      "ceRole\030\t \001(\010\032+\n\014AppReference\022\n\n\002id\030\001 \002(\t" +
+      "\022\017\n\007version\030\002 \002(\t\"\371\001\n\030DeploymentPlanDefi",
+      "nition\022\n\n\002id\030\001 \002(\t\022\021\n\ttimestamp\030\002 \001(\t\022A\n" +
+      "\023deprecated_original\030\004 \001(\0132$.mesosphere." +
+      "marathon.GroupDefinition\022?\n\021deprecated_t" +
+      "arget\030\005 \001(\0132$.mesosphere.marathon.GroupD" +
+      "efinition\022\035\n\025original_root_version\030\006 \001(\t" +
+      "\022\033\n\023target_root_version\030\007 \001(\t\"\306\001\n\013TaskFa" +
+      "ilure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r" +
+      ".mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.mesos.Tas" +
+      "kState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:" +
+      "\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n",
+      "\007slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T\n\014ZKStor" +
+      "eEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005va" +
+      "lue\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005false\"\326\001\n" +
+      "\023ResidencyDefinition\022(\n relaunchEscalati" +
+      "onTimeoutSeconds\030\001 \001(\003\022S\n\020taskLostBehavi" +
+      "or\030\002 \001(\01629.mesosphere.marathon.Residency" +
+      "Definition.TaskLostBehavior\"@\n\020TaskLostB" +
+      "ehavior\022\032\n\026RELAUNCH_AFTER_TIMEOUT\020\000\022\020\n\014W" +
+      "AIT_FOREVER\020\001\"$\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006s" +
+      "ource\030\002 \002(\t\"\262\001\n\017EnvVarReference\0227\n\004type\030",
+      "\001 \002(\0162).mesosphere.marathon.EnvVarRefere" +
+      "nce.Type\022\014\n\004name\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(" +
+      "\0132$.mesosphere.marathon.EnvVarSecretRef\"" +
+      "\037\n\004Type\022\013\n\007UNKNOWN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvV" +
+      "arSecretRef\022\020\n\010secretId\030\001 \002(\t*3\n\rKillSel" +
+      "ection\022\021\n\rYoungestFirst\020\001\022\017\n\013OldestFirst" +
+      "\020\002B\035\n\023mesosphere.marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -49524,13 +50384,19 @@ public final class Protos {
     internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_descriptor,
-        new java.lang.String[] { "Seccomp", });
+        new java.lang.String[] { "Seccomp", "IpcInfo", });
     internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_Seccomp_descriptor =
       internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_descriptor.getNestedTypes().get(0);
     internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_Seccomp_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_Seccomp_descriptor,
         new java.lang.String[] { "ProfileName", "Unconfined", });
+    internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_descriptor =
+      internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_descriptor.getNestedTypes().get(1);
+    internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_descriptor,
+        new java.lang.String[] { "IpcMode", "ShmSize", });
     internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_descriptor =
       internal_static_mesosphere_marathon_ExtendedContainerInfo_descriptor.getNestedTypes().get(3);
     internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_fieldAccessorTable = new
