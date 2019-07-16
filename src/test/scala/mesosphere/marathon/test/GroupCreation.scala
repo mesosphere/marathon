@@ -34,7 +34,7 @@ trait GroupCreation {
     version: Timestamp = Group.defaultVersion,
     validate: Boolean = true,
     enabledFeatures: Set[String] = Set.empty,
-    enforceRole: Option[Boolean] = None): Group = {
+    enforceRole: Boolean = false): Group = {
     val groupsById: Map[Group.GroupKey, Group] = groups.map(group => group.id -> group)(collection.breakOut)
     val group = Group(
       id,

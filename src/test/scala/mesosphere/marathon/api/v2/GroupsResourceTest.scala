@@ -300,7 +300,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "Creation of a group with same path as an existing group should be prohibited" in
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/group".toRootPath, enforceRole = Some(false))))) {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/group".toRootPath)))) {
         When("creating a group with the same path existing app")
         val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group"))))
 

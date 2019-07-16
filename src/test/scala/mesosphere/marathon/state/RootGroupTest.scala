@@ -645,7 +645,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val updatedRoot = current.putGroup(groupUpdate)
 
       Then("the update should be reflected in the new root group")
-      updatedRoot.group("/top".toPath).value.enforceRole.value should be(true)
+      updatedRoot.group("/top".toPath).value.enforceRole should be(true)
     }
   }
 }

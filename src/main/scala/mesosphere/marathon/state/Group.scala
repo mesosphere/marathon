@@ -22,9 +22,9 @@ class Group(
     val groupsById: Map[Group.GroupKey, Group] = defaultGroups,
     val dependencies: Set[PathId] = defaultDependencies,
     val version: Timestamp = defaultVersion,
-    val enforceRole: Option[Boolean] = None) extends IGroup {
+    val enforceRole: Boolean = false) extends IGroup {
 
-  require((id.parent.isRoot && enforceRole.isDefined) || enforceRole.isEmpty, "Only top-level groups can define the enforce role parameter.")
+  require((!id.parent.isRoot && !enforceRole) || id.parent.isRoot, "Only top-level groups can enforce roles.")
 
   /**
     * Get app from this group or any child group.
@@ -126,11 +126,11 @@ class Group(
 
   /** @return a copy of this group with an updated `enforceRole` field. */
   def withEnforceRole(enforceRole: Boolean): Group =
-    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, Some(enforceRole))
+    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, enforceRole)
 
   /** @return a copy of this group with the removed `enforceRole` field. */
   def withoutEnforceRole(): Group =
-    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, None)
+    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, false)
 }
 
 object Group extends StrictLogging {
@@ -143,9 +143,8 @@ object Group extends StrictLogging {
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
     dependencies: Set[PathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
-    enforceRole: Option[Boolean] = None): Group = {
-    if (id.parent.isRoot) new Group(id, apps, pods, groupsById, dependencies, version, enforceRole)
-    else new Group(id, apps, pods, groupsById, dependencies, version, None)
+    enforceRole: Boolean = false): Group = {
+    new Group(id, apps, pods, groupsById, dependencies, version, enforceRole)
   }
 
   def empty(id: PathId): Group =
@@ -288,7 +287,7 @@ object Group extends StrictLogging {
 
     def apply(maybeNewEnforceRole: Option[Boolean]) = {
       val originalGroup = updatedGroupId.flatMap(originalRootGroup.group) // TODO: why is groupUpdate.id optional? What is the semantic there?
-      (maybeNewEnforceRole, originalGroup.flatMap(_.enforceRole)) match {
+      (maybeNewEnforceRole, originalGroup.map(_.enforceRole)) match {
         case (None, None) => Success
         case (Some(newEnforceRole), None) if originalGroup.nonEmpty =>
           Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated to $newEnforceRole for $updatedGroupId. Use a partial update instead.")))

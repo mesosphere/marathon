@@ -39,6 +39,17 @@ case class StoredGroup(
   lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
   lazy val transitivePodIds: Map[PathId, OffsetDateTime] = podIds ++ storedGroups.flatMap(_.podIds)
 
+  /**
+    * Load all apps and pods referenced by id and version.
+    *
+    * The [[StoredGroup]] does not hold the actual app and pod definitions but only their ids and versions.
+    * This method resolves these, ie loads them.
+    *
+    * @param appRepository The app repository used to load all apps.
+    * @param podRepository The pod repository used to load all pods.
+    * @param ctx The execution context for async/await.
+    * @return A [[Group]] with all apps and pods attached.
+    */
   def resolve(
     appRepository: AppRepository,
     podRepository: PodRepository)(implicit ctx: ExecutionContext): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
@@ -144,7 +155,7 @@ object StoredGroup {
       storedGroups = group.groupsById.map { case (_, group) => StoredGroup(group) }(collection.breakOut),
       dependencies = group.dependencies,
       version = group.version.toOffsetDateTime,
-      enforceRole = group.enforceRole)
+      enforceRole = Some(group.enforceRole))
 
   def apply(proto: Protos.GroupDefinition): StoredGroup = {
     val apps: Map[PathId, OffsetDateTime] = proto.getAppsList.map { appId =>

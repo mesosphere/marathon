@@ -82,6 +82,7 @@ object UpdateGroupStructureOp {
 
     require(groupUpdate.scaleBy.isEmpty, "For a structural update, no scale should be given.")
     require(groupUpdate.version.isEmpty, "For a structural update, no version should be given.")
+    assert(groupUpdate.enforceRole.isDefined, s"BUG! The group normalization should have set enforceRole for ${groupUpdate.id}.")
 
     implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(current.id))
     implicit val appNormalization = normalizeApp(timestamp)
@@ -113,7 +114,7 @@ object UpdateGroupStructureOp {
       groupsById = effectiveGroups,
       dependencies = effectiveDependencies,
       version = timestamp,
-      enforceRole = groupUpdate.enforceRole)
+      enforceRole = groupUpdate.enforceRole.get)
   }
 }
 
