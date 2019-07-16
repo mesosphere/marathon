@@ -53,6 +53,9 @@ case class StoredGroup(
   def resolve(
     appRepository: AppRepository,
     podRepository: PodRepository)(implicit ctx: ExecutionContext): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
+
+    require(enforceRole.isDefined, s"BUG! Group $id has not enforce role filed defined which should be done by migration.")
+
     val appFutures = appIds.map {
       case (appId, appVersion) => appRepository.getVersion(appId, appVersion).recover {
         case NonFatal(ex) =>
@@ -108,7 +111,8 @@ case class StoredGroup(
       pods = pods,
       groupsById = groups,
       dependencies = dependencies,
-      version = Timestamp(version)
+      version = Timestamp(version),
+      enforceRole = enforceRole.get
     )
   }
 
