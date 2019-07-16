@@ -11,7 +11,7 @@ import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.{App, Resources}
-import mesosphere.marathon.state.Container.{Docker, PortMapping}
+import mesosphere.marathon.state.Container.{Docker, Mesos, PortMapping}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.{AppDefinition, Container, PathId, Timestamp, _}
@@ -1236,7 +1236,7 @@ class TaskBuilderTest extends UnitTest {
         ))
       ), None, None, None)
       assert(task.isDefined, "expected task to match offer")
-      val Some((taskInfo, _)) = task
+      val Some((taskInfo: MesosProtos.TaskInfo, _)) = task
       val taskId = Task.Id.parse(taskInfo.getTaskId())
 
       assert(taskInfo.getContainer.getDocker.getParametersList.size == 1, s"expected 1 parameter, but ${taskInfo.getContainer.getDocker.getParametersList.size}")
@@ -1925,6 +1925,48 @@ class TaskBuilderTest extends UnitTest {
       val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id(instanceId)) // TODO: What about container?
       containerInfo should be(empty)
     }
+
+    "seccomp specified in app mesos container is passed through to ContainerInfo" in {
+      val seccompProfileName = "seccompProfile"
+
+      val app = MarathonTestHelper.makeBasicApp().copy(
+        container = Some(Mesos(linuxInfo = Some(LinuxInfo(seccomp = Some(Seccomp(profileName = Some(seccompProfileName), unconfined = false)), ipcInfo = None))))
+      )
+      val instanceId = Instance.Id.forRunSpec(app.id)
+      val taskId = Task.Id(instanceId)
+      val builder = new TaskBuilder(app, taskId, MarathonTestHelper.defaultConfig())
+      val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id(instanceId))
+
+      containerInfo should be(defined)
+      containerInfo.get.hasLinuxInfo should be(true)
+      containerInfo.get.getLinuxInfo.hasSeccomp should be(true)
+      containerInfo.get.getLinuxInfo.getSeccomp.hasProfileName should be(true)
+      containerInfo.get.getLinuxInfo.getSeccomp.getProfileName should be(seccompProfileName)
+      containerInfo.get.getLinuxInfo.getSeccomp.hasUnconfined should be(true)
+      containerInfo.get.getLinuxInfo.getSeccomp.getUnconfined should be(false)
+    }
+
+    "ipcConfig specified in app mesos container is passed through to ContainerInfo" in {
+      val ipcShmSize = 64
+
+      val app = MarathonTestHelper.makeBasicApp().copy(
+        container = Some(Mesos(linuxInfo = Some(LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(IpcMode.Private, Some(ipcShmSize)))))))
+      )
+      val instanceId = Instance.Id.forRunSpec(app.id)
+      val taskId = Task.Id(instanceId) // What about container?
+      val builder = new TaskBuilder(app, taskId, MarathonTestHelper.defaultConfig())
+      val containerInfo = builder.computeContainerInfo(Seq(Some(123)), Task.Id(instanceId))
+
+      containerInfo should be(defined)
+      containerInfo.get.hasLinuxInfo should be(true)
+      containerInfo.get.getLinuxInfo.hasSeccomp should be(false)
+      containerInfo.get.getLinuxInfo.hasIpcMode should be(true)
+      containerInfo.get.getLinuxInfo.getIpcMode should be (MesosProtos.LinuxInfo.IpcMode.PRIVATE)
+
+      containerInfo.get.getLinuxInfo.hasShmSize should be(true)
+      containerInfo.get.getLinuxInfo.getShmSize should be (64)
+    }
+
   }
 
   def buildIfMatches(

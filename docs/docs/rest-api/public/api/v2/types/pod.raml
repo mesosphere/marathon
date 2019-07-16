@@ -12,6 +12,7 @@ uses:
   volumes: volumes.raml
   unreachableStrategy: unreachableStrategy.raml
   killSelection: killSelection.raml
+  linux: linux.raml
 types:
   PodScalingPolicyType:
     type: string
@@ -169,3 +170,4 @@ types:
         description: |
           The role to use. If not specified, uses the role of the enclosing group, or the default role.
           At the moment, only the default role or the group role are allowed
+      linuxInfo?: linux.LinuxInfo
