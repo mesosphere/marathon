@@ -44,7 +44,7 @@ class MigrationTo19100(
   /**
     * Read format for old instance without reservation id.
     */
-  val instanceJsonReads19100: Reads[Instance] = {
+  val instanceJsonReads18200: Reads[Instance] = {
     import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
     import mesosphere.marathon.core.instance.Instance.tasksMapFormat
 

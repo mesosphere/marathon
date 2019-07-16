@@ -36,8 +36,7 @@ class MigrationTo19100Test extends AkkaUnitTest {
       Then("only one instance has been migrated")
       updatedInstances should have size (1)
       updatedInstances.head.instanceId should be(instanceId1)
-      updatedInstances.head.role.isDefined should be(true)
-      updatedInstances.head.role.get should be(mesosDefaultRole)
+      updatedInstances.head.role.value should be(mesosDefaultRole)
     }
   }
 

@@ -43,7 +43,7 @@ case class Instance(
     * @return This instance in core model.
     */
   def toCoreInstance(runSpec: RunSpec) = {
-    require(role.isDefined, "Stored Instances must have a defined role")
+    require(role.isDefined, s"BUG! Stored $instanceId has no role defined which should be covered by migration.")
     CoreInstance(instanceId, agentInfo, state, tasksMap, runSpec, reservation, role.get)
   }
 }
