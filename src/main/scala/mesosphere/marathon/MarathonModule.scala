@@ -19,7 +19,6 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
 import mesosphere.util.state._
-import org.apache.mesos.Protos.FrameworkInfo
 
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal

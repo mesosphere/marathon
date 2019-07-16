@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package stream
 
-import akka.{Done, NotUsed}
+import akka.Done
 import akka.stream.scaladsl.{Flow, Keep, Sink}
 
 import scala.collection.immutable
