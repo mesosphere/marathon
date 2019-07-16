@@ -5,6 +5,7 @@ import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{Instance, Reservation}
+import mesosphere.marathon.state.Group.Role
 import mesosphere.marathon.state.PathId
 
 case class EnrichedTask(
@@ -14,7 +15,7 @@ case class EnrichedTask(
     healthCheckResults: Seq[Health],
     servicePorts: Seq[Int],
     reservation: Option[Reservation],
-    role: String)
+    role: Role)
 
 object EnrichedTask {
 
