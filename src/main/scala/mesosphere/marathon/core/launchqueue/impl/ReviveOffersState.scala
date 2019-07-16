@@ -11,7 +11,7 @@ import mesosphere.marathon.state.RunSpecConfigRef
 /**
   * Holds the current state and defines the revive logic.
   *
-  * @param hungryInstances All scheduled instances, grouped by role, requiring offers and their RunSpec ref.
+  * @param hungryInstances All scheduled instances, grouped by role, that want offers
   * @param activeDelays    Delays for run specs.
   * @param version         Monotonically increasing number, used ultimately so that we can tell if new instances for a role want offers
   */
@@ -35,7 +35,7 @@ case class ReviveOffersState(
   def withSnapshot(snapshot: InstancesSnapshot, defaultRole: Role): ReviveOffersState = {
     val hungryInstances = snapshot.instances.groupBy(_.role).map {
       case (role, instances) =>
-        role -> instances.view.filter(isHungry).map { i => i.instanceId -> toHungryInstance(i) }.toMap
+        role -> instances.view.filter(wantsOffers).map { i => i.instanceId -> toHungryInstance(i) }.toMap
     }
     val defaultRoleEntry: Map[Role, Map[Instance.Id, HungryInstance]] = Map(defaultRole -> Map.empty)
 
@@ -48,7 +48,7 @@ case class ReviveOffersState(
   }
 
   private def updateInstanceState(role: Role, instanceId: Instance.Id, newState: Option[Instance]): ReviveOffersState = {
-    val newHungryInstance = newState.filter(isHungry).map(toHungryInstance)
+    val newHungryInstance = newState.filter(wantsOffers).map(toHungryInstance)
 
     val newHungryInstances: Map[Role, Map[Instance.Id, HungryInstance]] = newHungryInstance match {
       case Some(hungryInstance) =>
@@ -77,14 +77,14 @@ case class ReviveOffersState(
 
   /** @return this state updated with an instance. */
   def withInstanceAddedOrUpdated(instance: Instance): ReviveOffersState = {
-    if (isHungry(instance) && hasHungryInstance(instance.role, instance.instanceId)) {
+    if (wantsOffers(instance) && hasHungryInstance(instance.role, instance.instanceId)) {
       this
     } else {
       updateInstanceState(instance.role, instance.instanceId, Some(instance))
     }
   }
 
-  private def isHungry(instance: Instance): Boolean = {
+  private def wantsOffers(instance: Instance): Boolean = {
     instance.isScheduled || shouldUnreserve(instance)
   }
 
