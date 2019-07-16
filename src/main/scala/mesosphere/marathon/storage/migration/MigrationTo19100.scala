@@ -71,7 +71,7 @@ class MigrationTo19100(
     * @param jsValue The instance as JSON.
     * @return The parsed instance.
     */
-  def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads19100)
+  def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads18200)
 
   val instanceMigrationFlow = Flow[JsValue]
     .filter { jsValue =>
