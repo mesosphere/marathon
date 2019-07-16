@@ -5,6 +5,7 @@ package core.pod
 import mesosphere.marathon.api.v2.PodNormalization
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.{Endpoint, ExecutorResources, Pod, Raml, Resources}
+import mesosphere.marathon.state.Group.Role
 import mesosphere.marathon.state._
 import play.api.libs.json.Json
 
@@ -32,7 +33,7 @@ case class PodDefinition(
     override val volumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
-    role: String
+    role: Role
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
   /**

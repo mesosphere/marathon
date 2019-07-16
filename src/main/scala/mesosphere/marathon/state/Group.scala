@@ -127,6 +127,7 @@ class Group(
 
 object Group extends StrictLogging {
   type GroupKey = PathId
+  type Role = String
 
   def apply(
     id: PathId,

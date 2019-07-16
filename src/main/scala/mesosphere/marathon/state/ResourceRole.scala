@@ -4,13 +4,14 @@ package state
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
+import mesosphere.marathon.state.Group.Role
 
 import scala.collection.SortedSet
 
 object ResourceRole {
   val Unreserved: String = "*"
 
-  def validForRole(validRole: String): Validator[Set[String]] = {
+  def validForRole(validRole: Role): Validator[Set[String]] = {
     isTrue(s"""acceptedResourceRoles can only contain ${SortedSet(Unreserved, validRole).mkString("", " and ", "")}""") { acceptedResourceRoles =>
       val validRolesSet = SortedSet(Unreserved, validRole)
       acceptedResourceRoles.isEmpty ||

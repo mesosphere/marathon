@@ -18,6 +18,7 @@ import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
 import mesosphere.marathon.metrics.MetricsConf
+import mesosphere.marathon.state.Group.Role
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.storage.StorageConf
 import mesosphere.mesos.MatcherConf
@@ -125,7 +126,7 @@ trait MarathonConf
 
   def executor: Executor = Executor.dispatch(defaultExecutor())
 
-  lazy val mesosRole = opt[String](
+  lazy val mesosRole = opt[Role](
     "mesos_role",
     descr = "Mesos role for this framework. " +
       "If set, Marathon receives resource offers for the specified role in addition to " +
