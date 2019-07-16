@@ -18,7 +18,6 @@ import mesosphere.marathon.storage.repository.{StoredGroup, StoredGroupRepositor
 import mesosphere.marathon.storage.store.ZkStoreSerialization
 import play.api.libs.json.Json
 
-import scala.annotation.tailrec
 import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
 
