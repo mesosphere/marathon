@@ -357,7 +357,8 @@ object MarathonTestHelper {
     cmd = Some("sleep 60"),
     resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
     executor = "//cmd",
-    portDefinitions = Seq(PortDefinition(0))
+    portDefinitions = Seq(PortDefinition(0)),
+    role = "*"
   )
 
   def createTaskTrackerModule(

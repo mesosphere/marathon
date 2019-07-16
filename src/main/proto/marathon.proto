@@ -167,6 +167,7 @@ message ServiceDefinition {
   optional mesos.TTYInfo tty = 35;
   repeated mesos.Resource executorResources = 36;
   optional CheckDefinition check = 37;
+  optional string role = 38;
 }
 
 enum KillSelection {

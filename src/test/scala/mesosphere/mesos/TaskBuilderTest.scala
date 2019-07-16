@@ -41,6 +41,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
@@ -63,6 +64,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
@@ -97,6 +99,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(
             cpus = 1.0,
@@ -121,6 +124,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
@@ -165,6 +169,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
@@ -199,6 +204,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
           networks = Seq(BridgeNetwork()), container = Some(Docker(
@@ -248,6 +254,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           resources = Resources(
             cpus = 1.0,
             mem = 64.0,
@@ -306,6 +313,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
@@ -328,6 +336,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
@@ -355,6 +364,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(disk = 0.0)
         )
@@ -376,6 +386,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
@@ -406,6 +417,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 32.0),
           executor = "//cmd",
@@ -444,6 +456,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 32.0),
           executor = "//cmd",
@@ -503,6 +516,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 32.0),
           executor = "//cmd",
@@ -564,6 +578,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 32.0),
           executor = "/qazwsx",
@@ -630,6 +645,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer, AppDefinition(
         id = "/testApp".toPath,
+        role = "*",
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         container = Some(Container.MesosDocker(
@@ -667,6 +683,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
@@ -691,6 +708,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/testApp".toPath,
+          role = "*",
           args = Seq("a", "b", "c"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
@@ -729,6 +747,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
@@ -753,6 +772,7 @@ class TaskBuilderTest extends UnitTest {
       offer,
       AppDefinition(
         id = "/testApp".toPath,
+        role = "*",
         args = Seq("a", "b", "c"),
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         portDefinitions = Nil,
@@ -907,6 +927,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/testApp".toPath,
+          role = "*",
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           cmd = Some("foo"),
           executor = "/custom/executor",
@@ -934,6 +955,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/testApp".toPath,
+          role = "*",
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           args = Seq("a", "b", "c"),
           executor = "/custom/executor",
@@ -958,6 +980,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/testApp".toPath,
+          role = "*",
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           args = Seq("a", "b", "c"),
           portDefinitions = PortDefinitions(8080, 8081),
@@ -993,6 +1016,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/testApp".toPath,
+          role = "*",
           resources = Resources(cpus = 2.0, mem = 200.0, disk = 2.0),
           executor = "//cmd",
           portDefinitions = PortDefinitions(8080, 8081)
@@ -1032,6 +1056,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/testApp".toPath,
+          role = "*",
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
           portDefinitions = PortDefinitions(8080, 8081)
@@ -1065,6 +1090,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer, AppDefinition(
         id = "/testApp".toPath,
+        role = "*",
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         networks = Seq(BridgeNetwork()), container = Some(Docker(
@@ -1093,6 +1119,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer, AppDefinition(
         id = "/testApp".toPath,
+        role = "*",
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         networks = Seq(ContainerNetwork("vnet")), container = Some(Docker(
@@ -1124,6 +1151,7 @@ class TaskBuilderTest extends UnitTest {
 
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, AppDefinition(
         id = "/testApp".toPath,
+        role = "*",
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         networks = Seq(ContainerNetwork("whatever")), container = Some(Docker(
@@ -1159,6 +1187,7 @@ class TaskBuilderTest extends UnitTest {
 
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, AppDefinition(
         id = "/testApp".toPath,
+        role = "*",
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         networks = Seq(ContainerNetwork("whatever")),
@@ -1199,6 +1228,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer, AppDefinition(
         id = "/testApp".toPath,
+        role = "*",
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
         container = Some(Docker(
@@ -1371,6 +1401,7 @@ class TaskBuilderTest extends UnitTest {
       val version = VersionInfo.forNewConfig(Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC)))
       val runSpec = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         versionInfo = version
       )
       val env = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = None)
@@ -1382,6 +1413,7 @@ class TaskBuilderTest extends UnitTest {
       val version = VersionInfo.forNewConfig(Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC)))
       val runSpec = AppDefinition(
         id = PathId("/app"),
+        role = "*",
         versionInfo = version
       )
 
@@ -1407,6 +1439,7 @@ class TaskBuilderTest extends UnitTest {
       val runSpecId = PathId("/app")
       val runSpec = AppDefinition(
         id = runSpecId,
+        role = "*",
         versionInfo = version,
         container = Some(Docker(
           image = "myregistry/myimage:version"
@@ -1446,6 +1479,7 @@ class TaskBuilderTest extends UnitTest {
 
       val runSpec = AppDefinition(
         id = PathId("/test"),
+        role = "*",
         labels = Map(
           "label" -> "VALUE1",
           "label-with-invalid-chars" -> "VALUE2",
@@ -1473,7 +1507,7 @@ class TaskBuilderTest extends UnitTest {
       val command =
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
-            id = runSpecId,
+            id = runSpecId, role = "*",
             portDefinitions = PortDefinitions(8080, 8081),
             container = Some(Docker(
               image = "myregistry/myimage:version"
@@ -1503,6 +1537,7 @@ class TaskBuilderTest extends UnitTest {
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
             id = runSpecId,
+            role = "*",
             portDefinitions = PortDefinitions(8080, 8081),
             env = EnvVarValue(Map(
               "PORT" -> "1",
@@ -1535,6 +1570,7 @@ class TaskBuilderTest extends UnitTest {
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
             id = runSpecId,
+            role = "*",
             portDefinitions = PortDefinitions(8080, 8081)
           ),
           taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
@@ -1555,6 +1591,7 @@ class TaskBuilderTest extends UnitTest {
         TaskBuilder.commandInfo(
           AppDefinition(
             id = runSpecId,
+            role = "*",
             portDefinitions = PortDefinitions(8080, 8081)
           ),
           Some(Task.LegacyId(runSpecId, ".", uuid)),
@@ -1587,6 +1624,7 @@ class TaskBuilderTest extends UnitTest {
         TaskBuilder.commandInfo(
           AppDefinition(
             id = runSpecId,
+            role = "*",
             portDefinitions = PortDefinitions(8080, 8081)
           ),
           Some(Task.LegacyId(runSpecId, ".", uuid)),
@@ -1611,6 +1649,7 @@ class TaskBuilderTest extends UnitTest {
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
             id = runSpecId,
+            role = "*",
             networks = Seq(BridgeNetwork()), container = Some(Docker(
 
               portMappings = Seq(
@@ -1639,6 +1678,7 @@ class TaskBuilderTest extends UnitTest {
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
             id = runSpecId,
+            role = "*",
             networks = Seq(ContainerNetwork("dcos")), container = Some(Docker(
 
               portMappings = Seq(
@@ -1670,6 +1710,7 @@ class TaskBuilderTest extends UnitTest {
       a[IllegalArgumentException] shouldBe thrownBy {
         val appDef = AppDefinition(
           id = runSpecId,
+          role = "*",
           portDefinitions = PortDefinitions(22, 23),
           networks = Seq(BridgeNetwork()), container = Some(Docker(
 
@@ -1694,6 +1735,7 @@ class TaskBuilderTest extends UnitTest {
       val command = TaskBuilder.commandInfo(
         runSpec = AppDefinition(
           id = runSpecId,
+          role = "*",
           fetch = Seq(
             FetchUri(uri = "http://www.example.com", extract = false, cache = true, executable = false),
             FetchUri(uri = "http://www.example2.com", extract = true, cache = true, executable = true)
@@ -1724,6 +1766,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           portDefinitions = PortDefinitions(25552, 25551),
           requirePorts = true
@@ -1757,6 +1800,7 @@ class TaskBuilderTest extends UnitTest {
         offer,
         AppDefinition(
           id = "/product/frontend".toPath,
+          role = "*",
           cmd = Some("foo"),
           networks = Seq(ContainerNetwork("vnet")), container = Some(Docker(
             image = "jdef/foo",
@@ -1863,7 +1907,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "tty defined in an app will render ContainerInfo correctly" in {
-      val appWithTTY = AppDefinition(id = PathId("/tty"), container = Some(Docker()), tty = Some(true))
+      val appWithTTY = AppDefinition(id = PathId("/tty"), role = "*", container = Some(Docker()), tty = Some(true))
       val instanceId = Instance.Id.forRunSpec(appWithTTY.id)
       val taskId = Task.Id(instanceId) // What about container?
       val builder = new TaskBuilder(appWithTTY, taskId, MarathonTestHelper.defaultConfig())

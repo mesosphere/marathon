@@ -163,3 +163,9 @@ types:
       executorResources?:
           type: resources.ExecutorResources
           description: The resources to allocate to the executor.
+      role?:
+        type: string
+        minLength: 1
+        description: |
+          The role to use. If not specified, uses the role of the enclosing group, or the default role.
+          At the moment, only the default role or the group role are allowed

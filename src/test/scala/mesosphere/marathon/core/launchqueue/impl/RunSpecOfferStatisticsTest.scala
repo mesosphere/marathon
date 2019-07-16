@@ -74,7 +74,7 @@ class RunSpecOfferStatisticsTest extends UnitTest {
   }
 
   class Fixture {
-    val runSpec = AppDefinition(PathId("/foo"))
+    val runSpec = AppDefinition(PathId("/foo"), role = "*")
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val instanceOp = mock[InstanceOp]
     val matched = Match(runSpec, offer, instanceOp, Timestamp.now())

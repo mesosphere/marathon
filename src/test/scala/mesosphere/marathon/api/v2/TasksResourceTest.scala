@@ -53,7 +53,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
     "list (txt) tasks with less ports than the current app version" in new Fixture {
       // Regression test for #234
       Given("one app with one task with less ports than required")
-      val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)), cmd = Some("sleep"))
+      val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)), cmd = Some("sleep"), role = "*")
 
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
@@ -107,8 +107,8 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       config.zkTimeoutDuration returns 5.seconds
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
-      groupManager.app(app1) returns Some(AppDefinition(app1))
-      groupManager.app(app2) returns Some(AppDefinition(app2))
+      groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))
+      groupManager.app(app2) returns Some(AppDefinition(app2, role = "*"))
 
       When("we ask to kill both tasks")
       val response = asyncRequest { r =>
@@ -174,8 +174,8 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       config.zkTimeoutDuration returns 5.seconds
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       taskKiller.killAndScale(any, any)(any) returns Future.successful(deploymentPlan)
-      groupManager.app(app1) returns Some(AppDefinition(app1))
-      groupManager.app(app2) returns Some(AppDefinition(app2))
+      groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))
+      groupManager.app(app2) returns Some(AppDefinition(app2, role = "*"))
 
       When("we ask to kill both tasks")
       val response = asyncRequest { r =>
@@ -225,7 +225,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
       instanceTracker.specInstances(app1) returns Future.successful(Seq(instance1))
       taskKiller.kill(Matchers.eq(app1), any, Matchers.eq(true))(any) returns Future.successful(List(instance1))
-      groupManager.app(app1) returns Some(AppDefinition(app1))
+      groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))
 
       When("we send the request")
       val response = asyncRequest { r =>
@@ -256,7 +256,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
       Given("the app exists")
-      groupManager.app(appId) returns Some(AppDefinition(appId))
+      groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
 
       When("kill task is called")
       val killTasks = asyncRequest { r => taskResource.killTasks(scale = true, force = false, wipe = false, body, req, r) }
@@ -333,7 +333,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
 
       Given("the app exists")
       config.zkTimeoutDuration returns 5.seconds
-      groupManager.app(appId) returns Some(AppDefinition(appId))
+      groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("kill task is called")

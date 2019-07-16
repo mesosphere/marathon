@@ -247,7 +247,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
     val f = new Fixture
 
     // Setup staged instance with a staged task
-    val app = new AppDefinition(PathId("/test"))
+    val app = new AppDefinition(PathId("/test"), role = "*")
     val scheduledInstance = Instance.scheduled(app)
     val taskId = Task.Id(scheduledInstance.instanceId)
     val provisionedTasks = Tasks.provisioned(taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now(f.clock))
@@ -328,7 +328,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
   "suspend reservation when resident instance is terminal" in {
     val f = new Fixture
 
-    val app = AppDefinition(PathId("/test"))
+    val app = AppDefinition(PathId("/test"), role = "*")
     val scheduledReserved = TestInstanceBuilder.scheduledWithReservation(app)
     val provisionedTasks = Tasks.provisioned(f.taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now(f.clock))
     val provisionedInstance = scheduledReserved.provisioned(f.agentInfo, app, provisionedTasks, Timestamp(f.clock.instant()))
@@ -480,7 +480,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
       networkInfo = NetworkInfoPlaceholder()
     )
     val task = Task(taskId, runSpecVersion = clock.now(), status = taskStatus)
-    val app = AppDefinition(instanceId.runSpecId, versionInfo = VersionInfo.OnlyVersion(clock.now()))
+    val app = AppDefinition(instanceId.runSpecId, role = "*", versionInfo = VersionInfo.OnlyVersion(clock.now()))
     val instance = Instance(
       instanceId, Some(agentInfo), instanceState, Map(taskId -> task), app, None)
   }

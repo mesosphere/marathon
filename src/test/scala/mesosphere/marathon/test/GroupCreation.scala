@@ -17,7 +17,8 @@ trait GroupCreation {
     val group = RootGroup(apps, pods, groups.map(group => group.id -> group)(collection.breakOut), dependencies, version)
 
     if (validate) {
-      val validation = accord.validate(group)(RootGroup.rootGroupValidator(enabledFeatures))
+      val conf = if (enabledFeatures.isEmpty) AllConf.withTestConfig() else AllConf.withTestConfig("--enable_features", enabledFeatures.mkString(","))
+      val validation = accord.validate(group)(RootGroup.validRootGroup(conf))
       assert(validation.isSuccess, s"Provided test root group was not valid: ${validation.toString}")
     }
 
@@ -45,7 +46,8 @@ trait GroupCreation {
       enforceRole)
 
     if (validate) {
-      val validation = accord.validate(group)(Group.validGroup(id.parent, enabledFeatures))
+      val conf = if (enabledFeatures.isEmpty) AllConf.withTestConfig() else AllConf.withTestConfig("--enable_features", enabledFeatures.mkString(","))
+      val validation = accord.validate(group)(Group.validGroup(id.parent, conf))
       assert(validation.isSuccess, s"Provided test group was not valid: ${validation.toString}")
     }
 

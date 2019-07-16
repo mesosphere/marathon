@@ -3,13 +3,13 @@ package api.v2
 
 import com.wix.accord._
 import com.wix.accord.dsl._
-import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.core.pod.BridgeNetwork
 import mesosphere.marathon.raml.GroupUpdate
 import mesosphere.marathon.state.Container._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
+import mesosphere.{UnitTest, ValidationTestLike}
 import play.api.libs.json.{JsObject, Json}
 
 import scala.collection.immutable.Seq
@@ -26,6 +26,7 @@ object ModelValidationTest {
   def createServicePortApp(id: PathId, servicePort: Int) =
     AppDefinition(
       id,
+      role = "*",
       networks = Seq(BridgeNetwork()),
       container = Some(Docker(
         image = "demothing",
@@ -35,6 +36,8 @@ object ModelValidationTest {
 }
 
 class ModelValidationTest extends UnitTest with GroupCreation with ValidationTestLike {
+
+  val emptyConfig = AllConf.withTestConfig()
 
   import ModelValidationTest._
 
@@ -52,7 +55,7 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
       val conflictingApp = createServicePortApp("/app2".toPath, 3201)
 
       val rootGroup = createRootGroup(apps = Map(existingApp.id -> existingApp, conflictingApp.id -> conflictingApp))
-      val result = validate(rootGroup)(RootGroup.rootGroupValidator(Set()))
+      val result = validate(rootGroup)(RootGroup.validRootGroup(emptyConfig))
 
       result.isSuccess should be(true)
     }
@@ -71,8 +74,8 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
     }
 
     "Validators should not produce 'value' string at the end of description." in {
-      val validApp = AppDefinition("/test/group1/valid".toPath, cmd = Some("foo"))
-      val invalidApp = AppDefinition("/test/group1/invalid".toPath)
+      val validApp = AppDefinition("/test/group1/valid".toPath, cmd = Some("foo"), role = "*")
+      val invalidApp = AppDefinition("/test/group1/invalid".toPath, role = "*")
       val rootGroup = createRootGroup(
         groups = Set(createGroup("/test".toPath, groups = Set(
           createGroup("/test/group1".toPath, Map(
@@ -85,17 +88,17 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
         validate = false
       )
 
-      validate(rootGroup)(RootGroup.rootGroupValidator(Set())) should haveViolations(
+      validate(rootGroup)(RootGroup.validRootGroup(emptyConfig)) should haveViolations(
         "/apps//test/group1/invalid" -> "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'."
       )
     }
 
     "PortDefinition should be allowed to contain tcp and udp as protocol." in {
-      val validApp = AppDefinition("/test/app".toPath, cmd = Some("foo"), portDefinitions = Seq(PortDefinition(port = 80, protocol = "udp,tcp")))
+      val validApp = AppDefinition("/test/app".toPath, cmd = Some("foo"), portDefinitions = Seq(PortDefinition(port = 80, protocol = "udp,tcp")), role = "*")
 
       val rootGroup = createRootGroup(groups = Set(createGroup("/test".toPath, apps = Map(validApp.id -> validApp))))
 
-      val result = validate(rootGroup)(RootGroup.rootGroupValidator(Set()))
+      val result = validate(rootGroup)(RootGroup.validRootGroup(emptyConfig))
       result.isSuccess should be(true)
     }
   }

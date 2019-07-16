@@ -184,7 +184,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
         val f = new Fixture
         Given("an task loader with one staged and two running instances")
         val appId: PathId = PathId("/app")
-        val appDef = AppDefinition(id = appId)
+        val appDef = AppDefinition(id = appId, role = "*")
         val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
         val scheduled = Instance.scheduled(appDef)
         val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
@@ -213,7 +213,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
         Given("an task loader with one staged and two running instances")
         val f = new Fixture
         val appId: PathId = PathId("/app")
-        val appDef = AppDefinition(id = appId)
+        val appDef = AppDefinition(id = appId, role = "*")
         val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
         val scheduled = Instance.scheduled(appDef)
         val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
@@ -241,7 +241,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
         val f = new Fixture
         Given("an task loader with one staged and two running instances")
         val appId: PathId = PathId("/app")
-        val scheduled = Instance.scheduled(AppDefinition(appId))
+        val scheduled = Instance.scheduled(AppDefinition(appId, role = "*"))
         val appDataMap = InstanceTracker.InstancesBySpec.forInstances(scheduled)
         f.instancesLoader.load() returns Future.successful(appDataMap)
 
