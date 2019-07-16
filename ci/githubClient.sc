@@ -73,7 +73,7 @@ def reject(
   buildTag: String): Unit = {
   val msg = s"I'm building your change at [$buildTag]($buildUrl)."
 
-  comment(pullNumber, msg, "REQUEST_CHANGES")
+  comment(pullNumber, msg)
 }
 
 /**
