@@ -58,7 +58,8 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
       unreachableStrategy = state.UnreachableDisabled,
       upgradeStrategy = state.UpgradeStrategy(0.0, 0.0),
       networks = Seq(HostNetwork),
-      instances = 1
+      instances = 1,
+      role = "*"
     )
 
     When("The pod is deployed")
