@@ -106,6 +106,9 @@ def reportSuccess(
   var msg = s"""
     |**\u2714 Build of #$pullNumber completed successfully.**
     |
+    |<details>
+    |<summary>Details</summary>
+    |
     |See details at [$buildTag]($buildUrl).
     |
     |$buildinfoDiff
@@ -116,11 +119,12 @@ def reportSuccess(
     | * [Strict](https://jenkins.mesosphere.com/service/jenkins/view/Marathon/job/system-integration-tests/job/marathon-si-pr/parambuild/?Pull_Request_Id=$pullNumber&Variant=strict&Channel=testing/pull/1296)
     |
     |The job will report back to this PR.
+    |</details>
     |
     |**＼\\ ٩( ᐛ )و /／**
     |""".stripMargin
 
-  comment(pullNumber, msg, event="APPROVE")
+  comment(pullNumber, msg)
 }
 
 /**
@@ -140,13 +144,16 @@ def reportFailure(
   val body = s"""
     |**\u2717 Build of #$pullNumber failed.**
     |
+    |<details>
+    |<summary>Details</summary>
     |See the [logs]($buildUrl/console) and [test results]($buildUrl/testReport) for details.
     |
     |Error message:
     |>$msg
+    |</details>
     |
     |**(๑′°︿°๑)**
     |""".stripMargin
 
-  comment(pullNumber, body, event="REQUEST_CHANGES")
+  comment(pullNumber, body)
 }
