@@ -23,14 +23,15 @@ case object OffersWanted extends RoleOfferState { def isWanted = true }
 case object OffersNotWanted extends RoleOfferState { def isWanted = false }
 
 /**
+  * Manages revive and suppress calls to Mesos.
   *
   * @param metrics
   * @param initialFrameworkInfo - The initial frameworkInfo used, including the frameworkId received by the registered event
   * @param defaultMesosRole - The default Mesos role as specified by --mesos_role
-  * @param minReviveOffersInterval
-  * @param instanceUpdates
-  * @param rateLimiterUpdates
-  * @param driverHolder
+  * @param minReviveOffersInterval - The interval between revive repeats as defined in [[MarathonConf]]
+  * @param instanceUpdates - Updates from the [[InstanceTracker]]
+  * @param rateLimiterUpdates - Update from the [[RateLimiterActor]]
+  * @param driverHolder - Mesos driver used to call revive, suppress or update the framework info
   */
 class ReviveOffersActor(
     metrics: Metrics,
