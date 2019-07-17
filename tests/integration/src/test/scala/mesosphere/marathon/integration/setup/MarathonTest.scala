@@ -387,7 +387,7 @@ trait MarathonAppFixtures {
 
   def appProxy(appId: PathId, versionId: String, instances: Int,
     healthCheck: Option[raml.AppHealthCheck] = Some(appProxyHealthCheck()),
-    dependencies: Set[PathId] = Set.empty, gpus: Int = 0): App = {
+    dependencies: Set[PathId] = Set.empty, gpus: Int = 0, role: Option[String] = None): App = {
 
     val cmd = appMockCmd(appId, versionId)
 
@@ -398,7 +398,8 @@ trait MarathonAppFixtures {
       instances = instances,
       cpus = 0.01, mem = 32.0, gpus = gpus,
       healthChecks = healthCheck.toSet,
-      dependencies = dependencies.map(_.toString)
+      dependencies = dependencies.map(_.toString),
+      role = role
     )
   }
 
