@@ -4,7 +4,7 @@ package core.launchqueue.impl
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstancesSnapshot
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.{OffersWantedInfo, ReviveReason, Role}
+import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.{OffersWantedInfo, OffersWantedReason, Role}
 import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.VersionedRoleState
 import mesosphere.marathon.state.RunSpecConfigRef
 
@@ -61,9 +61,9 @@ case class ReviveOffersState(
     val newInstancesWantingOffers: Map[Role, Map[Instance.Id, OffersWantedInfo]] = newWantedInfo match {
       case Some(wantedInfo) =>
         wantedInfo.reason match {
-          case ReviveReason.Launching =>
+          case OffersWantedReason.Launching =>
             logger.debug(s"Adding ${instanceId} to scheduled instances.")
-          case ReviveReason.CleaningUpReservations =>
+          case OffersWantedReason.CleaningUpReservations =>
             logger.debug(s"$instanceId is terminal but has a reservation.")
         }
         val newRoleOffersWanted = instancesWantingOffers.getOrElse(role, Map.empty) + (instanceId -> wantedInfo)
@@ -99,7 +99,7 @@ case class ReviveOffersState(
   private def instanceToWantedInfo(instance: Instance): OffersWantedInfo = {
     OffersWantedInfo(
       version,
-      if (shouldUnreserve(instance)) ReviveReason.CleaningUpReservations else ReviveReason.Launching,
+      if (shouldUnreserve(instance)) OffersWantedReason.CleaningUpReservations else OffersWantedReason.Launching,
       instance.runSpec.configRef)
   }
 
@@ -162,7 +162,7 @@ case class ReviveOffersState(
 
   /** @return true if a instance has no active delay, or the instance requires clean up. */
   private def launchAllowed(wantedInfo: OffersWantedInfo): Boolean = {
-    wantedInfo.reason == ReviveReason.CleaningUpReservations || !activeDelays.contains(wantedInfo.ref)
+    wantedInfo.reason == OffersWantedReason.CleaningUpReservations || !activeDelays.contains(wantedInfo.ref)
   }
 }
 
@@ -170,15 +170,15 @@ object ReviveOffersState {
   private[impl] type Role = String
   def empty = ReviveOffersState(Map.empty, Set.empty, 0)
 
-  private[impl] case class OffersWantedInfo(version: Long, reason: ReviveReason, ref: RunSpecConfigRef)
+  private[impl] case class OffersWantedInfo(version: Long, reason: OffersWantedReason, ref: RunSpecConfigRef)
 
-  private[impl] sealed trait ReviveReason
+  private[impl] sealed trait OffersWantedReason
 
-  private[impl] case object ReviveReason {
+  private[impl] case object OffersWantedReason {
 
-    case object CleaningUpReservations extends ReviveReason
+    case object CleaningUpReservations extends OffersWantedReason
 
-    case object Launching extends ReviveReason
+    case object Launching extends OffersWantedReason
 
   }
 }
