@@ -95,7 +95,7 @@ def make_handler(app_id, version, task_id, base_url):
             logging.debug("Reporting IPC info")
             ipc_info = subprocess.check_output(["ipcs", "-lm"])
             df_shm_info = subprocess.check_output(["df", "-m", "/dev/shm"])
-            ipc_ns_info = subprocess.check_output("stat", "-Lc", "%i", "/proc/self/ns/ipc")
+            ipc_ns_info = subprocess.check_output(["stat", "-Lc", "%i", "/proc/self/ns/ipc"])
 
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
