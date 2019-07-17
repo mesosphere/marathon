@@ -9,6 +9,7 @@ import mesosphere.marathon.state.{HostVolume, VolumeMount}
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 
 import scala.collection.immutable.Seq
+import scala.util.matching.Regex.Match
 
 class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
@@ -25,6 +26,9 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val containerDir = "marathon"
     val id = testBasePath / "simple-pod-with-shm-setup"
+
+    val shmSize = 11
+
     def appMockCommand(port: String) =
       s"""
          |echo APP PROXY $$MESOS_TASK_ID RUNNING; \\
@@ -47,7 +51,7 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
             seccomp = None,
             ipcInfo = Some(state.IPCInfo(
               ipcMode = state.IpcMode.Private,
-              shmSize = Some(11)
+              shmSize = Some(shmSize)
             ))
           ))
         )
@@ -79,7 +83,11 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
 
       logger.info("IPCInfo is: " + ipcInfoString)
 
-      ipcInfoString should contain("hello\n")
+      val shmFsSizeRegex = "tmpfs\\s+([0-9]+)\\s+[0-9]+\\s+[0-9]+%\\s+/dev/shm".r
+      val shmFsSizeMatch = shmFsSizeRegex.findFirstMatchIn(ipcInfoString)
+
+      shmFsSizeMatch.value.group(1) should be(shmSize)
+
       facade
     }
 
