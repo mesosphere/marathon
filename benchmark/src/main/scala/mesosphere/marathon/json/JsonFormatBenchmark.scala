@@ -59,6 +59,7 @@ object JsonFormatBenchmark extends AppAndGroupFormats {
     AppInfo(
       app = AppDefinition(
         id = appId,
+        role = "someRole",
         env = 0.to(numEnvVars).map(i => ("KEY_" * 10) + i -> EnvVarString(("VALUE_" * 10) + i)).toMap,
         labels = 0.to(numLabels).map(i => ("KEY_" * 10) + i -> (("VALUE_" * 10) + i)).toMap
       ),

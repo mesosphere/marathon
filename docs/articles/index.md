@@ -20,6 +20,7 @@
 ## C
 [CLI](cli.md)  
 [Cluster Maintenance](cluster-maintenance.md)  
+[Checks](checks.md)
 [Command Line Arguments](command-line-arguments.md)  
 [Configuration](configuration.md)  
 [Constraints](constraints.md)  
@@ -101,6 +102,7 @@
 
 ## S
 [Scaling](scaling.md)  
+[Seccomp](seccomp.md)
 [Secrets](secrets.md)  
 [Security](access-control.md)  
 [Service Discovery](service-discovery.md)  

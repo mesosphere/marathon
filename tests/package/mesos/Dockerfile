@@ -1,4 +1,4 @@
-FROM marathon-package-test:debian8
+FROM marathon-package-test:debian9
 
 COPY zookeeper.service /lib/systemd/system
 
@@ -7,4 +7,3 @@ RUN apt-get -o Acquire::Check-Valid-Until=false update && \
   systemctl enable zookeeper && \
   systemctl enable mesos-master
 
-ENTRYPOINT ["/sbin/init"]

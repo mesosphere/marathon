@@ -123,6 +123,7 @@ object TemplateRepositoryBenchmark extends StrictLogging {
     */
   def appDef(pathId: PathId, labelSize: Int = 1): AppDefinition = AppDefinition(
     id = pathId,
+    role = "someRole",
     labels = Map("a" -> random.alphanumeric.take(labelSize).mkString)
   )
 
@@ -188,7 +189,7 @@ class TemplateRepositoryBenchmark extends StrictLogging {
 
   @Benchmark
   def read(hole: Blackhole) = {
-    val res = repository.read(AppDefinition(id = randomRangedPathId(size.toString, params(size))), APP_VERSION)
+    val res = repository.read(AppDefinition(id = randomRangedPathId(size.toString, params(size)), role = "someRole"), APP_VERSION)
     hole.consume(res)
   }
 

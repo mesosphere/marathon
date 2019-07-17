@@ -81,7 +81,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       unreachableStrategy = Some(app.unreachableStrategy.toRaml),
       killSelection = app.killSelection.toRaml,
       tty = app.tty,
-      executorResources = app.executorResources.toRaml
+      executorResources = app.executorResources.toRaml,
+      role = Option(app.role)
     )
   }
 
@@ -137,6 +138,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
 
     val versionInfo = state.VersionInfo.OnlyVersion(app.version.map(Timestamp(_)).getOrElse(Timestamp.now()))
 
+    val role = app.role.getOrElse(throw new IllegalArgumentException("Failed to convert raml.App, no role provided. This is a bug in AppNormalization."))
+
     val result: AppDefinition = AppDefinition(
       id = PathId(app.id),
       cmd = app.cmd,
@@ -166,7 +169,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       unreachableStrategy = app.unreachableStrategy.map(_.fromRaml).getOrElse(AppDefinition.DefaultUnreachableStrategy),
       killSelection = app.killSelection.fromRaml,
       tty = app.tty,
-      executorResources = app.executorResources.map(_.fromRaml)
+      executorResources = app.executorResources.map(_.fromRaml),
+      role = role
     )
     result
   }
@@ -216,7 +220,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       unreachableStrategy = update.unreachableStrategy.orElse(app.unreachableStrategy),
       killSelection = update.killSelection.getOrElse(app.killSelection),
       tty = update.tty.orElse(app.tty),
-      executorResources = update.executorResources
+      executorResources = update.executorResources,
+      role = update.role.orElse(app.role)
     )
   }
 
@@ -362,7 +367,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       versionInfo = versionInfo, // we restore this but App-to-AppDefinition conversion drops it...
       killSelection = service.whenOrElse(_.hasKillSelection, _.getKillSelection.toRaml, App.DefaultKillSelection),
       unreachableStrategy = unreachableStrategy,
-      tty = service.when(_.hasTty, _.getTty: Boolean).orElse(App.DefaultTty)
+      tty = service.when(_.hasTty, _.getTty: Boolean).orElse(App.DefaultTty),
+      role = service.when(_.hasRole, _.getRole).orElse(App.DefaultRole)
     )
     // special ports normalization when converting from protobuf, because the protos don't allow us to distinguish
     // between "I specified an empty set of ports" and "I specified a null set of ports" (for definitions and mappings).
@@ -423,7 +429,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       ipAddress = app.ipAddress,
       ports = app.ports,
       uris = app.uris,
-      tty = app.tty
+      tty = app.tty,
+      role = app.role
     )
   }
 }

@@ -18,7 +18,7 @@ import scala.concurrent.duration._
 object MesosFacade {
 
   /**
-    * Corresponds to parts of `state.json`.
+    * Corresponds to parts of `state` JSON response.
     */
   case class ITMesosState(
       version: String,
@@ -95,7 +95,7 @@ object MesosFacade {
 
   case class ITask(id: String, status: Option[String])
 
-  case class ITFramework(id: String, name: String, tasks: Seq[ITask])
+  case class ITFramework(id: String, name: String, tasks: Seq[ITask], unreachable_tasks: Seq[ITask])
 
   case class ITFrameworks(
       frameworks: Seq[ITFramework],
@@ -116,7 +116,7 @@ class MesosFacade(val url: String, val waitTime: FiniteDuration = 30.seconds)(im
 
   def state: RestResult[ITMesosState] = {
     logger.info(s"fetching state from $url")
-    result(requestFor[ITMesosState](Get(s"$url/state.json")), waitTime)
+    result(requestFor[ITMesosState](Get(s"$url/state")), waitTime)
   }
 
   def frameworks(): RestResult[ITFrameworks] = {

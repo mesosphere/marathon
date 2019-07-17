@@ -15,7 +15,9 @@ import scala.collection.immutable.Seq
 
 class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  override def agentsGpus = Some(4)
+  override lazy val mesosConfig = MesosConfig(
+    agentsGpus = Some(4)
+  )
 
   override val marathonArgs: Map[String, String] = Map(
     "enable_features" -> "gpu_resources",

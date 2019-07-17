@@ -2,14 +2,15 @@ package mesosphere.marathon
 
 import com.typesafe.scalalogging.StrictLogging
 import java.net.URL
+
 import mesosphere.marathon.core.appinfo.AppInfoConfig
 import mesosphere.marathon.core.deployment.DeploymentConfig
 import mesosphere.marathon.core.event.EventConf
-import mesosphere.marathon.core.flow.{LaunchTokenConfig, ReviveOffersConfig}
+import mesosphere.marathon.core.flow.LaunchTokenConfig
 import mesosphere.marathon.core.group.GroupManagerConfig
 import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.launcher.OfferProcessorConfig
-import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
+import mesosphere.marathon.core.launchqueue.{LaunchQueueConfig, ReviveOffersConfig}
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
@@ -129,7 +130,7 @@ trait MarathonConf
     descr = "Mesos role for this framework. " +
       "If set, Marathon receives resource offers for the specified role in addition to " +
       "resources with the role designation '*'.",
-    default = None)
+    default = Some(ResourceRole.Unreserved))
 
   def expectedResourceRoles: Set[String] = mesosRole.toOption match {
     case Some(role) => Set(role, ResourceRole.Unreserved)

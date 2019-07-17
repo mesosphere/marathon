@@ -123,8 +123,12 @@ object MigrationTo18 extends StrictLogging {
       (__ \ "tasksMap").read[ParsedValue[Map[Task.Id, Task]]](taskMapReads17) ~
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[ParsedValue[InstanceState]](instanceStateReads17) ~
-      (__ \ "reservation").readNullable[Reservation]
-    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation) =>
+      (__ \ "reservation").readNullable[JsObject]
+    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, rawReservation) =>
+
+        val reservation = rawReservation.map { raw =>
+          raw.as[Reservation](InstanceMigration.legacyReservationReads(tasksMap.value, instanceId))
+        }
 
         if (List(state, tasksMap).exists(_.isModified)) {
           val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation)

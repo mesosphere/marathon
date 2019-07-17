@@ -142,6 +142,23 @@ class PathIdTest extends UnitTest with ValidationTestLike {
       parents should be(Seq(PathId("/a/b/c"), PathId("/a/b"), PathId("/a"), PathId("/")))
       parents should have size 4
     }
+
+    "should return the first element of the path or empty string as root" in {
+      PathId("/").root shouldBe ""
+      PathId("/a").root shouldBe "a"
+      PathId("/a/b/c/d").root shouldBe "a"
+
+      PathId("c/d/e").root shouldBe "c"
+    }
+
+    "should return the first element of the path or an empty path as rootPath" in {
+      PathId("/").rootPath shouldBe PathId("/")
+      PathId("/a").rootPath shouldBe PathId("/a")
+      PathId("/a/b/c/d").rootPath shouldBe PathId("/a")
+
+      PathId("c/d/e").rootPath shouldBe PathId("c")
+    }
+
   }
 
   "An ordered PathID collection" should {

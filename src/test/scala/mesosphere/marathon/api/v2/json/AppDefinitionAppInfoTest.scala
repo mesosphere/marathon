@@ -19,7 +19,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
   Formats.configureJacksonSerializer()
 
-  val app = AppDefinition(PathId("/test"), cmd = Some("sleep 123"), labels = Map("Some" -> "label"))
+  val app = AppDefinition(PathId("/test"), cmd = Some("sleep 123"), labels = Map("Some" -> "label"), role = "*")
 
   val counts = TaskCounts(
     tasksStaged = 3,

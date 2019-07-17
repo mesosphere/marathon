@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.launchqueue.impl.RateLimiter.DelayUpdate
 import mesosphere.marathon.core.launchqueue.impl.RateLimiterActor.GetDelay
 import mesosphere.marathon.core.launchqueue.{LaunchQueue, LaunchQueueConfig}
-import mesosphere.marathon.state.RunSpec
+import mesosphere.marathon.state.{RunSpec, RunSpecConfigRef}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -31,8 +31,9 @@ private[launchqueue] class LaunchQueueDelegate(
   override def notifyOfInstanceUpdate(update: InstanceChange): Future[Done] =
     askQueueActorFuture[InstanceChange, Done]("notifyOfInstanceUpdate")(update)
 
-  override def add(runSpec: RunSpec, count: Int): Future[Done] =
+  override def add(runSpec: RunSpec, count: Int): Future[Done] = {
     askQueueActorFuture[LaunchQueueDelegate.Request, Done]("add")(LaunchQueueDelegate.Add(runSpec, count))
+  }
 
   private[this] def askQueueActorFuture[T, R: ClassTag](
     method: String,
@@ -40,8 +41,8 @@ private[launchqueue] class LaunchQueueDelegate(
     askActorFuture[T, R](method, timeout)(launchQueueActor, message)
   }
 
-  override def getDelay(spec: RunSpec): Future[DelayUpdate] = {
-    askActorFuture[GetDelay, DelayUpdate]("getDelay", launchQueueRequestTimeout)(rateLimiterActor, GetDelay(spec.configRef))
+  override def getDelay(specConfigRef: RunSpecConfigRef): Future[DelayUpdate] = {
+    askActorFuture[GetDelay, DelayUpdate]("getDelay", launchQueueRequestTimeout)(rateLimiterActor, GetDelay(specConfigRef))
   }
 
   override def addDelay(spec: RunSpec): Unit = rateLimiterActor ! RateLimiterActor.AddDelay(spec)

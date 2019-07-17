@@ -33,7 +33,8 @@ case class StoredGroup(
     podIds: Map[PathId, OffsetDateTime],
     storedGroups: Seq[StoredGroup],
     dependencies: Set[PathId],
-    version: OffsetDateTime) extends StrictLogging {
+    version: OffsetDateTime,
+    enforceRole: Option[Boolean]) extends StrictLogging {
 
   lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
   lazy val transitivePodIds: Map[PathId, OffsetDateTime] = podIds ++ storedGroups.flatMap(_.podIds)
@@ -126,6 +127,8 @@ case class StoredGroup(
     storedGroups.foreach { storedGroup => b.addGroups(storedGroup.toProto) }
     dependencies.foreach { dependency => b.addDependencies(dependency.safePath) }
 
+    enforceRole.foreach { flag => b.setEnforceRole(flag) }
+
     b.build()
   }
 }
@@ -140,7 +143,8 @@ object StoredGroup {
       podIds = group.pods.map { case (id, pod) => id -> pod.version.toOffsetDateTime },
       storedGroups = group.groupsById.map { case (_, group) => StoredGroup(group) }(collection.breakOut),
       dependencies = group.dependencies,
-      version = group.version.toOffsetDateTime)
+      version = group.version.toOffsetDateTime,
+      enforceRole = group.enforceRole)
 
   def apply(proto: Protos.GroupDefinition): StoredGroup = {
     val apps: Map[PathId, OffsetDateTime] = proto.getAppsList.map { appId =>
@@ -151,15 +155,24 @@ object StoredGroup {
       PathId.fromSafePath(podId.getId) -> OffsetDateTime.parse(podId.getVersion, DateFormat)
     }(collection.breakOut)
 
+    val id = PathId.fromSafePath(proto.getId)
+
+    // Default to false for top-level group.
+    val effectiveEnforceRole =
+      if (proto.hasEnforceRole()) Some(proto.getEnforceRole)
+      else if (id.parent.isRoot) Some(false)
+      else None
+
     val groups = proto.getGroupsList.map(StoredGroup(_))
 
     StoredGroup(
-      id = PathId.fromSafePath(proto.getId),
+      id = id,
       appIds = apps,
       podIds = pods,
       storedGroups = groups.toIndexedSeq,
       dependencies = proto.getDependenciesList.map(PathId.fromSafePath)(collection.breakOut),
-      version = OffsetDateTime.parse(proto.getVersion, DateFormat)
+      version = OffsetDateTime.parse(proto.getVersion, DateFormat),
+      enforceRole = effectiveEnforceRole
     )
   }
 }

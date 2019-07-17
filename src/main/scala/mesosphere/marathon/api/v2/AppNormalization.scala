@@ -4,6 +4,7 @@ package api.v2
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{FetchUri, PathId}
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.util.RoleSettings
 
 object AppNormalization {
 
@@ -304,27 +305,32 @@ object AppNormalization {
     // requirePorts only applies for host-mode networking
     val requirePorts = networks.find(_.mode != NetworkMode.Host).fold(app.requirePorts)(_ => false)
 
+    val role = app.role.getOrElse(config.roleSettings.defaultRole)
+
     app.copy(
       container = container,
       networks = networks,
       unreachableStrategy = app.unreachableStrategy.orElse(Option(defaultUnreachable)),
-      requirePorts = requirePorts
+      requirePorts = requirePorts,
+      role = Some(role)
     )
   }
 
   /** dynamic app normalization configuration, useful for migration and/or testing */
   trait Config extends NetworkNormalization.Config {
     def mesosBridgeName: String
+    def enabledFeatures: Set[String]
+    def roleSettings: RoleSettings
   }
 
   /** static app normalization configuration */
-  case class Configuration(nc: NetworkNormalization.Config, override val mesosBridgeName: String) extends Config {
-    override val defaultNetworkName: Option[String] = nc.defaultNetworkName
+  case class Configuration(defaultNetworkName: Option[String], override val mesosBridgeName: String, enabledFeatures: Set[String], roleSettings: RoleSettings) extends Config {
+
   }
 
   object Configuration {
-    def apply(defaultNetworkName: Option[String], mesosBridgeName: String): Config =
-      Configuration(NetworkNormalization.Configure(defaultNetworkName), mesosBridgeName)
+    def apply(config: MarathonConf, roleSettings: RoleSettings): Config =
+      Configuration(config.defaultNetworkName.toOption, config.mesosBridgeName(), config.availableFeatures, roleSettings)
   }
 
   /**

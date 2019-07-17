@@ -92,6 +92,7 @@ class PortDiscoveryTest extends UnitTest {
       "generate a network-name label for mappings specifying a network name and not a host port" in {
         val app = AppDefinition(
           PathId("/test"),
+          role = "*",
           networks = containerNetworks(1),
           container = Some(Mesos(
             portMappings = Seq(PortMapping(
@@ -110,6 +111,7 @@ class PortDiscoveryTest extends UnitTest {
       "not generate a network-name label for mappings with a host port" in {
         val app = AppDefinition(
           PathId("/test"),
+          role = "*",
           networks = containerNetworks(1),
           container = Some(Mesos(
             portMappings = Seq(PortMapping(
@@ -127,6 +129,7 @@ class PortDiscoveryTest extends UnitTest {
       "generate a label for all networks when networkNames is Nil" in {
         val app = AppDefinition(
           PathId("/test"),
+          role = "*",
           networks = containerNetworks(2),
           container = Some(Mesos(
             portMappings = Seq(PortMapping(
@@ -148,6 +151,7 @@ class PortDiscoveryTest extends UnitTest {
       "generate a label for only the specified networkNames" in {
         val app = AppDefinition(
           PathId("/test"),
+          role = "*",
           networks = containerNetworks(3),
           container = Some(Mesos(
             portMappings = Seq(PortMapping(
@@ -170,6 +174,7 @@ class PortDiscoveryTest extends UnitTest {
       "generate a record for each specified protocol" in {
         val app = AppDefinition(
           PathId("/test"),
+          role = "*",
           networks = containerNetworks(3),
           container = Some(Mesos(
             portMappings = Seq(PortMapping(
@@ -189,6 +194,7 @@ class PortDiscoveryTest extends UnitTest {
       "generate host DiscoveryInfo records" in {
         val app = AppDefinition(
           PathId("/test"),
+          role = "*",
           networks = Seq(BridgeNetwork()),
           container = Some(Mesos(
             portMappings = Seq(PortMapping(
@@ -210,6 +216,7 @@ class PortDiscoveryTest extends UnitTest {
         val labels = Map("VIP" -> "127.0.0.1:8080")
         val app = AppDefinition(
           PathId("/test"),
+          role = "*",
           networks = Seq(HostNetwork),
           portDefinitions = Seq(
             PortDefinition(0, "tcp,udp", Some("http"), labels)))

@@ -9,6 +9,7 @@ import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.{Task, TaskCondition}
 import mesosphere.marathon.state.{PathId, Timestamp}
+import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus.Reason
 import org.apache.mesos.Protos.{TaskState, TaskStatus}
 
@@ -49,13 +50,14 @@ object TaskStatusUpdateTestHelper {
   lazy val defaultInstance = TestInstanceBuilder.newBuilder(PathId("/app")).addTaskStaged().getInstance()
   lazy val defaultTimestamp = Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC))
 
-  def provision(instance: Instance, timestamp: Timestamp = defaultTimestamp) = {
-    val provisioned = TestInstanceBuilder.newBuilderWithInstanceId(instance.instanceId).addTaskProvisioned().getInstance()
-    val operation = InstanceUpdateOperation.Provision(instance.instanceId, provisioned.agentInfo.get, provisioned.runSpec, provisioned.tasksMap, timestamp)
+  def provision(instance: Instance = defaultInstance, timestamp: Timestamp = defaultTimestamp) = {
+    val dummy = TestInstanceBuilder.newBuilderWithInstanceId(instance.instanceId, timestamp).addTaskProvisioned().getInstance()
+    val operation = InstanceUpdateOperation.Provision(instance.instanceId, dummy.agentInfo.get, dummy.runSpec, dummy.tasksMap, timestamp)
+    val provisioned = instance.provisioned(dummy.agentInfo.get, dummy.runSpec, dummy.tasksMap, timestamp)
     val effect = InstanceUpdateEffect.Update(
-      instance.provisioned(provisioned.agentInfo.get, provisioned.runSpec, provisioned.tasksMap, timestamp),
+      provisioned,
       oldState = Some(instance),
-      events = Nil)
+      events = Seq(InstanceChangedEventsGenerator.updatedCondition(provisioned)))
     TaskStatusUpdateTestHelper(operation, effect)
   }
 
@@ -103,6 +105,12 @@ object TaskStatusUpdateTestHelper {
     taskUpdateFor(instance, Condition.Staging, status)
   }
 
+  def starting(instance: Instance = defaultInstance) = {
+    val taskId = Task.Id(instance.instanceId)
+    val status = MesosTaskStatusTestHelper.starting(taskId)
+    taskUpdateFor(instance, Condition.Starting, status)
+  }
+
   def finished(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
     val taskId = Task.Id(instance.instanceId, container)
     val status = MesosTaskStatusTestHelper.finished(taskId)
@@ -134,10 +142,11 @@ object TaskStatusUpdateTestHelper {
     }
   }
 
-  def killed(instance: Instance = defaultInstance) = {
+  def killed(instance: Instance = defaultInstance, draining: Boolean = false) = {
     // TODO(PODS): the method signature should allow passing a taskId
     val (taskId, _) = instance.tasksMap.head
-    val status = MesosTaskStatusTestHelper.killed(taskId)
+    val maybeReason = if (draining) Some(mesos.Protos.TaskStatus.Reason.REASON_SLAVE_DRAINING) else None
+    val status = MesosTaskStatusTestHelper.killed(taskId, maybeReason)
     taskUpdateFor(instance, Condition.Killed, status)
   }
 
@@ -162,9 +171,10 @@ object TaskStatusUpdateTestHelper {
     taskUpdateFor(instance, Condition.Gone, status)
   }
 
-  def goneByOperator(instance: Instance = defaultInstance, container: Option[MesosContainer] = None) = {
+  def goneByOperator(instance: Instance = defaultInstance, container: Option[MesosContainer] = None, draining: Boolean = false) = {
     val taskId = Task.Id(instance.instanceId, container)
-    val status = MesosTaskStatusTestHelper.goneByOperator(taskId)
+    val maybeReason = if (draining) Some(mesos.Protos.TaskStatus.Reason.REASON_SLAVE_DRAINING) else None
+    val status = MesosTaskStatusTestHelper.goneByOperator(taskId, maybeReason = maybeReason)
     taskUpdateFor(instance, Condition.Gone, status)
   }
 

@@ -113,40 +113,11 @@ object Container {
     }
   }
 
-  case class MesosAppC(
-      volumes: Seq[VolumeWithMount[Volume]] = Seq.empty,
-      image: String = "",
-      override val portMappings: Seq[PortMapping] = Nil,
-      id: Option[String] = None,
-      labels: Map[String, String] = Map.empty[String, String],
-      forcePullImage: Boolean = false,
-      override val linuxInfo: Option[LinuxInfo] = None) extends Container {
-
-    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes, linuxInfo: Option[LinuxInfo] = linuxInfo) =
-      copy(portMappings = portMappings, volumes = volumes)
-  }
-
-  object MesosAppC {
-    val prefix = "sha512-"
-
-    val validId: Validator[String] =
-      isTrue[String](s"id must begin with '$prefix',") { id =>
-        id.startsWith(prefix)
-      } and isTrue[String](s"id must contain non-empty digest after '$prefix'.") { id =>
-        id.length > prefix.length
-      }
-
-    val validMesosAppCContainer = validator[MesosAppC] { appc =>
-      appc.image is notEmpty
-      appc.id is optional(validId)
-    }
-  }
-
   def validContainer(networks: Seq[Network], enabledFeatures: Set[String]): Validator[Container] = {
     import Network._
     val validGeneralContainer = validator[Container] { container =>
       container.volumes is every(VolumeWithMount.validVolumeWithMount(enabledFeatures))
-      container.linuxInfo is optional(LinuxInfo.validLinuxInfo)
+      container.linuxInfo is optional(LinuxInfo.validLinuxInfoForContainerState)
     }
 
     new Validator[Container] {
@@ -154,7 +125,6 @@ object Container {
         case _: Mesos => Success
         case dd: Docker => validate(dd)(Docker.validDockerContainer)
         case md: MesosDocker => validate(md)(MesosDocker.validMesosDockerContainer)
-        case ma: MesosAppC => validate(ma)(MesosAppC.validMesosAppCContainer)
       }
     } and
       validGeneralContainer and

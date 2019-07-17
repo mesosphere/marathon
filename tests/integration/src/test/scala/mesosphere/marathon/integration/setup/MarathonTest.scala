@@ -358,6 +358,9 @@ trait MarathonAppFixtures {
   def appMockCmd(appId: PathId, versionId: String): String = {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val appMock: File = new File(projectDir, "src/test/resources/python/app_mock.py")
+    if (!appMock.exists()) {
+      throw new IllegalStateException("Failed to locate app_mock.py (" + appMock.getAbsolutePath + ")")
+    }
     s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
       s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}"""
   }
@@ -466,6 +469,7 @@ trait MarathonAppFixtures {
 
   def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1): PodDefinition = PodDefinition(
     id = testBasePath / s"$podId",
+    role = "foo",
     containers = Seq(
       MesosContainer(
         name = "task1",
@@ -491,6 +495,7 @@ trait MarathonAppFixtures {
 
     val pod = PodDefinition(
       id = testBasePath / id,
+      role = "foo",
       containers = Seq(
         MesosContainer(
           name = "task1",
@@ -560,7 +565,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     }
   }
 
-  // We shouldn't eat exceptions in clenaUp() methods: it's a source of hard to find bugs if
+  // We shouldn't eat exceptions in cleanUp() methods: it's a source of hard to find bugs if
   // we just move on to the next test, that expects a "clean state". We should fail loud and
   // proud here and find out why the clean-up fails.
   def cleanUp(): Unit = {
@@ -572,6 +577,20 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     //do not fail here, since the require statements will ensure a correct setup and fail otherwise
     Try(waitForDeployment(eventually(marathon.deleteGroup(testBasePath, force = true))))
 
+    waitForCleanMesos()
+    val apps = marathon.listAppsInBaseGroup
+    require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
+    val pods = marathon.listPodsInBaseGroup
+    require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
+    val groups = marathon.listGroupsInBaseGroup
+    require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
+    events.clear()
+    healthChecks(_.clear())
+
+    logger.info("... CLEAN UP finished <<<")
+  }
+
+  def waitForCleanMesos(): Unit = {
     val cleanUpPatienceConfig = WaitTestSupport.PatienceConfig(timeout = Span(50, Seconds), interval = Span(1, Seconds))
 
     WaitTestSupport.waitUntil("clean slate in Mesos") {
@@ -591,17 +610,6 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
 
       occupiedAgents.isEmpty
     }(cleanUpPatienceConfig)
-
-    val apps = marathon.listAppsInBaseGroup
-    require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
-    val pods = marathon.listPodsInBaseGroup
-    require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
-    val groups = marathon.listGroupsInBaseGroup
-    require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
-    events.clear()
-    healthChecks(_.clear())
-
-    logger.info("... CLEAN UP finished <<<")
   }
 
   def waitForHealthCheck(check: IntegrationHealthCheck, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {

@@ -122,7 +122,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
     withReservation(Seq.empty, state)
 
   def withReservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State): TestInstanceBuilder =
-    withReservation(Reservation(volumeIds, state))
+    withReservation(Reservation(volumeIds, state, Reservation.SimplifiedId(instance.instanceId)))
 
   def withReservation(reservation: Reservation): TestInstanceBuilder =
     copy(instance = instance.copy(reservation = Some(reservation)))
@@ -148,7 +148,7 @@ object TestInstanceBuilder {
 
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
     instanceId: Instance.Id, unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default()): Instance = {
-    val runSpec = AppDefinition(instanceId.runSpecId, unreachableStrategy = unreachableStrategy, versionInfo = VersionInfo.OnlyVersion(version))
+    val runSpec = AppDefinition(instanceId.runSpecId, unreachableStrategy = unreachableStrategy, versionInfo = VersionInfo.OnlyVersion(version), role = "*")
     Instance(
       instanceId = instanceId,
       agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
@@ -166,7 +166,8 @@ object TestInstanceBuilder {
     val runSpec = AppDefinition(
       task.taskId.instanceId.runSpecId,
       unreachableStrategy = unreachableStrategy,
-      versionInfo = VersionInfo.OnlyVersion(task.runSpecVersion)
+      versionInfo = VersionInfo.OnlyVersion(task.runSpecVersion),
+      role = "*"
     )
 
     new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, runSpec, None)
@@ -194,5 +195,8 @@ object TestInstanceBuilder {
     def appTask[T <: Task]: T = new LegacyInstanceImprovement(instance).appTask.asInstanceOf[T]
   }
 
-  def scheduledWithReservation(runSpec: RunSpec, localVolumes: Seq[LocalVolumeId] = Seq.empty, state: Reservation.State = Reservation.State.New(None)): Instance = Instance.scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)).reserved(Reservation(localVolumes, state), AgentInfoPlaceholder())
+  def scheduledWithReservation(runSpec: RunSpec, localVolumes: Seq[LocalVolumeId] = Seq.empty, state: Reservation.State = Reservation.State.New(None)): Instance = {
+    val instanceId = Instance.Id.forRunSpec(runSpec.id)
+    Instance.scheduled(runSpec, instanceId).reserved(Reservation(localVolumes, state, Reservation.SimplifiedId(instanceId)), AgentInfoPlaceholder())
+  }
 }

@@ -74,19 +74,19 @@ class InstanceIdTest extends UnitTest with Inside {
     "be reconstructed from every possible reservation id" in {
       val appTaskId = Task.Id.parse("app.4455cb85-0c16-490d-b84e-481f8321ff0a")
       appTaskId shouldBe a[Task.LegacyId]
-      Reservation.Id(appTaskId.reservationId.label).instanceId shouldEqual appTaskId.instanceId
+      Reservation.Id("app.4455cb85-0c16-490d-b84e-481f8321ff0a").instanceId shouldEqual appTaskId.instanceId
 
       val appResidentTaskIdWithAttempt = Task.Id.parse("app.4455cb85-0c16-490d-b84e-481f8321ff0a.1")
       appResidentTaskIdWithAttempt shouldBe a[Task.LegacyResidentId]
-      Reservation.Id(appResidentTaskIdWithAttempt.reservationId.label).instanceId shouldEqual appResidentTaskIdWithAttempt.instanceId
+      Reservation.Id("app.4455cb85-0c16-490d-b84e-481f8321ff0a").instanceId shouldEqual appResidentTaskIdWithAttempt.instanceId
 
       val podTaskIdWithContainerName = Task.Id.parse("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct")
       podTaskIdWithContainerName shouldBe a[Task.EphemeralTaskId]
-      Reservation.Id(podTaskIdWithContainerName.reservationId.label).instanceId shouldEqual podTaskIdWithContainerName.instanceId
+      Reservation.Id("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a").instanceId shouldEqual podTaskIdWithContainerName.instanceId
 
       val podTaskIdWithContainerNameAndAttempt = Task.Id.parse("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a.ct.1")
       podTaskIdWithContainerNameAndAttempt shouldBe a[Task.TaskIdWithIncarnation]
-      Reservation.Id(podTaskIdWithContainerNameAndAttempt.reservationId.label).instanceId shouldEqual podTaskIdWithContainerNameAndAttempt.instanceId
+      Reservation.Id("app.instance-4455cb85-0c16-490d-b84e-481f8321ff0a").instanceId shouldEqual podTaskIdWithContainerNameAndAttempt.instanceId
     }
   }
 }

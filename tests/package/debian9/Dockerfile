@@ -1,19 +1,20 @@
-FROM debian:jessie
+FROM jrei/systemd-debian:9
 
 COPY ./mesos-version /mesos-version
 
+RUN apt-get -y update && apt-get -y install gnupg2
 RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \
-    echo "deb http://archive.debian.org/debian jessie-backports main" >> /etc/apt/sources.list && \
-    echo "deb http://repos.mesosphere.com/debian jessie-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
-    echo "deb http://repos.mesosphere.com/debian jessie main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+    echo "deb http://repos.mesosphere.com/debian stretch-unstable main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+    echo "deb http://repos.mesosphere.com/debian stretch-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+    echo "deb http://repos.mesosphere.com/debian stretch main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
     apt-get -o Acquire::Check-Valid-Until=false update && \
     # this MUST be done first, unfortunately, because Mesos packages will create folders that should be symlinks and break the python install process
     apt-get install python2.7-minimal -y && \
-    apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java=20161107~bpo8+1 && \
+    apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates && \
     # Workaround required due to https://github.com/mesosphere/mesos-deb-packaging/issues/102
     # Remove after upgrading to Mesos 1.7.0
-    apt-get install -y libcurl3-nss && \
-    apt-get install --no-install-recommends -y --force-yes mesos=$(cat /mesos-version) && \
+    # apt-get install -y libcurl3-nss && \
+    apt-get install --no-install-recommends -y --force-yes mesos="$(cat /mesos-version).debian9" && \
 
     # disable mesos-master; we don't want to start in this image
     systemctl disable mesos-master && \
@@ -30,5 +31,3 @@ RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151B
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 ENV JAVA_HOME /docker-java-home
-
-ENTRYPOINT ["/sbin/init"]
