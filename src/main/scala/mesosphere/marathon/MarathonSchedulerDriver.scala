@@ -13,7 +13,6 @@ object MarathonSchedulerDriver extends StrictLogging {
   /**
     * Constructs the initial frameworkInfo used for initial subscription, and later frameworkInfo update calls
     *
-    * Does not contain
     * @param config
     * @param httpConfig
     * @return
