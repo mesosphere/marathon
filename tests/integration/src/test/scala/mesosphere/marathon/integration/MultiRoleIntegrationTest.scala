@@ -10,8 +10,8 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "Marathon should launch tasks as specified role" in {
       Given("a new pod")
-      val podInDev = simplePod("/dev/podWithRole", role = "dev")
-      val podInMetrics = simplePod("/metrics/podWithRole", role = "metrics")
+      val podInDev = simplePod("/dev/pod-with-role", role = "dev")
+      val podInMetrics = simplePod("/metrics/pod-with-role", role = "metrics")
 
       When("The pods are deployed")
       val resultInDev = marathon.createPodV2(podInDev)
