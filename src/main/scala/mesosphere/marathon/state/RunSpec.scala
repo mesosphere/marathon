@@ -73,6 +73,10 @@ trait RunSpec extends plugin.RunSpec {
   final def configRef: RunSpecConfigRef = RunSpecConfigRef(id, versionInfo.lastConfigChangeVersion)
 }
 
+object RunSpec {
+  var wipDefaultRole = "default"
+}
+
 /**
   * Points to a specific version of a runSpec
   */
