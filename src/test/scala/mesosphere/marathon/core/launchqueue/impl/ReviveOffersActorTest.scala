@@ -78,7 +78,8 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       f.verifyUnsuppress()
 
       And("it will later repeat the revive")
-      f.verifyExplicitRevive()
+      // since ticks are at 500ms, and repeat happens on 2nd tick, it could take a little longer than 1 second to repeat a revive
+      f.verifyExplicitRevive(Mockito.timeout(5000))
 
       When("the actor gets notified of the Scheduled instance becoming Staging")
       val testInstanceStaging = TestInstanceBuilder.newBuilderForRunSpec(testApp, instanceId = testInstanceScheduled.instanceId).addTaskStaged().getInstance()
@@ -162,8 +163,8 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       import org.mockito.Matchers.{eq => mEq}
       Mockito.verify(driver, invocationTimeout).updateFramework(any, mEq(Seq(defaultRole).asJava))
     }
-    def verifyExplicitRevive(): Unit = {
-      Mockito.verify(driver, invocationTimeout).reviveOffers(Set(defaultRole).asJava)
+    def verifyExplicitRevive(timeout: VerificationWithTimeout = invocationTimeout): Unit = {
+      Mockito.verify(driver, timeout).reviveOffers(Set(defaultRole).asJava)
     }
 
     def verifyNoMoreInteractions(): Unit = {
