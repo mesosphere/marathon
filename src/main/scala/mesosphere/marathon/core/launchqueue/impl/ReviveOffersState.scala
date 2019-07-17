@@ -4,19 +4,19 @@ package core.launchqueue.impl
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstancesSnapshot
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.{HungryInstance, ReviveReason, Role}
+import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.{OffersWantedInfo, ReviveReason, Role}
 import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.VersionedRoleState
 import mesosphere.marathon.state.RunSpecConfigRef
 
 /**
   * Holds the current state and defines the revive logic.
   *
-  * @param hungryInstances All scheduled instances, grouped by role, that want offers
+  * @param instancesWantingOffers All scheduled instances, grouped by role, that want offers
   * @param activeDelays    Delays for run specs.
   * @param version         Monotonically increasing number, used ultimately so that we can tell if new instances for a role want offers
   */
 case class ReviveOffersState(
-    hungryInstances: Map[Role, Map[Instance.Id, HungryInstance]],
+    instancesWantingOffers: Map[Role, Map[Instance.Id, OffersWantedInfo]],
     activeDelays: Set[RunSpecConfigRef],
     version: Long) extends StrictLogging {
 
@@ -26,58 +26,66 @@ case class ReviveOffersState(
   }
 
   private def copyBumpingVersion(
-    hungryInstances: Map[Role, Map[Instance.Id, HungryInstance]] = hungryInstances,
+    instancesWantingOffers: Map[Role, Map[Instance.Id, OffersWantedInfo]] = instancesWantingOffers,
     activeDelays: Set[RunSpecConfigRef] = activeDelays): ReviveOffersState = {
 
-    copy(hungryInstances, activeDelays, version + 1)
+    copy(instancesWantingOffers, activeDelays, version + 1)
   }
 
+  /**
+    * Process the initial state snapshot from the instance subscription mechanism.
+    *
+    * In order to stabilize the list of roles to which Marathon is subscribed, we indicate that all known roles for all
+    * instances should be subscribed by adding an empty map entry.
+    *
+    * @return new copy of the state with the change applied
+    */
   def withSnapshot(snapshot: InstancesSnapshot, defaultRole: Role): ReviveOffersState = {
-    val hungryInstances = snapshot.instances.groupBy(_.role).map {
+    val rolesWithOffersWantedData = snapshot.instances.groupBy(_.role).map {
       case (role, instances) =>
-        role -> instances.view.filter(wantsOffers).map { i => i.instanceId -> toHungryInstance(i) }.toMap
+        role -> instances.view.filter(wantsOffers).map { i => i.instanceId -> instanceToWantedInfo(i) }.toMap
     }
-    val defaultRoleEntry: Map[Role, Map[Instance.Id, HungryInstance]] = Map(defaultRole -> Map.empty)
+    val defaultRoleEntry: Map[Role, Map[Instance.Id, OffersWantedInfo]] = Map(defaultRole -> Map.empty)
 
-    // Note - we take all known roles, whether offers are wanted or not, and create at least an empty map entry in the hungryInstances map
-    copyBumpingVersion(hungryInstances = defaultRoleEntry ++ hungryInstances)
+    // Note - we take all known roles, whether offers are wanted or not, and create at least an empty map entry in the wantedInfo map
+    copyBumpingVersion(instancesWantingOffers = defaultRoleEntry ++ rolesWithOffersWantedData)
   }
 
-  private def hasHungryInstance(role: Role, instanceId: Instance.Id): Boolean = {
-    hungryInstances.getOrElse(role, Map.empty).contains(instanceId)
+  private def hasRecordOfInstanceWantingOffers(role: Role, instanceId: Instance.Id): Boolean = {
+    instancesWantingOffers.getOrElse(role, Map.empty).contains(instanceId)
   }
 
   private def updateInstanceState(role: Role, instanceId: Instance.Id, newState: Option[Instance]): ReviveOffersState = {
-    val newHungryInstance = newState.filter(wantsOffers).map(toHungryInstance)
+    val newWantedInfo = newState.filter(wantsOffers).map(instanceToWantedInfo)
 
-    val newHungryInstances: Map[Role, Map[Instance.Id, HungryInstance]] = newHungryInstance match {
-      case Some(hungryInstance) =>
-        hungryInstance.reason match {
+    val newInstancesWantingOffers: Map[Role, Map[Instance.Id, OffersWantedInfo]] = newWantedInfo match {
+      case Some(wantedInfo) =>
+        wantedInfo.reason match {
           case ReviveReason.Launching =>
             logger.debug(s"Adding ${instanceId} to scheduled instances.")
           case ReviveReason.CleaningUpReservations =>
             logger.debug(s"$instanceId is terminal but has a reservation.")
         }
-        val newRoleHungryInstances = hungryInstances.getOrElse(role, Map.empty) + (instanceId -> hungryInstance)
-        hungryInstances + (role -> newRoleHungryInstances)
+        val newRoleHungryInstances = instancesWantingOffers.getOrElse(role, Map.empty) + (instanceId -> wantedInfo)
+        instancesWantingOffers + (role -> newRoleHungryInstances)
       case None =>
-        if (hasHungryInstance(role, instanceId))
+        if (hasRecordOfInstanceWantingOffers(role, instanceId))
           logger.debug(s"Removing ${instanceId} from instances wanting offers.")
-        val newRoleHungryInstances = hungryInstances.getOrElse(role, Map.empty) - instanceId
+        val newRoleHungryInstances = instancesWantingOffers.getOrElse(role, Map.empty) - instanceId
 
         /* we don't clean up empty entries on purpose; this allows us to continue to signal that at one point in time,
          * either via the initial snapshot or later down the road, offers were wanted for an instance. Marathon will
          * remove any totally unused roles (for which no instances are defined) when a new leader is instated
          */
-        hungryInstances + (role -> newRoleHungryInstances)
+        instancesWantingOffers + (role -> newRoleHungryInstances)
     }
 
-    copyBumpingVersion(hungryInstances = newHungryInstances)
+    copyBumpingVersion(instancesWantingOffers = newInstancesWantingOffers)
   }
 
   /** @return this state updated with an instance. */
   def withInstanceAddedOrUpdated(instance: Instance): ReviveOffersState = {
-    if (wantsOffers(instance) && hasHungryInstance(instance.role, instance.instanceId)) {
+    if (wantsOffers(instance) && hasRecordOfInstanceWantingOffers(instance.role, instance.instanceId)) {
       this
     } else {
       updateInstanceState(instance.role, instance.instanceId, Some(instance))
@@ -88,34 +96,39 @@ case class ReviveOffersState(
     instance.isScheduled || shouldUnreserve(instance)
   }
 
-  private def toHungryInstance(instance: Instance): HungryInstance = {
-    HungryInstance(
+  private def instanceToWantedInfo(instance: Instance): OffersWantedInfo = {
+    OffersWantedInfo(
       version,
       if (shouldUnreserve(instance)) ReviveReason.CleaningUpReservations else ReviveReason.Launching,
       instance.runSpec.configRef)
   }
 
-  /** @return this state with passed instance removed from [[hungryInstances]] and [[terminalReservations]]. */
+  /** @return this state with passed instance removed from [[instancesWantingOffers]]. */
   def withInstanceDeleted(instance: Instance): ReviveOffersState = {
     updateInstanceState(instance.role, instance.instanceId, Some(instance))
   }
 
-  /** @return this state with removed ref from [[activeDelays]]. */
+  /**
+    * Removes delay from the state. If any instance's offers-wanted signal were filtered, then we bump their
+    * version so that a new revive will occur.
+    *
+    * @return this state with removed ref from [[activeDelays]].
+    */
   def withoutDelay(ref: RunSpecConfigRef): ReviveOffersState = {
     logger.debug(s"Marking $ref as no longer actively delayed")
 
     // This is not optimized
-    val bumpedVersions = hungryInstances.map {
-      case (role, hungryInstances) =>
-        role -> hungryInstances.map {
-          case (instanceId, hungryInstance) =>
-            if (hungryInstance.ref == ref)
-              instanceId -> hungryInstance.copy(version = this.version)
+    val bumpedVersions = instancesWantingOffers.map {
+      case (role, instancesWantedInfo) =>
+        role -> instancesWantedInfo.map {
+          case (instanceId, wantedInfo) =>
+            if (wantedInfo.ref == ref)
+              instanceId -> wantedInfo.copy(version = this.version)
             else
-              instanceId -> hungryInstance
+              instanceId -> wantedInfo
         }
     }
-    copyBumpingVersion(hungryInstances = bumpedVersions, activeDelays = activeDelays - ref)
+    copyBumpingVersion(instancesWantingOffers = bumpedVersions, activeDelays = activeDelays - ref)
   }
 
   /** @return this state with updated [[activeDelays]]. */
@@ -124,10 +137,19 @@ case class ReviveOffersState(
     copyBumpingVersion(activeDelays = activeDelays + ref)
   }
 
-  /** scheduled instances that should be launched. */
+  /**
+    * Returns a map of all known roles and a desired versioned role-state, where the role-state is OffersWanted or OffersNotWanted.
+    *
+    * A version is used to help indicate whether or not a new revive is wanted for some role; for example
+    *
+    * 1. Offers are indicated as wanted for a role with version 1
+    * 2. The downstream revive directive interprets this as a role should be unsuppressed
+    * 3. Offers are indicated as wanted for a role with version 2
+    * 4. The downstream revive directive issues a new revive
+    */
   lazy val roleReviveVersions: Map[Role, VersionedRoleState] = {
-    hungryInstances.keysIterator.map { role =>
-      val iterator = hungryInstances.getOrElse(role, Map.empty).values
+    instancesWantingOffers.keysIterator.map { role =>
+      val iterator = instancesWantingOffers.getOrElse(role, Map.empty).values
         .iterator
         .filter(launchAllowed)
 
@@ -139,25 +161,24 @@ case class ReviveOffersState(
   }
 
   /** @return true if a instance has no active delay, or the instance requires clean up. */
-  def launchAllowed(hungryInstance: HungryInstance): Boolean = {
-    hungryInstance.reason == ReviveReason.CleaningUpReservations || !activeDelays.contains(hungryInstance.ref)
+  private def launchAllowed(wantedInfo: OffersWantedInfo): Boolean = {
+    wantedInfo.reason == ReviveReason.CleaningUpReservations || !activeDelays.contains(wantedInfo.ref)
   }
 }
 
 object ReviveOffersState {
-  type Role = String
+  private[impl] type Role = String
   def empty = ReviveOffersState(Map.empty, Set.empty, 0)
 
-  case class HungryInstance(version: Long, reason: ReviveReason, ref: RunSpecConfigRef)
+  private[impl] case class OffersWantedInfo(version: Long, reason: ReviveReason, ref: RunSpecConfigRef)
 
-  sealed trait ReviveReason
+  private[impl] sealed trait ReviveReason
 
-  case object ReviveReason {
+  private[impl] case object ReviveReason {
 
     case object CleaningUpReservations extends ReviveReason
 
     case object Launching extends ReviveReason
 
   }
-
 }
