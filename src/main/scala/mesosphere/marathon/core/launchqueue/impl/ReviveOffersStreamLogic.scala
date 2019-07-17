@@ -93,14 +93,20 @@ object ReviveOffersStreamLogic extends StrictLogging {
       })
   }
 
-  trait ReviveDirectiveFlowLogic {
+  /**
+    * Immutable directive generator which compares two offers wanted state and issues the appropriate unsuppress or
+    * re-revive directives.
+    *
+    * There are two implementations for the logic, one with suppression, and the other with suppression disabled.
+    */
+  private[impl] trait ReviveDirectiveFlowLogic {
     def lastOffersWantedVersion(lastState: Map[Role, VersionedRoleState], role: Role): Option[Long] =
       lastState.get(role).collect { case VersionedRoleState(version, OffersWanted) => version }
 
     def directivesForDiff(lastState: Map[Role, VersionedRoleState], newState: Map[Role, VersionedRoleState]): List[RoleDirective]
   }
 
-  class ReviveDirectiveFlowLogicWithoutSuppression extends ReviveDirectiveFlowLogic {
+  private[impl] class ReviveDirectiveFlowLogicWithoutSuppression extends ReviveDirectiveFlowLogic {
 
     def directivesForDiff(lastState: Map[Role, VersionedRoleState], newState: Map[Role, VersionedRoleState]): List[RoleDirective] = {
       val rolesChanged = lastState.keySet != newState.keySet
@@ -131,7 +137,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
     }
   }
 
-  class ReviveDirectiveFlowLogicWithSuppression extends ReviveDirectiveFlowLogic {
+  private[impl] class ReviveDirectiveFlowLogicWithSuppression extends ReviveDirectiveFlowLogic {
 
     private def offersNotWantedRoles(state: Map[Role, VersionedRoleState]): Set[Role] =
       state.collect { case (role, VersionedRoleState(_, OffersNotWanted)) => role }.toSet
@@ -186,6 +192,13 @@ object ReviveOffersStreamLogic extends StrictLogging {
       }
     }
 
+  /**
+    * Stateful event processor to handle the (rather complex) task of repeating revive signal based on the last directive.
+    *
+    * Rather than using a timer directly, ReviveRepeaterLogic repeats revive signal in response to ticks received;
+    * specifically, it will indicate that offers should be revived for a role on the 2nd tick received after the initial
+    * unsuppress or revive directive was received, unless if offers for the role are suppressed.
+    */
   private[impl] class ReviveRepeaterLogic {
     var currentRoleState: Map[Role, RoleOfferState] = Map.empty
     var repeatIn: Map[Role, Int] = Map.empty
@@ -223,7 +236,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
     }
   }
 
-  case object Tick
+  private[impl] case object Tick
 
   sealed trait RoleDirective
 
