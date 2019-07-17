@@ -66,18 +66,18 @@ case class ReviveOffersState(
           case ReviveReason.CleaningUpReservations =>
             logger.debug(s"$instanceId is terminal but has a reservation.")
         }
-        val newRoleHungryInstances = instancesWantingOffers.getOrElse(role, Map.empty) + (instanceId -> wantedInfo)
-        instancesWantingOffers + (role -> newRoleHungryInstances)
+        val newRoleOffersWanted = instancesWantingOffers.getOrElse(role, Map.empty) + (instanceId -> wantedInfo)
+        instancesWantingOffers + (role -> newRoleOffersWanted)
       case None =>
         if (hasRecordOfInstanceWantingOffers(role, instanceId))
           logger.debug(s"Removing ${instanceId} from instances wanting offers.")
-        val newRoleHungryInstances = instancesWantingOffers.getOrElse(role, Map.empty) - instanceId
+        val newRoleOffersWanted = instancesWantingOffers.getOrElse(role, Map.empty) - instanceId
 
         /* we don't clean up empty entries on purpose; this allows us to continue to signal that at one point in time,
          * either via the initial snapshot or later down the road, offers were wanted for an instance. Marathon will
          * remove any totally unused roles (for which no instances are defined) when a new leader is instated
          */
-        instancesWantingOffers + (role -> newRoleHungryInstances)
+        instancesWantingOffers + (role -> newRoleOffersWanted)
     }
 
     copyBumpingVersion(instancesWantingOffers = newInstancesWantingOffers)
