@@ -138,7 +138,8 @@ case class ReviveOffersState(
   }
 
   /**
-    * Returns a map of all known roles and a desired versioned role-state, where the role-state is OffersWanted or OffersNotWanted.
+    * Returns a map of all known roles and a desired versioned role-state, where the role-state is
+    * [[OffersWanted]] or [[OffersNotWanted]].
     *
     * A version is used to help indicate whether or not a new revive is wanted for some role; for example
     *
@@ -151,7 +152,7 @@ case class ReviveOffersState(
     instancesWantingOffers.keysIterator.map { role =>
       val iterator = instancesWantingOffers.getOrElse(role, Map.empty).values
         .iterator
-        .filter(launchAllowed)
+        .filter(launchAllowedOrCleanUpRequired)
 
       if (iterator.isEmpty)
         role -> VersionedRoleState(version, OffersNotWanted)
@@ -161,7 +162,7 @@ case class ReviveOffersState(
   }
 
   /** @return true if a instance has no active delay, or the instance requires clean up. */
-  private def launchAllowed(wantedInfo: OffersWantedInfo): Boolean = {
+  private def launchAllowedOrCleanUpRequired(wantedInfo: OffersWantedInfo): Boolean = {
     wantedInfo.reason == OffersWantedReason.CleaningUpReservations || !activeDelays.contains(wantedInfo.ref)
   }
 }
