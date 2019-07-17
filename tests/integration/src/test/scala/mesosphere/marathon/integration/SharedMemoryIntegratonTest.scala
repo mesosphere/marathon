@@ -9,7 +9,6 @@ import mesosphere.marathon.state.{HostVolume, VolumeMount}
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 
 import scala.collection.immutable.Seq
-import scala.util.matching.Regex.Match
 
 class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
