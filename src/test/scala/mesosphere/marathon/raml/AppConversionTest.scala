@@ -73,7 +73,12 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
     id = PathId("/mesos-with-linux-info"),
     role = "*",
     cmd = Option("whatever"),
-    container = Some(state.Container.Mesos(linuxInfo = Some(state.LinuxInfo(Some(state.Seccomp(Some("default"), false))))))
+
+    container = Some(state.Container.Mesos(
+      linuxInfo = Some(state.LinuxInfo(
+        seccomp = Some(state.Seccomp(Some("default"), false)),
+        ipcInfo = Some(state.IPCInfo(state.IpcMode.Private, Some(64)))
+      ))))
   )
 
   def convertToRamlAndBack(app: AppDefinition): Unit = {

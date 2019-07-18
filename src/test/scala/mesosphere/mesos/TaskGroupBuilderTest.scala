@@ -1141,6 +1141,51 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       containerInfo should be(empty)
     }
 
+    "IpcConfig defined on a pod renderes to executor info" in {
+      val ipcShmSize = 64
+      val ipcMode = IpcMode.Private
+
+      val ipcModeContainer = IpcMode.ShareParent
+      val ipcShmSizeContainer = 32
+
+      val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 8000, endPort = 9000).build
+      val container = MesosContainer(name = "dummy", resources = Resources(), linuxInfo = Some(LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(ipcMode = ipcModeContainer, shmSize = Some(ipcShmSizeContainer))))))
+
+      val podSpec = PodDefinition(id = PathId("/ipcConfig"), containers = Seq(container), linuxInfo = Some(LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(ipcMode = ipcMode, shmSize = Some(ipcShmSize))))), role = "*")
+      val instanceId = Instance.Id.forRunSpec(podSpec.id)
+      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Nil,
+        defaultBuilderConfig.acceptedResourceRoles, config, Nil)
+
+      val (executorInfo, taskGroup, _) = TaskGroupBuilder.build(
+        podSpec,
+        offer,
+        instanceId,
+        taskIds,
+        defaultBuilderConfig,
+        RunSpecTaskProcessor.empty,
+        resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
+        None
+      )
+
+      executorInfo.hasContainer should be(true)
+      executorInfo.getContainer.hasLinuxInfo should be(true)
+      executorInfo.getContainer.getLinuxInfo.hasIpcMode should be(true)
+      executorInfo.getContainer.getLinuxInfo.getIpcMode should be(mesos.LinuxInfo.IpcMode.PRIVATE)
+      executorInfo.getContainer.getLinuxInfo.hasShmSize should be(true)
+      executorInfo.getContainer.getLinuxInfo.getShmSize should be(ipcShmSize)
+
+      taskGroup.getTasksCount should be(1)
+      val task = taskGroup.getTasksList.get(0)
+      task.hasContainer should be(true)
+      task.getContainer.hasLinuxInfo should be(true)
+      task.getContainer.getLinuxInfo.hasIpcMode should be(true)
+      task.getContainer.getLinuxInfo.getIpcMode should be(mesos.LinuxInfo.IpcMode.SHARE_PARENT)
+      task.getContainer.getLinuxInfo.hasShmSize should be(true)
+      task.getContainer.getLinuxInfo.getShmSize should be(ipcShmSizeContainer)
+
+    }
+
     "killPolicy is specified correctly" in {
       val killDuration = 3.seconds
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 8000, endPort = 9000).build

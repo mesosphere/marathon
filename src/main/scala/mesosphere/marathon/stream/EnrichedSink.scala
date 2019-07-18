@@ -1,7 +1,8 @@
 package mesosphere.marathon
 package stream
 
-import akka.stream.scaladsl.Sink
+import akka.Done
+import akka.stream.scaladsl.{Flow, Keep, Sink}
 
 import scala.collection.immutable
 import scala.concurrent.Future
@@ -28,4 +29,17 @@ object EnrichedSink {
 
   def liveFold[T, U](zero: U)(fold: (U, T) => U): Sink[T, LiveFold.Folder[U]] =
     Sink.fromGraph(new LiveFold(zero)(fold))
+
+  def statefulForeach[T](constructor: () => T => Unit): Sink[T, Future[Done]] = {
+    Flow[T].statefulMapConcat({ () =>
+      val fn = constructor()
+
+      { t =>
+        fn(t)
+        Nil
+      }
+    }
+    )
+      .toMat(Sink.ignore)(Keep.right)
+  }
 }

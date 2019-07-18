@@ -1,9 +1,11 @@
 package mesosphere.marathon
 package core.launchqueue
 
-import org.rogach.scallop.ScallopConf
+import org.rogach.scallop.{ScallopConf, ScallopOption}
 
 trait ReviveOffersConfig extends ScallopConf {
+
+  def mesosRole: ScallopOption[String]
 
   // TODO: deprecate this
   lazy val reviveOffersForNewApps = toggle(
