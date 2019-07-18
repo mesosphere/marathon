@@ -229,7 +229,7 @@ private class TaskLauncherActor(
               offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(matched))
               handleInstanceOp(matched.instanceOp, offer, promise)
             case notMatched: OfferMatchResult.NoMatch =>
-              logger.info(s"Did not match offer ${offer.getId.getValue} for run spec ${runSpecId}.")
+              logger.info(s"Did not match offer ${offer.getId.getValue} for run spec ${runSpecId}. Reasons: ${notMatched.reasons}")
               offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(notMatched))
               promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
           }
