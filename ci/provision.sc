@@ -5,18 +5,19 @@ import ammonite.ops.ImplicitWd._
 import scala.util.control.NonFatal
 import scalaj.http._
 
+// Find Mesos version
+val versionPattern = """.*MesosDebian = "(.*)"""".r
+val maybeVersion =
+    read.lines(pwd/'project/"Dependencies.scala")
+        .collectFirst { case versionPattern(v) => v }
+
+
 /**
  * Finds the version of the Mesos Debian package in "project/Dependencies.scala"
  * and installs it.
  */
 @main
 def installMesos(): Unit = {
-  // Find Mesos version
-  val versionPattern = """.*MesosDebian = "(.*)"""".r
-  val maybeVersion =
-      read.lines(pwd/'project/"Dependencies.scala")
-          .collectFirst { case versionPattern(v) => v }
-
   // Install Mesos
   def install_mesos(version: String): Unit = {
     %%('sudo, "apt-get", "install", "-y", "--force-yes", "--no-install-recommends", s"mesos=$version.debian9")
