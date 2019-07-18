@@ -640,7 +640,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
           createGroup("/side".toPath)
         ))
 
-      When("we update the enforce role parameter of the mid-level group")
+      When("we update the enforce role parameter of the top-level group")
       val groupUpdate = current.group("/top".toPath).value.withEnforceRole(true)
       val updatedRoot = current.putGroup(groupUpdate)
 
