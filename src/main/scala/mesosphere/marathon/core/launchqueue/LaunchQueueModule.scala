@@ -18,8 +18,9 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.{Region, RunSpec}
+import org.apache.mesos.Protos.FrameworkInfo
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
 /**
@@ -37,7 +38,8 @@ class LaunchQueueModule(
     instanceTracker: InstanceTracker,
     taskOpFactory: InstanceOpFactory,
     groupManager: GroupManager,
-    localRegion: () => Option[Region])(implicit materializer: Materializer, ec: ExecutionContext) {
+    localRegion: () => Option[Region],
+    initialFrameworkInfo: Future[FrameworkInfo])(implicit materializer: Materializer, ec: ExecutionContext) {
 
   val (offerMatchStatisticsInput, offerMatchStatistics) =
     Source.queue[OfferMatchStatistics.OfferMatchUpdate](Int.MaxValue, OverflowStrategy.fail).
@@ -88,6 +90,8 @@ class LaunchQueueModule(
   def reviveOffersActor(): ActorRef = {
     val props = ReviveOffersActor.props(
       metrics,
+      initialFrameworkInfo,
+      reviveConfig.mesosRole(),
       reviveConfig.minReviveOffersInterval().millis,
       instanceTracker.instanceUpdates, rateLimiterUpdates, driverHolder, reviveConfig.suppressOffers())
     leadershipModule.startWhenLeader(props, "reviveOffers")

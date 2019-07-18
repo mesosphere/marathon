@@ -18,7 +18,7 @@ class EnrichedTaskWritesTest extends UnitTest {
   class Fixture {
     val time = Timestamp(1024)
 
-    val runSpec = AppDefinition(id = PathId("/foo/bar"))
+    val runSpec = AppDefinition(id = PathId("/foo/bar"), role = "*")
     val runSpecId = runSpec.id
     val hostName = "agent1.mesos"
     val agentId = "abcd-1234"

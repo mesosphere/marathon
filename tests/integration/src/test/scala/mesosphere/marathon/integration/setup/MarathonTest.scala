@@ -80,7 +80,7 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
   val config = Map(
     "master" -> masterUrl,
     "mesos_authentication_principal" -> "principal",
-    "mesos_role" -> "foo",
+    "mesos_role" -> BaseMarathon.defaultRole,
     "http_port" -> httpPort.toString,
     "zk" -> zkUrl,
     "zk_timeout" -> 20.seconds.toMillis.toString,
@@ -188,6 +188,11 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
     "-Dscala.concurrent.context.maxThreads=32"
   )
 }
+
+object BaseMarathon {
+  final val defaultRole = "foo"
+}
+
 /**
   * Runs a marathon server for the given test suite
   * @param suiteName The test suite that owns this marathon
@@ -335,6 +340,7 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
 trait MarathonAppFixtures {
 
   val testBasePath: PathId
+  val defaultRole: String = BaseMarathon.defaultRole
 
   implicit class PathIdTestHelper(path: String) {
     def toRootTestPath: PathId = testBasePath.append(path).canonicalPath()
@@ -358,6 +364,9 @@ trait MarathonAppFixtures {
   def appMockCmd(appId: PathId, versionId: String): String = {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val appMock: File = new File(projectDir, "src/test/resources/python/app_mock.py")
+    if (!appMock.exists()) {
+      throw new IllegalStateException("Failed to locate app_mock.py (" + appMock.getAbsolutePath + ")")
+    }
     s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
       s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}"""
   }
@@ -378,7 +387,7 @@ trait MarathonAppFixtures {
 
   def appProxy(appId: PathId, versionId: String, instances: Int,
     healthCheck: Option[raml.AppHealthCheck] = Some(appProxyHealthCheck()),
-    dependencies: Set[PathId] = Set.empty, gpus: Int = 0): App = {
+    dependencies: Set[PathId] = Set.empty, gpus: Int = 0, role: Option[String] = None): App = {
 
     val cmd = appMockCmd(appId, versionId)
 
@@ -389,7 +398,8 @@ trait MarathonAppFixtures {
       instances = instances,
       cpus = 0.01, mem = 32.0, gpus = gpus,
       healthChecks = healthCheck.toSet,
-      dependencies = dependencies.map(_.toString)
+      dependencies = dependencies.map(_.toString),
+      role = role
     )
   }
 
@@ -464,8 +474,9 @@ trait MarathonAppFixtures {
     )
   }
 
-  def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1): PodDefinition = PodDefinition(
+  def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1, role: String = defaultRole): PodDefinition = PodDefinition(
     id = testBasePath / s"$podId",
+    role = role,
     containers = Seq(
       MesosContainer(
         name = "task1",
@@ -491,6 +502,7 @@ trait MarathonAppFixtures {
 
     val pod = PodDefinition(
       id = testBasePath / id,
+      role = "foo",
       containers = Seq(
         MesosContainer(
           name = "task1",

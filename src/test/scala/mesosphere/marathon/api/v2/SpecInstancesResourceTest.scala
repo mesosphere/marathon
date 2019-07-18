@@ -84,7 +84,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
       config.zkTimeoutDuration returns 5.seconds
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
-      groupManager.runSpec(appId) returns Some(AppDefinition(appId))
+      groupManager.runSpec(appId) returns Some(AppDefinition(appId, role = "*"))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
       val response = asyncRequest { r =>
@@ -163,7 +163,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       config.zkTimeoutDuration returns 5.seconds
       instanceTracker.specInstances(appId) returns Future.successful(Seq(instance1, instance2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
-      groupManager.app(appId) returns Some(AppDefinition(appId))
+      groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
       val response = asyncRequest { r =>
@@ -222,7 +222,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       config.zkTimeoutDuration returns 5.seconds
       instanceTracker.specInstances(appId) returns Future.successful(Seq(instance1, instance2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
-      groupManager.app(appId) returns Some(AppDefinition(appId))
+      groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
       val response = asyncRequest { r =>
@@ -266,7 +266,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       config.zkTimeoutDuration returns 5.seconds
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
-      groupManager.app(appId) returns Some(AppDefinition(appId))
+      groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
 
       val response = asyncRequest { r => appsTaskResource.indexJson("/my/app", auth.request, r) }
       response.getStatus shouldEqual 200
@@ -364,7 +364,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
       Given("the app exists")
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-      groupManager.app("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath))
+      groupManager.app("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath, role = "*"))
 
       When("the indexJson is fetched")
       val indexJson = asyncRequest { r => appsTaskResource.indexJson("/app", req, r) }
@@ -412,7 +412,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
 
       Given("The app exists")
-      groupManager.app("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath))
+      groupManager.app("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
@@ -447,7 +447,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val taskId = Task.Id(instanceId)
 
       Given("The app exists")
-      groupManager.runSpec("/app".toRootPath) returns Some(AppDefinition(appId))
+      groupManager.runSpec("/app".toRootPath) returns Some(AppDefinition(appId, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteOne is called")
@@ -486,7 +486,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
 
       Given("The app exists")
-      groupManager.runSpec("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath))
+      groupManager.runSpec("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteMany is called")

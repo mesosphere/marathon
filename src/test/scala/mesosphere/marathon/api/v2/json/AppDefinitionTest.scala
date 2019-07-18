@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2.json
 
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
+import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization, ValidationHelper}
 import mesosphere.marathon.core.check.MesosCommandCheck
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.plugin.PluginManager
@@ -12,6 +12,7 @@ import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
+import mesosphere.marathon.util.RoleSettings
 import mesosphere.{UnitTest, ValidationTestLike}
 import play.api.libs.json.Json
 
@@ -20,11 +21,14 @@ import scala.concurrent.duration._
 
 class AppDefinitionTest extends UnitTest with ValidationTestLike {
   val enabledFeatures = Set("secrets")
-  implicit val validator = AppDefinition.validAppDefinition(enabledFeatures)(PluginManager.None)
+  val enforcedrole = "*"
+
+  val validator = AppDefinition.validAppDefinition(enabledFeatures, ValidationHelper.roleSettings)(PluginManager.None)
+
+  val validatorWithRole = AppDefinition.validAppDefinition(enabledFeatures, RoleSettings(validRoles = Set("someRole"), defaultRole = "someRole"))(PluginManager.None)
 
   private[this] def appNormalization(app: raml.App): raml.App =
-    AppHelpers.appNormalization(
-      enabledFeatures, AppNormalization.Configuration(None, "mesos-bridge-name")).normalized(app)
+    AppHelpers.appNormalization(AppNormalization.Configuration(None, "mesos-bridge-name", enabledFeatures, ValidationHelper.roleSettings)).normalized(app)
 
   private[this] def fromJson(json: String): AppDefinition = {
     val raw: raml.App = Json.parse(json).as[raml.App]
@@ -33,7 +37,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
   "AppDefinition" should {
     "Validation" in {
-      var app = AppDefinition(id = "a b".toRootPath)
+      var app = AppDefinition(id = "a b".toRootPath, role = "*")
       val idError = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'"
       validator(app) should haveViolations("/id" -> idError)
 
@@ -49,7 +53,23 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       app = app.copy(id = "uppercaseLettersNoGood".toRootPath)
       validator(app) should haveViolations("/id" -> idError)
 
-      val correct = AppDefinition(id = "test".toRootPath)
+      val correct = AppDefinition(id = "test".toRootPath, role = "*")
+
+      app = correct.copy(
+        role = "aRole",
+        cmd = Some("cmd")
+      )
+      validatorWithRole(app) should haveViolations(
+        "/role" -> "got aRole, expected one of: [someRole]"
+      )
+
+      app = app.copy(
+        role = "someRole",
+        acceptedResourceRoles = Set("differentRole")
+      )
+      validatorWithRole(app) should haveViolations(
+        "/acceptedResourceRoles" -> "acceptedResourceRoles can only contain * and someRole"
+      )
 
       app = correct.copy(
         networks = Seq(ContainerNetwork("whatever")), container = Some(Docker(
@@ -176,7 +196,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       validator(app.copy(resources = Resources(gpus = 1))) should haveViolations("/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
 
       {
-        val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"))(PluginManager.None)
+        val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"), ValidationHelper.roleSettings)(PluginManager.None)
         appValidator(app.copy(resources = Resources(gpus = 1))) shouldNot haveViolations(
           "/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
       }
@@ -197,13 +217,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       app = correct.copy(
         resources = Resources(gpus = 1),
         container = Some(Container.MesosDocker())
-      )
-
-      validator(app) shouldNot haveViolations("/" -> "GPU resources only work with the Mesos containerizer")
-
-      app = correct.copy(
-        resources = Resources(gpus = 1),
-        container = Some(Container.MesosAppC())
       )
 
       validator(app) shouldNot haveViolations("/" -> "GPU resources only work with the Mesos containerizer")
@@ -332,6 +345,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       val app = AppDefinition(
         id = PathId("/prod/product/frontend/my-app"),
+        role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = PortDefinitions(9001, 9002),
         healthChecks = Set(MarathonHttpHealthCheck())
@@ -348,6 +362,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       val app = AppDefinition(
         id = PathId("/prod/product/frontend/my-app"),
+        role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
         healthChecks = Set(MarathonHttpHealthCheck())
@@ -365,6 +380,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       val app = AppDefinition(
         id = PathId("/prod/product/frontend/my-app"),
+        role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
         networks = Seq(ContainerNetwork("whatever")), container = Some(
@@ -386,6 +402,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       val app = AppDefinition(
         id = PathId("/prod/product/frontend/my-app"),
+        role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
         container = Some(Docker(image = "foo")),
@@ -404,6 +421,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       val app = AppDefinition(
         id = PathId("/prod/product/frontend/my-app"),
+        role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
         healthChecks = Set(MesosHttpHealthCheck())
@@ -420,6 +438,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       val app = AppDefinition(
         id = PathId("/prod/product/frontend/my-app"),
+        role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
         networks = Seq(ContainerNetwork("whatever")), container = Some(
@@ -444,6 +463,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       val app = AppDefinition(
         id = PathId("/prod/product/frontend/my-app"),
+        role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
         container = Some(Docker(image = "foo")),
@@ -460,6 +480,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       val app4 = AppDefinition(
         id = "bridged-webapp".toRootPath,
+        role = "*",
         cmd = Some("python3 -m http.server 8080"),
         networks = Seq(BridgeNetwork()), container = Some(Docker(
           image = "python:3",
@@ -496,6 +517,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       val app = AppDefinition(
         id = "app-with-fetch".toRootPath,
+        role = "*",
         cmd = Some("brew update"),
         fetch = Seq(
           new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true,
@@ -573,6 +595,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Serialize deserialize path with fetch" in {
       val app = AppDefinition(
         id = "app-with-fetch".toPath,
+        role = "*",
         cmd = Some("brew update"),
         fetch = Seq(
           new FetchUri(uri = "http://example.com/file1?foo=10&bar=meh", executable = false, extract = true, cache = true,
@@ -600,6 +623,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Read app with labeled virtual network and discovery info" in {
       val app = AppDefinition(
         id = "app-with-ip-address".toRootPath,
+        role = "*",
         cmd = Some("python3 -m http.server 8080"),
         networks = Seq(ContainerNetwork(
           name = "whatever",
@@ -645,6 +669,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Read app with ip address without discovery info" in {
       val app = AppDefinition(
         id = "app-with-ip-address".toRootPath,
+        role = "*",
         cmd = Some("python3 -m http.server 8080"),
         container = Some(state.Container.Mesos(portMappings = Seq(Container.PortMapping.defaultInstance))), portDefinitions = Nil,
         networks = Seq(ContainerNetwork(
@@ -681,6 +706,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Read app with ip address and an empty ports list" in {
       val app = AppDefinition(
         id = "app-with-network-isolation".toRootPath,
+        role = "*",
         cmd = Some("python3 -m http.server 8080"),
         container = Some(state.Container.Mesos(portMappings = Seq(Container.PortMapping.defaultInstance))),
         networks = Seq(ContainerNetwork("whatever"))
@@ -772,7 +798,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     }
 
     "container port mappings when empty stays empty" in {
-      val appDef = AppDefinition(id = PathId("/test"), container = Some(Docker()))
+      val appDef = AppDefinition(id = PathId("/test"), container = Some(Docker()), role = "*")
       val roundTripped = AppDefinition.fromProto(appDef.toProto)
       roundTripped should equal(appDef)
       roundTripped.container.map(_.portMappings) should equal(appDef.container.map(_.portMappings))

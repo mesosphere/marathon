@@ -148,9 +148,25 @@ object TestInstanceBuilder {
 
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
     instanceId: Instance.Id, unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default()): Instance = {
-    val runSpec = AppDefinition(instanceId.runSpecId, unreachableStrategy = unreachableStrategy, versionInfo = VersionInfo.OnlyVersion(version))
+    val runSpec = AppDefinition(instanceId.runSpecId, unreachableStrategy = unreachableStrategy, versionInfo = VersionInfo.OnlyVersion(version), role = "*")
     Instance(
       instanceId = instanceId,
+      agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
+      state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
+      tasksMap = Map.empty,
+      runSpec = runSpec,
+      None
+    )
+  }
+
+  def emptyInstanceForRunSpec(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
+    runSpec: RunSpec, unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default(), instanceId: Instance.Id): Instance = {
+    val resolvedInstanceId = Option(instanceId).getOrElse(Instance.Id.forRunSpec(runSpec.id))
+
+    require(resolvedInstanceId.runSpecId == runSpec.id, "provided instanceId did not match runSpec")
+
+    Instance(
+      instanceId = resolvedInstanceId,
       agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
       state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
       tasksMap = Map.empty,
@@ -166,7 +182,8 @@ object TestInstanceBuilder {
     val runSpec = AppDefinition(
       task.taskId.instanceId.runSpecId,
       unreachableStrategy = unreachableStrategy,
-      versionInfo = VersionInfo.OnlyVersion(task.runSpecVersion)
+      versionInfo = VersionInfo.OnlyVersion(task.runSpecVersion),
+      role = "*"
     )
 
     new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, runSpec, None)
@@ -176,9 +193,13 @@ object TestInstanceBuilder {
     host = AgentTestDefaults.defaultHostName,
     agentId = Some(AgentTestDefaults.defaultAgentId), region = None, zone = None, attributes = Seq.empty)
 
+  def newBuilderForRunSpec(runSpec: RunSpec, now: Timestamp = Timestamp.now(),
+    version: Timestamp = Timestamp.zero, instanceId: Instance.Id = null): TestInstanceBuilder =
+    TestInstanceBuilder(emptyInstanceForRunSpec(now, version, runSpec, instanceId = instanceId), now)
+
   def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
-    newBuilderWithInstanceId(Instance.Id.forRunSpec(runSpecId), now, version)
+    TestInstanceBuilder(emptyInstance(now, version, Instance.Id.forRunSpec(runSpecId)), now)
 
   def newBuilderWithInstanceId(instanceId: Instance.Id, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =

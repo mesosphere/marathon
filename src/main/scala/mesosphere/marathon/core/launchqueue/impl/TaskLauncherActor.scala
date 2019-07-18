@@ -200,7 +200,12 @@ private class TaskLauncherActor(
       val reachableInstances = instanceMap.filterNotAs{
         case (_, instance) => instance.state.condition.isLost || instance.isScheduled
       }
-      scheduledInstances.filter(i => launchAllowed(i.runSpec.configRef)) match {
+      val candidateInstances = scheduledInstances.iterator
+        .filter { instance => offer.getAllocationInfo.getRole == instance.role }
+        .filter { instance => launchAllowed(instance.runSpec.configRef) }
+        .toSeq
+
+      candidateInstances match {
         case NonEmptyIterable(scheduledInstancesWithoutBackoff) =>
           val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstancesWithoutBackoff, localRegion())
           instanceOpFactory.matchOfferRequest(matchRequest) match {

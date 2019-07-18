@@ -3,19 +3,23 @@ package core.launchqueue.impl
 
 import akka.NotUsed
 import akka.stream.OverflowStrategy
-import akka.stream.scaladsl.Flow
+import akka.stream.scaladsl.{Flow, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{InstanceChangeOrSnapshot, InstanceDeleted, InstanceUpdated, InstancesSnapshot}
+import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.Role
 import mesosphere.marathon.state.RunSpecConfigRef
 import mesosphere.marathon.stream.TimedEmitter
 
 import scala.concurrent.duration._
 
 object ReviveOffersStreamLogic extends StrictLogging {
+
   sealed trait DelayedStatus {
     val element: RunSpecConfigRef
   }
+
   case class Delayed(element: RunSpecConfigRef) extends DelayedStatus
+
   case class NotDelayed(element: RunSpecConfigRef) extends DelayedStatus
 
   /**
@@ -36,93 +40,14 @@ object ReviveOffersStreamLogic extends StrictLogging {
       case TimedEmitter.Inactive(ref) => NotDelayed(ref)
     }
 
-  /**
-    * If two suppresses are sent in a row, filter them out
-    */
-  val deduplicateSuppress: Flow[Op, Op, NotUsed] = Flow[Op].statefulMapConcat(() => {
-    var justSuppressed: Boolean = false
-
-    {
-      case Suppress =>
-        if (justSuppressed) {
-          Nil
-        } else {
-          justSuppressed = true
-          List(Suppress)
-        }
-      case Revive =>
-        justSuppressed = false
-        List(Revive)
-    }
-  })
-
-  val reviveStateFromInstancesAndDelays: Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], ReviveOffersState, NotUsed] = {
+  def reviveStateFromInstancesAndDelays(defaultRole: Role): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], ReviveOffersState, NotUsed] = {
     Flow[Either[InstanceChangeOrSnapshot, DelayedStatus]].scan(ReviveOffersState.empty) {
-      case (current, Left(snapshot: InstancesSnapshot)) => current.withSnapshot(snapshot)
-      case (current, Left(InstanceUpdated(updated, _, _))) => current.withInstanceUpdated(updated)
+      case (current, Left(snapshot: InstancesSnapshot)) => current.withSnapshot(snapshot, defaultRole)
+      case (current, Left(InstanceUpdated(updated, _, _))) => current.withInstanceAddedOrUpdated(updated)
       case (current, Left(InstanceDeleted(deleted, _, _))) => current.withInstanceDeleted(deleted)
       case (current, Right(Delayed(configRef))) => current.withDelay(configRef)
       case (current, Right(NotDelayed(configRef))) => current.withoutDelay(configRef)
     }
-  }
-
-  /**
-    * A resident instances was deleted and requires a revive.
-    *
-    * Currently Marathon uses [[InstanceTrackerDelegate.forceExpunge]] when a run spec with resident instances
-    * is removed. Thus Marathon looses all knowledge of any reservations to these instances. The [[OfferMatcherReconciler]]
-    * is supposed to filter offers for these reservations and destroy them if no related instance is known.
-    *
-    * A revive call to trigger an offer with said reservations to be destroyed should be emitted. There is no
-    * guarantee that the reservation is destroyed.
-    *
-    * @param current The current accumulated state.
-    * @param previous The accumulated state of the last check.
-    * @return true if there is a new force expunged resident instance, false otherwise.
-    */
-  def shouldTryToReleaseForceExpungedResidentInstances(current: ReviveOffersState, previous: ReviveOffersState): Boolean =
-    current.forceExpungedResidentInstances > previous.forceExpungedResidentInstances
-
-  /**
-    * This flow emits a [[Suppress]] or a [[Revive]] based on the last two states emitted by [[reviveStateFromInstancesAndDelays]]
-    *
-    * @return The actual flow.
-    */
-  val suppressOrReviveFromDiff: Flow[ReviveOffersState, Op, NotUsed] = Flow[ReviveOffersState]
-    .sliding(2)
-    .mapConcat {
-      case Seq(previous, current) =>
-
-        val diffScheduled = current.scheduledInstancesWithoutBackoff -- previous.scheduledInstancesWithoutBackoff
-        def diffTerminal = current.terminalReservations -- previous.terminalReservations
-
-        if (diffScheduled.nonEmpty) {
-          logger.info(s"Revive: There are newly scheduled instances to launch: $diffScheduled")
-          // There's a very small chance that we decline an offer in response to a revive for an instance not yet registered
-          // with the TaskLauncherActor. To deal with the rare case this happens, we just repeat the revive call a few times
-          List(Revive, Revive, Revive)
-        } else if (diffTerminal.nonEmpty) {
-          logger.info(s"Revive: There are decommissioned resident instances that need their reservations cleaned up: $diffTerminal")
-          List(Revive)
-        } else if (shouldTryToReleaseForceExpungedResidentInstances(current, previous)) {
-          logger.info(s"Revive: Triggering reservation reconciliation.")
-          List(Revive)
-        } else if (current.isEmpty) {
-          logger.info(s"Suppress: There are no pending instances right now.")
-          List(Suppress)
-        } else {
-          Nil
-        }
-      case _ =>
-        logger.warn("Revive or Suppress: End of stream detected in suppress/revive logic.")
-        Nil
-    }
-
-  def handleIgnoreSuppress(enableSuppress: Boolean): Flow[Op, Op, NotUsed] = {
-    if (enableSuppress)
-      Flow[Op] // do nothing
-    else
-      Flow[Op].filter { _ != Suppress }
   }
 
   /**
@@ -133,18 +58,203 @@ object ReviveOffersStreamLogic extends StrictLogging {
     * Revive rate is throttled and debounced using minReviveOffersInterval
     *
     * @param minReviveOffersInterval - The maximum rate at which we allow suppress and revive commands to be applied
-    * @param enableSuppress - Whether or not to enable offer suppression
+    * @param enableSuppress          - Whether or not to enable offer suppression
     * @return
     */
   def suppressAndReviveFlow(
-    minReviveOffersInterval: FiniteDuration,
-    enableSuppress: Boolean): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], Op, NotUsed] = {
 
-    reviveStateFromInstancesAndDelays
+    minReviveOffersInterval: FiniteDuration,
+    enableSuppress: Boolean,
+    defaultRole: Role): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], RoleDirective, NotUsed] = {
+
+    val reviveRepeaterWithTicks = Flow[RoleDirective]
+      .map(Left(_))
+      .merge(Source.tick(minReviveOffersInterval, minReviveOffersInterval, Right(Tick)), eagerComplete = true)
+      .via(reviveRepeater)
+
+    reviveStateFromInstancesAndDelays(defaultRole)
       .buffer(1, OverflowStrategy.dropHead) // While we are back-pressured, we drop older interim frames
-      .via(suppressOrReviveFromDiff)
-      .via(handleIgnoreSuppress(enableSuppress = enableSuppress))
-      .via(deduplicateSuppress)
       .throttle(1, minReviveOffersInterval)
+      .map(_.roleReviveVersions)
+      .map(l => { logger.info(s"roleReviveVersions = ${l}"); l })
+      .via(reviveDirectiveFlow(enableSuppress))
+      .map(l => { logger.info(s"reviveDirectiveFlow = ${l}"); l })
+      .via(reviveRepeaterWithTicks)
   }
+
+  def reviveDirectiveFlow(enableSuppress: Boolean): Flow[Map[Role, VersionedRoleState], RoleDirective, NotUsed] = {
+    val logic = if (enableSuppress) new ReviveDirectiveFlowLogicWithSuppression else new ReviveDirectiveFlowLogicWithoutSuppression
+    Flow[Map[Role, VersionedRoleState]]
+      .sliding(2)
+      .mapConcat({
+        case Seq(lastState, newState) =>
+          logic.directivesForDiff(lastState, newState)
+        case _ =>
+          logger.debug(s"Stream is terminating")
+          Nil
+      })
+  }
+
+  /**
+    * Immutable directive generator which compares two offers wanted state and issues the appropriate unsuppress or
+    * re-revive directives.
+    *
+    * There are two implementations for the logic, one with suppression, and the other with suppression disabled.
+    */
+  private[impl] trait ReviveDirectiveFlowLogic {
+    def lastOffersWantedVersion(lastState: Map[Role, VersionedRoleState], role: Role): Option[Long] =
+      lastState.get(role).collect { case VersionedRoleState(version, OffersWanted) => version }
+
+    def directivesForDiff(lastState: Map[Role, VersionedRoleState], newState: Map[Role, VersionedRoleState]): List[RoleDirective]
+  }
+
+  private[impl] class ReviveDirectiveFlowLogicWithoutSuppression extends ReviveDirectiveFlowLogic {
+
+    def directivesForDiff(lastState: Map[Role, VersionedRoleState], newState: Map[Role, VersionedRoleState]): List[RoleDirective] = {
+      val rolesChanged = lastState.keySet != newState.keySet
+      val directives = List.newBuilder[RoleDirective]
+
+      if (rolesChanged) {
+        val newRoleState = newState.keysIterator.map { role =>
+          role -> OffersWanted
+        }.toMap
+        val updateFramework = UpdateFramework(
+          newRoleState,
+          newlyRevived = newState.keySet -- lastState.keySet,
+          newlySuppressed = Set.empty
+        )
+        directives += updateFramework
+      }
+      val needsExplicitRevive = newState.iterator
+        .collect {
+          case (role, VersionedRoleState(_, OffersWanted)) if !lastState.get(role).exists(_.roleState.isWanted) => role
+          case (role, VersionedRoleState(version, OffersWanted)) if lastOffersWantedVersion(lastState, role).exists(_ < version) => role
+        }
+        .toSet
+
+      if (needsExplicitRevive.nonEmpty)
+        directives += IssueRevive(needsExplicitRevive)
+
+      directives.result()
+    }
+  }
+
+  private[impl] class ReviveDirectiveFlowLogicWithSuppression extends ReviveDirectiveFlowLogic {
+
+    private def offersNotWantedRoles(state: Map[Role, VersionedRoleState]): Set[Role] =
+      state.collect { case (role, VersionedRoleState(_, OffersNotWanted)) => role }.toSet
+
+    def updateFrameworkNeeded(lastState: Map[Role, VersionedRoleState], newState: Map[Role, VersionedRoleState]) = {
+      val rolesChanged = lastState.keySet != newState.keySet
+      val suppressedChanged = offersNotWantedRoles(lastState) != offersNotWantedRoles(newState)
+      rolesChanged || suppressedChanged
+    }
+
+    def directivesForDiff(lastState: Map[Role, VersionedRoleState], newState: Map[Role, VersionedRoleState]): List[RoleDirective] = {
+      val directives = List.newBuilder[RoleDirective]
+
+      if (updateFrameworkNeeded(lastState, newState)) {
+        val roleState = newState.map {
+          case (role, VersionedRoleState(_, state)) => role -> state
+        }
+        val newlyWanted = newState
+          .iterator
+          .collect { case (role, v) if v.roleState.isWanted && !lastState.get(role).exists(_.roleState.isWanted) => role }
+          .to[Set]
+
+        val newlyNotWanted = newState
+          .iterator
+          .collect { case (role, v) if !v.roleState.isWanted && lastState.get(role).exists(_.roleState.isWanted) => role }
+          .to[Set]
+        directives += UpdateFramework(roleState, newlyRevived = newlyWanted, newlySuppressed = newlyNotWanted)
+      }
+
+      val rolesNeedingRevive = newState.view
+        .collect { case (role, VersionedRoleState(version, OffersWanted)) if lastOffersWantedVersion(lastState, role).exists(_ < version) => role }.toSet
+
+      if (rolesNeedingRevive.nonEmpty)
+        directives += IssueRevive(rolesNeedingRevive)
+
+      directives.result()
+
+    }
+  }
+
+  def reviveRepeater: Flow[Either[RoleDirective, Tick.type], RoleDirective, NotUsed] = Flow[Either[RoleDirective, Tick.type]]
+    .statefulMapConcat { () =>
+      val logic = new ReviveRepeaterLogic
+
+      {
+        case Left(directive) =>
+          logic.processRoleDirective(directive)
+          List(directive)
+
+        case Right(tick) =>
+          logic.handleTick()
+      }
+    }
+
+  /**
+    * Stateful event processor to handle the (rather complex) task of repeating revive signal based on the last directive.
+    *
+    * Rather than using a timer directly, ReviveRepeaterLogic repeats revive signal in response to ticks received;
+    * specifically, it will indicate that offers should be revived for a role on the 2nd tick received after the initial
+    * unsuppress or revive directive was received, unless if offers for the role are suppressed.
+    */
+  private[impl] class ReviveRepeaterLogic {
+    var currentRoleState: Map[Role, RoleOfferState] = Map.empty
+    var repeatIn: Map[Role, Int] = Map.empty
+
+    def markRolesForRepeat(roles: Iterable[Role]): Unit =
+      roles.foreach {
+        role =>
+          repeatIn += role -> 2
+      }
+
+    def processRoleDirective(directive: RoleDirective): Unit = directive match {
+      case updateFramework: UpdateFramework =>
+        currentRoleState = updateFramework.roleState
+        markRolesForRepeat(updateFramework.newlyRevived)
+
+      case IssueRevive(roles) =>
+        markRolesForRepeat(roles) // set / reset the repeat delay
+    }
+
+    def handleTick(): List[RoleDirective] = {
+      val newRepeatIn = repeatIn.collect {
+        case (k, v) if v > 1 => k -> (v - 1)
+      }
+      val rolesForReviveRepetition = (repeatIn.keySet -- newRepeatIn.keySet).filter {
+        role => currentRoleState.get(role).contains(OffersWanted)
+      }
+
+      repeatIn = newRepeatIn
+
+      if (rolesForReviveRepetition.isEmpty) {
+        Nil
+      } else {
+        List(IssueRevive(rolesForReviveRepetition))
+      }
+    }
+  }
+
+  private[impl] case object Tick
+
+  sealed trait RoleDirective
+
+  /**
+    *
+    * @param roleState       The data specifying to which roles we should be subscribed, and which should be suppressed
+    * @param newlyRevived    Convenience metadata - Set of roles that were previously non-existent or suppressed
+    * @param newlySuppressed Convenience metadata - Set of roles that were previously not suppressed
+    */
+  case class UpdateFramework(
+      roleState: Map[String, RoleOfferState],
+      newlyRevived: Set[String],
+      newlySuppressed: Set[String]) extends RoleDirective
+
+  case class IssueRevive(roles: Set[String]) extends RoleDirective
+
+  case class VersionedRoleState(version: Long, roleState: RoleOfferState)
+
 }

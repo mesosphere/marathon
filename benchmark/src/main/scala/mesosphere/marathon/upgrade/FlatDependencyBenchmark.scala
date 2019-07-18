@@ -23,6 +23,7 @@ object FlatDependencyBenchmark {
   def makeApp(path: PathId) =
     AppDefinition(
       id = path,
+      role = "someRole",
       labels = Map("ID" -> path.toString),
       versionInfo = version,
       networks = Seq(BridgeNetwork()),
@@ -33,6 +34,7 @@ object FlatDependencyBenchmark {
   def makePod(path: PathId) =
     PodDefinition(
       id = path,
+      role = "someRole",
       networks = Seq(BridgeNetwork()),
       labels = Map("ID" -> path.toString),
       versionInfo = version,

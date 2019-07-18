@@ -18,6 +18,7 @@ class GroupBenchmark {
   def makeApp(path: PathId) =
     AppDefinition(
       id = path,
+      role = "someRole",
       labels = Map("ID" -> path.toString),
       versionInfo = version,
       networks = Seq(BridgeNetwork()),
@@ -81,6 +82,6 @@ class RootGroupBenchmark extends GroupBenchmark {
 
   @Benchmark
   def validateRootGroup(hole: Blackhole): Unit = {
-    Validation.validateOrThrow(rootGroup)(RootGroup.rootGroupValidator(Set.empty))
+    Validation.validateOrThrow(rootGroup)(RootGroup.validRootGroup(AllConf.withTestConfig()))
   }
 }

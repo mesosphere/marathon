@@ -25,7 +25,7 @@ class QueueInfoConversionTest extends UnitTest {
 
     "A NoMatch is converted correctly" in {
       Given("A NoMatch")
-      val app = AppDefinition(PathId("/test"))
+      val app = AppDefinition(PathId("/test"), role = "*")
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val noMatch = OfferMatchResult.NoMatch(app, offer, Seq(NoOfferMatchReason.InsufficientCpus), Timestamp.now())
 
@@ -42,7 +42,7 @@ class QueueInfoConversionTest extends UnitTest {
       Given("A QueueInfoWithStatistics")
       val clock = new SettableClock()
       val now = clock.now()
-      val app = AppDefinition(PathId("/test"))
+      val app = AppDefinition(PathId("/test"), role = "*")
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val noMatch = Seq(
         OfferMatchResult.NoMatch(app, offer, Seq(NoOfferMatchReason.InsufficientCpus), now),

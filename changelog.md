@@ -1,3 +1,39 @@
+## Changes from 1.8.194 to 1.9.xxx
+
+### Introduce SharedMemory/IPC configuration to Marathon Apps and Pods
+
+When running Marathon Apps or Pods it is now possible to configure the IPC separation level and shared memory size.
+Each container or executor can have their IPC mode set to either private or share the parents namespace. If set to
+private, the shared memory size can also be configured.
+See [Mesos documentation](http://mesos.apache.org/documentation/latest/isolators/namespaces-ipc/) for shared memory configuration for details.
+
+```
+{
+  "id": "/mesos-shared-memory-app",
+  "cmd": "sleep 1000",
+  "cpus": 0.1,
+  "mem": 32,
+  "container": {
+    "type": "MESOS",
+    "linuxInfo": {
+      "ipcInfo": {
+        "mode": "PRIVATE",
+        "shmSize": 16
+      }
+    }
+  }
+}
+``` 
+
+### `undefined` is an Illegal `--gpu_scheduling_behavior` Parameter
+
+As described [in an earlies note](#--gpu_scheduling_behavior-default-is-now-restricted-undefined-is-deprecated-and-will-be-removed) `undefined`
+is removed with `1.9.x`.
+
+### Marathon will auto-reset backoff delays when agents are being drained
+
+When Marathon receives a `TASK_GONE_BY_OPERATOR` or `TASK_KILLED` status update with a reason indicating that the agent is being drained, any delay for the related run spec will be deleted. This is to speed up the process of replacing tasks from drained agents.
+
 ## Changes from 1.8.194 to 1.8.xxx
 
 ### Revive and Suppress Refactoring

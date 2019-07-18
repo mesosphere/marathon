@@ -175,9 +175,7 @@ lazy val packagingSettings = Seq(
           |apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \\
           |apt-get update -y && \\
           |apt-get upgrade -y && \\
-          |echo "deb http://ftp.debian.org/debian stretch-backports main" | tee -a /etc/apt/sources.list && \\
-          |echo "deb http://repos.mesosphere.com/debian stretch-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
-          |echo "deb http://repos.mesosphere.com/debian stretch main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
+          |${NativePackagerSettings.debianSourceCommands} && \\
           |apt-get update && \\
           |# jdk setup
           |mkdir -p /usr/share/man/man1 && \\
@@ -189,7 +187,7 @@ lazy val packagingSettings = Seq(
           |# Workaround required due to https://github.com/mesosphere/mesos-deb-packaging/issues/102
           |# Remove after upgrading to Mesos 1.7.0
           |apt-get install -y libcurl3-nss && \\
-          |apt-get install --no-install-recommends -y mesos=${Dependency.V.MesosDebian} && \\
+          |apt-get install --no-install-recommends -y mesos=${Dependency.V.MesosDebian}.debian9 && \\
           |rm /usr/bin/systemctl && \\
           |apt-get clean && \\
           |chown nobody:nogroup /marathon""".stripMargin)) ++

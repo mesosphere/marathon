@@ -53,7 +53,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
   logger.info("Started status update processor")
 
   override def publish(status: MesosProtos.TaskStatus): Future[Unit] = publishTimeMetric {
-    logger.debug(s"Received status update\n${status}")
+    logger.debug(s"Received status update\n$status")
     getTaskStateCounterMetric(status.getState).increment()
 
     import TaskStatusUpdateProcessorImpl._
@@ -71,7 +71,7 @@ class TaskStatusUpdateProcessorImpl @Inject() (
       case Some(instance) if taskIsUnknown(instance, taskId) =>
         if (killWhenUnknown(taskCondition)) {
           killUnknownTaskTimeMetric {
-            logger.warn(s"Kill ${taskId} because it's unknown to marathon. " +
+            logger.warn(s"Kill $taskId because it's unknown to marathon. " +
               s"The related instance ${instance.instanceId} is associated with ${instance.tasksMap.keys}")
             Future.successful(killService.killUnknownTask(taskId, KillReason.NotInSync))
           }
@@ -83,19 +83,19 @@ class TaskStatusUpdateProcessorImpl @Inject() (
         instanceTracker.updateStatus(instance, status, now).flatMap(_ => acknowledge(status))
 
       case None if terminalUnknown(taskCondition) =>
-        logger.warn(s"Received terminal status update for unknown ${taskId}")
+        logger.warn(s"Received terminal status update for unknown $taskId")
         eventStream.publish(UnknownInstanceTerminated(taskId.instanceId, taskId.runSpecId, taskCondition))
         acknowledge(status)
 
       case None if killWhenUnknown(taskCondition) =>
         killUnknownTaskTimeMetric {
-          logger.warn(s"Kill unknown ${taskId}")
+          logger.warn(s"Kill unknown $taskId")
           killService.killUnknownTask(taskId, KillReason.Unknown)
           acknowledge(status)
         }
 
-      case maybeTask: Option[Instance] =>
-        val taskStr = taskKnownOrNotStr(maybeTask)
+      case maybeInstance: Option[Instance] =>
+        val taskStr = taskKnownOrNotStr(maybeInstance)
         logger.info(s"Ignoring ${status.getState} update for $taskStr $taskId")
         acknowledge(status)
     }

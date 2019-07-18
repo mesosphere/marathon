@@ -35,7 +35,8 @@ class MesosSchedulerDriverFactory @Inject() (
   override def createDriver(): SchedulerDriver = {
     val frameworkId: Option[FrameworkID] = MesosSchedulerDriverFactory.getFrameworkId(
       crashStrategy, config.zkTimeoutDuration, frameworkIdRepository, instanceRepository)
-    val driver = MarathonSchedulerDriver.newDriver(config, httpConfig, scheduler, frameworkId)
+    val frameworkInfo = MarathonSchedulerDriver.newFrameworkInfo(frameworkId, config, httpConfig)
+    val driver = MarathonSchedulerDriver.newDriver(frameworkInfo, config, scheduler)
     holder.driver = Some(driver)
     driver
   }

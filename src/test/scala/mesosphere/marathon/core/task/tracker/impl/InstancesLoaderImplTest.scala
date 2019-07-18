@@ -85,7 +85,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
 
       And(s"no run spec for app 2 version ${f.clock.now()}")
       val app2Id = PathId("/app2")
-      val app2 = AppDefinition(id = app2Id, versionInfo = VersionInfo.OnlyVersion(f.clock.now()))
+      val app2 = AppDefinition(id = app2Id, role = "*", versionInfo = VersionInfo.OnlyVersion(f.clock.now()))
       val app2Instance1 = TestInstanceBuilder.emptyInstance(instanceId = Instance.Id.forRunSpec(app2Id)).copy(runSpec = app2)
       f.groupRepository.runSpecVersion(eq(app2Id), eq(app2Instance1.runSpecVersion.toOffsetDateTime))(any) returns Future.successful(None)
 

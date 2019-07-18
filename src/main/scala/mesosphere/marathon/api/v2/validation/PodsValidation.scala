@@ -13,7 +13,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{PathId, ResourceRole, RootGroup}
-import mesosphere.marathon.util.SemanticVersion
+import mesosphere.marathon.util.{RoleSettings, SemanticVersion}
 // scalastyle:on
 
 /**
@@ -28,14 +28,14 @@ trait PodsValidation extends GeneralPurposeCombinators {
   import SecretValidation._
   import Validation._
 
-  val resourceValidator = validator[Resources] { resource =>
+  private val resourceValidator = validator[Resources] { resource =>
     resource.cpus should be >= 0.0
     resource.mem should be >= 0.0
     resource.disk should be >= 0.0
     resource.gpus should be >= 0
   }
 
-  def httpHealthCheckValidator(endpoints: Seq[Endpoint]) = validator[HttpCheck] { hc =>
+  private def httpHealthCheckValidator(endpoints: Seq[Endpoint]) = validator[HttpCheck] { hc =>
     hc.endpoint.length is between(1, 63)
     hc.endpoint should matchRegexFully(NamePattern)
     hc.endpoint is isTrue("contained in the container endpoints") { endpoint =>
@@ -44,7 +44,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     hc.path.map(_.length).getOrElse(1) is between(1, 1024)
   }
 
-  def tcpHealthCheckValidator(endpoints: Seq[Endpoint]) = validator[TcpCheck] { hc =>
+  private def tcpHealthCheckValidator(endpoints: Seq[Endpoint]) = validator[TcpCheck] { hc =>
     hc.endpoint.length is between(1, 63)
     hc.endpoint should matchRegexFully(NamePattern)
     hc.endpoint is isTrue("contained in the container endpoints") { endpoint =>
@@ -52,7 +52,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     }
   }
 
-  def commandCheckValidator(mesosMasterVersion: SemanticVersion) = new Validator[CommandCheck] {
+  private def commandCheckValidator(mesosMasterVersion: SemanticVersion) = new Validator[CommandCheck] {
     override def apply(v1: CommandCheck): Result = if (mesosMasterVersion >= PodsValidation.MinCommandCheckMesosVersion) {
       v1.command match {
         case ShellCommand(shell) =>
@@ -65,7 +65,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     }
   }
 
-  def healthCheckValidator(endpoints: Seq[Endpoint], mesosMasterVersion: SemanticVersion) = validator[HealthCheck] { hc =>
+  private def healthCheckValidator(endpoints: Seq[Endpoint], mesosMasterVersion: SemanticVersion) = validator[HealthCheck] { hc =>
     hc.gracePeriodSeconds should be >= 0
     hc.intervalSeconds should be >= 0
     hc.timeoutSeconds should be < hc.intervalSeconds
@@ -80,7 +80,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     }
   }
 
-  def endpointValidator(networks: Seq[Network]) = {
+  private def endpointValidator(networks: Seq[Network]) = {
     val networkNamess = networks.flatMap(_.name)
     val hostPortRequiresNetworkName = isTrue[Endpoint](NetworkNameRequiredForMultipleContainerNetworks) { endpoint =>
       endpoint.hostPort.isEmpty || endpoint.networkNames.length == 1
@@ -111,7 +111,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     normalValidation and implied(networks.count(_.mode == NetworkMode.Container) > 1)(hostPortRequiresNetworkName)
   }
 
-  def imageValidator(enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[Image] = new Validator[Image] {
+  private def imageValidator(enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[Image] = new Validator[Image] {
     override def apply(image: Image): Result = {
       val dockerImageValidator: Validator[Image] = validator[Image] { image =>
         image.pullConfig is empty or featureEnabled(enabledFeatures, Features.SECRETS)
@@ -120,18 +120,13 @@ trait PodsValidation extends GeneralPurposeCombinators {
             config => secrets.contains(config.secret)))
       }
 
-      val appcImageValidator: Validator[Image] = validator[Image] { image =>
-        image.pullConfig is isTrue("pullConfig is supported only with Docker images")(_.isEmpty)
-      }
-
       image.kind match {
         case ImageType.Docker => validate(image)(dockerImageValidator)
-        case ImageType.Appc => validate(image)(appcImageValidator)
       }
     }
   }
 
-  def volumeMountValidator(volumes: Seq[PodVolume]): Validator[VolumeMount] = validator[VolumeMount] { volumeMount => // linter:ignore:UnusedParameter
+  private def volumeMountValidator(volumes: Seq[PodVolume]): Validator[VolumeMount] = validator[VolumeMount] { volumeMount => // linter:ignore:UnusedParameter
     volumeMount.name.length is between(1, 63)
     volumeMount.name should matchRegexFully(NamePattern)
     volumeMount.mountPath.length is between(1, 1024)
@@ -140,22 +135,18 @@ trait PodsValidation extends GeneralPurposeCombinators {
     }
   }
 
-  def secretVolumesValidator(secrets: Map[String, SecretDef]): Validator[PodSecretVolume] = validator[PodSecretVolume] { vol =>
+  private def secretVolumesValidator(secrets: Map[String, SecretDef]): Validator[PodSecretVolume] = validator[PodSecretVolume] { vol =>
     vol.secret is isTrue(SecretVolumeMustReferenceSecret) {
       secrets.contains(_)
     }
   }
 
-  val artifactValidator = validator[Artifact] { artifact =>
+  private val artifactValidator = validator[Artifact] { artifact =>
     artifact.uri.length is between(1, 1024)
     artifact.destPath.map(_.length).getOrElse(1) is between(1, 1024)
   }
 
-  val lifeCycleValidator = validator[Lifecycle] { lc =>
-    lc.killGracePeriodSeconds.getOrElse(0.0) should be > 0.0
-  }
-
-  def containerValidator(pod: Pod, enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[PodContainer] =
+  private def containerValidator(pod: Pod, enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion): Validator[PodContainer] =
     validator[PodContainer] { container =>
       container.name is notEqualTo(Task.Id.Names.anonymousContainer)
       container.resources is resourceValidator
@@ -165,46 +156,36 @@ trait PodsValidation extends GeneralPurposeCombinators {
       container.healthCheck is optional(healthCheckValidator(container.endpoints, mesosMasterVersion))
       container.volumeMounts is every(volumeMountValidator(pod.volumes))
       container.artifacts is every(artifactValidator)
-      container.linuxInfo is optional(linuxInfoValidator)
+      container.linuxInfo is optional(state.LinuxInfo.validLinuxInfoForContainerRaml)
     }
 
-  val linuxInfoValidator: Validator[LinuxInfo] = new Validator[LinuxInfo] {
-    override def apply(li: LinuxInfo): Result = li.seccomp match {
-      case Some(seccomp) =>
-        if (seccomp.profileName.isDefined && seccomp.unconfined) Failure(Set(RuleViolation(li, "Seccomp unconfined can NOT be true when Profile is defined")))
-        else if (seccomp.profileName.isEmpty && !seccomp.unconfined) Failure(Set(RuleViolation(li, "Seccomp unconfined must be true when Profile is NOT defined")))
-        else Success
-      case None => Success
-    }
-  }
-
-  def volumeValidator(containers: Seq[PodContainer]): Validator[PodVolume] =
+  private def volumeValidator(containers: Seq[PodContainer]): Validator[PodVolume] =
     isTrue[PodVolume]("volume must be referenced by at least one container") { v =>
       containers.exists(_.volumeMounts.exists(_.name == volumeName(v)))
     }
 
-  val fixedPodScalingPolicyValidator = validator[FixedPodScalingPolicy] { f =>
+  private val fixedPodScalingPolicyValidator = validator[FixedPodScalingPolicy] { f =>
     f.instances should be >= 0
   }
 
-  val scalingValidator: Validator[PodScalingPolicy] = new Validator[PodScalingPolicy] {
+  private val scalingValidator: Validator[PodScalingPolicy] = new Validator[PodScalingPolicy] {
     override def apply(v1: PodScalingPolicy): Result = v1 match {
       case fsf: FixedPodScalingPolicy => fixedPodScalingPolicyValidator(fsf)
       case _ => Failure(Set(RuleViolation(v1, "Not a fixed scaling policy")))
     }
   }
 
-  val endpointNamesUnique: Validator[Pod] = isTrue(EndpointNamesMustBeUnique) { pod: Pod =>
+  private val endpointNamesUnique: Validator[Pod] = isTrue(EndpointNamesMustBeUnique) { pod: Pod =>
     val names = pod.containers.flatMap(_.endpoints.map(_.name))
     names.distinct.size == names.size
   }
 
-  val endpointContainerPortsUnique: Validator[Pod] = isTrue(ContainerPortsMustBeUnique) { pod: Pod =>
+  private val endpointContainerPortsUnique: Validator[Pod] = isTrue(ContainerPortsMustBeUnique) { pod: Pod =>
     val containerPorts = pod.containers.flatMap(_.endpoints.flatMap(_.containerPort)).filter(_ != 0)
     containerPorts.distinct.size == containerPorts.size
   }
 
-  val endpointHostPortsUnique: Validator[Pod] = isTrue(HostPortsMustBeUnique) { pod: Pod =>
+  private val endpointHostPortsUnique: Validator[Pod] = isTrue(HostPortsMustBeUnique) { pod: Pod =>
     val hostPorts = pod.containers.flatMap(_.endpoints.flatMap(_.hostPort)).filter(_ != 0)
     hostPorts.distinct.size == hostPorts.size
   }
@@ -217,7 +198,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
   private def podAcceptedResourceRoles(pod: Pod) =
     pod.scheduling.flatMap(_.placement.map(_.acceptedResourceRoles)).getOrElse(Seq.empty).toSet
 
-  val haveUnreachableDisabledForResidentPods: Validator[Pod] =
+  private val haveUnreachableDisabledForResidentPods: Validator[Pod] =
     isTrue[Pod]("unreachableStrategy must be disabled for pods with persistent volumes") { pod =>
       if (podPersistentVolumes(pod).isEmpty)
         true
@@ -227,12 +208,14 @@ trait PodsValidation extends GeneralPurposeCombinators {
       }
     }
 
-  val haveValidAcceptedResourceRoles: Validator[Pod] = validator[Pod] { pod =>
-    (podAcceptedResourceRoles(pod) as "acceptedResourceRoles"
-      is empty or valid(ResourceRole.validAcceptedResourceRoles("pod", podPersistentVolumes(pod).nonEmpty)))
+  private def haveValidAcceptedResourceRoles(validRoles: Set[String]): Validator[Pod] = validator[Pod] { pod =>
+    (podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is empty or valid(ResourceRole.validAcceptedResourceRoles("pod", podPersistentVolumes(pod).nonEmpty)))
   }
 
-  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String]): Validator[Pod] = validator[Pod] { pod =>
+  def podValidator(config: MarathonConf, mesosMasterVersion: Option[SemanticVersion] = Some(SemanticVersion.zero), roleSettings: RoleSettings): Validator[Pod] =
+    podValidator(config.availableFeatures, mesosMasterVersion.getOrElse(SemanticVersion.zero), config.defaultNetworkName.toOption, roleSettings)
+
+  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String], roleSettings: RoleSettings): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
@@ -255,18 +238,29 @@ trait PodsValidation extends GeneralPurposeCombinators {
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
     pod should complyWithPodUpgradeStrategyRules
     pod should haveUnreachableDisabledForResidentPods
-    pod should haveValidAcceptedResourceRoles
+    pod should haveValidAcceptedResourceRoles(roleSettings.validRoles)
+    pod.linuxInfo is optional(state.LinuxInfo.validLinuxInfoForPodRaml)
   }
 
-  def volumeNames(volumes: Seq[PodVolume]): Seq[String] = volumes.map(volumeName)
-  def volumeName(volume: PodVolume): String = volume match {
+  def podDefValidator(pluginManager: PluginManager, roleSettings: RoleSettings): Validator[PodDefinition] = validator[PodDefinition] { podDef =>
+    podDef is pluginValidators(pluginManager)
+    podDef is validPodDefinitionWithRoleEnforcement(roleSettings)
+  }
+
+  def validPodDefinitionWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[PodDefinition] = validator[PodDefinition] { pod =>
+    pod.role is in(roleEnforcement.validRoles)
+    pod.acceptedResourceRoles is valid(ResourceRole.validForRole(pod.role))
+  }
+
+  private def volumeNames(volumes: Seq[PodVolume]): Seq[String] = volumes.map(volumeName)
+  private def volumeName(volume: PodVolume): String = volume match {
     case PodEphemeralVolume(name) => name
     case PodHostVolume(name, _) => name
     case PodSecretVolume(name, _) => name
     case PodPersistentVolume(name, _) => name
   }
 
-  def pluginValidators(implicit pluginManager: PluginManager): Validator[PodDefinition] =
+  private def pluginValidators(implicit pluginManager: PluginManager): Validator[PodDefinition] =
     new Validator[PodDefinition] {
       override def apply(pod: PodDefinition): Result = {
         val plugins = pluginManager.plugins[RunSpecValidator]

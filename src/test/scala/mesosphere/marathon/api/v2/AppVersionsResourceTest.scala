@@ -42,7 +42,7 @@ class AppVersionsResourceTest extends UnitTest with JerseyTest {
       auth.authorized = false
       val req = auth.request
 
-      groupManager.app("appId".toRootPath) returns Some(AppDefinition("appId".toRootPath))
+      groupManager.app("appId".toRootPath) returns Some(AppDefinition("appId".toRootPath, role = "*"))
       When("the index is fetched")
       val index = asyncRequest { r => appsVersionsResource.index("appId", req, r) }
       Then("we receive a not authorized response")
@@ -69,7 +69,7 @@ class AppVersionsResourceTest extends UnitTest with JerseyTest {
       val req = auth.request
 
       val version = Timestamp.now()
-      service.getApp("appId".toRootPath, version) returns Some(AppDefinition("appId".toRootPath))
+      service.getApp("appId".toRootPath, version) returns Some(AppDefinition("appId".toRootPath, role = "*"))
       When("one app version is fetched")
       val show = asyncRequest { r => appsVersionsResource.show("appId", version.toString, req, r) }
       Then("we receive a not authorized response")

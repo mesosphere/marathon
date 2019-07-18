@@ -17,7 +17,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv DF7D54CBE56151BF && \
   # install mesos
   # this MUST be done first, unfortunately, because Mesos packages will create folders that should be symlinks and break the python install process
   apt-get install python2.7-minimal -y && \
-  apt-get install --no-install-recommends -y --force-yes mesos=$(cat /mesos-version) && \
+  apt-get install --no-install-recommends -y --force-yes mesos="$(cat /mesos-version).ubuntu1404" && \
 
   # disable mesos-master; we don't want to start in this image
   echo manual | tee /etc/init/mesos-master.override && \

@@ -14,15 +14,18 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
 import mesosphere.marathon.util.StreamHelpers
+import org.apache.mesos.Protos.FrameworkInfo
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.verification.VerificationWithTimeout
 
+import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.collection.JavaConverters._
 
 class ReviveOffersActorTest extends AkkaUnitTest {
 
-  val testApp = AppDefinition(id = PathId("/test"))
+  val testApp = AppDefinition(id = PathId("/test"), role = "role")
 
   "ReviveOffersActor" should {
 
@@ -35,14 +38,14 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       f.actorRef.start()
 
       Then("it will suppress offers")
-      Mockito.verify(f.driver, f.invocationTimeout).suppressOffers()
+      f.verifySuppress()
 
       f.verifyNoMoreInteractions()
     }
 
     "suppress upon non-empty init state" in {
-      val instance1 = TestInstanceBuilder.newBuilder(testApp.id).addTaskStaged(Timestamp.now()).getInstance()
-      val instance2 = TestInstanceBuilder.newBuilder(testApp.id).addTaskRunning().getInstance()
+      val instance1 = TestInstanceBuilder.newBuilderForRunSpec(testApp).addTaskStaged(Timestamp.now()).getInstance()
+      val instance2 = TestInstanceBuilder.newBuilderForRunSpec(testApp).addTaskRunning().getInstance()
 
       Given("some initial instances")
       val f = new Fixture(instancesSnapshot = InstancesSnapshot(Seq(instance1, instance2)))
@@ -51,7 +54,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       f.actorRef.start()
 
       Then("it will suppress offers")
-      Mockito.verify(f.driver, f.invocationTimeout).suppressOffers()
+      f.verifySuppress()
 
       f.verifyNoMoreInteractions()
     }
@@ -61,9 +64,9 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       val (instanceChangesInput, instanceChanges) = Source.queue[InstanceChange](16, OverflowStrategy.fail).preMaterialize()
       val testInstanceScheduled = Instance.scheduled(testApp)
       val snapshot = InstancesSnapshot(Seq(
-        TestInstanceBuilder.newBuilder(testApp.id).addTaskStaged(Timestamp.now()).getInstance(),
+        TestInstanceBuilder.newBuilderForRunSpec(testApp).addTaskStaged(Timestamp.now()).getInstance(),
         testInstanceScheduled,
-        TestInstanceBuilder.newBuilder(testApp.id).addTaskRunning().getInstance()))
+        TestInstanceBuilder.newBuilderForRunSpec(testApp).addTaskRunning().getInstance()))
       val f = new Fixture(
         instancesSnapshot = snapshot,
         instanceChanges = instanceChanges)
@@ -71,15 +74,19 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       When("the actor initializes")
       f.actorRef.start()
 
-      Then("it will revive offers")
-      Mockito.verify(f.driver, f.invocationTimeout.times(3)).reviveOffers()
+      Then("it will issue the initial updateFramework call with the role unsuppressed")
+      f.verifyUnsuppress()
+
+      And("it will later repeat the revive")
+      // since ticks are at 500ms, and repeat happens on 2nd tick, it could take a little longer than 1 second to repeat a revive
+      f.verifyExplicitRevive(Mockito.timeout(5000))
 
       When("the actor gets notified of the Scheduled instance becoming Staging")
-      val testInstanceStaging = TestInstanceBuilder.newBuilderWithInstanceId(testInstanceScheduled.instanceId).addTaskStaged().getInstance()
+      val testInstanceStaging = TestInstanceBuilder.newBuilderForRunSpec(testApp, instanceId = testInstanceScheduled.instanceId).addTaskStaged().getInstance()
       instanceChangesInput.offer(InstanceUpdated(testInstanceStaging, None, Nil)).futureValue
 
       Then("suppress offers is called")
-      Mockito.verify(f.driver, f.invocationTimeout).suppressOffers()
+      f.verifySuppress()
       f.verifyNoMoreInteractions()
     }
 
@@ -95,32 +102,32 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       f.actorRef.start()
 
       Then("it will suppress offers")
-      Mockito.verify(f.driver, f.invocationTimeout).suppressOffers()
+      f.verifySuppress()
 
       When("the actor gets notified of a new Scheduled instance")
       val instance1 = Instance.scheduled(testApp)
       instanceChangesInput.offer(InstanceUpdated(instance1, None, Nil)).futureValue
 
-      Then("reviveOffers is called")
-      Mockito.verify(f.driver, f.invocationTimeout).reviveOffers()
+      Then("the role becomes unsuppress via updateFramework")
+      f.verifyUnsuppress()
 
       When("the actor gets notified of another Scheduled instance")
       val instance2 = Instance.scheduled(testApp)
       instanceChangesInput.offer(InstanceUpdated(instance2, None, Nil)).futureValue
 
       Then("reviveOffers is called again, since we might have declined offers meanwhile")
-      Mockito.verify(f.driver, f.invocationTimeout).reviveOffers()
+      f.verifyExplicitRevive()
 
       When("the actor gets notified of the first instance becoming Staging")
-      val instance1Staging = TestInstanceBuilder.newBuilderWithInstanceId(instance1.instanceId).addTaskStaged().getInstance()
+      val instance1Staging = TestInstanceBuilder.newBuilderForRunSpec(testApp, instanceId = instance1.instanceId).addTaskStaged().getInstance()
       instanceChangesInput.offer(InstanceUpdated(instance1Staging, None, Nil)).futureValue
 
       And("the actor gets notified of the second instance becoming Gone")
-      val instance2Gone = TestInstanceBuilder.newBuilderWithInstanceId(instance2.instanceId).addTaskGone().getInstance()
+      val instance2Gone = TestInstanceBuilder.newBuilderForRunSpec(testApp, instanceId = instance2.instanceId).addTaskGone().getInstance()
       instanceChangesInput.offer(InstanceUpdated(instance2Gone, None, Nil)).futureValue
 
       Then("suppress is called again")
-      Mockito.verify(f.driver).suppressOffers()
+      f.verifySuppress()
     }
   }
 
@@ -128,7 +135,9 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       instancesSnapshot: InstancesSnapshot = InstancesSnapshot(Nil),
       instanceChanges: Source[InstanceChange, NotUsed] = StreamHelpers.sourceNever,
       delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed] = StreamHelpers.sourceNever,
-      enableSuppress: Boolean = true) {
+      val defaultRole: String = "role",
+      enableSuppress: Boolean = true,
+      val invocationTimeout: VerificationWithTimeout = Mockito.timeout(1000)) {
 
     val instanceUpdates: InstanceTracker.InstanceUpdates = Source.single(instancesSnapshot -> instanceChanges)
     implicit val mat: ActorMaterializer = ActorMaterializer()
@@ -139,13 +148,24 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       holder
     }
     val metrics: Metrics = DummyMetrics
+    val initialFrameworkInfo = FrameworkInfo.newBuilder().setUser("test").setName("test").build
 
     lazy val actorRef: TestActorRef[ReviveOffersActor] = TestActorRef[ReviveOffersActor](
-      ReviveOffersActor.props(metrics, minReviveOffersInterval = 100.millis,
+      ReviveOffersActor.props(metrics, Future.successful(initialFrameworkInfo), defaultRole, minReviveOffersInterval = 500.millis,
         instanceUpdates = instanceUpdates, rateLimiterUpdates = delayUpdates, driverHolder = driverHolder, enableSuppress = enableSuppress)
     )
 
-    val invocationTimeout: VerificationWithTimeout = Mockito.timeout(1000)
+    def verifyUnsuppress(): Unit = {
+      import org.mockito.Matchers.{eq => mEq}
+      Mockito.verify(driver, invocationTimeout).updateFramework(any, mEq(Nil.asJava))
+    }
+    def verifySuppress(): Unit = {
+      import org.mockito.Matchers.{eq => mEq}
+      Mockito.verify(driver, invocationTimeout).updateFramework(any, mEq(Seq(defaultRole).asJava))
+    }
+    def verifyExplicitRevive(timeout: VerificationWithTimeout = invocationTimeout): Unit = {
+      Mockito.verify(driver, timeout).reviveOffers(Set(defaultRole).asJava)
+    }
 
     def verifyNoMoreInteractions(): Unit = {
       def killActorAndWaitForDeath(): Terminated = {

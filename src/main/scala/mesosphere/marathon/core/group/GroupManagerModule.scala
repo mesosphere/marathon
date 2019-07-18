@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContext
   */
 class GroupManagerModule(
     metrics: Metrics,
-    config: GroupManagerConfig,
+    config: MarathonConf,
     scheduler: Provider[DeploymentService],
     groupRepo: GroupRepository)(implicit ctx: ExecutionContext, eventStream: EventStream, authorizer: Authorizer) {
 

@@ -28,7 +28,7 @@ import mesosphere.mesos.protos.Implicits._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.DomainInfo
 import org.apache.mesos.Protos.DomainInfo.FaultDomain
-import org.apache.mesos.Protos.Resource.{DiskInfo, ReservationInfo}
+import org.apache.mesos.Protos.Resource.{AllocationInfo, DiskInfo, ReservationInfo}
 import org.apache.mesos.Protos._
 import org.apache.mesos.{Protos => Mesos}
 
@@ -110,6 +110,8 @@ object MarathonTestHelper {
     } else {
       None
     }
+
+    val allocationInfo = AllocationInfo.newBuilder().setRole("*")
     val offerBuilder = Offer.newBuilder
       .setId(OfferID("1"))
       .setFrameworkId(frameworkID)
@@ -119,6 +121,7 @@ object MarathonTestHelper {
       .addResources(gpuResource)
       .addResources(memResource)
       .addResources(diskResource)
+      .setAllocationInfo(allocationInfo)
 
     portsResource.foreach(offerBuilder.addResources)
 
@@ -357,7 +360,8 @@ object MarathonTestHelper {
     cmd = Some("sleep 60"),
     resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
     executor = "//cmd",
-    portDefinitions = Seq(PortDefinition(0))
+    portDefinitions = Seq(PortDefinition(0)),
+    role = "*"
   )
 
   def createTaskTrackerModule(

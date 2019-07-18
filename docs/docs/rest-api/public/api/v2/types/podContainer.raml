@@ -17,7 +17,7 @@ uses:
 types:
   ImageType:
     type: string
-    enum: [DOCKER, APPC]
+    enum: [DOCKER]
   Image:
     type: object
     properties:
@@ -55,7 +55,7 @@ types:
         type: boolean
         usage: |
           Applies only if a container image is specified AND that container image
-          defines a default entrypoint (Docker) or exec (appc) property.
+          defines a default entrypoint (Docker) or exec property.
           It is an error to use `false` here when `command.shell` is set.
         description: |
           When true argv[0] will be used as the entrypoint/exec of the container.

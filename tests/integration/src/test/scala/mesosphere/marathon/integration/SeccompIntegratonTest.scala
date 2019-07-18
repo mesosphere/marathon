@@ -78,6 +78,7 @@ class SeccompIntegratonTest extends AkkaIntegrationTest with EmbeddedMarathonTes
   def seccompPod(podId: PathId, unconfined: Boolean, profileName: Option[String] = None): PodDefinition = {
     PodDefinition(
       id = podId,
+      role = "foo",
       instances = 1,
       containers = Seq(
         MesosContainer(
@@ -88,7 +89,8 @@ class SeccompIntegratonTest extends AkkaIntegrationTest with EmbeddedMarathonTes
             seccomp = Some(state.Seccomp(
               profileName,
               unconfined
-            ))
+            )),
+            ipcInfo = None
           ))
         )
       ))
