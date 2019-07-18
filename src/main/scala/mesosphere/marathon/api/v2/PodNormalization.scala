@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api.v2
 
-import mesosphere.marathon.raml.{AnyToRaml, Endpoint, Network, NetworkMode, Pod, PodContainer, PodPersistentVolume, PodSchedulingPolicy, PodUpgradeStrategy}
+import mesosphere.marathon.raml.{AnyToRaml, Endpoint, Network, NetworkMode, Pod, PodContainer, PodPersistentVolume, PodPlacementPolicy, PodSchedulingPolicy, PodUpgradeStrategy}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.RoleSettings
 
@@ -16,13 +16,17 @@ object PodNormalization {
   /** dynamic pod normalization configuration, useful for migration and/or testing */
   trait Config extends NetworkNormalization.Config {
     def roleSettings: RoleSettings
+    def availableDeprecatedFeatures: DeprecatedFeatureSet
   }
 
-  case class Configuration(defaultNetworkName: Option[String], roleSettings: RoleSettings) extends Config
+  case class Configuration(
+      defaultNetworkName: Option[String],
+      roleSettings: RoleSettings,
+      availableDeprecatedFeatures: DeprecatedFeatureSet) extends Config
 
   object Configuration {
     def apply(config: MarathonConf, roleSettings: RoleSettings): Config =
-      Configuration(config.defaultNetworkName.toOption, roleSettings)
+      Configuration(config.defaultNetworkName.toOption, roleSettings, config.availableDeprecatedFeatures)
   }
 
   case class Containers(networks: Seq[Network], containers: Seq[PodContainer])
@@ -45,6 +49,33 @@ object PodNormalization {
   }
 
   /**
+    * Removes all roles that are not the service role or "*" from the placement policy.
+    *
+    * @param maybePlacement The placement policy containing the accepted resource roles.
+    * @param effectiveRole The final Mesos role of the pod.
+    * @return the placement policy with update accepted resource roles.
+    */
+  def sanitizeAcceptedResourceRoles(maybePlacement: Option[PodPlacementPolicy], effectiveRole: String): Option[PodPlacementPolicy] = {
+    maybePlacement.map { placement =>
+      val sanitizedAcceptedResourceRoles = placement.acceptedResourceRoles.filter(role => role == "*" || role == effectiveRole)
+      placement.copy(acceptedResourceRoles = sanitizedAcceptedResourceRoles)
+    }
+  }
+
+  def normalizeUpgradeAndUnreachableStrategy(pod: Pod): PodSchedulingPolicy = {
+    val defaultUpgradeStrategy = state.UpgradeStrategy.forResidentTasks.toRaml
+    val defaultUnreachableStrategy = state.UnreachableStrategy.default(true).toRaml
+    val scheduling = pod.scheduling.getOrElse(PodSchedulingPolicy())
+    val upgradeStrategy = scheduling.upgrade.getOrElse(PodUpgradeStrategy(
+      minimumHealthCapacity = defaultUpgradeStrategy.minimumHealthCapacity,
+      maximumOverCapacity = defaultUpgradeStrategy.maximumOverCapacity))
+    val unreachableStrategy = scheduling.unreachableStrategy.getOrElse(defaultUnreachableStrategy)
+    scheduling.copy(
+      upgrade = Some(upgradeStrategy),
+      unreachableStrategy = Some(unreachableStrategy))
+  }
+
+  /**
     * If a pod has one or more persistent volumes, this method ensure that
     * the pod's upgrade and unreachable strategies have values which make
     * sense for resident pods: the unreachable strategy should be disabled
@@ -52,31 +83,31 @@ object PodNormalization {
     * for such pods.
     *
     * @param pod a pod which scheduling policy should be normalized
+    * @param effectiveRole the final Mesos role of the pod
+    * @param config the normalization configuration
     * @return a normalized scheduling policy
     */
-  def normalizeScheduling(pod: Pod): Option[PodSchedulingPolicy] = {
+  def normalizeScheduling(pod: Pod, effectiveRole: String, config: Config): Option[PodSchedulingPolicy] = {
     val hasPersistentVolumes = pod.volumes.existsAn[PodPersistentVolume]
-    if (hasPersistentVolumes) {
-      val defaultUpgradeStrategy = state.UpgradeStrategy.forResidentTasks.toRaml
-      val defaultUnreachableStrategy = state.UnreachableStrategy.default(hasPersistentVolumes).toRaml
-      val scheduling = pod.scheduling.getOrElse(PodSchedulingPolicy())
-      val upgradeStrategy = scheduling.upgrade.getOrElse(PodUpgradeStrategy(
-        minimumHealthCapacity = defaultUpgradeStrategy.minimumHealthCapacity,
-        maximumOverCapacity = defaultUpgradeStrategy.maximumOverCapacity))
-      val unreachableStrategy = scheduling.unreachableStrategy.getOrElse(defaultUnreachableStrategy)
-      Some(scheduling.copy(
-        upgrade = Some(upgradeStrategy),
-        unreachableStrategy = Some(unreachableStrategy)))
+    val normalized = if (hasPersistentVolumes) {
+      Some(normalizeUpgradeAndUnreachableStrategy(pod))
     } else pod.scheduling
+
+    // sanitize accepted resource roles if enabled
+    if (config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles)) {
+      normalized.map { scheduling =>
+        scheduling.copy(placement = sanitizeAcceptedResourceRoles(scheduling.placement, effectiveRole))
+      }
+    } else normalized
   }
 
   def apply(config: Config): Normalization[Pod] = Normalization { pod =>
     val networks = Networks(config, Some(pod.networks)).normalize.networks.filter(_.nonEmpty).getOrElse(DefaultNetworks)
     NetworkNormalization.requireContainerNetworkNameResolution(networks)
     val containers = Containers(networks, pod.containers).normalize.containers
-    val scheduling = normalizeScheduling(pod)
-
     val role = pod.role.getOrElse(config.roleSettings.defaultRole)
+
+    val scheduling = normalizeScheduling(pod, role, config)
 
     pod.copy(containers = containers, networks = networks, scheduling = scheduling, role = Some(role))
   }

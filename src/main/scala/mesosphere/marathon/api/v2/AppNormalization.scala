@@ -202,6 +202,11 @@ object AppNormalization {
       else c
     }
 
+  def sanitizeAcceptedResourceRoles(app: App, effectiveRole: String): Option[Set[String]] =
+    app.acceptedResourceRoles.map { roles =>
+      roles.filter(role => role == "*" || role == effectiveRole)
+    }
+
   def maybeDropPortMappings(c: Container, networks: Seq[Network]): Container =
     // empty networks Seq defaults to host-mode later on, so consider it now as indicating host-mode networking
     if (networks.exists(_.mode == NetworkMode.Host) || networks.isEmpty) c.copy(portMappings = None) else c
@@ -307,12 +312,19 @@ object AppNormalization {
 
     val role = app.role.getOrElse(config.roleSettings.defaultRole)
 
+    // sanitize accepted resource roles if enabled
+    val acceptedResourceRoles =
+      if (config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles)) {
+        sanitizeAcceptedResourceRoles(app, role)
+      } else app.acceptedResourceRoles
+
     app.copy(
       container = container,
       networks = networks,
       unreachableStrategy = app.unreachableStrategy.orElse(Option(defaultUnreachable)),
       requirePorts = requirePorts,
-      role = Some(role)
+      role = Some(role),
+      acceptedResourceRoles = acceptedResourceRoles
     )
   }
 
@@ -321,16 +333,29 @@ object AppNormalization {
     def mesosBridgeName: String
     def enabledFeatures: Set[String]
     def roleSettings: RoleSettings
+    def availableDeprecatedFeatures: DeprecatedFeatureSet
   }
 
   /** static app normalization configuration */
-  case class Configuration(defaultNetworkName: Option[String], override val mesosBridgeName: String, enabledFeatures: Set[String], roleSettings: RoleSettings) extends Config {
+  case class Configuration(
+      defaultNetworkName: Option[String],
+      override val mesosBridgeName: String,
+      enabledFeatures: Set[String],
+      roleSettings: RoleSettings,
+      availableDeprecatedFeatures: DeprecatedFeatureSet
+  ) extends Config {
 
   }
 
   object Configuration {
     def apply(config: MarathonConf, roleSettings: RoleSettings): Config =
-      Configuration(config.defaultNetworkName.toOption, config.mesosBridgeName(), config.availableFeatures, roleSettings)
+      Configuration(
+        config.defaultNetworkName.toOption,
+        config.mesosBridgeName(),
+        config.availableFeatures,
+        roleSettings,
+        config.availableDeprecatedFeatures
+      )
   }
 
   /**

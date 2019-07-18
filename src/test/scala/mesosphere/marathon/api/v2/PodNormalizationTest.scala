@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.UnitTest
-import mesosphere.marathon.raml.{Endpoint, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodPersistentVolume, PodSchedulingPolicy, PodUpgradeStrategy, Resources, UnreachableDisabled, VolumeMount}
+import mesosphere.marathon.raml.{Endpoint, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodPersistentVolume, PodPlacementPolicy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, UnreachableDisabled, VolumeMount}
 import Normalization._
 import mesosphere.marathon.util.RoleSettings
 import org.scalatest.Inside
@@ -65,7 +65,7 @@ class PodNormalizationTest extends UnitTest with Inside {
             net.name.value shouldBe "net1"
         }
       }
-      "with default network name" in new Fixture(PodNormalization.Configuration(defaultNetworkName = Some("default1"), ValidationHelper.roleSettings)) {
+      "with default network name" in new Fixture(PodNormalization.Configuration(defaultNetworkName = Some("default1"), ValidationHelper.roleSettings, DeprecatedFeatureSet.empty(SemVer(1, 9, 0)))) {
         // replace empty network name with the default
         val withoutNetworkName = template.copy(networks = Seq(Network()))
         inside(withoutNetworkName.normalize.networks) {
@@ -122,7 +122,7 @@ class PodNormalizationTest extends UnitTest with Inside {
         }
       }
 
-      "return the configured role for pods without a role" in new Fixture(config = PodNormalization.Configuration(None, RoleSettings(validRoles = Set("customDefault"), defaultRole = "customDefault"))) {
+      "return the configured role for pods without a role" in new Fixture(config = PodNormalization.Configuration(None, RoleSettings(validRoles = Set("customDefault"), defaultRole = "customDefault"), DeprecatedFeatureSet.empty(SemVer(1, 9, 0)))) {
         inside(template.normalize.role) {
           case Some(role) =>
             role shouldBe "customDefault"
@@ -138,9 +138,27 @@ class PodNormalizationTest extends UnitTest with Inside {
 
     }
 
+    "sanitizing accepted resource roles" should {
+      val template = Pod(
+        id = "foo",
+        containers = Seq(PodContainer(name = "c", resources = Resources())),
+        scheduling = Some(PodSchedulingPolicy(placement = Some(PodPlacementPolicy(acceptedResourceRoles = Seq("*", "other")))))
+      )
+      val sanitizationEnabled = PodNormalization.Configuration(None, ValidationHelper.roleSettings, DeprecatedFeatureSet.empty(SemVer(1, 9, 0)))
+      val sanitizationDisabled = PodNormalization.Configuration(None, ValidationHelper.roleSettings, DeprecatedFeatureSet.empty(SemVer(1, 10, 0)))
+
+      s"remove the role if ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} is enabled" in new Fixture(config = sanitizationEnabled) {
+        template.normalize.scheduling.value.placement.value.acceptedResourceRoles should contain theSameElementsAs (Set("*"))
+      }
+
+      s"keep the role if ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} is disabled" in new Fixture(config = sanitizationDisabled) {
+        template.normalize.scheduling.value.placement.value.acceptedResourceRoles should contain theSameElementsAs (Set("*", "other"))
+      }
+    }
+
   }
 
-  abstract class Fixture(config: PodNormalization.Config = PodNormalization.Configuration(None, ValidationHelper.roleSettings)) {
+  abstract class Fixture(config: PodNormalization.Config = PodNormalization.Configuration(None, ValidationHelper.roleSettings, DeprecatedFeatureSet.empty(SemVer(1, 9, 0)))) {
     protected implicit val normalization: Normalization[Pod] = PodNormalization(config)
   }
 }

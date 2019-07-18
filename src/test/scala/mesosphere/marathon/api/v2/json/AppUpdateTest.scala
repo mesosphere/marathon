@@ -25,7 +25,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
     */
   private[this] def fromJsonString(json: String): AppUpdate = {
     val update: AppUpdate = Json.fromJson[AppUpdate](Json.parse(json)).get
-    AppNormalization.forDeprecatedUpdates(AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings))
+    AppNormalization.forDeprecatedUpdates(AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings, DeprecatedFeatureSet.empty(SemVer(1, 9, 0))))
       .normalized(update)
   }
 
