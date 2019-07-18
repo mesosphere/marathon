@@ -30,6 +30,7 @@ case class PodDefinition(
     backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy,
     executorResources: Resources = PodDefinition.DefaultExecutorResources,
+    linuxInfo: Option[LinuxInfo] = PodDefinition.DefaultLinuxInfo,
     override val volumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
@@ -79,7 +80,8 @@ case class PodDefinition(
           networks != to.networks ||
           backoffStrategy != to.backoffStrategy ||
           upgradeStrategy != to.upgradeStrategy ||
-          role != to.role
+          role != to.role ||
+          linuxInfo != to.linuxInfo
       }
     case _ =>
       // A validation rule will ensure, this can not happen
@@ -122,6 +124,7 @@ object PodDefinition {
   }
 
   val DefaultExecutorResources: Resources = ExecutorResources().fromRaml
+  val DefaultLinuxInfo = Option.empty[LinuxInfo]
   val DefaultId = PathId.empty
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]

@@ -280,7 +280,23 @@ message ExtendedContainerInfo {
       required bool unconfined = 2;
     }
 
+    message IpcInfo {
+      // IPC configurations
+
+      enum IpcMode {
+        PRIVATE = 1;
+        SHARE_PARENT = 2;
+      }
+
+      // The ipc mode the container or executor should apply
+      required IpcMode ipcMode = 1;
+
+      // The shared memory size in MB
+      optional uint32 shmSize = 2;
+    }
+
     optional Seccomp seccomp = 1;
+    optional IpcInfo ipcInfo = 2;
   }
 
   message PortMapping {

@@ -39,7 +39,7 @@ trait Implicits {
       .setId(frameworkInfo.id)
       .setName(frameworkInfo.name)
       .setUser(frameworkInfo.user)
-      .setRole(frameworkInfo.role)
+      .addRoles(frameworkInfo.role)
       .setCheckpoint(frameworkInfo.checkpoint)
       .setFailoverTimeout(frameworkInfo.failoverTimeout)
       .build: @silent

@@ -1281,6 +1281,422 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           response.getEntity.toString should include("Seccomp unconfined must be true when Profile is NOT defined")
         }
       }
+
+      "Decline a pod definition with ANY seccomp configuration on executor level" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }],
+            |    "linuxInfo": {
+            |        "seccomp": {
+            |        }
+            |    }
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(422)
+          response.getEntity.toString should include("Seccomp configuration on executor level is not supported")
+        }
+      }
+    }
+
+    "Support shared memory" when {
+
+      "Accept a pod definition with private IPC and shm size defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "SHARE_PARENT"
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }],
+            |    "linuxInfo": {
+            |       "ipcInfo": {
+            |           "mode": "PRIVATE",
+            |           "shmSize": 16
+            |       }
+            |    }
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "Accept a pod definition with private IPC and shm size NOT defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "SHARE_PARENT"
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }],
+            |    "linuxInfo": {
+            |       "ipcInfo": {
+            |           "mode": "PRIVATE"
+            |       }
+            |    }
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "Decline a pod definition with shared parent IPC and shm size defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "SHARE_PARENT"
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }],
+            |    "linuxInfo": {
+            |        "ipcInfo": {
+            |            "mode": "SHARE_PARENT",
+            |            "shmSize": 16
+            |        }
+            |    }
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(422)
+          response.getEntity.toString should include("ipcInfo shmSize can NOT be set when mode is SHARE_PARENT")
+        }
+      }
+
+      "Accept a pod definition with shared Parent IPC and shm size NOT defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "SHARE_PARENT"
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }],
+            |    "linuxInfo": {
+            |       "ipcInfo": {
+            |           "mode": "SHARE_PARENT"
+            |       }
+            |    }
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "Accept a pod definition with container that has private IPC and shm size defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "PRIVATE",
+            |              "shmSize": 16
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "Accept a pod definition with container that has private IPC and shm size NOT defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "PRIVATE"
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "Decline a pod definition with container that has shared parent IPC and shm size defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "SHARE_PARENT",
+            |              "shmSize": 16
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(422)
+          response.getEntity.toString should include("ipcInfo shmSize can NOT be set when mode is SHARE_PARENT")
+        }
+      }
+
+      "Accept a pod definition with container that has shared parent IPC and shm size NOT defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "SHARE_PARENT"
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
     }
 
     "support versions" when {

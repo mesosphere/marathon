@@ -156,18 +156,8 @@ trait PodsValidation extends GeneralPurposeCombinators {
       container.healthCheck is optional(healthCheckValidator(container.endpoints, mesosMasterVersion))
       container.volumeMounts is every(volumeMountValidator(pod.volumes))
       container.artifacts is every(artifactValidator)
-      container.linuxInfo is optional(linuxInfoValidator)
+      container.linuxInfo is optional(state.LinuxInfo.validLinuxInfoForContainerRaml)
     }
-
-  private val linuxInfoValidator: Validator[LinuxInfo] = new Validator[LinuxInfo] {
-    override def apply(li: LinuxInfo): Result = li.seccomp match {
-      case Some(seccomp) =>
-        if (seccomp.profileName.isDefined && seccomp.unconfined) Failure(Set(RuleViolation(li, "Seccomp unconfined can NOT be true when Profile is defined")))
-        else if (seccomp.profileName.isEmpty && !seccomp.unconfined) Failure(Set(RuleViolation(li, "Seccomp unconfined must be true when Profile is NOT defined")))
-        else Success
-      case None => Success
-    }
-  }
 
   private def volumeValidator(containers: Seq[PodContainer]): Validator[PodVolume] =
     isTrue[PodVolume]("volume must be referenced by at least one container") { v =>
@@ -249,6 +239,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     pod should complyWithPodUpgradeStrategyRules
     pod should haveUnreachableDisabledForResidentPods
     pod should haveValidAcceptedResourceRoles(roleSettings.validRoles)
+    pod.linuxInfo is optional(state.LinuxInfo.validLinuxInfoForPodRaml)
   }
 
   def podDefValidator(pluginManager: PluginManager, roleSettings: RoleSettings): Validator[PodDefinition] = validator[PodDefinition] { podDef =>
