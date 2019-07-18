@@ -1,4 +1,17 @@
-## Changes from 1.8.194 to 1.9.xxx
+## Changes from 1.8.212 to 1.9.xxx
+
+### Multirole support
+
+Marathon 1.9 brings support for multirole, enabling you to launch services for different roles (against different Mesos quotas) with the same Marathon instance.
+
+#### Role field added to services
+
+The role field can now be optionally specified for a service. However, the value of this field may only be sent to 1 of two values:
+
+* The default role as specified by `--mesos_role c`ommand line parameter
+* The name of the top-level group (this is referred to as the group-role)
+
+This feature was implement it in a way that preserves backwards functionality, allowing services to continue running with the same resource roles, and same service definitions, exactly as before.
 
 ### Introduce SharedMemory/IPC configuration to Marathon Apps and Pods
 
@@ -34,7 +47,7 @@ is removed with `1.9.x`.
 
 When Marathon receives a `TASK_GONE_BY_OPERATOR` or `TASK_KILLED` status update with a reason indicating that the agent is being drained, any delay for the related run spec will be deleted. This is to speed up the process of replacing tasks from drained agents.
 
-## Changes from 1.8.194 to 1.8.xxx
+## Changes from 1.8.194 to 1.8.212
 
 ### Revive and Suppress Refactoring
 
