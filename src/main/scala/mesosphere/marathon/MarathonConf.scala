@@ -140,7 +140,7 @@ trait MarathonConf
   lazy val groupRoleBehavior = opt[GroupRoleBehavior](
     name = "group_role_behavior",
     descr = "Defines the behavior for group roles. 'Top' means that all new child apps and pods are launched" +
-      "with the role of the top-level group.",
+      "with a role that matches the top-level group's name.",
     default = Some(GroupRoleBehavior.Off))(groupRoleBehaviorConverter)
 
   lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.getOrElse(expectedResourceRoles)
