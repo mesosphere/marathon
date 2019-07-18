@@ -26,19 +26,19 @@ import scala.sys.process.ProcessBuilder
 import scala.util.Try
 
 case class MesosConfig(
-                        numMasters: Int = 1,
-                        numAgents: Int = 1,
-                        quorumSize: Int = 1,
-                        launcher: String = "posix",
-                        containerizers: String = "mesos",
-                        isolation: Option[String] = None,
-                        imageProviders: Option[String] = None,
-                        mastersFaultDomains: Seq[Option[FaultDomain]] = Seq.empty,
-                        agentsFaultDomains: Seq[Option[FaultDomain]] = Seq.empty,
-                        agentsGpus: Option[Int] = None,
-                        agentSeccompConfigDir: Option[String] = None,
-                        agentSeccompProfileName: Option[String] = None,
-                        restrictedToRoles: Option[String] = Some("public,foo")) {
+    numMasters: Int = 1,
+    numAgents: Int = 1,
+    quorumSize: Int = 1,
+    launcher: String = "posix",
+    containerizers: String = "mesos",
+    isolation: Option[String] = None,
+    imageProviders: Option[String] = None,
+    mastersFaultDomains: Seq[Option[FaultDomain]] = Seq.empty,
+    agentsFaultDomains: Seq[Option[FaultDomain]] = Seq.empty,
+    agentsGpus: Option[Int] = None,
+    agentSeccompConfigDir: Option[String] = None,
+    agentSeccompProfileName: Option[String] = None,
+    restrictedToRoles: Option[String] = Some("public,foo")) {
 
   require(validQuorumSize, "Mesos quorum size should be 0 or smaller than number of agents")
   require(validSeccompConfig, "To enable seccomp, agentSeccompConfigDir should be defined and isolation \"linux/seccomp\" used")
