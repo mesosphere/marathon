@@ -37,6 +37,18 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForTasks(PathId(appInMetrics.id), 1) //make sure, the pod has really started
 
     }
+  }
 
+  "Marathon should launch an resident app as non-default role" in {
+    Given("an app in role dev")
+    val appInDev = residentApp(PathId("/dev/simple-resident-app-with-role"), role = Some("dev"))
+
+    When("The app is deployed")
+    val resultInDev = marathon.createAppV2(appInDev)
+
+    Then("The apps are created")
+    resultInDev should be(Created)
+    waitForDeployment(resultInDev)
+    waitForTasks(PathId(appInDev.id), 1) //make sure the app has really started
   }
 }

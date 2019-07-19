@@ -410,7 +410,8 @@ trait MarathonAppFixtures {
     instances: Int = 1,
     backoffDuration: FiniteDuration = 1.hour,
     portDefinitions: Seq[PortDefinition] = Seq.empty, /* prevent problems by randomized port assignment */
-    constraints: Set[Seq[String]] = Set.empty): App = {
+    constraints: Set[Seq[String]] = Set.empty,
+    role: Option[String] = None): App = {
 
     val cpus: Double = 0.001
     val mem: Double = 1.0
@@ -440,7 +441,8 @@ trait MarathonAppFixtures {
       portDefinitions = Some(portDefinitions),
       backoffSeconds = backoffDuration.toSeconds.toInt,
       upgradeStrategy = Some(UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0.0)),
-      unreachableStrategy = Some(UnreachableDisabled.DefaultValue)
+      unreachableStrategy = Some(UnreachableDisabled.DefaultValue),
+      role = role
     )
 
     app
