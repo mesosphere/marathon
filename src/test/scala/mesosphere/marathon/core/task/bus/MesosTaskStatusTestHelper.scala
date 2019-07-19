@@ -21,11 +21,12 @@ object MesosTaskStatusTestHelper {
     maybeAgentId: Option[SlaveID] = None,
     taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)): TaskStatus = {
 
+    val agentID = maybeAgentId.getOrElse(SlaveID.newBuilder().setValue("agent").build())
     val mesosStatus = TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
       .setState(state)
       .setTimestamp(timestamp.seconds.toDouble)
-    maybeAgentId.foreach(mesosStatus.setSlaveId)
+    mesosStatus.setSlaveId(agentID)
     maybeHealthy.foreach(mesosStatus.setHealthy)
     maybeReason.foreach(mesosStatus.setReason)
     maybeMessage.foreach(mesosStatus.setMessage)
@@ -62,12 +63,12 @@ object MesosTaskStatusTestHelper {
   def failed(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_FAILED, taskId = taskId)
   def finished(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_FINISHED, taskId = taskId)
   def gone(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_GONE, taskId = taskId)
-  def goneByOperator(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None), agentId: Option[SlaveID] = None) =
-    mesosStatus(state = TaskState.TASK_GONE_BY_OPERATOR, taskId = taskId, maybeAgentId = agentId)
+  def goneByOperator(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None), agentId: Option[SlaveID] = None, maybeReason: Option[Reason] = None) =
+    mesosStatus(state = TaskState.TASK_GONE_BY_OPERATOR, taskId = taskId, maybeAgentId = agentId, maybeReason = maybeReason)
   def error(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_ERROR, taskId = taskId)
   def lost(reason: Reason, taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None), since: Timestamp = Timestamp.zero) =
     mesosStatus(TaskState.TASK_LOST, maybeReason = Some(reason), timestamp = since, taskId = taskId)
-  def killed(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_KILLED, taskId = taskId)
+  def killed(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None), maybeReason: Option[Reason] = None) = mesosStatus(state = TaskState.TASK_KILLED, taskId = taskId, maybeReason = maybeReason)
   def killing(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_KILLING, taskId = taskId)
   def unknown(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_UNKNOWN, taskId = taskId)
   def unreachable(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None), since: Timestamp = Timestamp.zero) = {

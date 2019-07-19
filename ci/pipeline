@@ -207,11 +207,16 @@ def buildDockerAndLinuxPackages(): Unit = {
 }
 
 def testDockerAndLinuxPackages(): Unit = {
-  utils.stage("Testing Docker Image, Debian and RedHat Packages") {
-    // create test-bed docker images and run the package tests
-    val testPath = pwd/'tests/'package
-    %('make, "clean")(testPath)
-    %('make, "test", "-j")(testPath)
+  provision.maybeVersion match {
+    case Some(version) if version.contains(".pre.") =>
+      println("Skipping docker image testing as it does not work with pre-release Mesos versions")
+    case _ =>
+      utils.stage("Testing Docker Image, Debian and RedHat Packages") {
+        // create test-bed docker images and run the package tests
+        val testPath = pwd/'tests/'package
+        %('make, "clean")(testPath)
+        %('make, "test", "-j")(testPath)
+      }
   }
 }
 

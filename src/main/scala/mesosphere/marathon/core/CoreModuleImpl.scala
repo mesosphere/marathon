@@ -4,12 +4,13 @@ package core
 import java.time.Clock
 import java.util.concurrent.Executors
 
-import javax.inject.Named
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.EventStream
 import com.google.inject.{Inject, Provider}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
+import javax.inject.Named
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ActorsModule, CrashStrategy, LifecycleState}
 import mesosphere.marathon.core.deployment.DeploymentModule
@@ -38,8 +39,9 @@ import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.{StorageConf, StorageConfig, StorageModule}
 import mesosphere.util.NamedExecutionContext
 import mesosphere.util.state.MesosLeaderInfo
+import org.apache.mesos.Protos.FrameworkID
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Promise}
 import scala.util.Random
 
 /**
@@ -50,6 +52,7 @@ import scala.util.Random
   */
 class CoreModuleImpl @Inject() (
     // external dependencies still wired by guice
+    httpConf: HttpConf,
     marathonConf: MarathonConf,
     eventStream: EventStream,
     @Named(ModuleNames.HOST_PORT) hostPort: String,
@@ -150,6 +153,12 @@ class CoreModuleImpl @Inject() (
     pluginModule.pluginManager
   )(clock)
 
+  private val frameworkIdPromise = Promise[FrameworkID]
+  private val initialFrameworkInfo = frameworkIdPromise.future
+    .map { frameworkId =>
+      MarathonSchedulerDriver.newFrameworkInfo(Some(frameworkId), marathonConf, httpConf)
+    }(ExecutionContexts.callerThread)
+
   override lazy val launchQueueModule = new LaunchQueueModule(
     metricsModule.metrics,
     marathonConf,
@@ -165,7 +174,8 @@ class CoreModuleImpl @Inject() (
     instanceTrackerModule.instanceTracker,
     launcherModule.taskOpFactory,
     groupManagerModule.groupManager,
-    () => marathonScheduler.getLocalRegion
+    () => marathonScheduler.getLocalRegion,
+    initialFrameworkInfo
   )(actorsModule.materializer, ExecutionContext.global)
 
   // PLUGINS
@@ -272,7 +282,9 @@ class CoreModuleImpl @Inject() (
     eventStream,
     taskTerminationModule.taskKillService)(schedulerActionsExecutionContext, actorsModule.materializer)
 
-  override lazy val marathonScheduler: MarathonScheduler = new MarathonScheduler(eventStream, launcherModule.offerProcessor, taskStatusUpdateProcessor, storageModule.frameworkIdRepository, mesosLeaderInfo, marathonConf, crashStrategy)
+  override lazy val marathonScheduler: MarathonScheduler = new MarathonScheduler(
+    eventStream, launcherModule.offerProcessor, taskStatusUpdateProcessor, storageModule.frameworkIdRepository,
+    mesosLeaderInfo, marathonConf, crashStrategy, frameworkIdPromise)
 
   // MesosHeartbeatMonitor decorates MarathonScheduler
   override def mesosHeartbeatMonitor = new MesosHeartbeatMonitor(marathonScheduler, heartbeatActor)

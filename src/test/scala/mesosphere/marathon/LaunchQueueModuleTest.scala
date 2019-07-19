@@ -21,6 +21,7 @@ import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.{AkkaUnitTest, WaitTestSupport}
+import org.apache.mesos.Protos.FrameworkInfo
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers
 
@@ -149,6 +150,8 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       holder
     }
 
+    val initialFrameworkInfo = FrameworkInfo.newBuilder().setUser("test").setName("test").build
+
     lazy val module: LaunchQueueModule = new LaunchQueueModule(
       metrics,
       config,
@@ -161,7 +164,8 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       instanceTracker,
       instanceOpFactory,
       groupManager,
-      localRegion
+      localRegion,
+      Future.successful(initialFrameworkInfo)
     )
 
     def launchQueue = module.launchQueue
