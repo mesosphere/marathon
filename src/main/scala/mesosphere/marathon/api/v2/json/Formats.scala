@@ -446,24 +446,24 @@ trait AppAndGroupFormats {
     }
 
   // TODO: migrate to GroupConversion
-  implicit lazy val GroupInfoWrites: Writes[GroupInfo] =
-    Writes { info =>
-
-      val maybeJson = Seq[Option[JsObject]](
-        info.maybeApps.map(apps => Json.obj("apps" -> apps)),
-        info.maybeGroups.map(groups => Json.obj("groups" -> groups)),
-        info.maybePods.map(pods => Json.obj("pods" -> pods))
-      ).flatten
-
-      val groupJson = Json.obj (
-        "id" -> info.group.id,
-        "dependencies" -> info.group.dependencies,
-        "version" -> info.group.version,
-        "enforceRole" -> info.group.enforceRole
-      )
-
-      maybeJson.foldLeft(groupJson)((result, obj) => result ++ obj)
-    }
+  //  implicit lazy val GroupInfoWrites: Writes[GroupInfo] =
+  //    Writes { info =>
+  //
+  //      val maybeJson = Seq[Option[JsObject]](
+  //        info.maybeApps.map(apps => Json.obj("apps" -> apps)),
+  //        info.maybeGroups.map(groups => Json.obj("groups" -> groups)),
+  //        info.maybePods.map(pods => Json.obj("pods" -> pods))
+  //      ).flatten
+  //
+  //      val groupJson = Json.obj (
+  //        "id" -> info.group.id,
+  //        "dependencies" -> info.group.dependencies,
+  //        "version" -> info.group.version,
+  //        "enforceRole" -> info.group.enforceRole
+  //      )
+  //
+  //      maybeJson.foldLeft(groupJson)((result, obj) => result ++ obj)
+  //    }
 
 }
 
