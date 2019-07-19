@@ -42,8 +42,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     val instanceId = Instance.Id.forRunSpec(runSpecId)
     val launch = new InstanceOpFactoryHelper(
       metrics,
-      Some("principal"),
-      Some("role")).provision(_: Mesos.TaskInfo, _: InstanceUpdateOperation.Provision)
+      Some("principal")).provision(_: Mesos.TaskInfo, _: InstanceUpdateOperation.Provision)
   }
 
   class Fixture {
