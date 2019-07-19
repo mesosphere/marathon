@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "228800a5c50eaddcccb263a101a5c02cb094823f62021130359bb1ec73727836"
+            "sha256": "1a6864901890b3cf22dc60440745872530e48a428797917e1d76df4c79807d72"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -178,7 +178,7 @@
         },
         "dcos-test-utils": {
             "git": "https://github.com/dcos/dcos-test-utils",
-            "ref": "a1a33c5465a9b9370209718fa72ae9429982bf35"
+            "ref": "d2903a23e8dbf009d0bba02f2a479e1e048416b5"
         },
         "idna": {
             "hashes": [
