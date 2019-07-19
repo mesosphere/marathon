@@ -10,8 +10,8 @@ trait ReviveOffersConfig extends ScallopConf {
   // TODO: deprecate this
   lazy val reviveOffersForNewApps = toggle(
     "revive_offers_for_new_apps",
-    descrYes = "(Default) Call reviveOffers for new or changed apps.",
-    descrNo = "Disable reviveOffers for new or changed apps.",
+    descrYes = "Deprecated, has no effect",
+    descrNo = "Deprecated, has no effect",
     hidden = true,
     default = Some(true),
     prefix = "disable_")
