@@ -250,10 +250,10 @@
         },
         "paramiko": {
             "hashes": [
-                "sha256:99f0179bdc176281d21961a003ffdb2ec369daac1a1007241f53374e376576cf",
-                "sha256:f4b2edfa0d226b70bd4ca31ea7e389325990283da23465d572ed1f70a7583041"
+                "sha256:34fb64705ba3d1d5cd20b4fda16377b5ea3c84f5d74356543ecf2263c7fbc9b8",
+                "sha256:c6de454b3be8d35100d95d62b8073e429ed35326d574649f173c0acf7d72b2eb"
             ],
-            "version": "==2.6.0"
+            "version": "==2.4.3"
         },
         "pluggy": {
             "hashes": [
@@ -283,6 +283,13 @@
                 "sha256:dc639b046a6e2cff5bbe40194ad65936d6ba360b52b3c3fe1d08a82dd50b5e53"
             ],
             "version": "==1.8.0"
+        },
+        "pyasn1": {
+            "hashes": [
+                "sha256:da2420fe13a9452d8ae97a0e478adde1dee153b11ba832a95b223a2ba01c10f7",
+                "sha256:da6b43a8c9ae93bc80e2739efb38cc776ba74a886e3e9318d65fe81a8b8a2c6e"
+            ],
+            "version": "==0.4.5"
         },
         "pycparser": {
             "hashes": [
