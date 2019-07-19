@@ -7,6 +7,7 @@
 MAJOR=1
 MINOR=9
 BRANCH_POINT=8228cea
+REF=HEAD
 
 declare -a OTHERARGS
 help() {
