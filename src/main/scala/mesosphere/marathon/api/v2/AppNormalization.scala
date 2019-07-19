@@ -314,7 +314,7 @@ object AppNormalization {
 
     // sanitize accepted resource roles if enabled
     val acceptedResourceRoles =
-      if (config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles)) {
+      if (config.sanitizeAcceptedResourceRoles) {
         sanitizeAcceptedResourceRoles(app, role)
       } else app.acceptedResourceRoles
 
@@ -333,7 +333,7 @@ object AppNormalization {
     def mesosBridgeName: String
     def enabledFeatures: Set[String]
     def roleSettings: RoleSettings
-    def availableDeprecatedFeatures: DeprecatedFeatureSet
+    def sanitizeAcceptedResourceRoles: Boolean
   }
 
   /** static app normalization configuration */
@@ -342,7 +342,7 @@ object AppNormalization {
       override val mesosBridgeName: String,
       enabledFeatures: Set[String],
       roleSettings: RoleSettings,
-      availableDeprecatedFeatures: DeprecatedFeatureSet
+      sanitizeAcceptedResourceRoles: Boolean
   ) extends Config {
 
   }
@@ -354,7 +354,7 @@ object AppNormalization {
         config.mesosBridgeName(),
         config.availableFeatures,
         roleSettings,
-        config.availableDeprecatedFeatures
+        config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles)
       )
   }
 

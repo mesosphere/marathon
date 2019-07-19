@@ -101,11 +101,11 @@ class AppNormalizationTest extends UnitTest {
       defaultNetworkName: Option[String] = None,
       mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName,
       role: Option[String] = None,
-      deprecatedFeatureSet: DeprecatedFeatureSet = DeprecatedFeatureSet.empty(SemVer(1, 9, 0))) = {
+      sanitizeAcceptedResourceRoles: Boolean = true) = {
 
       val roleSettings = role.map(r => RoleSettings(validRoles = Set(r), defaultRole = r)).getOrElse(ValidationHelper.roleSettings)
 
-      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName, Set(), roleSettings, deprecatedFeatureSet)
+      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName, Set(), roleSettings, sanitizeAcceptedResourceRoles)
       Normalization[App] { app =>
         AppNormalization(config).normalized(AppNormalization.forDeprecated(config).normalized(app))
       }
@@ -114,8 +114,8 @@ class AppNormalizationTest extends UnitTest {
     def updateNormalizer(
       defaultNetworkName: Option[String],
       mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName,
-      currentVersion: SemVer = SemVer(1, 9, 0)) = {
-      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName, Set(), ValidationHelper.roleSettings, DeprecatedFeatureSet.empty(currentVersion))
+      sanitizeAcceptedResourceRoles: Boolean = true) = {
+      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName, Set(), ValidationHelper.roleSettings, sanitizeAcceptedResourceRoles)
       Normalization[AppUpdate] { app =>
         AppNormalization.forUpdates(config)
           .normalized(AppNormalization.forDeprecatedUpdates(config).normalized(app))
@@ -640,14 +640,12 @@ class AppNormalizationTest extends UnitTest {
       )
 
       s"the ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} feature is enabled" in {
-        val sanitizationEnabled = DeprecatedFeatureSet(SemVer(1, 9, 0), Set(DeprecatedFeatures.sanitizeAcceptedResourceRoles))
-        val configuredNormalizer = normalizer(role = Some("default_role"), deprecatedFeatureSet = sanitizationEnabled)
+        val configuredNormalizer = normalizer(role = Some("default_role"), sanitizeAcceptedResourceRoles = true)
         raw.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*"))
       }
 
       s"the ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} feature is disabled" in {
-        val sanitizationDisabled = DeprecatedFeatureSet.empty(SemVer(1, 10, 0))
-        val configuredNormalizer = normalizer(role = Some("default_role"), deprecatedFeatureSet = sanitizationDisabled)
+        val configuredNormalizer = normalizer(role = Some("default_role"), sanitizeAcceptedResourceRoles = false)
         raw.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*", "other"))
       }
     }

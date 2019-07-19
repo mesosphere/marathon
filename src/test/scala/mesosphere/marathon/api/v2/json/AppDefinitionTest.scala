@@ -21,7 +21,6 @@ import scala.concurrent.duration._
 
 class AppDefinitionTest extends UnitTest with ValidationTestLike {
   val enabledFeatures = Set("secrets")
-  val deprecatedFeatures = DeprecatedFeatureSet.empty(SemVer(1, 9, 0))
   val enforcedrole = "*"
 
   val validator = AppDefinition.validAppDefinition(enabledFeatures, ValidationHelper.roleSettings)(PluginManager.None)
@@ -29,7 +28,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
   val validatorWithRole = AppDefinition.validAppDefinition(enabledFeatures, RoleSettings(validRoles = Set("someRole"), defaultRole = "someRole"))(PluginManager.None)
 
   private[this] def appNormalization(app: raml.App): raml.App =
-    AppHelpers.appNormalization(AppNormalization.Configuration(None, "mesos-bridge-name", enabledFeatures, ValidationHelper.roleSettings, deprecatedFeatures)).normalized(app)
+    AppHelpers.appNormalization(AppNormalization.Configuration(None, "mesos-bridge-name", enabledFeatures, ValidationHelper.roleSettings, true)).normalized(app)
 
   private[this] def fromJson(json: String): AppDefinition = {
     val raw: raml.App = Json.parse(json).as[raml.App]

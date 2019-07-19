@@ -16,17 +16,20 @@ object PodNormalization {
   /** dynamic pod normalization configuration, useful for migration and/or testing */
   trait Config extends NetworkNormalization.Config {
     def roleSettings: RoleSettings
-    def availableDeprecatedFeatures: DeprecatedFeatureSet
+    def sanitizeAcceptedResourceRoles: Boolean
   }
 
   case class Configuration(
       defaultNetworkName: Option[String],
       roleSettings: RoleSettings,
-      availableDeprecatedFeatures: DeprecatedFeatureSet) extends Config
+      sanitizeAcceptedResourceRoles: Boolean) extends Config
 
   object Configuration {
     def apply(config: MarathonConf, roleSettings: RoleSettings): Config =
-      Configuration(config.defaultNetworkName.toOption, roleSettings, config.availableDeprecatedFeatures)
+      Configuration(
+        config.defaultNetworkName.toOption,
+        roleSettings,
+        config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles))
   }
 
   case class Containers(networks: Seq[Network], containers: Seq[PodContainer])
@@ -94,7 +97,7 @@ object PodNormalization {
     } else pod.scheduling
 
     // sanitize accepted resource roles if enabled
-    if (config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles)) {
+    if (config.sanitizeAcceptedResourceRoles) {
       normalized.map { scheduling =>
         scheduling.copy(placement = sanitizeAcceptedResourceRoles(scheduling.placement, effectiveRole))
       }

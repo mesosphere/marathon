@@ -65,7 +65,7 @@ class PodNormalizationTest extends UnitTest with Inside {
             net.name.value shouldBe "net1"
         }
       }
-      "with default network name" in new Fixture(PodNormalization.Configuration(defaultNetworkName = Some("default1"), ValidationHelper.roleSettings, DeprecatedFeatureSet.empty(SemVer(1, 9, 0)))) {
+      "with default network name" in new Fixture(PodNormalization.Configuration(defaultNetworkName = Some("default1"), ValidationHelper.roleSettings, true)) {
         // replace empty network name with the default
         val withoutNetworkName = template.copy(networks = Seq(Network()))
         inside(withoutNetworkName.normalize.networks) {
@@ -122,7 +122,7 @@ class PodNormalizationTest extends UnitTest with Inside {
         }
       }
 
-      "return the configured role for pods without a role" in new Fixture(config = PodNormalization.Configuration(None, RoleSettings(validRoles = Set("customDefault"), defaultRole = "customDefault"), DeprecatedFeatureSet.empty(SemVer(1, 9, 0)))) {
+      "return the configured role for pods without a role" in new Fixture(config = PodNormalization.Configuration(None, RoleSettings(validRoles = Set("customDefault"), defaultRole = "customDefault"), true)) {
         inside(template.normalize.role) {
           case Some(role) =>
             role shouldBe "customDefault"
@@ -144,8 +144,8 @@ class PodNormalizationTest extends UnitTest with Inside {
         containers = Seq(PodContainer(name = "c", resources = Resources())),
         scheduling = Some(PodSchedulingPolicy(placement = Some(PodPlacementPolicy(acceptedResourceRoles = Seq("*", "other")))))
       )
-      val sanitizationEnabled = PodNormalization.Configuration(None, ValidationHelper.roleSettings, DeprecatedFeatureSet.empty(SemVer(1, 9, 0)))
-      val sanitizationDisabled = PodNormalization.Configuration(None, ValidationHelper.roleSettings, DeprecatedFeatureSet.empty(SemVer(1, 10, 0)))
+      val sanitizationEnabled = PodNormalization.Configuration(None, ValidationHelper.roleSettings, true)
+      val sanitizationDisabled = PodNormalization.Configuration(None, ValidationHelper.roleSettings, false)
 
       s"remove the role if ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} is enabled" in new Fixture(config = sanitizationEnabled) {
         template.normalize.scheduling.value.placement.value.acceptedResourceRoles should contain theSameElementsAs (Set("*"))
@@ -158,7 +158,7 @@ class PodNormalizationTest extends UnitTest with Inside {
 
   }
 
-  abstract class Fixture(config: PodNormalization.Config = PodNormalization.Configuration(None, ValidationHelper.roleSettings, DeprecatedFeatureSet.empty(SemVer(1, 9, 0)))) {
+  abstract class Fixture(config: PodNormalization.Config = PodNormalization.Configuration(None, ValidationHelper.roleSettings, true)) {
     protected implicit val normalization: Normalization[Pod] = PodNormalization(config)
   }
 }
