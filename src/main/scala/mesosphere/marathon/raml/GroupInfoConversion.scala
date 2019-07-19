@@ -3,7 +3,7 @@ package raml
 
 import mesosphere.marathon.core.appinfo.{GroupInfo => CoreGroupInfo}
 
-trait GroupInfoConversion extends AppConversion {
+trait GroupInfoConversion extends AppConversion with PodStatusConversion {
 
   implicit val podRamlWriter: Writes[CoreGroupInfo, GroupInfo] = Writes { info =>
     GroupInfo(
@@ -11,7 +11,8 @@ trait GroupInfoConversion extends AppConversion {
       dependencies = info.group.dependencies.map(_.toString),
       version = Some(info.group.version.toOffsetDateTime),
       enforceRole = Some(info.group.enforceRole),
-      apps = info.maybeApps.fold(Set.empty)(apps => apps.toRaml)
+      apps = info.maybeApps.fold(Set.empty)(apps => apps.toRaml),
+      pods = info.maybePods.getOrElse(Seq.empty).toSet
     )
   }
 
