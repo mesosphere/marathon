@@ -168,25 +168,23 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
         Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
 
       Then("The group info contains apps and groups")
-      result.futureValue.get.maybeGroups should be(defined)
-      result.futureValue.get.maybeApps should be(defined)
-      result.futureValue.get.transitiveApps.get should have size 5
-      result.futureValue.get.maybeGroups.get should have size 1
+      result.futureValue.value.groups should have size 1
+      result.futureValue.value.apps should have size 5
 
       When("querying extending group information without apps")
       val result2 = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty,
         Set(GroupInfo.Embed.Groups))
 
       Then("The group info contains no apps but groups")
-      result2.futureValue.get.maybeGroups should be(defined)
-      result2.futureValue.get.maybeApps should be(empty)
+      result2.futureValue.value.groups should be('nonEmpty)
+      result2.futureValue.value.apps should be(empty)
 
       When("querying extending group information without apps and groups")
       val result3 = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty, Set.empty)
 
       Then("The group info contains no apps nor groups")
-      result3.futureValue.get.maybeGroups should be(empty)
-      result3.futureValue.get.maybeApps should be(empty)
+      result3.futureValue.value.groups should be(empty)
+      result3.futureValue.value.apps should be(empty)
     }
 
     "Selecting with Group Selector filters the result" in {
@@ -207,10 +205,9 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val result = f.infoService.selectGroup(rootGroup.id, selector, Set.empty, Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
 
       Then("The result is filtered by the selector")
-      result.futureValue.get.maybeGroups should be(defined)
-      result.futureValue.get.maybeApps should be(defined)
-      result.futureValue.get.transitiveApps.get should have size 2
-      result.futureValue.get.transitiveGroups.get should have size 2
+      result.futureValue.value.groups should be('nonEmpty)
+      result.futureValue.value.apps should have size 2
+      //      result.futureValue.get.transitiveGroups.get should have size 2
     }
 
     "Selecting with App Selector implicitly gives access to parent groups" in {
@@ -237,10 +234,10 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val result = f.infoService.selectGroup(rootId, selector, Set.empty, Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
 
       Then("The result is filtered by the selector")
-      result.futureValue.get.transitiveGroups.get should have size 1
-      result.futureValue.get.transitiveGroups.get.head.group should be(nestedGroup)
-      result.futureValue.get.transitiveApps.get should have size 1
-      result.futureValue.get.transitiveApps.get.head.app should be(nestedApp1)
+      result.futureValue.value.groups should have size 1
+      result.futureValue.value.groups.head should be(nestedGroup)
+      //      result.futureValue.get.transitiveApps.get should have size 1
+      //      result.futureValue.get.transitiveApps.get.head.app should be(nestedApp1)
     }
   }
 

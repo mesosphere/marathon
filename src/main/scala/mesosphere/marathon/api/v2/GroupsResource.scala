@@ -15,11 +15,10 @@ import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{AuthResource, GroupApiService}
-import mesosphere.marathon.core.appinfo.{GroupInfo, GroupInfoService, Selector}
+import mesosphere.marathon.core.appinfo.{GroupInfoService, Selector}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -92,14 +91,14 @@ class GroupsResource @Inject() (
 
       def groupResponse(id: PathId) =
         infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {
-          case Some(info) => ok(Raml.toRaml(info))
-          case None if id.isRoot => ok(Raml.toRaml(GroupInfo.empty))
+          case Some(info) => ok(info)
+          case None if id.isRoot => ok(raml.GroupInfo(RootGroup.empty.id.toString))
           case None => unknownGroup(id)
         }
 
       def groupVersionResponse(id: PathId, version: Timestamp) =
         infoService.selectGroupVersion(id, version, authorizationSelectors, groupEmbed).map {
-          case Some(info) => ok(Raml.toRaml(info))
+          case Some(info) => ok(info)
           case None => unknownGroup(id)
         }
 

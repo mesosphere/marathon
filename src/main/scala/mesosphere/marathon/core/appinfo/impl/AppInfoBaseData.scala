@@ -69,24 +69,36 @@ class AppInfoBaseData(
     instanceTracker.instancesBySpec()
   }
 
-  def appInfoFuture(app: AppDefinition, embeds: Set[AppInfo.Embed]): Future[AppInfo] = async {
+  def appInfoFuture(app: AppDefinition, embeds: Set[AppInfo.Embed]): Future[raml.AppInfo] = async {
     val appData = new AppData(app)
 
     val taskCountsOpt: Option[TaskCounts] = if (embeds.contains(AppInfo.Embed.Counts)) Some(await(appData.taskCountsFuture)) else None
-    val readinessChecksByAppOpt: Option[Map[PathId, Seq[ReadinessCheckResult]]] = if (embeds.contains(AppInfo.Embed.Readiness)) Some(await(readinessChecksByAppFuture)) else None
+    val readinessChecksByAppOpt: Option[Seq[ReadinessCheckResult]] = if (embeds.contains(AppInfo.Embed.Readiness)) await(readinessChecksByAppFuture).get(app.id) else None
     val runningDeploymentsByAppOpt: Option[Map[PathId, Seq[Identifiable]]] = if (embeds.contains(AppInfo.Embed.Deployments)) Some(await(runningDeploymentsByAppFuture)) else None
     val lastTaskFailureOpt: Option[TaskFailure] = if (embeds.contains(AppInfo.Embed.LastTaskFailure)) await(appData.maybeLastTaskFailureFuture) else None
     val enrichedTasksOpt: Option[Seq[EnrichedTask]] = if (embeds.contains(AppInfo.Embed.Tasks)) Some(await(appData.enrichedTasksFuture)) else None
     val taskStatsOpt: Option[TaskStatsByVersion] = if (embeds.contains(AppInfo.Embed.TaskStats)) Some(await(appData.taskStatsFuture)) else None
 
-    val appInfo = AppInfo(
-      app = app,
-      maybeTasks = enrichedTasksOpt,
-      maybeCounts = taskCountsOpt,
-      maybeDeployments = runningDeploymentsByAppOpt.map(_.apply(app.id)),
-      maybeReadinessCheckResults = readinessChecksByAppOpt.map(_.apply(app.id)),
-      maybeLastTaskFailure = lastTaskFailureOpt,
-      maybeTaskStats = taskStatsOpt
+    // Screw RamlConversions.
+    def convertReadinessCheckResults(readinessCheckResults: Seq[ReadinessCheckResult]): Seq[raml.TaskReadinessCheckResult] = {
+      readinessCheckResults.map { result =>
+        raml.TaskReadinessCheckResult(
+          name = result.name,
+          taskId = result.taskId.idString,
+          ready = result.ready,
+          lastResponse = result.lastResponse.map(response => raml.ReadinessCheckHttpResponse(response.status, response.contentType, response.body))
+        )
+      }
+    }
+
+    val appInfo = raml.AppInfo(
+      app = Raml.toRaml(app),
+      readinessCheckResults = readinessChecksByAppOpt.map(convertReadinessCheckResults).getOrElse(Nil),
+      tasks = enrichedTasksOpt.getOrElse(Seq.empty).map(Raml.toRaml(_)(raml.TaskConversion.enrichedTaskRamlWrite)),
+//      maybeCounts = taskCountsOpt,
+//      maybeDeployments = runningDeploymentsByAppOpt.map(_.apply(app.id)),
+//      maybeLastTaskFailure = lastTaskFailureOpt,
+//      maybeTaskStats = taskStatsOpt
     )
     appInfo
   }

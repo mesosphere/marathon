@@ -37,7 +37,7 @@ private[appinfo] class DefaultInfoService(
     resolvePodInfos(pods, baseData)
   }
 
-  override def selectApp(id: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[AppInfo]] = {
+  override def selectApp(id: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[raml.AppInfo]] = {
     logger.debug(s"queryForAppId $id")
     groupManager.app(id) match {
       case Some(app) if selector.matches(app) => newBaseData().appInfoFuture(app, embed).map(Some(_))
@@ -45,7 +45,7 @@ private[appinfo] class DefaultInfoService(
     }
   }
 
-  override def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] =
+  override def selectAppsBy(selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[raml.AppInfo]] =
     async { // linter:ignore UnnecessaryElseBranch
       logger.debug("queryAll")
       val rootGroup = groupManager.rootGroup()
@@ -55,7 +55,7 @@ private[appinfo] class DefaultInfoService(
     }
 
   override def selectAppsInGroup(groupId: PathId, selector: AppSelector,
-    embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] =
+    embed: Set[AppInfo.Embed]): Future[Seq[raml.AppInfo]] =
 
     async { // linter:ignore UnnecessaryElseBranch
       logger.debug(s"queryAllInGroup $groupId")
@@ -69,7 +69,7 @@ private[appinfo] class DefaultInfoService(
     }
 
   override def selectGroup(groupId: PathId, selectors: GroupInfoService.Selectors,
-    appEmbed: Set[Embed], groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
+    appEmbed: Set[Embed], groupEmbed: Set[GroupInfo.Embed]): Future[Option[raml.GroupInfo]] = {
     groupManager.group(groupId) match {
       case Some(group) => queryForGroup(group, selectors, appEmbed, groupEmbed)
       case None => Future.successful(None)
@@ -77,7 +77,7 @@ private[appinfo] class DefaultInfoService(
   }
 
   override def selectGroupVersion(groupId: PathId, version: Timestamp, selectors: GroupInfoService.Selectors,
-    groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
+    groupEmbed: Set[GroupInfo.Embed]): Future[Option[raml.GroupInfo]] = {
     groupManager.group(groupId, version).flatMap {
       case Some(group) => queryForGroup(group, selectors, Set.empty, groupEmbed)
       case None => Future.successful(None)
@@ -90,7 +90,7 @@ private[appinfo] class DefaultInfoService(
     group: Group,
     selectors: GroupInfoService.Selectors,
     appEmbed: Set[AppInfo.Embed],
-    groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] =
+    groupEmbed: Set[GroupInfo.Embed]): Future[Option[raml.GroupInfo]] =
 
     async { // linter:ignore UnnecessaryElseBranch
       val cachedBaseData = LazyCell(() => newBaseData()) // Work around strange async/eval compile bug in Scala 2.12
@@ -99,7 +99,7 @@ private[appinfo] class DefaultInfoService(
       val groupEmbedPods = groupEmbed(GroupInfo.Embed.Pods)
 
       //fetch all transitive app infos and pod statuses with one request
-      val infoById: Map[PathId, AppInfo] =
+      val infoById: Map[PathId, raml.AppInfo] =
         if (groupEmbedApps) {
           val filteredApps: IndexedSeq[AppDefinition] =
             group.transitiveApps.filterAs(selectors.appSelector.matches)(collection.breakOut)
@@ -107,7 +107,7 @@ private[appinfo] class DefaultInfoService(
             info => info.app.id -> info
           }(collection.breakOut)
         } else {
-          Map.empty[PathId, AppInfo]
+          Map.empty[PathId, raml.AppInfo]
         }
 
       val statusById: Map[PathId, PodStatus] =
@@ -123,7 +123,7 @@ private[appinfo] class DefaultInfoService(
 
       //already matched groups are stored here for performance reasons (match only once)
       val alreadyMatched = mutable.Map.empty[PathId, Boolean]
-      def queryGroup(ref: Group): Option[GroupInfo] = {
+      def queryGroup(ref: Group): Option[raml.GroupInfo] = {
         //if a subgroup is allowed, we also have to allow all parents implicitly
         def groupMatches(group: Group): Boolean = {
           alreadyMatched.getOrElseUpdate(
@@ -133,23 +133,29 @@ private[appinfo] class DefaultInfoService(
               group.apps.keys.exists(infoById.contains)) || group.pods.keys.exists(statusById.contains)
         }
         if (groupMatches(ref)) {
-          val groups: Option[Seq[GroupInfo]] =
+          val groups: Set[raml.GroupInfo] =
             if (groupEmbed(GroupInfo.Embed.Groups))
-              Some(ref.groupsById.values.toIndexedSeq.flatMap(queryGroup).sortBy(_.group.id))
+              ref.groupsById.values.flatMap(queryGroup).toSet
             else
-              None
-          val apps: Option[Seq[AppInfo]] =
+              Set.empty
+          val apps: Set[raml.AppInfo] =
             if (groupEmbedApps)
-              Some(ref.apps.keys.flatMap(infoById.get)(collection.breakOut).sortBy(_.app.id))
+              ref.apps.keys.flatMap(infoById.get).toSet
             else
-              None
-          val pods: Option[Seq[PodStatus]] =
+              Set.empty
+          val pods: Set[PodStatus] =
             if (groupEmbedPods)
-              Some(ref.pods.keys.flatMap(statusById.get)(collection.breakOut).sortBy(_.id))
+              ref.pods.keys.flatMap(statusById.get)(collection.breakOut).sortBy(_.id).toSet
             else
-              None
+              Set.empty
 
-          Some(GroupInfo(ref, apps, pods, groups))
+          Some(raml.GroupInfo(
+            id = ref.id.toString,
+            apps = apps,
+            pods = pods,
+            groups = groups,
+            version = Some(ref.version.toOffsetDateTime),
+            enforceRole = Some(ref.enforceRole)))
         } else None
       }
       queryGroup(group)
@@ -158,7 +164,7 @@ private[appinfo] class DefaultInfoService(
   private[this] def resolveAppInfos(
     specs: Seq[RunSpec],
     embed: Set[AppInfo.Embed],
-    baseData: AppInfoBaseData = newBaseData()): Future[Seq[AppInfo]] = Future.sequence(specs.collect {
+    baseData: AppInfoBaseData = newBaseData()): Future[Seq[raml.AppInfo]] = Future.sequence(specs.collect {
     case app: AppDefinition =>
       baseData.appInfoFuture(app, embed)
   })

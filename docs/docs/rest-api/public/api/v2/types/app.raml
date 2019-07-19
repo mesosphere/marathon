@@ -15,6 +15,7 @@ uses:
   readiness: readinessCheck.raml
   secrets: secrets.raml
   strings: stringTypes.raml
+  task: task.raml
   versionInfo: versionInfo.raml
   pragma: pragma.raml
   unreachableStrategy: unreachableStrategy.raml
@@ -341,3 +342,15 @@ types:
     type: object
     properties:
       versions: datetime[]
+
+  AppInfo:
+    type: object
+    properties:
+      app: App
+       # info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),
+      # info.maybeDeployments.map(deployments => Json.obj("deployments" -> deployments)),
+      readinessCheckResults?: readiness.TaskReadinessCheckResult[]
+      tasks?: task.Task[]
+      # info.maybeLastTaskFailure.map(lastFailure => Json.obj("lastTaskFailure" -> lastFailure)),
+      # info.maybeTaskStats.map(taskStats => Json.obj("taskStats" -> taskStats))
+
