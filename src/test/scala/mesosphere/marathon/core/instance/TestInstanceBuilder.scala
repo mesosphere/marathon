@@ -155,7 +155,8 @@ object TestInstanceBuilder {
       state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
       tasksMap = Map.empty,
       runSpec = runSpec,
-      None, "*"
+      reservation = None,
+      role = "*"
     )
   }
 
@@ -171,7 +172,8 @@ object TestInstanceBuilder {
       state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
       tasksMap = Map.empty,
       runSpec = runSpec,
-      None
+      reservation = None,
+      role = runSpec.role
     )
   }
 

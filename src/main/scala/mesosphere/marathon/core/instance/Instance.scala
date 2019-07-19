@@ -63,8 +63,6 @@ case class Instance(
 
   override def region: Option[String] = agentInfo.flatMap(_.region)
 
-  def role: String = runSpec.role
-
   /**
     * Factory method for creating provisioned instance from Scheduled instance
     * @return new instance in a provisioned state

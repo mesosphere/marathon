@@ -58,6 +58,7 @@ case class ITEnrichedTask(
     version: Option[String],
     region: Option[String],
     zone: Option[String],
+    role: String,
     healthCheckResults: Seq[ITHealthCheckResult]) {
 
   def launched: Boolean = startedAt.nonEmpty
@@ -129,8 +130,9 @@ class MarathonFacade(
     (__ \ "version").formatNullable[String] ~
     (__ \ "region").formatNullable[String] ~
     (__ \ "zone").formatNullable[String] ~
+    (__ \ "role").format[String] ~
     (__ \ "healthCheckResults").formatWithDefault[Seq[ITHealthCheckResult]](Nil)
-  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
+  )(ITEnrichedTask, unlift(ITEnrichedTask.unapply))
 
   def isInBaseGroup(pathId: PathId): Boolean = {
     pathId.path.startsWith(baseGroup.path)
