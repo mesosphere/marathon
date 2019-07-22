@@ -38,7 +38,7 @@ object RoleSettings extends StrictLogging {
       val topLevelGroup = rootGroup.group(topLevelGroupPath)
 
       val defaultForEnforceFromConfig: Boolean = false // TODO: Use value from config instead
-      val enforceRole = topLevelGroup.flatMap(_.enforceRole).getOrElse(defaultForEnforceFromConfig)
+      val enforceRole = topLevelGroup.fold(defaultForEnforceFromConfig)(_.enforceRole)
 
       if (topLevelGroup.isEmpty) {
         // TODO: Fetch top-level group even if it's in the process of creation

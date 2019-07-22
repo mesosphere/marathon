@@ -16,8 +16,6 @@ import scala.collection.immutable.Seq
 
 object ModelValidationTest {
 
-  implicit val groupUpdateValidator: Validator[GroupUpdate] = Group.validNestedGroupUpdateWithBase(PathId.empty)
-
   case class ImportantTitle(name: String)
 
   private implicit val mrImportantValidator: Validator[ImportantTitle] = validator[ImportantTitle] { m =>
@@ -45,6 +43,7 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
 
   "ModelValidation" should {
     "A group update should pass validation" in {
+      implicit val groupUpdateValidator: Validator[GroupUpdate] = Group.validNestedGroupUpdateWithBase(PathId.empty, RootGroup.empty)
       val update = GroupUpdate(id = Some("/a/b/c"))
 
       validate(update).isSuccess should be(true)

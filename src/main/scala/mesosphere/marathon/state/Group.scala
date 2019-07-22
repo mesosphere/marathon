@@ -22,9 +22,9 @@ class Group(
     val groupsById: Map[Group.GroupKey, Group] = defaultGroups,
     val dependencies: Set[PathId] = defaultDependencies,
     val version: Timestamp = defaultVersion,
-    val enforceRole: Option[Boolean] = None) extends IGroup {
+    val enforceRole: Boolean = false) extends IGroup {
 
-  require((id.parent.isRoot && enforceRole.isDefined) || enforceRole.isEmpty, "Only top-level groups can define the enforce role parameter.")
+  require((!id.parent.isRoot && !enforceRole) || id.parent.isRoot, "Only top-level groups can enforce roles.")
 
   /**
     * Get app from this group or any child group.
@@ -121,8 +121,16 @@ class Group(
     val summarizedGroups = summarize(groupsById.valuesIterator.map(_.id))
     val summarizedDependencies = summarize(dependencies.iterator)
 
-    s"Group($id, apps = $summarizedApps, pods = $summarizedPods, groups = $summarizedGroups, dependencies = $summarizedDependencies, version = $version)"
+    s"Group($id, apps = $summarizedApps, pods = $summarizedPods, groups = $summarizedGroups, dependencies = $summarizedDependencies, version = $version, enforceRole = $enforceRole)"
   }
+
+  /** @return a copy of this group with an updated `enforceRole` field. */
+  def withEnforceRole(enforceRole: Boolean): Group =
+    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, enforceRole)
+
+  /** @return a copy of this group with the removed `enforceRole` field. */
+  def withoutEnforceRole(): Group =
+    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, false)
 }
 
 object Group extends StrictLogging {
@@ -134,9 +142,9 @@ object Group extends StrictLogging {
     pods: Map[PathId, PodDefinition] = Group.defaultPods,
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
     dependencies: Set[PathId] = Group.defaultDependencies,
-    version: Timestamp = Group.defaultVersion): Group = {
-    if (id.parent.isRoot) new Group(id, apps, pods, groupsById, dependencies, version, Some(false))
-    else new Group(id, apps, pods, groupsById, dependencies, version, None)
+    version: Timestamp = Group.defaultVersion,
+    enforceRole: Boolean = false): Group = {
+    new Group(id, apps, pods, groupsById, dependencies, version, enforceRole)
   }
 
   def empty(id: PathId): Group =
@@ -250,9 +258,17 @@ object Group extends StrictLogging {
   def emptyUpdate(id: PathId): raml.GroupUpdate = raml.GroupUpdate(Some(id.toString))
 
   /** requires that apps are in canonical form */
-  def validNestedGroupUpdateWithBase(base: PathId): Validator[raml.GroupUpdate] =
+  def validNestedGroupUpdateWithBase(base: PathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] =
     validator[raml.GroupUpdate] { group =>
       group is notNull
+
+      // Only top-level groups are allowed to set the enforce role parameter.
+      if (group.enforceRole.contains(true)) {
+        group.id.map(_.toPath) is optional(PathId.topLevel)
+      }
+
+      // Enforce role is not allowed to be updated.
+      group.enforceRole is noEnforceRoleUpdate(originalRootGroup, group.id.map(_.toPath))
 
       group.version is theOnlyDefinedOptionIn(group)
       group.scaleBy is theOnlyDefinedOptionIn(group)
@@ -264,6 +280,24 @@ object Group extends StrictLogging {
       group.apps is optional(every(
         AppValidation.validNestedApp(group.id.fold(base)(PathId(_).canonicalPath(base)))))
       group.groups is optional(every(
-        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)))))
+        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup)))
     }
+
+  case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[PathId]) extends Validator[Option[Boolean]] {
+
+    def apply(maybeNewEnforceRole: Option[Boolean]) = {
+      val originalGroup = updatedGroupId.flatMap(originalRootGroup.group) // TODO: why is groupUpdate.id optional? What is the semantic there?
+      (maybeNewEnforceRole, originalGroup.map(_.enforceRole)) match {
+        case (None, None) => Success
+        case (Some(newEnforceRole), None) if originalGroup.nonEmpty =>
+          Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated to $newEnforceRole for $updatedGroupId. Use a partial update instead.")))
+        case (None, Some(_)) =>
+          Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be removed from $updatedGroupId.")))
+        case (Some(newEnforceRole), Some(oldEnforceRole)) =>
+          if (newEnforceRole == oldEnforceRole) Success
+          else Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated from $oldEnforceRole to $newEnforceRole for $updatedGroupId. Use a pratial update instead.")))
+        case _ => Success
+      }
+    }
+  }
 }

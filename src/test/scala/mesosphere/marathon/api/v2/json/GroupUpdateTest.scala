@@ -3,7 +3,7 @@ package api.v2.json
 
 import com.wix.accord.validate
 import mesosphere.UnitTest
-import mesosphere.marathon.api.v2.{AppNormalization, ValidationHelper}
+import mesosphere.marathon.api.v2.{AppNormalization, GroupNormalization, ValidationHelper}
 import mesosphere.marathon.raml.{App, GroupConversion, GroupUpdate, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -36,7 +36,8 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val timestamp = Timestamp.now()
 
       When("The update is performed")
-      val result: Group = Raml.fromRaml(GroupConversion(update, rootGroup, timestamp) -> appConversionFunc)
+      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.empty).normalized(update)
+      val result: Group = Raml.fromRaml(GroupConversion(normalized, rootGroup, timestamp) -> appConversionFunc)
 
       validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
@@ -80,8 +81,9 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val timestamp = Timestamp.now()
 
       When("The update is performed")
+      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.empty).normalized(update)
       val result: RootGroup = RootGroup.fromGroup(Raml.fromRaml(
-        GroupConversion(update, actual, timestamp) -> appConversionFunc))
+        GroupConversion(normalized, actual, timestamp) -> appConversionFunc))
 
       validate(result)(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
@@ -130,7 +132,8 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       )
 
       val timestamp = Timestamp.now()
-      val next = Raml.fromRaml(GroupConversion(update, current, timestamp) -> appConversionFunc)
+      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, update.id.get.toPath).normalized(update)
+      val next = Raml.fromRaml(GroupConversion(normalized, current, timestamp) -> appConversionFunc)
       val result = createRootGroup(groups = Set(next))
 
       validate(result)(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
@@ -176,8 +179,9 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       )))
 
       When("The update is performed")
+      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.empty).normalized(update)
       val result = Raml.fromRaml(
-        GroupConversion(update, createRootGroup(), Timestamp.now()) -> appConversionFunc)
+        GroupConversion(normalized, createRootGroup(), Timestamp.now()) -> appConversionFunc)
 
       validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
