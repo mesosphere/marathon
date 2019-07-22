@@ -275,7 +275,7 @@ def test_run_app_with_specified_user():
 def test_run_app_with_non_existing_user():
     """Runs an app with a non-existing user, which should be failing."""
 
-    app_def = apps.sleep_app()
+    app_def = apps.sleep_app(app_id='non-existing-user')
     app_def['user'] = 'bad'
 
     client = marathon.create_client()
