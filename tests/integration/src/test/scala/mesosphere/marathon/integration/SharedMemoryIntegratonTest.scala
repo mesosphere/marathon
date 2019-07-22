@@ -79,7 +79,7 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
       val facade = AppMockFacade(hosts.head, ports.head)
 
       val ipcInfoString = facade.get(s"/ipcinfo").futureValue
-      ipcInfoString should contain("Filesystem     1M-blocks  Used Available")
+      ipcInfoString should include("Filesystem     1M-blocks  Used Available")
 
       ipcInfoString
     }
@@ -188,8 +188,8 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
       logger.info("IPCInfo1 is: " + ipcInfoString1)
       logger.info("IPCInfo2 is: " + ipcInfoString2)
 
-      ipcInfoString1 should contain("Filesystem     1M-blocks  Used Available")
-      ipcInfoString2 should contain("Filesystem     1M-blocks  Used Available")
+      ipcInfoString1 should include("Filesystem     1M-blocks  Used Available")
+      ipcInfoString2 should include("Filesystem     1M-blocks  Used Available")
 
       (ipcInfoString1, ipcInfoString2)
     }
