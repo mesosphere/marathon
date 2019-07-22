@@ -247,7 +247,7 @@ Marathon can request all available offers from Mesos again -- even those that it
 calling the underlying `reviveOffers` API call to often, you can configure the minimal delay between subsequent
 invocations of this call.
 
-* <span class="label label-default">v0.11.0</span> `--min_revive_offers_interval` (Optional. Default: 30000):
+* <span class="label label-default">v0.11.0</span> `--min_revive_offers_interval` (Optional. Default: 5000):
     Do not ask for all offers (also already seen ones) more often than this interval (ms).
 
 The order in which mesos receives `reviveOffers` and `declineOffer` calls is not guaranteed. Therefore, as
