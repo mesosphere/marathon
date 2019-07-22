@@ -213,7 +213,9 @@ class GroupsResource @Inject() (
 
         def updateGroup(maybeGroup: Option[Group]): Group = {
           maybeGroup match {
-            case Some(group) => normalized.enforceRole.fold(group.withoutEnforceRole())(group.withEnforceRole(_))
+            case Some(group) =>
+              checkAuthorization(UpdateGroup, group)
+              normalized.enforceRole.fold(group.withoutEnforceRole())(group.withEnforceRole(_))
             case None => throw new RuntimeException(s"This is a bug. Group $id was not found this should have been caught by the validation.")
           }
         }
