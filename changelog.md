@@ -8,7 +8,7 @@ Marathon 1.9 brings support for multirole, enabling you to launch services for d
 
 The role field can now be optionally specified for a service. However, the value of this field may only be sent to one of two values:
 
-* The default role as specified by `--mesos_role c`ommand line parameter
+* The default role as specified by `--mesos_role` command line parameter
 * The name of the top-level group (this is referred to as the group-role)
 
 This feature was implement it in a way that preserves backwards functionality, allowing services to continue running with the same resource roles, and same service definitions, exactly as before.
