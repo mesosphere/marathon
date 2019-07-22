@@ -47,15 +47,18 @@ class InstanceOpFactoryImpl(
     logger.debug(s"Matching offer ${request.offer.getId}")
     val scheduledInstances = request.scheduledInstances
 
-    val result: OfferMatchResult = scheduledInstances.head match {
-      case scheduledInstance @ Instance(_, _, _, _, app: AppDefinition, _, _) =>
-        if (app.isResident) inferForResidents(request, scheduledInstance)
-        else inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, scheduledInstance)
-      case scheduledInstance @ Instance(_, _, _, _, pod: PodDefinition, _, _) =>
-        if (pod.isResident) inferForResidents(request, scheduledInstance)
-        else inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, scheduledInstance)
-      case Instance(_, _, _, _, runSpec, _, _) =>
-        throw new IllegalArgumentException(s"unsupported runSpec object ${runSpec}")
+    // scheduledInstances is a nonEmpyIterable so accessing head is safe
+    val firstScheduledInstance = scheduledInstances.head
+
+    val result: OfferMatchResult = firstScheduledInstance.runSpec match {
+      case app: AppDefinition =>
+        if (app.isResident) inferForResidents(request, firstScheduledInstance)
+        else inferNormalTaskOp(app, request.instances, request.offer, request.localRegion, firstScheduledInstance)
+      case pod: PodDefinition =>
+        if (pod.isResident) inferForResidents(request, firstScheduledInstance)
+        else inferPodInstanceOp(pod, request.instances, request.offer, request.localRegion, firstScheduledInstance)
+      case unexpected: RunSpec =>
+        throw new IllegalArgumentException(s"unsupported runSpec object ${unexpected}")
     }
 
     result match {

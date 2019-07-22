@@ -23,6 +23,18 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.matching.Regex
 
+/**
+  * Internal state of a instantiated [[RunSpec]], ie instance of an [[AppDefinition]]
+  * or [[mesosphere.marathon.core.pod.PodDefinition]].
+  *
+  * Also has an [[mesosphere.marathon.state.Instance]] which is the storage model and an
+  * [[mesosphere.marathon.raml.Instance]] for the API
+  *
+  * @param role The Mesos role for the resources allocated to this instance. It isn't possible to change a
+  *             reservation's role. In the case of resident services, we allow the operator to change the
+  *             service role without deleting existing instances reserved to the former role. Because of this,
+  *             the instance role can differ from the service role, and must be persisted separately.
+  */
 case class Instance(
     instanceId: Instance.Id,
     agentInfo: Option[Instance.AgentInfo],

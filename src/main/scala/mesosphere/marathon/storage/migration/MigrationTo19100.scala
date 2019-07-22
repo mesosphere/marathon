@@ -56,10 +56,10 @@ class MigrationTo19100(
       (__ \ "state").read[InstanceState] ~
       (__ \ "reservation").readNullable[Reservation] ~
       (__ \ "role").readNullable[String]
-    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation, rawRole) =>
+    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation, persistedRole) =>
         logger.info(s"Migrate $instanceId")
 
-        val role = rawRole.orElse(Some(defaultMesosRole))
+        val role = persistedRole.orElse(Some(defaultMesosRole))
 
         new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation, role)
       }
