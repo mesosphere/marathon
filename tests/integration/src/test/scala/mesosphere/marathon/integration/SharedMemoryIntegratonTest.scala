@@ -79,7 +79,8 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
       val facade = AppMockFacade(hosts.head, ports.head)
 
       val ipcInfoString = facade.get(s"/ipcinfo").futureValue
-      ipcInfoString should include("Filesystem     1M-blocks  Used Available")
+      logger.info("IpcInfo is: " + ipcInfoString)
+      ipcInfoString should include("=======")
 
       ipcInfoString
     }
@@ -175,6 +176,9 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
     val (ipcInfo1:String, ipcInfo2:String) = eventually {
       marathon.status(pod.id) should be(Stable)
       val status = marathon.status(pod.id).value
+
+      logger.info("Query PodStatus: " + status )
+
       val hosts = status.instances.flatMap(_.agentHostname)
       hosts should have size (1)
       val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
@@ -188,8 +192,8 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
       logger.info("IPCInfo1 is: " + ipcInfoString1)
       logger.info("IPCInfo2 is: " + ipcInfoString2)
 
-      ipcInfoString1 should include("Filesystem     1M-blocks  Used Available")
-      ipcInfoString2 should include("Filesystem     1M-blocks  Used Available")
+      ipcInfoString1 should include("=======")
+      ipcInfoString2 should include("=======")
 
       (ipcInfoString1, ipcInfoString2)
     }
