@@ -220,9 +220,12 @@ object ReviveOffersStreamLogic extends StrictLogging {
     }
 
     def handleTick(): List[RoleDirective] = {
+      // Decrease tick counts and filter out those that are zero.
       val newRepeatIn = repeatIn.collect {
         case (k, v) if v >= 1 => k -> (v - 1)
       }
+
+      // Repeat revives for those roles that waited for a tick.
       val rolesForReviveRepetition = newRepeatIn.iterator.collect {
         case (role, counter) if counter == 0 && currentRoleState.get(role).contains(OffersWanted) => role
       }.toSet
