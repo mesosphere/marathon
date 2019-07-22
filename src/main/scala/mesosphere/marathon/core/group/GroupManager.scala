@@ -20,14 +20,7 @@ import scala.collection.immutable.Seq
   *
   * Only 1 update to the root will be processed at a time.
   */
-trait GroupManager {
-
-  /**
-    * Get a root group, fetching it from a persistence store if necessary.
-    *
-    * @return a root group
-    */
-  def rootGroup(): RootGroup
+trait GroupManager extends GroupManager.CurrentRootGroupRetriever {
 
   /**
     * Get a root group.
@@ -211,5 +204,17 @@ trait GroupManager {
     * @return Done if invalidation was successful
     */
   def invalidateGroupCache(): Future[Done]
+
+}
+
+object GroupManager {
+  trait CurrentRootGroupRetriever {
+    /**
+      * Get a root group, fetching it from a persistence store if necessary.
+      *
+      * @return a root group
+      */
+    def rootGroup(): RootGroup
+  }
 
 }
