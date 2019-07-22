@@ -15,7 +15,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     restrictedToRoles = None
   )
   override lazy val marathonArgs = Map(
-    "mesos_role" -> "*"
+    "mesos_role" -> "foo"
   )
 
   "MultiRole" should {
@@ -95,10 +95,10 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("The app is scaled to 2")
       val resultOfScale = marathon.updateApp(appId, updatedApp.copy(instances = Some(2)))
 
-      resultOfUpdate should be(OK)
-      waitForDeployment(resultOfUpdate)
+      resultOfScale should be(OK)
+      waitForDeployment(resultOfScale)
 
-      waitForTasks(PathId(appInDev.id), 1) //make sure the app has restarted
+      waitForTasks(PathId(appInDev.id), 2) // make sure both apps have started
 
       Given("The Update is done")
       taskListResult = marathon.tasks(appId)
