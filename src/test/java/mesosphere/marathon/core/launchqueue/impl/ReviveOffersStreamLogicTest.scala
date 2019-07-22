@@ -112,6 +112,26 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
       logic.handleTick() shouldBe Nil
 
     }
+
+    "send a repeat two times every other tick" in {
+      val logic = new ReviveOffersStreamLogic.ReviveRepeaterLogic
+
+      logic.processRoleDirective(UpdateFramework(Map("role" -> OffersWanted), Set("role"), Set.empty))
+      logic.handleTick() shouldBe Nil
+      logic.handleTick() shouldBe List(IssueRevive(Set("role")))
+
+      logic.processRoleDirective(IssueRevive(Set("role")))
+      logic.handleTick() shouldBe Nil
+
+      logic.handleTick() shouldBe List(IssueRevive(Set("role")))
+      logic.handleTick() shouldBe Nil
+
+      logic.handleTick() shouldBe List(IssueRevive(Set("role")))
+      logic.handleTick() shouldBe Nil
+
+      logic.handleTick() shouldBe List(IssueRevive(Set("role")))
+      logic.handleTick() shouldBe Nil
+    }
   }
 
   "Suppress and revive without throttling" should {

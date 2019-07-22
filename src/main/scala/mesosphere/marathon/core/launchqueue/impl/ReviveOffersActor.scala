@@ -102,19 +102,19 @@ class ReviveOffersActor(
   val reviveSuppressMetrics: Sink[RoleDirective, Future[Done]] = Sink.foreach {
     case UpdateFramework(newState, newlyRevived, newlySuppressed) =>
       newlyRevived.foreach { role =>
-        logger.info(s"Role ${role} newly revived via update framework call")
+        logger.info(s"Role '${role}' newly revived via update framework call")
         reviveCountMetric.increment()
       }
 
       newlySuppressed.foreach { role =>
-        logger.info(s"Role ${role} newly suppressed via update framework call")
+        logger.info(s"Role '${role}' newly suppressed via update framework call")
         suppressCountMetric.increment()
       }
 
     case IssueRevive(roles) =>
       roles.foreach { role =>
         reviveCountMetric.increment()
-        logger.info(s"Role ${role} explicitly revived")
+        logger.info(s"Role '${role}' explicitly revived")
       }
   }
 
