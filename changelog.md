@@ -34,6 +34,18 @@ is removed with `1.9.x`.
 
 When Marathon receives a `TASK_GONE_BY_OPERATOR` or `TASK_KILLED` status update with a reason indicating that the agent is being drained, any delay for the related run spec will be deleted. This is to speed up the process of replacing tasks from drained agents.
 
+### Deprecated features
+
+#### Deprecation and eventual removal of the command line flags `--revive_offer_repetitions` and `--revive_offers_for_new_apps`
+
+The command line options `--revive_offers_port_new_apps` and `--revive_offers_repetitions` have been deprecated in Marathon 1.9. Specifying these command-line arguments no longer has any effect. These command-line options will be completely removed in Marathon 1.10, where specifying them will be considered an error.
+
+Instead of specifying `--revive_offers_port_new_apps`, one can achieve similar effects by specifying a larger `--min_revive_offers_interval`, which will reduce the burden and offer starvation in clusters with lots of frameworks.
+
+Revive offers repetitions functionality no longer optional; after the duration specified by ```min_revive_offers_interval` since the last revive for role, offers are still wanted, a revive is repeated once (and only once).
+
+For more detailed information, see the JIRA ticket [MARATHON-8663](https://jira.mesosphere.com/browse/MARATHON-8663)
+
 ## Changes from 1.8.194 to 1.8.xxx
 
 ### Revive and Suppress Refactoring
