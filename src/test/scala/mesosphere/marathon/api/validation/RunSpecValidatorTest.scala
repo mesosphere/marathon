@@ -18,7 +18,7 @@ import scala.reflect.ClassTag
 
 class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
-  val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings)
+  val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings("foo"))
   private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set(), () => config.defaultNetworkName)
   private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), config.roleSettings)(PluginManager.None)
   private def validContainer(networks: Seq[Network] = Nil) = Container.validContainer(networks, Set())
@@ -686,7 +686,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       def residentApp(id: String, volumes: Seq[VolumeWithMount[PersistentVolume]]): AppDefinition = {
         AppDefinition(
           id = PathId(id),
-          role = "*",
+          role = "foo",
           cmd = Some("test"),
           container = Some(Container.Mesos(volumes)),
           portDefinitions = Seq(PortDefinition(0)),
@@ -702,6 +702,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         """
         |{
         |  "id": "/cassandra",
+        |  "role": "foo",
         |  "cpus": 2,
         |  "mem": 2048,
         |  "instances": 1,

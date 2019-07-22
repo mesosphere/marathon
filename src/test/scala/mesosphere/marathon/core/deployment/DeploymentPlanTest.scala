@@ -461,7 +461,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
     def residentApp(id: String, volumes: Seq[VolumeWithMount[PersistentVolume]]): AppDefinition = {
       AppDefinition(
         id = PathId(id),
-        role = "*",
+        role = "foo",
         cmd = Some("foo"),
         container = Some(Container.Mesos(volumes)),
         unreachableStrategy = UnreachableDisabled
