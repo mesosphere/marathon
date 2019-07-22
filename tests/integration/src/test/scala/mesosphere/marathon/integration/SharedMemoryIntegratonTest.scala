@@ -69,7 +69,7 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
     val createResult = marathon.createPodV2(pod)
     createResult should be(Created)
     waitForDeployment(createResult)
-    eventually {
+    val ipcInfo = eventually {
       marathon.status(pod.id) should be(Stable)
       val status = marathon.status(pod.id).value
       val hosts = status.instances.flatMap(_.agentHostname)
@@ -79,18 +79,21 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
       val facade = AppMockFacade(hosts.head, ports.head)
 
       val ipcInfoString = facade.get(s"/ipcinfo").futureValue
+      ipcInfoString should contain("Filesystem     1M-blocks  Used Available")
 
-      logger.info("IPCInfo is: " + ipcInfoString)
-
-      val shmFsSizeRegex = "tmpfs\\s+([0-9]+)\\s+[0-9]+\\s+[0-9]+\\s+[0-9]+%\\s+/dev/shm".r
-      val shmFsSizeMatch = shmFsSizeRegex.findFirstMatchIn(ipcInfoString)
-
-      logger.info("Found Match: " + shmFsSizeMatch + " ==> " + shmFsSizeMatch.map(_.group(1)))
-
-      shmFsSizeMatch.value.group(1) should be(shmSize)
-
-      facade
+      ipcInfoString
     }
+
+    logger.info("IPCInfo is: " + ipcInfo)
+
+    val shmFsSizeRegex = "tmpfs\\s+([0-9]+)\\s+[0-9]+\\s+[0-9]+\\s+[0-9]+%\\s+/dev/shm".r
+    val shmFsSizeMatch = shmFsSizeRegex.findFirstMatchIn(ipcInfo)
+
+    logger.info("Found Match: " + shmFsSizeMatch + " ==> " + shmFsSizeMatch.map(_.group(1)))
+
+    val shmSizeFromIpcInfo = shmFsSizeMatch.value.group(1)
+
+    shmSizeFromIpcInfo should be("" + shmSize)
 
   }
 
@@ -201,8 +204,8 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
     val shmSize1 = shmFsSizeMatch1.value.group(1)
     val shmSize2 = shmFsSizeMatch2.value.group(1)
 
-    shmSize1 should be(shmSize)
-    shmSize2 should be(shmSize)
+    shmSize1 should be("" + shmSize)
+    shmSize2 should be("" + shmSize)
 
     Then("The IPC ID should be the same for both containers")
     val ipcIdRegex = "=======[0-9]+\\s+=======".r
