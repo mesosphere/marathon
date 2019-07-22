@@ -461,7 +461,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
-        response.getEntity.toString should include("Resident apps can not have the role *")
+        response.getEntity.toString should include("Resident pods cannot have the role *")
       }
     }
 
