@@ -23,6 +23,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
   private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), config.roleSettings)(PluginManager.None)
   private def validContainer(networks: Seq[Network] = Nil) = Container.validContainer(networks, Set())
 
+
   private[this] def testValidId(id: String): Unit = {
     val app = AppDefinition(
       id = PathId(id),
