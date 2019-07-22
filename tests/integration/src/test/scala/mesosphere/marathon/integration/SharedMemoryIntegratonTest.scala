@@ -144,7 +144,7 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
         ),
         MesosContainer(
           name = "task2",
-          exec = Some(raml.MesosExec(raml.ShellCommand(appMockCommand("$ENDPOINT_TASK1")))),
+          exec = Some(raml.MesosExec(raml.ShellCommand(appMockCommand("$ENDPOINT_TASK2")))),
           resources = raml.Resources(cpus = 0.1, mem = 32.0),
           endpoints = Seq(raml.Endpoint(name = "task2", hostPort = Some(0))),
           healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task2")), path = Some("/ping"))),
