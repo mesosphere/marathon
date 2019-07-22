@@ -98,7 +98,7 @@ class ReviveOffersActor(
     done.pipeTo(self)
   }
 
-  val reviveSuppressMetrics: Flow[RoleDirective, RoleDirective, NotUsed] = Flow[RoleDirective] {
+  val reviveSuppressMetrics: Flow[RoleDirective, RoleDirective, NotUsed] = Flow[RoleDirective].map {
     case directive @ UpdateFramework(newState, newlyRevived, newlySuppressed) =>
       newlyRevived.foreach { role =>
         logger.info(s"Role '${role}' newly revived via update framework call")
