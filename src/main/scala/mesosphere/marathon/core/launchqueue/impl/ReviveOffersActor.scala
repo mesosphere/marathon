@@ -5,7 +5,7 @@ import akka.actor.{Actor, Props, Stash, Status}
 import akka.event.LoggingReceive
 import akka.pattern.pipe
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.{Sink, Source}
+import akka.stream.scaladsl.{Flow, Sink, Source}
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstanceChangeOrSnapshot
@@ -77,7 +77,7 @@ class ReviveOffersActor(
       flattenedInstanceUpdates.map(Left(_))
         .merge(delayedConfigRefs.map(Right(_)))
         .via(suppressReviveFlow)
-        .wireTap(reviveSuppressMetrics)
+        .via(reviveSuppressMetrics)
         .runWith(Sink.foreach {
           case UpdateFramework(roleState, _, _) =>
             driverHolder.driver.foreach { d =>
@@ -89,7 +89,6 @@ class ReviveOffersActor(
             }
 
           case IssueRevive(roles) =>
-            suppressCountMetric.increment()
             driverHolder.driver.foreach { d =>
               d.reviveOffers(roles.asJava)
             }
@@ -99,8 +98,8 @@ class ReviveOffersActor(
     done.pipeTo(self)
   }
 
-  val reviveSuppressMetrics: Sink[RoleDirective, Future[Done]] = Sink.foreach {
-    case UpdateFramework(newState, newlyRevived, newlySuppressed) =>
+  val reviveSuppressMetrics: Flow[RoleDirective, RoleDirective, NotUsed] = Flow[RoleDirective] {
+    case directive @ UpdateFramework(newState, newlyRevived, newlySuppressed) =>
       newlyRevived.foreach { role =>
         logger.info(s"Role '${role}' newly revived via update framework call")
         reviveCountMetric.increment()
@@ -110,12 +109,15 @@ class ReviveOffersActor(
         logger.info(s"Role '${role}' newly suppressed via update framework call")
         suppressCountMetric.increment()
       }
+      directive
 
-    case IssueRevive(roles) =>
+    case directive @ IssueRevive(roles) =>
       roles.foreach { role =>
         reviveCountMetric.increment()
         logger.info(s"Role '${role}' explicitly revived")
       }
+
+      directive
   }
 
   override def receive: Receive = LoggingReceive {
