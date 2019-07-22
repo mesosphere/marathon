@@ -206,6 +206,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
     def markRolesForRepeat(roles: Iterable[Role]): Unit =
       roles.foreach {
         role =>
+          // Override any old state.
           repeatIn += role -> 2
       }
 
@@ -219,13 +220,12 @@ object ReviveOffersStreamLogic extends StrictLogging {
     }
 
     def handleTick(): List[RoleDirective] = {
-      println(repeatIn)
       val newRepeatIn = repeatIn.collect {
-        case (k, v) if v > 1 => k -> (v - 1)
+        case (k, v) if v >= 1 => k -> (v - 1)
       }
-      val rolesForReviveRepetition = (repeatIn.keySet -- newRepeatIn.keySet).filter {
-        role => currentRoleState.get(role).contains(OffersWanted)
-      }
+      val rolesForReviveRepetition = newRepeatIn.iterator.collect {
+        case (role, counter) if counter == 0 && currentRoleState.get(role).contains(OffersWanted) => role
+      }.toSet
 
       repeatIn = newRepeatIn
 

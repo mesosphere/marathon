@@ -113,22 +113,20 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
 
     }
 
-    "send a repeat two times every other tick" in {
+    "send a repeat revive once after the second tick" in {
       val logic = new ReviveOffersStreamLogic.ReviveRepeaterLogic
 
       logic.processRoleDirective(UpdateFramework(Map("role" -> OffersWanted), Set("role"), Set.empty))
       logic.handleTick() shouldBe Nil
+
+      // First repeat for update framework
       logic.handleTick() shouldBe List(IssueRevive(Set("role")))
 
+      // Revive was triggered
       logic.processRoleDirective(IssueRevive(Set("role")))
       logic.handleTick() shouldBe Nil
 
-      logic.handleTick() shouldBe List(IssueRevive(Set("role")))
-      logic.handleTick() shouldBe Nil
-
-      logic.handleTick() shouldBe List(IssueRevive(Set("role")))
-      logic.handleTick() shouldBe Nil
-
+      // Second repeat for newly triggered revive
       logic.handleTick() shouldBe List(IssueRevive(Set("role")))
       logic.handleTick() shouldBe Nil
     }
