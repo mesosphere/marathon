@@ -69,7 +69,7 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
     val createResult = marathon.createPodV2(pod)
     createResult should be(Created)
     waitForDeployment(createResult)
-    val ipcInfo = eventually {
+    val ipcInfo:String = eventually {
       marathon.status(pod.id) should be(Stable)
       val status = marathon.status(pod.id).value
       val hosts = status.instances.flatMap(_.agentHostname)
@@ -113,13 +113,13 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
 
     val pod = PodDefinition(
       id = id,
-      linuxInfo = state.LinuxInfo(
+      linuxInfo = Some(state.LinuxInfo(
         seccomp = None,
         ipcInfo = Some(state.IPCInfo(
           ipcMode = state.IpcMode.Private,
-          shmSize = shmSize
+          shmSize = Some(shmSize)
         ))
-      ),
+      )),
       containers = Seq(
         MesosContainer(
           name = "task1",
@@ -172,7 +172,7 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
     createResult should be(Created)
     waitForDeployment(createResult)
 
-    val (ipcInfo1, ipcInfo2) = eventually {
+    val (ipcInfo1:String, ipcInfo2:String) = eventually {
       marathon.status(pod.id) should be(Stable)
       val status = marathon.status(pod.id).value
       val hosts = status.instances.flatMap(_.agentHostname)
