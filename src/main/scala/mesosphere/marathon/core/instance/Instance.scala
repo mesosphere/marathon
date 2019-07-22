@@ -7,7 +7,7 @@ import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.Group.Role
+import mesosphere.marathon.state.Role
 import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy, _}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.OfferUtil

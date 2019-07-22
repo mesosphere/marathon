@@ -2,7 +2,7 @@ package mesosphere.marathon
 package util
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.state.Group.Role
+import mesosphere.marathon.state.Role
 import mesosphere.marathon.state.{PathId, RootGroup}
 
 /**

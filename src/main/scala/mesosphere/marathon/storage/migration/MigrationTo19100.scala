@@ -16,7 +16,7 @@ import mesosphere.marathon.core.instance.Reservation
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.Group.Role
+import mesosphere.marathon.state.Role
 import mesosphere.marathon.state.{AppDefinition, Instance, PathId, Timestamp}
 import mesosphere.marathon.storage.repository.{AppRepository, InstanceRepository, PodRepository}
 import mesosphere.marathon.storage.store.ZkStoreSerialization

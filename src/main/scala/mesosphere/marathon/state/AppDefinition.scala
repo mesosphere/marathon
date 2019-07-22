@@ -24,7 +24,6 @@ import mesosphere.mesos.protos.{Resource, ScalarResource}
 import org.apache.mesos.{Protos => mesos}
 import mesosphere.marathon.core.health.{PortReference => HealthPortReference}
 import mesosphere.marathon.core.check.{PortReference => CheckPortReference}
-import mesosphere.marathon.state.Group.Role
 import mesosphere.marathon.util.RoleSettings
 
 import scala.concurrent.duration._

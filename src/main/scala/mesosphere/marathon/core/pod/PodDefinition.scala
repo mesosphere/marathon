@@ -5,7 +5,7 @@ package core.pod
 import mesosphere.marathon.api.v2.PodNormalization
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.{Endpoint, ExecutorResources, Pod, Raml, Resources}
-import mesosphere.marathon.state.Group.Role
+import mesosphere.marathon.state.Role
 import mesosphere.marathon.state._
 import play.api.libs.json.Json
 

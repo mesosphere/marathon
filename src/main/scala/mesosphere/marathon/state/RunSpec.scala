@@ -4,7 +4,6 @@ package state
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.pod.Network
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.Group.Role
 
 import scala.concurrent.duration._
 
