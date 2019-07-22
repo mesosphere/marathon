@@ -52,3 +52,7 @@ case class DeprecatedFeatureSet(
     hardRemovedFeatures.isEmpty
   }
 }
+
+object DeprecatedFeatureSet {
+  def empty(currentVersion: SemVer): DeprecatedFeatureSet = DeprecatedFeatureSet(currentVersion, Set.empty)
+}

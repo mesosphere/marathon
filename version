@@ -7,20 +7,54 @@
 MAJOR=1
 MINOR=9
 BRANCH_POINT=8228cea
+REF=HEAD
+
+declare -a OTHERARGS
+help() {
+  cat <<-EOF
+Usage $0 [options]
+
+  --help This help
+  --ref  The reference for which version to output Defaults to HEAD
+
+Non-arg params
+
+- commit: output just the formatted commit hash
+- docker: output the version as used by the Docker tag
+EOF
+}
+
+while ! [ -z "$1" ]; do
+  arg="$1"
+  shift
+  case "$arg" in
+    --help)
+      help
+      exit 0
+      ;;
+    --ref)
+      REF="$1"
+      shift
+      ;;
+    *)
+      OTHERARGS+=("$arg")
+      ;;
+  esac
+done
 
 # Infer version
 # Number of commits since branch point
-COMMIT_NUMBER="$(git rev-list --count --first-parent $BRANCH_POINT..HEAD)"
-COMMIT_HASH=$(git rev-parse --short HEAD)
+COMMIT_NUMBER="$(git rev-list --count --first-parent $BRANCH_POINT..$REF)"
+COMMIT_HASH=$(git rev-parse --short $REF)
 
 # Echo commit hash
-if [ "$#" -eq 1 ] && [ "$1" == "commit" ]; then
+if [ "${OTHERARGS[0]}" == "commit" ]; then
     echo "$COMMIT_HASH"
     exit 0
 fi
 
 # Version for Docker image, e.g. v1.7.42
-if [ "$#" -eq 1 ] && [ "$1" == "docker" ]; then
+if [ "${OTHERARGS[0]}" == "docker" ]; then
     echo "v$MAJOR.$MINOR.$COMMIT_NUMBER"
     exit 0
 fi

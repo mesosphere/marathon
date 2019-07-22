@@ -203,7 +203,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
     val defaultAgentId = AgentTestDefaults.defaultAgentId
 
     def normalApp = MTH.makeBasicApp()
-    def residentApp = MTH.appWithPersistentVolume()
+    def residentApp = MTH.appWithPersistentVolume().copy(role = "test")
     def residentPod = PodDefinition(
       PathId("/test-pod"),
       containers = Seq(MesosContainer(
@@ -212,7 +212,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
         volumeMounts = Seq(VolumeMount(volumeName = Some("pst"), mountPath = "persistent-volume")))
       ),
       volumes = Seq(PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(10))),
-      role = "*"
+      role = "test"
     )
 
     def scheduledReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) =

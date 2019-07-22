@@ -77,10 +77,12 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
 
   val secretPath = write(workDir, fileName = "marathon-secret", content = "secret1")
 
+  val mesosRole = conf.getOrElse("mesos_role", BaseMarathon.defaultRole)
+
   val config = Map(
     "master" -> masterUrl,
     "mesos_authentication_principal" -> "principal",
-    "mesos_role" -> BaseMarathon.defaultRole,
+    "mesos_role" -> mesosRole,
     "http_port" -> httpPort.toString,
     "zk" -> zkUrl,
     "zk_timeout" -> 20.seconds.toMillis.toString,

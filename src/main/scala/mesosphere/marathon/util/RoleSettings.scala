@@ -35,7 +35,7 @@ object RoleSettings extends StrictLogging {
       RoleSettings(validRoles = Set(defaultRole), defaultRole = defaultRole)
     } else {
       val topLevelGroupPath = servicePathId.rootPath
-      val groupRole = topLevelGroupPath.root
+      val topLevelGroupRole = topLevelGroupPath.root
       val topLevelGroup = rootGroup.group(topLevelGroupPath)
 
       val defaultForEnforceFromConfig: Boolean = false // TODO: Use value from config instead
@@ -54,12 +54,12 @@ object RoleSettings extends StrictLogging {
 
       if (enforceRole) {
         // With enforceRole, we only allow the service to use the group-role or an existing role
-        RoleSettings(validRoles = Set(groupRole) ++ maybeExistingRole, defaultRole = groupRole)
+        RoleSettings(validRoles = Set(topLevelGroupRole) ++ maybeExistingRole, defaultRole = topLevelGroupRole)
       } else {
         // Without enforce role, we allow default role, group role and already existing role
         // The default role depends on the config parameter
-        val defaultRoleToUse = if (defaultForEnforceFromConfig) groupRole else defaultRole
-        RoleSettings(validRoles = Set(defaultRole, groupRole) ++ maybeExistingRole, defaultRole = defaultRoleToUse)
+        val defaultRoleToUse = if (defaultForEnforceFromConfig) topLevelGroupRole else defaultRole
+        RoleSettings(validRoles = Set(defaultRole, topLevelGroupRole) ++ maybeExistingRole, defaultRole = defaultRoleToUse)
       }
     }
   }
