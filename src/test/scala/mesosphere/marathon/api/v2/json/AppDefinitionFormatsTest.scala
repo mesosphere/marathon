@@ -41,8 +41,8 @@ class AppDefinitionFormatsTest extends UnitTest
     """)
   }
 
-  def normalizeAndConvert(app: raml.App): AppDefinition = {
-    val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings)
+  def normalizeAndConvert(app: raml.App, sanitizeAcceptedResourceRoles: Boolean = true): AppDefinition = {
+    val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings, sanitizeAcceptedResourceRoles)
     Raml.fromRaml(
       // this is roughly the equivalent of how the original Formats behaved, which is notable because Formats
       // (like this code) reverses the order of validation and normalization
@@ -201,7 +201,7 @@ class AppDefinitionFormatsTest extends UnitTest
 
     """FromJSON should parse "acceptedResourceRoles": ["production", "*"] """ in {
       val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": ["production", "*"] }""")
-      val appDef = normalizeAndConvert(json.as[raml.App])
+      val appDef = normalizeAndConvert(json.as[raml.App], false)
       appDef.acceptedResourceRoles should equal(Set("production", ResourceRole.Unreserved))
     }
 
@@ -575,7 +575,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should fail for empty container (#4978)" in {
-      val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings)
+      val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings, true)
       val json = Json.parse(
         """{
           |  "id": "/docker-compose-demo",

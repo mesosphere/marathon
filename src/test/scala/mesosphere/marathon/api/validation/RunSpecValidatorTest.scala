@@ -18,7 +18,8 @@ import scala.reflect.ClassTag
 
 class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
-  val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings("foo"))
+  val config =
+    AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings("foo"), true)
   private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set(), () => config.defaultNetworkName)
   private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), config.roleSettings)(PluginManager.None)
   private def validContainer(networks: Seq[Network] = Nil) = Container.validContainer(networks, Set())
