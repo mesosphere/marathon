@@ -506,7 +506,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   def validWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.role is in(roleEnforcement.validRoles)
     if (app.isResident) {
-      app.role is isTrue(s"Resident apps can not have the role ${ResourceRole.Unreserved}") { role: String =>
+      app.role is isTrue(s"Resident apps cannot have the role ${ResourceRole.Unreserved}") { role: String =>
         !role.equals(ResourceRole.Unreserved)
       }
     }

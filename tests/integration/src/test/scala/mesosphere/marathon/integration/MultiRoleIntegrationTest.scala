@@ -48,7 +48,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       When("The app is deployed")
       val resultInDev = marathon.createAppV2(appInDev)
 
-      Then("The apps are created")
+      Then("The app is created")
       resultInDev should be(Created)
       waitForDeployment(resultInDev)
       waitForTasks(PathId(appInDev.id), 1) //make sure the app has really started
