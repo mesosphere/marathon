@@ -82,7 +82,7 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
 
       logger.info("IPCInfo is: " + ipcInfoString)
 
-      val shmFsSizeRegex = "tmpfs\\s+([0-9]+)\\s+[0-9]+\\s+[0-9]+%\\s+/dev/shm".r
+      val shmFsSizeRegex = "tmpfs\\s+([0-9]+)\\s+[0-9]+\\s+[0-9]+\\s+[0-9]+%\\s+/dev/shm".r
       val shmFsSizeMatch = shmFsSizeRegex.findFirstMatchIn(ipcInfoString)
 
       logger.info("Found Match: " + shmFsSizeMatch + " ==> " + shmFsSizeMatch.map(_.group(1)))
