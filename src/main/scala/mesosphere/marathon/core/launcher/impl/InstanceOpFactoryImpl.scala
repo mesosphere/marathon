@@ -34,9 +34,8 @@ class InstanceOpFactoryImpl(
 
   private[this] val instanceOperationFactory = {
     val principalOpt = config.mesosAuthenticationPrincipal.toOption
-    val roleOpt = config.mesosRole.toOption
 
-    new InstanceOpFactoryHelper(metrics, principalOpt, roleOpt)
+    new InstanceOpFactoryHelper(metrics, principalOpt)
   }
 
   private[this] val schedulerPlugins: Seq[SchedulerPlugin] = pluginManager.plugins[SchedulerPlugin]
@@ -180,7 +179,7 @@ class InstanceOpFactoryImpl(
         instances.valuesIterator.toStream.filterAs(_.instanceId != volumeMatch.instance.instanceId)
 
       // resources are reserved for this role, so we only consider those resources
-      val rolesToConsider = config.mesosRole.toOption.toSet
+      val rolesToConsider = Set(volumeMatch.instance.role)
       val reservationId = volumeMatch.instance.reservation.get.id
       val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, reservationId).labels
       val resourceMatchResponse =
@@ -351,7 +350,7 @@ class InstanceOpFactoryImpl(
 
     val reservationLabels = TaskLabels.labelsForTask(frameworkId, reservationId)
     val stateOp = InstanceUpdateOperation.Reserve(scheduledInstance.instanceId, reservation, agentInfo)
-    instanceOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)
+    instanceOperationFactory.reserveAndCreateVolumes(scheduledInstance.role, reservationLabels, stateOp, resourceMatch.resources, localVolumes)
   }
 
   def combine(processors: Seq[RunSpecTaskProcessor]): RunSpecTaskProcessor = new RunSpecTaskProcessor {

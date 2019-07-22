@@ -10,10 +10,9 @@ import org.apache.mesos.{Protos => Mesos}
 
 class InstanceOpFactoryHelper(
     private val metrics: Metrics,
-    private val principalOpt: Option[String],
-    private val roleOpt: Option[String]) {
+    private val principalOpt: Option[String]) {
 
-  private[this] val offerOperationFactory = new OfferOperationFactory(metrics, principalOpt, roleOpt)
+  private[this] val offerOperationFactory = new OfferOperationFactory(metrics, principalOpt)
 
   def provision(
     taskInfo: Mesos.TaskInfo,
@@ -69,14 +68,15 @@ class InstanceOpFactoryHelper(
     * volumes against them as needed
     */
   def reserveAndCreateVolumes(
+    role: String,
     reservationLabels: ReservationLabels,
     newState: InstanceUpdateOperation.Reserve,
     resources: Seq[Mesos.Resource],
     localVolumes: Seq[InstanceOpFactory.OfferedVolume]): InstanceOp.ReserveAndCreateVolumes = {
 
     def createOperations =
-      offerOperationFactory.reserve(reservationLabels, resources) ++
-        offerOperationFactory.createVolumes(reservationLabels, localVolumes)
+      offerOperationFactory.reserve(role, reservationLabels, resources) ++
+        offerOperationFactory.createVolumes(role, reservationLabels, localVolumes)
 
     InstanceOp.ReserveAndCreateVolumes(newState, resources, createOperations)
   }

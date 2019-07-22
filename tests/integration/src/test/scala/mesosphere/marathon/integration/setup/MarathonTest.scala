@@ -77,10 +77,12 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
 
   val secretPath = write(workDir, fileName = "marathon-secret", content = "secret1")
 
+  val mesosRole = conf.getOrElse("mesos_role", BaseMarathon.defaultRole)
+
   val config = Map(
     "master" -> masterUrl,
     "mesos_authentication_principal" -> "principal",
-    "mesos_role" -> BaseMarathon.defaultRole,
+    "mesos_role" -> mesosRole,
     "http_port" -> httpPort.toString,
     "zk" -> zkUrl,
     "zk_timeout" -> 20.seconds.toMillis.toString,
@@ -410,7 +412,8 @@ trait MarathonAppFixtures {
     instances: Int = 1,
     backoffDuration: FiniteDuration = 1.hour,
     portDefinitions: Seq[PortDefinition] = Seq.empty, /* prevent problems by randomized port assignment */
-    constraints: Set[Seq[String]] = Set.empty): App = {
+    constraints: Set[Seq[String]] = Set.empty,
+    role: Option[String] = None): App = {
 
     val cpus: Double = 0.001
     val mem: Double = 1.0
@@ -440,7 +443,8 @@ trait MarathonAppFixtures {
       portDefinitions = Some(portDefinitions),
       backoffSeconds = backoffDuration.toSeconds.toInt,
       upgradeStrategy = Some(UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0.0)),
-      unreachableStrategy = Some(UnreachableDisabled.DefaultValue)
+      unreachableStrategy = Some(UnreachableDisabled.DefaultValue),
+      role = role
     )
 
     app

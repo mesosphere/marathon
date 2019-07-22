@@ -19,7 +19,7 @@ import scala.reflect.ClassTag
 class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
   val config =
-    AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings, true)
+    AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings("foo"), true)
   private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set(), () => config.defaultNetworkName)
   private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), config.roleSettings)(PluginManager.None)
   private def validContainer(networks: Seq[Network] = Nil) = Container.validContainer(networks, Set())
@@ -592,8 +592,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
       val f = new Fixture
       val app = Json.parse(f.cassandraWithoutResidency).as[App]
-      val config =
-        AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings, true)
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings, true)
       val result = validAppDefinition(Raml.fromRaml(
         AppNormalization(config).normalized(
           validateOrThrow(
@@ -606,8 +605,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       val f = new Fixture
       val base = Json.parse(f.cassandraWithoutResidency).as[App]
       val app = base.copy(upgradeStrategy = Some(raml.UpgradeStrategy(0, 0)))
-      val config =
-        AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings, true)
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings, true)
       val result = validAppDefinition(Raml.fromRaml(
         AppNormalization(config).normalized(
           validateOrThrow(
@@ -689,7 +687,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       def residentApp(id: String, volumes: Seq[VolumeWithMount[PersistentVolume]]): AppDefinition = {
         AppDefinition(
           id = PathId(id),
-          role = "*",
+          role = "foo",
           cmd = Some("test"),
           container = Some(Container.Mesos(volumes)),
           portDefinitions = Seq(PortDefinition(0)),
@@ -705,6 +703,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         """
         |{
         |  "id": "/cassandra",
+        |  "role": "foo",
         |  "cpus": 2,
         |  "mem": 2048,
         |  "instances": 1,

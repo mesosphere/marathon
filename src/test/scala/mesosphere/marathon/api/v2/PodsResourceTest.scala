@@ -396,13 +396,14 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
     "create a pod with a persistent volume" in {
       implicit val podSystem = mock[PodManager]
-      val f = Fixture()
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
       val podSpecJsonWithPersistentVolume =
         """
           | { "id": "/mypod",
+          |   "role": "foo",
           |   "containers": [ {
           |     "name": "dataapp",
           |     "resources": { "cpus": 0.03, "mem": 64 },
@@ -432,9 +433,41 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
     }
 
+    "fail to create a pod with a persistent volume if role is set to *" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+
+      podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val podSpecJsonWithPersistentVolume =
+        """
+          | { "id": "/mypod",
+          |   "role": "*",
+          |   "containers": [ {
+          |     "name": "dataapp",
+          |     "resources": { "cpus": 0.03, "mem": 64 },
+          |     "image": { "kind": "DOCKER", "id": "busybox" },
+          |     "exec": { "command": { "shell": "sleep 1" } },
+          |     "volumeMounts": [ { "name": "pst", "mountPath": "pst1", "readOnly": false } ]
+          |   } ],
+          |   "volumes": [ {
+          |     "name": "pst",
+          |     "persistent": { "type": "root", "size": 10 }
+          |   } ] }
+        """.stripMargin
+
+      val response = asyncRequest { r =>
+        f.podsResource.update("/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request, r)
+      }
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(422)
+        response.getEntity.toString should include("Resident pods cannot have the role *")
+      }
+    }
+
     "fail to create a pod with a persistent volume if unreachable strategy is enabled" in {
       implicit val podSystem = mock[PodManager]
-      val f = Fixture()
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -466,7 +499,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
     "fail to create a pod with a persistent volume if upgrade.maximumOverCapacity != 0" in {
       implicit val podSystem = mock[PodManager]
-      val f = Fixture()
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -506,6 +539,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       val podSpecJsonWithPersistentVolume =
         """
           | { "id": "/mypod",
+          |   "role": "foo",
           |   "scheduling": { "placement": { "acceptedResourceRoles": ["*", "slave_public"] } },
           |   "containers": [ {
           |     "name": "dataapp",
