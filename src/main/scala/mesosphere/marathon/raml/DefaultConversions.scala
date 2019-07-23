@@ -27,7 +27,7 @@ trait DefaultConversions {
     option.map(writer.write)
   }
 
-  implicit def seqConversion[A, B](implicit writer: Writes[A, B]): Writes[Seq[A], Seq[B]] = Writes { seq =>
+  implicit val SeqConversion[A, B](implicit writer: Writes[A, B]): Writes[Seq[A], Seq[B]] = Writes { seq =>
     seq.map(writer.write)
   }
 
@@ -47,9 +47,13 @@ trait DefaultConversions {
 
   implicit val timestampWrites: Writes[Timestamp, String] = Writes { _.toString }
 
-  implicit val pathIdWrites: Writes[PathId, String] = Writes { _.toString }
+  implicit class PathIdWrites(id: PathId) extends Writes[String] {
+    override def toRaml(): String = id.toString
+  }
 
-  implicit val instanceIdWrites: Writes[core.instance.Instance.Id, String] = Writes { _.toString }
+  implicit class InstanceIdWrites(id: core.instance.Instance.Id) extends Writes[String] {
+    override def toRaml(): String = id.toString
+  }
 
   implicit val taskStateWrites: Writes[mesos.TaskState, MesosTaskState] = Writes { taskState =>
     val name = taskState.name()

@@ -24,7 +24,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       UpgradeStrategy(strategy.maximumOverCapacity, strategy.minimumHealthCapacity)
   }
 
-  implicit class VersionInfoWrites(info: state.VersionInfo) extends  Writes[Option[VersionInfo]] {
+  implicit class VersionInfoWrites(info: state.VersionInfo) extends Writes[Option[VersionInfo]] {
     override def toRaml(): Option[VersionInfo] = info match {
       case state.VersionInfo.FullVersionInfo(_, scale, config) => Some(VersionInfo(scale.toOffsetDateTime, config.toOffsetDateTime))
       case state.VersionInfo.OnlyVersion(_) => None
@@ -49,7 +49,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
         else container.copy(portMappings = None)
       },
       cpus = app.resources.cpus,
-      dependencies = app.dependencies.map(Raml.toRaml(_)),
+      dependencies = app.dependencies.map(_.toRaml),
       disk = app.resources.disk,
       env = app.env.toRaml,
       executor = app.executor,
