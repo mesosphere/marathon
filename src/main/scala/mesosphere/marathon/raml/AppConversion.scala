@@ -14,23 +14,28 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
 
   import AppConversion._
 
-  implicit val artifactWrites: Writes[FetchUri, Artifact] = Writes { fetch =>
-    Artifact(fetch.uri, fetch.extract, fetch.executable, fetch.cache, fetch.outputFile)
+  implicit class ArtifactConversion(fetch: FetchUri) extends Writes[Artifact] {
+    override def toRaml(): Artifact =
+      Artifact(fetch.uri, fetch.extract, fetch.executable, fetch.cache, fetch.outputFile)
   }
 
-  implicit val upgradeStrategyWrites: Writes[state.UpgradeStrategy, UpgradeStrategy] = Writes { strategy =>
-    UpgradeStrategy(strategy.maximumOverCapacity, strategy.minimumHealthCapacity)
+  implicit class UpgradeStrategyWrites(strategy: state.UnreachableStrategy) extends Writes[UpgradeStrategy] {
+    override def toRaml(): UpgradeStrategy =
+      UpgradeStrategy(strategy.maximumOverCapacity, strategy.minimumHealthCapacity)
   }
 
-  implicit val versionInfoWrites: Writes[state.VersionInfo, Option[VersionInfo]] = Writes {
-    case state.VersionInfo.FullVersionInfo(_, scale, config) => Some(VersionInfo(scale.toOffsetDateTime, config.toOffsetDateTime))
-    case state.VersionInfo.OnlyVersion(_) => None
-    case state.VersionInfo.NoVersion => None
+  implicit class VersionInfoWrites(info: state.VersionInfo) extends  Writes[Option[VersionInfo]] {
+    override def toRaml(): Option[VersionInfo] = info match {
+      case state.VersionInfo.FullVersionInfo(_, scale, config) => Some(VersionInfo(scale.toOffsetDateTime, config.toOffsetDateTime))
+      case state.VersionInfo.OnlyVersion(_) => None
+      case state.VersionInfo.NoVersion => None
+    }
   }
 
-  implicit val appWriter: Writes[AppDefinition, App] = Writes { app =>
+  implicit class AppWriter(app: AppDefinition) extends Writes[App] {
+
     // we explicitly do not write ports, uris, ipAddress because they are deprecated fields
-    App(
+    override def toRaml(): App = App(
       id = app.id.toString,
       acceptedResourceRoles = if (app.acceptedResourceRoles.nonEmpty) Some(app.acceptedResourceRoles) else None,
       args = app.args,
@@ -48,7 +53,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       disk = app.resources.disk,
       env = app.env.toRaml,
       executor = app.executor,
-      fetch = app.fetch.toRaml,
+      fetch = app.fetch.map(_.toRaml),
       gpus = app.resources.gpus,
       healthChecks = app.healthChecks.toRaml,
       check = app.check.map(_.toRaml),
