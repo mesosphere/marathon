@@ -131,7 +131,7 @@ class MarathonFacade(
     (__ \ "version").formatNullable[String] ~
     (__ \ "region").formatNullable[String] ~
     (__ \ "zone").formatNullable[String] ~
-    (__ \ "role").format[String] ~
+    (__ \ "role").formatNullable[String] ~
     (__ \ "healthCheckResults").formatWithDefault[Seq[ITHealthCheckResult]](Nil)
   )(ITEnrichedTask, unlift(ITEnrichedTask.unapply))
 
