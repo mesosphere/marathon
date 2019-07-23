@@ -253,7 +253,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     eventually { marathon16549 should have (runningTasksFor(app_16549.id.toPath, 1)) }
     eventually { marathon16549 should have (runningTasksFor(app_16549_fail.id.toPath, 1)) }
 
-    val originalApp16549Tasks = marathon16549.client.tasks(app_16549.id.toPath).value
+    val originalApp16549Tasks: List[ITEnrichedTask] = marathon16549.client.tasks(app_16549.id.toPath).value
     val originalApp16549FailedTasks = marathon16549.client.tasks(app_16549_fail.id.toPath).value
 
     When("Marathon 1.6.549 is shut down")
@@ -268,7 +268,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
     Then("All apps from 1.6.549 are still running")
-    marathonCurrent.client.tasks(app_16549.id.toPath).value should contain theSameElementsAs (originalApp16549Tasks)
+    val originalTasksWithRole = originalApp16549Tasks.map(t => t.copy(role = Some("foo")))
+    marathonCurrent.client.tasks(app_16549.id.toPath).value should contain theSameElementsAs (originalTasksWithRole)
 
     And("All apps from 1.6.549 are recovered and running again")
     eventually { marathonCurrent should have(runningTasksFor(app_16549_fail.id.toPath, 1)) }
