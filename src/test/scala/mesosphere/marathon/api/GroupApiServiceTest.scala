@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api
 
 import mesosphere.UnitTest
+import mesosphere.marathon.api.v2.GroupNormalization
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
@@ -16,6 +17,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class GroupApiServiceTest extends UnitTest with GroupCreation {
   implicit val identity: Identity = new Identity {}
+  val noEnabledFeatures = AllConf.withTestConfig()
 
   "revert a version if version is provided" in {
     Given("Group manager with the group version")
@@ -82,10 +84,12 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
     groupManager.group(groupId).returns(Some(existingGroup))
     val f = Fixture(groupManager = groupManager)
     When("Calling update with new apps being added to a group")
+    val update = GroupUpdate(apps = Some(Set(App("/app", role = Some(ResourceRole.Unreserved), networks = Seq(Network(mode = NetworkMode.ContainerBridge))))))
+    val normalizedUpdate = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.empty).normalized(update)
     val updatedGroup = f.groupApiService.updateGroup(
       createRootGroup(),
       PathId.empty,
-      GroupUpdate(apps = Some(Set(App("/app", role = Some(ResourceRole.Unreserved), networks = Seq(Network(mode = NetworkMode.ContainerBridge)))))),
+      normalizedUpdate,
       newVersion).futureValue
 
     Then("Group will contain those apps after an update")

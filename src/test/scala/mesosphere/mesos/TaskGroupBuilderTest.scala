@@ -89,7 +89,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(taskGroupInfo.getTasksList.exists(_.getName == "Foo"))
@@ -127,7 +128,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(taskGroupInfo.getTasksCount == 3)
@@ -161,7 +163,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(executorInfo.getResourcesList.forall(_.getRole == "slave0"))
@@ -239,7 +242,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(taskGroupInfo.getTasksCount == 3)
@@ -301,7 +305,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(taskGroupInfo.getTasksCount == 2)
@@ -343,7 +348,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(executorInfo.hasLabels)
@@ -402,7 +408,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(taskGroupInfo.getTasksCount == 1)
@@ -456,7 +463,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(taskGroupInfo.getTasksCount == 2)
@@ -565,7 +573,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(taskGroupInfo.getTasksCount == 2)
@@ -621,7 +630,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(taskGroupInfo.getTasksCount == 1)
@@ -687,7 +697,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(taskGroupInfo.getTasksCount == 3)
@@ -761,7 +772,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(taskGroupInfo.getTasksCount == 2)
@@ -827,7 +839,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(taskGroupInfo.getTasksCount == 2)
@@ -874,7 +887,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       val task1Artifacts = taskGroupInfo.getTasksList.find(_.getName == "Foo1").get.getCommand.getUrisList
@@ -915,7 +929,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       val cpuExecutorInfo = executorInfo.getResourcesList.find(info => info.getName == "cpus")
@@ -980,7 +995,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(taskGroupInfo.getTasksCount == 2)
@@ -1078,7 +1094,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       assert(taskGroupInfo.getTasksCount == 2)
@@ -1119,7 +1136,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       val (_, taskGroupInfo, _) = TaskGroupBuilder.build(
         podSpec,
         offer, instanceId, taskIds, defaultBuilderConfig, runSpecTaskProcessor,
-        resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch, None
+        resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch, None, true
       )
       taskGroupInfo.getTasksCount should be(1)
       taskGroupInfo.getTasks(0).getName should be(s"${container.name}-extended")
@@ -1165,7 +1182,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       executorInfo.hasContainer should be(true)
@@ -1208,7 +1226,8 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
         defaultBuilderConfig,
         RunSpecTaskProcessor.empty,
         resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None
+        None,
+        true
       )
 
       taskGroupInfo.getTasks(0).getKillPolicy.getGracePeriod.getNanoseconds shouldBe (killDuration.toNanos)

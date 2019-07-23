@@ -152,7 +152,8 @@ case class AppDefinition(
       taskId = None,
       host = None,
       hostPorts = Seq.empty,
-      envPrefix = None
+      envPrefix = None,
+      enforceRole = None
     )
     val cpusResource = ScalarResource(Resource.CPUS, resources.cpus)
     val memResource = ScalarResource(Resource.MEM, resources.mem)

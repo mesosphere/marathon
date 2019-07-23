@@ -3,6 +3,7 @@ package tasks
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.impl.InstanceOpFactoryImpl
@@ -13,14 +14,16 @@ import mesosphere.marathon.core.task.state.{AgentTestDefaults, NetworkInfo}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.raml.{ExecutorResources, Resources}
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
+import mesosphere.mesos.TaskBuilderConstants
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.scalatest.Inside
 
+import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
 
 class InstanceOpFactoryImplTest extends UnitTest with Inside {
@@ -110,7 +113,16 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
     "Resident pod -> ReserveAndCreateVolumes succeeds" in {
       Given("A resident pod, a normal offer and no tasks")
       val f = new Fixture
-      val pod = f.residentPod
+      val pod = PodDefinition(
+        PathId("/test-pod"),
+        containers = Seq(MesosContainer(
+          name = "first",
+          resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
+          volumeMounts = Seq(VolumeMount(volumeName = Some("pst"), mountPath = "persistent-volume")))
+        ),
+        volumes = Seq(PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(10))),
+        role = "test"
+      )
       val offer = f.offerWithSpaceForLocalVolume
 
       When("We infer the taskOp")
@@ -190,41 +202,97 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
           }
       }
     }
+
+    "enforceRole property is propagated to task environment for pods" in {
+      val f = new Fixture
+      f.rootGroup = f.rootGroup.putGroup(Group(PathId("/dev"), enforceRole = true))
+      val podId = PathId("/dev/testing")
+      val offer = MarathonTestHelper.makeBasicOffer().build()
+      val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(podId, f.clock.now()).getInstance()
+      val pod: PodDefinition = PodDefinition(
+        id = podId,
+        executorResources = ExecutorResources(disk = 0).fromRaml,
+        containers = Seq(
+          MesosContainer(
+            resources = Resources(cpus = 0.1, mem = 32.0, disk = 0),
+            name = "first")),
+        role = "*")
+      val scheduledInstance = Instance.scheduled(pod, Instance.Id.forRunSpec(podId))
+
+      val request = InstanceOpFactory.Request(
+        offer,
+        Map(instance.instanceId -> instance),
+        scheduledInstances = NonEmptyIterable(scheduledInstance))
+
+      val matched = inside(f.instanceOpFactory.matchOfferRequest(request)) {
+        case matched: OfferMatchResult.Match => matched
+      }
+
+      val Some(op) = matched.instanceOp.offerOperations.headOption
+
+      val envValue = op.getLaunchGroup.getTaskGroup.getTasks(0).getCommand.getEnvironment.getVariablesList.asScala.collect { case pair if pair.getName == TaskBuilderConstants.MARATHON_ENFORCE_GROUP_ROLE => pair.getValue }
+      envValue.head shouldBe "TRUE"
+    }
+
+    "enforceRole property is propagated to task environment for apps" in {
+      val f = new Fixture
+      f.rootGroup = f.rootGroup.putGroup(Group(PathId("/dev"), enforceRole = true))
+      val appId = PathId("/dev/testing")
+      val offer = MarathonTestHelper.makeBasicOffer().build()
+      val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, f.clock.now()).getInstance()
+      val app: AppDefinition = AppDefinition(id = appId, portDefinitions = List(), role = "*")
+      val scheduledInstance = Instance.scheduled(app, Instance.Id.forRunSpec(appId))
+
+      val request = InstanceOpFactory.Request(
+        offer,
+        Map(instance.instanceId -> instance),
+        scheduledInstances = NonEmptyIterable(scheduledInstance))
+
+      val matched = inside(f.instanceOpFactory.matchOfferRequest(request)) {
+        case matched: OfferMatchResult.Match => matched
+      }
+
+      val Some(op) = matched.instanceOp.offerOperations.headOption
+
+      val envValue = op.getLaunch.getTaskInfos(0).getCommand.getEnvironment.getVariablesList.asScala.collect { case pair if pair.getName == TaskBuilderConstants.MARATHON_ENFORCE_GROUP_ROLE => pair.getValue }
+      envValue.head shouldBe "TRUE"
+    }
   }
 
   class Fixture {
+
     import mesosphere.marathon.test.{MarathonTestHelper => MTH}
+
     val instanceTracker = mock[InstanceTracker]
     val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
     implicit val clock = new SettableClock()
     val metrics: Metrics = DummyMetrics
-    val instanceOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(metrics, config)
+    var rootGroup = RootGroup.empty
+    val rootGroupRetriever: GroupManager.CurrentRootGroupRetriever = new GroupManager.CurrentRootGroupRetriever {
+      override def rootGroup(): RootGroup = Fixture.this.rootGroup
+    }
+    val instanceOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(metrics, config, rootGroupRetriever = rootGroupRetriever)
     val defaultHostName = AgentTestDefaults.defaultHostName
     val defaultAgentId = AgentTestDefaults.defaultAgentId
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume().copy(role = "test")
-    def residentPod = PodDefinition(
-      PathId("/test-pod"),
-      containers = Seq(MesosContainer(
-        name = "first",
-        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
-        volumeMounts = Seq(VolumeMount(volumeName = Some("pst"), mountPath = "persistent-volume")))
-      ),
-      volumes = Seq(PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(10))),
-      role = "test"
-    )
 
     def scheduledReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
       TestInstanceBuilder.scheduledWithReservation(residentApp, Seq(volumeIds: _*))
+
     def residentLaunchedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
       TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched(Seq(volumeIds: _*)).getInstance()
+
     def offer = MTH.makeBasicOffer().build()
+
     def offerWithSpaceForLocalVolume = MTH.makeBasicOffer(disk = 1025).build()
+
     def insufficientOffer = MTH.makeBasicOffer(cpus = 0.01, mem = 1, disk = 0.01, beginPort = 31000, endPort = 31001).build()
 
     def offerWithVolumes(taskId: Task.Id, localVolumeIds: LocalVolumeId*) =
       MTH.offerWithVolumes(taskId, defaultHostName, defaultAgentId, localVolumeIds: _*)
+
     def offerWithVolumes(taskId: Task.Id, hostname: String, agentId: String, localVolumeIds: LocalVolumeId*) =
       MTH.offerWithVolumes(taskId, hostname, agentId, localVolumeIds: _*)
   }

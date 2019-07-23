@@ -180,4 +180,6 @@ object PathId {
     * Needed for AppDefinitionValidatorTest.testSchemaLessStrictForId.
     */
   val absolutePathValidator = isTrue[PathId]("Path needs to be absolute") { _.absolute }
+
+  val topLevel = isTrue[PathId]("Path needs to be top-level") { _.parent.isRoot }
 }

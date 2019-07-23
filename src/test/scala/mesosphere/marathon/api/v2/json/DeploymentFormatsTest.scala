@@ -5,7 +5,7 @@ import java.util.UUID
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment._
-import mesosphere.marathon.raml.{App, GroupUpdate, Raml}
+import mesosphere.marathon.raml.{App, GroupUpdate}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{AppDefinition, Group, Timestamp}
 import mesosphere.marathon.test.GroupCreation
@@ -61,11 +61,6 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
       groupFromNull.dependencies should be('empty)
       groupFromNull.scaleBy should be('empty)
       groupFromNull.version should be('empty)
-    }
-
-    "Can write/read Group" in {
-      marshalUnmarshal(Raml.toRaml(genGroup()))
-      marshalUnmarshal(Raml.toRaml(genGroup(Set(genGroup(), genGroup(Set(genGroup()))))))
     }
 
     "Can write/read byte arrays" in {

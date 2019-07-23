@@ -150,17 +150,18 @@ class GroupsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
 
-      val rootGroup = groupManager.rootGroup()
+      val originalRootGroup = groupManager.rootGroup()
       val rootPath = validateOrThrow(id.toRootPath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
+      val normalized = GroupNormalization.updateNormalization(config, effectivePath).normalized(raw)
 
-      val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath)
+      val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath, originalRootGroup)
       val groupUpdate = validateOrThrow(
         normalizeApps(
-          rootGroup,
+          originalRootGroup,
           rootPath,
-          raw,
+          normalized,
           config
         ))(groupValidator)
 
@@ -169,11 +170,11 @@ class GroupsResource @Inject() (
       }
 
       throwIfConflicting(
-        rootGroup.group(effectivePath),
+        originalRootGroup.group(effectivePath),
         s"Group $effectivePath is already created. Use PUT to change this group.")
 
       throwIfConflicting(
-        rootGroup.app(effectivePath),
+        originalRootGroup.app(effectivePath),
         s"An app with the path $effectivePath already exists.")
 
       val (deployment, path) = await(updateOrCreate(rootPath, groupUpdate, force))
@@ -189,6 +190,40 @@ class GroupsResource @Inject() (
     @Context req: HttpServletRequest,
     @Suspended asyncResponse: AsyncResponse): Unit = {
     update("", force, dryRun, body, req, asyncResponse)
+  }
+
+  @PATCH
+  @Path("""{id:.+}""")
+  def patchGroup(
+    @PathParam("id") id: String,
+    body: Array[Byte],
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      val raw = Json.parse(body).as[raml.GroupPartialUpdate]
+      val normalized = GroupNormalization.partialUpdateNormalization(config).normalized(raw)
+
+      val groupId = id.toRootPath
+      validateOrThrow(groupId)(PathId.topLevel)
+
+      if (groupManager.group(groupId).isEmpty) {
+        unknownGroup(groupId)
+      } else {
+
+        def updateGroup(maybeGroup: Option[Group]): Group = {
+          maybeGroup match {
+            case Some(group) =>
+              checkAuthorization(UpdateGroup, group)
+              normalized.enforceRole.fold(group.withoutEnforceRole())(group.withEnforceRole(_))
+            case None => throw new RuntimeException(s"This is a bug. Group $id was not found this should have been caught by the validation.")
+          }
+        }
+
+        await(groupManager.patchRoot(_.updateGroup(groupId, updateGroup)))
+        ok()
+      }
+    }
   }
 
   /**
@@ -210,27 +245,28 @@ class GroupsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
 
-      val originalGroup = groupManager.rootGroup()
+      val originalRootGroup = groupManager.rootGroup()
       val rootPath = validateOrThrow(id.toRootPath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
+      val normalized = GroupNormalization.updateNormalization(config, effectivePath).normalized(raw)
 
-      val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath)
+      val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath, originalRootGroup)
       val groupUpdate = validateOrThrow(
         normalizeApps(
-          originalGroup,
+          originalRootGroup,
           effectivePath,
-          raw,
+          normalized,
           config
         ))(groupValidator)
 
       if (dryRun) {
         val newVersion = Timestamp.now()
-        val updatedGroup = await(groupsService.updateGroup(originalGroup, effectivePath, groupUpdate, newVersion))
+        val updatedGroup = await(groupsService.updateGroup(originalRootGroup, effectivePath, groupUpdate, newVersion))
 
         ok(
           Json.obj(
-            "steps".->(DeploymentPlan(originalGroup, updatedGroup).steps)
+            "steps".->(DeploymentPlan(originalRootGroup, updatedGroup).steps)
           ).toString()
         )
       } else {

@@ -39,9 +39,23 @@ case class StoredGroup(
   lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
   lazy val transitivePodIds: Map[PathId, OffsetDateTime] = podIds ++ storedGroups.flatMap(_.podIds)
 
+  /**
+    * Load all apps and pods referenced by id and version.
+    *
+    * The [[StoredGroup]] does not hold the actual app and pod definitions but only their ids and versions.
+    * This method resolves these, ie loads them.
+    *
+    * @param appRepository The app repository used to load all apps.
+    * @param podRepository The pod repository used to load all pods.
+    * @param ctx The execution context for async/await.
+    * @return A [[Group]] with all apps and pods attached.
+    */
   def resolve(
     appRepository: AppRepository,
     podRepository: PodRepository)(implicit ctx: ExecutionContext): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
+
+    require(enforceRole.isDefined, s"BUG! Group $id has not enforce role filed defined which should be done by migration.")
+
     val appFutures = appIds.map {
       case (appId, appVersion) => appRepository.getVersion(appId, appVersion).recover {
         case NonFatal(ex) =>
@@ -97,7 +111,8 @@ case class StoredGroup(
       pods = pods,
       groupsById = groups,
       dependencies = dependencies,
-      version = Timestamp(version)
+      version = Timestamp(version),
+      enforceRole = enforceRole.get
     )
   }
 
@@ -144,7 +159,7 @@ object StoredGroup {
       storedGroups = group.groupsById.map { case (_, group) => StoredGroup(group) }(collection.breakOut),
       dependencies = group.dependencies,
       version = group.version.toOffsetDateTime,
-      enforceRole = group.enforceRole)
+      enforceRole = Some(group.enforceRole))
 
   def apply(proto: Protos.GroupDefinition): StoredGroup = {
     val apps: Map[PathId, OffsetDateTime] = proto.getAppsList.map { appId =>
@@ -158,7 +173,7 @@ object StoredGroup {
     val id = PathId.fromSafePath(proto.getId)
 
     // Default to false for top-level group.
-    val effectiveEnforceRole =
+    val enforceRole: Option[Boolean] =
       if (proto.hasEnforceRole()) Some(proto.getEnforceRole)
       else if (id.parent.isRoot) Some(false)
       else None
@@ -172,7 +187,7 @@ object StoredGroup {
       storedGroups = groups.toIndexedSeq,
       dependencies = proto.getDependenciesList.map(PathId.fromSafePath)(collection.breakOut),
       version = OffsetDateTime.parse(proto.getVersion, DateFormat),
-      enforceRole = effectiveEnforceRole
+      enforceRole = enforceRole
     )
   }
 }

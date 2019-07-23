@@ -60,8 +60,6 @@ class InfoResource @Inject() (
     "on_elected_prepare_timeout" -> config.onElectedPrepareTimeout.toOption,
     "reconciliation_initial_delay" -> config.reconciliationInitialDelay.toOption,
     "reconciliation_interval" -> config.reconciliationInterval.toOption,
-    "revive_offers_for_new_apps" -> config.reviveOffersForNewApps.toOption,
-    "revive_offers_repetitions" -> config.reviveOffersRepetitions.toOption,
     "scale_apps_initial_delay" -> config.scaleAppsInitialDelay.toOption,
     "scale_apps_interval" -> config.scaleAppsInterval.toOption,
     "store_cache" -> config.storeCache.toOption,
