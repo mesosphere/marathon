@@ -59,7 +59,7 @@ case class ITEnrichedTask(
     version: Option[String],
     region: Option[String],
     zone: Option[String],
-    role: String,
+    role: Option[String],
     healthCheckResults: Seq[ITHealthCheckResult]) {
 
   def launched: Boolean = startedAt.nonEmpty
