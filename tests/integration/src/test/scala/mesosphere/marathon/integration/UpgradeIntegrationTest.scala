@@ -127,8 +127,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       eventually { marathon149 should have (runningTasksFor(app_149.id.toPath, 1)) }
       eventually { marathon149 should have (runningTasksFor(app_149_fail.id.toPath, 1)) }
 
-      val originalApp149Tasks = marathon149.client.tasks(app_149.id.toPath).value
-      val originalApp149FailedTasks = marathon149.client.tasks(app_149_fail.id.toPath).value
+      val originalApp149Tasks: List[ITEnrichedTask] = marathon149.client.tasks(app_149.id.toPath).value
+      val originalApp149FailedTasks: List[ITEnrichedTask] = marathon149.client.tasks(app_149_fail.id.toPath).value
 
       When("Marathon 1.4.9 is shut down")
       marathon149.stop().futureValue
@@ -153,8 +153,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       eventually { marathon1515 should have (runningTasksFor(app_1515.id.toPath, 1)) }
       eventually { marathon1515 should have (runningTasksFor(app_1515_fail.id.toPath, 1)) }
 
-      val originalApp1515Tasks = marathon1515.client.tasks(app_1515.id.toPath).value
-      val originalApp1515FailedTasks = marathon1515.client.tasks(app_1515_fail.id.toPath).value
+      val originalApp1515Tasks: List[ITEnrichedTask] = marathon1515.client.tasks(app_1515.id.toPath).value
+      val originalApp1515FailedTasks: List[ITEnrichedTask] = marathon1515.client.tasks(app_1515_fail.id.toPath).value
 
       And("All apps from 1.4.9 are still running")
       marathon1515.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
@@ -215,8 +215,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
       Then("All apps from 1.4.9 and 1.5.15 are still running")
-      marathonCurrent.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
-      marathonCurrent.client.tasks(app_1515.id.toPath).value should contain theSameElementsAs (originalApp1515Tasks)
+      val originalApp149TasksWithRole = originalApp149Tasks.map(t => t.copy(role = Some("foo")))
+      val originalApp1515TasksWithRole = originalApp1515Tasks.map(t => t.copy(role = Some("foo")))
+      marathonCurrent.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149TasksWithRole)
+      marathonCurrent.client.tasks(app_1515.id.toPath).value should contain theSameElementsAs (originalApp1515TasksWithRole)
 
       And("All apps from 1.4.9 and 1.5.15 are recovered and running again")
       eventually { marathonCurrent should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
