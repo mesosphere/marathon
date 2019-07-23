@@ -42,14 +42,12 @@ class MigrationTo19100Test extends AkkaUnitTest {
 
   class Fixture {
 
-    val appRepository: AppRepository = mock[AppRepository]
-    val podRepository: PodRepository = mock[PodRepository]
     val instanceRepository: InstanceRepository = mock[InstanceRepository]
     val persistenceStore: PersistenceStore[ZkId, String, ZkSerialized] = mock[PersistenceStore[ZkId, String, ZkSerialized]]
 
     def migration(): MigrationTo19100 = {
 
-      new MigrationTo19100(mesosDefaultRole, appRepository, podRepository, instanceRepository, persistenceStore )
+      new MigrationTo19100(mesosDefaultRole, instanceRepository, persistenceStore )
     }
 
     /**
