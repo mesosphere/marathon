@@ -58,7 +58,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     "An Instance should keep it's previous role in a resident app" in {
-      val appId = PathId("/dev/resident-app-with-role")
+      val appId = PathId("/dev/resident-app-keep-previous-role")
 
       Given("an app in with the default role")
       val appInDev = residentApp(appId, instances = 1, role = Some(BaseMarathon.defaultRole), cmd = "sleep 10000")
@@ -115,7 +115,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "Marathon should launch an resident app as non-default role" in {
       Given("an app in role dev")
-      val appInDev = residentApp(PathId("/dev/simple-resident-app-with-role"), role = Some("dev"))
+      val appInDev = residentApp(PathId("/dev/resident-app-with-non-default-role"), role = Some("dev"))
 
       When("The app is deployed")
       val resultInDev = marathon.createAppV2(appInDev)
