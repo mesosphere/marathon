@@ -1,7 +1,8 @@
 package mesosphere.marathon
-package api.v2
+package api.v2.normalization
 
 import mesosphere.UnitTest
+import mesosphere.marathon.api.v2.{AppNormalization, NetworkNormalizationMessages, ValidationHelper}
 import mesosphere.marathon.raml._
 import mesosphere.marathon.util.RoleSettings
 

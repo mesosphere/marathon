@@ -1,9 +1,10 @@
 package mesosphere.marathon
-package api.v2
+package api.v2.normalization
 
 import mesosphere.UnitTest
 import mesosphere.marathon.raml.{Endpoint, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodPersistentVolume, PodPlacementPolicy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, UnreachableDisabled, VolumeMount}
 import Normalization._
+import mesosphere.marathon.api.v2.{NetworkNormalizationMessages, PodNormalization, ValidationHelper}
 import mesosphere.marathon.util.RoleSettings
 import org.scalatest.Inside
 

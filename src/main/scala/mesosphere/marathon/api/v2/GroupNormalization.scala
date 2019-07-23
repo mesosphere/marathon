@@ -15,7 +15,8 @@ object GroupNormalization {
       if (id.parent.isRoot) {
         update.copy(enforceRole = Some(effectiveEnforceRole(conf, update.enforceRole)), groups = update.groups.map(normalizeChildren(conf, false)))
       } else {
-        update.copy(enforceRole = Some(false), groups = update.groups.map(normalizeChildren(conf, id.isRoot)))
+        val enforceRole = update.enforceRole.orElse(Some(false))
+        update.copy(enforceRole = enforceRole, groups = update.groups.map(normalizeChildren(conf, id.isRoot)))
       }
     } else update
   }
@@ -51,7 +52,8 @@ object GroupNormalization {
       }
     } else {
       childGroups.map { child =>
-        child.copy(enforceRole = Some(false), groups = child.groups.map(normalizeChildren(conf, false)))
+        val enforceRole = child.enforceRole.orElse(Some(false))
+        child.copy(enforceRole = enforceRole, groups = child.groups.map(normalizeChildren(conf, false)))
       }
     }
   }

@@ -264,7 +264,7 @@ object Group extends StrictLogging {
 
       // Only top-level groups are allowed to set the enforce role parameter.
       if (group.enforceRole.contains(true)) {
-        group.id.map(_.toPath) is optional(PathId.topLevel)
+        group.id.map(base.append(_)) is optional(PathId.topLevel)
       }
 
       // Enforce role is not allowed to be updated.

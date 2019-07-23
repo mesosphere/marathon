@@ -432,5 +432,39 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
         rootGroup.app(PathId("/test-group/sleep/goodnight")).shouldNot(be(empty))
       }
     }
+
+    "Allow batch creation of a top-level group with enforce role and apps" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+        val body =
+          """
+        {
+          "groups": [
+            {
+              "apps": [
+                {
+                  "id": "goodnight",
+                  "cmd": "sleep 1",
+                  "instances": 0,
+                  "role": "prod"
+                }
+              ],
+              "id": "sleep"
+            }
+          ],
+          "id": "/prod",
+          "enforceRole": true
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("", false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 201
+
+        val rootGroup = groupManager.rootGroup()
+        groupPaths(rootGroup) shouldBe Set("/", "/prod", "/prod/sleep")
+        rootGroup.app(PathId("/prod/sleep/goodnight")).value.role should be("prod")
+      }
+    }
   }
 }
