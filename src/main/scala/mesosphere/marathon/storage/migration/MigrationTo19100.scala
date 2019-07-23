@@ -16,15 +16,12 @@ import mesosphere.marathon.core.instance.Reservation
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.Role
-import mesosphere.marathon.state.{AppDefinition, Instance, PathId, Timestamp}
-import mesosphere.marathon.storage.repository.{AppRepository, InstanceRepository, PodRepository}
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
-import mesosphere.marathon.storage.repository.{StoredGroup, StoredGroupRepositoryImpl}
+import mesosphere.marathon.state._
+import mesosphere.marathon.storage.repository.{InstanceRepository, StoredGroup, StoredGroupRepositoryImpl}
 import mesosphere.marathon.storage.store.ZkStoreSerialization
-import play.api.libs.json._
-import play.api.libs.json.Reads._
 import play.api.libs.functional.syntax._
+import play.api.libs.json.Reads._
+import play.api.libs.json._
 
 import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
@@ -227,8 +224,8 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
   }
 
   def migrateGroups(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
-    import ZkStoreSerialization.{groupIdResolver, groupMarshaller, groupUnmarshaller}
     import StoredGroupRepositoryImpl.RootId
+    import ZkStoreSerialization.{groupIdResolver, groupMarshaller, groupUnmarshaller}
 
     val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }
       .mapMaterializedValue { f =>

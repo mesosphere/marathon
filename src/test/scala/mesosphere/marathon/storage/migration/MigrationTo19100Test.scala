@@ -7,7 +7,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.storage.repository.{AppRepository, InstanceRepository, PodRepository}
+import mesosphere.marathon.storage.repository.InstanceRepository
 import play.api.libs.json.{JsObject, JsString, Json}
 
 class MigrationTo19100Test extends AkkaUnitTest {
