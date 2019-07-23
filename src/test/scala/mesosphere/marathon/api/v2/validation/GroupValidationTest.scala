@@ -4,7 +4,7 @@ package api.v2.validation
 import mesosphere.marathon.state.{Group, PathId, RootGroup}
 import mesosphere.{UnitTest, ValidationTestLike}
 
-class GroupValidationTest  extends UnitTest with ValidationTestLike {
+class GroupValidationTest extends UnitTest with ValidationTestLike {
 
   "Group validation" should {
     "reject defined `enforceRole` outside of a top-level group" in {
@@ -17,9 +17,9 @@ class GroupValidationTest  extends UnitTest with ValidationTestLike {
         )))
       )
 
-      val validation = groupValidator(update)
-      validation.isFailure shouldBe true
-      validation.toString should include("\"/prod/second\" Path needs to be top-level")
+      groupValidator(update) should haveViolations(
+        "/groups(0)/enforceRole" -> """enforceRole can only be set for top-level groups, and /prod/second is not top-level"""
+      )
     }
   }
 }

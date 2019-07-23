@@ -4,7 +4,7 @@ package state
 import java.util.Objects
 
 import com.typesafe.scalalogging.StrictLogging
-import com.wix.accord.Descriptions.Explicit
+import com.wix.accord.Descriptions.{Explicit, Generic, Path}
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
@@ -261,11 +261,7 @@ object Group extends StrictLogging {
   def validNestedGroupUpdateWithBase(base: PathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] =
     validator[raml.GroupUpdate] { group =>
       group is notNull
-
-      // Only top-level groups are allowed to set the enforce role parameter.
-      if (group.enforceRole.contains(true)) {
-        group.id.map(base.append(_)) is optional(PathId.topLevel)
-      }
+      group is definingEnforcingRoleOnlyIfItsTopLevel(base)
 
       // Enforce role is not allowed to be updated.
       group.enforceRole is noEnforceRoleUpdate(originalRootGroup, group.id.map(_.toPath))
@@ -283,9 +279,21 @@ object Group extends StrictLogging {
         validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup)))
     }
 
-  case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[PathId]) extends Validator[Option[Boolean]] {
+  private case class definingEnforcingRoleOnlyIfItsTopLevel(base: PathId) extends Validator[raml.GroupUpdate] {
+    override def apply(group: raml.GroupUpdate): Result = {
+      val groupId = group.id.fold(base) { id => PathId(id).canonicalPath(base) }
+      // Only top-level groups are allowed to set the enforce role parameter.
+      if (!groupId.isTopLevel && group.enforceRole.contains(true)) {
+        Failure(Set(RuleViolation(group.enforceRole, s"enforceRole can only be set for top-level groups, and ${groupId} is not top-level", Path(Generic("enforceRole")))))
+      } else {
+        Success
+      }
+    }
+  }
 
-    def apply(maybeNewEnforceRole: Option[Boolean]) = {
+  private case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[PathId]) extends Validator[Option[Boolean]] {
+
+    override def apply(maybeNewEnforceRole: Option[Boolean]): Result = {
       val originalGroup = updatedGroupId.flatMap(originalRootGroup.group) // TODO: why is groupUpdate.id optional? What is the semantic there?
       (maybeNewEnforceRole, originalGroup.map(_.enforceRole)) match {
         case (None, None) => Success
