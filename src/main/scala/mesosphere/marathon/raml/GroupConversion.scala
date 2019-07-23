@@ -23,7 +23,7 @@ case class UpdateGroupStructureOp(
     current: CoreGroup,
     timestamp: Timestamp
 ) {
-  def apply(implicit cf: App => AppDefinition): CoreGroup = UpdateGroupStructureOp.execute(groupUpdate, current, timestamp)
+  def apply(cf: App => AppDefinition): CoreGroup = UpdateGroupStructureOp.execute(groupUpdate, current, timestamp)(cf)
 }
 
 object UpdateGroupStructureOp {
