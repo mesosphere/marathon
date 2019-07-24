@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization, ValidationHelper}
+import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{BridgeNetwork, HostNetwork}
 import mesosphere.marathon.state._

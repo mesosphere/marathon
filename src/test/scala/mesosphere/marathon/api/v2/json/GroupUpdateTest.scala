@@ -3,7 +3,7 @@ package api.v2.json
 
 import com.wix.accord.validate
 import mesosphere.UnitTest
-import mesosphere.marathon.api.v2.{AppNormalization, GroupNormalization, ValidationHelper}
+import mesosphere.marathon.api.v2.{AppNormalization, GroupNormalization}
 import mesosphere.marathon.raml.{App, GroupConversion, GroupUpdate, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._

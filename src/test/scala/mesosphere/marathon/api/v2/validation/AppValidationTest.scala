@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2.validation
 
 import com.wix.accord.Validator
-import mesosphere.marathon.api.v2.{AppNormalization, ValidationHelper}
+import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.{UnitTest, ValidationTestLike}
