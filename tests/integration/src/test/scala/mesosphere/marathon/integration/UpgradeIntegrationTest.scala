@@ -215,10 +215,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
       Then("All apps from 1.4.9 and 1.5.15 are still running")
-      val originalApp149TasksWithRole = originalApp149Tasks.map(t => t.copy(role = Some("foo")))
-      val originalApp1515TasksWithRole = originalApp1515Tasks.map(t => t.copy(role = Some("foo")))
-      marathonCurrent.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149TasksWithRole)
-      marathonCurrent.client.tasks(app_1515.id.toPath).value should contain theSameElementsAs (originalApp1515TasksWithRole)
+      val originalApp149TaskIds = originalApp149Tasks.map(_.id)
+      val originalApp1515TaskIds = originalApp1515Tasks.map(_.id)
+      marathonCurrent.client.tasks(app_149.id.toPath).value.map(_.id) should contain theSameElementsAs (originalApp149TaskIds)
+      marathonCurrent.client.tasks(app_1515.id.toPath).value.map(_.id) should contain theSameElementsAs (originalApp1515TaskIds)
 
       And("All apps from 1.4.9 and 1.5.15 are recovered and running again")
       eventually { marathonCurrent should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
@@ -270,8 +270,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
     Then("All apps from 1.6.549 are still running")
-    val originalTasksWithRole = originalApp16549Tasks.map(t => t.copy(role = Some("foo")))
-    marathonCurrent.client.tasks(app_16549.id.toPath).value should contain theSameElementsAs (originalTasksWithRole)
+    val originalTaskIds = originalApp16549Tasks.map(_.id)
+    marathonCurrent.client.tasks(app_16549.id.toPath).value.map(_.id) should contain theSameElementsAs (originalTaskIds)
 
     And("All apps from 1.6.549 are recovered and running again")
     eventually { marathonCurrent should have(runningTasksFor(app_16549_fail.id.toPath, 1)) }
