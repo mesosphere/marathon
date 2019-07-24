@@ -52,9 +52,9 @@ class OfferProcessorImplTest extends UnitTest {
   object f {
     import org.apache.mesos.{Protos => Mesos}
     val metrics = DummyMetrics
-    val provision = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
+    val provision = new InstanceOpFactoryHelper(metrics, Some("principal"))
       .provision(_: Mesos.TaskInfo, _: InstanceUpdateOperation.Provision)
-    val launchWithNewTask = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
+    val launchWithNewTask = new InstanceOpFactoryHelper(metrics, Some("principal"))
       .launchOnReservation(_: Mesos.TaskInfo, _: InstanceUpdateOperation.Provision, _: Instance)
   }
 

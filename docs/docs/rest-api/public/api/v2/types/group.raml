@@ -6,41 +6,6 @@ uses:
   strings: stringTypes.raml
   pragma: pragma.raml
 types:
-  Group:
-    type: object
-    description: |
-      Group is used to create or update applications and groups. Pods are not mutable
-      through this interface, but are included for completeness.
-    properties:
-      id: strings.PathId
-      apps?:
-        type: array
-        items: app.App
-        uniqueItems: true
-      pods?:
-        type: array
-        items: pod.Pod
-        uniqueItems: true
-      groups?:
-        type: array
-        items: Group
-        uniqueItems: true
-        description: |
-            Groups can build a tree.
-            Each group can contain sub-groups.
-            The sub-groups are defined here.
-      dependencies?:
-        type: array
-        items: strings.PathId
-        uniqueItems: true
-        description: |
-          A list of services that this group depends on.
-          An order is derived from the dependencies for performing start/stop and
-          upgrade of the application. For example, an application /a relies on the
-          services /b which itself relies on /c. To start all 3 applications,
-          first /c is started than /b than /a.
-      version?:
-        type: datetime
   GroupInfo:
     type: object
     description: |
@@ -77,6 +42,8 @@ types:
           first /c is started than /b than /a.
       version?:
         type: datetime
+      enforceRole?:
+        type: boolean
   GroupUpdate:
     type: object
     (pragma.asUpdateType):
@@ -100,3 +67,10 @@ types:
         minimum: 0
       version?:
         type: datetime
+      enforceRole?:
+        type: boolean
+  GroupPartialUpdate:
+    type: object
+    properties:
+      enforceRole?:
+        type: boolean

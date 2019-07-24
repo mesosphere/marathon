@@ -152,7 +152,8 @@ case class AppDefinition(
       taskId = None,
       host = None,
       hostPorts = Seq.empty,
-      envPrefix = None
+      envPrefix = None,
+      enforceRole = None
     )
     val cpusResource = ScalarResource(Resource.CPUS, resources.cpus)
     val memResource = ScalarResource(Resource.MEM, resources.mem)
@@ -505,6 +506,11 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   def validWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.role is in(roleEnforcement.validRoles)
+    if (app.isResident) {
+      app.role is isTrue(s"Resident apps cannot have the role ${ResourceRole.Unreserved}") { role: String =>
+        !role.equals(ResourceRole.Unreserved)
+      }
+    }
     app.acceptedResourceRoles is ResourceRole.validForRole(app.role)
   }
 

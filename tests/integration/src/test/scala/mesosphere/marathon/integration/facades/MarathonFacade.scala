@@ -22,13 +22,14 @@ import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.setup.{AkkaHttpResponse, RestResult}
-import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
+import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.Retry
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
 import mesosphere.marathon.state.PathId._
+
 import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
 import scala.concurrent.Future
@@ -358,6 +359,10 @@ class MarathonFacade(
   def updateGroup(id: PathId, group: GroupUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     result(requestFor[ITDeploymentResult](Put(s"$url/v2/groups$id?force=$force", group)), waitTime)
+  }
+
+  def patchGroup(id: PathId, update: GroupPartialUpdate): RestResult[String] = {
+    result(requestFor[String](Patch(s"$url/v2/groups$id", update)), waitTime)
   }
 
   def rollbackGroup(groupId: PathId, version: Timestamp, force: Boolean = false): RestResult[ITDeploymentResult] = {

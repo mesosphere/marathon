@@ -199,13 +199,14 @@ object ReviveOffersStreamLogic extends StrictLogging {
     * specifically, it will indicate that offers should be revived for a role on the 2nd tick received after the initial
     * unsuppress or revive directive was received, unless if offers for the role are suppressed.
     */
-  private[impl] class ReviveRepeaterLogic {
+  private[impl] class ReviveRepeaterLogic extends StrictLogging {
     var currentRoleState: Map[Role, RoleOfferState] = Map.empty
     var repeatIn: Map[Role, Int] = Map.empty
 
     def markRolesForRepeat(roles: Iterable[Role]): Unit =
       roles.foreach {
         role =>
+          // Override any old state.
           repeatIn += role -> 2
       }
 
@@ -219,18 +220,22 @@ object ReviveOffersStreamLogic extends StrictLogging {
     }
 
     def handleTick(): List[RoleDirective] = {
+      // Decrease tick counts and filter out those that are zero.
       val newRepeatIn = repeatIn.collect {
-        case (k, v) if v > 1 => k -> (v - 1)
+        case (k, v) if v >= 1 => k -> (v - 1)
       }
-      val rolesForReviveRepetition = (repeatIn.keySet -- newRepeatIn.keySet).filter {
-        role => currentRoleState.get(role).contains(OffersWanted)
-      }
+
+      // Repeat revives for those roles that waited for a tick.
+      val rolesForReviveRepetition = newRepeatIn.iterator.collect {
+        case (role, counter) if counter == 0 && currentRoleState.get(role).contains(OffersWanted) => role
+      }.toSet
 
       repeatIn = newRepeatIn
 
       if (rolesForReviveRepetition.isEmpty) {
         Nil
       } else {
+        logger.debug(s"Repeat revive for $rolesForReviveRepetition.")
         List(IssueRevive(rolesForReviveRepetition))
       }
     }

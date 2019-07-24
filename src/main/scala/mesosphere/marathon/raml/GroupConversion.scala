@@ -11,18 +11,6 @@ trait GroupConversion {
       case (op, cf) =>
         op.apply(cf)
     }
-
-  implicit val groupWritesRaml: Writes[CoreGroup, Group] =
-    Writes[CoreGroup, Group] { group =>
-      Group(
-        id = group.id.toString,
-        apps = group.apps.map { case (_, app) => Raml.toRaml(app) }(collection.breakOut),
-        pods = group.pods.map { case (_, pod) => Raml.toRaml(pod) }(collection.breakOut),
-        groups = group.groupsById.map { case (_, g) => Raml.toRaml(g) }(collection.breakOut),
-        dependencies = group.dependencies.map(_.toString),
-        version = Some(group.version.toOffsetDateTime)
-      )
-    }
 }
 
 object GroupConversion extends GroupConversion {
@@ -94,6 +82,7 @@ object UpdateGroupStructureOp {
 
     require(groupUpdate.scaleBy.isEmpty, "For a structural update, no scale should be given.")
     require(groupUpdate.version.isEmpty, "For a structural update, no version should be given.")
+    assert(groupUpdate.enforceRole.isDefined, s"BUG! The group normalization should have set enforceRole for ${groupUpdate.id}.")
 
     implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(current.id))
     implicit val appNormalization = normalizeApp(timestamp)
@@ -124,7 +113,8 @@ object UpdateGroupStructureOp {
       pods = current.pods,
       groupsById = effectiveGroups,
       dependencies = effectiveDependencies,
-      version = timestamp)
+      version = timestamp,
+      enforceRole = groupUpdate.enforceRole.get)
   }
 }
 

@@ -4,6 +4,7 @@ package core.launcher.impl
 import java.time.Clock
 
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
 import mesosphere.marathon.core.instance.{Instance, LocalVolume, LocalVolumeId, Reservation}
@@ -29,14 +30,14 @@ import scala.concurrent.duration._
 class InstanceOpFactoryImpl(
     metrics: Metrics,
     config: MarathonConf,
-    pluginManager: PluginManager = PluginManager.None)(implicit clock: Clock)
+    pluginManager: PluginManager = PluginManager.None,
+    rootGroupRetriever: GroupManager.CurrentRootGroupRetriever)(implicit clock: Clock)
   extends InstanceOpFactory with StrictLogging {
 
   private[this] val instanceOperationFactory = {
     val principalOpt = config.mesosAuthenticationPrincipal.toOption
-    val roleOpt = config.mesosRole.toOption
 
-    new InstanceOpFactoryHelper(metrics, principalOpt, roleOpt)
+    new InstanceOpFactoryHelper(metrics, principalOpt)
   }
 
   private[this] val schedulerPlugins: Seq[SchedulerPlugin] = pluginManager.plugins[SchedulerPlugin]
@@ -95,7 +96,7 @@ class InstanceOpFactoryImpl(
           pod.containers.map { container => Task.Id(instanceId, Some(container)) }
         }
         val (executorInfo, groupInfo, networkInfos) = TaskGroupBuilder.build(pod, offer,
-          instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None)
+          instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None, getEnforceRole(pod.id))
 
         val agentInfo = Instance.AgentInfo(offer)
         val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id.parse(t.getTaskId) }(collection.breakOut)
@@ -135,7 +136,7 @@ class InstanceOpFactoryImpl(
           case None => Task.Id(scheduledInstance.instanceId)
         }
         val taskBuilder = new TaskBuilder(app, taskId, config, runSpecTaskProc)
-        val (taskInfo, networkInfo) = taskBuilder.build(offer, matches.resourceMatch, None)
+        val (taskInfo, networkInfo) = taskBuilder.build(offer, matches.resourceMatch, None, getEnforceRole(app.id))
 
         val agentInfo = AgentInfo(offer)
 
@@ -180,7 +181,7 @@ class InstanceOpFactoryImpl(
         instances.valuesIterator.toStream.filterAs(_.instanceId != volumeMatch.instance.instanceId)
 
       // resources are reserved for this role, so we only consider those resources
-      val rolesToConsider = config.mesosRole.toOption.toSet
+      val rolesToConsider = Set(volumeMatch.instance.role)
       val reservationId = volumeMatch.instance.reservation.get.id
       val reservationLabels = TaskLabels.labelsForTask(request.frameworkId, reservationId).labels
       val resourceMatchResponse =
@@ -275,7 +276,7 @@ class InstanceOpFactoryImpl(
 
         val (taskInfo, networkInfo) =
           new TaskBuilder(app, newTaskId, config, runSpecTaskProc)
-            .build(offer, resourceMatch, Some(volumeMatch))
+            .build(offer, resourceMatch, Some(volumeMatch), getEnforceRole(app.id))
 
         val now = clock.now()
         val provisionedTasks = Tasks.provisioned(Seq(newTaskId), Map(newTaskId -> networkInfo), app.version, now)
@@ -312,7 +313,7 @@ class InstanceOpFactoryImpl(
         }
 
         val (executorInfo, groupInfo, networkInfos) = TaskGroupBuilder.build(pod, offer,
-          instanceId, podContainerTaskIds, builderConfig, runSpecTaskProc, resourceMatch, Some(volumeMatch))
+          instanceId, podContainerTaskIds, builderConfig, runSpecTaskProc, resourceMatch, Some(volumeMatch), getEnforceRole(pod.id))
 
         val now = clock.now()
         val provisionedTasks = Tasks.provisioned(podContainerTaskIds, networkInfos, pod.version, now)
@@ -320,6 +321,18 @@ class InstanceOpFactoryImpl(
 
         instanceOperationFactory.launchOnReservation(executorInfo, groupInfo, stateOp, reservedInstance)
     }
+  }
+
+  private def getEnforceRole(pathId: PathId): Boolean = {
+    val topLevelPath = pathId.rootPath
+    val topLevelGroup = if (topLevelPath.isEmpty)
+      None
+    else
+      rootGroupRetriever.rootGroup().group(topLevelPath)
+
+    topLevelGroup
+      .map { _.enforceRole }
+      .getOrElse(false)
   }
 
   private[this] def reserveAndCreateVolumes(
@@ -351,7 +364,7 @@ class InstanceOpFactoryImpl(
 
     val reservationLabels = TaskLabels.labelsForTask(frameworkId, reservationId)
     val stateOp = InstanceUpdateOperation.Reserve(scheduledInstance.instanceId, reservation, agentInfo)
-    instanceOperationFactory.reserveAndCreateVolumes(reservationLabels, stateOp, resourceMatch.resources, localVolumes)
+    instanceOperationFactory.reserveAndCreateVolumes(scheduledInstance.role, reservationLabels, stateOp, resourceMatch.resources, localVolumes)
   }
 
   def combine(processors: Seq[RunSpecTaskProcessor]): RunSpecTaskProcessor = new RunSpecTaskProcessor {

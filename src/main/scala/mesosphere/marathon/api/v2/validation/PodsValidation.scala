@@ -249,6 +249,11 @@ trait PodsValidation extends GeneralPurposeCombinators {
 
   def validPodDefinitionWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[PodDefinition] = validator[PodDefinition] { pod =>
     pod.role is in(roleEnforcement.validRoles)
+    if (pod.isResident) {
+      pod.role is isTrue(s"Resident pods cannot have the role ${ResourceRole.Unreserved}") { role: String =>
+        !role.equals(ResourceRole.Unreserved)
+      }
+    }
     pod.acceptedResourceRoles is valid(ResourceRole.validForRole(pod.role))
   }
 
