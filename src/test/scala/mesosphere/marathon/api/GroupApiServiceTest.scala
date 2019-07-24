@@ -85,9 +85,10 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
     val f = Fixture(groupManager = groupManager)
     When("Calling update with new apps being added to a group")
     val update = GroupUpdate(apps = Some(Set(App("/app", role = Some(ResourceRole.Unreserved), networks = Seq(Network(mode = NetworkMode.ContainerBridge))))))
-    val normalizedUpdate = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.empty).normalized(update)
+    val rootGroup = createRootGroup()
+    val normalizedUpdate = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.empty, rootGroup).normalized(update)
     val updatedGroup = f.groupApiService.updateGroup(
-      createRootGroup(),
+      rootGroup,
       PathId.empty,
       normalizedUpdate,
       newVersion).futureValue

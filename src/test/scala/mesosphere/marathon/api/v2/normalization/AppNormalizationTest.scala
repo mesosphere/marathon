@@ -4,6 +4,7 @@ package api.v2.normalization
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.{AppNormalization, NetworkNormalizationMessages, ValidationHelper}
 import mesosphere.marathon.raml._
+import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.util.RoleSettings
 
 class AppNormalizationTest extends UnitTest {
@@ -104,9 +105,9 @@ class AppNormalizationTest extends UnitTest {
       role: Option[String] = None,
       sanitizeAcceptedResourceRoles: Boolean = true) = {
 
-      val roleSettings = role.map(r => RoleSettings(validRoles = Set(r), defaultRole = r)).getOrElse(ValidationHelper.roleSettings)
+      val roleSettings = role.map(r => RoleSettings(validRoles = Set(r), defaultRole = r)).getOrElse(ValidationHelper.roleSettings())
 
-      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName, Set(), roleSettings, sanitizeAcceptedResourceRoles)
+      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName, Set(), roleSettings.defaultRole, sanitizeAcceptedResourceRoles)
       Normalization[App] { app =>
         AppNormalization(config).normalized(AppNormalization.forDeprecated(config).normalized(app))
       }
@@ -116,7 +117,7 @@ class AppNormalizationTest extends UnitTest {
       defaultNetworkName: Option[String],
       mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName,
       sanitizeAcceptedResourceRoles: Boolean = true) = {
-      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName, Set(), ValidationHelper.roleSettings, sanitizeAcceptedResourceRoles)
+      val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName, Set(), ResourceRole.Unreserved, sanitizeAcceptedResourceRoles)
       Normalization[AppUpdate] { app =>
         AppNormalization.forUpdates(config)
           .normalized(AppNormalization.forDeprecatedUpdates(config).normalized(app))

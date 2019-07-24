@@ -1,7 +1,8 @@
 package mesosphere.marathon
 package api.v2
 
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{PathId, RootGroup}
+import mesosphere.mesos.ResourceMatcher.Role
 
 object GroupNormalization {
 
@@ -9,7 +10,21 @@ object GroupNormalization {
     update.copy(enforceRole = Some(effectiveEnforceRole(conf, update.enforceRole)))
   }
 
-  def updateNormalization(conf: MarathonConf, id: PathId): Normalization[raml.GroupUpdate] = Normalization { update =>
+  def updateNormalization(conf: MarathonConf, effectivePath: PathId, originalRootGroup: RootGroup): Normalization[raml.GroupUpdate] = Normalization { update =>
+    assert(!effectivePath.isRoot, "TODO: support root group update")
+    val withNormalizedRoles = normalizeRoles(conf, effectivePath, update)
+    val defaultRole: Role = if (effectivePath.parent.isRoot) {
+      if (withNormalizedRoles.enforceRole.get) effectivePath.root
+      else conf.mesosRole()
+    } else {
+      val parent = originalRootGroup.group(effectivePath.parent).get
+      if (parent.enforceRole) parent.id.root
+      else conf.mesosRole()
+    }
+    normalizeApps(conf, withNormalizedRoles, effectivePath, defaultRole)
+  }
+
+  private def normalizeRoles(conf: MarathonConf, id: PathId, update: raml.GroupUpdate): raml.GroupUpdate = {
     // Only update if this is not a scale or rollback
     if (update.version.isEmpty && update.scaleBy.isEmpty) {
       if (id.parent.isRoot) {
@@ -19,6 +34,22 @@ object GroupNormalization {
         update.copy(enforceRole = enforceRole, groups = update.groups.map(normalizeChildren(conf, id.isRoot)))
       }
     } else update
+  }
+
+  private def normalizeApps(conf: MarathonConf, update: raml.GroupUpdate, effectivePath: PathId, defaultRole: Role): raml.GroupUpdate = {
+    val apps = update.apps.map(_.map { a =>
+
+      val normalizationConfig = AppNormalization.Configuration(conf, defaultRole)
+      val validateAndNormalizeApp: Normalization[raml.App] = AppHelpers.appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+
+      validateAndNormalizeApp.normalized(a.copy(id = PathId(a.id).canonicalPath(effectivePath).toString))
+    })
+
+    val groups = update.groups.map(_.map { g =>
+      normalizeApps(conf, g, effectivePath, defaultRole)
+    })
+
+    update.copy(apps = apps, groups = groups)
   }
 
   /**

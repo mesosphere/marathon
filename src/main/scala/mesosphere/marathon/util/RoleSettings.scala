@@ -26,7 +26,10 @@ object RoleSettings extends StrictLogging {
     *
     * @return A data set with valid roles, default role and a flag if the role should be enforced
     */
-  def forService(config: MarathonConf, servicePathId: PathId, rootGroup: RootGroup): RoleSettings = {
+  def forService(
+    config: MarathonConf,
+    servicePathId: PathId,
+    rootGroup: RootGroup): RoleSettings = {
     val defaultRole = config.mesosRole()
 
     if (servicePathId.parent.isRoot) {

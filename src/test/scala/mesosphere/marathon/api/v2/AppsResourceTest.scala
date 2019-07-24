@@ -59,9 +59,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       config.defaultNetworkName.toOption,
       config.mesosBridgeName(),
       config.availableFeatures,
-      ValidationHelper.roleSettings,
+      ResourceRole.Unreserved,
       config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles))
-    implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, normalizationConfig.roleSettings)(PluginManager.None)
+    implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, ValidationHelper.roleSettings())(PluginManager.None)
 
     implicit val validateAndNormalizeApp: Normalization[raml.App] =
       AppHelpers.appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())

@@ -53,7 +53,7 @@ class AppsResource @Inject() (
 
   private def createValidatorAndNormalizerForApp(pathId: PathId): (Normalization[raml.App], Validator[AppDefinition]) = {
     val roleSettings = RoleSettings.forService(config, pathId, groupManager.rootGroup())
-    val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
+    val normalizationConfig = AppNormalization.Configuration(config, roleSettings.defaultRole)
     val normalizer: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
     val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(config.availableFeatures, roleSettings)(pluginManager)
 
@@ -62,7 +62,7 @@ class AppsResource @Inject() (
 
   private def createValidatorAndNormalizerForAppUpdate(pathId: PathId): (Normalization[raml.AppUpdate], Validator[AppDefinition]) = {
     val roleSettings = RoleSettings.forService(config, pathId, groupManager.rootGroup())
-    val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
+    val normalizationConfig = AppNormalization.Configuration(config, roleSettings.defaultRole)
     val normalizer: Normalization[raml.AppUpdate] = appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
     val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(config.availableFeatures, roleSettings)(pluginManager)
 
@@ -178,7 +178,7 @@ class AppsResource @Inject() (
     */
   def canonicalAppUpdateFromJson(appId: PathId, body: Array[Byte], updateType: UpdateType): raml.AppUpdate = {
     val roleSettings = RoleSettings.forService(config, appId, groupManager.rootGroup())
-    val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
+    val normalizationConfig = AppNormalization.Configuration(config, roleSettings.defaultRole)
 
     implicit val normalizerApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
     implicit val normalizerUpdate: Normalization[raml.AppUpdate] = appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())

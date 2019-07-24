@@ -66,7 +66,7 @@ class PodNormalizationTest extends UnitTest with Inside {
             net.name.value shouldBe "net1"
         }
       }
-      "with default network name" in new Fixture(PodNormalization.Configuration(defaultNetworkName = Some("default1"), ValidationHelper.roleSettings, true)) {
+      "with default network name" in new Fixture(PodNormalization.Configuration(defaultNetworkName = Some("default1"), ValidationHelper.roleSettings(), true)) {
         // replace empty network name with the default
         val withoutNetworkName = template.copy(networks = Seq(Network()))
         inside(withoutNetworkName.normalize.networks) {
@@ -145,8 +145,8 @@ class PodNormalizationTest extends UnitTest with Inside {
         containers = Seq(PodContainer(name = "c", resources = Resources())),
         scheduling = Some(PodSchedulingPolicy(placement = Some(PodPlacementPolicy(acceptedResourceRoles = Seq("*", "other")))))
       )
-      val sanitizationEnabled = PodNormalization.Configuration(None, ValidationHelper.roleSettings, true)
-      val sanitizationDisabled = PodNormalization.Configuration(None, ValidationHelper.roleSettings, false)
+      val sanitizationEnabled = PodNormalization.Configuration(None, ValidationHelper.roleSettings(), true)
+      val sanitizationDisabled = PodNormalization.Configuration(None, ValidationHelper.roleSettings(), false)
 
       s"remove the role if ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} is enabled" in new Fixture(config = sanitizationEnabled) {
         template.normalize.scheduling.value.placement.value.acceptedResourceRoles should contain theSameElementsAs (Set("*"))
@@ -159,7 +159,7 @@ class PodNormalizationTest extends UnitTest with Inside {
 
   }
 
-  abstract class Fixture(config: PodNormalization.Config = PodNormalization.Configuration(None, ValidationHelper.roleSettings, true)) {
+  abstract class Fixture(config: PodNormalization.Config = PodNormalization.Configuration(None, ValidationHelper.roleSettings(), true)) {
     protected implicit val normalization: Normalization[Pod] = PodNormalization(config)
   }
 }
