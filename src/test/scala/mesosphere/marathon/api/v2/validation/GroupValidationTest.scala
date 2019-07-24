@@ -17,9 +17,9 @@ class GroupValidationTest extends UnitTest with ValidationTestLike {
         )))
       )
 
-      val validation = groupValidator(update)
-      validation.isFailure shouldBe true
-      validation.toString should include("\"/prod/second\" Path needs to be top-level")
+      groupValidator(update) should haveViolations(
+        "/groups(0)/enforceRole" -> """enforceRole can only be set for top-level groups, and /prod/second is not top-level"""
+      )
     }
   }
 }

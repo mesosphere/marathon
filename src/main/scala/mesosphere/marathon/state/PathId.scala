@@ -19,6 +19,8 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
 
   def isEmpty: Boolean = path.isEmpty
 
+  def isTopLevel: Boolean = !isRoot && parent.isRoot
+
   def isRoot: Boolean = path.isEmpty
 
   lazy val parent: PathId = path match {
@@ -181,5 +183,5 @@ object PathId {
     */
   val absolutePathValidator = isTrue[PathId]("Path needs to be absolute") { _.absolute }
 
-  val topLevel = isTrue[PathId]("Path needs to be top-level") { _.parent.isRoot }
+  val topLevel = isTrue[PathId]("Path needs to be top-level") { _.isTopLevel }
 }
