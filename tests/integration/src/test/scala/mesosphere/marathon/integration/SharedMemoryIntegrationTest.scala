@@ -4,7 +4,7 @@ package integration
 import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.AppMockFacade
-import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
+import mesosphere.marathon.integration.setup.{BaseMarathon, EmbeddedMarathonTest, MesosConfig}
 import mesosphere.marathon.raml.{Pod, Raml}
 import mesosphere.marathon.state.{HostVolume, VolumeMount}
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
@@ -13,7 +13,7 @@ import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 
-class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
+class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
   val projectDir: String = sys.props.getOrElse("user.dir", ".")
   override lazy val mesosConfig = MesosConfig(
@@ -67,7 +67,7 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
       upgradeStrategy = state.UpgradeStrategy(0.0, 0.0),
       networks = Seq(HostNetwork),
       instances = 1,
-      role = "foo"
+      role = BaseMarathon.defaultRole
     )
 
     When("The pod is deployed")
@@ -94,8 +94,6 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
 
     val shmFsSizeRegex = "tmpfs\\s+([0-9]+)\\s+[0-9]+\\s+[0-9]+\\s+[0-9]+%\\s+/dev/shm".r
     val shmFsSizeMatch = shmFsSizeRegex.findFirstMatchIn(ipcInfo)
-
-    logger.info("Found Match: " + shmFsSizeMatch + " ==> " + shmFsSizeMatch.map(_.group(1)))
 
     val shmSizeFromIpcInfo = shmFsSizeMatch.value.group(1)
 
@@ -169,13 +167,11 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
       upgradeStrategy = state.UpgradeStrategy(0.0, 0.0),
       networks = Seq(HostNetwork),
       instances = 1,
-      role = "foo"
+      role = BaseMarathon.defaultRole
     )
 
     val body:Pod = Raml.toRaml(pod)
     val bodyString = Json.prettyPrint(Pod.playJsonFormat.writes(body))
-
-    logger.info("Deploy Pod: " + bodyString )
 
     When("The pod is deployed")
     val createResult = marathon.createPodV2(pod)
@@ -185,8 +181,6 @@ class SharedMemoryIntegratonTest extends AkkaIntegrationTest with EmbeddedMarath
     val (ipcInfo1:String, ipcInfo2:String) = eventually {
       marathon.status(pod.id) should be(Stable)
       val status = marathon.status(pod.id).value
-
-      logger.info("Query PodStatus: " + status )
 
       val hosts = status.instances.flatMap(_.agentHostname)
       hosts should have size (1)

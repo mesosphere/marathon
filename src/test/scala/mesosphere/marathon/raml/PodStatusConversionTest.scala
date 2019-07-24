@@ -17,6 +17,19 @@ class PodStatusConversionTest extends UnitTest {
 
   import PodStatusConversionTest._
 
+  "PodConversion" should {
+    "keep linux info on executor" in {
+      val pod = basicOneContainerPod.copy(linuxInfo = Some(state.LinuxInfo(seccomp = None, ipcInfo = Some(state.IPCInfo(ipcMode = state.IpcMode.Private, shmSize = Some(32))))))
+
+      val ramlPod = pod.toRaml
+
+      val ramlLinuxInfo = Some(LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(mode = IPCMode.Private, shmSize = Some(32)))))
+
+      ramlPod.linuxInfo should be(ramlLinuxInfo)
+
+    }
+  }
+
   "PodStatusConversion" should {
     "multiple tasks with multiple container networks convert to proper network status" in {
 
