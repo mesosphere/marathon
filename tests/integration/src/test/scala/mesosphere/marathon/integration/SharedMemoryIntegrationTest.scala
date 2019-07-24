@@ -215,12 +215,15 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
     shmSize2 should be("" + shmSize)
 
     Then("The IPC ID should be the same for both containers")
-    val ipcIdRegex = "=======[0-9]+\\s+=======".r
+    val ipcIdRegex = "=======([0-9]+)\\s+=======".r
 
     val ipcIdMatch1 = ipcIdRegex.findFirstMatchIn(ipcInfo1)
     val ipcIdMatch2 = ipcIdRegex.findFirstMatchIn(ipcInfo2)
 
-    ipcIdMatch1.value should be(ipcIdMatch2.value)
+    val ipcId1 = ipcIdMatch1.value.group(1)
+    val ipcId2 = ipcIdMatch2.value.group(1)
+
+    ipcId1 should be(ipcId2)
 
 
   }
