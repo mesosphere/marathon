@@ -152,10 +152,11 @@ class GroupsResource @Inject() (
       val rootPath = validateOrThrow(id.toRootPath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
-      val normalized = GroupNormalization.updateNormalization(config, effectivePath, originalRootGroup).normalized(raw)
 
       val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath, originalRootGroup)
-      val groupUpdate = validateOrThrow(normalized)(groupValidator)
+      val groupUpdate = validateOrThrow(
+        GroupNormalization.updateNormalization(config, effectivePath, originalRootGroup).normalized(raw)
+      )(groupValidator)
 
       def throwIfConflicting[A](conflict: Option[Any], msg: String) = {
         conflict.map(_ => throw ConflictingChangeException(msg))
@@ -241,10 +242,11 @@ class GroupsResource @Inject() (
       val rootPath = validateOrThrow(id.toRootPath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
-      val normalized = GroupNormalization.updateNormalization(config, effectivePath, originalRootGroup).normalized(raw)
 
       val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath, originalRootGroup)
-      val groupUpdate = validateOrThrow(normalized)(groupValidator)
+      val groupUpdate = validateOrThrow(
+        GroupNormalization.updateNormalization(config, effectivePath, originalRootGroup).normalized(raw)
+      )(groupValidator)
 
       if (dryRun) {
         val newVersion = Timestamp.now()

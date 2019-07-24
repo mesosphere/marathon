@@ -17,8 +17,8 @@ object GroupNormalization {
       if (withNormalizedRoles.enforceRole.get) effectivePath.root
       else conf.mesosRole()
     } else {
-      val parent = originalRootGroup.group(effectivePath.parent).get
-      if (parent.enforceRole) parent.id.root
+      val enforceRole = effectiveEnforceRole(conf, originalRootGroup.group(effectivePath.parent).map(_.enforceRole))
+      if (enforceRole) effectivePath.parent.root
       else conf.mesosRole()
     }
     normalizeApps(conf, withNormalizedRoles, effectivePath, defaultRole)
@@ -37,16 +37,17 @@ object GroupNormalization {
   }
 
   private def normalizeApps(conf: MarathonConf, update: raml.GroupUpdate, effectivePath: PathId, defaultRole: Role): raml.GroupUpdate = {
+    val groupPath = update.id.map(PathId(_).canonicalPath(effectivePath)).getOrElse(effectivePath)
     val apps = update.apps.map(_.map { a =>
 
       val normalizationConfig = AppNormalization.Configuration(conf, defaultRole)
       val validateAndNormalizeApp: Normalization[raml.App] = AppHelpers.appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 
-      validateAndNormalizeApp.normalized(a.copy(id = PathId(a.id).canonicalPath(effectivePath).toString))
+      validateAndNormalizeApp.normalized(a.copy(id = PathId(a.id).canonicalPath(groupPath).toString))
     })
 
     val groups = update.groups.map(_.map { g =>
-      normalizeApps(conf, g, effectivePath, defaultRole)
+      normalizeApps(conf, g, groupPath, defaultRole)
     })
 
     update.copy(apps = apps, groups = groups)
