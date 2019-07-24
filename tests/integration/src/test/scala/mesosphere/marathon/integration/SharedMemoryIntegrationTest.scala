@@ -220,7 +220,7 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
     val ipcIdMatch1 = ipcIdRegex.findFirstMatchIn(ipcInfo1)
     val ipcIdMatch2 = ipcIdRegex.findFirstMatchIn(ipcInfo2)
 
-    ipcIdMatch1 should be(ipcIdMatch2)
+    ipcIdMatch1.value should be(ipcIdMatch2.value)
 
 
   }
