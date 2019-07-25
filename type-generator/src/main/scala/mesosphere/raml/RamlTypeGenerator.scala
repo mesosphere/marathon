@@ -34,6 +34,9 @@ object RamlTypeGenerator {
     }
   }
 
+  def isUpdateType(o: ObjectTypeDeclaration): Boolean =
+    (o.`type`() == "object") && o.annotations.asScala.exists(_.name() == "(pragma.asUpdateType)")
+
   def isOmitEmpty(field: TypeDeclaration): Boolean =
     field.annotations.asScala.exists(_.name() == "(pragma.omitEmpty)")
 
@@ -43,7 +46,15 @@ object RamlTypeGenerator {
   def pragmaSerializeOnly(o: TypeDeclaration): Boolean =
     o.annotations().asScala.exists(_.name() == "(pragma.serializeOnly)")
 
-  def generateUpdateTypeName(o: ObjectTypeDeclaration): Option[String] = None
+  def generateUpdateTypeName(o: ObjectTypeDeclaration): Option[String] =
+    if (o.`type`() == "object" && !isUpdateType(o)) {
+      // use the attribute value as the type name if specified ala enumName; otherwise just append "Update"
+      o.annotations().asScala.find(_.name() == "(pragma.generateUpdateType)").map { annotation =>
+        Option(annotation.structuredValue().value()).fold(o.name()+"Update")(_.toString)
+      }
+    } else {
+      None
+    }
 
   def buildTypeTable(types: Set[TypeDeclaration]): Map[String, Symbol] = {
     @tailrec def build(types: Set[TypeDeclaration], result: Map[String, Symbol]): Map[String, Symbol] = {
@@ -253,11 +264,16 @@ object RamlTypeGenerator {
               if (!results.exists(_.name == o.name())) {
                 val (name, parent) = objectName(o)
                 val fields: Seq[FieldT] = o.properties().asScala.withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
-                val objectType = ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()), serializeOnly = pragmaSerializeOnly(o))
-                val updateType = generateUpdateTypeName(o).withFilter(n => !results.exists(_.name == n)).map { updateName =>
-                  objectType.copy(name = updateName, fields = fields.map(_.copy(forceOptional = true)))
+                if (isUpdateType(o)) {
+                  val objectType = ObjectT(name, fields.map(_.copy(forceOptional = true)), parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()), serializeOnly = pragmaSerializeOnly(o))
+                  buildTypes(s.tail, results + objectType)
+                } else {
+                  val objectType = ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()), serializeOnly = pragmaSerializeOnly(o))
+                  val updateType = generateUpdateTypeName(o).withFilter(n => !results.exists(_.name == n)).map { updateName =>
+                    objectType.copy(name = updateName, fields = fields.map(_.copy(forceOptional = true)))
+                  }
+                  buildTypes(s.tail, results ++ Seq(Some(objectType), updateType).flatten)
                 }
-                buildTypes(s.tail, results ++ Seq(Some(objectType), updateType).flatten)
               } else {
                 buildTypes(s.tail, results)
               }
