@@ -4,7 +4,80 @@ package api.v2
 import mesosphere.marathon.state.{PathId, RootGroup}
 import mesosphere.mesos.ResourceMatcher.Role
 
+trait GroupUpdateVisitor {
+  def visitEnforceRole(enforceRole: Option[Boolean]): Option[Boolean]
+
+  def childGroupVisitor(): GroupUpdateVisitor
+
+  def appVisitor(): AppVisitor
+}
+
+case class RootGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor {
+  override def visitEnforceRole(enforceRole: Option[Boolean]): Option[Boolean] = Some(false)
+
+  override def childGroupVisitor(): GroupUpdateVisitor = TopLevelGroupVisitor(conf)
+
+  override def appVisitor(): AppVisitor = AppNormalizeVisitor(conf, conf.mesosRole())
+}
+
+case class TopLevelGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor {
+  override def visitEnforceRole(enforceRole: Option[Boolean]): Option[Boolean] = {
+    enforceRole.orElse {
+      conf.groupRoleBehavior() match {
+        case GroupRoleBehavior.Off => Some(false)
+        case GroupRoleBehavior.Top => Some(true)
+      }
+    }
+  }
+
+  override def childGroupVisitor(): GroupUpdateVisitor = ChildGroupVisitor()
+
+  override def appVisitor(): AppVisitor = AppNormalizeVisitor(conf, ???)
+}
+
+case class ChildGroupVisitor() extends GroupUpdateVisitor {
+  override def visitEnforceRole(enforceRole: Option[Boolean]): Option[Boolean] = Some(false)
+
+  override def childGroupVisitor(): GroupUpdateVisitor = ChildGroupVisitor()
+
+  override def appVisitor(): AppVisitor = ???
+}
+
+
+trait AppVisitor {
+  def visit(app: raml.App, groupId: PathId): raml.App
+}
+
+case class AppNormalizeVisitor(conf: MarathonConf, defaultRole: Role) extends AppVisitor {
+
+  val normalizationConfig = AppNormalization.Configuration(conf, defaultRole)
+
+  // TODO: should this be the absolute group path? I think so.
+  override def visit(app: raml.App, groupPath: PathId): raml.App = {
+    val validateAndNormalizeApp: Normalization[raml.App] = AppHelpers.appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+    validateAndNormalizeApp.normalized(app.copy(id = PathId(app.id).canonicalPath(groupPath).toString))
+  }
+}
+
 object GroupNormalization {
+
+  def dispatch(conf: MarathonConf, groupUpdate: raml.GroupUpdate, visitor: GroupUpdateVisitor): raml.GroupUpdate = {
+    val updatedEnforceRole = visitor.visitEnforceRole(groupUpdate.enforceRole)
+
+    // Visit each child group.
+    val childGroupVisitor = visitor.childGroupVisitor(???)
+    val children = groupUpdate.groups.map(_.map { childGroup =>
+      dispatch(conf, childGroup, childGroupVisitor)
+    })
+
+    // Visit each app.
+    val appVisitor = visitor.appVisitor()
+    val apps = groupUpdate.apps.map(_.map { app =>
+      appVisitor.visit(app, PathId(groupUpdate.id.get)) // TODO: is id always set?
+    })
+
+    groupUpdate.copy(enforceRole = updatedEnforceRole, groups = children, apps = apps)
+  }
 
   def partialUpdateNormalization(conf: MarathonConf): Normalization[raml.GroupPartialUpdate] = Normalization { update =>
     update.copy(enforceRole = Some(effectiveEnforceRole(conf, update.enforceRole)))
