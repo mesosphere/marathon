@@ -36,8 +36,9 @@ object GroupNormalization {
     } else update
   }
 
-  private def normalizeApps(conf: MarathonConf, update: raml.GroupUpdate, effectivePath: PathId, defaultRole: Role): raml.GroupUpdate = {
-    val groupPath = update.id.map(PathId(_).canonicalPath(effectivePath)).getOrElse(effectivePath)
+  private def normalizeApps(conf: MarathonConf, update: raml.GroupUpdate, rootPath: PathId, defaultRole: Role): raml.GroupUpdate = {
+    val groupPath = update.id.map(PathId(_).canonicalPath(rootPath)).getOrElse(rootPath)
+    println(s"effective $rootPath, group path $groupPath")
     val apps = update.apps.map(_.map { a =>
 
       val normalizationConfig = AppNormalization.Configuration(conf, defaultRole)
