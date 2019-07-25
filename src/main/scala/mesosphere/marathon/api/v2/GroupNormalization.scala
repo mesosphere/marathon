@@ -44,7 +44,10 @@ case class TopLevelGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor {
 
 case class ChildGroupVisitor(conf: MarathonConf, defaultRole: Role) extends GroupUpdateVisitor {
 
-  override def visit(thisGroup: GroupUpdate): GroupUpdate = thisGroup.copy(enforceRole = Some(false))
+  override def visit(thisGroup: GroupUpdate): GroupUpdate = {
+    if (thisGroup.enforceRole.isEmpty) thisGroup.copy(enforceRole = Some(false))
+    else thisGroup
+  }
 
   override def childGroupVisitor(): GroupUpdateVisitor = ChildGroupVisitor(conf, defaultRole)
 
@@ -96,7 +99,14 @@ object GroupNormalization {
     if (update.version.isEmpty && update.scaleBy.isEmpty) {
       if (base.isRoot) dispatch(conf, update, base, RootGroupVisitor(conf))
       else if (base.parent.isRoot) dispatch(conf, update, base, TopLevelGroupVisitor(conf))
-      else dispatch(conf, update, base, ChildGroupVisitor(conf, ???))
+      else {
+        // Infer default role from parent role.
+        // TODO: does only work for isTopLevel(base.parent)
+        val defaultRole = originalRootGroup.group(base.parent).fold(conf.mesosRole()) { parentGroup =>
+          if (parentGroup.enforceRole) base.parent.root else conf.mesosRole()
+        }
+        dispatch(conf, update, base, ChildGroupVisitor(conf, defaultRole))
+      }
     } else update
   }
 
