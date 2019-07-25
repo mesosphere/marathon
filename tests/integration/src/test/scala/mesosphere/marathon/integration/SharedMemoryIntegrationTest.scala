@@ -8,12 +8,13 @@ import mesosphere.marathon.integration.setup.{BaseMarathon, EmbeddedMarathonTest
 import mesosphere.marathon.raml.{Pod, Raml}
 import mesosphere.marathon.state.{HostVolume, VolumeMount}
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
+import org.scalatest.Inside
 import org.scalatest.time.{Seconds, Span}
 import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 
-class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
+class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
   val projectDir: String = sys.props.getOrElse("user.dir", ".")
   override lazy val mesosConfig = MesosConfig(
@@ -27,7 +28,6 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
   "get correct shm size from pod" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
     Given("a pod with a single task and a volume")
-    val projectDir = sys.props.getOrElse("user.dir", ".")
     val containerDir = "marathon"
     val id = testBasePath / "simple-pod-with-shm-setup"
 
@@ -74,36 +74,31 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
     val createResult = marathon.createPodV2(pod)
     createResult should be(Created)
     waitForDeployment(createResult)
-    val ipcInfo:String = eventually {
+    val shmSizeFromPod: String = eventually {
       marathon.status(pod.id) should be(Stable)
       val status = marathon.status(pod.id).value
-      val hosts = status.instances.flatMap(_.agentHostname)
-      hosts should have size (1)
-      val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
-      ports should have size (1)
-      val facade = AppMockFacade(hosts.head, ports.head)
+      val host = inside(status.instances.flatMap(_.agentHostname)) {
+        case Seq(host) => host
+      }
+      val port = inside(status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))) {
+        case Seq(port) => port
+      }
 
-      val ipcInfoString = facade.get(s"/ipcinfo").futureValue
-      logger.info("IpcInfo is: " + ipcInfoString)
-      ipcInfoString should include("=======")
+      val facade = AppMockFacade(host, port)
 
-      ipcInfoString
+      val shmSize = facade.get("/ipcshm").futureValue
+
+      shmSize
     }
 
-    logger.info("IPCInfo is: " + ipcInfo)
+    logger.info("ShmSize is: " + shmSizeFromPod)
 
-    val shmFsSizeRegex = "tmpfs\\s+([0-9]+)\\s+[0-9]+\\s+[0-9]+\\s+[0-9]+%\\s+/dev/shm".r
-    val shmFsSizeMatch = shmFsSizeRegex.findFirstMatchIn(ipcInfo)
-
-    val shmSizeFromIpcInfo = shmFsSizeMatch.value.group(1)
-
-    shmSizeFromIpcInfo should be("" + shmSize)
+    shmSizeFromPod should be(shmSize.toString)
 
   }
 
   "check share parent shm works" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
     Given("a pod with a two tasks and shareParent ipcInfo")
-    val projectDir = sys.props.getOrElse("user.dir", ".")
     val containerDir = "marathon"
     val id = testBasePath / "pod-with-shared-parent-shm-setup"
 
@@ -170,7 +165,7 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       role = BaseMarathon.defaultRole
     )
 
-    val body:Pod = Raml.toRaml(pod)
+    val body: Pod = Raml.toRaml(pod)
     val bodyString = Json.prettyPrint(Pod.playJsonFormat.writes(body))
 
     When("The pod is deployed")
@@ -178,55 +173,38 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
     createResult should be(Created)
     waitForDeployment(createResult)
 
-    val (ipcInfo1:String, ipcInfo2:String) = eventually {
+    val (shmSize1, shmSize2, ipcNs1, ipcNs2) = eventually {
       marathon.status(pod.id) should be(Stable)
       val status = marathon.status(pod.id).value
 
-      val hosts = status.instances.flatMap(_.agentHostname)
-      hosts should have size (1)
-      val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
-      ports should have size (2)
-      val facade1 = AppMockFacade(hosts.head, ports.head)
-      val facade2 = AppMockFacade(hosts.head, ports.last)
+      val host = inside(status.instances.flatMap(_.agentHostname)) {
+        case Seq(h) => h
+      }
+      val (port1, port2) = inside(status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))) {
+        case Seq(p1, p2) => (p1, p2)
+      }
 
-      val ipcInfoString1 = facade1.get(s"/ipcinfo").futureValue
-      val ipcInfoString2 = facade2.get(s"/ipcinfo").futureValue
+      val facade1 = AppMockFacade(host, port1)
+      val facade2 = AppMockFacade(host, port2)
 
-      logger.info("IPCInfo1 is: " + ipcInfoString1)
-      logger.info("IPCInfo2 is: " + ipcInfoString2)
+      val shmSize1 = facade1.get(s"/ipcshm").futureValue
+      val shmSize2 = facade2.get(s"/ipcshm").futureValue
 
-      ipcInfoString1 should include("=======")
-      ipcInfoString2 should include("=======")
+      val ipcNs1 = facade1.get(s"/ipcns").futureValue
+      val ipcNs2 = facade2.get(s"/ipcns").futureValue
 
-      (ipcInfoString1, ipcInfoString2)
+      (shmSize1, shmSize2, ipcNs1, ipcNs2)
     }
 
-
     Then("The SharedMemory size for both containers should match the one defined on the pod level")
-    val shmFsSizeRegex = "tmpfs\\s+([0-9]+)\\s+[0-9]+\\s+[0-9]+\\s+[0-9]+%\\s+/dev/shm".r
 
-    val shmFsSizeMatch1 = shmFsSizeRegex.findFirstMatchIn(ipcInfo1)
-    val shmFsSizeMatch2 = shmFsSizeRegex.findFirstMatchIn(ipcInfo2)
-
-    val shmSize1 = shmFsSizeMatch1.value.group(1)
-    val shmSize2 = shmFsSizeMatch2.value.group(1)
-
-    shmSize1 should be("" + shmSize)
-    shmSize2 should be("" + shmSize)
+    shmSize1 should be(shmSize.toString)
+    shmSize2 should be(shmSize.toString)
 
     Then("The IPC ID should be the same for both containers")
-    val ipcIdRegex = "=======([0-9]+)\\s+=======".r
 
-    val ipcIdMatch1 = ipcIdRegex.findFirstMatchIn(ipcInfo1)
-    val ipcIdMatch2 = ipcIdRegex.findFirstMatchIn(ipcInfo2)
-
-    val ipcId1 = ipcIdMatch1.value.group(1)
-    val ipcId2 = ipcIdMatch2.value.group(1)
-
-    ipcId1 should be(ipcId2)
-
+    ipcNs1 should be(ipcNs2)
 
   }
-
 
 }

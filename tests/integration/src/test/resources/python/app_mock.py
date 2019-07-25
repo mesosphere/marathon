@@ -7,6 +7,7 @@ import signal
 import socket
 import sys
 import subprocess
+import re
 
 # Ensure compatibility with Python 2 and 3.
 # See https://github.com/JioCloud/python-six/blob/master/six.py for details.
@@ -91,21 +92,32 @@ def make_handler(app_id, version, task_id, base_url):
             logging.debug("Done processing health request.")
             return
 
-        def handle_ipc_info(self):
-            logging.debug("Reporting IPC info")
+        def handle_ipc_shm_info(self):
+            logging.debug("Reporting IPC shm info")
             df_shm_info = subprocess.check_output(["df", "-m", "/dev/shm"])
+
+            shm_size = re.search('tmpfs\\s+([0-9]+)\\s+[0-9]+\\s+[0-9]+\\s+[0-9]+%\\s+/dev/shm', df_shm_info).group(1)
+
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/text')
+            self.end_headers()
+
+            self.wfile.write(shm_size)
+
+            logging.debug("Done reporting IPC shm info.")
+            return
+
+        def handle_ipc_ns_info(self):
+            logging.debug("Reporting IPC namespace info")
             ipc_ns_info = subprocess.check_output(["stat", "-Lc", "%i", "/proc/self/ns/ipc"])
 
             self.send_response(200)
-            self.send_header('Content-type', 'text/html')
+            self.send_header('Content-Type', 'application/text')
             self.end_headers()
 
-            self.wfile.write(df_shm_info)
-            self.wfile.write("=======")
             self.wfile.write(ipc_ns_info)
-            self.wfile.write("=======")
 
-            logging.debug("Done reporting IPC info.")
+            logging.debug("Done reporting IPC ns info.")
             return
 
         def handle_suicide(self):
@@ -127,8 +139,10 @@ def make_handler(app_id, version, task_id, base_url):
                     return self.check_readiness()
                 elif self.path == '/health':
                     return self.check_health()
-                elif self.path == '/ipcinfo':
-                    return self.handle_ipc_info()
+                elif self.path == '/ipcshm':
+                    return self.handle_ipc_shm_info()
+                elif self.path == '/ipcns':
+                    return self.handle_ipc_ns_info()
                 else:
                     return SimpleHTTPRequestHandler.do_GET(self)
             except Exception:
