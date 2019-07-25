@@ -16,7 +16,8 @@
         10019
       ],
       "region": "primary",
-      "zone" : "a"
+      "zone" : "a",
+      "role" : "*"
     },
     {
       "id": "tools_docker_registry.002b4d28-46b9-11e5-b731-525400cce7ed",
@@ -34,7 +35,8 @@
         5000
       ],
       "region": "primary",
-      "zone" : "a"
+      "zone" : "a",
+      "role" : "*"
     }
   ]
 }

@@ -7,6 +7,7 @@ import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.Role
 import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy, _}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.OfferUtil
@@ -22,13 +23,26 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.matching.Regex
 
+/**
+  * Internal state of a instantiated [[RunSpec]], ie instance of an [[AppDefinition]]
+  * or [[mesosphere.marathon.core.pod.PodDefinition]].
+  *
+  * Also has an [[mesosphere.marathon.state.Instance]] which is the storage model and an
+  * [[mesosphere.marathon.raml.Instance]] for the API
+  *
+  * @param role The Mesos role for the resources allocated to this instance. It isn't possible to change a
+  *             reservation's role. In the case of resident services, we allow the operator to change the
+  *             service role without deleting existing instances reserved to the former role. Because of this,
+  *             the instance role can differ from the service role, and must be persisted separately.
+  */
 case class Instance(
     instanceId: Instance.Id,
     agentInfo: Option[Instance.AgentInfo],
     state: InstanceState,
     tasksMap: Map[Task.Id, Task],
     runSpec: RunSpec,
-    reservation: Option[Reservation]) extends Placed {
+    reservation: Option[Reservation],
+    role: Role) extends Placed {
 
   def runSpecId: PathId = runSpec.id
   def runSpecVersion: Timestamp = runSpec.version
@@ -60,8 +74,6 @@ case class Instance(
   override def zone: Option[String] = agentInfo.flatMap(_.zone)
 
   override def region: Option[String] = agentInfo.flatMap(_.region)
-
-  def role: String = runSpec.role
 
   /**
     * Factory method for creating provisioned instance from Scheduled instance
@@ -97,7 +109,7 @@ object Instance {
 
   object Running {
     def unapply(instance: Instance): Option[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]] = instance match {
-      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _) =>
+      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _, _) =>
         Some((instanceId, agentInfo, tasksMap))
       case _ =>
         Option.empty[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]]
@@ -113,7 +125,8 @@ object Instance {
     */
   def scheduled(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
     val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running)
-    Instance(instanceId, None, state, Map.empty, runSpec, None)
+
+    Instance(instanceId, None, state, Map.empty, runSpec, None, runSpec.role)
   }
 
   /*
@@ -420,4 +433,5 @@ object Instance {
       Json.toJson(stringToTask)
     }
   )
+
 }
