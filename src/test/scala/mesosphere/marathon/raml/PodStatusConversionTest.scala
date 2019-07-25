@@ -2,13 +2,13 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference}
-import mesosphere.marathon.core.instance.{Goal, Reservation}
+import mesosphere.marathon.core.instance.Reservation
 import mesosphere.marathon.core.pod.{ContainerNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos
 
 import scala.concurrent.duration._
@@ -18,17 +18,37 @@ class PodStatusConversionTest extends UnitTest {
   import PodStatusConversionTest._
 
   "PodConversion" should {
+    val pod = basicOneContainerPod.copy(linuxInfo = Some(state.LinuxInfo(seccomp = None, ipcInfo = Some(state.IPCInfo(ipcMode = state.IpcMode.Private, shmSize = Some(32))))))
+
     "keep linux info on executor" in {
-      val pod = basicOneContainerPod.copy(linuxInfo = Some(state.LinuxInfo(seccomp = None, ipcInfo = Some(state.IPCInfo(ipcMode = state.IpcMode.Private, shmSize = Some(32))))))
-
       val ramlPod = pod.toRaml
-
       val ramlLinuxInfo = Some(LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(mode = IPCMode.Private, shmSize = Some(32)))))
-
       ramlPod.linuxInfo should be(ramlLinuxInfo)
+    }
 
+    behave like convertToRamlAndBack(pod)
+
+  }
+
+  def convertToRamlAndBack(pod: PodDefinition): Unit = {
+    s"pod ${pod.id.toString} is written to json and can be read again via formats" in {
+      Given("An pod")
+      val ramlPod = pod.toRaml[Pod]
+
+      When("The pod is translated to json and read back from formats")
+      val readPod: PodDefinition = withValidationClue {
+        Raml.fromRaml(ramlPod)
+      }
+      Then("The pod is identical")
+      readPod should be(pod)
     }
   }
+
+  def withValidationClue[T](f: => T): T = scala.util.Try { f }.recover {
+    // handle RAML validation errors
+    case vfe: ValidationFailedException => fail(vfe.failure.violations.toString())
+    case th => throw th
+  }.get
 
   "PodStatusConversion" should {
     "multiple tasks with multiple container networks convert to proper network status" in {
