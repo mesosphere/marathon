@@ -58,7 +58,7 @@ class QueueResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val runSpecId = id.toRootPath
+      val runSpecId = id.toAbsolutePath
       val runSpecScheduled = await(instanceTracker.specInstances(runSpecId)).exists(_.isScheduled)
       val maybeRunSpec = if (runSpecScheduled) groupManager.runSpec(runSpecId) else None
       withAuthorization(UpdateRunSpec, maybeRunSpec, notFound(runSpecNotFoundTasksQueue(runSpecId))) { runSpec =>

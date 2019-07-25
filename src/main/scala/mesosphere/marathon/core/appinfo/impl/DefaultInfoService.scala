@@ -135,12 +135,12 @@ private[appinfo] class DefaultInfoService(
         if (groupMatches(ref)) {
           val groups: Option[Seq[GroupInfo]] =
             if (groupEmbed(GroupInfo.Embed.Groups))
-              Some(ref.groupsById.values.toIndexedSeq.flatMap(queryGroup).sortBy(_.group.id))
+              Some(ref.groupsById.values.toIndexedSeq.flatMap(queryGroup).sortBy(_.group.id: PathId))
             else
               None
           val apps: Option[Seq[AppInfo]] =
             if (groupEmbedApps)
-              Some(ref.apps.keys.flatMap(infoById.get)(collection.breakOut).sortBy(_.app.id))
+              Some(ref.apps.keys.flatMap(infoById.get)(collection.breakOut).sortBy(_.app.id: PathId))
             else
               None
           val pods: Option[Seq[PodStatus]] =

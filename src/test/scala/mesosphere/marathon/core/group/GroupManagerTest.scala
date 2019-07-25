@@ -50,7 +50,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       groupRepository.root() returns Future.successful(createRootGroup())
 
       intercept[ValidationFailedException] {
-        throw groupManager.updateRoot(PathId.empty, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
+        throw groupManager.updateRoot(PathId.root, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
       }
 
       verify(groupRepository, times(0)).storeRoot(any, any, any, any, any)
@@ -91,13 +91,13 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
           ???
       }
 
-      groupManager.updateRoot(PathId.empty, _.putGroup(group, version = Timestamp(1)), version = Timestamp(1), force = false).futureValue
+      groupManager.updateRoot(PathId.root, _.putGroup(group, version = Timestamp(1)), version = Timestamp(1), force = false).futureValue
       verify(groupRepository).storeRoot(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil, Nil, Nil)
       verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil)
 
       groupChangeSuccess.future.
         futureValue.
-        groupId shouldBe PathId.empty
+        groupId shouldBe PathId.root
     }
 
     "store new apps with correct version infos in groupRepo and appRepo" in new Fixture {
@@ -116,7 +116,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       groupRepository.storeRootVersion(any, any, any) returns Future.successful(Done)
       groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
 
-      groupManager.updateRoot(PathId.empty, _.putGroup(rootGroup, version = Timestamp(1)), version = Timestamp(1), force = false).futureValue
+      groupManager.updateRoot(PathId.root, _.putGroup(rootGroup, version = Timestamp(1)), version = Timestamp(1), force = false).futureValue
 
       verify(groupRepository).storeRoot(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil, Nil, Nil)
       verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil)
@@ -132,7 +132,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       groupRepository.storeRootVersion(any, any, any) returns Future.successful(Done)
       groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
 
-      groupManager.updateRoot(PathId.empty, _.putGroup(groupEmpty, version = Timestamp(1)), Timestamp(1), force = false).futureValue
+      groupManager.updateRoot(PathId.root, _.putGroup(groupEmpty, version = Timestamp(1)), Timestamp(1), force = false).futureValue
       verify(groupRepository).storeRootVersion(groupEmpty, Nil, Nil)
       verify(groupRepository).storeRoot(groupEmpty, Nil, Seq("/app1".toPath), Nil, Nil)
     }
@@ -146,7 +146,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       deploymentService.listRunningDeployments() returns Future.successful(running)
 
       intercept[TooManyRunningDeploymentsException] {
-        throw groupManager.updateRoot(PathId.empty, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
+        throw groupManager.updateRoot(PathId.root, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
       }
 
     }

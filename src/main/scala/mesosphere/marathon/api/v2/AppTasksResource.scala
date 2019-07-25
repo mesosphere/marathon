@@ -51,7 +51,7 @@ class AppTasksResource @Inject() (
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       id match {
         case GroupTasks(gid) =>
-          val groupPath = gid.toRootPath
+          val groupPath = gid.toAbsolutePath
           val maybeGroup = groupManager.group(groupPath)
           await(withAuthorization(ViewGroup, maybeGroup, Future.successful(unknownGroup(groupPath))) { group =>
             async {
@@ -60,7 +60,7 @@ class AppTasksResource @Inject() (
             }
           })
         case _ =>
-          val appId = id.toRootPath
+          val appId = id.toAbsolutePath
           val maybeApp = groupManager.app(appId)
           val tasks = await(runningTasks(Set(appId), instancesBySpec)).toRaml
           withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
@@ -88,7 +88,7 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val id = appId.toRootPath
+      val id = appId.toAbsolutePath
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
         ok(EndpointsHelper.appsToEndpointString(ListTasks(instancesBySpec, Seq(app))))
@@ -106,7 +106,7 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val pathId = appId.toRootPath
+      val pathId = appId.toAbsolutePath
 
       def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
         Option(host).fold(appTasks) { hostname =>
@@ -144,7 +144,7 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val pathId = appId.toRootPath
+      val pathId = appId.toAbsolutePath
 
       def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
         try {

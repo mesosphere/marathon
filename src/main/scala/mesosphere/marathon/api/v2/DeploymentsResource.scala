@@ -64,7 +64,7 @@ class DeploymentsResource @Inject() (
           } else {
             // create a new deployment to return to the previous state
             deploymentResult(await(groupManager.updateRoot(
-              PathId.empty,
+              PathId.root,
               deployment.revert,
               force = true
             )))

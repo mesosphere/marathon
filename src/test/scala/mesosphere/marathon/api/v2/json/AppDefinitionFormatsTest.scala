@@ -26,7 +26,7 @@ class AppDefinitionFormatsTest extends UnitTest
 
   object Fixture {
     val a1 = AppDefinition(
-      id = "app1".toRootPath,
+      id = "app1".toAbsolutePath,
       role = "*",
       cmd = Some("sleep 10"),
       versionInfo = VersionInfo.OnlyVersion(Timestamp(1))
@@ -558,7 +558,7 @@ class AppDefinitionFormatsTest extends UnitTest
 
     "app with readinessCheck passes validation" in {
       val app = AppDefinition(
-        id = "test".toRootPath,
+        id = "test".toAbsolutePath,
         role = "*",
         cmd = Some("sleep 1234"),
         readinessChecks = Seq(

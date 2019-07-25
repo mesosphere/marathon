@@ -422,7 +422,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   val RandomPortDefinition: PortDefinition = PortDefinition(RandomPortValue, "tcp", None, Map.empty[String, String])
 
   // App defaults
-  val DefaultId = PathId.empty
+  val DefaultId = PathId.root
 
   val DefaultEnv = Map.empty[String, EnvVarValue]
 

@@ -75,7 +75,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
   "SpecInstancesResource" should {
     "deleteMany" in new Fixture {
-      val appId = "/my/app".toRootPath
+      val appId = "/my/app".toAbsolutePath
       val host = "host"
       val clock = new SettableClock()
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).addTaskStaged().getInstance()
@@ -145,7 +145,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
     "deleteMany with wipe delegates to taskKiller with wipe value" in new Fixture {
       val appId = "/my/app"
       val host = "host"
-      healthCheckManager.statuses(appId.toRootPath) returns Future.successful(collection.immutable.Map.empty)
+      healthCheckManager.statuses(appId.toAbsolutePath) returns Future.successful(collection.immutable.Map.empty)
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
 
       val response = asyncRequest { r =>
@@ -354,7 +354,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
       Given("the app does not exist")
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-      groupManager.app("/app".toRootPath) returns None
+      groupManager.app("/app".toAbsolutePath) returns None
 
       When("the indexJson is fetched")
       val indexJson = asyncRequest { r => appsTaskResource.indexJson("/app", req, r) }
@@ -370,7 +370,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
       Given("the app exists")
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-      groupManager.app("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath, role = "*"))
+      groupManager.app("/app".toAbsolutePath) returns Some(AppDefinition("/app".toAbsolutePath, role = "*"))
 
       When("the indexJson is fetched")
       val indexJson = asyncRequest { r => appsTaskResource.indexJson("/app", req, r) }
@@ -386,7 +386,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
       Given("the group does not exist")
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-      groupManager.group("/group".toRootPath) returns None
+      groupManager.group("/group".toAbsolutePath) returns None
 
       When("the indexJson is fetched")
       val indexJson = asyncRequest { r => appsTaskResource.indexJson("/group/*", req, r) }
@@ -401,7 +401,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
 
       Given("the group exists")
-      val groupPath = "/group".toRootPath
+      val groupPath = "/group".toAbsolutePath
       groupManager.group(groupPath) returns Some(createGroup(groupPath))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
@@ -418,7 +418,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
 
       Given("The app exists")
-      groupManager.app("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath, role = "*"))
+      groupManager.app("/app".toAbsolutePath) returns Some(AppDefinition("/app".toAbsolutePath, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
@@ -434,7 +434,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
 
       Given("The app not exists")
-      groupManager.app("/app".toRootPath) returns None
+      groupManager.app("/app".toAbsolutePath) returns None
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
@@ -453,7 +453,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val taskId = Task.Id(instanceId)
 
       Given("The app exists")
-      groupManager.runSpec("/app".toRootPath) returns Some(AppDefinition(appId, role = "*"))
+      groupManager.runSpec("/app".toAbsolutePath) returns Some(AppDefinition(appId, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteOne is called")
@@ -474,7 +474,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val taskId = Task.Id(instanceId)
 
       Given("The app not exists")
-      groupManager.runSpec("/app".toRootPath) returns None
+      groupManager.runSpec("/app".toAbsolutePath) returns None
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteOne is called")
@@ -492,7 +492,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
 
       Given("The app exists")
-      groupManager.runSpec("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath, role = "*"))
+      groupManager.runSpec("/app".toAbsolutePath) returns Some(AppDefinition("/app".toAbsolutePath, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteMany is called")
@@ -510,7 +510,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
 
       Given("The app not exists")
-      groupManager.runSpec("/app".toRootPath) returns None
+      groupManager.runSpec("/app".toAbsolutePath) returns None
 
       When("deleteMany is called")
       val deleteMany = asyncRequest { r =>

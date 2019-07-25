@@ -43,7 +43,7 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
   override lazy val leadingMarathon = Future.successful(marathonServer)
 
   override lazy val marathonUrl: String = s"http://localhost:${marathonServer.httpPort}"
-  override lazy val testBasePath: PathId = PathId.empty
+  override lazy val testBasePath: PathId = PathId.root
   override lazy val marathon: MarathonFacade = new MarathonFacade(marathonUrl, testBasePath)
 
   override def beforeAll(): Unit = {

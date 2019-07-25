@@ -323,7 +323,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val appNew = app.copy(args = Seq("foo"))
 
       val from = createRootGroup(apps = Map(app.id -> app))
-      val to = from.updateApps(PathId.empty, _ => Map(appNew.id -> appNew), from.version)
+      val to = from.updateApps(PathId.root, _ => Map(appNew.id -> appNew), from.version)
 
       val plan = DeploymentPlan(from, to)
 
@@ -342,7 +342,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val appNew = app.copy(instances = 1) // no change
 
       val from = createRootGroup(apps = Map(app.id -> app))
-      val to = from.updateApps(PathId.empty, _ => Map(appNew.id -> appNew), from.version)
+      val to = from.updateApps(PathId.root, _ => Map(appNew.id -> appNew), from.version)
 
       DeploymentPlan(from, to) should be(empty)
     }
@@ -357,7 +357,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val appNew = app.markedForRestarting
 
       val from = createRootGroup(apps = Map(app.id -> app))
-      val to = from.updateApps(PathId.empty, _ => Map(appNew.id -> appNew), from.version)
+      val to = from.updateApps(PathId.root, _ => Map(appNew.id -> appNew), from.version)
 
       DeploymentPlan(from, to).steps should have size 1
       DeploymentPlan(from, to).steps.head should be(DeploymentStep(Seq(RestartApplication(appNew))))
@@ -402,7 +402,7 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
 
       When("We create a scale deployment")
       val app = f.validResident.copy(instances = 123)
-      val rootGroup = f.rootGroup.updateApps(PathId.empty, _ => Map(app.id -> app), f.rootGroup.version)
+      val rootGroup = f.rootGroup.updateApps(PathId.root, _ => Map(app.id -> app), f.rootGroup.version)
       val plan = DeploymentPlan(f.rootGroup, rootGroup)
 
       Then("The deployment is valid")
