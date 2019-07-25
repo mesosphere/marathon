@@ -84,7 +84,7 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
     groupManager.group(groupId).returns(Some(existingGroup))
     val f = Fixture(groupManager = groupManager)
     When("Calling update with new apps being added to a group")
-    val update = GroupUpdate(apps = Some(Set(App("/app", role = Some(ResourceRole.Unreserved), networks = Seq(Network(mode = NetworkMode.ContainerBridge))))))
+    val update = GroupUpdate(apps = Some(Set(App("/app", role = Some(ResourceRole.Unreserved), cmd = Some("sleep 1000"), networks = Seq(Network(mode = NetworkMode.ContainerBridge))))))
     val rootGroup = createRootGroup()
     val normalizedUpdate = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root, rootGroup).normalized(update)
     val updatedGroup = f.groupApiService.updateGroup(
@@ -94,7 +94,7 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
       newVersion).futureValue
 
     Then("Group will contain those apps after an update")
-    updatedGroup.apps(PathId("/app")) should be (AppDefinition("/app".toAbsolutePath, networks = Seq(BridgeNetwork()), versionInfo = VersionInfo.OnlyVersion(newVersion), role = "*"))
+    updatedGroup.apps(PathId("/app")) should be (AppDefinition("/app".toAbsolutePath, cmd = Some("sleep 1000"), networks = Seq(BridgeNetwork()), versionInfo = VersionInfo.OnlyVersion(newVersion), role = "*"))
   }
 
   case class Fixture(
