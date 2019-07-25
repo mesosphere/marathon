@@ -133,7 +133,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       )
 
       val timestamp = Timestamp.now()
-      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, AbsolutePathId("/test"), ???).normalized(update)
+      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, AbsolutePathId("/test"), createRootGroup()).normalized(update)
       val next = Raml.fromRaml(GroupConversion(normalized, current, timestamp) -> appConversionFunc)
       val result = createRootGroup(groups = Set(next))
 
@@ -180,7 +180,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       )))
 
       When("The update is performed")
-      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root, ???).normalized(update)
+      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root, createRootGroup()).normalized(update)
       val result = Raml.fromRaml(
         GroupConversion(normalized, createRootGroup(), Timestamp.now()) -> appConversionFunc)
 
