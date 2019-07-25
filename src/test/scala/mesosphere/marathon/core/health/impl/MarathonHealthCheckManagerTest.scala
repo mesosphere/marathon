@@ -33,7 +33,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     """akka.loggers = ["akka.testkit.TestEventListener"]"""
   )
 
-  private val appId = "test".toRootPath
+  private val appId = "test".toAbsolutePath
   private val clock = new SettableClock()
 
   case class Fixture() {
@@ -251,7 +251,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
         instanceTracker.forceExpunge(instance.instanceId).futureValue
 
       // one other task of another app
-      val otherAppId = "other".toRootPath
+      val otherAppId = "other".toAbsolutePath
       val otherHealthChecks = Set[HealthCheck](MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true")))
       val (otherInstance, otherApp) = startInstance(otherAppId, Timestamp(42), otherHealthChecks)
 

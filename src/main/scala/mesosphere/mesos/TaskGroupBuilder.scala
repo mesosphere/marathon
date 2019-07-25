@@ -691,7 +691,7 @@ object TaskGroupBuilder extends StrictLogging {
       MARATHON_APP_ID -> Some(instanceId.runSpecId.toString),
       MARATHON_APP_VERSION -> Some(version.toString),
       MARATHON_CONTAINER_ID -> Some(container.name),
-      MARATHON_ENFORCE_GROUP_ROLE -> Some(enforceRole.toString.toUpperCase()),
+      MARATHON_APP_ENFORCE_GROUP_ROLE -> Some(enforceRole.toString.toUpperCase()),
       MARATHON_CONTAINER_RESOURCE_CPUS -> Some(container.resources.cpus.toString),
       MARATHON_CONTAINER_RESOURCE_MEM -> Some(container.resources.mem.toString),
       MARATHON_CONTAINER_RESOURCE_DISK -> Some(container.resources.disk.toString),

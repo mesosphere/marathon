@@ -225,7 +225,7 @@ object Group extends StrictLogging {
     */
   private def isChildOfParentId(group: Group): Validator[AppDefinition] = {
     isTrue("App has to be child of group with parent id") { app =>
-      if (app.id.parent == group.id) group.apps.contains(app.id)
+      if (app.id.asAbsolutePath.parent == group.id.asAbsolutePath) group.apps.contains(app.id)
       else {
         group.group(app.id.parent).exists(child => child.apps.contains(app.id))
       }
@@ -258,7 +258,7 @@ object Group extends StrictLogging {
   def emptyUpdate(id: PathId): raml.GroupUpdate = raml.GroupUpdate(Some(id.toString))
 
   /** requires that apps are in canonical form */
-  def validNestedGroupUpdateWithBase(base: PathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] =
+  def validNestedGroupUpdateWithBase(base: AbsolutePathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] =
     validator[raml.GroupUpdate] { group =>
       group is notNull
       group is definingEnforcingRoleOnlyIfItsTopLevel(base)
@@ -279,7 +279,7 @@ object Group extends StrictLogging {
         validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup)))
     }
 
-  private case class definingEnforcingRoleOnlyIfItsTopLevel(base: PathId) extends Validator[raml.GroupUpdate] {
+  private case class definingEnforcingRoleOnlyIfItsTopLevel(base: AbsolutePathId) extends Validator[raml.GroupUpdate] {
     override def apply(group: raml.GroupUpdate): Result = {
       val groupId = group.id.fold(base) { id => PathId(id).canonicalPath(base) }
       // Only top-level groups are allowed to set the enforce role parameter.

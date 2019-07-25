@@ -1765,7 +1765,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
       "there are versions" when {
         import mesosphere.marathon.state.PathId._
-        val pod1 = PodDefinition("/id".toRootPath, containers = Seq(MesosContainer(name = "foo", resources = Resources())), role = "*")
+        val pod1 = PodDefinition("/id".toAbsolutePath, containers = Seq(MesosContainer(name = "foo", resources = Resources())), role = "*")
         val pod2 = pod1.copy(versionInfo = VersionInfo.OnlyVersion(pod1.version + 1.minute))
         "list the available versions" in {
           val groupManager = mock[GroupManager]
@@ -1803,7 +1803,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         "attempting to kill a single instance" in {
           implicit val killer = mock[TaskKiller]
           val f = Fixture()
-          val runSpec = AppDefinition(id = "/id1".toRootPath, versionInfo = VersionInfo.OnlyVersion(f.clock.now()), role = "*")
+          val runSpec = AppDefinition(id = "/id1".toAbsolutePath, versionInfo = VersionInfo.OnlyVersion(f.clock.now()), role = "*")
           val instanceId = Instance.Id.fromIdString("id1.instance-a905036a-f6ed-11e8-9688-2a978491fd64")
           val instance = Instance(
             instanceId, Some(Instance.AgentInfo("", None, None, None, Nil)),
@@ -1842,7 +1842,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         }
         "attempting to kill multiple instances" in {
           implicit val killer = mock[TaskKiller]
-          val runSpec = AppDefinition(id = "/id1".toRootPath, unreachableStrategy = UnreachableStrategy.default(), role = "*")
+          val runSpec = AppDefinition(id = "/id1".toAbsolutePath, unreachableStrategy = UnreachableStrategy.default(), role = "*")
           val instances = Seq(
             Instance(Instance.Id.forRunSpec(runSpec.id), Some(Instance.AgentInfo("", None, None, None, Nil)),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,

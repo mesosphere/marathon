@@ -107,13 +107,13 @@ class GroupsResource @Inject() (
       }
 
       id match {
-        case ListApps(gid) => await(appsResponse(gid.toRootPath))
-        case ListRootApps() => await(appsResponse(PathId.empty))
-        case ListVersionsRE(gid) => await(versionsResponse(gid.toRootPath))
-        case ListRootVersionRE() => await(versionsResponse(PathId.empty))
-        case GetVersionRE(gid, version) => await(groupVersionResponse(gid.toRootPath, Timestamp(version)))
-        case GetRootVersionRE(version) => await(groupVersionResponse(PathId.empty, Timestamp(version)))
-        case _ => await(groupResponse(id.toRootPath))
+        case ListApps(gid) => await(appsResponse(gid.toAbsolutePath))
+        case ListRootApps() => await(appsResponse(PathId.root))
+        case ListVersionsRE(gid) => await(versionsResponse(gid.toAbsolutePath))
+        case ListRootVersionRE() => await(versionsResponse(PathId.root))
+        case GetVersionRE(gid, version) => await(groupVersionResponse(gid.toAbsolutePath, Timestamp(version)))
+        case GetRootVersionRE(version) => await(groupVersionResponse(PathId.root, Timestamp(version)))
+        case _ => await(groupResponse(id.toAbsolutePath))
       }
     }
   }
@@ -149,8 +149,7 @@ class GroupsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
 
       val originalRootGroup = groupManager.rootGroup()
-      val rootPath = validateOrThrow(id.toRootPath)
-      println(s"root path $rootPath")
+      val rootPath = validateOrThrow(id.toAbsolutePath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
       println(s"effective $effectivePath")
@@ -199,7 +198,7 @@ class GroupsResource @Inject() (
       val raw = Json.parse(body).as[raml.GroupPartialUpdate]
       val normalized = GroupNormalization.partialUpdateNormalization(config).normalized(raw)
 
-      val groupId = id.toRootPath
+      val groupId = id.toAbsolutePath
       validateOrThrow(groupId)(PathId.topLevel)
 
       if (groupManager.group(groupId).isEmpty) {
@@ -241,7 +240,7 @@ class GroupsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
 
       val originalRootGroup = groupManager.rootGroup()
-      val rootPath = validateOrThrow(id.toRootPath)
+      val rootPath = validateOrThrow(id.toAbsolutePath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
 
@@ -280,7 +279,7 @@ class GroupsResource @Inject() (
         RootGroup(version = version)
       }
 
-      val deployment = await(groupManager.updateRoot(PathId.empty, clearRootGroup, version, force))
+      val deployment = await(groupManager.updateRoot(PathId.root, clearRootGroup, version, force))
       deploymentResult(deployment)
     }
   }
@@ -300,7 +299,7 @@ class GroupsResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val groupId = id.toRootPath
+      val groupId = id.toAbsolutePath
       val version = Timestamp.now()
 
       def deleteGroup(rootGroup: RootGroup) = {
@@ -317,7 +316,7 @@ class GroupsResource @Inject() (
   }
 
   private def updateOrCreate(
-    rootPath: PathId,
+    rootPath: AbsolutePathId,
     update: raml.GroupUpdate,
     force: Boolean)(implicit identity: Identity): Future[(DeploymentPlan, PathId)] = async {
     val version = Timestamp.now()

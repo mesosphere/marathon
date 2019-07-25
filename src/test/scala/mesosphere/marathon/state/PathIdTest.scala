@@ -25,19 +25,30 @@ class PathIdTest extends UnitTest with ValidationTestLike {
       val reference = PathId("/")
 
       Then("the path is equal")
-      PathId.empty should be(reference)
+      PathId.root should be(reference)
     }
 
     "parse safePath from itself" in {
       When("The path is empty")
-      PathId.fromSafePath(PathId.empty.safePath) should equal(PathId.empty)
+      PathId.fromSafePath(PathId.root.safePath) should equal(PathId.root)
 
       When("The path isn't empty")
       val reference = PathId("a" :: "b" :: "c" :: "d" :: Nil)
       PathId.fromSafePath(reference.safePath) should equal(reference)
     }
 
-    "be written and parsed from string" in {
+    "absolute be written and parsed from string" in {
+      Given("An absolute base id")
+      val path = PathId("/a/b/c/d")
+
+      When("The same path serialized to string and de-serialized again")
+      val reference = PathId(path.toString)
+
+      Then("the path is equal")
+      path should be(reference)
+    }
+
+    "relative be written and parsed from string" in {
       Given("A base id")
       val path = PathId("a/b/c/d")
 
@@ -50,7 +61,7 @@ class PathIdTest extends UnitTest with ValidationTestLike {
 
     "compute the canonical path when path is relative" in {
       Given("A base id")
-      val id = PathId("/a/b/c/d")
+      val id = AbsolutePathId("/a/b/c/d")
 
       When("a relative path is canonized")
       val path = PathId("./test/../e/f/g/./../").canonicalPath(id)
@@ -94,7 +105,7 @@ class PathIdTest extends UnitTest with ValidationTestLike {
       Given("base id's")
       val id1 = PathId("/a/b/c")
       val id2 = PathId("/a")
-      val id3 = PathId.empty
+      val id3 = PathId.root
 
       When("taskTrackerRef ids get computed")
       val parent1 = id1.parent
@@ -103,15 +114,15 @@ class PathIdTest extends UnitTest with ValidationTestLike {
 
       Then("the taskTrackerRef path is correct")
       parent1 should be(PathId("/a/b"))
-      parent2 should be(PathId.empty)
-      parent3 should be(PathId.empty)
+      parent2 should be(PathId.root)
+      parent3 should be(PathId.root)
     }
 
     "convert to a hostname" in {
       Given("base id's")
       val id1 = PathId("/a/b/c")
       val id2 = PathId("/a")
-      val id3 = PathId.empty
+      val id3 = PathId.root
 
       When("hostnames get computed")
       val host1 = id1.toHostname
@@ -127,7 +138,8 @@ class PathIdTest extends UnitTest with ValidationTestLike {
   "PathIds" should {
     "handles root paths" in {
       PathId("/").isRoot shouldBe true
-      PathId("").isRoot shouldBe true
+      PathId("").isEmpty shouldBe true
+      PathId("").isRoot shouldBe false
     }
 
     "match another PathId" in {

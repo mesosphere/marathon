@@ -22,7 +22,7 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
   "revert a version if version is provided" in {
     Given("Group manager with the group version")
     val groupManager = mock[GroupManager]
-    val groupId = PathId.empty
+    val groupId = PathId.root
     val version = Timestamp.now()
     val groupWithOlderVersion = createGroup(groupId, version = version)
     groupManager.group(groupId, version).returns(Future.successful(Some(groupWithOlderVersion)))
@@ -30,7 +30,7 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
     When("Calling update with version provided")
     val updatedGroup = f.groupApiService.updateGroup(
       createRootGroup(),
-      PathId.empty,
+      PathId.root,
       GroupUpdate(version = Some(version.toOffsetDateTime)),
       version).futureValue
 
@@ -41,7 +41,7 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
   "reverting to non-existing version throws exception" in {
     Given("Group manager with no group of required version")
     val groupManager = mock[GroupManager]
-    val groupId = PathId.empty
+    val groupId = PathId.root
     val version = Timestamp.now
     groupManager.group(groupId, version).returns(Future.successful(None))
     val f = Fixture(groupManager = groupManager)
@@ -50,7 +50,7 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
     Then("Exception will be thrown")
     val ex = f.groupApiService.updateGroup(
       createRootGroup(),
-      PathId.empty,
+      PathId.root,
       GroupUpdate(version = Some(version.toOffsetDateTime)),
       version).failed.futureValue
     ex shouldBe an[IllegalArgumentException]
@@ -59,15 +59,15 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
   "scale when scaleBy provided" in {
     Given("Initialized service with root group and one app")
     val f = Fixture()
-    val app = AppDefinition("/app".toRootPath, cmd = Some("cmd"), networks = Seq(ContainerNetwork("foo")), role = "*")
+    val app = AppDefinition("/app".toAbsolutePath, cmd = Some("cmd"), networks = Seq(ContainerNetwork("foo")), role = "*")
     val originalInstancesCount = app.instances
     val rootGroup = createRootGroup(apps = Map(
-      "/app".toRootPath -> app
+      "/app".toAbsolutePath -> app
     ))
     When("Calling update with scaleBy")
     val updatedGroup = f.groupApiService.updateGroup(
       rootGroup,
-      PathId.empty,
+      PathId.root,
       GroupUpdate(scaleBy = Some(2)),
       Timestamp.now()).futureValue
 
@@ -78,7 +78,7 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
   "update the group if version as well as scaleBy not provided" in {
     Given("Group manager with the group version")
     val groupManager = mock[GroupManager]
-    val groupId = PathId.empty
+    val groupId = PathId.root
     val newVersion = Timestamp.now()
     val existingGroup = createGroup(groupId, version = newVersion)
     groupManager.group(groupId).returns(Some(existingGroup))
@@ -86,15 +86,15 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
     When("Calling update with new apps being added to a group")
     val update = GroupUpdate(apps = Some(Set(App("/app", role = Some(ResourceRole.Unreserved), networks = Seq(Network(mode = NetworkMode.ContainerBridge))))))
     val rootGroup = createRootGroup()
-    val normalizedUpdate = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.empty, rootGroup).normalized(update)
+    val normalizedUpdate = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root, rootGroup).normalized(update)
     val updatedGroup = f.groupApiService.updateGroup(
       rootGroup,
-      PathId.empty,
+      PathId.root,
       normalizedUpdate,
       newVersion).futureValue
 
     Then("Group will contain those apps after an update")
-    updatedGroup.apps(PathId("/app")) should be (AppDefinition("/app".toRootPath, networks = Seq(BridgeNetwork()), versionInfo = VersionInfo.OnlyVersion(newVersion), role = "*"))
+    updatedGroup.apps(PathId("/app")) should be (AppDefinition("/app".toAbsolutePath, networks = Seq(BridgeNetwork()), versionInfo = VersionInfo.OnlyVersion(newVersion), role = "*"))
   }
 
   case class Fixture(

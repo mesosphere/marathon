@@ -230,7 +230,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
       val Some(op) = matched.instanceOp.offerOperations.headOption
 
-      val envValue = op.getLaunchGroup.getTaskGroup.getTasks(0).getCommand.getEnvironment.getVariablesList.asScala.collect { case pair if pair.getName == TaskBuilderConstants.MARATHON_ENFORCE_GROUP_ROLE => pair.getValue }
+      val envValue = op.getLaunchGroup.getTaskGroup.getTasks(0).getCommand.getEnvironment.getVariablesList.asScala.collect { case pair if pair.getName == TaskBuilderConstants.MARATHON_APP_ENFORCE_GROUP_ROLE => pair.getValue }
       envValue.head shouldBe "TRUE"
     }
 
@@ -254,7 +254,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
       val Some(op) = matched.instanceOp.offerOperations.headOption
 
-      val envValue = op.getLaunch.getTaskInfos(0).getCommand.getEnvironment.getVariablesList.asScala.collect { case pair if pair.getName == TaskBuilderConstants.MARATHON_ENFORCE_GROUP_ROLE => pair.getValue }
+      val envValue = op.getLaunch.getTaskInfos(0).getCommand.getEnvironment.getVariablesList.asScala.collect { case pair if pair.getName == TaskBuilderConstants.MARATHON_APP_ENFORCE_GROUP_ROLE => pair.getValue }
       envValue.head shouldBe "TRUE"
     }
   }

@@ -3,7 +3,7 @@ package api.v2.normalization
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.GroupNormalization
-import mesosphere.marathon.state.{PathId, RootGroup}
+import mesosphere.marathon.state.{AbsolutePathId, RootGroup}
 import org.rogach.scallop.ScallopConf
 
 class GroupNormalizationTest extends UnitTest {
@@ -22,7 +22,7 @@ class GroupNormalizationTest extends UnitTest {
         )))
       )
 
-      val normalized = GroupNormalization.updateNormalization(config, PathId("/prod"), RootGroup.empty).normalized(invalidUpdate)
+      val normalized = GroupNormalization.updateNormalization(config, AbsolutePathId("/prod"), RootGroup.empty).normalized(invalidUpdate)
       normalized.groups.value.head.enforceRole should be(Some(true))
     }
   }

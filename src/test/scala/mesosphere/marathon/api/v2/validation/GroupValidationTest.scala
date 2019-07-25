@@ -1,14 +1,14 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import mesosphere.marathon.state.{Group, PathId, RootGroup}
+import mesosphere.marathon.state.{AbsolutePathId, Group, PathId, RootGroup}
 import mesosphere.{UnitTest, ValidationTestLike}
 
 class GroupValidationTest extends UnitTest with ValidationTestLike {
 
   "Group validation" should {
     "reject defined `enforceRole` outside of a top-level group" in {
-      val groupValidator = Group.validNestedGroupUpdateWithBase(PathId("/"), RootGroup.empty)
+      val groupValidator = Group.validNestedGroupUpdateWithBase(AbsolutePathId("/"), RootGroup.empty)
       val update = raml.GroupUpdate(
         id = Some("/prod"),
         enforceRole = Some(true),

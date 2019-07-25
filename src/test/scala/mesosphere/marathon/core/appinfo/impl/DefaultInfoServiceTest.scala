@@ -216,7 +216,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     "Selecting with App Selector implicitly gives access to parent groups" in {
       Given("a nested group with access to only nested app /group/app1")
       val f = new Fixture
-      val rootId = PathId.empty
+      val rootId = PathId.root
       val rootApp = AppDefinition(PathId("/app"), cmd = Some("sleep"), role = "*")
       val nestedApp1 = AppDefinition(PathId("/group/app1"), cmd = Some("sleep"), role = "*")
       val nestedApp2 = AppDefinition(PathId("/group/app2"), cmd = Some("sleep"), role = "*")

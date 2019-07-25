@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.marathon.raml.GroupUpdate
-import mesosphere.marathon.state.{PathId, RootGroup}
+import mesosphere.marathon.state.{AbsolutePathId, PathId, RootGroup}
 import mesosphere.mesos.ResourceMatcher.Role
 
 import scala.annotation.tailrec
@@ -57,15 +57,14 @@ case class ChildGroupVisitor(conf: MarathonConf, defaultRole: Role) extends Grou
 }
 
 trait AppVisitor {
-  def visit(app: raml.App, groupId: PathId): raml.App
+  def visit(app: raml.App, groupId: AbsolutePathId): raml.App
 }
 
 case class AppNormalizeVisitor(conf: MarathonConf, defaultRole: Role) extends AppVisitor {
 
   val normalizationConfig = AppNormalization.Configuration(conf, defaultRole)
 
-  // TODO: should this be the absolute group path? I think so.
-  override def visit(app: raml.App, absoluteGroupPath: PathId): raml.App = {
+  override def visit(app: raml.App, absoluteGroupPath: AbsolutePathId): raml.App = {
     val validateAndNormalizeApp: Normalization[raml.App] = AppHelpers.appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
     validateAndNormalizeApp.normalized(app.copy(id = PathId(app.id).canonicalPath(absoluteGroupPath).toString))
   }
@@ -73,7 +72,7 @@ case class AppNormalizeVisitor(conf: MarathonConf, defaultRole: Role) extends Ap
 
 object GroupNormalization {
 
-  def dispatch(conf: MarathonConf, groupUpdate: raml.GroupUpdate, base: PathId, visitor: GroupUpdateVisitor): raml.GroupUpdate = {
+  def dispatch(conf: MarathonConf, groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor): raml.GroupUpdate = {
     val updatedGroup = visitor.visit(groupUpdate)
 
     // Visit each child group.
@@ -96,11 +95,11 @@ object GroupNormalization {
     update.copy(enforceRole = Some(effectiveEnforceRole(conf, update.enforceRole)))
   }
 
-  def updateNormalization(conf: MarathonConf, base: PathId, originalRootGroup: RootGroup): Normalization[raml.GroupUpdate] = Normalization { update =>
+  def updateNormalization(conf: MarathonConf, base: AbsolutePathId, originalRootGroup: RootGroup): Normalization[raml.GroupUpdate] = Normalization { update =>
     // Only update if this is not a scale or rollback
     if (update.version.isEmpty && update.scaleBy.isEmpty) {
       if (base.isRoot) dispatch(conf, update, base, RootGroupVisitor(conf))
-      else if (isTopLevel(base)) dispatch(conf, update, base, TopLevelGroupVisitor(conf))
+      else if (base.isTopLevel) dispatch(conf, update, base, TopLevelGroupVisitor(conf))
       else {
         val defaultRole = inferDefaultRole(conf, base, originalRootGroup)
         dispatch(conf, update, base, ChildGroupVisitor(conf, defaultRole))
@@ -124,9 +123,6 @@ object GroupNormalization {
     }
   }
 
-  /** @return true if the passed path id is the top-level, eg `/dev`. */
-  private def isTopLevel(id: PathId): Boolean = id.parent.isRoot
-
   /**
     * Determine the default role for a lower level group.
     *
@@ -136,8 +132,8 @@ object GroupNormalization {
     * @return The default role for all apps and pods.
     */
   @tailrec private def inferDefaultRole(conf: MarathonConf, groupId: PathId, rootGroup: RootGroup): Role = {
-    assert(!isTopLevel(groupId) && !groupId.isRoot)
-    if (isTopLevel(groupId.parent)) {
+    assert(!groupId.isTopLevel && !groupId.isRoot)
+    if (groupId.parent.isTopLevel) {
       rootGroup.group(groupId.parent).fold(conf.mesosRole()) { parentGroup =>
         if (parentGroup.enforceRole) groupId.parent.root else conf.mesosRole()
       }
