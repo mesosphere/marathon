@@ -5,6 +5,8 @@ import mesosphere.marathon.raml.GroupUpdate
 import mesosphere.marathon.state.{PathId, RootGroup}
 import mesosphere.mesos.ResourceMatcher.Role
 
+import scala.annotation.tailrec
+
 trait GroupUpdateVisitor {
   def visit(thisGroup: raml.GroupUpdate): raml.GroupUpdate
 
@@ -98,13 +100,9 @@ object GroupNormalization {
     // Only update if this is not a scale or rollback
     if (update.version.isEmpty && update.scaleBy.isEmpty) {
       if (base.isRoot) dispatch(conf, update, base, RootGroupVisitor(conf))
-      else if (base.parent.isRoot) dispatch(conf, update, base, TopLevelGroupVisitor(conf))
+      else if (isTopLevel(base)) dispatch(conf, update, base, TopLevelGroupVisitor(conf))
       else {
-        // Infer default role from parent role.
-        // TODO: does only work for isTopLevel(base.parent)
-        val defaultRole = originalRootGroup.group(base.parent).fold(conf.mesosRole()) { parentGroup =>
-          if (parentGroup.enforceRole) base.parent.root else conf.mesosRole()
-        }
+        val defaultRole = inferDefaultRole(conf, base, originalRootGroup)
         dispatch(conf, update, base, ChildGroupVisitor(conf, defaultRole))
       }
     } else update
@@ -124,5 +122,25 @@ object GroupNormalization {
         case GroupRoleBehavior.Top => true
       }
     }
+  }
+
+  /** @return true if the passed path id is the top-level, eg `/dev`. */
+  private def isTopLevel(id: PathId): Boolean = id.parent.isRoot
+
+  /**
+    * Determine the default role for a lower level group.
+    *
+    * @param conf The [[MarathonConf]] used to check the default Mesos role.
+    * @param groupId The group id of the lower level group. Must not be root or top-level.
+    * @param rootGroup The root group used to look up the default role.
+    * @return The default role for all apps and pods.
+    */
+  @tailrec private def inferDefaultRole(conf: MarathonConf, groupId: PathId, rootGroup: RootGroup): Role = {
+    assert(!isTopLevel(groupId) && !groupId.isRoot)
+    if (isTopLevel(groupId.parent)) {
+      rootGroup.group(groupId.parent).fold(conf.mesosRole()) { parentGroup =>
+        if (parentGroup.enforceRole) groupId.parent.root else conf.mesosRole()
+      }
+    } else inferDefaultRole(conf, groupId.parent, rootGroup)
   }
 }
