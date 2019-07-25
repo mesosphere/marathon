@@ -124,7 +124,7 @@ object PodDefinition {
 
   val DefaultExecutorResources: Resources = ExecutorResources().fromRaml
   val DefaultLinuxInfo = Option.empty[LinuxInfo]
-  val DefaultId = PathId.empty
+  val DefaultId = PathId.root
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]
   val DefaultLabels = Map.empty[String, String]

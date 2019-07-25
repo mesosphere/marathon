@@ -225,7 +225,7 @@ object Group extends StrictLogging {
     */
   private def isChildOfParentId(group: Group): Validator[AppDefinition] = {
     isTrue("App has to be child of group with parent id") { app =>
-      if (app.id.parent == group.id) group.apps.contains(app.id)
+      if (app.id.asAbsolutePath.parent == group.id.asAbsolutePath) group.apps.contains(app.id)
       else {
         group.group(app.id.parent).exists(child => child.apps.contains(app.id))
       }
@@ -258,7 +258,7 @@ object Group extends StrictLogging {
   def emptyUpdate(id: PathId): raml.GroupUpdate = raml.GroupUpdate(Some(id.toString))
 
   /** requires that apps are in canonical form */
-  def validNestedGroupUpdateWithBase(base: PathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] =
+  def validNestedGroupUpdateWithBase(base: AbsolutePathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] =
     validator[raml.GroupUpdate] { group =>
       group is notNull
 

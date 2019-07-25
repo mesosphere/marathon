@@ -35,7 +35,7 @@ class GroupBenchmark {
   lazy val groupIds = 0 until groupDepth
 
   lazy val groupPaths: Vector[PathId] = groupIds.foldLeft(Vector[PathId]()) { (allPaths, nextChild) =>
-    val nextChildPath = allPaths.lastOption.getOrElse(PathId.empty) / s"group-$nextChild"
+    val nextChildPath = allPaths.lastOption.getOrElse(PathId.root) / s"group-$nextChild"
     allPaths :+ nextChildPath
   }
 

@@ -46,7 +46,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       offer.getResourcesList.find(_.getName == "disk") should be('empty)
 
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(0, 0),
         role = "*"
@@ -67,7 +67,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match resources success" in {
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(0, 0),
         role = "*"
@@ -88,7 +88,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match resources success with BRIDGE and portMappings" in {
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = Nil,
@@ -117,7 +117,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match resources success with USER and portMappings" in {
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = Nil,
@@ -167,7 +167,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           .build()
 
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 2.0, mem = 128.0, disk = 2.0),
         portDefinitions = PortDefinitions(0)
@@ -228,7 +228,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           .build()
 
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 2.0, mem = 128.0, disk = 2.0),
         portDefinitions = PortDefinitions(0)
@@ -287,7 +287,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           .build()
 
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 2.0, mem = 128.0, disk = 2.0),
         portDefinitions = PortDefinitions(0)
@@ -313,7 +313,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           .build()
 
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 2.0),
         portDefinitions = PortDefinitions()
@@ -330,7 +330,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match resources success with preserved roles" in {
       val offer = MarathonTestHelper.makeBasicOffer(role = "marathon").build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(0, 0)
@@ -351,7 +351,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match resources failure because of incorrect roles" in {
       val offer = MarathonTestHelper.makeBasicOffer(role = "marathon").build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(0, 0)
@@ -367,7 +367,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match resources success with constraints" in {
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0).setHostname("host1").build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         constraints = Set(
@@ -387,7 +387,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match resources fails on constraints" in {
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0).setHostname("host1").build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         constraints = Set(
@@ -407,7 +407,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match resources fail on cpu" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.1).build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(0, 0)
@@ -421,7 +421,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match resources fail on mem" in {
       val offer = MarathonTestHelper.makeBasicOffer(mem = 0.1).build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(0, 0)
@@ -435,7 +435,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match resources should always match constraints and therefore return NoOfferMatchReason.UnfulfilledConstraint in case of no match" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5).build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0), // cpu does not match
         constraints = Set(
@@ -458,7 +458,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match resources fail on disk" in {
       val offer = MarathonTestHelper.makeBasicOffer(disk = 0.1).build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 1.0),
         portDefinitions = PortDefinitions(0, 0)
@@ -472,7 +472,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match resources fail on ports" in {
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0).build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(1, 2)
@@ -486,7 +486,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "resource matcher should not respond with NoOfferMatchReason.UnfulfilledRole if role matches" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5, role = "A").build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0), // make sure it mismatches
         acceptedResourceRoles = Set("A", "B")
@@ -503,7 +503,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "resource matcher should respond with NoOfferMatchReason.UnfulfilledRole if runSpec requires unreserved Role but resources are reserved" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5, role = "A").build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0), // make sure it mismatches
         acceptedResourceRoles = Set(ResourceRole.Unreserved)
@@ -520,7 +520,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "resource matcher should respond with NoOfferMatchReason.UnfulfilledRole if runSpec has no role defined" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5, role = "A").build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0) // make sure it mismatches
       )
@@ -536,7 +536,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "resource matcher should respond with NoOfferMatchReason.UnfulfilledRole if role mismatches and offer contains other role" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 0.5, role = "C").build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0), // make sure it mismatches
         acceptedResourceRoles = Set("A", "B")
@@ -553,7 +553,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "resource matcher should respond with all NoOfferMatchReason.Insufficient{Cpus, Memory, Gpus, Disk} if mismatches" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 1, mem = 1, disk = 1, gpus = 1).build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 2, mem = 2, disk = 2, gpus = 2) // make sure it mismatches
       )
@@ -570,7 +570,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "resource matcher should respond with NoOfferMatchReason.InsufficientPorts if ports mismatch and other requirements matches" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 1, mem = 1, disk = 1, beginPort = 0, endPort = 0).build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1, mem = 1, disk = 1),
         portDefinitions = PortDefinitions(1, 2) // this match fails
@@ -588,7 +588,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       // NoOfferMatchReason.InsufficientPorts is calculated lazy and should only be calculated if all other requirements matches
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 1, mem = 1, disk = 1, beginPort = 0, endPort = 0).build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 2, mem = 1, disk = 1), // this match fails
         portDefinitions = PortDefinitions(1, 2) // this would fail as well, but is not evaluated of the resource matcher
@@ -625,7 +625,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         VolumeMount(None, "/var/lib/data"))
 
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(
           cpus = 1.0,
@@ -650,7 +650,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         .addAttributes(TextAttribute("zone", "pl-east-1b"))
         .build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         versionInfo = OnlyVersion(Timestamp(2)),
@@ -694,7 +694,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         .build()
       val oldVersion = Timestamp(1)
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         versionInfo = FullVersionInfo(
@@ -758,7 +758,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val volume = VolumeWithMount(persistentVolume, mount)
 
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(
           cpus = 1.0,
@@ -805,7 +805,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         mount = VolumeMount(None, "/var/lib/data"))
 
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(
           cpus = 1.0,
@@ -846,7 +846,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           mount = VolumeMount(None, "/var/lib/data"))
 
         val app = AppDefinition(
-          id = "/test".toRootPath,
+          id = "/test".toAbsolutePath,
           role = "*",
           resources = Resources(
             cpus = 1.0,
@@ -895,7 +895,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val volume = VolumeWithMount(persistentVolume, mount)
 
       val app = AppDefinition(
-        id = "/test-persistent-volumes-with-unique-constraint".toRootPath,
+        id = "/test-persistent-volumes-with-unique-constraint".toAbsolutePath,
         instances = 3,
         resources = Resources(cpus = 0.1, mem = 32.0, disk = 0.0),
         constraints = Set(Constraint.newBuilder.setField("hostname").
@@ -926,7 +926,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val volume = VolumeWithMount(persistentVolume, mount)
 
       val app = AppDefinition(
-        id = "/test-persistent-volumes-without-unique-constraint".toRootPath,
+        id = "/test-persistent-volumes-without-unique-constraint".toAbsolutePath,
         instances = 3,
         resources = Resources(cpus = 0.1, mem = 32.0, disk = 0.0),
         container = Some(Container.Mesos(
@@ -946,7 +946,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val maintenanceDisabledConf = AllConf.withTestConfig("--disable_maintenance_mode")
       val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now).build
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 0.1, mem = 128.0, disk = 0.0)
       )
@@ -964,7 +964,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match offers with maintenance mode and enabled feature should not match" in {
       val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now).build
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 0.1, mem = 128.0, disk = 0.0)
       )
@@ -977,7 +977,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match offers with maintenance mode, too many required cpus and enabled feature should not match" in {
       val offer = MarathonTestHelper.makeBasicOfferWithUnavailability(clock.now).build
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1000, mem = 128.0, disk = 0.0)
       )
@@ -991,7 +991,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val maintenanceEnabledConf = AllConf.withTestConfig("--draining_seconds", "300")
       val offer = MarathonTestHelper.makeBasicOffer().build
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1000, mem = 128.0, disk = 0.0)
       )
@@ -1004,7 +1004,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match offers with empty region if localRegion is not available" in {
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(0, 0)
@@ -1017,7 +1017,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "match offers with empty region if localRegion is available" in {
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(0, 0)
@@ -1033,7 +1033,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         .setDomain(MarathonTestHelper.newDomainInfo("region", "zone"))
         .build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(0, 0)
@@ -1049,7 +1049,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         .setDomain(MarathonTestHelper.newDomainInfo("region", "zone"))
         .build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(0, 0)
@@ -1064,14 +1064,14 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val gpuOffer = MarathonTestHelper.makeBasicOffer(gpus = 4)
         .build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(0, 0)
       )
 
       val gpuApp = AppDefinition(
-        id = "/gpu".toRootPath,
+        id = "/gpu".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0, gpus = 1),
         portDefinitions = PortDefinitions(0, 0)
@@ -1108,14 +1108,14 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
         .build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(0, 0)
       )
 
       val gpuApp = AppDefinition(
-        id = "/gpu".toRootPath,
+        id = "/gpu".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0, gpus = 1),
         portDefinitions = PortDefinitions(0, 0)
@@ -1152,7 +1152,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
         .build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = PortDefinitions(0, 0)
@@ -1179,7 +1179,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
         .build()
       val app = AppDefinition(
-        id = "/test".toRootPath,
+        id = "/test".toAbsolutePath,
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0, gpus = 2),
         portDefinitions = PortDefinitions(0, 0)
@@ -1283,7 +1283,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         val offer = offerBuilder.build()
 
         val app = AppDefinition(
-          id = "/test".toRootPath,
+          id = "/test".toAbsolutePath,
           role = "*",
           resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
           portDefinitions = PortDefinitions(0, 0)
@@ -1308,7 +1308,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         val offer = offerBuilder.build()
 
         val app = AppDefinition(
-          id = "/test".toRootPath,
+          id = "/test".toAbsolutePath,
           role = "*",
           resources = Resources(cpus = 1.0, mem = 128.0, disk = 1.0),
           portDefinitions = PortDefinitions(0, 0)
@@ -1334,7 +1334,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         val offer = offerBuilder.build()
 
         val app = AppDefinition(
-          id = "/test".toRootPath,
+          id = "/test".toAbsolutePath,
           role = "*",
           resources = Resources(cpus = 1.0, mem = 128.0, disk = 1.0),
           portDefinitions = PortDefinitions(0, 0)
@@ -1371,7 +1371,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
           .build()
         val app = AppDefinition(
-          id = "/test".toRootPath,
+          id = "/test".toAbsolutePath,
           role = "*",
           resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
           portDefinitions = PortDefinitions(0, 0),
