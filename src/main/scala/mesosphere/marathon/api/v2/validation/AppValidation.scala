@@ -18,7 +18,7 @@ trait AppValidation {
   import ArtifactValidation._
   import EnvVarValidation._
   import NetworkValidation._
-  import PathId.{empty => _, _}
+  import PathId.{root => _, _}
   import SchedulingValidation._
   import SecretValidation._
 

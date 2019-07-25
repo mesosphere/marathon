@@ -107,7 +107,7 @@ private[deployment] object DeploymentPlanReverter extends StrictLogging {
       case (change1, change2) =>
         // both groups are supposed to have the same path id (if there are any)
         def pathId(change: (Option[Group], Option[Group])): PathId = {
-          Seq(change._1, change._2).flatten.headOption.fold(PathId.empty)(_.id)
+          Seq(change._1, change._2).flatten.headOption.fold(PathId.root: PathId)(_.id)
         }
 
         pathId(change1) > pathId(change2)

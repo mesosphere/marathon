@@ -31,7 +31,7 @@ class AppVersionsResource(
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val id = appId.toRootPath
+      val id = appId.toAbsolutePath
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { _ =>
         ok(jsonObjString("versions" -> service.listAppVersions(id)))
       }
@@ -47,7 +47,7 @@ class AppVersionsResource(
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val id = appId.toRootPath
+      val id = appId.toAbsolutePath
       val timestamp = Timestamp(version)
       withAuthorization(ViewRunSpec, service.getApp(id, timestamp), unknownApp(id, Some(timestamp))) { app =>
         ok(jsonString(app))

@@ -43,7 +43,7 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
 
   "ModelValidation" should {
     "A group update should pass validation" in {
-      implicit val groupUpdateValidator: Validator[GroupUpdate] = Group.validNestedGroupUpdateWithBase(PathId.empty, RootGroup.empty)
+      implicit val groupUpdateValidator: Validator[GroupUpdate] = Group.validNestedGroupUpdateWithBase(PathId.root, RootGroup.empty)
       val update = GroupUpdate(id = Some("/a/b/c"))
 
       validate(update).isSuccess should be(true)

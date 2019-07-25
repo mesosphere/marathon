@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{FetchUri, PathId}
+import mesosphere.marathon.state.{AbsolutePathId, FetchUri, PathId}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.RoleSettings
 
@@ -279,7 +279,7 @@ object AppNormalization {
     app.copy(
       // it's kind of cheating to do this here, but its required in order to pass canonical validation (that happens
       // before canonical normalization)
-      id = app.id.toRootPath.toString,
+      id = app.id.toAbsolutePath.toString,
       // normalize fetch
       fetch = fetch,
       uris = None,
@@ -414,7 +414,7 @@ object AppNormalization {
         throw NormalizationException("cannot mix deprecated and canonical network APIs")
     }
   }
-  def withCanonizedIds[T](base: PathId = PathId.empty): Normalization[T] = Normalization {
+  def withCanonizedIds[T](base: AbsolutePathId = PathId.root): Normalization[T] = Normalization {
     case update: AppUpdate =>
       update.copy(
         id = update.id.map(id => PathId(id).canonicalPath(base).toString),

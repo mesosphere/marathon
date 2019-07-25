@@ -177,12 +177,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       clock: SettableClock = new SettableClock(),
       auth: TestAuthFixture = new TestAuthFixture,
       appTaskResource: AppTasksResource = mock[AppTasksResource],
-      service: MarathonSchedulerService = mock[MarathonSchedulerService],
       appInfoService: AppInfoService = mock[AppInfoService],
       configArgs: Seq[String] = Seq("--enable_features", "external_volumes")) {
     val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(initialRoot = initialRoot)
     val groupManager: GroupManager = groupManagerFixture.groupManager
     val groupRepository: GroupRepository = groupManagerFixture.groupRepository
+    val service = groupManagerFixture.service
 
     val config: AllConf = AllConf.withTestConfig(configArgs: _*)
     val appsResource: AppsResource = new AppsResource(
@@ -672,7 +672,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     "Create a new app with IP/CT on virtual network foo, then update it to nothing" in new FixtureWithRealGroupManager(
       initialRoot = createRootGroup(apps = Map(
-        "/app".toRootPath -> AppDefinition("/app".toRootPath, cmd = Some("cmd"), networks = Seq(ContainerNetwork("foo")), role = "*")
+        "/app".toAbsolutePath -> AppDefinition("/app".toAbsolutePath, cmd = Some("cmd"), networks = Seq(ContainerNetwork("foo")), role = "*")
       ))
     ) {
       Given("An app and group")
@@ -1609,7 +1609,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |  },
           |  "ipAddress": { "networkName": "dcos" }
           |}""".stripMargin.getBytes("UTF-8")
-      val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, CompleteReplacement)
+      val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id.asAbsolutePath, body, CompleteReplacement)
 
       Then("the application is updated")
       implicit val identity = auth.identity
@@ -1617,7 +1617,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true, now = clock.now(), service = service)
 
       And("also works when the update operation uses partial-update semantics, dropping portDefinitions")
-      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, PartialUpdate(app))
+      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id.asAbsolutePath, body, PartialUpdate(app))
       val app2 = AppHelpers.updateOrCreate(
         app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false, now = clock.now(), service = service)
 
@@ -1779,7 +1779,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       restart.getStatus should be(auth.NotAuthenticatedStatus)
     }
 
-    "access without authorization is denied" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toRootPath -> AppDefinition("/a".toRootPath, cmd = Some("sleep"), role = "*")))) {
+    "access without authorization is denied" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toAbsolutePath -> AppDefinition("/a".toAbsolutePath, cmd = Some("sleep"), role = "*")))) {
       Given("An unauthorized request")
       auth.authenticated = true
       auth.authorized = false
@@ -2219,6 +2219,33 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         Then("The return code indicates success")
         response.getStatus should be(201)
       }
+    }
+
+    "Create a new app inside a top-group with enforceRole applies the proper group-role default" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/dev".toPath, enforceRole = true)))) {
+      service.deploy(any, any) returns Future.successful(Done)
+
+      Given("group /dev with enforceRole: true")
+
+      When("I post a sleeper app definition without a leading slash to dev/sleeper")
+      val response = asyncRequest { r =>
+        val body =
+          """
+            |{
+            |  "id": "dev/sleeper",
+            |  "cmd": "sleep 3600",
+            |  "instances": 1,
+            |  "cpus": 0.05,
+            |  "mem": 128
+            |}
+          """.stripMargin
+        appsResource.create(body.getBytes, force = false, auth.request, r)
+      }
+
+      response.getStatus should be(201)
+
+      val Some(app) = groupManager.rootGroup().app("/dev/sleeper".toPath)
+
+      app.role shouldBe "dev"
     }
 
   }

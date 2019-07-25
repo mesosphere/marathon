@@ -21,34 +21,34 @@ class TaskIdTest extends UnitTest with Inside {
 
     "Old TaskIds can be converted" in {
       val taskId = Task.Id.parse(TaskID.newBuilder().setValue("app_682ebe64-0771-11e4-b05d-e0f84720c54e").build)
-      taskId.runSpecId should equal("app".toRootPath)
+      taskId.runSpecId should equal("app".toAbsolutePath)
     }
 
     "Old TaskIds can be converted even if they have dots in them" in {
       val taskId = Task.Id.parse(TaskID.newBuilder().setValue("app.foo.bar_682ebe64-0771-11e4-b05d-e0f84720c54e").build)
-      taskId.runSpecId should equal("app.foo.bar".toRootPath)
+      taskId.runSpecId should equal("app.foo.bar".toAbsolutePath)
     }
 
     "Old TaskIds can be converted even if they have underscores in them" in {
       val taskId = Task.Id.parse(TaskID.newBuilder().setValue("app_foo_bar_682ebe64-0771-11e4-b05d-e0f84720c54e").build)
-      taskId.runSpecId should equal("/app/foo/bar".toRootPath)
+      taskId.runSpecId should equal("/app/foo/bar".toAbsolutePath)
     }
 
     "TaskIds with encoded InstanceIds could be encoded" in {
       val taskId = Task.Id.parse(TaskID.newBuilder().setValue("test_foo_bla_rest.instance-62d0f03f-79aa-11e6-a1a0-660c139c5e15._app").build)
-      taskId.runSpecId should equal("/test/foo/bla/rest".toRootPath)
+      taskId.runSpecId should equal("/test/foo/bla/rest".toAbsolutePath)
       taskId.instanceId.idString should equal("test_foo_bla_rest.instance-62d0f03f-79aa-11e6-a1a0-660c139c5e15")
     }
 
     "TaskIds with encoded InstanceIds could be encoded even with crucial path ids" in {
       val taskId = Task.Id.parse(TaskID.newBuilder().setValue("test_foo.instance-_bla_rest.instance-62d0f03f-79aa-11e6-a1a0-660c139c5e15._app").build)
-      taskId.runSpecId should equal("/test/foo.instance-/bla/rest".toRootPath)
+      taskId.runSpecId should equal("/test/foo.instance-/bla/rest".toAbsolutePath)
       taskId.instanceId.idString should equal("test_foo.instance-_bla_rest.instance-62d0f03f-79aa-11e6-a1a0-660c139c5e15")
     }
 
     "TaskIds without specific instanceId should use taskId as instanceId" in {
       val taskId = Task.Id.parse(TaskID.newBuilder().setValue("test_foo_bla_rest.62d0f03f-79aa-11e6-a1a0-660c139c5e15").build)
-      taskId.runSpecId should equal("/test/foo/bla/rest".toRootPath)
+      taskId.runSpecId should equal("/test/foo/bla/rest".toAbsolutePath)
       taskId.instanceId.idString should equal("test_foo_bla_rest.marathon-62d0f03f-79aa-11e6-a1a0-660c139c5e15")
     }
 
