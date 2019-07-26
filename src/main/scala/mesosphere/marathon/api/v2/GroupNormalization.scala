@@ -1,20 +1,17 @@
 package mesosphere.marathon
 package api.v2
 
-import mesosphere.marathon.raml.GroupUpdate
+import mesosphere.marathon.raml.{AppVisitor, GroupUpdate, GroupUpdateVisitor}
 import mesosphere.marathon.state.{AbsolutePathId, PathId, RootGroup}
 import mesosphere.mesos.ResourceMatcher.Role
 
 import scala.annotation.tailrec
 
-trait GroupUpdateVisitor {
-  def visit(thisGroup: raml.GroupUpdate): raml.GroupUpdate
-
-  def childGroupVisitor(): GroupUpdateVisitor
-
-  def appVisitor(): AppVisitor
-}
-
+/**
+  * Visitor that normalizes a root group update.
+  *
+  * @param conf The [[MarathonConf]].
+  */
 case class RootGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor {
 
   override def visit(thisGroup: GroupUpdate): GroupUpdate = thisGroup.copy(enforceRole = Some(false))
@@ -24,6 +21,11 @@ case class RootGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor {
   override def appVisitor(): AppVisitor = AppNormalizeVisitor(conf, conf.mesosRole())
 }
 
+/**
+  * Visitor that normalizes a top-level group update, ie an update for a group directly under root eg `/prod`.
+  *
+  * @param conf The [[MarathonConf]].
+  */
 case class TopLevelGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor {
   var defaultRole: Role = conf.mesosRole()
 
@@ -44,6 +46,13 @@ case class TopLevelGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor {
   override def appVisitor(): AppVisitor = AppNormalizeVisitor(conf, defaultRole)
 }
 
+/**
+  * Visitor that normalizes an update for a group that is not root or a top-level group. See
+  * [[RootGroupVisitor]] and [[TopLevelGroupVisitor]] for these cases.
+  *
+  * @param conf The [[MarathonConf]].
+  * @param defaultRole The default Mesos role for all apps in this group.
+  */
 case class ChildGroupVisitor(conf: MarathonConf, defaultRole: Role) extends GroupUpdateVisitor {
 
   override def visit(thisGroup: GroupUpdate): GroupUpdate = {
@@ -56,10 +65,12 @@ case class ChildGroupVisitor(conf: MarathonConf, defaultRole: Role) extends Grou
   override def appVisitor(): AppVisitor = AppNormalizeVisitor(conf, defaultRole)
 }
 
-trait AppVisitor {
-  def visit(app: raml.App, groupId: AbsolutePathId): raml.App
-}
-
+/**
+  * Visitor that normalizes an [[raml.App]] in an [[raml.GroupUpdate]].
+  *
+  * @param conf The [[MarathonConf]].
+  * @param defaultRole The default Mesos role of the app.
+  */
 case class AppNormalizeVisitor(conf: MarathonConf, defaultRole: Role) extends AppVisitor {
 
   val normalizationConfig = AppNormalization.Configuration(conf, defaultRole)
@@ -72,6 +83,15 @@ case class AppNormalizeVisitor(conf: MarathonConf, defaultRole: Role) extends Ap
 
 object GroupNormalization {
 
+  /**
+    * Dispatch the visitor on the group update and its children.
+    *
+    * @param conf The [[MarathonConf]]
+    * @param groupUpdate The group update that will be visited.
+    * @param base The absolute path of group being updated.
+    * @param visitor
+    * @return The group update returned by the visitor.
+    */
   def dispatch(conf: MarathonConf, groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor): raml.GroupUpdate = {
     val updatedGroup = visitor.visit(groupUpdate)
 
@@ -95,6 +115,15 @@ object GroupNormalization {
     update.copy(enforceRole = Some(effectiveEnforceRole(conf, update.enforceRole)))
   }
 
+  /**
+    * Normalize the group update of an API call.
+    *
+    * @param conf The [[MarathonConf]] holding the default Mesos role and the default enforce group
+    *             role behavior.
+    * @param base The absolute path of the group being updated.
+    * @param originalRootGroup The [[RootGroup]] before the update was applied.
+    * @return The normalized group update.
+    */
   def updateNormalization(conf: MarathonConf, base: AbsolutePathId, originalRootGroup: RootGroup): Normalization[raml.GroupUpdate] = Normalization { update =>
     // Only update if this is not a scale or rollback
     if (update.version.isEmpty && update.scaleBy.isEmpty) {
