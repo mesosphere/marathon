@@ -19,8 +19,9 @@ Usage $0 [options]
 
 Non-arg params
 
-- commit: output just the formatted commit hash
-- docker: output the version as used by the Docker tag
+* commit - output just the formatted commit hash
+* docker - output the version as used by the Docker tag
+* package - output the version with the commit hash, ie 1.9.34-a122edcb4
 EOF
 }
 
