@@ -38,10 +38,6 @@ class MigrationTo19100Test extends AkkaUnitTest {
       updatedInstances.head.instanceId should be(instanceId1)
       updatedInstances.head.role.value should be(mesosDefaultRole)
     }
-
-    "migrate all nested groups" in {
-
-    }
   }
 
   class Fixture {
