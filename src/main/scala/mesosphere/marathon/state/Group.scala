@@ -11,6 +11,7 @@ import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.plugin.{Group => IGroup}
+import mesosphere.marathon.raml.{AppVisitor, GroupUpdate, GroupUpdateVisitor}
 import mesosphere.marathon.state.Group.{defaultApps, defaultDependencies, defaultGroups, defaultPods, defaultVersion}
 import mesosphere.marathon.state.PathId.{StringPathId, validPathWithBase}
 import mesosphere.util.summarize
@@ -258,10 +259,20 @@ object Group extends StrictLogging {
   def emptyUpdate(id: PathId): raml.GroupUpdate = raml.GroupUpdate(Some(id.toString))
 
   /** requires that apps are in canonical form */
-  def validNestedGroupUpdateWithBase(base: AbsolutePathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] =
-    validator[raml.GroupUpdate] { group =>
+  def validNestedGroupUpdateWithBase(base: AbsolutePathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] = {
+    val visitor =
+      if (base.isRoot) RootGroupValidationVisitor(originalRootGroup)
+      else if (base.isTopLevel) TopLevelGroupValidationVisitor(originalRootGroup)
+      else LowerLevelGroupValidationVisitor(originalRootGroup)
+
+    (groupUpdate: raml.GroupUpdate) => dispatch(base, groupUpdate, visitor, originalRootGroup)
+  }
+
+  // TODO: investigate Scalactic Or and Every
+  trait GroupValidationVisitor extends GroupUpdateVisitor[Result, Result] {
+    val originalRootGroup: RootGroup
+    val groupUpdateValidator = validator[raml.GroupUpdate] { group =>
       group is notNull
-      group is definingEnforcingRoleOnlyIfItsTopLevel(base)
 
       // Enforce role is not allowed to be updated.
       group.enforceRole is noEnforceRoleUpdate(originalRootGroup, group.id.map(_.toPath))
@@ -272,23 +283,63 @@ object Group extends StrictLogging {
       // this is funny: id is "optional" only because version and scaleBy can't be used in conjunction with other
       // fields. it feels like we should make an exception for "id" and always require it for non-root groups.
       group.id.map(_.toPath) as "id" is optional(valid)
-
-      group.apps is optional(every(
-        AppValidation.validNestedApp(group.id.fold(base)(PathId(_).canonicalPath(base)))))
-      group.groups is optional(every(
-        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup)))
     }
 
-  private case class definingEnforcingRoleOnlyIfItsTopLevel(base: AbsolutePathId) extends Validator[raml.GroupUpdate] {
-    override def apply(group: raml.GroupUpdate): Result = {
-      val groupId = group.id.fold(base) { id => PathId(id).canonicalPath(base) }
-      // Only top-level groups are allowed to set the enforce role parameter.
-      if (!groupId.isTopLevel && group.enforceRole.contains(true)) {
-        Failure(Set(RuleViolation(group.enforceRole, s"enforceRole can only be set for top-level groups, and ${groupId} is not top-level", Path(Generic("enforceRole")))))
+    def enforceRoleNotDefined(thisGroup: GroupUpdate): Result = {
+      if (thisGroup.enforceRole.contains(true)) {
+        Failure(Set(RuleViolation(thisGroup.enforceRole, "enforceRole can only be set for top-level groups, and / is not top-level", Path(Generic("enforceRole")))))
       } else {
         Success
       }
     }
+
+    override def visit(thisGroup: raml.GroupUpdate): Result = groupUpdateValidator(thisGroup)
+
+    override def appVisitor(): AppVisitor[Result] = ???
+
+    override def childGroupVisitor(): GroupValidationVisitor = this
+  }
+
+  case class TopLevelGroupValidationVisitor(override val originalRootGroup: RootGroup) extends GroupValidationVisitor {
+
+    override def childGroupVisitor(): GroupValidationVisitor = LowerLevelGroupValidationVisitor(originalRootGroup)
+  }
+
+  case class RootGroupValidationVisitor(override val originalRootGroup: RootGroup) extends GroupValidationVisitor {
+
+    override def visit(thisGroup: GroupUpdate): Result = super.visit(thisGroup).and(enforceRoleNotDefined(thisGroup))
+
+    override def childGroupVisitor(): GroupValidationVisitor = TopLevelGroupValidationVisitor(originalRootGroup)
+  }
+
+  case class LowerLevelGroupValidationVisitor(override val originalRootGroup: RootGroup) extends GroupValidationVisitor {
+
+    override def visit(thisGroup: GroupUpdate): Result = super.visit(thisGroup).and(enforceRoleNotDefined(thisGroup))
+
+    override def childGroupVisitor(): GroupValidationVisitor = this
+  }
+
+  case class AppValidationVisitor() extends AppVisitor[Result] {
+    override def visit(app: raml.App, groupId: AbsolutePathId): Result = AppValidation.validNestedApp(groupId)(app)
+  }
+
+  def dispatch(base: AbsolutePathId, update: raml.GroupUpdate, visitor: GroupValidationVisitor, originalRootGroup: RootGroup): Result = {
+    val updateResult = visitor.visit(update)
+
+    // Visit each child group.
+    val childGroupVisitor = visitor.childGroupVisitor()
+    val childrenResult = update.groups.fold[Result](Success)(groups => groups.foldLeft[Result](Success) { (acc, childGroup) =>
+      val absoluteChildGroupPath = PathId(childGroup.id.get).canonicalPath(base)
+      acc.and(dispatch(absoluteChildGroupPath, childGroup, childGroupVisitor, originalRootGroup))
+    })
+
+    // Visit each app
+    val appVisitor = visitor.appVisitor()
+    val appsResult = update.apps.fold[Result](Success)(apps => apps.foldLeft[Result](Success) { (acc, app) =>
+      acc.and(appVisitor.visit(app, base))
+    })
+
+    updateResult.and(childrenResult).and(appsResult)
   }
 
   private case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[PathId]) extends Validator[Option[Boolean]] {
