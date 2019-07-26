@@ -3,6 +3,15 @@ package raml
 
 import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, Group => CoreGroup, VersionInfo => CoreVersionInfo}
 
+//case class GroupUpdateConversionVisitor() extends GroupUpdateVisitor[AppDefinition, CoreGroup] {
+//
+//  override def childGroupVisitor(): GroupUpdateVisitor[AppDefinition, CoreGroup] = this
+//
+//  override def appVisitor(): AppVisitor[AppDefinition] = ???
+//
+//
+//}
+
 trait GroupConversion {
 
   // TODO needs a dedicated/focused unit test; other (larger) unit tests provide indirect coverage
