@@ -11,11 +11,12 @@ import mesosphere.marathon.raml.{App, GroupUpdate, Network, NetworkMode}
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 import mesosphere.marathon.state.PathId._
+import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
-class GroupApiServiceTest extends UnitTest with GroupCreation {
+class GroupApiServiceTest extends UnitTest with Inside with GroupCreation {
   implicit val identity: Identity = new Identity {}
   val noEnabledFeatures = AllConf.withTestConfig()
 
@@ -94,7 +95,7 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
       newVersion).futureValue
 
     Then("Group will contain those apps after an update")
-    updatedGroup.apps(PathId("/app")) should be (AppDefinition("/app".toAbsolutePath, cmd = Some("sleep 1000"), networks = Seq(BridgeNetwork()), versionInfo = VersionInfo.OnlyVersion(newVersion), role = "*"))
+    updatedGroup.apps.get(PathId("/app")).value.versionInfo should be(VersionInfo.OnlyVersion(newVersion))
   }
 
   case class Fixture(
