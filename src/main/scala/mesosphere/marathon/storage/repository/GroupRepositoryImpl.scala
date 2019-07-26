@@ -416,5 +416,5 @@ class StoredGroupRepositoryImpl[K, C, S](
 }
 
 object StoredGroupRepositoryImpl {
-  val RootId = PathId.empty
+  val RootId: PathId = PathId.root
 }

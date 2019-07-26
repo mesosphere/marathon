@@ -21,7 +21,7 @@ import org.scalatest.time.{Seconds, Span}
 class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhenThen {
   import PathId._
 
-  def randomAppId = UUID.randomUUID().toString.toRootPath
+  def randomAppId = UUID.randomUUID().toString.toAbsolutePath
   def randomApp = AppDefinition(randomAppId, role = "*", versionInfo = VersionInfo.OnlyVersion(Timestamp.now()))
 
   override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(30, Seconds))

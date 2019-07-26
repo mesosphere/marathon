@@ -3,7 +3,7 @@ package raml
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference}
-import mesosphere.marathon.core.instance.Reservation
+import mesosphere.marathon.core.instance.{Goal, Instance, Reservation}
 import mesosphere.marathon.core.pod.{ContainerNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.{PathId, Timestamp}
@@ -563,14 +563,15 @@ object PodStatusConversionTest {
         )
       ).map(t => t.taskId -> t)(collection.breakOut),
       runSpec = pod,
-      reservation = maybeReservation
+      reservation = maybeReservation,
+      role = "*"
     )
 
     InstanceFixture(since, agentInfo, taskIds, instance)
   } // fakeInstance
 
   def fakeTask(networks: Seq[Protos.NetworkInfo]) = {
-    val instanceId = core.instance.Instance.Id.forRunSpec(PathId.empty)
+    val instanceId = core.instance.Instance.Id.forRunSpec(PathId.root)
     val taskId = core.task.Task.Id(instanceId)
     core.task.Task(
       taskId = taskId,

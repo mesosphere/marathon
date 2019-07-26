@@ -255,8 +255,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     "Group Versions for root are transferred as simple json string array (Fix #2329)" in new Fixture {
       Given("Specific Group versions")
       val groupVersions = Seq(Timestamp.now(), Timestamp.now())
-      groupManager.versions(PathId.empty) returns Source(groupVersions)
-      groupManager.group(PathId.empty) returns Some(createGroup(PathId.empty))
+      groupManager.versions(PathId.root) returns Source(groupVersions)
+      groupManager.group(PathId.root) returns Some(createGroup(PathId.root))
 
       When("The versions are queried")
       val rootVersionsResponse = asyncRequest { r => groupsResource.group("versions", embed, auth.request, r) }
@@ -270,8 +270,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       Given("Specific group versions")
       val groupVersions = Seq(Timestamp.now(), Timestamp.now())
       groupManager.versions(any) returns Source(groupVersions)
-      groupManager.versions("/foo/bla/blub".toRootPath) returns Source(groupVersions)
-      groupManager.group("/foo/bla/blub".toRootPath) returns Some(createGroup("/foo/bla/blub".toRootPath))
+      groupManager.versions("/foo/bla/blub".toAbsolutePath) returns Source(groupVersions)
+      groupManager.group("/foo/bla/blub".toAbsolutePath) returns Some(createGroup("/foo/bla/blub".toAbsolutePath))
 
       When("The versions are queried")
       val rootVersionsResponse = asyncRequest { r => groupsResource.group("/foo/bla/blub/versions", embed, auth.request, r) }
@@ -283,8 +283,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
     "Creation of a group with same path as an existing app should be prohibited (fixes #3385)" in new FixtureWithRealGroupManager(
       initialRoot = {
-        val app = AppDefinition("/group/app".toRootPath, cmd = Some("sleep"), role = "*")
-        createRootGroup(groups = Set(createGroup("/group".toRootPath, Map(app.id -> app))), validate = false)
+        val app = AppDefinition("/group/app".toAbsolutePath, cmd = Some("sleep"), role = "*")
+        createRootGroup(groups = Set(createGroup("/group".toAbsolutePath, Map(app.id -> app))), validate = false)
       }
     ) {
       Given("A real group manager with one app")
@@ -300,7 +300,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "Creation of a group with same path as an existing group should be prohibited" in
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/group".toRootPath)))) {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/group".toAbsolutePath)))) {
         When("creating a group with the same path existing app")
         val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group"))))
 

@@ -26,7 +26,7 @@ class RootGroup(
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
     dependencies: Set[PathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion) extends Group(
-  PathId.empty,
+  PathId.root,
   apps,
   pods,
   groupsById,
@@ -438,7 +438,7 @@ object RootGroup {
 
   def validRootGroup(config: MarathonConf): Validator[RootGroup] = validator[RootGroup] { rootGroup =>
     rootGroup is noCyclicDependencies
-    rootGroup is Group.validGroup(PathId.empty, config)
+    rootGroup is Group.validGroup(PathId.root, config)
     rootGroup is ExternalVolumes.validRootGroup()
     rootGroup.transitiveApps as "apps" is Group.everyApp(
       validAppRole(config, rootGroup)
@@ -452,11 +452,11 @@ object RootGroup {
     isTrue("Dependency graph has cyclic dependencies.") { _.hasNonCyclicDependencies }
 
   private def validAppRole(config: MarathonConf, rootGroup: RootGroup): Validator[AppDefinition] = (app: AppDefinition) => {
-    AppDefinition.validWithRoleEnforcement(RoleSettings.forService(config, app.id, rootGroup)).apply(app)
+    AppDefinition.validWithRoleEnforcement(RoleSettings.forService(config, app.id.asAbsolutePath, rootGroup)).apply(app)
   }
 
   private def validPodRole(config: MarathonConf, rootGroup: RootGroup): Validator[PodDefinition] = (pod: PodDefinition) => {
-    PodsValidation.validPodDefinitionWithRoleEnforcement(RoleSettings.forService(config, pod.id, rootGroup)).apply(pod)
+    PodsValidation.validPodDefinitionWithRoleEnforcement(RoleSettings.forService(config, pod.id.asAbsolutePath, rootGroup)).apply(pod)
   }
 
 }

@@ -36,7 +36,7 @@ class EnrichedTaskWritesTest extends UnitTest {
         .withAgentInfo(agentInfo)
         .addTaskStaging(since = time)
         .getInstance()
-      EnrichedTask(instance.runSpecId, instance.appTask, agentInfo, Nil, Nil, None)
+      EnrichedTask(instance.runSpecId, instance.appTask, agentInfo, Nil, Nil, None, "*")
     }
 
     def mesosStatus(taskId: Task.Id) = {
@@ -57,7 +57,7 @@ class EnrichedTaskWritesTest extends UnitTest {
         .addTaskWithBuilder().taskStaging(since = time)
         .withNetworkInfo(networkInfo)
         .build().getInstance()
-      EnrichedTask(instance.runSpecId, instance.appTask, agentInfo, Nil, Nil, None)
+      EnrichedTask(instance.runSpecId, instance.appTask, agentInfo, Nil, Nil, None, "*")
     }
   }
 
@@ -78,7 +78,8 @@ class EnrichedTaskWritesTest extends UnitTest {
         |  "stagedAt": "1970-01-01T00:00:01.024Z",
         |  "version": "1970-01-01T00:00:01.024Z",
         |  "slaveId": "abcd-1234",
-        |  "localVolumes" : []
+        |  "localVolumes" : [],
+        |  "role" : "*"
         |}
       """.stripMargin
       JsonTestHelper.assertThatJsonOf(f.taskWithoutIp.toRaml).correspondsToJsonString(json)
@@ -109,7 +110,8 @@ class EnrichedTaskWritesTest extends UnitTest {
         |  "stagedAt": "1970-01-01T00:00:01.024Z",
         |  "version": "1970-01-01T00:00:01.024Z",
         |  "slaveId": "abcd-1234",
-        |  "localVolumes" : []
+        |  "localVolumes" : [],
+        |  "role" : "*"
         |}
       """.stripMargin
       JsonTestHelper.assertThatJsonOf(f.taskWithMultipleIPs.toRaml).correspondsToJsonString(json)
