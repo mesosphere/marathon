@@ -5,7 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.GroupNormalization
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
+import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.raml.{App, GroupUpdate, Network, NetworkMode}
 import mesosphere.marathon.state._

@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api.v2.validation
 
-import mesosphere.marathon.state.{AbsolutePathId, Group, PathId, RootGroup}
+import mesosphere.marathon.state.{AbsolutePathId, Group, RootGroup}
 import mesosphere.{UnitTest, ValidationTestLike}
 
 class GroupValidationTest extends UnitTest with ValidationTestLike {
