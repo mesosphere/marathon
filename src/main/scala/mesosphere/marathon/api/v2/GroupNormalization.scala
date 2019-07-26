@@ -65,7 +65,7 @@ case class AppNormalizeVisitor(conf: MarathonConf, defaultRole: Role) extends Ap
   val normalizationConfig = AppNormalization.Configuration(conf, defaultRole)
 
   override def visit(app: raml.App, absoluteGroupPath: AbsolutePathId): raml.App = {
-    val validateAndNormalizeApp: Normalization[raml.App] = AppHelpers.appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+    val validateAndNormalizeApp: Normalization[raml.App] = AppHelpers.appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds(absoluteGroupPath))
     validateAndNormalizeApp.normalized(app.copy(id = PathId(app.id).canonicalPath(absoluteGroupPath).toString))
   }
 }
