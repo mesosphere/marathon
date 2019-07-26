@@ -89,7 +89,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Then("One Instance should have the old role, and one the new role")
       var taskList = taskListResult.value
 
-      taskList should have size(1)
+      taskList should have size (1)
       taskList.head.role.value should be(BaseMarathon.defaultRole)
 
       Given("The app is scaled to 2")
@@ -106,7 +106,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Then("One Instance should have the old role, and one the new role")
       taskList = taskListResult.value
 
-      taskList should have size(2)
+      taskList should have size (2)
       val instanceRoles = taskList.map(task => task.role.value)
       instanceRoles should contain("dev")
       instanceRoles should contain(BaseMarathon.defaultRole)

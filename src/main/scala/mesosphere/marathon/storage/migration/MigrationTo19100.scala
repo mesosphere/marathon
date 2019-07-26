@@ -229,7 +229,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
 
     val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }
       .mapMaterializedValue { f =>
-        f.map(i => logger.info(s"$i pods migrated to 1.9.100"))
+        f.map(i => logger.info(s"$i groups migrated to 1.9.100"))
         NotUsed
       }
 
@@ -240,7 +240,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
           case Some(rootGroupVersion) => zkStore.get(RootId, rootGroupVersion).map(group => (group, Some(rootGroupVersion)))
           case None => zkStore.get(RootId).map(group => (group, None))
         }
-        .collect{ case (Some(group), optVersion) if group.enforceRole.isEmpty => (group, optVersion) }
+        .collect{ case (Some(group), optVersion) => (group, optVersion) }
         .map{
           case (rootGroup, optVersion) => (migrateGroup(rootGroup), optVersion)
         }
