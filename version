@@ -47,18 +47,24 @@ done
 COMMIT_NUMBER="$(git rev-list --count --first-parent $BRANCH_POINT..$REF)"
 COMMIT_HASH=$(git rev-parse --short $REF)
 
-# Echo commit hash
-if [ "${OTHERARGS[0]}" == "commit" ]; then
+case ${OTHERARGS[0]} in
+  commit)
+    # Echo commit hash
     echo "$COMMIT_HASH"
-    exit 0
-fi
-
-# Version for Docker image, e.g. v1.7.42
-if [ "${OTHERARGS[0]}" == "docker" ]; then
+    ;;
+  package)
+    # Echo package version plus hash
+    echo "$MAJOR.$MINOR.$COMMIT_NUMBER-$COMMIT_HASH"
+    ;;
+  docker)
+    # Version for Docker image, e.g. v1.7.42
     echo "v$MAJOR.$MINOR.$COMMIT_NUMBER"
-    exit 0
-fi
+    ;;
+  *)
+    # Echo verion
+    # E.g. 1.7.42
+    echo "$MAJOR.$MINOR.$COMMIT_NUMBER"
+    ;;
 
-# Echo verion
-# E.g. 1.7.42
-echo "$MAJOR.$MINOR.$COMMIT_NUMBER"
+
+esac
