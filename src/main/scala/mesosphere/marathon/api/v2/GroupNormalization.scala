@@ -60,7 +60,7 @@ case class ChildGroupVisitor(conf: MarathonConf, defaultRole: Role) extends Grou
     else thisGroup
   }
 
-  override def childGroupVisitor(): GroupUpdateVisitor = ChildGroupVisitor(conf, defaultRole)
+  override def childGroupVisitor(): GroupUpdateVisitor = this
 
   override def appVisitor(): AppVisitor = AppNormalizeVisitor(conf, defaultRole)
 }
