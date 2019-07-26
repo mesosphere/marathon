@@ -22,6 +22,7 @@ Non-arg params
 * commit - output just the formatted commit hash
 * docker - output the version as used by the Docker tag
 * package - output the version with the commit hash, ie 1.9.34-a122edcb4
+
 EOF
 }
 
@@ -61,10 +62,16 @@ case ${OTHERARGS[0]} in
     # Version for Docker image, e.g. v1.7.42
     echo "v$MAJOR.$MINOR.$COMMIT_NUMBER"
     ;;
-  *)
+  "")
     # Echo verion
     # E.g. 1.7.42
     echo "$MAJOR.$MINOR.$COMMIT_NUMBER"
+    ;;
+  *)
+    echo "ERROR: ${OTHERARGS[0]} is not a version format"
+    echo
+    help
+    exit 1
     ;;
 
 
