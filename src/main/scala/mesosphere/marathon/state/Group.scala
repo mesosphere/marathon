@@ -265,6 +265,8 @@ object Group extends StrictLogging {
       else if (base.isTopLevel) TopLevelGroupValidationVisitor(originalRootGroup)
       else LowerLevelGroupValidationVisitor(originalRootGroup)
 
+    println(s"validating $base")
+
     (groupUpdate: raml.GroupUpdate) => dispatch(base, groupUpdate, visitor, originalRootGroup)
   }
 
@@ -285,9 +287,9 @@ object Group extends StrictLogging {
       group.id.map(_.toPath) as "id" is optional(valid)
     }
 
-    def enforceRoleNotDefined(thisGroup: GroupUpdate): Result = {
+    def enforceRoleNotDefined(thisGroup: GroupUpdate, groupId: AbsolutePathId): Result = {
       if (thisGroup.enforceRole.contains(true)) {
-        Failure(Set(RuleViolation(thisGroup.enforceRole, "enforceRole can only be set for top-level groups, and / is not top-level", Path(Generic("enforceRole")))))
+        Failure(Set(RuleViolation(thisGroup.enforceRole, s"enforceRole can only be set for top-level groups, and $groupId is not top-level", Path(Generic("enforceRole")))))
       } else {
         Success
       }
@@ -295,7 +297,7 @@ object Group extends StrictLogging {
 
     override def visit(thisGroup: raml.GroupUpdate): Result = groupUpdateValidator(thisGroup)
 
-    override def appVisitor(): AppVisitor[Result] = ???
+    override def appVisitor(): AppVisitor[Result] = AppValidationVisitor()
 
     override def childGroupVisitor(): GroupValidationVisitor = this
   }
@@ -307,14 +309,14 @@ object Group extends StrictLogging {
 
   case class RootGroupValidationVisitor(override val originalRootGroup: RootGroup) extends GroupValidationVisitor {
 
-    override def visit(thisGroup: GroupUpdate): Result = super.visit(thisGroup).and(enforceRoleNotDefined(thisGroup))
+    override def visit(thisGroup: GroupUpdate): Result = super.visit(thisGroup).and(enforceRoleNotDefined(thisGroup, PathId.root))
 
     override def childGroupVisitor(): GroupValidationVisitor = TopLevelGroupValidationVisitor(originalRootGroup)
   }
 
   case class LowerLevelGroupValidationVisitor(override val originalRootGroup: RootGroup) extends GroupValidationVisitor {
 
-    override def visit(thisGroup: GroupUpdate): Result = super.visit(thisGroup).and(enforceRoleNotDefined(thisGroup))
+    override def visit(thisGroup: GroupUpdate): Result = super.visit(thisGroup).and(enforceRoleNotDefined(thisGroup, PathId.root)) // TODO: pass group path
 
     override def childGroupVisitor(): GroupValidationVisitor = this
   }
