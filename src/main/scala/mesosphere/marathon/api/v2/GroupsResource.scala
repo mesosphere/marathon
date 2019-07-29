@@ -152,7 +152,6 @@ class GroupsResource @Inject() (
       val rootPath = validateOrThrow(id.toAbsolutePath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
-      println(s"effective $effectivePath")
 
       val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath, originalRootGroup)
       val groupUpdate = validateOrThrow(
