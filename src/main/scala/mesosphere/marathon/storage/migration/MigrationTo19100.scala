@@ -13,16 +13,16 @@ import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{StoredGroup, StoredGroupRepositoryImpl}
 import mesosphere.marathon.storage.store.ZkStoreSerialization
-import play.api.libs.json.Json
+import play.api.libs.json._
 
 import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
 
 class MigrationTo19100(
-    defaultMesosRole: String,
+    defaultMesosRole: Role,
     persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]) extends MigrationStep with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = async {
@@ -31,6 +31,7 @@ class MigrationTo19100(
     await(MigrationTo19100.migratePods(defaultMesosRole, persistenceStore))
     await(MigrationTo19100.migrateGroups(persistenceStore))
   }
+
 }
 
 object MigrationTo19100 extends MaybeStore with StrictLogging {
@@ -43,7 +44,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
     * @param defaultMesosRole The default Mesos role to use.
     * @return The update app definition.
     */
-  def migrateApp(appProtos: Protos.ServiceDefinition, optVersion: Option[OffsetDateTime], defaultMesosRole: String): (Protos.ServiceDefinition, Option[OffsetDateTime]) = {
+  def migrateApp(appProtos: Protos.ServiceDefinition, optVersion: Option[OffsetDateTime], defaultMesosRole: Role): (Protos.ServiceDefinition, Option[OffsetDateTime]) = {
     logger.info(s"Migrate App(${appProtos.getId}) with store version $optVersion to role '$defaultMesosRole' (AppVersion: ${appProtos.getVersion})")
 
     val newAppProtos = appProtos.toBuilder.setRole(defaultMesosRole).build()
@@ -59,7 +60,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
     * @param defaultMesosRole The default Mesos role to use.
     * @return The update pod definition.
     */
-  def migratePod(podRaml: raml.Pod, optVersion: Option[OffsetDateTime], defaultMesosRole: String): (raml.Pod, Option[OffsetDateTime]) = {
+  def migratePod(podRaml: raml.Pod, optVersion: Option[OffsetDateTime], defaultMesosRole: Role): (raml.Pod, Option[OffsetDateTime]) = {
     logger.info(s"Migrate Pod(${podRaml.id}) with store version $optVersion to role '$defaultMesosRole', (Version: ${podRaml.version})")
 
     val newPod = podRaml.copy(role = Some(defaultMesosRole))
@@ -85,7 +86,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
     * @param persistenceStore The ZooKeeper storage.
     * @return Successful future when done.
     */
-  def migrateApps(defaultMesosRole: String, persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+  def migrateApps(defaultMesosRole: Role, persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     implicit val appProtosUnmarshaller: Unmarshaller[ZkSerialized, Protos.ServiceDefinition] =
       Unmarshaller.strict {
         case ZkSerialized(byteString) => Protos.ServiceDefinition.parseFrom(byteString.toArray)
@@ -133,7 +134,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
     * @param persistenceStore The ZooKeeper storage.
     * @return Successful future when done.
     */
-  def migratePods(defaultMesosRole: String, persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+  def migratePods(defaultMesosRole: Role, persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
 
     implicit val podIdResolver =
       new ZkStoreSerialization.ZkPathIdResolver[raml.Pod]("pods", true, _.version.getOrElse(Timestamp.now().toOffsetDateTime))
@@ -178,12 +179,12 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
   }
 
   def migrateGroups(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
-    import ZkStoreSerialization.{groupIdResolver, groupMarshaller, groupUnmarshaller}
     import StoredGroupRepositoryImpl.RootId
+    import ZkStoreSerialization.{groupIdResolver, groupMarshaller, groupUnmarshaller}
 
     val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }
       .mapMaterializedValue { f =>
-        f.map(i => logger.info(s"$i pods migrated to 1.9.100"))
+        f.map(i => logger.info(s"$i groups migrated to 1.9.100"))
         NotUsed
       }
 
@@ -194,7 +195,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
           case Some(rootGroupVersion) => zkStore.get(RootId, rootGroupVersion).map(group => (group, Some(rootGroupVersion)))
           case None => zkStore.get(RootId).map(group => (group, None))
         }
-        .collect{ case (Some(group), optVersion) if group.enforceRole.isEmpty => (group, optVersion) }
+        .collect{ case (Some(group), optVersion) => (group, optVersion) }
         .map{
           case (rootGroup, optVersion) => (migrateGroup(rootGroup), optVersion)
         }
