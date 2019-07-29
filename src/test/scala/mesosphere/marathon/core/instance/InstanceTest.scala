@@ -140,7 +140,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
       val currentTasks = tasks(conditions.map(_ => condition))
       val newTasks = tasks(conditions)
       val state = Instance.InstanceState(None, currentTasks, clock.now(), UnreachableStrategy.default(), Goal.Running)
-      val instance = Instance(Instance.Id.forRunSpec(id), Some(agentInfo), state, currentTasks, app, None)
+      val instance = Instance(Instance.Id.forRunSpec(id), Some(agentInfo), state, currentTasks, app, None, "*")
       (instance, newTasks)
     }
   }

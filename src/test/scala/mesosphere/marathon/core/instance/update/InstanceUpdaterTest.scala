@@ -482,6 +482,6 @@ class InstanceUpdaterTest extends UnitTest with Inside {
     val task = Task(taskId, runSpecVersion = clock.now(), status = taskStatus)
     val app = AppDefinition(instanceId.runSpecId, role = "*", versionInfo = VersionInfo.OnlyVersion(clock.now()))
     val instance = Instance(
-      instanceId, Some(agentInfo), instanceState, Map(taskId -> task), app, None)
+      instanceId, Some(agentInfo), instanceState, Map(taskId -> task), app, None, "*")
   }
 }

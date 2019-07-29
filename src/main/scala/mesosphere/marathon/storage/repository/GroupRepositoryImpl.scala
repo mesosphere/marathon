@@ -54,7 +54,7 @@ case class StoredGroup(
     appRepository: AppRepository,
     podRepository: PodRepository)(implicit ctx: ExecutionContext): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
 
-    require(enforceRole.isDefined, s"BUG! Group $id has not enforce role filed defined which should be done by migration.")
+    require(enforceRole.isDefined, s"BUG! Group $id has no defined enforce role filed which should be done by migration.")
 
     val appFutures = appIds.map {
       case (appId, appVersion) => appRepository.getVersion(appId, appVersion).recover {
@@ -175,7 +175,6 @@ object StoredGroup {
     // Default to false for top-level group.
     val enforceRole: Option[Boolean] =
       if (proto.hasEnforceRole()) Some(proto.getEnforceRole)
-      else if (id.parent.isRoot) Some(false)
       else None
 
     val groups = proto.getGroupsList.map(StoredGroup(_))

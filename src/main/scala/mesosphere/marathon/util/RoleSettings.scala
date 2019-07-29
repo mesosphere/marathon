@@ -2,6 +2,7 @@ package mesosphere.marathon
 package util
 
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.state.Role
 import mesosphere.marathon.state.{RootGroup, AbsolutePathId}
 
 /**
@@ -12,7 +13,7 @@ import mesosphere.marathon.state.{RootGroup, AbsolutePathId}
   * @param validRoles List of valid roles
   * @param defaultRole The default role to use if no role is specified on the service. Defaults to '*'
   */
-case class RoleSettings(validRoles: Set[String], defaultRole: String) {
+case class RoleSettings(validRoles: Set[Role], defaultRole: Role) {
   require(validRoles(defaultRole))
 }
 

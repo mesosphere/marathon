@@ -60,9 +60,9 @@ case class ChildGroupVisitor(conf: MarathonConf, defaultRole: Role) extends Grou
     else thisGroup
   }
 
-  override def childGroupVisitor(): GroupUpdateVisitor[raml.App, GroupUpdate] = this
+  override val childGroupVisitor: GroupUpdateVisitor[raml.App, GroupUpdate] = this
 
-  override def appVisitor(): AppVisitor[raml.App] = AppNormalizeVisitor(conf, defaultRole)
+  override val appVisitor: AppVisitor[raml.App] = AppNormalizeVisitor(conf, defaultRole)
 }
 
 /**

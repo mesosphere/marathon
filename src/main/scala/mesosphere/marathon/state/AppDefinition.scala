@@ -88,7 +88,7 @@ case class AppDefinition(
 
     tty: Option[Boolean] = AppDefinition.DefaultTTY,
 
-    role: String) extends RunSpec
+    role: Role) extends RunSpec
   with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
@@ -262,7 +262,7 @@ case class AppDefinition(
 
     val tty: Option[Boolean] = if (proto.hasTty) Some(proto.getTty) else AppDefinition.DefaultTTY
 
-    val role: String = proto.getRole()
+    val role: Role = proto.getRole()
 
     // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
     // until the deprecation cycle is complete.
