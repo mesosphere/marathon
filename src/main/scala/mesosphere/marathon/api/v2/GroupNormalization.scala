@@ -14,7 +14,7 @@ import scala.annotation.tailrec
   */
 case class RootGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor[raml.App, GroupUpdate] {
 
-  override def visit(thisGroup: GroupUpdate): GroupUpdate = thisGroup.copy(enforceRole = Some(false))
+  override def visit(thisGroup: GroupUpdate): GroupUpdate = thisGroup.copy(id = Some("/"), enforceRole = Some(false))
 
   override def childGroupVisitor(): GroupUpdateVisitor[raml.App, GroupUpdate] = TopLevelGroupVisitor(conf)
 

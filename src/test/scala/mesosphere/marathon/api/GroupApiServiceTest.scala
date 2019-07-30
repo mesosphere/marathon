@@ -88,6 +88,7 @@ class GroupApiServiceTest extends UnitTest with Inside with GroupCreation {
     val update = GroupUpdate(apps = Some(Set(App("/app", role = Some(ResourceRole.Unreserved), cmd = Some("sleep 1000"), networks = Seq(Network(mode = NetworkMode.ContainerBridge))))))
     val rootGroup = createRootGroup()
     val normalizedUpdate = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root, rootGroup).normalized(update)
+    println(s"update: $normalizedUpdate")
     val updatedGroup = f.groupApiService.updateGroup(
       rootGroup,
       PathId.root,
