@@ -92,10 +92,17 @@ def make_handler(app_id, version, task_id, base_url):
             logging.debug("Done processing health request.")
             return
 
+        # This method returns the size of the shared memory fs, mounted at /dev/shm
+        # It parses the output of 'df -m /dev/shm', extracts the "Size" column of the output and returns
+        # that number
         def handle_ipc_shm_info(self):
             logging.debug("Reporting IPC shm info")
             df_shm_info = subprocess.check_output(["df", "-m", "/dev/shm"])
 
+            # Example Output:
+            #
+            # Filesystem            Size  Used Avail Use% Mounted on
+            # tmpfs                   23       0    23   0% /dev/shm
             shm_size = re.search('tmpfs\\s+([0-9]+)\\s+[0-9]+\\s+[0-9]+\\s+[0-9]+%\\s+/dev/shm', df_shm_info).group(1)
 
             self.send_response(200)
@@ -107,6 +114,8 @@ def make_handler(app_id, version, task_id, base_url):
             logging.debug("Done reporting IPC shm info.")
             return
 
+        # This method gathers the IPC namespace ID and returns it to the caller. Can be used to make sure
+        # two processes access the same shared memory segments
         def handle_ipc_ns_info(self):
             logging.debug("Reporting IPC namespace info")
             ipc_ns_info = subprocess.check_output(["stat", "-Lc", "%i", "/proc/self/ns/ipc"])

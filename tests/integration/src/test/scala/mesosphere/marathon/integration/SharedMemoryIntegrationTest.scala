@@ -91,10 +91,8 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       shmSize
     }
 
-    logger.info("ShmSize is: " + shmSizeFromPod)
-
+    Then( "The shared memory size from the pod should be as configured")
     shmSizeFromPod should be(shmSize.toString)
-
   }
 
   "check share parent shm works" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
