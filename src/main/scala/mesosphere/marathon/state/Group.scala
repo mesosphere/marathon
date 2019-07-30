@@ -267,7 +267,7 @@ object Group extends StrictLogging {
 
     println(s"validating $base")
 
-    (groupUpdate: raml.GroupUpdate) => dispatch(base, groupUpdate, visitor, originalRootGroup)
+    (groupUpdate: raml.GroupUpdate) => dispatch(base, groupUpdate, visitor)
   }
 
   trait GroupValidationVisitor extends GroupUpdateVisitor[Result, Result] {
@@ -299,6 +299,16 @@ object Group extends StrictLogging {
     override def appVisitor(): AppVisitor[Result] = AppValidationVisitor()
 
     override def childGroupVisitor(): GroupValidationVisitor = this
+
+    override def done(base: AbsolutePathId, thisGroup: Result, children: Option[Iterator[Result]], apps: Option[Iterator[Result]]): Result = {
+      val childrenResult = children.fold[Result](Success)(groups => groups.foldLeft[Result](Success) { (acc, childGroup) =>
+        acc.and(childGroup)
+      })
+      val appsResult = apps.fold[Result](Success)(apps => apps.foldLeft[Result](Success) { (acc, app) =>
+        acc.and(app)
+      })
+      thisGroup.and(childrenResult).and(appsResult)
+    }
   }
 
   case class TopLevelGroupValidationVisitor(override val originalRootGroup: RootGroup) extends GroupValidationVisitor {
@@ -324,24 +334,8 @@ object Group extends StrictLogging {
     override def visit(app: raml.App, groupId: AbsolutePathId): Result = AppValidation.validNestedApp(groupId)(app)
   }
 
-  def dispatch(base: AbsolutePathId, update: raml.GroupUpdate, visitor: GroupValidationVisitor, originalRootGroup: RootGroup): Result = {
-    val updateResult = visitor.visit(update)
-
-    // Visit each child group.
-    val childGroupVisitor = visitor.childGroupVisitor()
-    val childrenResult = update.groups.fold[Result](Success)(groups => groups.foldLeft[Result](Success) { (acc, childGroup) =>
-      val absoluteChildGroupPath = PathId(childGroup.id.get).canonicalPath(base)
-      acc.and(dispatch(absoluteChildGroupPath, childGroup, childGroupVisitor, originalRootGroup))
-    })
-
-    // Visit each app
-    val appVisitor = visitor.appVisitor()
-    val appsResult = update.apps.fold[Result](Success)(apps => apps.foldLeft[Result](Success) { (acc, app) =>
-      acc.and(appVisitor.visit(app, base))
-    })
-
-    updateResult.and(childrenResult).and(appsResult)
-  }
+  def dispatch(base: AbsolutePathId, update: raml.GroupUpdate, visitor: GroupValidationVisitor): Result =
+    GroupUpdateVisitor.dispatch(update, base, visitor)
 
   private case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[PathId]) extends Validator[Option[Boolean]] {
 

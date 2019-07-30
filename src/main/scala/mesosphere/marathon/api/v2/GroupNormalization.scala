@@ -19,6 +19,10 @@ case class RootGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor[raml.
   override def childGroupVisitor(): GroupUpdateVisitor[raml.App, GroupUpdate] = TopLevelGroupVisitor(conf)
 
   override def appVisitor(): AppVisitor[raml.App] = AppNormalizeVisitor(conf, conf.mesosRole())
+
+  override def done(base: AbsolutePathId, thisGroup: GroupUpdate, children: Option[Iterator[GroupUpdate]], apps: Option[Iterator[raml.App]]): GroupUpdate = {
+    thisGroup.copy(groups = children.map(_.toSet), apps = apps.map(_.toSet))
+  }
 }
 
 /**
@@ -44,6 +48,10 @@ case class TopLevelGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor[r
   override def childGroupVisitor(): GroupUpdateVisitor[raml.App, GroupUpdate] = ChildGroupVisitor(conf, defaultRole)
 
   override def appVisitor(): AppVisitor[raml.App] = AppNormalizeVisitor(conf, defaultRole)
+
+  override def done(base: AbsolutePathId, thisGroup: GroupUpdate, children: Option[Iterator[GroupUpdate]], apps: Option[Iterator[raml.App]]): GroupUpdate = {
+    thisGroup.copy(groups = children.map(_.toSet), apps = apps.map(_.toSet))
+  }
 }
 
 /**
@@ -63,6 +71,10 @@ case class ChildGroupVisitor(conf: MarathonConf, defaultRole: Role) extends Grou
   override val childGroupVisitor: GroupUpdateVisitor[raml.App, GroupUpdate] = this
 
   override val appVisitor: AppVisitor[raml.App] = AppNormalizeVisitor(conf, defaultRole)
+
+  override def done(base: AbsolutePathId, thisGroup: GroupUpdate, children: Option[Iterator[GroupUpdate]], apps: Option[Iterator[raml.App]]): GroupUpdate = {
+    thisGroup.copy(groups = children.map(_.toSet), apps = apps.map(_.toSet))
+  }
 }
 
 /**
@@ -86,30 +98,13 @@ object GroupNormalization {
   /**
     * Dispatch the visitor on the group update and its children.
     *
-    * @param conf The [[MarathonConf]]
     * @param groupUpdate The group update that will be visited.
     * @param base The absolute path of group being updated.
     * @param visitor
     * @return The group update returned by the visitor.
     */
-  def dispatch(conf: MarathonConf, groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor[raml.App, GroupUpdate]): raml.GroupUpdate = {
-    val updatedGroup = visitor.visit(groupUpdate)
-
-    // Visit each child group.
-    val childGroupVisitor = visitor.childGroupVisitor()
-    val children = groupUpdate.groups.map(_.map { childGroup =>
-      val absoluteChildGroupPath = PathId(childGroup.id.get).canonicalPath(base)
-      dispatch(conf, childGroup, absoluteChildGroupPath, childGroupVisitor)
-    })
-
-    // Visit each app.
-    val appVisitor = visitor.appVisitor()
-    val apps = groupUpdate.apps.map(_.map { app =>
-      appVisitor.visit(app, base)
-    })
-
-    updatedGroup.copy(groups = children, apps = apps)
-  }
+  def dispatch(groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor[raml.App, GroupUpdate]): raml.GroupUpdate =
+    GroupUpdateVisitor.dispatch(groupUpdate, base, visitor)
 
   def partialUpdateNormalization(conf: MarathonConf): Normalization[raml.GroupPartialUpdate] = Normalization { update =>
     update.copy(enforceRole = Some(effectiveEnforceRole(conf, update.enforceRole)))
@@ -127,11 +122,11 @@ object GroupNormalization {
   def updateNormalization(conf: MarathonConf, base: AbsolutePathId, originalRootGroup: RootGroup): Normalization[raml.GroupUpdate] = Normalization { update =>
     // Only update if this is not a scale or rollback
     if (update.version.isEmpty && update.scaleBy.isEmpty) {
-      if (base.isRoot) dispatch(conf, update, base, RootGroupVisitor(conf))
-      else if (base.isTopLevel) dispatch(conf, update, base, TopLevelGroupVisitor(conf))
+      if (base.isRoot) dispatch(update, base, RootGroupVisitor(conf))
+      else if (base.isTopLevel) dispatch(update, base, TopLevelGroupVisitor(conf))
       else {
         val defaultRole = inferDefaultRole(conf, base, originalRootGroup)
-        dispatch(conf, update, base, ChildGroupVisitor(conf, defaultRole))
+        dispatch(update, base, ChildGroupVisitor(conf, defaultRole))
       }
     } else update
   }

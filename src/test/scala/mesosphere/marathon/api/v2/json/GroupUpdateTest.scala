@@ -40,7 +40,8 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val visitor = GroupUpdateConversionVisitor(rootGroup, timestamp, appConversionFunc)
       val result: Group = GroupConversion.dispatch(normalized, PathId.root, visitor)
 
-      validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
+      val validation = validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures))
+      validation.isSuccess should be(true) withClue (validation)
 
       Then("The update is applied correctly")
       result.id should be(PathId.root)

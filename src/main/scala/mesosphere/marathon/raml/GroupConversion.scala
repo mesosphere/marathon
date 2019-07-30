@@ -27,6 +27,28 @@ case class GroupUpdateConversionVisitor(originalRootGroup: RootGroup, timestamp:
   override def childGroupVisitor(): GroupUpdateVisitor[AppDefinition, CoreGroup] = GroupUpdateConversionVisitor(originalRootGroup, timestamp, appConversion)
 
   override val appVisitor: AppVisitor[AppDefinition] = AppConversionVisitor(appConversion, timestamp)
+
+  override def done(base: AbsolutePathId, thisGroup: CoreGroup, children: Option[Iterator[CoreGroup]], apps: Option[Iterator[AppDefinition]]): CoreGroup = {
+
+    // Accumulate child groups.
+    val effectiveGroups: Map[PathId, CoreGroup] = children.fold(thisGroup.groupsById)(_.map { childGroup =>
+      childGroup.id -> childGroup
+    }.toMap)
+
+    // Accumulate apps.
+    val effectiveApps: Map[AppDefinition.AppKey, AppDefinition] = apps.fold(thisGroup.apps)(_.map { app =>
+      app.id -> app
+    }.toMap)
+
+    CoreGroup(
+      id = base,
+      apps = effectiveApps,
+      pods = thisGroup.pods,
+      groupsById = effectiveGroups,
+      dependencies = thisGroup.dependencies,
+      version = thisGroup.version,
+      enforceRole = thisGroup.enforceRole)
+  }
 }
 
 // TODO: convert without a function
@@ -36,33 +58,7 @@ case class AppConversionVisitor(convert: App => AppDefinition, version: Timestam
 
 object GroupConversion {
 
-  def dispatch(groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor[AppDefinition, CoreGroup]): CoreGroup = {
-    println(s"Dispatch $base")
-    val updatedCurrent = visitor.visit(groupUpdate) // TODO: pass base
-
-    // Visit each child group.
-    val childGroupVisitor = visitor.childGroupVisitor()
-    val effectiveGroups: Map[PathId, CoreGroup] = groupUpdate.groups.fold(updatedCurrent.groupsById)(_.map { childGroup =>
-      val absoluteChildGroupPath = PathId(childGroup.id.get).canonicalPath(base)
-      dispatch(childGroup, absoluteChildGroupPath, childGroupVisitor)
-    }.map(g => g.id -> g).toMap)
-
-    // Visit each app.
-    val appVisitor = visitor.appVisitor()
-    val effectiveApps: Map[AppDefinition.AppKey, AppDefinition] = groupUpdate.apps.fold(updatedCurrent.apps)(_.map { app =>
-      appVisitor.visit(app, base)
-    }.map(a => a.id -> a).toMap)
-
-    println(s"Create group ${updatedCurrent.id}: $updatedCurrent, $effectiveApps, $effectiveGroups")
-
-    CoreGroup(
-      id = base,
-      apps = effectiveApps,
-      pods = updatedCurrent.pods,
-      groupsById = effectiveGroups,
-      dependencies = updatedCurrent.dependencies,
-      version = updatedCurrent.version,
-      enforceRole = updatedCurrent.enforceRole)
-  }
+  def dispatch(groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor[AppDefinition, CoreGroup]): CoreGroup =
+    GroupUpdateVisitor.dispatch(groupUpdate, base, visitor)
 }
 
