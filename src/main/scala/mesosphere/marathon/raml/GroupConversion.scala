@@ -1,16 +1,33 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, Group => CoreGroup, VersionInfo => CoreVersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId, RootGroup, Timestamp, Group => CoreGroup, VersionInfo => CoreVersionInfo}
 
-//case class GroupUpdateConversionVisitor() extends GroupUpdateVisitor[AppDefinition, CoreGroup] {
-//
-//  override def childGroupVisitor(): GroupUpdateVisitor[AppDefinition, CoreGroup] = this
-//
-//  override def appVisitor(): AppVisitor[AppDefinition] = ???
-//
-//
-//}
+case class GroupUpdateConversionVisitor(originalRootGroup: RootGroup, timestamp: Timestamp, appConversion: App => AppDefinition) extends GroupUpdateVisitor[AppDefinition, CoreGroup] {
+
+  override def visit(thisGroup: GroupUpdate): CoreGroup = {
+    val current = originalRootGroup.group(PathId(thisGroup.id.get)).getOrElse(CoreGroup.empty(PathId(thisGroup.id.get)))
+    val effectiveDependencies = thisGroup.dependencies.fold(current.dependencies)(_.map(PathId(_).canonicalPath(current.id.asAbsolutePath)))
+
+    CoreGroup(
+      id = current.id,
+      apps = current.apps,
+      pods = current.pods,
+      groupsById = current.groupsById,
+      dependencies = effectiveDependencies,
+      version = timestamp,
+      enforceRole = thisGroup.enforceRole.get)
+  }
+
+  override def childGroupVisitor(): GroupUpdateVisitor[AppDefinition, CoreGroup] = GroupUpdateConversionVisitor(originalRootGroup, timestamp, appConversion)
+
+  override val appVisitor: AppVisitor[AppDefinition] = AppConversionVisitor(appConversion, timestamp)
+}
+
+// TODO: convert without a function
+case class AppConversionVisitor(convert: App => AppDefinition, version: Timestamp) extends AppVisitor[AppDefinition] {
+  override def visit(app: App, groupId: AbsolutePathId): AppDefinition = convert(app).copy(versionInfo = CoreVersionInfo.OnlyVersion(version))
+}
 
 trait GroupConversion {
 
@@ -23,6 +40,36 @@ trait GroupConversion {
 }
 
 object GroupConversion extends GroupConversion {
+
+  def dispatch(groupUpdate: raml.GroupUpdate, base: AbsolutePathId, originalRootGroup: RootGroup, visitor: GroupUpdateVisitor[AppDefinition, CoreGroup]): CoreGroup = {
+    println(s"Dispatch $base")
+    val updatedCurrent = visitor.visit(groupUpdate) // TODO: pass base
+
+    // Visit each child group.
+    val childGroupVisitor = visitor.childGroupVisitor()
+    val effectiveGroups: Map[PathId, CoreGroup] = groupUpdate.groups.fold(updatedCurrent.groupsById)(_.map { childGroup =>
+      val absoluteChildGroupPath = PathId(childGroup.id.get).canonicalPath(base)
+      dispatch(childGroup, absoluteChildGroupPath, originalRootGroup, childGroupVisitor)
+    }.map(g => g.id -> g).toMap)
+
+    // Visit each app.
+    val appVisitor = visitor.appVisitor()
+    val effectiveApps: Map[AppDefinition.AppKey, AppDefinition] = groupUpdate.apps.fold(updatedCurrent.apps)(_.map { app =>
+      appVisitor.visit(app, base)
+    }.map(a => a.id -> a).toMap)
+
+    println(s"Create group ${updatedCurrent.id}: $updatedCurrent, $effectiveApps, $effectiveGroups")
+
+    CoreGroup(
+      id = base,
+      apps = effectiveApps,
+      pods = updatedCurrent.pods,
+      groupsById = effectiveGroups,
+      dependencies = updatedCurrent.dependencies,
+      version = updatedCurrent.version,
+      enforceRole = updatedCurrent.enforceRole)
+  }
+
   def apply(groupUpdate: GroupUpdate, current: CoreGroup, timestamp: Timestamp): UpdateGroupStructureOp =
     UpdateGroupStructureOp(groupUpdate, current, timestamp)
 }
@@ -115,6 +162,8 @@ object UpdateGroupStructureOp {
     }
 
     val effectiveDependencies = groupUpdate.dependencies.fold(current.dependencies)(_.map(PathId(_).normalize))
+
+    println(s"Create group ${current.id}: $effectiveApps, $effectiveGroups")
 
     CoreGroup(
       id = current.id,

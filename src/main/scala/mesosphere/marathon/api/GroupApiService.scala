@@ -4,7 +4,7 @@ package api
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.{GroupConversion, Raml}
+import mesosphere.marathon.raml.{GroupConversion, GroupUpdateConversionVisitor, Raml}
 import mesosphere.marathon.state._
 
 import scala.async.Async._
@@ -20,7 +20,7 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
     */
   def updateGroup(
     rootGroup: RootGroup,
-    groupId: PathId,
+    groupId: AbsolutePathId,
     groupUpdate: raml.GroupUpdate,
     newVersion: Timestamp)(implicit identity: Identity): Future[RootGroup] = async {
     val currentGroup = rootGroup.group(groupId).getOrElse(Group.empty(groupId))
@@ -47,8 +47,12 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
       // groupManager.update always passes a group, even if it doesn't exist
       val maybeExistingGroup = groupManager.group(currentGroup.id)
       val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
-      val updatedGroup: Group = Raml.fromRaml(
-        GroupConversion(groupUpdate, currentGroup, newVersion) -> appConversionFunc)
+      val visitor = GroupUpdateConversionVisitor(rootGroup, newVersion, appConversionFunc)
+      val updatedGroup: Group = GroupConversion.dispatch(groupUpdate, groupId, rootGroup, visitor)
+      //      val updatedGroup: Group = Raml.fromRaml(
+      //        GroupConversion(groupUpdate, currentGroup, newVersion) -> appConversionFunc)
+
+      println("updated group")
 
       if (maybeExistingGroup.isEmpty) checkAuthorizationOrThrow(CreateGroup, updatedGroup)
 

@@ -263,14 +263,13 @@ object Group extends StrictLogging {
     val visitor =
       if (base.isRoot) RootGroupValidationVisitor(originalRootGroup)
       else if (base.isTopLevel) TopLevelGroupValidationVisitor(originalRootGroup)
-      else LowerLevelGroupValidationVisitor(originalRootGroup)
+      else ChildGroupValidationVisitor(originalRootGroup)
 
     println(s"validating $base")
 
     (groupUpdate: raml.GroupUpdate) => dispatch(base, groupUpdate, visitor, originalRootGroup)
   }
 
-  // TODO: investigate Scalactic Or and Every
   trait GroupValidationVisitor extends GroupUpdateVisitor[Result, Result] {
     val originalRootGroup: RootGroup
     val groupUpdateValidator = validator[raml.GroupUpdate] { group =>
@@ -304,7 +303,7 @@ object Group extends StrictLogging {
 
   case class TopLevelGroupValidationVisitor(override val originalRootGroup: RootGroup) extends GroupValidationVisitor {
 
-    override def childGroupVisitor(): GroupValidationVisitor = LowerLevelGroupValidationVisitor(originalRootGroup)
+    override def childGroupVisitor(): GroupValidationVisitor = ChildGroupValidationVisitor(originalRootGroup)
   }
 
   case class RootGroupValidationVisitor(override val originalRootGroup: RootGroup) extends GroupValidationVisitor {
@@ -314,7 +313,7 @@ object Group extends StrictLogging {
     override def childGroupVisitor(): GroupValidationVisitor = TopLevelGroupValidationVisitor(originalRootGroup)
   }
 
-  case class LowerLevelGroupValidationVisitor(override val originalRootGroup: RootGroup) extends GroupValidationVisitor {
+  case class ChildGroupValidationVisitor(override val originalRootGroup: RootGroup) extends GroupValidationVisitor {
 
     override def visit(thisGroup: GroupUpdate): Result = super.visit(thisGroup).and(enforceRoleNotDefined(thisGroup, PathId.root)) // TODO: pass group path
 
