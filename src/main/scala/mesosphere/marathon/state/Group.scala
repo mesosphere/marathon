@@ -315,7 +315,7 @@ object Group extends StrictLogging {
 
   case class ChildGroupValidationVisitor(override val originalRootGroup: RootGroup) extends GroupValidationVisitor {
 
-    override def visit(thisGroup: GroupUpdate): Result = super.visit(thisGroup).and(enforceRoleNotDefined(thisGroup, PathId.root)) // TODO: pass group path
+    override def visit(thisGroup: GroupUpdate): Result = super.visit(thisGroup).and(enforceRoleNotDefined(thisGroup, AbsolutePathId(thisGroup.id.get)))
 
     override def childGroupVisitor(): GroupValidationVisitor = this
   }
