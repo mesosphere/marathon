@@ -37,13 +37,13 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
   @deprecated("Assuming an absolute path where it may not be is a source of bugs; avoid using this method if possible")
   def asAbsolutePath: AbsolutePathId
 
-  lazy val parent: PathId = path match {
-    case Nil => this
-    case head +: Nil => PathId(Nil, absolute)
-    case head +: rest => PathId(path.init, absolute)
+  lazy val parent: AbsolutePathId = path match {
+    case Nil => PathId.root
+    case head +: Nil => PathId.root
+    case head +: rest => AbsolutePathId(path.init)
   }
 
-  def allParents: List[PathId] = if (isRoot) Nil else {
+  def allParents: List[AbsolutePathId] = if (isRoot) Nil else {
     val p = parent
     p :: p.allParents
   }
@@ -155,7 +155,7 @@ case class RelativePathId(path: Seq[String]) extends PathId with StrictLogging {
 }
 
 object PathId {
-  def fromSafePath(in: String): PathId = {
+  def fromSafePath(in: String): AbsolutePathId = {
     if (in.isEmpty) PathId.root
     else AbsolutePathId(in.split("_").toList)
   }

@@ -34,7 +34,7 @@ object RoleSettings extends StrictLogging {
       // We have a service in the root group, no enforced role here
       RoleSettings(validRoles = Set(defaultRole), defaultRole = defaultRole)
     } else {
-      val topLevelGroupPath = servicePathId.rootPath
+      val topLevelGroupPath = servicePathId.rootPath.asAbsolutePath
       val topLevelGroupRole = topLevelGroupPath.root
       val topLevelGroup = rootGroup.group(topLevelGroupPath)
 

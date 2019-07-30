@@ -16,11 +16,11 @@ import mesosphere.marathon.state.PathId.{StringPathId, validPathWithBase}
 import mesosphere.util.summarize
 
 class Group(
-    val id: PathId,
+    val id: AbsolutePathId,
     val apps: Map[AppDefinition.AppKey, AppDefinition] = defaultApps,
     val pods: Map[PathId, PodDefinition] = defaultPods,
     val groupsById: Map[Group.GroupKey, Group] = defaultGroups,
-    val dependencies: Set[PathId] = defaultDependencies,
+    val dependencies: Set[AbsolutePathId] = defaultDependencies,
     val version: Timestamp = defaultVersion,
     val enforceRole: Boolean = false) extends IGroup {
 
@@ -71,7 +71,7 @@ class Group(
     * @param gid The path of the group for find.
     * @return None if no group was found or non empty option with group.
     */
-  def group(gid: PathId): Option[Group] = transitiveGroupsById.get(gid)
+  def group(gid: AbsolutePathId): Option[Group] = transitiveGroupsById.get(gid)
 
   def transitiveAppsIterator(): Iterator[AppDefinition] = apps.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppsIterator())
   private def transitiveAppIdsIterator(): Iterator[PathId] = apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppIdsIterator())
@@ -134,26 +134,26 @@ class Group(
 }
 
 object Group extends StrictLogging {
-  type GroupKey = PathId
+  type GroupKey = AbsolutePathId
 
   def apply(
-    id: PathId,
+    id: AbsolutePathId,
     apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
     pods: Map[PathId, PodDefinition] = Group.defaultPods,
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
-    dependencies: Set[PathId] = Group.defaultDependencies,
+    dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
     enforceRole: Boolean = false): Group = {
     new Group(id, apps, pods, groupsById, dependencies, version, enforceRole)
   }
 
-  def empty(id: PathId): Group =
+  def empty(id: AbsolutePathId): Group =
     Group(id = id, version = Timestamp(0))
 
   def defaultApps: Map[AppDefinition.AppKey, AppDefinition] = Map.empty
   val defaultPods = Map.empty[PathId, PodDefinition]
   def defaultGroups: Map[Group.GroupKey, Group] = Map.empty
-  def defaultDependencies: Set[PathId] = Set.empty
+  def defaultDependencies: Set[AbsolutePathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
   def validGroup(base: PathId, config: MarathonConf): Validator[Group] =
@@ -268,7 +268,7 @@ object Group extends StrictLogging {
       }
 
       // Enforce role is not allowed to be updated.
-      group.enforceRole is noEnforceRoleUpdate(originalRootGroup, group.id.map(_.toPath))
+      group.enforceRole is noEnforceRoleUpdate(originalRootGroup, group.id.map(_.toPath.canonicalPath(base)))
 
       group.version is theOnlyDefinedOptionIn(group)
       group.scaleBy is theOnlyDefinedOptionIn(group)
@@ -283,7 +283,7 @@ object Group extends StrictLogging {
         validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup)))
     }
 
-  case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[PathId]) extends Validator[Option[Boolean]] {
+  case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[AbsolutePathId]) extends Validator[Option[Boolean]] {
 
     def apply(maybeNewEnforceRole: Option[Boolean]) = {
       val originalGroup = updatedGroupId.flatMap(originalRootGroup.group) // TODO: why is groupUpdate.id optional? What is the semantic there?

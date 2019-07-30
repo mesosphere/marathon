@@ -77,13 +77,13 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
       val validApp = AppDefinition("/test/group1/valid".toPath, cmd = Some("foo"), role = "*")
       val invalidApp = AppDefinition("/test/group1/invalid".toPath, role = "*")
       val rootGroup = createRootGroup(
-        groups = Set(createGroup("/test".toPath, groups = Set(
-          createGroup("/test/group1".toPath, Map(
+        groups = Set(createGroup("/test".toAbsolutePath, groups = Set(
+          createGroup("/test/group1".toAbsolutePath, Map(
             validApp.id -> validApp,
             invalidApp.id -> invalidApp),
             validate = false
           ),
-          createGroup("/test/group2".toPath, validate = false)),
+          createGroup("/test/group2".toAbsolutePath, validate = false)),
           validate = false)),
         validate = false
       )
@@ -96,7 +96,7 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
     "PortDefinition should be allowed to contain tcp and udp as protocol." in {
       val validApp = AppDefinition("/test/app".toPath, cmd = Some("foo"), portDefinitions = Seq(PortDefinition(port = 80, protocol = "udp,tcp")), role = "*")
 
-      val rootGroup = createRootGroup(groups = Set(createGroup("/test".toPath, apps = Map(validApp.id -> validApp))))
+      val rootGroup = createRootGroup(groups = Set(createGroup("/test".toAbsolutePath, apps = Map(validApp.id -> validApp))))
 
       val result = validate(rootGroup)(RootGroup.validRootGroup(emptyConfig))
       result.isSuccess should be(true)

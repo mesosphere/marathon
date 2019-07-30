@@ -21,9 +21,9 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val app2 = AppDefinition("/test/group2/app2".toPath, role = "*", cmd = Some("sleep"))
       val current = createRootGroup(
         groups = Set(
-          createGroup("/test".toPath, groups = Set(
-            createGroup("/test/group1".toPath, Map(app1.id -> app1)),
-            createGroup("/test/group2".toPath, Map(app2.id -> app2))
+          createGroup("/test".toAbsolutePath, groups = Set(
+            createGroup("/test/group1".toAbsolutePath, Map(app1.id -> app1)),
+            createGroup("/test/group2".toAbsolutePath, Map(app2.id -> app2))
           ))))
 
       When("an app with a specific path is requested")
@@ -51,9 +51,9 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val app2 = AppDefinition("/test/group2/app2".toPath, role = "*", cmd = Some("sleep"))
       val current = createRootGroup(
         groups = Set(
-          createGroup("/test".toPath, groups = Set(
-            createGroup("/test/group1".toPath, Map(app1.id -> app1)),
-            createGroup("/test/group2".toPath, Map(app2.id -> app2))
+          createGroup("/test".toAbsolutePath, groups = Set(
+            createGroup("/test/group1".toAbsolutePath, Map(app1.id -> app1)),
+            createGroup("/test/group2".toAbsolutePath, Map(app2.id -> app2))
           ))))
 
       When("a group with a specific path is requested")
@@ -69,13 +69,13 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val app2 = AppDefinition("/test/group2/app2".toPath, role = "*", cmd = Some("sleep"))
       val current = createRootGroup(
         groups = Set(
-          createGroup("/test".toPath, groups = Set(
-            createGroup("/test/group1".toPath, Map(app1.id -> app1)),
-            createGroup("/test/group2".toPath, Map(app2.id -> app2))
+          createGroup("/test".toAbsolutePath, groups = Set(
+            createGroup("/test/group1".toAbsolutePath, Map(app1.id -> app1)),
+            createGroup("/test/group2".toAbsolutePath, Map(app2.id -> app2))
           ))))
 
       When("a group with a specific path is requested")
-      val path = PathId("/test/group1")
+      val path = AbsolutePathId("/test/group1")
 
       Then("the group is found")
       current.group(path) should be('defined)
@@ -87,13 +87,13 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val app2 = AppDefinition("/test/group2/app2".toPath, role = "*", cmd = Some("sleep"))
       val current = createRootGroup(
         groups = Set(
-          createGroup("/test".toPath, groups = Set(
-            createGroup("/test/group1".toPath, Map(app1.id -> app1)),
-            createGroup("/test/group2".toPath, Map(app2.id -> app2))
+          createGroup("/test".toAbsolutePath, groups = Set(
+            createGroup("/test/group1".toAbsolutePath, Map(app1.id -> app1)),
+            createGroup("/test/group2".toAbsolutePath, Map(app2.id -> app2))
           ))))
 
       When("a group with a specific path is requested")
-      val path = PathId("/test/unknown")
+      val path = AbsolutePathId("/test/unknown")
 
       Then("the group is not found")
       current.group(path) should be('empty)
@@ -101,14 +101,14 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
     "can delete a node based in the path" in {
       Given("an existing group with two subgroups")
-      val current = createRootGroup().makeGroup("/test/foo/one".toPath).makeGroup("/test/bla/two".toPath)
+      val current = createRootGroup().makeGroup("/test/foo/one".toAbsolutePath).makeGroup("/test/bla/two".toAbsolutePath)
 
       When("a node will be deleted based on path")
-      val rootGroup = current.removeGroup("/test/foo".toPath)
+      val rootGroup = current.removeGroup("/test/foo".toAbsolutePath)
 
       Then("the update has been applied")
-      rootGroup.group("/test/foo".toPath) should be('empty)
-      rootGroup.group("/test/bla".toPath) should be('defined)
+      rootGroup.group("/test/foo".toAbsolutePath) should be('empty)
+      rootGroup.group("/test/bla".toAbsolutePath) should be('defined)
     }
 
     "can make groups specified by a path" in {
@@ -117,27 +117,27 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val app2 = AppDefinition("/test/group2/app2".toPath, role = "*", cmd = Some("sleep"))
       val current = createRootGroup(
         groups = Set(
-          createGroup("/test".toPath, groups = Set(
-            createGroup("/test/group1".toPath, Map(app1.id -> app1)),
-            createGroup("/test/group2".toPath, Map(app2.id -> app2))
+          createGroup("/test".toAbsolutePath, groups = Set(
+            createGroup("/test/group1".toAbsolutePath, Map(app1.id -> app1)),
+            createGroup("/test/group2".toAbsolutePath, Map(app2.id -> app2))
           ))))
 
       When("a non existing path is requested")
-      val path = PathId("/test/group3/group4/group5")
+      val path = AbsolutePathId("/test/group3/group4/group5")
       val rootGroup = current.makeGroup(path)
 
       Then("the path has been created")
       rootGroup.group(path) should be('defined)
 
       When("a partly existing path is requested")
-      val path2 = PathId("/test/group1/group4/group5")
+      val path2 = AbsolutePathId("/test/group1/group4/group5")
       val rootGroup2 = current.makeGroup(path2)
 
       Then("only the missing path has been created")
       rootGroup2.group(path2) should be('defined)
 
       When("the path is already existent")
-      val path3 = PathId("/test/group1")
+      val path3 = AbsolutePathId("/test/group1")
       val rootGroup3 = current.makeGroup(path3)
 
       Then("nothing has been changed")
@@ -152,8 +152,8 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("an existing group /some/nested which does not directly or indirectly contain apps")
       val current =
         createRootGroup()
-          .makeGroup("/some/nested/path".toPath)
-          .makeGroup("/some/nested/path2".toPath)
+          .makeGroup("/some/nested/path".toAbsolutePath)
+          .makeGroup("/some/nested/path2".toAbsolutePath)
 
       current.transitiveGroupsById.keys.map(_.toString) should be(
         Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2"))
@@ -176,8 +176,8 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("an existing group /some/nested which does contain an app")
       val current =
         createRootGroup()
-          .makeGroup("/some/nested/path".toPath)
-          .makeGroup("/some/nested/path2".toPath)
+          .makeGroup("/some/nested/path".toAbsolutePath)
+          .makeGroup("/some/nested/path2".toAbsolutePath)
           .updateApp(
             "/some/nested/path2/app".toPath,
             _ => AppDefinition("/some/nested/path2/app".toPath, role = "*", cmd = Some("true")),
@@ -208,8 +208,8 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("an existing group /some/nested which does contain an pod")
       val current =
         createRootGroup()
-          .makeGroup("/some/nested/path".toPath)
-          .makeGroup("/some/nested/path2".toPath)
+          .makeGroup("/some/nested/path".toAbsolutePath)
+          .makeGroup("/some/nested/path2".toAbsolutePath)
           .updatePod(
             "/some/nested/path2/pod".toPath,
             _ => PodDefinition(id = PathId("/some/nested/path2/pod"), role = "*"),
@@ -241,8 +241,8 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("an existing group /some/nested which does contain an pod")
       val current =
         createRootGroup()
-          .makeGroup("/some/nested/path".toPath)
-          .makeGroup("/some/nested/path2".toPath)
+          .makeGroup("/some/nested/path".toAbsolutePath)
+          .makeGroup("/some/nested/path2".toAbsolutePath)
           .updatePod(
             "/some/nested/path2/pod".toPath,
             _ => PodDefinition(id = PathId("/some/nested/path2/pod"), role = "*"),
@@ -284,22 +284,27 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val cacheApp = AppDefinition("/test/cache/c1/c1".toPath, role = "*", cmd = Some("sleep"))
       val current: RootGroup = createRootGroup(
         groups = Set(
-          createGroup("/test".toPath, groups = Set(
-            createGroup("/test/database".toPath, groups = Set(
-              createGroup("/test/database/redis".toPath, Map(redisApp.id -> redisApp)),
-              createGroup("/test/database/memcache".toPath, Map(memcacheApp.id -> memcacheApp), dependencies = Set("/test/database/mongo".toPath, "/test/database/redis".toPath)),
-              createGroup("/test/database/mongo".toPath, Map(mongoApp.id -> mongoApp), dependencies = Set("/test/database/redis".toPath))
+          createGroup("/test".toAbsolutePath, groups = Set(
+            createGroup("/test/database".toAbsolutePath, groups = Set(
+              createGroup("/test/database/redis".toAbsolutePath, Map(redisApp.id -> redisApp)),
+              createGroup("/test/database/memcache".toAbsolutePath, Map(memcacheApp.id -> memcacheApp),
+                dependencies = Set("/test/database/mongo".toAbsolutePath, "/test/database/redis".toAbsolutePath)),
+              createGroup("/test/database/mongo".toAbsolutePath, Map(mongoApp.id -> mongoApp),
+                dependencies = Set("/test/database/redis".toAbsolutePath))
             )),
-            createGroup("/test/service".toPath, groups = Set(
-              createGroup("/test/service/service1".toPath, Map(serviceApp1.id -> serviceApp1), dependencies = Set("/test/database/memcache".toPath)),
-              createGroup("/test/service/service2".toPath, Map(serviceApp2.id -> serviceApp2), dependencies = Set("/test/database".toPath, "/test/service/service1".toPath))
+            createGroup("/test/service".toAbsolutePath, groups = Set(
+              createGroup("/test/service/service1".toAbsolutePath, Map(serviceApp1.id -> serviceApp1),
+                dependencies = Set("/test/database/memcache".toAbsolutePath)),
+              createGroup("/test/service/service2".toAbsolutePath, Map(serviceApp2.id -> serviceApp2),
+                dependencies = Set("/test/database".toAbsolutePath, "/test/service/service1".toAbsolutePath))
             )),
-            createGroup("/test/frontend".toPath, groups = Set(
-              createGroup("/test/frontend/app1".toPath, Map(frontendApp1.id -> frontendApp1), dependencies = Set("/test/service/service2".toPath)),
-              createGroup("/test/frontend/app2".toPath, Map(frontendApp2.id -> frontendApp2), dependencies = Set("/test/service".toPath, "/test/database/mongo".toPath, "/test/frontend/app1".toPath))
+            createGroup("/test/frontend".toAbsolutePath, groups = Set(
+              createGroup("/test/frontend/app1".toAbsolutePath, Map(frontendApp1.id -> frontendApp1), dependencies = Set("/test/service/service2".toAbsolutePath)),
+              createGroup("/test/frontend/app2".toAbsolutePath, Map(frontendApp2.id -> frontendApp2),
+                dependencies = Set("/test/service".toAbsolutePath, "/test/database/mongo".toAbsolutePath, "/test/frontend/app1".toAbsolutePath))
             )),
-            createGroup("/test/cache".toPath, groups = Set(
-              createGroup("/test/cache/c1".toPath, Map(cacheApp.id -> cacheApp)) //has no dependencies
+            createGroup("/test/cache".toAbsolutePath, groups = Set(
+              createGroup("/test/cache/c1".toAbsolutePath, Map(cacheApp.id -> cacheApp)) //has no dependencies
             ))
           ))))
       current.hasNonCyclicDependencies should equal(true)
@@ -357,21 +362,21 @@ class RootGroupTest extends UnitTest with GroupCreation {
       //has no dependencies
       val current: RootGroup = createRootGroup(
         groups = Set(
-          createGroup("/test".toPath, groups = Set(
-            createGroup("/test/database".toPath, Map(
+          createGroup("/test".toAbsolutePath, groups = Set(
+            createGroup("/test/database".toAbsolutePath, Map(
               redisApp.id -> redisApp,
               memcacheApp.id -> memcacheApp,
               mongoApp.id -> mongoApp
             )),
-            createGroup("/test/service".toPath, Map(
+            createGroup("/test/service".toAbsolutePath, Map(
               serviceApp1.id -> serviceApp1,
               serviceApp2.id -> serviceApp2
             )),
-            createGroup("/test/frontend".toPath, Map(
+            createGroup("/test/frontend".toAbsolutePath, Map(
               frontendApp1.id -> frontendApp1,
               frontendApp2.id -> frontendApp2
             )),
-            createGroup("/test/cache".toPath, Map(cacheApp.id -> cacheApp))))
+            createGroup("/test/cache".toAbsolutePath, Map(cacheApp.id -> cacheApp))))
         ))
       current.hasNonCyclicDependencies should equal(true)
 
@@ -424,22 +429,22 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val cacheApp1 = AppDefinition("/test/cache/c1/cache1".toPath, role = "*", cmd = Some("sleep"))
       val current: RootGroup = createRootGroup(
         groups = Set(
-          createGroup("/test".toPath, groups = Set(
-            createGroup("/test/database".toPath, groups = Set(
-              createGroup("/test/database/redis".toPath, Map(redisApp.id -> redisApp)),
-              createGroup("/test/database/memcache".toPath, Map(memcacheApp.id -> memcacheApp)),
-              createGroup("/test/database/mongo".toPath, Map(mongoApp.id -> mongoApp))
+          createGroup("/test".toAbsolutePath, groups = Set(
+            createGroup("/test/database".toAbsolutePath, groups = Set(
+              createGroup("/test/database/redis".toAbsolutePath, Map(redisApp.id -> redisApp)),
+              createGroup("/test/database/memcache".toAbsolutePath, Map(memcacheApp.id -> memcacheApp)),
+              createGroup("/test/database/mongo".toAbsolutePath, Map(mongoApp.id -> mongoApp))
             )),
-            createGroup("/test/service".toPath, groups = Set(
-              createGroup("/test/service/service1".toPath, Map(serviceApp1.id -> serviceApp1)),
-              createGroup("/test/service/service2".toPath, Map(serviceApp2.id -> serviceApp2))
+            createGroup("/test/service".toAbsolutePath, groups = Set(
+              createGroup("/test/service/service1".toAbsolutePath, Map(serviceApp1.id -> serviceApp1)),
+              createGroup("/test/service/service2".toAbsolutePath, Map(serviceApp2.id -> serviceApp2))
             )),
-            createGroup("/test/frontend".toPath, groups = Set(
-              createGroup("/test/frontend/app1".toPath, Map(frontendApp1.id -> frontendApp1)),
-              createGroup("/test/frontend/app2".toPath, Map(frontendApp2.id -> frontendApp2))
+            createGroup("/test/frontend".toAbsolutePath, groups = Set(
+              createGroup("/test/frontend/app1".toAbsolutePath, Map(frontendApp1.id -> frontendApp1)),
+              createGroup("/test/frontend/app2".toAbsolutePath, Map(frontendApp2.id -> frontendApp2))
             )),
-            createGroup("/test/cache".toPath, groups = Set(
-              createGroup("/test/cache/c1".toPath, Map(cacheApp1.id -> cacheApp1))
+            createGroup("/test/cache".toAbsolutePath, groups = Set(
+              createGroup("/test/cache/c1".toAbsolutePath, Map(cacheApp1.id -> cacheApp1))
             ))
           ))))
       current.hasNonCyclicDependencies should equal(true)
@@ -457,12 +462,12 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val serviceApp1 = AppDefinition("/test/service/service1/srv1".toPath, role = "*", dependencies = Set("/test/database".toPath), cmd = Some("sleep"))
       val current: RootGroup = createRootGroup(
         groups = Set(
-          createGroup("/test".toPath, groups = Set(
-            createGroup("/test/database".toPath, groups = Set(
-              createGroup("/test/database/mongo".toPath, Map(mongoApp.id -> mongoApp), validate = false)
+          createGroup("/test".toAbsolutePath, groups = Set(
+            createGroup("/test/database".toAbsolutePath, groups = Set(
+              createGroup("/test/database/mongo".toAbsolutePath, Map(mongoApp.id -> mongoApp), validate = false)
             ), validate = false),
-            createGroup("/test/service".toPath, groups = Set(
-              createGroup("/test/service/service1".toPath, Map(serviceApp1.id -> serviceApp1), validate = false)
+            createGroup("/test/service".toAbsolutePath, groups = Set(
+              createGroup("/test/service/service1".toAbsolutePath, Map(serviceApp1.id -> serviceApp1), validate = false)
             ), validate = false)
           ))), validate = false)
 
@@ -474,9 +479,9 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("a group with subgroups having the same name")
       val serviceApp = AppDefinition("/test/service/test/app".toPath, role = "*", cmd = Some("Foobar"))
       val reference: Group = createRootGroup(groups = Set(
-        createGroup("/test".toPath, groups = Set(
-          createGroup("/test/service".toPath, groups = Set(
-            createGroup("/test/service/test".toPath, Map(serviceApp.id -> serviceApp))
+        createGroup("/test".toAbsolutePath, groups = Set(
+          createGroup("/test/service".toAbsolutePath, groups = Set(
+            createGroup("/test/service/test".toAbsolutePath, Map(serviceApp.id -> serviceApp))
           ))
         ))
       ))
@@ -496,8 +501,8 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val app1 = AppDefinition("/group/app1".toPath, role = "*", cmd = Some("foo"))
       val app2 = AppDefinition("/group/subgroup/app2".toPath, role = "*", cmd = Some("bar"), dependencies = Set("../app1".toPath))
       val rootGroup = createRootGroup(groups = Set(
-        createGroup("/group".toPath, apps = Map(app1.id -> app1),
-          groups = Set(createGroup("/group/subgroup".toPath, Map(app2.id -> app2))))
+        createGroup("/group".toAbsolutePath, apps = Map(app1.id -> app1),
+          groups = Set(createGroup("/group/subgroup".toAbsolutePath, Map(app2.id -> app2))))
       ))
 
       When("group is validated")
@@ -511,7 +516,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("Group with nested app of wrong path")
       val app = AppDefinition(PathId("/root"), role = "*", cmd = Some("test"))
       val invalid = createRootGroup(groups = Set(
-        createGroup(PathId("nested"), apps = Map(app.id -> app), validate = false)
+        createGroup(AbsolutePathId("nested"), apps = Map(app.id -> app), validate = false)
       ), validate = false)
 
       When("group is validated")
@@ -524,8 +529,8 @@ class RootGroupTest extends UnitTest with GroupCreation {
     "Group with group in wrong group is not valid" in {
       Given("Group with nested app of wrong path")
       val invalid = createRootGroup(groups = Set(
-        createGroup(PathId("nested"), groups = Set(
-          createGroup(PathId("/root"), validate = false)
+        createGroup(AbsolutePathId("nested"), groups = Set(
+          createGroup(AbsolutePathId("/root"), validate = false)
         ), validate = false)
       ), validate = false)
 
@@ -552,7 +557,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("Group with nested app of wrong path")
       val app = AppDefinition(PathId("/nested/foo"), role = "*", cmd = Some("test"))
       val valid = createRootGroup(groups = Set(
-        createGroup(PathId("/nested"), apps = Map(app.id -> app))
+        createGroup(AbsolutePathId("/nested"), apps = Map(app.id -> app))
       ))
 
       When("group is validated")
@@ -567,10 +572,10 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val app = AppDefinition(appPath, role = "*", cmd = Some("sleep"))
 
       val groupUpdate = createGroup(
-        PathId("/domain/developers"),
+        AbsolutePathId("/domain/developers"),
         groups = Set(
           createGroup(
-            PathId("/domain/developers/gitlab"),
+            AbsolutePathId("/domain/developers/gitlab"),
             apps = Map(appPath -> app))))
 
       val newVersion = Timestamp.now()
@@ -583,12 +588,12 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val app = AppDefinition(appPath, role = "*", cmd = Some("sleep"))
 
       val groupUpdate = createGroup(
-        PathId("/domain"),
+        AbsolutePathId("/domain"),
         groups = Set(createGroup(
-          PathId("/domain/developers"),
+          AbsolutePathId("/domain/developers"),
           groups = Set(
             createGroup(
-              PathId("/domain/developers/gitlab"),
+              AbsolutePathId("/domain/developers/gitlab"),
               apps = Map(appPath -> app))))))
 
       val newVersion = Timestamp.now()
@@ -601,7 +606,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       val app = AppDefinition(appPath, role = "*", cmd = Some("sleep"))
 
       val groupUpdate = createGroup(
-        PathId("/domain/developers/gitlab"),
+        AbsolutePathId("/domain/developers/gitlab"),
         apps = Map(appPath -> app))
 
       val newVersion = Timestamp.now()
@@ -613,39 +618,39 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("a three level hierarchy")
       val current: RootGroup = createRootGroup(
         groups = Set(
-          createGroup("/top".toPath, groups = Set(
-            createGroup("/top/mid".toPath, groups = Set(
-              createGroup("/top/mid/end".toPath)
+          createGroup("/top".toAbsolutePath, groups = Set(
+            createGroup("/top/mid".toAbsolutePath, groups = Set(
+              createGroup("/top/mid/end".toAbsolutePath)
             ))
           )),
-          createGroup("/side".toPath)
+          createGroup("/side".toAbsolutePath)
         ))
 
       When("we update the dependency of the mid-level group")
-      val updatedRoot = current.updateDependencies("/top/mid".toPath, _ => Set("/side".toPath))
+      val updatedRoot = current.updateDependencies("/top/mid".toAbsolutePath, _ => Set("/side".toAbsolutePath))
 
       Then("the update should be reflected in the new root group")
-      updatedRoot.group("/top/mid".toPath).value.dependencies should be(Set("/side".toPath))
+      updatedRoot.group("/top/mid".toAbsolutePath).value.dependencies should be(Set("/side".toPath))
     }
 
     "update a top-level group parameter" in {
       Given("a three level hierarchy")
       val current: RootGroup = createRootGroup(
         groups = Set(
-          createGroup("/top".toPath, groups = Set(
-            createGroup("/top/mid".toPath, groups = Set(
-              createGroup("/top/mid/end".toPath)
+          createGroup("/top".toAbsolutePath, groups = Set(
+            createGroup("/top/mid".toAbsolutePath, groups = Set(
+              createGroup("/top/mid/end".toAbsolutePath)
             ))
           )),
-          createGroup("/side".toPath)
+          createGroup("/side".toAbsolutePath)
         ))
 
       When("we update the enforce role parameter of the top-level group")
-      val groupUpdate = current.group("/top".toPath).value.withEnforceRole(true)
+      val groupUpdate = current.group("/top".toAbsolutePath).value.withEnforceRole(true)
       val updatedRoot = current.putGroup(groupUpdate)
 
       Then("the update should be reflected in the new root group")
-      updatedRoot.group("/top".toPath).value.enforceRole should be(true)
+      updatedRoot.group("/top".toAbsolutePath).value.enforceRole should be(true)
     }
   }
 }

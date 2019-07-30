@@ -338,11 +338,11 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
             createGroup("othergroup2".toAbsolutePath),
             createGroup("othergroup3".toAbsolutePath),
             {
-              val id = "withdeps".toAbsolutePath // withdeps still exists because of the subgroup
+              val id = "/withdeps".toAbsolutePath // withdeps still exists because of the subgroup
               createGroup(
                 id,
                 apps = Group.defaultApps,
-                groups = Set(createGroup(id / "some")),
+                groups = Set(createGroup((id / "some").asAbsolutePath)),
                 dependencies = Set() // dependencies were introduce with first deployment, should be gone now
               )
             },
@@ -461,9 +461,9 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
                   ),
                   groups = Set(
                     createGroup(
-                      id / "some",
+                      (id / "some").asAbsolutePath,
                       groups = Set(
-                        createGroup(id / "some" / "b")
+                        createGroup((id / "some" / "b").asAbsolutePath)
                       )
                     )
                   )
@@ -508,10 +508,10 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
                 ),
                 groups = Set(
                   createGroup(
-                    id / "some",
+                    (id / "some").asAbsolutePath,
                     groups = Set(
                       createGroup(
-                        id / "some" / "b",
+                        (id / "some" / "b").asAbsolutePath,
                         apps = Map(
                           appBA.id -> appBA,
                           appBB.id -> appBB,
