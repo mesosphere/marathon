@@ -3,8 +3,8 @@ package json
 
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.raml.{GroupConversion, Raml}
-import mesosphere.marathon.state.{AppDefinition, Group, RootGroup, Timestamp}
+import mesosphere.marathon.raml.{GroupConversion, GroupUpdateConversionVisitor, Raml}
+import mesosphere.marathon.state.{Group => _, _}
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 import play.api.libs.json.{JsValue, Json}
@@ -35,16 +35,15 @@ class JsonSerializeDeserializeState {
   /**
     * The contents of the JSON mock file as an updatable root group
     */
-  lazy val rootGroupMock: Group = {
-    import mesosphere.marathon.raml.GroupConversion._
+  lazy val rootGroupMock: RootGroup = {
     val value: JsValue = Json.parse(jsonMockContents)
     val groupUpdate: raml.GroupUpdate = Json.fromJson[raml.GroupUpdate](value).get
 
     val group: RootGroup = RootGroup()
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
 
-    Raml.fromRaml(
-      GroupConversion(groupUpdate, group, Timestamp.zero) -> appConversionFunc)
+    val visitor = GroupUpdateConversionVisitor(group, Timestamp.zero, appConversionFunc)
+    RootGroup.fromGroup(GroupConversion.dispatch(groupUpdate, PathId.root, visitor))
   }
 
 }
@@ -69,14 +68,13 @@ class JsonSerializeDeserializeBenchmark extends JsonSerializeDeserializeState {
 
   @Benchmark
   def jsonParseDeserialiseUpdate(hole: Blackhole): Unit = {
-    import mesosphere.marathon.raml.GroupConversion._
     val value: JsValue = Json.parse(jsonMockContents)
     val groupUpdate: raml.GroupUpdate = Json.fromJson[raml.GroupUpdate](value).get
 
     val group: RootGroup = RootGroup()
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
-    val updatedGroup: Group = Raml.fromRaml(
-      GroupConversion(groupUpdate, rootGroupMock, Timestamp.now()) -> appConversionFunc)
+    val visitor = GroupUpdateConversionVisitor(rootGroupMock, Timestamp.now(), appConversionFunc)
+    val updatedGroup = GroupConversion.dispatch(groupUpdate, PathId.root, visitor)
 
     hole.consume(updatedGroup)
   }
