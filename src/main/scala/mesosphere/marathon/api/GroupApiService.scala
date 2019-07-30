@@ -48,9 +48,7 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
       val maybeExistingGroup = groupManager.group(currentGroup.id)
       val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
       val visitor = GroupUpdateConversionVisitor(rootGroup, newVersion, appConversionFunc)
-      val updatedGroup: Group = GroupConversion.dispatch(groupUpdate, groupId, rootGroup, visitor)
-      //      val updatedGroup: Group = Raml.fromRaml(
-      //        GroupConversion(groupUpdate, currentGroup, newVersion) -> appConversionFunc)
+      val updatedGroup: Group = GroupConversion.dispatch(groupUpdate, groupId, visitor)
 
       println("updated group")
 

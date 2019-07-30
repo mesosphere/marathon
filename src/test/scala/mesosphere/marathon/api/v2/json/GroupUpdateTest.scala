@@ -4,7 +4,7 @@ package api.v2.json
 import com.wix.accord.validate
 import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.{AppNormalization, GroupNormalization}
-import mesosphere.marathon.raml.{App, GroupConversion, GroupUpdate, Raml}
+import mesosphere.marathon.raml.{App, GroupConversion, GroupUpdate, GroupUpdateConversionVisitor, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
@@ -16,7 +16,6 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
     Raml.fromRaml(AppNormalization.apply(
       AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved, true)).normalized(app))
   }
-  implicit val groupUpdateRamlReader = raml.GroupConversion.groupUpdateRamlReads // HACK: workaround bogus compiler error?!
 
   "GroupUpdate" should {
     "A group update can be applied to an empty group" in {
@@ -38,7 +37,8 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
 
       When("The update is performed")
       val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root, rootGroup).normalized(update)
-      val result: Group = Raml.fromRaml(GroupConversion(normalized, rootGroup, timestamp) -> appConversionFunc)
+      val visitor = GroupUpdateConversionVisitor(rootGroup, timestamp, appConversionFunc)
+      val result: Group = GroupConversion.dispatch(normalized, PathId.root, visitor)
 
       validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
@@ -83,15 +83,15 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
 
       When("The update is performed")
       val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root, actual).normalized(update)
-      val result: RootGroup = RootGroup.fromGroup(Raml.fromRaml(
-        GroupConversion(normalized, actual, timestamp) -> appConversionFunc))
+      val visitor = GroupUpdateConversionVisitor(actual, timestamp, appConversionFunc)
+      val result: RootGroup = RootGroup.fromGroup(GroupConversion.dispatch(normalized, PathId.root, visitor))
 
       validate(result)(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
       Then("The update is applied correctly")
       result.id should be(PathId.root)
       result.groupsById should have size 2
-      val test = result.group("test".toAbsolutePath)
+      val test = result.group("/test".toAbsolutePath)
       test should be('defined)
       test.get.groupsById should have size 1
       test.get.apps should have size 1
@@ -133,8 +133,10 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       )
 
       val timestamp = Timestamp.now()
-      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, AbsolutePathId("/test"), createRootGroup()).normalized(update)
-      val next = Raml.fromRaml(GroupConversion(normalized, current, timestamp) -> appConversionFunc)
+      val rootGroup = createRootGroup()
+      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, AbsolutePathId("/test"), rootGroup).normalized(update)
+      val visitor = GroupUpdateConversionVisitor(rootGroup, timestamp, appConversionFunc) // TODO: add current
+      val next: Group = GroupConversion.dispatch(normalized, AbsolutePathId("/test"), visitor)
       val result = createRootGroup(groups = Set(next))
 
       validate(result)(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
@@ -157,14 +159,20 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
     "A group update should not contain a version" in {
       val update = GroupUpdate(None, version = Some(Timestamp.now().toOffsetDateTime))
       intercept[IllegalArgumentException] {
-        Raml.fromRaml(GroupConversion(update, createRootGroup(), Timestamp.now()) -> appConversionFunc)
+        val timestamp = Timestamp.now()
+        val root = createRootGroup()
+        val visitor = GroupUpdateConversionVisitor(root, timestamp, appConversionFunc)
+        GroupConversion.dispatch(update, PathId.root, visitor)
       }
     }
 
     "A group update should not contain a scaleBy" in {
       val update = GroupUpdate(None, scaleBy = Some(3))
       intercept[IllegalArgumentException] {
-        Raml.fromRaml(GroupConversion(update, createRootGroup(), Timestamp.now()) -> appConversionFunc)
+        val timestamp = Timestamp.now()
+        val root = createRootGroup()
+        val visitor = GroupUpdateConversionVisitor(root, timestamp, appConversionFunc)
+        GroupConversion.dispatch(update, PathId.root, visitor)
       }
     }
 
@@ -180,9 +188,11 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       )))
 
       When("The update is performed")
-      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root, createRootGroup()).normalized(update)
-      val result = Raml.fromRaml(
-        GroupConversion(normalized, createRootGroup(), Timestamp.now()) -> appConversionFunc)
+      val root = createRootGroup()
+      val timestamp = Timestamp.now()
+      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root, root).normalized(update)
+      val visitor = GroupUpdateConversionVisitor(root, timestamp, appConversionFunc)
+      val result = GroupConversion.dispatch(normalized, PathId.root, visitor)
 
       validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
