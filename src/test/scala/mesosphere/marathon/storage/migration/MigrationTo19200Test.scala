@@ -10,7 +10,7 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage.repository.InstanceRepository
 import play.api.libs.json.{JsObject, JsString, Json}
 
-class MigrationTo19100Test extends AkkaUnitTest {
+class MigrationTo19200Test extends AkkaUnitTest {
 
   val mesosDefaultRole = "newDefaultRole"
 
@@ -45,9 +45,9 @@ class MigrationTo19100Test extends AkkaUnitTest {
     val instanceRepository: InstanceRepository = mock[InstanceRepository]
     val persistenceStore: PersistenceStore[ZkId, String, ZkSerialized] = mock[PersistenceStore[ZkId, String, ZkSerialized]]
 
-    def migration(): MigrationTo19100 = {
+    def migration(): MigrationTo19200 = {
 
-      new MigrationTo19100(mesosDefaultRole, instanceRepository, persistenceStore )
+      new MigrationTo19200(mesosDefaultRole, instanceRepository, persistenceStore )
     }
 
     /**

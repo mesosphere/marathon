@@ -7,20 +7,15 @@ import java.time.OffsetDateTime
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, Sink, Source}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.Instance.{AgentInfo, Id, InstanceState}
-import mesosphere.marathon.core.instance.Reservation
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
-import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.{InstanceRepository, StoredGroup, StoredGroupRepositoryImpl}
+import mesosphere.marathon.storage.repository.{StoredGroup, StoredGroupRepositoryImpl}
 import mesosphere.marathon.storage.store.ZkStoreSerialization
-import play.api.libs.functional.syntax._
-import play.api.libs.json.Reads._
 import play.api.libs.json._
 
 import scala.async.Async.{async, await}
@@ -28,7 +23,6 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class MigrationTo19100(
     defaultMesosRole: Role,
-    instanceRepository: InstanceRepository,
     persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]) extends MigrationStep with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = async {
@@ -36,47 +30,8 @@ class MigrationTo19100(
     await(MigrationTo19100.migrateApps(defaultMesosRole, persistenceStore))
     await(MigrationTo19100.migratePods(defaultMesosRole, persistenceStore))
     await(MigrationTo19100.migrateGroups(persistenceStore))
-    await(InstanceMigration.migrateInstances(instanceRepository, persistenceStore, instanceMigrationFlow))
   }
 
-  /**
-    * Read format for old instance without reservation id.
-    */
-  val instanceJsonReads18200: Reads[Instance] = {
-    import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-    import mesosphere.marathon.core.instance.Instance.tasksMapFormat
-
-    (
-      (__ \ "instanceId").read[Id] ~
-      (__ \ "agentInfo").read[AgentInfo] ~
-      (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
-      (__ \ "runSpecVersion").read[Timestamp] ~
-      (__ \ "state").read[InstanceState] ~
-      (__ \ "reservation").readNullable[Reservation] ~
-      (__ \ "role").readNullable[String]
-    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation, persistedRole) =>
-        logger.info(s"Migrate $instanceId")
-
-        val role = persistedRole.orElse(Some(defaultMesosRole))
-
-        new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation, role)
-      }
-  }
-
-  /**
-    * Extract instance from old format
-    *
-    * @param jsValue The instance as JSON.
-    * @return The parsed instance.
-    */
-  def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads18200)
-
-  val instanceMigrationFlow = Flow[JsValue]
-    .filter { jsValue =>
-      // Only migrate instances that don't have a role
-      (jsValue \ "role").isEmpty
-    }
-    .map(extractInstanceFromJson)
 }
 
 object MigrationTo19100 extends MaybeStore with StrictLogging {
@@ -229,7 +184,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
 
     val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }
       .mapMaterializedValue { f =>
-        f.map(i => logger.info(s"$i pods migrated to 1.9.100"))
+        f.map(i => logger.info(s"$i groups migrated to 1.9.100"))
         NotUsed
       }
 
@@ -240,7 +195,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
           case Some(rootGroupVersion) => zkStore.get(RootId, rootGroupVersion).map(group => (group, Some(rootGroupVersion)))
           case None => zkStore.get(RootId).map(group => (group, None))
         }
-        .collect{ case (Some(group), optVersion) if group.enforceRole.isEmpty => (group, optVersion) }
+        .collect{ case (Some(group), optVersion) => (group, optVersion) }
         .map{
           case (rootGroup, optVersion) => (migrateGroup(rootGroup), optVersion)
         }

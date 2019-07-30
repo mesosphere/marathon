@@ -248,7 +248,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     val app_16549_fail = appProxy(testBasePath / "app-16549-fail", "v1", instances = 1, healthCheck = None)
     marathon16549.client.createAppV2(app_16549_fail) should be(Created)
 
-    val app_16549 = appProxy(testBasePath / "app-16549", "v1", instances = 1, healthCheck = None)
+    val app_16549 = appProxy(testBasePath / "prod" / "db" / "app-16549", "v1", instances = 1, healthCheck = None)
     marathon16549.client.createAppV2(app_16549) should be(Created)
 
     patienceConfig
