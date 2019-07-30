@@ -63,7 +63,7 @@ case ${OTHERARGS[0]} in
     echo "v$MAJOR.$MINOR.$COMMIT_NUMBER"
     ;;
   "")
-    # Echo verion
+    # Echo version
     # E.g. 1.7.42
     echo "$MAJOR.$MINOR.$COMMIT_NUMBER"
     ;;
