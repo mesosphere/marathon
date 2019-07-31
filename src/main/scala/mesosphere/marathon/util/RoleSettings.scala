@@ -46,7 +46,7 @@ object RoleSettings extends StrictLogging {
         // If the topLevelGroup is empty, we might have run into the case where a user creates
         // a group with runSpecs in a single action. The group isn't yet created, therefore we can't lookup
         // the enforceRole flag.
-        logger.warn(s"Calculating role settings for $servicePathId, but unable to access top level group $topLevelGroupPath, using default for enforceRole flag: $enforceRole")
+        //        logger.warn(s"Calculating role settings for $servicePathId, but unable to access top level group $topLevelGroupPath, using default for enforceRole flag: $enforceRole")
       }
 
       // Look up any previously set group on the specified runSpec, and add that to the validRoles set if it exists
