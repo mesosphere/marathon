@@ -6,10 +6,11 @@ import mesosphere.marathon.state.{AbsolutePathId, PathId}
 /**
   * The interface to a group visitor pattern.
   *
+  * @tparam I The type of the update
   * @tparam A The return type of the [[AppVisitor.visit()]] call.
   * @tparam G The return type of [[GroupUpdateVisitor.visit()]].
   */
-trait GroupUpdateVisitor[A, G] {
+trait GroupUpdateVisitor[I, A, G] {
 
   /**
     * Visit the current group. It should not change `group.apps` or `group.groups`.
@@ -17,7 +18,7 @@ trait GroupUpdateVisitor[A, G] {
     * @param thisGroup The current group to visit.
     * @return The visit result.
     */
-  def visit(thisGroup: raml.GroupUpdate): G
+  def visit(thisGroup: I): G
 
   /**
     * Factory method for a visitor of the direct children of this group.
@@ -27,7 +28,7 @@ trait GroupUpdateVisitor[A, G] {
     * @return The [[GroupUpdateVisitor]] for the children. See [[mesosphere.marathon.api.v2.RootGroupVisitor.childGroupVisitor()]]
     *         for an example.
     */
-  def childGroupVisitor(): GroupUpdateVisitor[A, G]
+  def childGroupVisitor(): GroupUpdateVisitor[I, A, G]
 
   /**
     * Factory method for a visitor for all direct apps in `group.apps`. The visitor will not visit
@@ -48,6 +49,19 @@ trait GroupUpdateVisitor[A, G] {
     * @return The final accumulated result.
     */
   def done(base: AbsolutePathId, thisGroup: G, children: Option[Iterator[G]], apps: Option[Iterator[A]]): G
+
+  def andThen[G2](other: GroupUpdateVisitor[G, A, G2]): GroupUpdateVisitor[I, A, G2] = GroupUpdateComposeVisitor(this, other)
+}
+
+case class GroupUpdateComposeVisitor[I, A, G1, G2](first: GroupUpdateVisitor[I, A, G1], other: GroupUpdateVisitor[G1, A, G2]) extends GroupUpdateVisitor[I, A, G2] {
+  override def visit(thisGroup: I): G2 = other.visit(first.visit(thisGroup))
+
+  override def childGroupVisitor(): GroupUpdateVisitor[I, A, G2] = GroupUpdateComposeVisitor(first.childGroupVisitor(), other.childGroupVisitor())
+
+  override def appVisitor(): AppVisitor[A] = ???
+
+  // TODO: we probably have to pass result of first.done() to other.visit().
+  override def done(base: AbsolutePathId, thisGroup: G2, children: Option[Iterator[G2]], apps: Option[Iterator[A]]): G2 = other.done(base, thisGroup, children, apps)
 }
 
 /**
@@ -75,7 +89,7 @@ object GroupUpdateVisitor {
     * @param visitor
     * @return The group update returned by the visitor.
     */
-  def dispatch[A, R](groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor[A, R]): R = {
+  def dispatch[A, R](groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor[raml.GroupUpdate, A, R]): R = {
     val visitedGroup: R = visitor.visit(groupUpdate)
 
     // Visit each child group.
