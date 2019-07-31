@@ -141,10 +141,10 @@ class Group(
     * ├── pods(0)
     * ├── def
     * │    ├── apps(3)
-    * │    └──  pods(0)
+    * │    └── pods(0)
     * └── prod
     *     ├── apps(3)
-    *     └──  pods(0)
+    *     └── pods(0)
     * }}}
     *
     * @return the tree as a string.
