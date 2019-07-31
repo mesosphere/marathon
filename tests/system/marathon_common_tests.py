@@ -233,7 +233,7 @@ def test_ui_available(marathon_service_name):
 def test_task_failure_recovers():
     """Tests that if a task is KILLED, another one will be launched with a different ID."""
 
-    app_def = apps.sleep_app()
+    app_def = apps.sleep_app(app_id='/task-failure-recovers')
     app_def['cmd'] = 'sleep 1000'
     app_id = app_def["id"]
 
@@ -255,7 +255,7 @@ def test_task_failure_recovers():
 def test_run_app_with_specified_user():
     """Runs an app with a given user (cnetos). CentOS is expected, since it has centos user by default."""
 
-    app_def = apps.sleep_app()
+    app_def = apps.sleep_app(app_id='/app-with-specified-user')
     app_def['user'] = 'centos'
     app_id = app_def['id']
 
@@ -275,7 +275,7 @@ def test_run_app_with_specified_user():
 def test_run_app_with_non_existing_user():
     """Runs an app with a non-existing user, which should be failing."""
 
-    app_def = apps.sleep_app()
+    app_def = apps.sleep_app(app_id='/non-existing-user')
     app_def['user'] = 'bad'
 
     client = marathon.create_client()
@@ -288,7 +288,7 @@ def test_run_app_with_non_existing_user():
 def test_run_app_with_non_downloadable_artifact():
     """Runs an app with a non-downloadable artifact."""
 
-    app_def = apps.sleep_app()
+    app_def = apps.sleep_app(app_id='/non-downloadable-artifact')
     app_def['fetch'] = [{"uri": "http://localhost/missing-artifact"}]
 
     client = marathon.create_client()
