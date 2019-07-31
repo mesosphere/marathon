@@ -50,8 +50,6 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
       val visitor = GroupUpdateConversionVisitor(rootGroup, newVersion, appConversionFunc)
       val updatedGroup: Group = GroupConversion.dispatch(groupUpdate, groupId, visitor)
 
-      println("updated group")
-
       if (maybeExistingGroup.isEmpty) checkAuthorizationOrThrow(CreateGroup, updatedGroup)
 
       rootGroup.putGroup(updatedGroup, newVersion)

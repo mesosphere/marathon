@@ -289,8 +289,6 @@ object Group extends StrictLogging {
       else if (base.isTopLevel) TopLevelGroupValidationVisitor(originalRootGroup)
       else ChildGroupValidationVisitor(originalRootGroup)
 
-    println(s"validating $base")
-
     (groupUpdate: raml.GroupUpdate) => dispatch(base, groupUpdate, visitor)
   }
 
