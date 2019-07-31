@@ -3,7 +3,7 @@ package raml
 
 import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId, RootGroup, Timestamp, Group => CoreGroup, VersionInfo => CoreVersionInfo}
 
-case class GroupUpdateConversionVisitor(originalRootGroup: RootGroup, timestamp: Timestamp, appConversion: App => AppDefinition) extends GroupUpdateVisitor[AppDefinition, CoreGroup] {
+case class GroupUpdateConversionVisitor(originalRootGroup: RootGroup, timestamp: Timestamp, appConversion: App => AppDefinition) extends GroupUpdateVisitor[GroupUpdate, raml.App, AppDefinition, CoreGroup] {
 
   override def visit(thisGroup: GroupUpdate): CoreGroup = {
     require(thisGroup.scaleBy.isEmpty, "For a structural update, no scale should be given.")
@@ -23,9 +23,9 @@ case class GroupUpdateConversionVisitor(originalRootGroup: RootGroup, timestamp:
       enforceRole = thisGroup.enforceRole.get)
   }
 
-  override def childGroupVisitor(): GroupUpdateVisitor[AppDefinition, CoreGroup] = GroupUpdateConversionVisitor(originalRootGroup, timestamp, appConversion)
+  override def childGroupVisitor(): GroupUpdateVisitor[GroupUpdate, raml.App, AppDefinition, CoreGroup] = GroupUpdateConversionVisitor(originalRootGroup, timestamp, appConversion)
 
-  override val appVisitor: AppVisitor[AppDefinition] = AppConversionVisitor(appConversion, timestamp)
+  override val appVisitor: AppVisitor[raml.App, AppDefinition] = AppConversionVisitor(appConversion, timestamp)
 
   override def done(base: AbsolutePathId, thisGroup: CoreGroup, children: Option[Iterator[CoreGroup]], apps: Option[Iterator[AppDefinition]]): CoreGroup = {
 
@@ -51,13 +51,13 @@ case class GroupUpdateConversionVisitor(originalRootGroup: RootGroup, timestamp:
 }
 
 // TODO: convert without a function
-case class AppConversionVisitor(convert: App => AppDefinition, version: Timestamp) extends AppVisitor[AppDefinition] {
+case class AppConversionVisitor(convert: App => AppDefinition, version: Timestamp) extends AppVisitor[raml.App, AppDefinition] {
   override def visit(app: App, groupId: AbsolutePathId): AppDefinition = convert(app).copy(versionInfo = CoreVersionInfo.OnlyVersion(version))
 }
 
 object GroupConversion {
 
-  def dispatch(groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor[AppDefinition, CoreGroup]): CoreGroup =
+  def dispatch(groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor[GroupUpdate, raml.App, AppDefinition, CoreGroup]): CoreGroup =
     GroupUpdateVisitor.dispatch(groupUpdate, base, visitor)
 }
 

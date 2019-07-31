@@ -292,7 +292,7 @@ object Group extends StrictLogging {
     (groupUpdate: raml.GroupUpdate) => dispatch(base, groupUpdate, visitor)
   }
 
-  trait GroupValidationVisitor extends GroupUpdateVisitor[Result, Result] {
+  trait GroupValidationVisitor extends GroupUpdateVisitor[raml.GroupUpdate, raml.App, Result, Result] {
     val originalRootGroup: RootGroup
     val groupUpdateValidator = validator[raml.GroupUpdate] { group =>
       group is notNull
@@ -318,7 +318,7 @@ object Group extends StrictLogging {
 
     override def visit(thisGroup: raml.GroupUpdate): Result = groupUpdateValidator(thisGroup)
 
-    override def appVisitor(): AppVisitor[Result] = AppValidationVisitor()
+    override def appVisitor(): AppVisitor[raml.App, Result] = AppValidationVisitor()
 
     override def childGroupVisitor(): GroupValidationVisitor = this
 
@@ -352,7 +352,7 @@ object Group extends StrictLogging {
     override def childGroupVisitor(): GroupValidationVisitor = this
   }
 
-  case class AppValidationVisitor() extends AppVisitor[Result] {
+  case class AppValidationVisitor() extends AppVisitor[raml.App, Result] {
     override def visit(app: raml.App, groupId: AbsolutePathId): Result = AppValidation.validNestedApp(groupId)(app)
   }
 

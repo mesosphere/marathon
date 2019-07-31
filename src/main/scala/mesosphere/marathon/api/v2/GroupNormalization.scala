@@ -7,18 +7,21 @@ import mesosphere.mesos.ResourceMatcher.Role
 
 import scala.annotation.tailrec
 
+trait GroupNormalizationVisitor extends GroupUpdateVisitor[GroupUpdate, raml.App, raml.App, GroupUpdate]
+trait AppNormalizationVisitor extends AppVisitor[raml.App, raml.App]
+
 /**
   * Visitor that normalizes a root group update.
   *
   * @param conf The [[MarathonConf]].
   */
-case class RootGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor[raml.App, GroupUpdate] {
+case class RootGroupVisitor(conf: MarathonConf) extends GroupNormalizationVisitor {
 
   override def visit(thisGroup: GroupUpdate): GroupUpdate = thisGroup.copy(id = Some("/"), enforceRole = Some(false))
 
-  override def childGroupVisitor(): GroupUpdateVisitor[raml.App, GroupUpdate] = TopLevelGroupVisitor(conf)
+  override def childGroupVisitor(): GroupNormalizationVisitor = TopLevelGroupVisitor(conf)
 
-  override def appVisitor(): AppVisitor[raml.App] = AppNormalizeVisitor(conf, conf.mesosRole())
+  override def appVisitor(): AppNormalizationVisitor = AppNormalizeVisitor(conf, conf.mesosRole())
 
   override def done(base: AbsolutePathId, thisGroup: GroupUpdate, children: Option[Iterator[GroupUpdate]], apps: Option[Iterator[raml.App]]): GroupUpdate = {
     thisGroup.copy(groups = children.map(_.toSet), apps = apps.map(_.toSet))
@@ -30,7 +33,7 @@ case class RootGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor[raml.
   *
   * @param conf The [[MarathonConf]].
   */
-case class TopLevelGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor[raml.App, GroupUpdate] {
+case class TopLevelGroupVisitor(conf: MarathonConf) extends GroupNormalizationVisitor {
   var defaultRole: Role = conf.mesosRole()
 
   override def visit(thisGroup: GroupUpdate): GroupUpdate = {
@@ -45,9 +48,9 @@ case class TopLevelGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor[r
     thisGroup.copy(enforceRole = Some(enforceRole))
   }
 
-  override def childGroupVisitor(): GroupUpdateVisitor[raml.App, GroupUpdate] = ChildGroupVisitor(conf, defaultRole)
+  override def childGroupVisitor(): GroupNormalizationVisitor = ChildGroupVisitor(conf, defaultRole)
 
-  override def appVisitor(): AppVisitor[raml.App] = AppNormalizeVisitor(conf, defaultRole)
+  override def appVisitor(): AppNormalizationVisitor = AppNormalizeVisitor(conf, defaultRole)
 
   override def done(base: AbsolutePathId, thisGroup: GroupUpdate, children: Option[Iterator[GroupUpdate]], apps: Option[Iterator[raml.App]]): GroupUpdate = {
     thisGroup.copy(groups = children.map(_.toSet), apps = apps.map(_.toSet))
@@ -61,16 +64,16 @@ case class TopLevelGroupVisitor(conf: MarathonConf) extends GroupUpdateVisitor[r
   * @param conf The [[MarathonConf]].
   * @param defaultRole The default Mesos role for all apps in this group.
   */
-case class ChildGroupVisitor(conf: MarathonConf, defaultRole: Role) extends GroupUpdateVisitor[raml.App, GroupUpdate] {
+case class ChildGroupVisitor(conf: MarathonConf, defaultRole: Role) extends GroupNormalizationVisitor {
 
   override def visit(thisGroup: GroupUpdate): GroupUpdate = {
     if (thisGroup.enforceRole.isEmpty) thisGroup.copy(enforceRole = Some(false))
     else thisGroup
   }
 
-  override val childGroupVisitor: GroupUpdateVisitor[raml.App, GroupUpdate] = this
+  override val childGroupVisitor: GroupNormalizationVisitor = this
 
-  override val appVisitor: AppVisitor[raml.App] = AppNormalizeVisitor(conf, defaultRole)
+  override val appVisitor: AppNormalizationVisitor = AppNormalizeVisitor(conf, defaultRole)
 
   override def done(base: AbsolutePathId, thisGroup: GroupUpdate, children: Option[Iterator[GroupUpdate]], apps: Option[Iterator[raml.App]]): GroupUpdate = {
     thisGroup.copy(groups = children.map(_.toSet), apps = apps.map(_.toSet))
@@ -83,7 +86,7 @@ case class ChildGroupVisitor(conf: MarathonConf, defaultRole: Role) extends Grou
   * @param conf The [[MarathonConf]].
   * @param defaultRole The default Mesos role of the app.
   */
-case class AppNormalizeVisitor(conf: MarathonConf, defaultRole: Role) extends AppVisitor[raml.App] {
+case class AppNormalizeVisitor(conf: MarathonConf, defaultRole: Role) extends AppNormalizationVisitor {
 
   val normalizationConfig = AppNormalization.Configuration(conf, defaultRole)
 
@@ -103,7 +106,7 @@ object GroupNormalization {
     * @param visitor
     * @return The group update returned by the visitor.
     */
-  def dispatch(groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor[raml.App, GroupUpdate]): raml.GroupUpdate =
+  def dispatch(groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupNormalizationVisitor): raml.GroupUpdate =
     GroupUpdateVisitor.dispatch(groupUpdate, base, visitor)
 
   def partialUpdateNormalization(conf: MarathonConf): Normalization[raml.GroupPartialUpdate] = Normalization { update =>
