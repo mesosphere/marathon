@@ -116,11 +116,12 @@ class RootGroupBenchmark extends GroupBenchmark {
     val normalizedGroup = GroupNormalization.updateNormalization(config, PathId.root).normalized(groupRaml)
     //    val groupValidator = Group.validNestedGroupUpdateWithBase(PathId.root, rootGroup)
     //    groupValidator(normalized)
-    GroupsResource.normalizeApps(rootGroup, PathId.root, normalizedGroup, config)
+    val apps = GroupsResource.normalizeApps(rootGroup, PathId.root, normalizedGroup, config)
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
     val converted = Raml.fromRaml(
       GroupConversion(normalizedGroup, rootGroup, version.version) -> appConversionFunc)
     //    println(s"Group tree:\n ${converted.prettyTree()}")
+    hole.consume(apps)
     hole.consume(converted)
   }
 }
