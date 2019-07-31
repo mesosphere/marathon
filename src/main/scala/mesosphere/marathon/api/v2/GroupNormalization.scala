@@ -23,7 +23,7 @@ case class RootGroupVisitor(conf: MarathonConf) extends GroupNormalizationVisito
 
   override def appVisitor(): AppNormalizationVisitor = AppNormalizeVisitor(conf, conf.mesosRole())
 
-  override def done(base: AbsolutePathId, thisGroup: GroupUpdate, children: Option[Iterator[GroupUpdate]], apps: Option[Iterator[raml.App]]): GroupUpdate = {
+  override def done(base: AbsolutePathId, thisGroup: GroupUpdate, children: Option[Vector[GroupUpdate]], apps: Option[Vector[raml.App]]): GroupUpdate = {
     thisGroup.copy(groups = children.map(_.toSet), apps = apps.map(_.toSet))
   }
 }
@@ -52,7 +52,7 @@ case class TopLevelGroupVisitor(conf: MarathonConf) extends GroupNormalizationVi
 
   override def appVisitor(): AppNormalizationVisitor = AppNormalizeVisitor(conf, defaultRole)
 
-  override def done(base: AbsolutePathId, thisGroup: GroupUpdate, children: Option[Iterator[GroupUpdate]], apps: Option[Iterator[raml.App]]): GroupUpdate = {
+  override def done(base: AbsolutePathId, thisGroup: GroupUpdate, children: Option[Vector[GroupUpdate]], apps: Option[Vector[raml.App]]): GroupUpdate = {
     thisGroup.copy(groups = children.map(_.toSet), apps = apps.map(_.toSet))
   }
 }
@@ -75,7 +75,7 @@ case class ChildGroupVisitor(conf: MarathonConf, defaultRole: Role) extends Grou
 
   override val appVisitor: AppNormalizationVisitor = AppNormalizeVisitor(conf, defaultRole)
 
-  override def done(base: AbsolutePathId, thisGroup: GroupUpdate, children: Option[Iterator[GroupUpdate]], apps: Option[Iterator[raml.App]]): GroupUpdate = {
+  override def done(base: AbsolutePathId, thisGroup: GroupUpdate, children: Option[Vector[GroupUpdate]], apps: Option[Vector[raml.App]]): GroupUpdate = {
     thisGroup.copy(groups = children.map(_.toSet), apps = apps.map(_.toSet))
   }
 }

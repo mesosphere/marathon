@@ -27,17 +27,21 @@ case class GroupUpdateConversionVisitor(originalRootGroup: RootGroup, timestamp:
 
   override val appVisitor: AppVisitor[raml.App, AppDefinition] = AppConversionVisitor(appConversion, timestamp)
 
-  override def done(base: AbsolutePathId, thisGroup: CoreGroup, children: Option[Iterator[CoreGroup]], apps: Option[Iterator[AppDefinition]]): CoreGroup = {
+  override def done(base: AbsolutePathId, thisGroup: CoreGroup, children: Option[Vector[CoreGroup]], apps: Option[Vector[AppDefinition]]): CoreGroup = {
 
     // Accumulate child groups.
-    val effectiveGroups: Map[PathId, CoreGroup] = children.fold(thisGroup.groupsById)(_.map { childGroup =>
-      childGroup.id -> childGroup
-    }.toMap)
+    val effectiveGroups: Map[PathId, CoreGroup] = children.fold(thisGroup.groupsById) { children =>
+      val builder = Map.newBuilder[PathId, CoreGroup]
+      children.foreach { childGroup => builder += childGroup.id -> childGroup }
+      builder.result()
+    }
 
     // Accumulate apps.
-    val effectiveApps: Map[AppDefinition.AppKey, AppDefinition] = apps.fold(thisGroup.apps)(_.map { app =>
-      app.id -> app
-    }.toMap)
+    val effectiveApps: Map[AppDefinition.AppKey, AppDefinition] = apps.fold(thisGroup.apps){ apps =>
+      val builder = Map.newBuilder[AppDefinition.AppKey, AppDefinition]
+      apps.foreach{ app => builder += app.id -> app }
+      builder.result()
+    }
 
     CoreGroup(
       id = base,

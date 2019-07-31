@@ -48,7 +48,7 @@ trait GroupUpdateVisitor[I, AI, AR, G] {
     * @param apps The result from all visits to apps in this group.
     * @return The final accumulated result.
     */
-  def done(base: AbsolutePathId, thisGroup: G, children: Option[Iterator[G]], apps: Option[Iterator[AR]]): G
+  def done(base: AbsolutePathId, thisGroup: G, children: Option[Vector[G]], apps: Option[Vector[AR]]): G
 
   def andThen[A2R, G2](other: GroupUpdateVisitor[G, AR, A2R, G2]): GroupUpdateVisitor[I, AI, A2R, G2] = GroupUpdateVisitorCompose(this, other)
 }
@@ -60,7 +60,7 @@ case class GroupUpdateVisitorCompose[I, A1I, A1R, A2R, G1, G2](first: GroupUpdat
 
   override def appVisitor(): AppVisitor[A1I, A2R] = AppVisitorCompose(first.appVisitor(), other.appVisitor())
 
-  override def done(base: AbsolutePathId, thisGroup: G2, children: Option[Iterator[G2]], apps: Option[Iterator[A2R]]): G2 = other.done(base, thisGroup, children, apps)
+  override def done(base: AbsolutePathId, thisGroup: G2, children: Option[Vector[G2]], apps: Option[Vector[A2R]]): G2 = other.done(base, thisGroup, children, apps)
 }
 
 /**
@@ -98,14 +98,14 @@ object GroupUpdateVisitor {
 
     // Visit each child group.
     val childGroupVisitor = visitor.childGroupVisitor()
-    val visitedChildren: Option[Iterator[R]] = groupUpdate.groups.map(_.toIterator.map { childGroup =>
+    val visitedChildren: Option[Vector[R]] = groupUpdate.groups.map(_.toVector.map { childGroup =>
       val absoluteChildGroupPath = PathId(childGroup.id.get).canonicalPath(base)
       dispatch(childGroup, absoluteChildGroupPath, childGroupVisitor)
     })
 
     // Visit each app.
     val appVisitor = visitor.appVisitor()
-    val visitedApps: Option[Iterator[A]] = groupUpdate.apps.map(_.toIterator.map { app =>
+    val visitedApps: Option[Vector[A]] = groupUpdate.apps.map(_.toVector.map { app =>
       appVisitor.visit(app, base)
     })
 

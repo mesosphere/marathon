@@ -277,7 +277,13 @@ trait Validation {
       failure = _ -> failureMessage
     )
 
-  def validateAll[T](x: T, all: Validator[T]*): Result = all.map(v => validate(x)(v)).fold(Success)(_ and _)
+  def validateAll[T](x: T, all: Vector[Validator[T]]): Result = {
+    var acc: Result = Success
+    all.foreach { v =>
+      acc = acc.and(validate(x)(v))
+    }
+    acc
+  }
 
   /**
     * Given a wix accord violation, return a sequence of our own ConstraintViolation model, rendering the wix accord
@@ -317,7 +323,7 @@ object Validation extends Validation {
   case class ConstraintViolation(path: String, constraint: String)
 
   def forAll[T](all: Validator[T]*): Validator[T] = new Validator[T] {
-    override def apply(x: T): Result = validateAll(x, all: _*)
+    override def apply(x: T): Result = validateAll(x, all.toVector)
   }
 
   /**

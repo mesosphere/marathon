@@ -322,13 +322,19 @@ object Group extends StrictLogging {
 
     override def childGroupVisitor(): GroupValidationVisitor = this
 
-    override def done(base: AbsolutePathId, thisGroup: Result, children: Option[Iterator[Result]], apps: Option[Iterator[Result]]): Result = {
-      val childrenResult = children.fold[Result](Success)(groups => groups.foldLeft[Result](Success) { (acc, childGroup) =>
-        acc.and(childGroup)
-      })
-      val appsResult = apps.fold[Result](Success)(apps => apps.foldLeft[Result](Success) { (acc, app) =>
-        acc.and(app)
-      })
+    override def done(base: AbsolutePathId, thisGroup: Result, children: Option[Vector[Result]], apps: Option[Vector[Result]]): Result = {
+      val childrenResult = children.fold[Result](Success) { groups =>
+        var acc: Result = Success
+        groups.foreach { childGroup => acc = acc.and(childGroup) }
+        acc
+      }
+
+      val appsResult = apps.fold[Result](Success) { apps =>
+        var acc: Result = Success
+        apps.foreach { app => acc = acc.and(app) }
+        acc
+      }
+
       thisGroup.and(childrenResult).and(appsResult)
     }
   }
