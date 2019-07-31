@@ -20,7 +20,7 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
     */
   def updateGroup(
     rootGroup: RootGroup,
-    groupId: PathId,
+    groupId: AbsolutePathId,
     groupUpdate: raml.GroupUpdate,
     newVersion: Timestamp)(implicit identity: Identity): Future[RootGroup] = async {
     val group = rootGroup.group(groupId).getOrElse(Group.empty(groupId))

@@ -338,7 +338,7 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
             createGroup("othergroup2".toAbsolutePath),
             createGroup("othergroup3".toAbsolutePath),
             {
-              val id = "withdeps".toAbsolutePath // withdeps still exists because of the subgroup
+              val id = "/withdeps".toAbsolutePath // withdeps still exists because of the subgroup
               createGroup(
                 id,
                 apps = Group.defaultApps,

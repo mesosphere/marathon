@@ -23,7 +23,7 @@ import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition, PodManager}
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 import mesosphere.marathon.raml.{EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, PersistentVolumeInfo, PersistentVolumeType, Pod, PodPersistentVolume, PodSecretVolume, PodState, PodStatus, Raml, Resources, VolumeMount}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, Group, PathId, ResourceRole, Timestamp, UnreachableStrategy, VersionInfo}
+import mesosphere.marathon.state._
 import mesosphere.marathon.test.{GroupCreation, JerseyTest, Mockito, SettableClock}
 import mesosphere.marathon.util.SemanticVersion
 import play.api.libs.json._
@@ -2001,7 +2001,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
   ) extends GroupCreation {
 
     def prepareGroup(groupId: String, pods: Map[PathId, PodDefinition] = Group.defaultPods): Unit = {
-      val groupPath = PathId(groupId)
+      val groupPath = AbsolutePathId(groupId)
 
       val group = createGroup(groupPath, pods = pods)
 

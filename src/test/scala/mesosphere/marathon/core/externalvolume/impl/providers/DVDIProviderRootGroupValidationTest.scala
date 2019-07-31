@@ -23,7 +23,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
       val rootGroup = createRootGroup(
         groups = Set(
           createGroup(
-            id = PathId("/nested"),
+            id = AbsolutePathId("/nested"),
             apps = Map(
               app1.id -> app1,
               app2.id -> app2
@@ -48,7 +48,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
       val rootGroup = createRootGroup(
         groups = Set(
           createGroup(
-            id = PathId("/nested"),
+            id = AbsolutePathId("/nested"),
             apps = Map(
               app1.id -> app1,
               app2.id -> app2
