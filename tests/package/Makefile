@@ -7,7 +7,7 @@ clean:
 	rm -rf target/*
 
 purge: | clean
-	docker rmi -f marathon-package-test:debian8 || echo "Couldn't remove debian8"
+	docker rmi -f marathon-package-test:debian9 || echo "Couldn't remove debian9"
 	docker rmi -f marathon-package-test:centos6 || echo "Couldn't remove centos6"
 	docker rmi -f marathon-package-test:centos7 || echo "Couldn't remove centos7"
 	docker rmi -f marathon-package-test:ubuntu1404 || echo "Couldn't remove ubuntu1404"
