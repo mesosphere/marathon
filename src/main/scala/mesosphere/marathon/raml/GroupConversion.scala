@@ -11,7 +11,6 @@ case class GroupUpdateConversionVisitor(originalRootGroup: RootGroup, timestamp:
     assert(thisGroup.enforceRole.isDefined, s"BUG! The group normalization should have set enforceRole for ${thisGroup.id}.")
 
     val current = originalRootGroup.group(AbsolutePathId(thisGroup.id.get)).getOrElse(CoreGroup.empty(AbsolutePathId(thisGroup.id.get)))
-    println(s"current: $current")
     val effectiveDependencies = thisGroup.dependencies.fold(current.dependencies)(_.map(PathId(_).canonicalPath(current.id.asAbsolutePath)))
 
     CoreGroup(

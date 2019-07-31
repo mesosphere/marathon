@@ -19,8 +19,10 @@ Usage $0 [options]
 
 Non-arg params
 
-- commit: output just the formatted commit hash
-- docker: output the version as used by the Docker tag
+* commit - output just the formatted commit hash
+* docker - output the version as used by the Docker tag
+* package - output the version with the commit hash, ie 1.9.34-a122edcb4
+
 EOF
 }
 
@@ -47,18 +49,30 @@ done
 COMMIT_NUMBER="$(git rev-list --count --first-parent $BRANCH_POINT..$REF)"
 COMMIT_HASH=$(git rev-parse --short $REF)
 
-# Echo commit hash
-if [ "${OTHERARGS[0]}" == "commit" ]; then
+case ${OTHERARGS[0]} in
+  commit)
+    # Echo commit hash
     echo "$COMMIT_HASH"
-    exit 0
-fi
-
-# Version for Docker image, e.g. v1.7.42
-if [ "${OTHERARGS[0]}" == "docker" ]; then
+    ;;
+  package)
+    # Echo package version plus hash
+    echo "$MAJOR.$MINOR.$COMMIT_NUMBER-$COMMIT_HASH"
+    ;;
+  docker)
+    # Version for Docker image, e.g. v1.7.42
     echo "v$MAJOR.$MINOR.$COMMIT_NUMBER"
-    exit 0
-fi
+    ;;
+  "")
+    # Echo version
+    # E.g. 1.7.42
+    echo "$MAJOR.$MINOR.$COMMIT_NUMBER"
+    ;;
+  *)
+    echo "ERROR: ${OTHERARGS[0]} is not a version format"
+    echo
+    help
+    exit 1
+    ;;
 
-# Echo verion
-# E.g. 1.7.42
-echo "$MAJOR.$MINOR.$COMMIT_NUMBER"
+
+esac
