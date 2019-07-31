@@ -123,6 +123,14 @@ case class AbsolutePathId(path: Seq[String]) extends PathId {
   override def asAbsolutePath: AbsolutePathId = this
   protected def toString(delimiter: String): String =
     path.mkString("/", delimiter, "")
+
+  override def rootPath: AbsolutePathId = AbsolutePathId(path.headOption.map(_ :: Nil).getOrElse(Nil))
+
+  override def append(id: PathId): AbsolutePathId = AbsolutePathId(path ++ id.path)
+
+  override def append(id: String): AbsolutePathId = append(PathId(id))
+
+  override def /(id: String): AbsolutePathId = append(id)
 }
 
 object AbsolutePathId {

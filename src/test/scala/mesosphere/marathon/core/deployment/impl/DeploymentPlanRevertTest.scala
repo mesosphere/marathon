@@ -342,7 +342,7 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
               createGroup(
                 id,
                 apps = Group.defaultApps,
-                groups = Set(createGroup((id / "some").asAbsolutePath)),
+                groups = Set(createGroup(id / "some")),
                 dependencies = Set() // dependencies were introduce with first deployment, should be gone now
               )
             },
@@ -461,9 +461,9 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
                   ),
                   groups = Set(
                     createGroup(
-                      (id / "some").asAbsolutePath,
+                      id / "some",
                       groups = Set(
-                        createGroup((id / "some" / "b").asAbsolutePath)
+                        createGroup(id / "some" / "b")
                       )
                     )
                   )
@@ -508,10 +508,10 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
                 ),
                 groups = Set(
                   createGroup(
-                    (id / "some").asAbsolutePath,
+                    id / "some",
                     groups = Set(
                       createGroup(
-                        (id / "some" / "b").asAbsolutePath,
+                        id / "some" / "b",
                         apps = Map(
                           appBA.id -> appBA,
                           appBB.id -> appBB,
