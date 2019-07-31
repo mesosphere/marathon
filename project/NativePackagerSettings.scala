@@ -1,6 +1,6 @@
 object NativePackagerSettings {
   def debianSourceCommands: String = {
-    val unstableRepo = if(Dependency.V.MesosDebian.contains(".pre")) {
+    val unstableRepo = if (Dependency.V.MesosDebian.contains(".pre")) {
       List("stretch-unstable")
     } else Nil
 
