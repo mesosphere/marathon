@@ -95,13 +95,13 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
 
-      def buildParentGroup(path: PathId, childGroup: Group): Group = {
+      def buildParentGroup(path: AbsolutePathId, childGroup: Group): Group = {
         val group = createGroup(path, groups = Set(childGroup))
         groupManager.group(path) returns Some(group)
         if (path.parent.isRoot) group else buildParentGroup(path.parent, group)
       }
 
-      def buildGroupWithApp(path: PathId): Group = {
+      def buildGroupWithApp(path: AbsolutePathId): Group = {
         val group = createGroup(path, apps = Map(appDef.id -> appDef))
         groupManager.group(path) returns Some(group)
         if (path.parent.isRoot) group else buildParentGroup(path.parent, group)
@@ -120,19 +120,19 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     }
 
     def prepareGroup(groupId: String, groupManager: GroupManager) = {
-      def buildParentGroup(path: PathId, childGroup: Group): Group = {
+      def buildParentGroup(path: AbsolutePathId, childGroup: Group): Group = {
         val group = createGroup(path, groups = Set(childGroup))
         groupManager.group(path) returns Some(group)
         if (path.parent.isRoot) group else buildParentGroup(path.parent, group)
       }
 
-      def buildGroup(path: PathId): Group = {
+      def buildGroup(path: AbsolutePathId): Group = {
         val group = createGroup(path)
         groupManager.group(path) returns Some(group)
         if (path.parent.isRoot) group else buildParentGroup(path.parent, group)
       }
 
-      val groupPath = PathId(groupId)
+      val groupPath = AbsolutePathId(groupId)
       val group = buildGroup(groupPath)
 
       val rootGroup = createRootGroup(groups = Set(group), validate = false, enabledFeatures = Set.empty)
@@ -2221,7 +2221,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
     }
 
-    "Create a new app inside a top-group with enforceRole applies the proper group-role default" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/dev".toPath, enforceRole = true)))) {
+    "Create a new app inside a top-group with enforceRole applies the proper group-role default" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/dev".toAbsolutePath, enforceRole = true)))) {
       service.deploy(any, any) returns Future.successful(Done)
 
       Given("group /dev with enforceRole: true")

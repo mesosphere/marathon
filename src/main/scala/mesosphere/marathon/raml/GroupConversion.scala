@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, Group => CoreGroup, VersionInfo => CoreVersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId, Timestamp, Group => CoreGroup, VersionInfo => CoreVersionInfo}
 
 trait GroupConversion {
 
@@ -30,8 +30,8 @@ object UpdateGroupStructureOp {
 
   import Normalization._
 
-  private def requireGroupPath(groupUpdate: GroupUpdate)(implicit normalPaths: Normalization[PathId]): PathId = {
-    groupUpdate.id.map(PathId(_).normalize).getOrElse(
+  private def requireGroupPath(groupUpdate: GroupUpdate): PathId = {
+    groupUpdate.id.map(PathId(_)).getOrElse(
       // validation should catch this..
       throw SerializationFailedException("No group id was given!")
     )
@@ -45,7 +45,7 @@ object UpdateGroupStructureOp {
   /**
     * Creates a new [[state.Group]] from a [[GroupUpdate]], performing both normalization and conversion.
     */
-  private def createGroup(groupUpdate: GroupUpdate, gid: PathId, version: Timestamp)(implicit cf: App => AppDefinition): CoreGroup = {
+  private def createGroup(groupUpdate: GroupUpdate, gid: AbsolutePathId, version: Timestamp)(implicit cf: App => AppDefinition): CoreGroup = {
     implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(gid.asAbsolutePath))
     implicit val appNormalization = normalizeApp(version)
 
@@ -54,9 +54,10 @@ object UpdateGroupStructureOp {
       app.id -> app
     }(collection.breakOut)
 
-    val groupsById: Map[PathId, CoreGroup] = groupUpdate.groups.getOrElse(Seq.empty).map { currentGroup =>
+    val groupsById: Map[CoreGroup.GroupKey, CoreGroup] = groupUpdate.groups.getOrElse(Seq.empty).map { currentGroup =>
       // TODO: tailrec needed
-      val group = createGroup(currentGroup, requireGroupPath(currentGroup), version)
+      val id = requireGroupPath(currentGroup).canonicalPath(gid)
+      val group = createGroup(currentGroup, id, version)
       group.id -> group
     }(collection.breakOut)
 
@@ -65,7 +66,7 @@ object UpdateGroupStructureOp {
       apps = appsById,
       pods = Map.empty,
       groupsById = groupsById,
-      dependencies = groupUpdate.dependencies.fold(Set.empty[PathId])(_.map(PathId(_).normalize)),
+      dependencies = groupUpdate.dependencies.fold(Set.empty[AbsolutePathId])(_.map(PathId(_).canonicalPath(gid))),
       version = version
     )
   }
@@ -84,12 +85,12 @@ object UpdateGroupStructureOp {
     require(groupUpdate.version.isEmpty, "For a structural update, no version should be given.")
     assert(groupUpdate.enforceRole.isDefined, s"BUG! The group normalization should have set enforceRole for ${groupUpdate.id}.")
 
-    implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(current.id.asAbsolutePath))
+    implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(current.id))
     implicit val appNormalization = normalizeApp(timestamp)
 
-    val effectiveGroups: Map[PathId, CoreGroup] = groupUpdate.groups.fold(current.groupsById) { updates =>
+    val effectiveGroups: Map[CoreGroup.GroupKey, CoreGroup] = groupUpdate.groups.fold(current.groupsById) { updates =>
       updates.map { groupUpdate =>
-        val gid = requireGroupPath(groupUpdate)
+        val gid = requireGroupPath(groupUpdate).canonicalPath(current.id)
         val newGroup = current.groupsById.get(gid).map { group =>
           execute(groupUpdate, group, timestamp) // TODO: tailrec needed
         }.getOrElse(createGroup(groupUpdate, gid, timestamp))
@@ -105,7 +106,7 @@ object UpdateGroupStructureOp {
       }(collection.breakOut)
     }
 
-    val effectiveDependencies = groupUpdate.dependencies.fold(current.dependencies)(_.map(PathId(_).normalize))
+    val effectiveDependencies = groupUpdate.dependencies.fold(current.dependencies)(_.map(PathId(_).canonicalPath(current.id)))
 
     CoreGroup(
       id = current.id,

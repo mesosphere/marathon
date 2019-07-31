@@ -54,11 +54,11 @@ object DependencyGraphBenchmark {
       }(breakOut)
 
     val subGroups: Map[GroupKey, Group] = groupIds.map { groupId =>
-      val id = s"/supergroup-${superGroupId}/group-${groupId}".toPath
+      val id = s"/supergroup-${superGroupId}/group-${groupId}".toAbsolutePath
       id -> Group(id = id)
     }(breakOut)
 
-    val id = s"/supergroup-${superGroupId}".toPath
+    val id = s"/supergroup-${superGroupId}".toAbsolutePath
     id -> Group(
       id = id,
       groupsById = subGroups

@@ -23,7 +23,7 @@ private[deployment] object DeploymentPlanReverter extends StrictLogging {
     */
   def revert(original: RootGroup, target: RootGroup, newVersion: Timestamp = Group.defaultVersion): RootGroup => RootGroup = {
 
-    def changesOnIds[T](originalById: Map[PathId, T], targetById: Map[PathId, T]): Seq[(Option[T], Option[T])] = {
+    def changesOnIds[T](originalById: Map[Group.GroupKey, T], targetById: Map[Group.GroupKey, T]): Seq[(Option[T], Option[T])] = {
       val ids = originalById.keys ++ targetById.keys
       ids.map { id => originalById.get(id) -> targetById.get(id) }(collection.breakOut)
     }
@@ -55,12 +55,12 @@ private[deployment] object DeploymentPlanReverter extends StrictLogging {
     version: Timestamp,
     groupChanges: Seq[(Option[Group], Option[Group])])(rootGroup: RootGroup): RootGroup = {
 
-    def revertGroupRemoval(oldGroup: Group)(dependencies: Set[PathId]): Set[PathId] = {
+    def revertGroupRemoval(oldGroup: Group)(dependencies: Set[AbsolutePathId]): Set[AbsolutePathId] = {
       logger.debug("re-adding group {} with dependencies {}", Seq(oldGroup.id, oldGroup.dependencies): _*)
       if ((oldGroup.dependencies -- dependencies).nonEmpty) dependencies ++ oldGroup.dependencies else dependencies
     }
 
-    def revertDependencyChanges(oldGroup: Group, newGroup: Group)(dependencies: Set[PathId]): Set[PathId] = {
+    def revertDependencyChanges(oldGroup: Group, newGroup: Group)(dependencies: Set[AbsolutePathId]): Set[AbsolutePathId] = {
       val removedDependencies = oldGroup.dependencies -- newGroup.dependencies
       val addedDependencies = newGroup.dependencies -- oldGroup.dependencies
 
