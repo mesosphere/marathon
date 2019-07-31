@@ -31,7 +31,7 @@ class GroupBenchmark {
   def makeAppRaml(pathId: PathId) = Raml.toRaml(makeApp(pathId))
 
   //@Param(value = Array("2", "10", "100", "1000"))
-  @Param(value = Array("2"))
+  @Param(value = Array("10"))
   var appsPerGroup: Int = _
   lazy val appIds = 0 until appsPerGroup
 
@@ -50,20 +50,21 @@ class GroupBenchmark {
 
   lazy val rootGroup: RootGroup = fillRootGroup()
 
-  lazy val groupRaml: raml.GroupUpdate = groupIds.foldLeft(raml.GroupUpdate(id = Some("/first"))) { (acc, nextChildId) =>
-    val groupPath = PathId(acc.id.get) / s"group-$nextChildId"
-    val apps = appIds.map { appId =>
-      val path = groupPath / s"app-${appId}"
-      makeAppRaml(path)
-    }.toSet
-    val nextChild = raml.GroupUpdate(id = Some(groupPath.toString), apps = Some(apps))
-    acc.copy(groups = acc.groups.map(_ + nextChild))
+  lazy val groupRaml: raml.GroupUpdate = {
+    raml.GroupUpdate(id = Some("/"), groups = Some(buildChildGroups(0, PathId.root)))
   }
 
-  def buildGroupRaml(level: Int, parent: AbsolutePathId): raml.GroupUpdate = {
-    0 to groupsPerLevel map { gid =>
-      val groupPath = parent /  
-    }
+  def buildChildGroups(level: Int, parent: AbsolutePathId): Set[raml.GroupUpdate] = {
+    if (level == groupDepth) return Set.empty
+
+    (0 to groupsPerLevel).map { gid =>
+      val groupPath = (parent / s"group-$gid").asAbsolutePath
+      raml.GroupUpdate(
+        id = Some(groupPath.toString),
+        apps = Some((0 to appsPerGroup).map { aid => makeAppRaml(groupPath / s"app-$aid") }.toSet),
+        groups = Some(buildChildGroups(level + 1, groupPath))
+      )
+    }.toSet
   }
 
   // Create apps and add them to each group on each level
@@ -113,12 +114,12 @@ class RootGroupBenchmark extends GroupBenchmark {
   @Benchmark
   def serializationRoundtrip(hole: Blackhole): Unit = {
     val normalized = GroupNormalization.updateNormalization(config, PathId.root).normalized(groupRaml)
-    val groupValidator = Group.validNestedGroupUpdateWithBase(PathId.root, rootGroup)
-    groupValidator(normalized)
+    //    val groupValidator = Group.validNestedGroupUpdateWithBase(PathId.root, rootGroup)
+    //    groupValidator(normalized)
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
     val converted = Raml.fromRaml(
       GroupConversion(normalized, rootGroup, version.version) -> appConversionFunc)
-    println(s"Group tree:\n ${converted.prettyTree()}")
+    //    println(s"Group tree:\n ${converted.prettyTree()}")
     hole.consume(converted)
   }
 }

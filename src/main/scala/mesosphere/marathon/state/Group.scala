@@ -146,8 +146,9 @@ class Group(
     builder.append(s"\n$indent├── pods(${pods.size})")
 
     // append groups
+    // TODO: check last child
     groupsById.valuesIterator.foreach { childGroup =>
-      val newIndent = indent + "    "
+      val newIndent = indent + "│   "
       builder.append("\n").append(indent).append("├── ")
       childGroup.prettyTree(builder, indent = newIndent)
     }
