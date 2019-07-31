@@ -132,6 +132,23 @@ class Group(
   def withoutEnforceRole(): Group =
     new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, false)
 
+  /**
+    * Builds a pretty tree of the group
+    *
+    * {{{
+    * /
+    * ├── apps(0)
+    * ├── pods(0)
+    * ├── def
+    * │    ├── apps(3)
+    * │    └──  pods(0)
+    * └── prod
+    *     ├── apps(3)
+    *     └──  pods(0)
+    * }}}
+    *
+    * @return the tree as a string.
+    */
   def prettyTree(): String = {
     val builder = new StringBuilder()
     prettyTree(builder, "").toString()
@@ -143,13 +160,24 @@ class Group(
 
     // append apps and pods info
     builder.append(s"\n$indent├── apps(${apps.size})")
-    builder.append(s"\n$indent├── pods(${pods.size})")
+
+    if (groupsById.nonEmpty) {
+      builder.append(s"\n$indent├── pods(${pods.size})")
+    } else {
+      builder.append(s"\n$indent└── pods(${pods.size})")
+    }
 
     // append groups
     // TODO: check last child
-    groupsById.valuesIterator.foreach { childGroup =>
-      val newIndent = indent + "│   "
-      builder.append("\n").append(indent).append("├── ")
+    val iter = groupsById.valuesIterator
+    while (iter.hasNext) {
+      val childGroup = iter.next()
+      val lastElemet = !iter.hasNext
+      builder.append("\n").append(indent)
+
+      if (lastElemet) builder.append("└── ") else builder.append("├── ")
+
+      val newIndent = if (lastElemet) indent + "    " else indent + "│    "
       childGroup.prettyTree(builder, indent = newIndent)
     }
 
