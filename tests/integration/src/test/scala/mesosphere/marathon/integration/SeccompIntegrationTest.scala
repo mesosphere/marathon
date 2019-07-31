@@ -8,7 +8,7 @@ import mesosphere.marathon.state.PathId
 import mesosphere.marathon.state.PathId._
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 
-class SeccompIntegratonTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
+class SeccompIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
   val projectDir: String = sys.props.getOrElse("user.dir", ".")
   override lazy val mesosConfig = MesosConfig(
