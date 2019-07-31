@@ -131,6 +131,29 @@ class Group(
   /** @return a copy of this group with the removed `enforceRole` field. */
   def withoutEnforceRole(): Group =
     new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, false)
+
+  def prettyTree(): String = {
+    val builder = new StringBuilder()
+    prettyTree(builder, "").toString()
+  }
+
+  private def prettyTree(builder: StringBuilder, indent: String): StringBuilder = {
+
+    builder.append(id.path.lastOption.getOrElse("/"))
+
+    // append apps and pods info
+    builder.append(s"\n$indent├── apps(${apps.size})")
+    builder.append(s"\n$indent├── pods(${pods.size})")
+
+    // append groups
+    groupsById.valuesIterator.foreach { childGroup =>
+      val newIndent = indent + "    "
+      builder.append("\n").append(indent).append("├── ")
+      childGroup.prettyTree(builder, indent = newIndent)
+    }
+
+    builder
+  }
 }
 
 object Group extends StrictLogging {
