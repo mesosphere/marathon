@@ -2,7 +2,7 @@ package mesosphere.marathon
 package upgrade
 
 import mesosphere.UnitTest
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
+import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 
 class GroupVersioningUtilTest extends UnitTest with GroupCreation {
@@ -13,7 +13,7 @@ class GroupVersioningUtilTest extends UnitTest with GroupCreation {
   val nestedApp = createRootGroup(
     groups = Set(
       createGroup(
-        id = PathId("/nested"),
+        id = AbsolutePathId("/nested"),
         apps = Map(app.id -> app),
         version = Timestamp(2)
       )
@@ -27,7 +27,7 @@ class GroupVersioningUtilTest extends UnitTest with GroupCreation {
   val nestedAppScaled = createRootGroup(
     groups = Set(
       createGroup(
-        id = PathId("/nested"),
+        id = AbsolutePathId("/nested"),
         apps = Map(scaledApp.id -> scaledApp),
         version = Timestamp(2)
       )
@@ -40,7 +40,7 @@ class GroupVersioningUtilTest extends UnitTest with GroupCreation {
   val nestedAppUpdated = createRootGroup(
     groups = Set(
       createGroup(
-        id = PathId("/nested"),
+        id = AbsolutePathId("/nested"),
         apps = Map(updatedApp.id -> updatedApp),
         version = Timestamp(2)
       )

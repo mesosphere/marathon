@@ -331,7 +331,7 @@ class InstanceOpFactoryImpl(
     val topLevelGroup = if (topLevelPath.isEmpty)
       None
     else
-      rootGroupRetriever.rootGroup().group(topLevelPath)
+      rootGroupRetriever.rootGroup().group(topLevelPath.asAbsolutePath)
 
     topLevelGroup
       .map { _.enforceRole }

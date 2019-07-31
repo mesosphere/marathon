@@ -10,7 +10,7 @@ trait GroupCreation {
     apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
     pods: Map[PathId, PodDefinition] = Group.defaultPods,
     groups: Set[Group] = Set.empty,
-    dependencies: Set[PathId] = Group.defaultDependencies,
+    dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
     validate: Boolean = true,
     enabledFeatures: Set[String] = Set.empty): RootGroup = {
@@ -26,11 +26,11 @@ trait GroupCreation {
   }
 
   def createGroup(
-    id: PathId,
+    id: AbsolutePathId,
     apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
     pods: Map[PathId, PodDefinition] = Group.defaultPods,
     groups: Set[Group] = Set.empty,
-    dependencies: Set[PathId] = Group.defaultDependencies,
+    dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
     validate: Boolean = true,
     enabledFeatures: Set[String] = Set.empty,
