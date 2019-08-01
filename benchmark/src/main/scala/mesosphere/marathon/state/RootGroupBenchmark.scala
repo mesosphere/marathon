@@ -120,7 +120,6 @@ class RootGroupBenchmark extends GroupBenchmark {
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
     val converted = Raml.fromRaml(
       GroupConversion(normalizedGroup, rootGroup, version.version) -> appConversionFunc)
-    //    println(s"Group tree:\n ${converted.prettyTree()}")
     hole.consume(apps)
     hole.consume(converted)
   }
