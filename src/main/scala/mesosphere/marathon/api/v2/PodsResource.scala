@@ -93,7 +93,7 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       val podRaml = unmarshal(body)
 
-      val roleSettings = RoleSettings.forService(config, PathId(podRaml.id), groupManager.rootGroup())
+      val roleSettings = RoleSettings.forService(config, PathId(podRaml.id).canonicalPath(PathId.root), groupManager.rootGroup())
       implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
       implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
       implicit val podDefValidator: Validator[PodDefinition] = PodsValidation.podDefValidator(pluginManager, roleSettings)
@@ -124,16 +124,16 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       import PathId._
 
-      val podId = id.toRootPath
+      val podId = id.toAbsolutePath
       val podRaml = unmarshal(body)
 
-      val roleSettings = RoleSettings.forService(config, PathId(podRaml.id), groupManager.rootGroup())
+      val roleSettings = RoleSettings.forService(config, podId, groupManager.rootGroup())
       implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
       implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
       implicit val podDefValidator: Validator[PodDefinition] = PodsValidation.podDefValidator(pluginManager, roleSettings)
 
       validateOrThrow(podRaml)
-      if (podId != podRaml.id.toRootPath) {
+      if (podId != podRaml.id.toAbsolutePath) {
         Response.status(Status.BAD_REQUEST).entity(
           s"""
             |{"message": "'$podId' does not match definition's id ('${podRaml.id}')" }
@@ -175,7 +175,7 @@ class PodsResource @Inject() (
 
       import PathId._
 
-      withValid(id.toRootPath) { id =>
+      withValid(id.toAbsolutePath) { id =>
         podSystem.find(id).fold(notFound(s"""{"message": "pod with $id does not exist"}""")) { pod =>
           withAuthorization(ViewRunSpec, pod) {
             ok(marshal(pod))
@@ -196,7 +196,7 @@ class PodsResource @Inject() (
 
       import PathId._
 
-      val id = idOrig.toRootPath
+      val id = idOrig.toAbsolutePath
       validateOrThrow(id)
       podSystem.find(id) match {
         case Some(pod) =>
@@ -225,7 +225,7 @@ class PodsResource @Inject() (
 
       import PathId._
 
-      await(withValidF(id.toRootPath) { id =>
+      await(withValidF(id.toAbsolutePath) { id =>
         podStatusService.selectPodStatus(id, authzSelector).map {
           case None => notFound(id)
           case Some(status) => ok(Json.stringify(Json.toJson(status)))
@@ -244,7 +244,7 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       import PathId._
       import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-      await(withValidF(id.toRootPath) { id =>
+      await(withValidF(id.toAbsolutePath) { id =>
         async {
           val versions = await(podSystem.versions(id).runWith(Sink.seq))
           podSystem.find(id).fold(notFound(id)) { pod =>
@@ -266,7 +266,7 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       import PathId._
       val version = Timestamp(versionString)
-      await(withValidF(id.toRootPath) { id =>
+      await(withValidF(id.toAbsolutePath) { id =>
         async {
           await(podSystem.version(id, version)).fold(notFound(id)) { pod =>
             withAuthorization(ViewRunSpec, pod) {
@@ -306,7 +306,7 @@ class PodsResource @Inject() (
         ids should matchRegexFully(Instance.Id.InstanceIdRegex)
       }
       // don't need to authorize as taskKiller will do so.
-      val id = idOrig.toRootPath
+      val id = idOrig.toAbsolutePath
       validateOrThrow(id)
       validateOrThrow(instanceId)
       val parsedInstanceId = Instance.Id.fromIdString(instanceId)
@@ -340,7 +340,7 @@ class PodsResource @Inject() (
       }
 
       // don't need to authorize as taskKiller will do so.
-      val id = idOrig.toRootPath
+      val id = idOrig.toAbsolutePath
       validateOrThrow(id)
       val instancesToKill = Json.parse(body).as[Set[String]]
       validateOrThrow(instancesToKill)

@@ -59,7 +59,7 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
   lazy val uuid = UUID.randomUUID.toString
   lazy val httpPort = PortAllocator.ephemeralPort()
   lazy val url = conf.get("https_port").fold(s"http://localhost:$httpPort")(httpsPort => s"https://localhost:$httpsPort")
-  lazy val client = new MarathonFacade(url, PathId.empty)
+  lazy val client = new MarathonFacade(url, PathId.root)
 
   val workDir = {
     val f = Files.createTempDirectory(s"marathon-$httpPort").toFile
@@ -77,10 +77,12 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
 
   val secretPath = write(workDir, fileName = "marathon-secret", content = "secret1")
 
+  val mesosRole = conf.getOrElse("mesos_role", BaseMarathon.defaultRole)
+
   val config = Map(
     "master" -> masterUrl,
     "mesos_authentication_principal" -> "principal",
-    "mesos_role" -> BaseMarathon.defaultRole,
+    "mesos_role" -> mesosRole,
     "http_port" -> httpPort.toString,
     "zk" -> zkUrl,
     "zk_timeout" -> 20.seconds.toMillis.toString,
@@ -256,7 +258,7 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
       get {
         path(Segment / Segment / "health") { (uriEncodedAppId, versionId) =>
           import PathId._
-          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
+          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toAbsolutePath
 
           def instance = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId })
 
@@ -270,7 +272,7 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
           }
         } ~ path(Segment / Segment / Segment / "ready") { (uriEncodedAppId, versionId, taskId) =>
           import PathId._
-          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
+          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toAbsolutePath
 
           // Find a fitting registred readiness check. If the check has no task id set we ignore it.
           def check: Option[IntegrationReadinessCheck] = registeredReadinessChecks(_.find { c =>
@@ -410,7 +412,8 @@ trait MarathonAppFixtures {
     instances: Int = 1,
     backoffDuration: FiniteDuration = 1.hour,
     portDefinitions: Seq[PortDefinition] = Seq.empty, /* prevent problems by randomized port assignment */
-    constraints: Set[Seq[String]] = Set.empty): App = {
+    constraints: Set[Seq[String]] = Set.empty,
+    role: Option[String] = None): App = {
 
     val cpus: Double = 0.001
     val mem: Double = 1.0
@@ -440,7 +443,8 @@ trait MarathonAppFixtures {
       portDefinitions = Some(portDefinitions),
       backoffSeconds = backoffDuration.toSeconds.toInt,
       upgradeStrategy = Some(UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0.0)),
-      unreachableStrategy = Some(UnreachableDisabled.DefaultValue)
+      unreachableStrategy = Some(UnreachableDisabled.DefaultValue),
+      role = role
     )
 
     app

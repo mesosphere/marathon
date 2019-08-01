@@ -45,7 +45,7 @@ object TaskFailure {
 
   def empty: TaskFailure = {
     TaskFailure(
-      PathId.empty,
+      PathId.root,
       mesos.TaskID.newBuilder().setValue("").build,
       mesos.TaskState.TASK_STAGING
     )

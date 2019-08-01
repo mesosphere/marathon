@@ -2,7 +2,8 @@ package mesosphere.marathon
 package util
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.state.{PathId, RootGroup}
+import mesosphere.marathon.state.Role
+import mesosphere.marathon.state.{RootGroup, AbsolutePathId}
 
 /**
   * Configures role enforcement on runSpecs, used for validation.
@@ -12,7 +13,7 @@ import mesosphere.marathon.state.{PathId, RootGroup}
   * @param validRoles List of valid roles
   * @param defaultRole The default role to use if no role is specified on the service. Defaults to '*'
   */
-case class RoleSettings(validRoles: Set[String], defaultRole: String) {
+case class RoleSettings(validRoles: Set[Role], defaultRole: Role) {
   require(validRoles(defaultRole))
 }
 
@@ -21,12 +22,12 @@ object RoleSettings extends StrictLogging {
     * Returns the role settings for the service with the specified ID, based on the top-level group and the global config
     *
     * @param config Global config to provide defaultMesos role
-    * @param servicePathId The pathId of the affected runSpec, used to determine a possible top-level group role
+    * @param servicePathId The absolute pathId of the affected runSpec, used to determine a possible top-level group role
     * @param rootGroup The root group, used to access possible top-level groups and their settings
     *
     * @return A data set with valid roles, default role and a flag if the role should be enforced
     */
-  def forService(config: MarathonConf, servicePathId: PathId, rootGroup: RootGroup): RoleSettings = {
+  def forService(config: MarathonConf, servicePathId: AbsolutePathId, rootGroup: RootGroup): RoleSettings = {
     val defaultRole = config.mesosRole()
 
     if (servicePathId.parent.isRoot) {
@@ -34,7 +35,7 @@ object RoleSettings extends StrictLogging {
       RoleSettings(validRoles = Set(defaultRole), defaultRole = defaultRole)
     } else {
       val topLevelGroupPath = servicePathId.rootPath
-      val groupRole = topLevelGroupPath.root
+      val topLevelGroupRole = topLevelGroupPath.root
       val topLevelGroup = rootGroup.group(topLevelGroupPath)
 
       val defaultForEnforceFromConfig: Boolean = false // TODO: Use value from config instead
@@ -53,12 +54,12 @@ object RoleSettings extends StrictLogging {
 
       if (enforceRole) {
         // With enforceRole, we only allow the service to use the group-role or an existing role
-        RoleSettings(validRoles = Set(groupRole) ++ maybeExistingRole, defaultRole = groupRole)
+        RoleSettings(validRoles = Set(topLevelGroupRole) ++ maybeExistingRole, defaultRole = topLevelGroupRole)
       } else {
         // Without enforce role, we allow default role, group role and already existing role
         // The default role depends on the config parameter
-        val defaultRoleToUse = if (defaultForEnforceFromConfig) groupRole else defaultRole
-        RoleSettings(validRoles = Set(defaultRole, groupRole) ++ maybeExistingRole, defaultRole = defaultRoleToUse)
+        val defaultRoleToUse = if (defaultForEnforceFromConfig) topLevelGroupRole else defaultRole
+        RoleSettings(validRoles = Set(defaultRole, topLevelGroupRole) ++ maybeExistingRole, defaultRole = defaultRoleToUse)
       }
     }
   }

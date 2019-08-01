@@ -230,14 +230,14 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         role = "*"
       )
       val probe = TestProbe()
-      val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
+      val origGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"), Map(app.id -> app))))
 
       val appNew = app.copy(
         cmd = Some("cmd new"),
         versionInfo = VersionInfo.forNewConfig(Timestamp(1000))
       )
 
-      val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(appNew.id -> appNew))))
+      val targetGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"), Map(appNew.id -> appNew))))
 
       val plan = DeploymentPlan("foo", origGroup, targetGroup, Nil, Timestamp.now())
 
@@ -266,8 +266,8 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       )
       val probe = TestProbe()
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
-      val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
-      val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"))))
+      val origGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"), Map(app.id -> app))))
+      val targetGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"))))
 
       val plan = DeploymentPlan("d2", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
@@ -294,7 +294,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         role = "*"
       )
-      val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
+      val rootGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"), Map(app.id -> app))))
 
       val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d3"))
 
@@ -323,7 +323,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         role = "*"
       )
-      val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
+      val rootGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"), Map(app.id -> app))))
 
       val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d4"))
 
@@ -344,7 +344,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Forced deployment" in withFixture() { f =>
       import f._
       val app = AppDefinition(id = PathId("/foo/app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), role = "*")
-      val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
+      val rootGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"), Map(app.id -> app))))
 
       val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d1"))
 

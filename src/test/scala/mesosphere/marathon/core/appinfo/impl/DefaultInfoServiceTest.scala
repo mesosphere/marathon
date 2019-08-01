@@ -116,7 +116,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     "queryForGroupId" in {
       Given("a group repo with some apps below the queried group id")
       val f = new Fixture
-      f.groupManager.group(PathId("/nested")) returns someGroupWithNested.group(PathId("/nested"))
+      f.groupManager.group(PathId("/nested")) returns someGroupWithNested.group(AbsolutePathId("/nested"))
       f.baseData.appInfoFuture(any, any) answers { args =>
         Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
       }
@@ -139,7 +139,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     "queryForGroupId passes embed infos along" in {
       Given("a group repo with some apps below the queried group id")
       val f = new Fixture
-      f.groupManager.group(PathId("/nested")) returns someGroupWithNested.group(PathId("/nested"))
+      f.groupManager.group(PathId("/nested")) returns someGroupWithNested.group(AbsolutePathId("/nested"))
       f.baseData.appInfoFuture(any, any) answers { args =>
         Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
       }
@@ -213,11 +213,11 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     "Selecting with App Selector implicitly gives access to parent groups" in {
       Given("a nested group with access to only nested app /group/app1")
       val f = new Fixture
-      val rootId = PathId.empty
+      val rootId = PathId.root
       val rootApp = AppDefinition(PathId("/app"), cmd = Some("sleep"), role = "*")
       val nestedApp1 = AppDefinition(PathId("/group/app1"), cmd = Some("sleep"), role = "*")
       val nestedApp2 = AppDefinition(PathId("/group/app2"), cmd = Some("sleep"), role = "*")
-      val nestedGroup = createGroup(PathId("/group"), Map(nestedApp1.id -> nestedApp1, nestedApp2.id -> nestedApp2))
+      val nestedGroup = createGroup(AbsolutePathId("/group"), Map(nestedApp1.id -> nestedApp1, nestedApp2.id -> nestedApp2))
       val rootGroup = createRootGroup(Map(rootApp.id -> rootApp), groups = Set(nestedGroup))
 
       f.baseData.appInfoFuture(any, any) answers { args =>
@@ -278,7 +278,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     apps = someApps,
     groups = Set(
       createGroup(
-        id = PathId("/nested"),
+        id = AbsolutePathId("/nested"),
         apps = someNestedApps
       )
     ))
@@ -293,14 +293,14 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     val otherGroupApp1 = AppDefinition(PathId("/other/group/app1"), cmd = Some("sleep"), role = "*")
 
     createRootGroup(Map(app1.id -> app1), groups = Set(
-      createGroup(PathId("/visible"), Map(visibleApp1.id -> visibleApp1), groups = Set(
-        createGroup(PathId("/visible/group"), Map(visibleGroupApp1.id -> visibleGroupApp1))
+      createGroup(AbsolutePathId("/visible"), Map(visibleApp1.id -> visibleApp1), groups = Set(
+        createGroup(AbsolutePathId("/visible/group"), Map(visibleGroupApp1.id -> visibleGroupApp1))
       )),
-      createGroup(PathId("/secure"), Map(secureApp1.id -> secureApp1), groups = Set(
-        createGroup(PathId("/secure/group"), Map(secureGroupApp1.id -> secureGroupApp1))
+      createGroup(AbsolutePathId("/secure"), Map(secureApp1.id -> secureApp1), groups = Set(
+        createGroup(AbsolutePathId("/secure/group"), Map(secureGroupApp1.id -> secureGroupApp1))
       )),
-      createGroup(PathId("/other"), Map(otherApp1.id -> otherApp1), groups = Set(
-        createGroup(PathId("/other/group"), Map(otherGroupApp1.id -> otherGroupApp1)
+      createGroup(AbsolutePathId("/other"), Map(otherApp1.id -> otherApp1), groups = Set(
+        createGroup(AbsolutePathId("/other/group"), Map(otherGroupApp1.id -> otherGroupApp1)
         ))
       )))
   }

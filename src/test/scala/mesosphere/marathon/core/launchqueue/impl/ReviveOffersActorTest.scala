@@ -17,7 +17,7 @@ import mesosphere.marathon.util.StreamHelpers
 import org.apache.mesos.Protos.FrameworkInfo
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
-import org.mockito.verification.VerificationWithTimeout
+import org.mockito.verification.VerificationMode
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -137,7 +137,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed] = StreamHelpers.sourceNever,
       val defaultRole: String = "role",
       enableSuppress: Boolean = true,
-      val invocationTimeout: VerificationWithTimeout = Mockito.timeout(1000)) {
+      val invocationTimeout: VerificationMode = Mockito.timeout(1000).atLeastOnce()) {
 
     val instanceUpdates: InstanceTracker.InstanceUpdates = Source.single(instancesSnapshot -> instanceChanges)
     implicit val mat: ActorMaterializer = ActorMaterializer()
@@ -163,7 +163,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       import org.mockito.Matchers.{eq => mEq}
       Mockito.verify(driver, invocationTimeout).updateFramework(any, mEq(Seq(defaultRole).asJava))
     }
-    def verifyExplicitRevive(timeout: VerificationWithTimeout = invocationTimeout): Unit = {
+    def verifyExplicitRevive(timeout: VerificationMode = invocationTimeout): Unit = {
       Mockito.verify(driver, timeout).reviveOffers(Set(defaultRole).asJava)
     }
 

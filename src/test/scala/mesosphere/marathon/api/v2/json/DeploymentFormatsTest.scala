@@ -118,13 +118,13 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
   def genGroup(children: Set[Group] = Set.empty) = {
     val app1 = genApp
     val app2 = genApp
-    createGroup(genId, apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId), version = genTimestamp, validate = false)
+    createGroup(genId.asAbsolutePath, apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId.asAbsolutePath), version = genTimestamp, validate = false)
   }
 
   def genRootGroup(children: Set[Group] = Set.empty) = {
     val app1 = genApp
     val app2 = genApp
-    createRootGroup(apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId), version = genTimestamp, validate = false)
+    createRootGroup(apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId.asAbsolutePath), version = genTimestamp, validate = false)
   }
 
   def genGroupUpdate(children: Set[GroupUpdate] = Set.empty) =

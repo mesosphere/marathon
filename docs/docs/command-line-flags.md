@@ -255,17 +255,6 @@ long as we still need offers to launch tasks, we repeat the `reviveOffers` call 
 times so that our last `reviveOffers` will be received after all relevant `declineOffer` calls with high
 probability.
 
-* <span class="label label-default">v0.11.0</span> `--revive_offers_repetitions` (Optional. Default: 3):
-    Repeat every reviveOffer request this many times, delayed by the `--min_revive_offers_interval`.
-
-If you want to disable calling reviveOffers (not recommended), you can use:
-
-* <span class="label label-default">v0.11.0</span> `--disable_revive_offers_for_new_apps`
-
-When Marathon has no current use for an offer, it will decline the offer for a configurable period. This period is
-configurable. A short duration might lead to resource starvation for other frameworks if you run many frameworks
-in your cluster. You should only need to reduce it if you use `--disable_revive_offers_for_new_apps`.
-
 * `--decline_offer_duration` (Default: 120 seconds) The duration (milliseconds) for which to decline offers by default.
 
 * <span class="label label-default">v1.6.x</span> `--gpu_scheduling_behavior` (Default: restricted) Defines how offered GPU resources should be treated. Possible settings are `restricted` and `unrestricted`. Read more about [Preferential GPU scheduling](preferential-gpu-scheduling.html).

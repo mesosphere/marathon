@@ -75,7 +75,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
         state = InstanceState(None, tasks, clock.now(), UnreachableStrategy.default(), Goal.Running),
         tasksMap = tasks,
         runSpec = pod,
-        None
+        None, "*"
       )
     }
   }
@@ -174,9 +174,9 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       appInfo should be(AppInfo(app, maybeTasks = Some(
         Seq(
-          EnrichedTask(running1.runSpecId, running1.appTask, TestInstanceBuilder.defaultAgentInfo, Nil, Nil, None),
-          EnrichedTask(running2.runSpecId, running2.appTask, TestInstanceBuilder.defaultAgentInfo, Seq(alive), Nil, None),
-          EnrichedTask(running3.runSpecId, running3.appTask, TestInstanceBuilder.defaultAgentInfo, Seq(unhealthy), Nil, None)
+          EnrichedTask(running1.runSpecId, running1.appTask, TestInstanceBuilder.defaultAgentInfo, Nil, Nil, None, "*"),
+          EnrichedTask(running2.runSpecId, running2.appTask, TestInstanceBuilder.defaultAgentInfo, Seq(alive), Nil, None, "*"),
+          EnrichedTask(running3.runSpecId, running3.appTask, TestInstanceBuilder.defaultAgentInfo, Seq(unhealthy), Nil, None, "*")
         )
       )))
 
@@ -236,8 +236,8 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val f = new Fixture
       Given("One related and one unrelated deployment")
       val emptyRootGroup = createRootGroup()
-      val relatedDeployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.empty, _ => Map(app.id -> app), emptyRootGroup.version))
-      val unrelatedDeployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.empty, _ => Map(other.id -> other), emptyRootGroup.version))
+      val relatedDeployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.root, _ => Map(app.id -> app), emptyRootGroup.version))
+      val unrelatedDeployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.root, _ => Map(other.id -> other), emptyRootGroup.version))
       f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq[DeploymentStepInfo](
         DeploymentStepInfo(relatedDeployment, DeploymentStep(Seq.empty), 1),
         DeploymentStepInfo(unrelatedDeployment, DeploymentStep(Seq.empty), 1)
@@ -284,7 +284,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val f = new Fixture
       Given("One related and one unrelated deployment")
       val emptyRootGroup = createRootGroup()
-      val deployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.empty, _ => Map(app.id -> app), emptyRootGroup.version))
+      val deployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.root, _ => Map(app.id -> app), emptyRootGroup.version))
       val instanceId = Instance.Id.forRunSpec(app.id)
       val taskId: Task.Id = Task.Id(instanceId)
       val result = ReadinessCheckResult("foo", taskId, ready = false, None)

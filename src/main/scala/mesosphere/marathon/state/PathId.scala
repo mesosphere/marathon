@@ -1,15 +1,16 @@
 package mesosphere.marathon
 package state
 
+import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation.isTrue
-import mesosphere.marathon.plugin
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
 
-case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[PathId] with plugin.PathId {
+sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
+  val absolute: Boolean
 
   def root: String = path.headOption.getOrElse("")
 
@@ -17,17 +18,32 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
 
   def tail: Seq[String] = path.tail
 
+  /**
+    * @return True if this path is "" or "/"
+    */
   def isEmpty: Boolean = path.isEmpty
 
-  def isRoot: Boolean = path.isEmpty
+  /**
+    * @return True if this path is "/"
+    */
+  def isRoot: Boolean = path.isEmpty && (absolute == true)
 
-  lazy val parent: PathId = path match {
-    case Nil => this
-    case head +: Nil => PathId(Nil, absolute)
-    case head +: rest => PathId(path.init, absolute)
+  /**
+    * Workaround method used to cope with the fact that the proper type isn't used for many ids in our code.
+    *
+    * Once Group, AppDefinition and PodDefinition all use AbsolutePathId, we should remove this method
+    * @return
+    */
+  @deprecated("Assuming an absolute path where it may not be is a source of bugs; avoid using this method if possible")
+  def asAbsolutePath: AbsolutePathId
+
+  lazy val parent: AbsolutePathId = path match {
+    case Nil => PathId.root
+    case head +: Nil => PathId.root
+    case head +: rest => AbsolutePathId(path.init)
   }
 
-  def allParents: List[PathId] = if (isRoot) Nil else {
+  def allParents: List[AbsolutePathId] = if (isRoot) Nil else {
     val p = parent
     p :: p.allParents
   }
@@ -54,7 +70,7 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
    *
    * PathId("child").canonicalPath(PathId("/parent")) == PathId("/parent/child")
    */
-  def canonicalPath(base: PathId = PathId(Nil, absolute = true)): PathId = {
+  def canonicalPath(base: AbsolutePathId = PathId.root): AbsolutePathId = {
     require(base.absolute, "Base path is not absolute, canonical path can not be computed!")
     @tailrec def in(remaining: Seq[String], result: Seq[String] = Nil): Seq[String] = remaining match {
       case head +: tail if head == "." => in(tail, result)
@@ -62,7 +78,12 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
       case head +: tail => in(tail, head +: result)
       case Nil => result.reverse
     }
-    if (absolute) PathId(in(path)) else PathId(in(base.path ++ path))
+    this match {
+      case rootPath: AbsolutePathId =>
+        AbsolutePathId(in(path))
+      case relativePath: RelativePathId =>
+        AbsolutePathId(in(base.path ++ path))
+    }
   }
 
   def safePath: String = {
@@ -79,7 +100,7 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
 
   override val toString: String = toString("/")
 
-  private def toString(delimiter: String): String = path.mkString(if (absolute) delimiter else "", delimiter, "")
+  protected def toString(delimiter: String): String
 
   override def compare(that: PathId): Int = {
     import Ordering.Implicits._
@@ -97,10 +118,54 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
   override val hashCode: Int = scala.util.hashing.MurmurHash3.productHash(this)
 }
 
+case class AbsolutePathId(path: Seq[String]) extends PathId {
+  override val absolute: Boolean = true
+  override def asAbsolutePath: AbsolutePathId = this
+  protected def toString(delimiter: String): String =
+    path.mkString("/", delimiter, "")
+
+  override def rootPath: AbsolutePathId = AbsolutePathId(path.headOption.map(_ :: Nil).getOrElse(Nil))
+
+  override def append(id: PathId): AbsolutePathId = AbsolutePathId(path ++ id.path)
+
+  override def append(id: String): AbsolutePathId = append(PathId(id))
+
+  override def /(id: String): AbsolutePathId = append(id)
+}
+
+object AbsolutePathId {
+  /**
+    * Parse the string as a path, but interpret it as relative to root, if it is relative.
+    *
+    * @param path The string representation of the path to parse
+    * @return An absolute path
+    */
+  def apply(path: String): AbsolutePathId = {
+    PathId(path).canonicalPath(PathId.root)
+  }
+
+}
+
+case class RelativePathId(path: Seq[String]) extends PathId with StrictLogging {
+  override val absolute: Boolean = false
+  override def asAbsolutePath: AbsolutePathId = {
+    /* There could be some input cases in the wild where this could be hit, but in a benign way
+     * Rather than break Marathon, lets log a loud message and hopefully those cases will be addressed as we remove
+     * this method
+     */
+    val ex = new RuntimeException("An absolute path was expected where we had a relative path")
+    logger.warn(s"Path '${this}' assumed to be an absolute path, but was relative. This is probably a bug.", ex)
+    this.canonicalPath(PathId.root)
+  }
+
+  protected def toString(delimiter: String): String =
+    path.mkString(delimiter)
+}
+
 object PathId {
-  def fromSafePath(in: String): PathId = {
-    if (in.isEmpty) PathId.empty
-    else PathId(in.split("_").toList, absolute = true)
+  def fromSafePath(in: String): AbsolutePathId = {
+    if (in.isEmpty) PathId.root
+    else AbsolutePathId(in.split("_").toList)
   }
 
   /**
@@ -112,16 +177,23 @@ object PathId {
   def sanitized(pieces: TraversableOnce[String], absolute: Boolean = true) =
     PathId(pieces.filter(_.nonEmpty).toList, absolute)
 
+  def apply(pieces: Seq[String], absolute: Boolean = true): PathId = {
+    if (absolute)
+      AbsolutePathId(pieces)
+    else
+      RelativePathId(pieces)
+  }
+
   def apply(in: String): PathId = {
     val raw = in.replaceAll("""(^/+)|(/+$)""", "").split("/")
     sanitized(raw, in.startsWith("/"))
   }
 
-  def empty: PathId = PathId(Nil)
+  def root: AbsolutePathId = AbsolutePathId(Nil)
 
   implicit class StringPathId(val stringPath: String) extends AnyVal {
     def toPath: PathId = PathId(stringPath)
-    def toRootPath: PathId = PathId(stringPath).canonicalPath()
+    def toAbsolutePath: AbsolutePathId = PathId(stringPath).canonicalPath()
   }
 
   /**
@@ -167,7 +239,7 @@ object PathId {
     */
   private def childOf(parent: PathId): Validator[PathId] = {
     isTrue[PathId](s"Identifier is not child of $parent. Hint: use relative paths.") { child =>
-      !parent.absolute || (child.canonicalPath(parent).parent == parent)
+      !parent.absolute || (child.canonicalPath(parent.asAbsolutePath).parent == parent)
     }
   }
 

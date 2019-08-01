@@ -13,7 +13,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
   val noEnabledFeatures = AllConf.withTestConfig()
   val appConversionFunc: (App => AppDefinition) = { app =>
     // assume canonical form and that the app is valid
-    Raml.fromRaml(AppNormalization.apply(AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings)).normalized(app))
+    Raml.fromRaml(AppNormalization.apply(AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings, true)).normalized(app))
   }
   implicit val groupUpdateRamlReader = raml.GroupConversion.groupUpdateRamlReads // HACK: workaround bogus compiler error?!
 
@@ -22,7 +22,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       Given("An empty group with updates")
       val rootGroup = createRootGroup()
       val update = GroupUpdate(
-        Some(PathId.empty.toString),
+        Some(PathId.root.toString),
         Some(Set.empty[App]),
         Some(Set(
           GroupUpdate(
@@ -36,18 +36,18 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val timestamp = Timestamp.now()
 
       When("The update is performed")
-      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.empty).normalized(update)
+      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root).normalized(update)
       val result: Group = Raml.fromRaml(GroupConversion(normalized, rootGroup, timestamp) -> appConversionFunc)
 
       validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
       Then("The update is applied correctly")
-      result.id should be(PathId.empty)
+      result.id should be(PathId.root)
       result.groupsById should have size 2
-      val test = result.group("test".toRootPath)
+      val test = result.group("test".toAbsolutePath)
       test should be('defined)
       test.get.groupsById should have size 1
-      val apps = result.group("apps".toRootPath)
+      val apps = result.group("apps".toAbsolutePath)
       apps should be('defined)
       apps.get.apps should have size 1
       val app = apps.get.apps.head
@@ -59,11 +59,11 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       Given("A group with updates of existing nodes")
       val blaApp = AppDefinition("/test/bla".toPath, Some("foo"), role = "*")
       val actual = createRootGroup(groups = Set(
-        createGroup("/test".toPath, apps = Map(blaApp.id -> blaApp)),
-        createGroup("/apps".toPath, groups = Set(createGroup("/apps/foo".toPath)))
+        createGroup("/test".toAbsolutePath, apps = Map(blaApp.id -> blaApp)),
+        createGroup("/apps".toAbsolutePath, groups = Set(createGroup("/apps/foo".toAbsolutePath)))
       ))
       val update = GroupUpdate(
-        Some(PathId.empty.toString),
+        Some(PathId.root.toString),
         Some(Set.empty[App]),
         Some(Set(
           GroupUpdate(
@@ -81,20 +81,20 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val timestamp = Timestamp.now()
 
       When("The update is performed")
-      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.empty).normalized(update)
+      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root).normalized(update)
       val result: RootGroup = RootGroup.fromGroup(Raml.fromRaml(
         GroupConversion(normalized, actual, timestamp) -> appConversionFunc))
 
       validate(result)(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
       Then("The update is applied correctly")
-      result.id should be(PathId.empty)
+      result.id should be(PathId.root)
       result.groupsById should have size 2
-      val test = result.group("test".toRootPath)
+      val test = result.group("test".toAbsolutePath)
       test should be('defined)
       test.get.groupsById should have size 1
       test.get.apps should have size 1
-      val apps = result.group("apps".toRootPath)
+      val apps = result.group("apps".toAbsolutePath)
       apps should be('defined)
       apps.get.groupsById should have size 1
       apps.get.apps should have size 1
@@ -108,10 +108,10 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val app1 = AppDefinition("/test/group1/app1".toPath, Some("foo"), role = "*")
       val app2 = AppDefinition("/test/group2/app2".toPath, Some("foo"), role = "*")
       val current = createGroup(
-        "/test".toPath,
+        "/test".toAbsolutePath,
         groups = Set(
-          createGroup("/test/group1".toPath, Map(app1.id -> app1)),
-          createGroup("/test/group2".toPath, Map(app2.id -> app2))
+          createGroup("/test/group1".toAbsolutePath, Map(app1.id -> app1)),
+          createGroup("/test/group2".toAbsolutePath, Map(app2.id -> app2))
         )
       )
 
@@ -141,14 +141,14 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       Then("The update is reflected in the current group")
       result.id.toString should be("/")
       result.apps should be('empty)
-      val group0 = result.group("/test".toPath).get
+      val group0 = result.group("/test".toAbsolutePath).get
       group0.id.toString should be("/test")
       group0.apps should be('empty)
       group0.groupsById should have size 2
-      val group1 = result.group("/test/group1".toPath).get
-      group1.id should be("/test/group1".toPath)
+      val group1 = result.group("/test/group1".toAbsolutePath).get
+      group1.id should be("/test/group1".toAbsolutePath)
       group1.apps.head._1 should be("/test/group1/app3".toPath)
-      val group3 = result.group("/test/group3".toPath).get
+      val group3 = result.group("/test/group3".toAbsolutePath).get
       group3.id should be("/test/group3".toPath)
       group3.apps should be('empty)
     }
@@ -169,7 +169,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
 
     "Relative path of a dependency, should be relative to group and not to the app" in {
       Given("A group with two apps. Second app is dependend of first.")
-      val update = GroupUpdate(Some(PathId.empty.toString), Some(Set.empty[App]), Some(Set(
+      val update = GroupUpdate(Some(PathId.root.toString), Some(Set.empty[App]), Some(Set(
         GroupUpdate(
           Some("test-group"),
           Some(Set(
@@ -179,17 +179,17 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       )))
 
       When("The update is performed")
-      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.empty).normalized(update)
+      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root).normalized(update)
       val result = Raml.fromRaml(
         GroupConversion(normalized, createRootGroup(), Timestamp.now()) -> appConversionFunc)
 
       validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
       Then("The update is applied correctly")
-      val group = result.group("test-group".toRootPath)
+      val group = result.group("test-group".toAbsolutePath)
       group should be('defined)
       group.get.apps should have size 2
-      val dependentApp = group.get.app("/test-group/test-app2".toPath).get
+      val dependentApp = group.get.app("/test-group/test-app2".toAbsolutePath).get
       dependentApp.dependencies should be (Set("/test-group/test-app1".toPath))
     }
   }

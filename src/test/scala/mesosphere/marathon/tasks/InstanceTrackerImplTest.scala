@@ -212,9 +212,9 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     }
 
     "MultipleApps" in new Fixture {
-      val appName1 = "app1".toRootPath
-      val appName2 = "app2".toRootPath
-      val appName3 = "app3".toRootPath
+      val appName1 = "app1".toAbsolutePath
+      val appName2 = "app2".toAbsolutePath
+      val appName3 = "app3".toAbsolutePath
 
       val app1_instance1 = setupTrackerWithRunningInstance(appName1, Timestamp.now(), instanceTracker).futureValue
       val app1_instance2 = setupTrackerWithRunningInstance(appName1, Timestamp.now(), instanceTracker).futureValue

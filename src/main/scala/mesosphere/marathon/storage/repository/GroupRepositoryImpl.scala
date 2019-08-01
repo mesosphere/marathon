@@ -16,7 +16,7 @@ import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreVersione
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
-import mesosphere.marathon.state.{AppDefinition, Group, RootGroup, PathId, Timestamp}
+import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.{RichLock, toRichFuture}
 
@@ -28,11 +28,11 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
 case class StoredGroup(
-    id: PathId,
+    id: AbsolutePathId,
     appIds: Map[PathId, OffsetDateTime],
     podIds: Map[PathId, OffsetDateTime],
     storedGroups: Seq[StoredGroup],
-    dependencies: Set[PathId],
+    dependencies: Set[AbsolutePathId],
     version: OffsetDateTime,
     enforceRole: Option[Boolean]) extends StrictLogging {
 
@@ -54,7 +54,7 @@ case class StoredGroup(
     appRepository: AppRepository,
     podRepository: PodRepository)(implicit ctx: ExecutionContext): Future[Group] = async { // linter:ignore UnnecessaryElseBranch
 
-    require(enforceRole.isDefined, s"BUG! Group $id has not enforce role filed defined which should be done by migration.")
+    require(enforceRole.isDefined, s"BUG! Group $id has no defined enforce role filed which should be done by migration.")
 
     val appFutures = appIds.map {
       case (appId, appVersion) => appRepository.getVersion(appId, appVersion).recover {
@@ -101,7 +101,7 @@ case class StoredGroup(
         pod.id -> pod
     }(collection.breakOut)
 
-    val groups: Map[PathId, Group] = await(Future.sequence(groupFutures)).map { group =>
+    val groups: Map[Group.GroupKey, Group] = await(Future.sequence(groupFutures)).map { group =>
       group.id -> group
     }(collection.breakOut)
 
@@ -175,7 +175,6 @@ object StoredGroup {
     // Default to false for top-level group.
     val enforceRole: Option[Boolean] =
       if (proto.hasEnforceRole()) Some(proto.getEnforceRole)
-      else if (id.parent.isRoot) Some(false)
       else None
 
     val groups = proto.getGroupsList.map(StoredGroup(_))
@@ -416,5 +415,5 @@ class StoredGroupRepositoryImpl[K, C, S](
 }
 
 object StoredGroupRepositoryImpl {
-  val RootId = PathId.empty
+  val RootId: PathId = PathId.root
 }

@@ -150,7 +150,8 @@ class CoreModuleImpl @Inject() (
       offerMatcherReconcilerModule.offerMatcherReconciler,
       offerMatcherManagerModule.globalOfferMatcher
     ),
-    pluginModule.pluginManager
+    pluginModule.pluginManager,
+    groupManagerModule.groupManager
   )(clock)
 
   private val frameworkIdPromise = Promise[FrameworkID]

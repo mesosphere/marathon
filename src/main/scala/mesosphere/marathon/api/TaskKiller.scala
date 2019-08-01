@@ -106,8 +106,8 @@ class TaskKiller @Inject() (
     val version = Timestamp.now()
 
     def killDeployment = groupManager.updateRoot(
-      PathId.empty,
-      _.updateTransitiveApps(PathId.empty, scaleApp, version),
+      PathId.root,
+      _.updateTransitiveApps(PathId.root, scaleApp, version),
       version = version,
       force = force,
       toKill = appInstances

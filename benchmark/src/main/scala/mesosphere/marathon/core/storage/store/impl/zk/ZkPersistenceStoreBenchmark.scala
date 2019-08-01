@@ -10,6 +10,7 @@ import akka.stream.{ActorMaterializer, Materializer}
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.base.{JvmExitsCrashStrategy, LifecycleState}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
+import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.storage.{CuratorZk, StorageConf, StorageConfig}
 import mesosphere.marathon.storage.repository.StoredGroup
 import mesosphere.marathon.storage.store.ZkStoreSerialization
@@ -53,8 +54,8 @@ class ZkPersistenceStoreBenchmark {
   def storeAndRemoveGroup(hole: Blackhole): Unit = {
     val done = Promise[Done]
     val pipeline: Future[Done] = async {
-      await(zkStore.store(storedGroup.id, storedGroup))
-      val delete = Future.sequence(rootGroup.groupsById.keys.map { id => zkStore.deleteAll(id)(appDefResolver) })
+      await(zkStore.store[PathId, StoredGroup](storedGroup.id, storedGroup))
+      val delete = Future.sequence(rootGroup.groupsById.keys.map { id => zkStore.deleteAll[PathId, AppDefinition](id)(appDefResolver) })
       await(delete)
       Done
     }
