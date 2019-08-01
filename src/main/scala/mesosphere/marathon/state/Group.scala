@@ -33,7 +33,7 @@ class Group(
     * @return None if the app was not found or non empty option with app.
     */
   def app(appId: PathId): Option[AppDefinition] = {
-    apps.get(appId) orElse group(appId.parent).flatMap(_.apps.get(appId))
+    apps.get(appId) orElse group(appId.parent.asAbsolutePath).flatMap(_.apps.get(appId))
   }
 
   /**
@@ -43,7 +43,7 @@ class Group(
     * @return None if the pod was not found or non empty option with pod.
     */
   def pod(podId: PathId): Option[PodDefinition] = {
-    pods.get(podId) orElse group(podId.parent).flatMap(_.pods.get(podId))
+    pods.get(podId) orElse group(podId.parent.asAbsolutePath).flatMap(_.pods.get(podId))
   }
 
   /**
@@ -156,7 +156,7 @@ object Group extends StrictLogging {
   def defaultDependencies: Set[AbsolutePathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  def validGroup(base: PathId, config: MarathonConf): Validator[Group] =
+  def validGroup(base: AbsolutePathId, config: MarathonConf): Validator[Group] =
     validator[Group] { group =>
       group.id is validPathWithBase(base)
 
@@ -227,7 +227,7 @@ object Group extends StrictLogging {
     isTrue("App has to be child of group with parent id") { app =>
       if (app.id.asAbsolutePath.parent == group.id.asAbsolutePath) group.apps.contains(app.id)
       else {
-        group.group(app.id.parent).exists(child => child.apps.contains(app.id))
+        group.group(app.id.parent.asAbsolutePath).exists(child => child.apps.contains(app.id))
       }
     }
   }

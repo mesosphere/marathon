@@ -108,7 +108,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       val appPath = PathId(app.id)
-      val group = buildGroupWithApp(appPath.parent)
+      val group = buildGroupWithApp(appPath.parent.asAbsolutePath)
 
       val rootGroup = createRootGroup(groups = Set(group), validate = validate, enabledFeatures = enabledFeatures)
       val plan = DeploymentPlan(rootGroup, rootGroup)

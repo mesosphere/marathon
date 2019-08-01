@@ -163,7 +163,7 @@ object GroupNormalization {
   @tailrec private def inferDefaultRole(conf: MarathonConf, groupId: PathId, rootGroup: RootGroup): Role = {
     assert(!groupId.isTopLevel && !groupId.isRoot)
     if (groupId.parent.isTopLevel) {
-      rootGroup.group(groupId.parent).fold(conf.mesosRole()) { parentGroup =>
+      rootGroup.group(groupId.parent.asAbsolutePath).fold(conf.mesosRole()) { parentGroup =>
         if (parentGroup.enforceRole) groupId.parent.root else conf.mesosRole()
       }
     } else inferDefaultRole(conf, groupId.parent, rootGroup)
