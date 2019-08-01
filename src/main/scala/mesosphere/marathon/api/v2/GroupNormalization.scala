@@ -134,6 +134,16 @@ object GroupNormalization {
     } else update
   }
 
+  def normalizationVisitor(conf: MarathonConf, base: AbsolutePathId, originalRootGroup: RootGroup): GroupNormalizationVisitor = {
+    // TODO: Only update if this is not a scale or rollback
+    if (base.isRoot) RootGroupVisitor(conf)
+    else if (base.isTopLevel) TopLevelGroupVisitor(conf)
+    else {
+      val defaultRole = inferDefaultRole(conf, base, originalRootGroup)
+      ChildGroupVisitor(conf, defaultRole)
+    }
+  }
+
   /**
     * Infers the enforce role field for a top-level group based on the update value and the default behavior.
     *

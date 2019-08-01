@@ -284,15 +284,21 @@ object Group extends StrictLogging {
 
   /** requires that apps are in canonical form */
   def validNestedGroupUpdateWithBase(base: AbsolutePathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] = {
-    val visitor =
-      if (base.isRoot) RootGroupValidationVisitor(originalRootGroup)
-      else if (base.isTopLevel) TopLevelGroupValidationVisitor(originalRootGroup)
-      else ChildGroupValidationVisitor(originalRootGroup)
+    val visitor = nestedGroupUpdateWithBaseValidation(base, originalRootGroup)
 
     (groupUpdate: raml.GroupUpdate) => dispatch(base, groupUpdate, visitor)
   }
 
-  trait GroupValidationVisitor extends GroupUpdateVisitor[raml.GroupUpdate, raml.App, Result, Result] {
+  def nestedGroupUpdateWithBaseValidation(base: AbsolutePathId, originalRootGroup: RootGroup): GroupValidationVisitor = {
+    if (base.isRoot) RootGroupValidationVisitor(originalRootGroup)
+    else if (base.isTopLevel) TopLevelGroupValidationVisitor(originalRootGroup)
+    else ChildGroupValidationVisitor(originalRootGroup)
+  }
+
+  trait GroupValidationVisitor extends GroupUpdateVisitor[raml.GroupUpdate, raml.App, Either[Failure, raml.App], Either[Failure, raml.GroupUpdate]] {
+    type G = Either[Failure, raml.GroupUpdate]
+    type A = Either[Failure, raml.App]
+
     val originalRootGroup: RootGroup
     val groupUpdateValidator = validator[raml.GroupUpdate] { group =>
       group is notNull
@@ -316,16 +322,22 @@ object Group extends StrictLogging {
       }
     }
 
-    override def visit(thisGroup: raml.GroupUpdate): Result = groupUpdateValidator(thisGroup)
+    override def visit(thisGroup: raml.GroupUpdate): Either[Failure, raml.GroupUpdate] = groupUpdateValidator(thisGroup) match {
+      case Success => Right(thisGroup)
+      case f: Failure => Left(f)
+    }
 
-    override def appVisitor(): AppVisitor[raml.App, Result] = AppValidationVisitor()
+    override def appVisitor(): AppVisitor[raml.App, Either[Result, raml.App]] = AppValidationVisitor()
 
     override def childGroupVisitor(): GroupValidationVisitor = this
 
-    override def done(base: AbsolutePathId, thisGroup: Result, children: Option[Vector[Result]], apps: Option[Vector[Result]]): Result = {
+    override def done(base: AbsolutePathId, thisGroup: G, children: Option[Vector[G]], apps: Option[Vector[A]]): G = {
       val childrenResult = children.fold[Result](Success) { groups =>
         var acc: Result = Success
-        groups.foreach { childGroup => acc = acc.and(childGroup) }
+        groups.foreach {
+          case Left(f) => acc = acc.and(f)
+          case Right(_) => ()
+        }
         acc
       }
 
@@ -335,7 +347,10 @@ object Group extends StrictLogging {
         acc
       }
 
-      thisGroup.and(childrenResult).and(appsResult)
+      thisGroup.and(childrenResult).and(appsResult) match {
+        case Success => ???
+        case f: Failure => Left(f)
+      }
     }
   }
 

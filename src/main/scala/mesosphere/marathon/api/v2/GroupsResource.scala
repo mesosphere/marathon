@@ -18,6 +18,7 @@ import mesosphere.marathon.core.appinfo.{GroupInfo, GroupInfoService, Selector}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
+import mesosphere.marathon.raml.{GroupUpdateConversionVisitor, GroupUpdateVisitor, Raml, ValidateOrThrowVisitor}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -243,18 +244,27 @@ class GroupsResource @Inject() (
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
 
+      val newVersion = Timestamp.now()
+      val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
+
+      val visitor = GroupNormalization.normalizationVisitor(config, effectivePath, originalRootGroup)
+        .andThen(Group.nestedGroupUpdateWithBaseValidation(effectivePath, originalRootGroup))
+        .andThen(ValidateOrThrowVisitor())
+        .andThen(GroupUpdateConversionVisitor(originalRootGroup, newVersion, appConversionFunc))
+
+      val updatedGroup: Group = GroupUpdateVisitor.dispatch(raw, effectivePath, visitor)
+
       val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath, originalRootGroup)
       val groupUpdate = validateOrThrow(
         GroupNormalization.updateNormalization(config, effectivePath, originalRootGroup).normalized(raw)
       )(groupValidator)
 
       if (dryRun) {
-        val newVersion = Timestamp.now()
-        val updatedGroup = await(groupsService.updateGroup(originalRootGroup, effectivePath, groupUpdate, newVersion))
+        val updatedRootGroup = await(groupsService.updateGroup(originalRootGroup, effectivePath, groupUpdate, newVersion))
 
         ok(
           Json.obj(
-            "steps".->(DeploymentPlan(originalRootGroup, updatedGroup).steps)
+            "steps".->(DeploymentPlan(originalRootGroup, updatedRootGroup).steps)
           ).toString()
         )
       } else {

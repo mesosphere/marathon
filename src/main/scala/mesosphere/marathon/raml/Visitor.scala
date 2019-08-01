@@ -1,16 +1,18 @@
 package mesosphere.marathon
 package raml
 
+import com.wix.accord.Failure
 import mesosphere.marathon.state.{AbsolutePathId, PathId}
 
 /**
   * The interface to a group visitor pattern.
   *
-  * @tparam I The type of the update
-  * @tparam A The return type of the [[AppVisitor.visit()]] call.
-  * @tparam G The return type of [[GroupUpdateVisitor.visit()]].
+  * @tparam GroupIn The type of the update
+  * @tparam AppIn The input type to [[AppVisitor.visit()]].
+  * @tparam AppOut The return type of the [[AppVisitor.visit()]] call.
+  * @tparam GroupOut The return type of [[GroupUpdateVisitor.visit()]].
   */
-trait GroupUpdateVisitor[I, AI, AR, G] {
+trait GroupUpdateVisitor[GroupIn, AppIn, AppOut, GroupOut] {
 
   /**
     * Visit the current group. It should not change `group.apps` or `group.groups`.
@@ -18,7 +20,7 @@ trait GroupUpdateVisitor[I, AI, AR, G] {
     * @param thisGroup The current group to visit.
     * @return The visit result.
     */
-  def visit(thisGroup: I): G
+  def visit(thisGroup: GroupIn): GroupOut
 
   /**
     * Factory method for a visitor of the direct children of this group.
@@ -28,7 +30,7 @@ trait GroupUpdateVisitor[I, AI, AR, G] {
     * @return The [[GroupUpdateVisitor]] for the children. See [[mesosphere.marathon.api.v2.RootGroupVisitor.childGroupVisitor()]]
     *         for an example.
     */
-  def childGroupVisitor(): GroupUpdateVisitor[I, AI, AR, G]
+  def childGroupVisitor(): GroupUpdateVisitor[GroupIn, AppIn, AppOut, GroupOut]
 
   /**
     * Factory method for a visitor for all direct apps in `group.apps`. The visitor will not visit
@@ -36,7 +38,7 @@ trait GroupUpdateVisitor[I, AI, AR, G] {
     *
     * @return The new visitor, eg [[mesosphere.marathon.api.v2.AppNormalizeVisitor]].
     */
-  def appVisitor(): AppVisitor[AI, AR]
+  def appVisitor(): AppVisitor[AppIn, AppOut]
 
   /**
     * Accumulate results from [[visit()]], [[childGroupVisitor()]]'s visits to all direct child groups
@@ -48,25 +50,53 @@ trait GroupUpdateVisitor[I, AI, AR, G] {
     * @param apps The result from all visits to apps in this group.
     * @return The final accumulated result.
     */
-  def done(base: AbsolutePathId, thisGroup: G, children: Option[Vector[G]], apps: Option[Vector[AR]]): G
+  def done(base: AbsolutePathId, thisGroup: GroupOut, children: Option[Vector[GroupOut]], apps: Option[Vector[AppOut]]): GroupOut
 
-  def andThen[A2R, G2](other: GroupUpdateVisitor[G, AR, A2R, G2]): GroupUpdateVisitor[I, AI, A2R, G2] = GroupUpdateVisitorCompose(this, other)
+  /**
+    * Composes this visitor with and outer one.
+    *
+    * @param outer The outer visitor which visits the results of this visitor.
+    * @tparam OuterAppResult The return type of the outer app visits.
+    * @tparam OuterResult The return type of the outer group visits.
+    * @return A composed visitor.
+    */
+  def andThen[OuterAppResult, OuterResult](outer: GroupUpdateVisitor[GroupOut, AppOut, OuterAppResult, OuterResult]): GroupUpdateVisitor[GroupIn, AppIn, OuterAppResult, OuterResult] = GroupUpdateVisitorCompose(this, outer)
 }
 
-case class GroupUpdateVisitorCompose[I, A1I, A1R, A2R, G1, G2](first: GroupUpdateVisitor[I, A1I, A1R, G1], other: GroupUpdateVisitor[G1, A1R, A2R, G2]) extends GroupUpdateVisitor[I, A1I, A2R, G2] {
-  override def visit(thisGroup: I): G2 = other.visit(first.visit(thisGroup))
+/**
+  * Represents the composition of two group update visitor.
+  *
+  * @param inner The visitor that is first applied.
+  * @param outer The visitor that is applied to the result of the inner visitor.
+  * @tparam InnerGroupIn The input type for the inner group visitor.
+  * @tparam InnerAppIn The app input type for the inner group visitor.
+  * @tparam InnerAppOut The output type of the inner visitor. It is the input type for the outer.
+  * @tparam OuterAppOut The app output type of the outer visitor.
+  * @tparam InnerGroupOut The group output type of the inner group visitor. It is the input type of
+  *                       the outer visitor.
+  * @tparam OuterGroupOut The group output type of the outer group visitor.
+  */
+case class GroupUpdateVisitorCompose[InnerGroupIn, InnerAppIn, InnerAppOut, OuterAppOut, InnerGroupOut, OuterGroupOut](
+    inner: GroupUpdateVisitor[InnerGroupIn, InnerAppIn, InnerAppOut, InnerGroupOut],
+    outer: GroupUpdateVisitor[InnerGroupOut, InnerAppOut, OuterAppOut, OuterGroupOut]) extends GroupUpdateVisitor[InnerGroupIn, InnerAppIn, OuterAppOut, OuterGroupOut] {
 
-  override def childGroupVisitor(): GroupUpdateVisitor[I, A1I, A2R, G2] = GroupUpdateVisitorCompose(first.childGroupVisitor(), other.childGroupVisitor())
+  override def visit(thisGroup: InnerGroupIn): OuterGroupOut = outer.visit(inner.visit(thisGroup))
 
-  override def appVisitor(): AppVisitor[A1I, A2R] = AppVisitorCompose(first.appVisitor(), other.appVisitor())
+  override def childGroupVisitor(): GroupUpdateVisitor[InnerGroupIn, InnerAppIn, OuterAppOut, OuterGroupOut] = GroupUpdateVisitorCompose(inner.childGroupVisitor(), outer.childGroupVisitor())
 
-  override def done(base: AbsolutePathId, thisGroup: G2, children: Option[Vector[G2]], apps: Option[Vector[A2R]]): G2 = other.done(base, thisGroup, children, apps)
+  override def appVisitor(): AppVisitor[InnerAppIn, OuterAppOut] = AppVisitorCompose(inner.appVisitor(), outer.appVisitor())
+
+  override def done(base: AbsolutePathId, thisGroup: OuterGroupOut, children: Option[Vector[OuterGroupOut]], apps: Option[Vector[OuterAppOut]]): OuterGroupOut = outer.done(base, thisGroup, children, apps)
 }
 
 /**
   * The interface to an app visitor pattern.
+  *
+  * @tparam In The input type of the app for the visit method.
+  * @tparam Out The output type of the visit method.
   */
-trait AppVisitor[I, R] {
+trait AppVisitor[In, Out] {
+
   /**
     * Visit an app.
     *
@@ -75,12 +105,43 @@ trait AppVisitor[I, R] {
     *                hold the app `/prod/db/postgresql`.
     * @return The result of the visit.
     */
-  def visit(app: I, groupId: AbsolutePathId): R
+  def visit(app: In, groupId: AbsolutePathId): Out
 }
 
-case class AppVisitorCompose[I, R1, R2](first: AppVisitor[I, R1], second: AppVisitor[R1, R2]) extends AppVisitor[I, R2] {
+/**
+  * Represents a composition of two app visitors. It will call the outer visit method on the result
+  * of the inner visit call.
+  *
+  * @param inner The [[AppVisitor]] that is first visited.
+  * @param outer The [[AppVisitor]] that will visit the result of the inner visit.
+  * @tparam InnterIn The input type to the inner visit.
+  * @tparam InnterOut The result type of the inner visit.
+  * @tparam OuterOut The result type of the outer visit.
+  */
+case class AppVisitorCompose[InnterIn, InnterOut, OuterOut](inner: AppVisitor[InnterIn, InnterOut], outer: AppVisitor[InnterOut, OuterOut]) extends AppVisitor[InnterIn, OuterOut] {
 
-  override def visit(app: I, groupId: AbsolutePathId): R2 = second.visit(first.visit(app, groupId), groupId)
+  override def visit(app: InnterIn, groupId: AbsolutePathId): OuterOut = outer.visit(inner.visit(app, groupId), groupId)
+}
+
+case class ValidateOrThrowVisitor[GroupOut, AppOut]() extends GroupUpdateVisitor[Either[Failure, GroupOut], Either[Failure, AppOut], AppOut, GroupOut] {
+
+  object AppValidateOrThrowVisitor extends AppVisitor[Either[Failure, AppOut], AppOut] {
+    override def visit(app: Either[Failure, AppOut], groupId: AbsolutePathId): AppOut = app match {
+      case Left(f) => throw ValidationFailedException(???, f)
+      case Right(r) => r
+    }
+  }
+
+  override def visit(thisGroup: Either[Failure, GroupOut]): GroupOut = thisGroup match {
+    case Left(f) => throw ValidationFailedException(???, f)
+    case Right(r) => r
+  }
+
+  override def appVisitor(): AppVisitor[Either[Failure, AppOut], AppOut] = AppValidateOrThrowVisitor
+
+  override def childGroupVisitor(): GroupUpdateVisitor[Either[Failure, GroupOut], Either[Failure, AppOut], AppOut, GroupOut] = this
+
+  override def done(base: AbsolutePathId, thisGroup: GroupOut, children: Option[Vector[GroupOut]], apps: Option[Vector[AppOut]]): GroupOut = thisGroup
 }
 
 object GroupUpdateVisitor {
@@ -93,19 +154,19 @@ object GroupUpdateVisitor {
     * @param visitor
     * @return The group update returned by the visitor.
     */
-  def dispatch[A, R](groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor[raml.GroupUpdate, raml.App, A, R]): R = {
-    val visitedGroup: R = visitor.visit(groupUpdate)
+  def dispatch[AppOut, GroupOut](groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor[raml.GroupUpdate, raml.App, AppOut, GroupOut]): GroupOut = {
+    val visitedGroup: GroupOut = visitor.visit(groupUpdate)
 
     // Visit each child group.
     val childGroupVisitor = visitor.childGroupVisitor()
-    val visitedChildren: Option[Vector[R]] = groupUpdate.groups.map(_.toVector.map { childGroup =>
+    val visitedChildren: Option[Vector[GroupOut]] = groupUpdate.groups.map(_.toVector.map { childGroup =>
       val absoluteChildGroupPath = PathId(childGroup.id.get).canonicalPath(base)
       dispatch(childGroup, absoluteChildGroupPath, childGroupVisitor)
     })
 
     // Visit each app.
     val appVisitor = visitor.appVisitor()
-    val visitedApps: Option[Vector[A]] = groupUpdate.apps.map(_.toVector.map { app =>
+    val visitedApps: Option[Vector[AppOut]] = groupUpdate.apps.map(_.toVector.map { app =>
       appVisitor.visit(app, base)
     })
 
