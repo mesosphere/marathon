@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package integration.facades
 
-import akka.Done
 import akka.actor.ActorSystem
 import akka.http.scaladsl.client.RequestBuilding.{Get, Post}
 import akka.http.scaladsl.model.{HttpEntity, HttpResponse}
@@ -10,7 +9,7 @@ import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon.integration.setup.RestResult
 import mesosphere.marathon.integration.setup.AkkaHttpResponse._
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Await._
