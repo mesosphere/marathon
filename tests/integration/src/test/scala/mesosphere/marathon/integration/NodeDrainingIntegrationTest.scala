@@ -33,7 +33,7 @@ class NodeDrainingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
       val maybeAgentId = events.futureValue.find(_.eventType == "status_update_event").map(_.info("slaveId").asInstanceOf[String])
       maybeAgentId should not be empty
-      val agentId = maybeAgentId.get
+      val agentId = maybeAgentId.value
 
       Then("the task will eventually fail resulting in a huge backoff")
       waitForStatusUpdates("TASK_FAILED")
