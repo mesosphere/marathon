@@ -372,12 +372,10 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       Then("we get taskStats object in the appInfo")
       // we check the calculation of the stats in TaskStatsByVersionTest, so we only check some basic stats
 
-      import mesosphere.marathon.api.v2.json.Formats._
       withClue(Json.prettyPrint(Json.toJson(appInfo))) {
         appInfo.tasks should not be empty
-        appInfo.maybeTaskStats.get.maybeTotalSummary should not be empty
-        appInfo.maybeTaskStats.get.maybeTotalSummary.get.counts.tasksStaged should be (1)
-        appInfo.maybeTaskStats.get.maybeTotalSummary.get.counts.tasksRunning should be (2)
+        appInfo.tasksStats.value.totalSummary.value.counts.staged should be (1)
+        appInfo.tasksStats.value.totalSummary.value.counts.running should be (2)
 
         appInfo should be(AppInfo(
           app,

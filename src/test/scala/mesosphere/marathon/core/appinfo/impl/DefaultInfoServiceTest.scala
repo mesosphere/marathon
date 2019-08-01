@@ -4,6 +4,7 @@ package core.appinfo.impl
 import mesosphere.UnitTest
 import mesosphere.marathon.core.appinfo.{AppInfo, GroupInfo, _}
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 
@@ -16,7 +17,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val f = new Fixture
       f.groupManager.app(app1.id) returns Some(app1)
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo(Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
 
       When("querying for one App")
@@ -39,7 +40,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val f = new Fixture
       f.groupManager.app(app1.id) returns Some(app1)
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo(Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
 
       When("querying for one App")
@@ -58,7 +59,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val someGroup = createRootGroup(apps = someApps)
       f.groupManager.rootGroup() returns someGroup
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo(Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
 
       When("querying all apps")
@@ -82,7 +83,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val someGroup = createRootGroup(apps = someApps)
       f.groupManager.rootGroup() returns someGroup
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo(Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
 
       When("querying all apps")
@@ -118,7 +119,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val f = new Fixture
       f.groupManager.group(PathId("/nested")) returns someGroupWithNested.group(AbsolutePathId("/nested"))
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo(Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
 
       When("querying all apps in that group")
@@ -141,7 +142,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val f = new Fixture
       f.groupManager.group(PathId("/nested")) returns someGroupWithNested.group(AbsolutePathId("/nested"))
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo(Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
 
       When("querying all apps in that group")
@@ -159,7 +160,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val f = new Fixture
       val rootGroup = someGroupWithNested
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo(Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
       f.groupManager.group(rootGroup.id) returns Some(rootGroup)
 
@@ -192,7 +193,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val f = new Fixture
       val rootGroup = nestedGroup
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo(Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
       f.groupManager.group(rootGroup.id) returns Some(rootGroup)
       val selector = GroupInfoService.Selectors(
@@ -221,7 +222,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val rootGroup = createRootGroup(Map(rootApp.id -> rootApp), groups = Set(nestedGroup))
 
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo(Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
       f.groupManager.group(rootId) returns Some(rootGroup)
       val selector = GroupInfoService.Selectors(
