@@ -4,7 +4,7 @@ package state
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.core.pod.BridgeNetwork
-import mesosphere.marathon.api.v2.{GroupNormalization, GroupsResource, Validation}
+import mesosphere.marathon.api.v2.{GroupNormalization, Validation}
 import mesosphere.marathon.raml.{GroupConversion, Raml}
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
@@ -113,12 +113,10 @@ class RootGroupBenchmark extends GroupBenchmark {
 
   @Benchmark
   def serializationRoundtrip(hole: Blackhole): Unit = {
-    val normalizedGroup = GroupNormalization.updateNormalization(config, PathId.root).normalized(groupRaml)
-    val apps = GroupsResource.normalizeApps(rootGroup, PathId.root, normalizedGroup, config)
+    val normalizedGroup = GroupNormalization.updateNormalization(config, PathId.root, rootGroup).normalized(groupRaml)
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
     val converted = Raml.fromRaml(
       GroupConversion(normalizedGroup, rootGroup, version.version) -> appConversionFunc)
-    hole.consume(apps)
     hole.consume(converted)
   }
 }
