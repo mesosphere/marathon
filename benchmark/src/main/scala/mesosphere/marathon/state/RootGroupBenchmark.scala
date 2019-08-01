@@ -58,7 +58,7 @@ class GroupBenchmark {
     if (level == groupDepth) return Set.empty
 
     (0 to groupsPerLevel).map { gid =>
-      val groupPath = (parent / s"group-$gid").asAbsolutePath
+      val groupPath = (parent / s"group-$gid")
       raml.GroupUpdate(
         id = Some(groupPath.toString),
         apps = Some((0 to appsPerGroup).map { aid => makeAppRaml(groupPath / s"app-$aid") }.toSet),
