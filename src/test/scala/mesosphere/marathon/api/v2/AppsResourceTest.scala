@@ -1653,9 +1653,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     "Index has counts and deployments by default (regression for #2171)" in new Fixture {
       Given("An app and group")
-      val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"), role = "*")
+      val app = raml.App(id = "/app", cmd = Some("foo"), role = Some("*"))
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments)
-      val appInfo = AppInfo(app, maybeDeployments = Some(Seq(Identifiable("deployment-123"))), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
+      val appInfo = raml.AppInfo(app, maybeDeployments = Some(Seq(Identifiable("deployment-123"))), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
       appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
 
       When("The the index is fetched without any filters")

@@ -160,7 +160,7 @@ class AppsResource @Inject() (
           val appId = id.toAbsolutePath
           await(appInfoService.selectApp(appId, authzSelector, resolvedEmbed)) match {
             case Some(appInfo) =>
-              checkAuthorization(ViewRunSpec, appInfo.app)
+              checkAuthorization(ViewRunSpec, Raml.fromRaml(appInfo.app))
               ok(jsonObjString("app" -> appInfo))
             case None => unknownApp(appId)
           }
