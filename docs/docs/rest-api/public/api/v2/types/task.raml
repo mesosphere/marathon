@@ -71,3 +71,52 @@ types:
   TaskStatusCondition:
     type: string
     enum: [ running, staging ]
+
+  TaskFailure:
+    type: object
+    properties:
+      appId: strings.PathId
+      host: string
+      message: string
+      state: string
+      taskId: string
+      timestamp: datetime
+      version: datetime
+      slaveId?: string
+
+  TaskCounts:
+    type: object
+    properties:
+      staged:
+        type: integer
+        format: int32
+      running:
+        type: integer
+        format: int32
+      healthy:
+        type: integer
+        format: int32
+      unhealthy:
+        type: integer
+        format: int32
+
+  TaskLifeTime:
+    type: object
+    properties:
+      averageSeconds: number
+      medianSeconds: number
+
+  TaskStats:
+    type: object
+    properties:
+      counts: TaskCounts
+      lifeTime: TaskLifeTime
+
+  TaskStatsByVersion:
+    type: object
+    properties:
+      # TODO: the Formats.TaskStatsWrites has a "stats" field. Need to test.
+      startedAfterLastScaling?: TaskStats
+      withLatestConfig?: TaskStats
+      withOutdatedConfig?: TaskStats
+      totalSummary?: TaskStats

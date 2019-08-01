@@ -95,10 +95,15 @@ class AppInfoBaseData(
       app = Raml.toRaml(app),
       readinessCheckResults = readinessChecksByAppOpt.map(convertReadinessCheckResults).getOrElse(Nil),
       tasks = enrichedTasksOpt.getOrElse(Seq.empty).map(Raml.toRaml(_)(raml.TaskConversion.enrichedTaskRamlWrite)),
-//      maybeCounts = taskCountsOpt,
-//      maybeDeployments = runningDeploymentsByAppOpt.map(_.apply(app.id)),
-//      maybeLastTaskFailure = lastTaskFailureOpt,
-//      maybeTaskStats = taskStatsOpt
+      tasksStaged = taskCountsOpt.map(_.tasksStaged),
+      tasksRunning = taskCountsOpt.map(_.tasksRunning),
+      tasksHealthy = taskCountsOpt.map(_.tasksHealthy),
+      tasksUnhealthy = taskCountsOpt.map(_.tasksUnhealthy),
+      deployments = runningDeploymentsByAppOpt.fold(Seq.empty[raml.Identifiable])(_.apply(app.id).map{ i => raml.Identifiable(i.id) }),
+      lastTaskFailure = lastTaskFailureOpt.map{ f =>
+        raml.TaskFailure(app.id.toString, f.host, f.message, f.state.name(), f.taskId.getValue, f.timestamp.toOffsetDateTime, f.version.toOffsetDateTime, f.slaveId.map(_.getValue))
+      }
+    //      maybeTaskStats = taskStatsOpt
     )
     appInfo
   }

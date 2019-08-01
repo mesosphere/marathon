@@ -1655,7 +1655,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("An app and group")
       val app = raml.App(id = "/app", cmd = Some("foo"), role = Some("*"))
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments)
-      val appInfo = raml.AppInfo(app, maybeDeployments = Some(Seq(Identifiable("deployment-123"))), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
+      val appInfo = raml.AppInfo(app, deployments = Seq(raml.Identifiable("deployment-123")),
+        tasksStaged = Some(1), tasksRunning = Some(2), tasksHealthy = Some(3), tasksUnhealthy = Some(4))
       appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
 
       When("The the index is fetched without any filters")
@@ -1669,10 +1670,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     "Index passes with embed LastTaskFailure (regression for #4765)" in new Fixture {
       Given("An app and group")
-      val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"), role = "*")
+      val app = raml.App(id = "/app", cmd = Some("foo"), role = Some("*"))
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments, Embed.LastTaskFailure)
-      val taskFailure = TaskFailure.empty
-      val appInfo = AppInfo(app, maybeLastTaskFailure = Some(taskFailure), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
+      val appInfo = raml.AppInfo(
+        app,
+        lastTaskFailure = Some(raml.TaskFailure("/", "", "", "TASK_STAGING", "", Timestamp.now().toOffsetDateTime, Timestamp.now().toOffsetDateTime)),
+        tasksStaged = Some(1), tasksRunning = Some(2), tasksHealthy = Some(3), tasksUnhealthy = Some(4))
       appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
 
       When("The the index is fetched with last  task failure")

@@ -347,10 +347,21 @@ types:
     type: object
     properties:
       app: App
-       # info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),
-      # info.maybeDeployments.map(deployments => Json.obj("deployments" -> deployments)),
+      tasksStaged?:
+        type: integer
+        format: int32
+      tasksRunning?:
+        type: integer
+        format: int32
+      tasksHealthy?:
+        type: integer
+        format: int32
+      tasksUnhealthy?:
+        type: integer
+        format: int32
+      deployments?: strings.Identifiable[]
       readinessCheckResults?: readiness.TaskReadinessCheckResult[]
       tasks?: task.Task[]
-      # info.maybeLastTaskFailure.map(lastFailure => Json.obj("lastTaskFailure" -> lastFailure)),
-      # info.maybeTaskStats.map(taskStats => Json.obj("taskStats" -> taskStats))
+      lastTaskFailure?: task.TaskFailure
+      tasksStats?: task.TaskStatsByVersion
 

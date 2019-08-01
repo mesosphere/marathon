@@ -112,7 +112,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Tasks)).futureValue
 
       Then("should have 0 taskInfos")
-      appInfo.maybeTasks.get should have size 0
+      appInfo.tasks should have size 0
     }
 
     "requesting tasks without health information" in {
@@ -132,8 +132,8 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Tasks)).futureValue
 
       Then("we get a tasks object in the appInfo")
-      appInfo.maybeTasks.get should have size 2
-      appInfo.maybeTasks.value.map(_.task) should equal (Seq(task1, task2))
+      appInfo.tasks should have size 2
+      appInfo.tasks should equal (Seq(task1, task2))
     }
 
     "requesting tasks retrieves tasks from taskTracker and health infos" in {
@@ -165,9 +165,8 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Tasks)).futureValue
 
       Then("we get a tasks object in the appInfo")
-      appInfo.maybeTasks should not be empty
-      appInfo.maybeTasks.get.map(_.appId.toString) should have size 3
-      appInfo.maybeTasks.get.map(_.task.taskId.idString).toSet should be (Set(
+      appInfo.tasks should have size 3
+      appInfo.tasks.map(_.id).toSet should be (Set(
         running1.appTask.taskId.idString,
         running2.appTask.taskId.idString,
         running3.appTask.taskId.idString))
@@ -375,7 +374,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import mesosphere.marathon.api.v2.json.Formats._
       withClue(Json.prettyPrint(Json.toJson(appInfo))) {
-        appInfo.maybeTaskStats should not be empty
+        appInfo.tasks should not be empty
         appInfo.maybeTaskStats.get.maybeTotalSummary should not be empty
         appInfo.maybeTaskStats.get.maybeTotalSummary.get.counts.tasksStaged should be (1)
         appInfo.maybeTaskStats.get.maybeTotalSummary.get.counts.tasksRunning should be (2)
