@@ -10,8 +10,9 @@ import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon.integration.setup.RestResult
 import mesosphere.marathon.integration.setup.AkkaHttpResponse._
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 
+import scala.collection.immutable.Seq
 import scala.concurrent.Await._
 import scala.concurrent.duration._
 
@@ -146,6 +147,33 @@ class MesosFacade(val url: String, val waitTime: FiniteDuration = 30.seconds)(im
       "type" -> "MARK_AGENT_GONE",
       "mark_agent_gone" -> Json.obj(
         "agent_id" -> Json.obj("value" -> agentId))))), waitTime)
+    response.map { _ =>
+      Done
+    }
+  }
+
+  /**
+    * Drain agent using v1 operator API
+    *
+    * @return Right(Done) on success, Left(errorString) otherwise
+    */
+  def drainAgent(agentId: String, maxGracePeriod: Option[Int] = None, markAsGone: Boolean = false): RestResult[Done] = {
+    var requestPayload = Json.obj(
+      "type" -> "DRAIN_AGENT",
+      "drain_agent" -> Json.obj(
+        "agent_id" -> Json.obj("value" -> agentId),
+        // TODO: not sure whether is expected to be an object or a boolean field
+        "mark_gone" -> Json.obj("value" -> markAsGone)
+      )
+    )
+    maxGracePeriod.foreach { duration =>
+      requestPayload = requestPayload ++ Json.obj(
+        "max_grace_period" -> Json.obj("value" -> duration)
+      )
+    }
+
+    val response = result(request(Post(s"$url/api/v1", requestPayload)), waitTime)
+    logger.info(s"Received $response for request $requestPayload")
     response.map { _ =>
       Done
     }
