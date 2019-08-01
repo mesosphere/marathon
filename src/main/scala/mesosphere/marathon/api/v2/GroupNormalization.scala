@@ -77,7 +77,9 @@ case class AppNormalizeVisitor(conf: MarathonConf, defaultRole: Role) extends Ap
 
   override def visit(app: raml.App, absoluteGroupPath: AbsolutePathId): raml.App = {
     val validateAndNormalizeApp: Normalization[raml.App] = AppHelpers.appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds(absoluteGroupPath))
-    validateAndNormalizeApp.normalized(app.copy(id = PathId(app.id).canonicalPath(absoluteGroupPath).toString))
+    val normalizedAbsoluteId = PathId(app.id).canonicalPath(absoluteGroupPath).toString
+
+    validateAndNormalizeApp.normalized(app.copy(id = normalizedAbsoluteId))
   }
 }
 
@@ -92,7 +94,7 @@ object GroupNormalization {
     * @param visitor
     * @return The group update returned by the visitor.
     */
-  def dispatch(conf: MarathonConf, groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor): raml.GroupUpdate = {
+  private def dispatch(conf: MarathonConf, groupUpdate: raml.GroupUpdate, base: AbsolutePathId, visitor: GroupUpdateVisitor): raml.GroupUpdate = {
     val updatedGroup = visitor.visit(groupUpdate)
 
     // Visit each child group.
@@ -160,10 +162,10 @@ object GroupNormalization {
     * @param rootGroup The root group used to look up the default role.
     * @return The default role for all apps and pods.
     */
-  @tailrec private def inferDefaultRole(conf: MarathonConf, groupId: PathId, rootGroup: RootGroup): Role = {
+  @tailrec private def inferDefaultRole(conf: MarathonConf, groupId: AbsolutePathId, rootGroup: RootGroup): Role = {
     assert(!groupId.isTopLevel && !groupId.isRoot)
     if (groupId.parent.isTopLevel) {
-      rootGroup.group(groupId.parent.asAbsolutePath).fold(conf.mesosRole()) { parentGroup =>
+      rootGroup.group(groupId.parent).fold(conf.mesosRole()) { parentGroup =>
         if (parentGroup.enforceRole) groupId.parent.root else conf.mesosRole()
       }
     } else inferDefaultRole(conf, groupId.parent, rootGroup)
