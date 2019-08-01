@@ -168,7 +168,6 @@ class Group(
     }
 
     // append groups
-    // TODO: check last child
     val iter = groupsById.valuesIterator
     while (iter.hasNext) {
       val childGroup = iter.next()
