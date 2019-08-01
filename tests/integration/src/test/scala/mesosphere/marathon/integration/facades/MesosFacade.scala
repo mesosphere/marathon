@@ -138,26 +138,18 @@ class MesosFacade(val url: String, val waitTime: FiniteDuration = 30.seconds)(im
 
   /**
     * Mark agent as gone using v1 operator API
-    *
-    * @param agentId
-    * @return Right(Done) on success, Left(errorString) otherwise
     */
-  def markAgentGone(agentId: String): RestResult[Done] = {
-    val response = result(request(Post(s"$url/api/v1", Json.obj(
+  def markAgentGone(agentId: String): RestResult[HttpResponse] = {
+    result(request(Post(s"$url/api/v1", Json.obj(
       "type" -> "MARK_AGENT_GONE",
       "mark_agent_gone" -> Json.obj(
         "agent_id" -> Json.obj("value" -> agentId))))), waitTime)
-    response.map { _ =>
-      Done
-    }
   }
 
   /**
     * Drain agent using v1 operator API
-    *
-    * @return Right(Done) on success, Left(errorString) otherwise
     */
-  def drainAgent(agentId: String, maxGracePeriod: Option[Int] = None, markAsGone: Boolean = false): RestResult[Done] = {
+  def drainAgent(agentId: String, maxGracePeriod: Option[Int] = None, markAsGone: Boolean = false): RestResult[HttpResponse] = {
     var requestPayload = Json.obj(
       "type" -> "DRAIN_AGENT",
       "drain_agent" -> Json.obj(
@@ -172,10 +164,6 @@ class MesosFacade(val url: String, val waitTime: FiniteDuration = 30.seconds)(im
       )
     }
 
-    val response = result(request(Post(s"$url/api/v1", requestPayload)), waitTime)
-    logger.info(s"Received $response for request $requestPayload")
-    response.map { _ =>
-      Done
-    }
+    result(request(Post(s"$url/api/v1", requestPayload)), waitTime)
   }
 }

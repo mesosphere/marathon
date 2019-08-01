@@ -47,7 +47,7 @@ class NodeDrainingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       }
 
       When("the node is drained")
-      mesos.drainAgent(agentId, maxGracePeriod = Some(42)) should be(Ok)
+      mesos.drainAgent(agentId) should be(OK)
 
       Then("the delay is reset")
       eventually {
