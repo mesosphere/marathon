@@ -54,8 +54,10 @@ private[jobs] object OverdueInstancesActor {
 
     private[this] def killOverdueInstances(now: Timestamp, instances: Seq[Instance]): Unit = {
       val instancesToKill = overdueInstances(now, instances)
-      logger.info(s"Killing overdue instances: ${instancesToKill.map(_.instanceId).mkString(", ")}")
-      killService.killInstancesAndForget(instancesToKill, KillReason.Overdue)
+      if (instancesToKill.nonEmpty) {
+        logger.info(s"Killing overdue instances: ${instancesToKill.map(_.instanceId).mkString(", ")}")
+        killService.killInstancesAndForget(instancesToKill, KillReason.Overdue)
+      }
     }
 
     private[this] def overdueInstances(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {

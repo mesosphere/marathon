@@ -35,7 +35,9 @@ private[termination] class KillServiceDelegate(actorRef: ActorRef) extends KillS
   }
 
   override def killInstancesAndForget(instances: Seq[Instance], reason: KillReason): Unit = {
-    logger.info(s"Kill and forget following instances for reason $reason: ${instances.map(_.instanceId).mkString(",")}")
-    actorRef ! KillInstancesAndForget(instances)
+    if (instances.nonEmpty) {
+      logger.info(s"Kill and forget following instances for reason $reason: ${instances.map(_.instanceId).mkString(",")}")
+      actorRef ! KillInstancesAndForget(instances)
+    }
   }
 }
