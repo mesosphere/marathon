@@ -5,7 +5,7 @@ package mesosphere.marathon
   *
   *  - [[GroupRoleBehavior.Off]] indicates that groups will not enforce their role and apps will use
   *    the default Mesos role.
-  *  - [[GroupRoleBehavior.Top]] indicates that only top-level groups, ie groups directly unser `/`
+  *  - [[GroupRoleBehavior.Top]] indicates that only top-level groups, ie groups directly under `/`
   *    will enforce their role, thus assign their name as the role for any [[raml.App]] or [[raml.Pod]].
   */
 sealed trait GroupRoleBehavior {
