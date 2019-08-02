@@ -155,7 +155,7 @@ class GroupsResource @Inject() (
 
       val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath, originalRootGroup)
       val groupUpdate = validateOrThrow(
-        GroupNormalization.updateNormalization(config, effectivePath, originalRootGroup).normalized(raw)
+        GroupNormalization(config, originalRootGroup).updateNormalization(effectivePath).normalized(raw)
       )(groupValidator)
 
       def throwIfConflicting[A](conflict: Option[Any], msg: String) = {
@@ -195,7 +195,7 @@ class GroupsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
       val raw = Json.parse(body).as[raml.GroupPartialUpdate]
-      val normalized = GroupNormalization.partialUpdateNormalization(config).normalized(raw)
+      val normalized = GroupNormalization(config, groupManager.rootGroup()).partialUpdateNormalization().normalized(raw)
 
       val groupId = id.toAbsolutePath
       validateOrThrow(groupId)(PathId.topLevel)
@@ -245,7 +245,7 @@ class GroupsResource @Inject() (
 
       val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath, originalRootGroup)
       val groupUpdate = validateOrThrow(
-        GroupNormalization.updateNormalization(config, effectivePath, originalRootGroup).normalized(raw)
+        GroupNormalization(config, originalRootGroup).updateNormalization(effectivePath).normalized(raw)
       )(groupValidator)
 
       if (dryRun) {

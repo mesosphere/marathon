@@ -13,9 +13,9 @@ class AppValidationTest extends UnitTest with ValidationTestLike with TableDrive
   val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved, true)
   val configWithDefaultNetworkName =
     AppNormalization.Configuration(Some("defaultNetworkName"), "mesos-bridge-name", Set(), ResourceRole.Unreserved, true)
-  val basicValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)
-  val withSecretsValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set("secrets"), () => config.defaultNetworkName)
-  val withDefaultNetworkNameValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => configWithDefaultNetworkName.defaultNetworkName)
+  val basicValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName, Set(ResourceRole.Unreserved))
+  val withSecretsValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set("secrets"), () => config.defaultNetworkName, Set(ResourceRole.Unreserved))
+  val withDefaultNetworkNameValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => configWithDefaultNetworkName.defaultNetworkName, Set(ResourceRole.Unreserved))
 
   "File based secrets validation" when {
     "file based secret is used when secret feature is not enabled" should {

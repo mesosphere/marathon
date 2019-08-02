@@ -4,7 +4,7 @@ package api.v2
 import mesosphere.marathon.state.{AbsolutePathId, PathId, RootGroup}
 import mesosphere.mesos.ResourceMatcher.Role
 
-object GroupNormalization {
+case class GroupNormalization(conf: MarathonConf, originalRootGroup: RootGroup) {
 
   /**
     * Normalize the root group update.
@@ -23,7 +23,7 @@ object GroupNormalization {
 
     // Visit apps.
     val normalizationConfig = AppNormalization.Configuration(conf, conf.mesosRole())
-    val apps = groupUpdate.apps.map(_.map { app => visitApp(app, PathId.root, normalizationConfig) })
+    val apps = groupUpdate.apps.map(_.map { app => visitApp(app, PathId.root, normalizationConfig, false) })
 
     // Set enforce role field and aggregate.
     groupUpdate.copy(enforceRole = Some(false), groups = children, apps = apps)
@@ -47,12 +47,12 @@ object GroupNormalization {
     // Visit children.
     val children = groupUpdate.groups.map(_.map { childGroup =>
       val absoluteChildGroupPath = PathId(childGroup.id.get).canonicalPath(groupPath)
-      visitChildGroup(conf, childGroup, absoluteChildGroupPath, defaultRole)
+      visitChildGroup(conf, childGroup, absoluteChildGroupPath, defaultRole, enforceRole)
     })
 
     // Visit apps.
     val normalizationConfig = AppNormalization.Configuration(conf, defaultRole)
-    val apps = groupUpdate.apps.map(_.map { app => visitApp(app, groupPath, normalizationConfig) })
+    val apps = groupUpdate.apps.map(_.map { app => visitApp(app, groupPath, normalizationConfig, enforceRole) })
 
     // Aggregate results.
     groupUpdate.copy(enforceRole = Some(enforceRole), groups = children, apps = apps)
@@ -65,20 +65,21 @@ object GroupNormalization {
     * @param groupUpdate The update for the group.
     * @param groupPath The path of the groups that is updated.
     * @param defaultRole The default Mesos role for all apps in this groups.
+    * @param enforceRole Whether the top-level group enforces the app role.
     * @return a normalized update.
     */
-  def visitChildGroup(conf: MarathonConf, groupUpdate: raml.GroupUpdate, groupPath: AbsolutePathId, defaultRole: Role): raml.GroupUpdate = {
+  def visitChildGroup(conf: MarathonConf, groupUpdate: raml.GroupUpdate, groupPath: AbsolutePathId, defaultRole: Role, enforceRole: Boolean): raml.GroupUpdate = {
     val enforceRole = groupUpdate.enforceRole.getOrElse(false)
 
     // Visit children.
     val children = groupUpdate.groups.map(_.map { childGroup =>
       val absoluteChildGroupPath = PathId(childGroup.id.get).canonicalPath(groupPath)
-      visitChildGroup(conf, childGroup, absoluteChildGroupPath, defaultRole)
+      visitChildGroup(conf, childGroup, absoluteChildGroupPath, defaultRole, enforceRole)
     })
 
     // Visit apps.
     val normalizationConfig = AppNormalization.Configuration(conf, defaultRole)
-    val apps = groupUpdate.apps.map(_.map { app => visitApp(app, groupPath, normalizationConfig) })
+    val apps = groupUpdate.apps.map(_.map { app => visitApp(app, groupPath, normalizationConfig, enforceRole) })
 
     // Set enforce role and aggregate.
     groupUpdate.copy(enforceRole = Some(enforceRole), groups = children, apps = apps)
@@ -92,15 +93,16 @@ object GroupNormalization {
     * @param normalizationConfig The [[AppNormalization.Config]].
     * @return a normalized and validated app.
     */
-  def visitApp(app: raml.App, absoluteGroupPath: AbsolutePathId, normalizationConfig: AppNormalization.Config): raml.App = {
-    val validateAndNormalizeApp: Normalization[raml.App] = AppHelpers.appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds(absoluteGroupPath))
-    val normalizedAbsoluteId = PathId(app.id).canonicalPath(absoluteGroupPath).toString
+  def visitApp(app: raml.App, absoluteGroupPath: AbsolutePathId, normalizationConfig: AppNormalization.Config, enforceRole: Boolean): raml.App = {
+    val normalizedAbsoluteId = PathId(app.id).canonicalPath(absoluteGroupPath)
+    val validRoles = validRolesFor(normalizedAbsoluteId, normalizationConfig.defaultRole, enforceRole)
 
-    validateAndNormalizeApp.normalized(app.copy(id = normalizedAbsoluteId))
+    val validateAndNormalizeApp: Normalization[raml.App] = AppHelpers.appNormalization(normalizationConfig, validRoles)(AppNormalization.withCanonizedIds(absoluteGroupPath))
+    validateAndNormalizeApp.normalized(app.copy(id = normalizedAbsoluteId.toString))
   }
 
   /**
-    * Normalize the group update of an API call.
+    * Factory method for group update normalization of an API call.
     *
     * @param conf The [[MarathonConf]] holding the default Mesos role and the default enforce group
     *             role behavior.
@@ -108,19 +110,19 @@ object GroupNormalization {
     * @param originalRootGroup The [[RootGroup]] before the update was applied.
     * @return The normalized group update.
     */
-  def updateNormalization(conf: MarathonConf, groupPath: AbsolutePathId, originalRootGroup: RootGroup): Normalization[raml.GroupUpdate] = Normalization { update =>
+  def updateNormalization(groupPath: AbsolutePathId): Normalization[raml.GroupUpdate] = Normalization { update =>
     // Only update if this is not a scale or rollback
     if (update.version.isEmpty && update.scaleBy.isEmpty) {
       if (groupPath.isRoot) visitRootGroup(conf, update)
       else if (groupPath.isTopLevel) visitTopLevelGroup(conf, update, groupPath, conf.groupRoleBehavior(), conf.mesosRole())
       else {
-        val defaultRole = inferDefaultRole(conf, groupPath, originalRootGroup)
-        visitChildGroup(conf, update, groupPath, defaultRole)
+        val (defaultRole, enforceRole) = inferDefaultRole(conf, groupPath, originalRootGroup)
+        visitChildGroup(conf, update, groupPath, defaultRole, enforceRole)
       }
     } else update
   }
 
-  def partialUpdateNormalization(conf: MarathonConf): Normalization[raml.GroupPartialUpdate] = Normalization { update =>
+  def partialUpdateNormalization(): Normalization[raml.GroupPartialUpdate] = Normalization { update =>
     update.copy(enforceRole = Some(effectiveEnforceRole(conf.groupRoleBehavior(), update.enforceRole)))
   }
 
@@ -141,17 +143,34 @@ object GroupNormalization {
   }
 
   /**
-    * Determine the default role for a lower level group.
+    * Determine the default role for a lower level group update.
     *
     * @param conf The [[MarathonConf]] used to check the default Mesos role.
     * @param groupId The group id of the lower level group. Must not be root or top-level.
     * @param rootGroup The root group used to look up the default role.
-    * @return The default role for all apps and pods.
+    * @return The default role for all apps and pods and whether it should be enforced.
     */
-  private def inferDefaultRole(conf: MarathonConf, groupId: AbsolutePathId, rootGroup: RootGroup): Role = {
+  private def inferDefaultRole(conf: MarathonConf, groupId: AbsolutePathId, rootGroup: RootGroup): (Role, Boolean) = {
     require(!groupId.isTopLevel && !groupId.isRoot)
-    rootGroup.group(groupId.rootPath).fold(conf.mesosRole()) { parentGroup =>
-      if (parentGroup.enforceRole) groupId.root else conf.mesosRole()
+    rootGroup.group(groupId.rootPath) match {
+      case None =>
+        // If the top-level does not exist it is created during the update. Thus th enforce role is defined
+        // by the configured behavior.
+        (conf.mesosRole(), effectiveEnforceRole(conf.groupRoleBehavior(), None))
+      case Some(parentGroup) =>
+        val defaultRole = if (parentGroup.enforceRole) groupId.root else conf.mesosRole()
+        (defaultRole, parentGroup.enforceRole)
+    }
+  }
+
+  private def validRolesFor(appId: AbsolutePathId, defaultRole: Role, enforceRole: Boolean): Set[String] = {
+    // Look up any previously set group on the specified runSpec, and add that to the validRoles set if it exists
+    val maybeExistingRole: Option[String] = originalRootGroup.runSpec(appId).map(_.role)
+
+    if (enforceRole) {
+      Set(defaultRole) ++ maybeExistingRole
+    } else {
+      Set(defaultRole, conf.mesosRole()) ++ maybeExistingRole
     }
   }
 }

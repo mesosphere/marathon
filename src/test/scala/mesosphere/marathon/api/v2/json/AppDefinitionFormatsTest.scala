@@ -50,7 +50,7 @@ class AppDefinitionFormatsTest extends UnitTest
         AppNormalization.apply(config)
           .normalized(Validation.validateOrThrow(
             AppNormalization.forDeprecated(config).normalized(app))(AppValidation.validateOldAppAPI)))(
-          AppValidation.validateCanonicalAppAPI(Set.empty, () => None)
+          AppValidation.validateCanonicalAppAPI(Set.empty, () => None, Set(ResourceRole.Unreserved, "production"))
         )
     )
   }
@@ -200,7 +200,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     """FromJSON should parse "acceptedResourceRoles": ["production", "*"] """ in {
-      val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": ["production", "*"] }""")
+      val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": ["production", "*"], "role": "production" }""")
       val appDef = normalizeAndConvert(json.as[raml.App], false)
       appDef.acceptedResourceRoles should equal(Set("production", ResourceRole.Unreserved))
     }
@@ -583,7 +583,7 @@ class AppDefinitionFormatsTest extends UnitTest
           |  "container": {}
           |}""".stripMargin)
       val ramlApp = json.as[raml.App]
-      val validator = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)
+      val validator = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName, Set(ResourceRole.Unreserved))
       validator(ramlApp) should haveViolations("/container/docker" -> "not defined")
     }
 

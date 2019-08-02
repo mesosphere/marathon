@@ -91,7 +91,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val readApp: AppDefinition = withValidationClue {
         Raml.fromRaml(
           AppHelpers.appNormalization(
-            AppNormalization.Configuration(None, "bridge-name", features, ResourceRole.Unreserved, true)).normalized(ramlApp)
+            AppNormalization.Configuration(None, "bridge-name", features, ResourceRole.Unreserved, true), Set(ResourceRole.Unreserved)).normalized(ramlApp)
         )
       }
       Then("The app is identical")

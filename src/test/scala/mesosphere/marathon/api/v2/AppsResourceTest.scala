@@ -64,7 +64,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, ValidationHelper.roleSettings())(PluginManager.None)
 
     implicit val validateAndNormalizeApp: Normalization[raml.App] =
-      AppHelpers.appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+      AppHelpers.appNormalization(normalizationConfig, Set(ResourceRole.Unreserved))(AppNormalization.withCanonizedIds())
 
     implicit val normalizeAppUpdate: Normalization[raml.AppUpdate] =
       AppHelpers.appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())

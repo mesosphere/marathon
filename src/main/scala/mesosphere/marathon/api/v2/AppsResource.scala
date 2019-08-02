@@ -54,7 +54,7 @@ class AppsResource @Inject() (
   private def createValidatorAndNormalizerForApp(pathId: AbsolutePathId): (Normalization[raml.App], Validator[AppDefinition]) = {
     val roleSettings = RoleSettings.forService(config, pathId, groupManager.rootGroup())
     val normalizationConfig = AppNormalization.Configuration(config, roleSettings.defaultRole)
-    val normalizer: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+    val normalizer: Normalization[raml.App] = appNormalization(normalizationConfig, roleSettings.validRoles)(AppNormalization.withCanonizedIds())
     val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(config.availableFeatures, roleSettings)(pluginManager)
 
     (normalizer, validator)
@@ -180,7 +180,7 @@ class AppsResource @Inject() (
     val roleSettings = RoleSettings.forService(config, appId, groupManager.rootGroup())
     val normalizationConfig = AppNormalization.Configuration(config, roleSettings.defaultRole)
 
-    implicit val normalizerApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+    implicit val normalizerApp: Normalization[raml.App] = appNormalization(normalizationConfig, roleSettings.validRoles)(AppNormalization.withCanonizedIds())
     implicit val normalizerUpdate: Normalization[raml.AppUpdate] = appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 
     updateType match {

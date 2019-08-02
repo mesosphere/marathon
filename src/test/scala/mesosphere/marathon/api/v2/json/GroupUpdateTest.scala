@@ -36,7 +36,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val timestamp = Timestamp.now()
 
       When("The update is performed")
-      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root, rootGroup).normalized(update)
+      val normalized = GroupNormalization(noEnabledFeatures, rootGroup).updateNormalization(PathId.root).normalized(update)
       val result: Group = GroupConversion(normalized, rootGroup, timestamp).apply(appConversionFunc)
 
       validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
@@ -81,7 +81,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val timestamp = Timestamp.now()
 
       When("The update is performed")
-      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root, actual).normalized(update)
+      val normalized = GroupNormalization(noEnabledFeatures, actual).updateNormalization(PathId.root).normalized(update)
       val result: RootGroup = RootGroup.fromGroup(GroupConversion(normalized, actual, timestamp).apply(appConversionFunc))
 
       validate(result)(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
@@ -131,7 +131,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       )
 
       val timestamp = Timestamp.now()
-      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, AbsolutePathId("/test"), createRootGroup()).normalized(update)
+      val normalized = GroupNormalization(noEnabledFeatures, createRootGroup()).updateNormalization(AbsolutePathId("/test")).normalized(update)
       val next = GroupConversion(normalized, current, timestamp).apply(appConversionFunc)
       val result = createRootGroup(groups = Set(next))
 
@@ -178,7 +178,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       )))
 
       When("The update is performed")
-      val normalized = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root, createRootGroup()).normalized(update)
+      val normalized = GroupNormalization(noEnabledFeatures, createRootGroup()).updateNormalization(PathId.root).normalized(update)
       val result = GroupConversion(normalized, createRootGroup(), Timestamp.now()).apply(appConversionFunc)
 
       validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
