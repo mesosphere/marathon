@@ -5,8 +5,6 @@ import mesosphere.marathon.raml.{AppVisitor, GroupUpdate, GroupUpdateVisitor}
 import mesosphere.marathon.state.{AbsolutePathId, PathId, RootGroup}
 import mesosphere.mesos.ResourceMatcher.Role
 
-import scala.annotation.tailrec
-
 /**
   * Visitor that normalizes a root group update.
   *
@@ -162,12 +160,10 @@ object GroupNormalization {
     * @param rootGroup The root group used to look up the default role.
     * @return The default role for all apps and pods.
     */
-  @tailrec private def inferDefaultRole(conf: MarathonConf, groupId: AbsolutePathId, rootGroup: RootGroup): Role = {
-    assert(!groupId.isTopLevel && !groupId.isRoot)
-    if (groupId.parent.isTopLevel) {
-      rootGroup.group(groupId.parent).fold(conf.mesosRole()) { parentGroup =>
-        if (parentGroup.enforceRole) groupId.parent.root else conf.mesosRole()
-      }
-    } else inferDefaultRole(conf, groupId.parent, rootGroup)
+  private def inferDefaultRole(conf: MarathonConf, groupId: AbsolutePathId, rootGroup: RootGroup): Role = {
+    require(!groupId.isTopLevel && !groupId.isRoot)
+    rootGroup.group(groupId.rootPath).fold(conf.mesosRole()) { parentGroup =>
+      if (parentGroup.enforceRole) groupId.root else conf.mesosRole()
+    }
   }
 }

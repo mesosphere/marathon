@@ -47,8 +47,7 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
       // groupManager.update always passes a group, even if it doesn't exist
       val maybeExistingGroup = groupManager.group(currentGroup.id)
       val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
-      val updatedGroup: Group = Raml.fromRaml(
-        GroupConversion(groupUpdate, currentGroup, newVersion) -> appConversionFunc)
+      val updatedGroup: Group = GroupConversion(groupUpdate, currentGroup, newVersion).apply(appConversionFunc)
 
       if (maybeExistingGroup.isEmpty) checkAuthorizationOrThrow(CreateGroup, updatedGroup)
 

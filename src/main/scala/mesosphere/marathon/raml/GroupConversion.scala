@@ -3,17 +3,7 @@ package raml
 
 import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId, Timestamp, Group => CoreGroup, VersionInfo => CoreVersionInfo}
 
-trait GroupConversion {
-
-  // TODO needs a dedicated/focused unit test; other (larger) unit tests provide indirect coverage
-  implicit val groupUpdateRamlReads: Reads[(UpdateGroupStructureOp, App => AppDefinition), CoreGroup] =
-    Reads[(UpdateGroupStructureOp, App => AppDefinition), CoreGroup] {
-      case (op, cf) =>
-        op.apply(cf)
-    }
-}
-
-object GroupConversion extends GroupConversion {
+object GroupConversion {
   def apply(groupUpdate: GroupUpdate, current: CoreGroup, timestamp: Timestamp): UpdateGroupStructureOp =
     UpdateGroupStructureOp(groupUpdate, current, timestamp)
 }
