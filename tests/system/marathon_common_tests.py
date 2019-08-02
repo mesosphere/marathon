@@ -211,15 +211,14 @@ def test_launch_app_timed():
     """
 
     app_def = apps.mesos_app(app_id='/timed-launch-app')
+    app_id = app_def["id"]
 
     client = marathon.create_client()
     client.add_app(app_def)
 
-    # if not launched in 3 sec fail
-    time.sleep(3)
-    tasks = client.get_tasks(app_def["id"])
-
-    assert len(tasks) == 1, "The number of tasks is {} after deployment, but 1 was expected".format(len(tasks))
+    # if not launched in 10 sec fail
+    assert_that(lambda: client.get_tasks(app_id),
+                eventually(has_len(equal_to(1)), max_attempts=10))
 
 
 def test_ui_available(marathon_service_name):
