@@ -467,6 +467,36 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       }
     }
 
+    "Fail a batch update when app role is invalid" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+        val body =
+          """
+        {
+          "groups": [
+            {
+              "apps": [
+                {
+                  "id": "goodnight",
+                  "cmd": "sleep 1",
+                  "instances": 0,
+                  "role": "invalid"
+                }
+              ],
+              "id": "sleep"
+            }
+          ],
+          "id": "/prod",
+          "enforceRole": true
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("", false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 422
+      }
+    }
+
     "Default according to the top-level group enforce role field" in {
       new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
         val body =
