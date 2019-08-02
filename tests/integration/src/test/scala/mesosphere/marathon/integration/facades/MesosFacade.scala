@@ -148,18 +148,17 @@ class MesosFacade(val url: String, val waitTime: FiniteDuration = 30.seconds)(im
   /**
     * Drain agent using v1 operator API
     */
-  def drainAgent(agentId: String, maxGracePeriod: Option[Int] = None, markAsGone: Boolean = false): RestResult[HttpResponse] = {
+  def drainAgent(agentId: String, maxGracePeriodSeconds: Option[Int] = None, markAsGone: Boolean = false): RestResult[HttpResponse] = {
     var requestPayload = Json.obj(
       "type" -> "DRAIN_AGENT",
       "drain_agent" -> Json.obj(
         "agent_id" -> Json.obj("value" -> agentId),
-        // TODO: not sure whether is expected to be an object or a boolean field
-        "mark_gone" -> Json.obj("value" -> markAsGone)
+        "mark_gone" -> markAsGone
       )
     )
-    maxGracePeriod.foreach { duration =>
+    maxGracePeriodSeconds.foreach { seconds =>
       requestPayload = requestPayload ++ Json.obj(
-        "max_grace_period" -> Json.obj("value" -> duration)
+        "max_grace_period" -> Json.obj("seconds" -> seconds)
       )
     }
 
