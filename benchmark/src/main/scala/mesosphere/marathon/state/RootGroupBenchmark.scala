@@ -115,8 +115,7 @@ class RootGroupBenchmark extends GroupBenchmark {
   def serializationRoundtrip(hole: Blackhole): Unit = {
     val normalizedGroup = GroupNormalization.updateNormalization(config, PathId.root, rootGroup).normalized(groupRaml)
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
-    val converted = Raml.fromRaml(
-      GroupConversion(normalizedGroup, rootGroup, version.version) -> appConversionFunc)
+    val converted = GroupConversion(normalizedGroup, rootGroup, version.version).apply(appConversionFunc)
     hole.consume(converted)
   }
 }
