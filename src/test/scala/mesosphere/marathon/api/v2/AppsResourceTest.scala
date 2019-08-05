@@ -974,12 +974,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
-      val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      val expected = raml.AppInfo(
+        normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved)),
+        tasks = Seq.empty,
+        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        deployments = Seq(raml.Identifiable(plan.id))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -1024,12 +1023,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
-      val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      val expected = raml.AppInfo(
+        normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved)),
+        tasks = Seq.empty,
+        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        deployments = Seq(raml.Identifiable(plan.id))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -1141,12 +1139,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
 
       And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
-      val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      val expected = raml.AppInfo(
+        normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved)),
+        tasks = Seq.empty,
+        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        deployments = Seq(raml.Identifiable(plan.id))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -2027,12 +2024,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         response.getStatus should be(201)
 
         And("the JSON is as expected, including a defined role")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val expected = AppInfo(
-          normalizeAndConvert(app).copy(role = ResourceRole.Unreserved, versionInfo = VersionInfo.OnlyVersion(clock.now())),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+        val expected = raml.AppInfo(
+          normalize(app).copy(role = Some(ResourceRole.Unreserved), version = Some(clock.now().toOffsetDateTime)),
+          tasks = Seq.empty,
+          tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+          deployments = Seq(raml.Identifiable(plan.id))
         )
         JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
       }
