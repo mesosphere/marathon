@@ -3,11 +3,9 @@ package api.v2.json
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
-import mesosphere.marathon.core.appinfo.{TaskCounts, TaskLifeTime, TaskStats, TaskStatsByVersion}
 import play.api.libs.json.Json
 
 class TaskStatsByVersionFormatTest extends UnitTest {
-  import Formats._
 
   private[this] val emptyStats = raml.TaskStatsByVersion(
     startedAfterLastScaling = None,
@@ -19,7 +17,7 @@ class TaskStatsByVersionFormatTest extends UnitTest {
   private[this] val fullTaskStats = raml.TaskStats(
     counts = raml.TaskCounts(
       staged = 1,
-      running = 1,
+      running = 2,
       healthy = 3,
       unhealthy = 4
     ),
@@ -41,7 +39,7 @@ class TaskStatsByVersionFormatTest extends UnitTest {
 
     "fullTaskStats (not by version) get rendered correctly" in {
       When("serializing to JSON")
-      val json = Json.toJson(fullTaskStats)
+      val json = Json.toJson(raml.Stats(fullTaskStats))
       Then("we get the correct json")
       JsonTestHelper.assertThatJsonOf(json).correspondsToJsonOf(Json.obj(
         "stats" -> Json.obj(
@@ -61,7 +59,7 @@ class TaskStatsByVersionFormatTest extends UnitTest {
 
     "fullTaskStats (not by version) without lifeTimes get rendered correctly" in {
       When("serializing to JSON")
-      val json = Json.toJson(fullTaskStats.copy(lifeTime = None))
+      val json = Json.toJson(raml.Stats(fullTaskStats.copy(lifeTime = None)))
       Then("we get the correct json")
       JsonTestHelper.assertThatJsonOf(json).correspondsToJsonOf(Json.obj(
         "stats" -> Json.obj(
@@ -78,10 +76,10 @@ class TaskStatsByVersionFormatTest extends UnitTest {
     "full task stats by version get rendered correctly" in {
       // we just vary the task running count to see that the different instances get rendered to the correct output
       val fullStats = raml.TaskStatsByVersion(
-        startedAfterLastScaling = Some(fullTaskStats.copy(fullTaskStats.counts.copy(running = 100))),
-        withLatestConfig = Some(fullTaskStats.copy(fullTaskStats.counts.copy(running = 200))),
-        withOutdatedConfig = Some(fullTaskStats.copy(fullTaskStats.counts.copy(running = 300))),
-        totalSummary = Some(fullTaskStats.copy(fullTaskStats.counts.copy(running = 500)))
+        startedAfterLastScaling = Some(raml.Stats(fullTaskStats.copy(fullTaskStats.counts.copy(running = 100)))),
+        withLatestConfig = Some(raml.Stats(fullTaskStats.copy(fullTaskStats.counts.copy(running = 200)))),
+        withOutdatedConfig = Some(raml.Stats(fullTaskStats.copy(fullTaskStats.counts.copy(running = 300)))),
+        totalSummary = Some(raml.Stats(fullTaskStats.copy(fullTaskStats.counts.copy(running = 500))))
       )
 
       When("serializing to JSON")

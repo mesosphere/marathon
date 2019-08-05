@@ -366,8 +366,8 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       withClue(Json.prettyPrint(Json.toJson(appInfo))) {
         appInfo.tasks should not be empty
-        appInfo.tasksStats.value.totalSummary.value.counts.staged should be (1)
-        appInfo.tasksStats.value.totalSummary.value.counts.running should be (2)
+        appInfo.tasksStats.value.totalSummary.value.stats.counts.staged should be (1)
+        appInfo.tasksStats.value.totalSummary.value.stats.counts.running should be (2)
 
         appInfo should be(raml.AppInfo(
           Raml.toRaml(app),

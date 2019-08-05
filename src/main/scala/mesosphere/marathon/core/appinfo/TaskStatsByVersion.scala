@@ -7,12 +7,6 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.{Timestamp, VersionInfo}
 
-//case class TaskStatsByVersion(
-//    maybeStartedAfterLastScaling: Option[TaskStats],
-//    maybeWithLatestConfig: Option[TaskStats],
-//    maybeWithOutdatedConfig: Option[TaskStats],
-//    maybeTotalSummary: Option[TaskStats])
-
 object TaskStatsByVersion {
 
   def apply(
@@ -29,16 +23,16 @@ object TaskStatsByVersion {
       }
 
       raml.TaskStatsByVersion(
-        totalSummary = TaskStats.forSomeTasks(tasks),
+        totalSummary = TaskStats.forSomeTasks(tasks).map(raml.Stats(_)),
         startedAfterLastScaling = maybeFullVersionInfo.flatMap { vi =>
           statsForVersion(_ >= vi.lastScalingAt)
-        },
+        }.map(raml.Stats(_)),
         withLatestConfig = maybeFullVersionInfo.flatMap { vi =>
           statsForVersion(_ >= vi.lastConfigChangeAt)
-        },
+        }.map(raml.Stats(_)),
         withOutdatedConfig = maybeFullVersionInfo.flatMap { vi =>
           statsForVersion(_ < vi.lastConfigChangeAt)
-        }
+        }.map(raml.Stats(_))
       )
 
     }

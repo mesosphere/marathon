@@ -112,11 +112,15 @@ types:
       counts: TaskCounts
       lifeTime?: TaskLifeTime
 
+  Stats:
+    type: object
+    properties:
+      stats: TaskStats
+
   TaskStatsByVersion:
     type: object
     properties:
-      # TODO: the Formats.TaskStatsWrites has a "stats" field. Need to test.
-      startedAfterLastScaling?: TaskStats
-      withLatestConfig?: TaskStats
-      withOutdatedConfig?: TaskStats
-      totalSummary?: TaskStats
+      startedAfterLastScaling?: Stats
+      withLatestConfig?: Stats
+      withOutdatedConfig?: Stats
+      totalSummary?: Stats

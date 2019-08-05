@@ -62,17 +62,17 @@ class TaskStatsByVersionTest extends UnitTest {
       )
       Then("we get the correct stats")
       withClue(Json.prettyPrint(Json.obj("stats" -> stats.toString, "tasks" -> instances.map(state.Instance.fromCoreInstance)))) {
-        stats.withOutdatedConfig.value should be(TaskStats.forSomeTasks(now, outdatedInstances, statuses))
-        stats.withLatestConfig.value should be(TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses))
-        stats.startedAfterLastScaling.value should be(TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses))
-        stats.totalSummary.value should be(TaskStats.forSomeTasks(now, instances, statuses))
+        stats.withOutdatedConfig.value.stats should be(TaskStats.forSomeTasks(now, outdatedInstances, statuses).value)
+        stats.withLatestConfig.value.stats should be(TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses).value)
+        stats.startedAfterLastScaling.value.stats should be(TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses).value)
+        stats.totalSummary.value.stats should be(TaskStats.forSomeTasks(now, instances, statuses).value)
 
         stats should be(
           raml.TaskStatsByVersion(
-            startedAfterLastScaling = TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses),
-            withLatestConfig = TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses),
-            withOutdatedConfig = TaskStats.forSomeTasks(now, outdatedInstances, statuses),
-            totalSummary = TaskStats.forSomeTasks(now, instances, statuses)
+            startedAfterLastScaling = TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses).map(raml.Stats(_)),
+            withLatestConfig = TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses).map(raml.Stats(_)),
+            withOutdatedConfig = TaskStats.forSomeTasks(now, outdatedInstances, statuses).map(raml.Stats(_)),
+            totalSummary = TaskStats.forSomeTasks(now, instances, statuses).map(raml.Stats(_))
           )
         )
       }
