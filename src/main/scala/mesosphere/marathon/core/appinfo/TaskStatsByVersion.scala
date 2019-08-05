@@ -7,19 +7,19 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state.{Timestamp, VersionInfo}
 
-case class TaskStatsByVersion(
-    maybeStartedAfterLastScaling: Option[TaskStats],
-    maybeWithLatestConfig: Option[TaskStats],
-    maybeWithOutdatedConfig: Option[TaskStats],
-    maybeTotalSummary: Option[TaskStats])
+//case class TaskStatsByVersion(
+//    maybeStartedAfterLastScaling: Option[TaskStats],
+//    maybeWithLatestConfig: Option[TaskStats],
+//    maybeWithOutdatedConfig: Option[TaskStats],
+//    maybeTotalSummary: Option[TaskStats])
 
 object TaskStatsByVersion {
 
   def apply(
     versionInfo: VersionInfo,
-    tasks: Seq[TaskForStatistics]): TaskStatsByVersion =
+    tasks: Seq[TaskForStatistics]): raml.TaskStatsByVersion =
     {
-      def statsForVersion(versionTest: Timestamp => Boolean): Option[TaskStats] = {
+      def statsForVersion(versionTest: Timestamp => Boolean): Option[raml.TaskStats] = {
         TaskStats.forSomeTasks(tasks.filter(task => versionTest(task.version)))
       }
 
@@ -28,15 +28,15 @@ object TaskStatsByVersion {
         case _ => None
       }
 
-      TaskStatsByVersion(
-        maybeTotalSummary = TaskStats.forSomeTasks(tasks),
-        maybeStartedAfterLastScaling = maybeFullVersionInfo.flatMap { vi =>
+      raml.TaskStatsByVersion(
+        totalSummary = TaskStats.forSomeTasks(tasks),
+        startedAfterLastScaling = maybeFullVersionInfo.flatMap { vi =>
           statsForVersion(_ >= vi.lastScalingAt)
         },
-        maybeWithLatestConfig = maybeFullVersionInfo.flatMap { vi =>
+        withLatestConfig = maybeFullVersionInfo.flatMap { vi =>
           statsForVersion(_ >= vi.lastConfigChangeAt)
         },
-        maybeWithOutdatedConfig = maybeFullVersionInfo.flatMap { vi =>
+        withOutdatedConfig = maybeFullVersionInfo.flatMap { vi =>
           statsForVersion(_ < vi.lastConfigChangeAt)
         }
       )
@@ -47,31 +47,28 @@ object TaskStatsByVersion {
     now: Timestamp,
     versionInfo: VersionInfo,
     instances: Seq[Instance],
-    statuses: Map[Instance.Id, Seq[Health]]): TaskStatsByVersion =
+    statuses: Map[Instance.Id, Seq[Health]]): raml.TaskStatsByVersion =
     {
       TaskStatsByVersion(versionInfo, TaskForStatistics.forInstances(now, instances, statuses))
     }
 }
 
-case class TaskStats(
-    counts: TaskCounts,
-    maybeLifeTime: Option[TaskLifeTime])
-
 object TaskStats {
   def forSomeTasks(
-    now: Timestamp, instances: Seq[Instance], statuses: Map[Instance.Id, Seq[Health]]): Option[TaskStats] =
+    now: Timestamp, instances: Seq[Instance], statuses: Map[Instance.Id, Seq[Health]]): Option[raml.TaskStats] =
     {
       forSomeTasks(TaskForStatistics.forInstances(now, instances, statuses))
     }
 
-  def forSomeTasks(tasks: Seq[TaskForStatistics]): Option[TaskStats] = {
+  def forSomeTasks(tasks: Seq[TaskForStatistics]): Option[raml.TaskStats] = {
     if (tasks.isEmpty) {
       None
     } else {
+      val counts = TaskCounts(tasks)
       Some(
-        TaskStats(
-          counts = TaskCounts(tasks),
-          maybeLifeTime = TaskLifeTime.forSomeTasks(tasks)
+        raml.TaskStats(
+          counts = raml.TaskCounts(counts.tasksStaged, counts.tasksRunning, counts.tasksHealthy, counts.tasksUnhealthy),
+          lifeTime = TaskLifeTime.forSomeTasks(tasks)
         )
       )
     }

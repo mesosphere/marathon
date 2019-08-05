@@ -52,7 +52,7 @@ class TaskLifeTimeTest extends UnitTest {
       Then("we get the correct stats")
       lifeTimes should be(
         Some(
-          TaskLifeTime(
+          raml.TaskLifeTime(
             averageSeconds = 5.0,
             medianSeconds = 4.0
           )
@@ -68,7 +68,7 @@ class TaskLifeTimeTest extends UnitTest {
       Then("we get the correct stats")
       lifeTimes should be(
         Some(
-          TaskLifeTime(
+          raml.TaskLifeTime(
             averageSeconds = 5.0,
             medianSeconds = 4.0
           )

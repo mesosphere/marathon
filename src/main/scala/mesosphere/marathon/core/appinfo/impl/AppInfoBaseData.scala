@@ -77,7 +77,7 @@ class AppInfoBaseData(
     val runningDeploymentsByAppOpt: Option[Map[PathId, Seq[Identifiable]]] = if (embeds.contains(AppInfo.Embed.Deployments)) Some(await(runningDeploymentsByAppFuture)) else None
     val lastTaskFailureOpt: Option[TaskFailure] = if (embeds.contains(AppInfo.Embed.LastTaskFailure)) await(appData.maybeLastTaskFailureFuture) else None
     val enrichedTasksOpt: Option[Seq[EnrichedTask]] = if (embeds.contains(AppInfo.Embed.Tasks)) Some(await(appData.enrichedTasksFuture)) else None
-    val taskStatsOpt: Option[TaskStatsByVersion] = if (embeds.contains(AppInfo.Embed.TaskStats)) Some(await(appData.taskStatsFuture)) else None
+    val taskStatsOpt: Option[raml.TaskStatsByVersion] = if (embeds.contains(AppInfo.Embed.TaskStats)) Some(await(appData.taskStatsFuture)) else None
 
     // Screw RamlConversions.
     def convertReadinessCheckResults(readinessCheckResults: Seq[ReadinessCheckResult]): Seq[raml.TaskReadinessCheckResult] = {
@@ -102,8 +102,8 @@ class AppInfoBaseData(
       deployments = runningDeploymentsByAppOpt.fold(Seq.empty[raml.Identifiable])(_.apply(app.id).map{ i => raml.Identifiable(i.id) }),
       lastTaskFailure = lastTaskFailureOpt.map{ f =>
         raml.TaskFailure(app.id.toString, f.host, f.message, f.state.name(), f.taskId.getValue, f.timestamp.toOffsetDateTime, f.version.toOffsetDateTime, f.slaveId.map(_.getValue))
-      }
-    //      maybeTaskStats = taskStatsOpt
+      },
+      tasksStats = taskStatsOpt
     )
     appInfo
   }
@@ -145,7 +145,7 @@ class AppInfoBaseData(
       case NonFatal(e) => throw new RuntimeException(s"while calculating task counts for app [${app.id}]", e)
     }
 
-    lazy val taskStatsFuture: Future[TaskStatsByVersion] = {
+    lazy val taskStatsFuture: Future[raml.TaskStatsByVersion] = {
       logger.debug(s"calculating task stats for app [${app.id}]")
       for {
         tasks <- tasksForStats

@@ -26,11 +26,11 @@ class TaskStatsByVersionTest extends UnitTest {
       )
       Then("we get none")
       stats should be(
-        TaskStatsByVersion(
-          maybeStartedAfterLastScaling = None,
-          maybeWithLatestConfig = None,
-          maybeWithOutdatedConfig = None,
-          maybeTotalSummary = None
+        raml.TaskStatsByVersion(
+          startedAfterLastScaling = None,
+          withLatestConfig = None,
+          withOutdatedConfig = None,
+          totalSummary = None
         )
       )
     }
@@ -62,22 +62,17 @@ class TaskStatsByVersionTest extends UnitTest {
       )
       Then("we get the correct stats")
       withClue(Json.prettyPrint(Json.obj("stats" -> stats.toString, "tasks" -> instances.map(state.Instance.fromCoreInstance)))) {
-        stats.maybeWithOutdatedConfig should not be empty
-        stats.maybeWithLatestConfig should not be empty
-        stats.maybeStartedAfterLastScaling should not be empty
-        stats.maybeTotalSummary should not be empty
-
-        stats.maybeWithOutdatedConfig should be(TaskStats.forSomeTasks(now, outdatedInstances, statuses))
-        stats.maybeWithLatestConfig should be(TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses))
-        stats.maybeStartedAfterLastScaling should be(TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses))
-        stats.maybeTotalSummary should be(TaskStats.forSomeTasks(now, instances, statuses))
+        stats.withOutdatedConfig.value should be(TaskStats.forSomeTasks(now, outdatedInstances, statuses))
+        stats.withLatestConfig.value should be(TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses))
+        stats.startedAfterLastScaling.value should be(TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses))
+        stats.totalSummary.value should be(TaskStats.forSomeTasks(now, instances, statuses))
 
         stats should be(
-          TaskStatsByVersion(
-            maybeStartedAfterLastScaling = TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses),
-            maybeWithLatestConfig = TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses),
-            maybeWithOutdatedConfig = TaskStats.forSomeTasks(now, outdatedInstances, statuses),
-            maybeTotalSummary = TaskStats.forSomeTasks(now, instances, statuses)
+          raml.TaskStatsByVersion(
+            startedAfterLastScaling = TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses),
+            withLatestConfig = TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses),
+            withOutdatedConfig = TaskStats.forSomeTasks(now, outdatedInstances, statuses),
+            totalSummary = TaskStats.forSomeTasks(now, instances, statuses)
           )
         )
       }
