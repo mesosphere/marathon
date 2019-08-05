@@ -24,7 +24,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val appInfo = f.infoService.selectApp(id = app1.id, embed = Set.empty, selector = Selector.all).futureValue
 
       Then("we get an appInfo for the app from the appRepo/baseAppData")
-      appInfo.map(_.app.id).toSet should be(Set(app1.id))
+      appInfo.map(_.app.id).toSet should be(Set(app1.id.toString))
 
       verify(f.groupManager, times(1)).app(app1.id)
       for (app <- Set(app1)) {
@@ -66,7 +66,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val appInfos = f.infoService.selectAppsBy(Selector.all, embed = Set.empty).futureValue
 
       Then("we get appInfos for each app from the appRepo/baseAppData")
-      appInfos.map(_.app.id).toSet should be(someApps.keys)
+      appInfos.map(_.app.id).toSet should be(someApps.keys.map(_.toString))
 
       verify(f.groupManager, times(1)).rootGroup()
       for (app <- someApps.values) {
@@ -126,7 +126,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val appInfos = f.infoService.selectAppsInGroup(PathId("/nested"), Selector.all, Set.empty).futureValue
 
       Then("we get appInfos for each app from the groupRepo/baseAppData")
-      appInfos.map(_.app.id).toSet should be(someNestedApps.keys)
+      appInfos.map(_.app.id).toSet should be(someNestedApps.keys.map(_.toString))
 
       verify(f.groupManager, times(1)).group(PathId("/nested"))
       for (app <- someNestedApps.values) {
