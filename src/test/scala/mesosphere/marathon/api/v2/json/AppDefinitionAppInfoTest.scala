@@ -6,7 +6,6 @@ import java.util.UUID
 import mesosphere.UnitTest
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.appinfo.{AppInfo, TaskCounts}
-import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import org.apache.mesos.{Protos => mesos}
@@ -16,7 +15,6 @@ import scala.collection.immutable.Seq
 
 class AppDefinitionAppInfoTest extends UnitTest {
   import PathId._
-  import Formats._
 
   val app = raml.App("/test", cmd = Some("sleep 123"), role = Some("*"))
 

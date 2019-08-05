@@ -61,8 +61,7 @@ class TaskStatsByVersionTest extends UnitTest {
         statuses = statuses
       )
       Then("we get the correct stats")
-      import mesosphere.marathon.api.v2.json.Formats._
-      withClue(Json.prettyPrint(Json.obj("stats" -> stats, "tasks" -> instances.map(state.Instance.fromCoreInstance)))) {
+      withClue(Json.prettyPrint(Json.obj("stats" -> stats.toString, "tasks" -> instances.map(state.Instance.fromCoreInstance)))) {
         stats.maybeWithOutdatedConfig should not be empty
         stats.maybeWithLatestConfig should not be empty
         stats.maybeStartedAfterLastScaling should not be empty

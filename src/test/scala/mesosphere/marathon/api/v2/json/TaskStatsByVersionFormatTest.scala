@@ -9,22 +9,22 @@ import play.api.libs.json.Json
 class TaskStatsByVersionFormatTest extends UnitTest {
   import Formats._
 
-  private[this] val emptyStats = TaskStatsByVersion(
-    maybeStartedAfterLastScaling = None,
-    maybeWithLatestConfig = None,
-    maybeWithOutdatedConfig = None,
-    maybeTotalSummary = None
+  private[this] val emptyStats = raml.TaskStatsByVersion(
+    startedAfterLastScaling = None,
+    withLatestConfig = None,
+    withOutdatedConfig = None,
+    totalSummary = None
   )
 
-  private[this] val fullTaskStats = TaskStats(
-    counts = TaskCounts(
-      tasksStaged = 1,
-      tasksRunning = 2,
-      tasksHealthy = 3,
-      tasksUnhealthy = 4
+  private[this] val fullTaskStats = raml.TaskStats(
+    counts = raml.TaskCounts(
+      staged = 1,
+      running = 1,
+      healthy = 3,
+      unhealthy = 4
     ),
-    maybeLifeTime = Some(
-      TaskLifeTime(
+    lifeTime = Some(
+      raml.TaskLifeTime(
         averageSeconds = 20.0,
         medianSeconds = 10.0
       )
@@ -61,7 +61,7 @@ class TaskStatsByVersionFormatTest extends UnitTest {
 
     "fullTaskStats (not by version) without lifeTimes get rendered correctly" in {
       When("serializing to JSON")
-      val json = Json.toJson(fullTaskStats.copy(maybeLifeTime = None))
+      val json = Json.toJson(fullTaskStats.copy(lifeTime = None))
       Then("we get the correct json")
       JsonTestHelper.assertThatJsonOf(json).correspondsToJsonOf(Json.obj(
         "stats" -> Json.obj(
@@ -77,11 +77,11 @@ class TaskStatsByVersionFormatTest extends UnitTest {
 
     "full task stats by version get rendered correctly" in {
       // we just vary the task running count to see that the different instances get rendered to the correct output
-      val fullStats = TaskStatsByVersion(
-        maybeStartedAfterLastScaling = Some(fullTaskStats.copy(fullTaskStats.counts.copy(tasksRunning = 100))),
-        maybeWithLatestConfig = Some(fullTaskStats.copy(fullTaskStats.counts.copy(tasksRunning = 200))),
-        maybeWithOutdatedConfig = Some(fullTaskStats.copy(fullTaskStats.counts.copy(tasksRunning = 300))),
-        maybeTotalSummary = Some(fullTaskStats.copy(fullTaskStats.counts.copy(tasksRunning = 500)))
+      val fullStats = raml.TaskStatsByVersion(
+        startedAfterLastScaling = Some(fullTaskStats.copy(fullTaskStats.counts.copy(running = 100))),
+        withLatestConfig = Some(fullTaskStats.copy(fullTaskStats.counts.copy(running = 200))),
+        withOutdatedConfig = Some(fullTaskStats.copy(fullTaskStats.counts.copy(running = 300))),
+        totalSummary = Some(fullTaskStats.copy(fullTaskStats.counts.copy(running = 500)))
       )
 
       When("serializing to JSON")
