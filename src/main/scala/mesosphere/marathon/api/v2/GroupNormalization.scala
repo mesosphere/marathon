@@ -154,7 +154,7 @@ case class GroupNormalization(conf: MarathonConf, originalRootGroup: RootGroup) 
     require(!groupId.isTopLevel && !groupId.isRoot)
     rootGroup.group(groupId.rootPath) match {
       case None =>
-        // If the top-level does not exist it is created during the update. Thus th enforce role is defined
+        // If the top-level does not exist it is created during the update. Thus the enforced role is defined
         // by the configured behavior.
         (conf.mesosRole(), effectiveEnforceRole(conf.groupRoleBehavior(), None))
       case Some(parentGroup) =>
