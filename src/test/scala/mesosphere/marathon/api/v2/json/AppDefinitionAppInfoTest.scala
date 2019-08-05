@@ -15,9 +15,10 @@ import play.api.libs.json.{JsObject, Json}
 import scala.collection.immutable.Seq
 
 class AppDefinitionAppInfoTest extends UnitTest {
+  import PathId._
   import Formats._
 
-  val app = AppDefinition(PathId("/test"), cmd = Some("sleep 123"), role = "*")
+  val app = raml.App("/test", cmd = Some("sleep 123"), role = Some("*"))
 
   val counts = TaskCounts(
     tasksStaged = 3,
@@ -27,20 +28,20 @@ class AppDefinitionAppInfoTest extends UnitTest {
   )
 
   val uuid = UUID.fromString("b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6")
-  val taskId = Task.LegacyId(app.id, ".", uuid)
+  val taskId = Task.LegacyId(app.id.toPath, ".", uuid)
 
   val readinessCheckResults = Seq(
-    ReadinessCheckResult("foo", taskId, false, Some(HttpResponse(503, "text/plain", "n/a")))
+    raml.TaskReadinessCheckResult("foo", taskId.idString, false, Some(raml.ReadinessCheckHttpResponse(503, "text/plain", "n/a")))
   )
 
   val deployments = Seq(
-    Identifiable("deployment1")
+    raml.Identifiable("deployment1")
   )
 
   "AppDefinitionAppInfo" should {
     "app with taskCounts" in {
       Given("an app with counts")
-      val extended = AppInfo(app, maybeCounts = Some(counts))
+      val extended = raml.AppInfo(app, tasksStaged = Some(3), tasksRunning = Some(5), tasksHealthy = Some(4), tasksUnhealthy = Some(1))
 
       Then("the result contains all fields of the app plus the counts")
       val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
@@ -54,7 +55,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
     "app with deployments" in {
       Given("an app with deployments")
-      val extended = AppInfo(app, maybeDeployments = Some(deployments))
+      val extended = raml.AppInfo(app, deployments = deployments)
 
       Then("the result contains all fields of the app plus the deployments")
       val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
@@ -65,7 +66,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
     "app with readiness results" in {
       Given("an app with deployments")
-      val extended = AppInfo(app, maybeReadinessCheckResults = Some(readinessCheckResults))
+      val extended = raml.AppInfo(app, readinessCheckResults = readinessCheckResults)
 
       Then("the result contains all fields of the app plus the deployments")
       val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
@@ -85,7 +86,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
     "app with taskCounts + deployments (show that combinations work)" in {
       Given("an app with counts")
-      val extended = AppInfo(app, maybeCounts = Some(counts), maybeDeployments = Some(deployments))
+      val extended = raml.AppInfo(app, tasksStaged = Some(3), tasksRunning = Some(5), tasksHealthy = Some(4), tasksUnhealthy = Some(1), deployments = deployments)
 
       Then("the result contains all fields of the app plus the counts")
       val expectedJson =
@@ -103,17 +104,17 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
     "app with lastTaskFailure" in {
       Given("an app with a lastTaskFailure")
-      val lastTaskFailure = new TaskFailure(
-        appId = PathId("/myapp"),
-        taskId = mesos.TaskID.newBuilder().setValue("myapp.2da6109e-4cce-11e5-98c1-be5b2935a987").build(),
-        state = mesos.TaskState.TASK_FAILED,
+      val lastTaskFailure = raml.TaskFailure(
+        appId = "/myapp",
+        taskId = "myapp.2da6109e-4cce-11e5-98c1-be5b2935a987",
+        state = mesos.TaskState.TASK_FAILED.toString,
         message = "Command exited with status 1",
         host = "srv2.dc43.mesosphere.com",
-        timestamp = Timestamp("2015-08-27T15:13:48.386Z"),
-        version = Timestamp("2015-08-27T14:13:05.942Z"),
-        slaveId = Some(mesos.SlaveID.newBuilder().setValue("slave34").build())
+        timestamp = Timestamp("2015-08-27T15:13:48.386Z").toOffsetDateTime,
+        version = Timestamp("2015-08-27T14:13:05.942Z").toOffsetDateTime,
+        slaveId = Some("slave34")
       )
-      val extended = AppInfo(app, maybeLastTaskFailure = Some(lastTaskFailure))
+      val extended = raml.AppInfo(app, lastTaskFailure = Some(lastTaskFailure))
 
       Then("the result contains all fields of the app plus the deployments")
       val lastTaskFailureJson = Json.parse(
