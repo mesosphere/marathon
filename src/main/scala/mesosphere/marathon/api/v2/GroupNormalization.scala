@@ -148,7 +148,7 @@ case class GroupNormalization(conf: MarathonConf, originalRootGroup: RootGroup) 
     * @param conf The [[MarathonConf]] used to check the default Mesos role.
     * @param groupId The group id of the lower level group. Must not be root or top-level.
     * @param rootGroup The root group used to look up the default role.
-    * @return The default role for all apps and pods and whether it should be enforced.
+    * @return a tuple of the default role for all apps and pods and whether it should be enforced.
     */
   private def inferDefaultRole(conf: MarathonConf, groupId: AbsolutePathId, rootGroup: RootGroup): (Role, Boolean) = {
     require(!groupId.isTopLevel && !groupId.isRoot)
