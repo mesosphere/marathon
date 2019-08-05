@@ -529,5 +529,38 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
         rootGroup.app(PathId("/prod/sleep/goodnight")).value.role should be("prod")
       }
     }
+
+    "Default according to the top-level group when enforce role = false" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+        val body =
+          """
+        {
+          "groups": [
+            {
+              "apps": [
+                {
+                  "id": "goodnight",
+                  "cmd": "sleep 1",
+                  "instances": 0
+                }
+              ],
+              "id": "sleep"
+            }
+          ],
+          "id": "/prod",
+          "enforceRole": false
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("", false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 201
+
+        val rootGroup = groupManager.rootGroup()
+        groupPaths(rootGroup) shouldBe Set("/", "/prod", "/prod/sleep")
+        rootGroup.app(PathId("/prod/sleep/goodnight")).value.role should be(config.mesosRole())
+      }
+    }
   }
 }
