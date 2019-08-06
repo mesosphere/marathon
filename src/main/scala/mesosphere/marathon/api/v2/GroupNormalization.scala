@@ -157,9 +157,9 @@ case class GroupNormalization(conf: MarathonConf, originalRootGroup: RootGroup) 
         // If the top-level does not exist it is created during the update. Thus the enforced role is defined
         // by the configured behavior.
         (conf.mesosRole(), effectiveEnforceRole(conf.groupRoleBehavior(), None))
-      case Some(parentGroup) =>
-        val defaultRole = if (parentGroup.enforceRole) groupId.root else conf.mesosRole()
-        (defaultRole, parentGroup.enforceRole)
+      case Some(topLevelGroup) =>
+        val defaultRole = if (topLevelGroup.enforceRole) groupId.root else conf.mesosRole()
+        (defaultRole, topLevelGroup.enforceRole)
     }
   }
 
