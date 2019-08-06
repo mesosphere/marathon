@@ -994,10 +994,17 @@ def test_default_user():
 
 @common.marathon_1_4
 def test_declined_offer_due_to_resource_role():
-    """Tests that an offer gets declined because the role doesn't exist."""
+    """Tests that an offer gets declined because the role doesn't exist.
+       In the multi role world Marathon does not accept an `acceptedResourceRole` which is not also
+       the app `role` (it doesn't make sense, since the app will never start).
+       In oder to use an acceptedResourceRoles: ["very-random-role"] we need to deploy the app
+       in a top-level group with the same name ("very-random-role") and since enforceRole is by
+       default false, we also set the role field explicitly (to the same value).
+    """
 
-    app_def = apps.sleep_app()
-    app_def["acceptedResourceRoles"] = ["very_random_role"]
+    app_def = apps.sleep_app(app_id="/very-random-role/sleep-that-doesnt-start-because-no-resources")
+    app_def["role"] = "very-random-role"
+    app_def["acceptedResourceRoles"] = ["very-random-role"]
     _test_declined_offer(app_def, 'UnfulfilledRole')
 
 
