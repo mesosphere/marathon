@@ -88,7 +88,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
         case Seq(lastState, newState) =>
           logic.directivesForDiff(lastState, newState)
         case _ =>
-          logger.debug(s"Stream is terminating")
+          logger.info(s"Revive stream is terminating")
           Nil
       })
   }
@@ -212,10 +212,12 @@ object ReviveOffersStreamLogic extends StrictLogging {
 
     def processRoleDirective(directive: RoleDirective): Unit = directive match {
       case updateFramework: UpdateFramework =>
+        logger.info(s"Updating framework to revive offers with $directive")
         currentRoleState = updateFramework.roleState
         markRolesForRepeat(updateFramework.newlyRevived)
 
       case IssueRevive(roles) =>
+        logger.info(s"Send revive offers with $directive")
         markRolesForRepeat(roles) // set / reset the repeat delay
     }
 
@@ -233,9 +235,10 @@ object ReviveOffersStreamLogic extends StrictLogging {
       repeatIn = newRepeatIn
 
       if (rolesForReviveRepetition.isEmpty) {
+        logger.info(s"Nothing to revive for $rolesForReviveRepetition.")
         Nil
       } else {
-        logger.debug(s"Repeat revive for $rolesForReviveRepetition.")
+        logger.info(s"Repeat revive for $rolesForReviveRepetition.")
         List(IssueRevive(rolesForReviveRepetition))
       }
     }
