@@ -994,7 +994,7 @@ def test_default_user():
 
 @common.marathon_1_4
 def test_declined_offer_due_to_resource_role():
-    """Tests that an offer gets declined because the role doesn't exist.
+    """Tests that an offer gets declined because no resources are allocated for the role.
        In the multi role world Marathon does not accept an `acceptedResourceRole` which is not also
        the app `role` (it doesn't make sense, since the app will never start).
        In oder to use an acceptedResourceRoles: ["very-random-role"] we need to deploy the app
