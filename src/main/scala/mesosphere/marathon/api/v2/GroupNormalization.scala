@@ -164,7 +164,7 @@ case class GroupNormalization(conf: MarathonConf, originalRootGroup: RootGroup) 
   }
 
   private def validRolesFor(appId: AbsolutePathId, defaultRole: Role, enforceRole: Boolean): Set[String] = {
-    // Look up any previously set group on the specified runSpec, and add that to the validRoles set if it exists
+    // Look up any previously set role on the specified runSpec, and add that to the validRoles set if it exists
     val maybeExistingRole: Option[String] = originalRootGroup.runSpec(appId).map(_.role)
 
     if (enforceRole) {
