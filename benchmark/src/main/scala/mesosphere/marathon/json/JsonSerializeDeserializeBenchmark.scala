@@ -36,15 +36,13 @@ class JsonSerializeDeserializeState {
     * The contents of the JSON mock file as an updatable root group
     */
   lazy val rootGroupMock: Group = {
-    import mesosphere.marathon.raml.GroupConversion._
     val value: JsValue = Json.parse(jsonMockContents)
     val groupUpdate: raml.GroupUpdate = Json.fromJson[raml.GroupUpdate](value).get
 
     val group: RootGroup = RootGroup()
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
 
-    Raml.fromRaml(
-      GroupConversion(groupUpdate, group, Timestamp.zero) -> appConversionFunc)
+    GroupConversion(groupUpdate, group, Timestamp.zero).apply(appConversionFunc)
   }
 
 }
@@ -69,14 +67,12 @@ class JsonSerializeDeserializeBenchmark extends JsonSerializeDeserializeState {
 
   @Benchmark
   def jsonParseDeserialiseUpdate(hole: Blackhole): Unit = {
-    import mesosphere.marathon.raml.GroupConversion._
     val value: JsValue = Json.parse(jsonMockContents)
     val groupUpdate: raml.GroupUpdate = Json.fromJson[raml.GroupUpdate](value).get
 
     val group: RootGroup = RootGroup()
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
-    val updatedGroup: Group = Raml.fromRaml(
-      GroupConversion(groupUpdate, rootGroupMock, Timestamp.now()) -> appConversionFunc)
+    val updatedGroup: Group = GroupConversion(groupUpdate, rootGroupMock, Timestamp.now()).apply(appConversionFunc)
 
     hole.consume(updatedGroup)
   }

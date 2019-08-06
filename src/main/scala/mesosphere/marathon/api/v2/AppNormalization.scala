@@ -4,7 +4,7 @@ package api.v2
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{AbsolutePathId, FetchUri, PathId}
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util.RoleSettings
+import mesosphere.mesos.ResourceMatcher.Role
 
 object AppNormalization {
 
@@ -310,7 +310,7 @@ object AppNormalization {
     // requirePorts only applies for host-mode networking
     val requirePorts = networks.find(_.mode != NetworkMode.Host).fold(app.requirePorts)(_ => false)
 
-    val role = app.role.getOrElse(config.roleSettings.defaultRole)
+    val role = app.role.getOrElse(config.defaultRole)
 
     // sanitize accepted resource roles if enabled
     val acceptedResourceRoles =
@@ -332,7 +332,7 @@ object AppNormalization {
   trait Config extends NetworkNormalization.Config {
     def mesosBridgeName: String
     def enabledFeatures: Set[String]
-    def roleSettings: RoleSettings
+    def defaultRole: Role
     def sanitizeAcceptedResourceRoles: Boolean
   }
 
@@ -341,19 +341,19 @@ object AppNormalization {
       defaultNetworkName: Option[String],
       override val mesosBridgeName: String,
       enabledFeatures: Set[String],
-      roleSettings: RoleSettings,
+      defaultRole: Role,
       sanitizeAcceptedResourceRoles: Boolean
   ) extends Config {
 
   }
 
   object Configuration {
-    def apply(config: MarathonConf, roleSettings: RoleSettings): Config =
+    def apply(config: MarathonConf, defaultRole: Role): Config =
       Configuration(
         config.defaultNetworkName.toOption,
         config.mesosBridgeName(),
         config.availableFeatures,
-        roleSettings,
+        defaultRole,
         config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles)
       )
   }

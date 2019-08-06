@@ -23,12 +23,12 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
   val enabledFeatures = Set("secrets")
   val enforcedrole = "*"
 
-  val validator = AppDefinition.validAppDefinition(enabledFeatures, ValidationHelper.roleSettings)(PluginManager.None)
+  val validator = AppDefinition.validAppDefinition(enabledFeatures, ValidationHelper.roleSettings())(PluginManager.None)
 
   val validatorWithRole = AppDefinition.validAppDefinition(enabledFeatures, RoleSettings(validRoles = Set("someRole"), defaultRole = "someRole"))(PluginManager.None)
 
   private[this] def appNormalization(app: raml.App): raml.App =
-    AppHelpers.appNormalization(AppNormalization.Configuration(None, "mesos-bridge-name", enabledFeatures, ValidationHelper.roleSettings, true)).normalized(app)
+    AppHelpers.appNormalization(AppNormalization.Configuration(None, "mesos-bridge-name", enabledFeatures, ResourceRole.Unreserved, true), Set(ResourceRole.Unreserved)).normalized(app)
 
   private[this] def fromJson(json: String): AppDefinition = {
     val raw: raml.App = Json.parse(json).as[raml.App]
@@ -196,7 +196,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       validator(app.copy(resources = Resources(gpus = 1))) should haveViolations("/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
 
       {
-        val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"), ValidationHelper.roleSettings)(PluginManager.None)
+        val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"), ValidationHelper.roleSettings())(PluginManager.None)
         appValidator(app.copy(resources = Resources(gpus = 1))) shouldNot haveViolations(
           "/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
       }

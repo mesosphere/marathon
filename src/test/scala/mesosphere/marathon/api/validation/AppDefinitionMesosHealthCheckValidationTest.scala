@@ -9,7 +9,7 @@ import mesosphere.marathon.state._
 
 class AppDefinitionMesosHealthCheckValidationTest extends UnitTest {
 
-  lazy val validAppDefinition = AppDefinition.validAppDefinition(Set.empty, ValidationHelper.roleSettings)(PluginManager.None)
+  lazy val validAppDefinition = AppDefinition.validAppDefinition(Set.empty, ValidationHelper.roleSettings())(PluginManager.None)
   "AppDefinitionMesosHealthCheckValidation" should {
     "app with 0 Mesos health checks is valid" in {
       val f = new Fixture

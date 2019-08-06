@@ -23,8 +23,8 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
     groupId: AbsolutePathId,
     groupUpdate: raml.GroupUpdate,
     newVersion: Timestamp)(implicit identity: Identity): Future[RootGroup] = async {
-    val group = rootGroup.group(groupId).getOrElse(Group.empty(groupId))
-    checkAuthorizationOrThrow(UpdateGroup, group)
+    val currentGroup = rootGroup.group(groupId).getOrElse(Group.empty(groupId))
+    checkAuthorizationOrThrow(UpdateGroup, currentGroup)
 
     /**
       * roll back to a previous group version
@@ -32,23 +32,22 @@ class GroupApiService(groupManager: GroupManager)(implicit authorizer: Authorize
     def revertToOlderVersion: Future[Option[RootGroup]] = groupUpdate.version match {
       case Some(version) =>
         val targetVersion = Timestamp(version)
-        groupManager.group(group.id, targetVersion)
-          .map(_.getOrElse(throw new IllegalArgumentException(s"Group ${group.id} not available in version $targetVersion")))
+        groupManager.group(currentGroup.id, targetVersion)
+          .map(_.getOrElse(throw new IllegalArgumentException(s"Group ${currentGroup.id} not available in version $targetVersion")))
           .filter(checkAuthorizationOrThrow(ViewGroup, _))
           .map(g => Some(rootGroup.putGroup(g, newVersion)))
       case None => Future.successful(None)
     }
 
     def scaleChange: Option[RootGroup] = groupUpdate.scaleBy.map { scale =>
-      rootGroup.updateTransitiveApps(group.id, app => app.copy(instances = (app.instances * scale).ceil.toInt), newVersion)
+      rootGroup.updateTransitiveApps(currentGroup.id, app => app.copy(instances = (app.instances * scale).ceil.toInt), newVersion)
     }
 
     def createOrUpdateChange: RootGroup = {
       // groupManager.update always passes a group, even if it doesn't exist
-      val maybeExistingGroup = groupManager.group(group.id)
+      val maybeExistingGroup = groupManager.group(currentGroup.id)
       val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
-      val updatedGroup: Group = Raml.fromRaml(
-        GroupConversion(groupUpdate, group, newVersion) -> appConversionFunc)
+      val updatedGroup: Group = GroupConversion(groupUpdate, currentGroup, newVersion).apply(appConversionFunc)
 
       if (maybeExistingGroup.isEmpty) checkAuthorizationOrThrow(CreateGroup, updatedGroup)
 

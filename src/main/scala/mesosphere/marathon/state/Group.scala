@@ -4,7 +4,7 @@ package state
 import java.util.Objects
 
 import com.typesafe.scalalogging.StrictLogging
-import com.wix.accord.Descriptions.Explicit
+import com.wix.accord.Descriptions.{Explicit, Generic, Path}
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
@@ -33,7 +33,7 @@ class Group(
     * @return None if the app was not found or non empty option with app.
     */
   def app(appId: PathId): Option[AppDefinition] = {
-    apps.get(appId) orElse group(appId.parent).flatMap(_.apps.get(appId))
+    apps.get(appId) orElse group(appId.parent.asAbsolutePath).flatMap(_.apps.get(appId))
   }
 
   /**
@@ -43,7 +43,7 @@ class Group(
     * @return None if the pod was not found or non empty option with pod.
     */
   def pod(podId: PathId): Option[PodDefinition] = {
-    pods.get(podId) orElse group(podId.parent).flatMap(_.pods.get(podId))
+    pods.get(podId) orElse group(podId.parent.asAbsolutePath).flatMap(_.pods.get(podId))
   }
 
   /**
@@ -207,7 +207,7 @@ object Group extends StrictLogging {
   def defaultDependencies: Set[AbsolutePathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  def validGroup(base: PathId, config: MarathonConf): Validator[Group] =
+  def validGroup(base: AbsolutePathId, config: MarathonConf): Validator[Group] =
     validator[Group] { group =>
       group.id is validPathWithBase(base)
 
@@ -278,7 +278,7 @@ object Group extends StrictLogging {
     isTrue("App has to be child of group with parent id") { app =>
       if (app.id.asAbsolutePath.parent == group.id.asAbsolutePath) group.apps.contains(app.id)
       else {
-        group.group(app.id.parent).exists(child => child.apps.contains(app.id))
+        group.group(app.id.parent.asAbsolutePath).exists(child => child.apps.contains(app.id))
       }
     }
   }
@@ -312,11 +312,7 @@ object Group extends StrictLogging {
   def validNestedGroupUpdateWithBase(base: AbsolutePathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] =
     validator[raml.GroupUpdate] { group =>
       group is notNull
-
-      // Only top-level groups are allowed to set the enforce role parameter.
-      if (group.enforceRole.contains(true)) {
-        group.id.map(_.toPath) is optional(PathId.topLevel)
-      }
+      group is definingEnforcingRoleOnlyIfItsTopLevel(base)
 
       // Enforce role is not allowed to be updated.
       group.enforceRole is noEnforceRoleUpdate(originalRootGroup, group.id.map(_.toPath.canonicalPath(base)))
@@ -334,9 +330,21 @@ object Group extends StrictLogging {
         validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup)))
     }
 
+  private case class definingEnforcingRoleOnlyIfItsTopLevel(base: AbsolutePathId) extends Validator[raml.GroupUpdate] {
+    override def apply(group: raml.GroupUpdate): Result = {
+      val groupId = group.id.fold(base) { id => PathId(id).canonicalPath(base) }
+      // Only top-level groups are allowed to set the enforce role parameter.
+      if (!groupId.isTopLevel && group.enforceRole.contains(true)) {
+        Failure(Set(RuleViolation(group.enforceRole, s"enforceRole can only be set for top-level groups, and ${groupId} is not top-level", Path(Generic("enforceRole")))))
+      } else {
+        Success
+      }
+    }
+  }
+
   case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[AbsolutePathId]) extends Validator[Option[Boolean]] {
 
-    def apply(maybeNewEnforceRole: Option[Boolean]) = {
+    override def apply(maybeNewEnforceRole: Option[Boolean]): Result = {
       val originalGroup = updatedGroupId.flatMap(originalRootGroup.group) // TODO: why is groupUpdate.id optional? What is the semantic there?
       (maybeNewEnforceRole, originalGroup.map(_.enforceRole)) match {
         case (None, None) => Success
