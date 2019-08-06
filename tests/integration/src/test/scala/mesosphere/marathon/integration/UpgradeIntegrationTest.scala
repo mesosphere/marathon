@@ -85,6 +85,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       implicit
       val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
+    override val conf = Map("min_revive_offers_interval" -> "100")
+
     override val processBuilder = {
       val bin = new File(marathonPackage, "marathon-1.5.15/bin/marathon").getCanonicalPath
       val cmd = Seq("bash", bin, "-J-Xmx1024m", "-J-Xms256m", "-J-XX:+UseConcMarkSweepGC", "-J-XX:ConcGCThreads=2") ++ akkaJvmArgs ++
