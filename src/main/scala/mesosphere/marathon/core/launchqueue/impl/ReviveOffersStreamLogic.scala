@@ -212,12 +212,12 @@ object ReviveOffersStreamLogic extends StrictLogging {
 
     def processRoleDirective(directive: RoleDirective): Unit = directive match {
       case updateFramework: UpdateFramework =>
-        logger.info(s"Updating framework to revive offers with $directive")
+        logger.info(s"Issuing update framework for $updateFramework")
         currentRoleState = updateFramework.roleState
         markRolesForRepeat(updateFramework.newlyRevived)
 
       case IssueRevive(roles) =>
-        logger.info(s"Send revive offers with $directive")
+        logger.info(s"Issuing revive for roles $roles")
         markRolesForRepeat(roles) // set / reset the repeat delay
     }
 
@@ -235,10 +235,10 @@ object ReviveOffersStreamLogic extends StrictLogging {
       repeatIn = newRepeatIn
 
       if (rolesForReviveRepetition.isEmpty) {
-        logger.info(s"Nothing to revive for $rolesForReviveRepetition.")
+        logger.info(s"Found no roles to revive.")
         Nil
       } else {
-        logger.info(s"Repeat revive for $rolesForReviveRepetition.")
+        logger.info(s"Repeat revive for roles $rolesForReviveRepetition.")
         List(IssueRevive(rolesForReviveRepetition))
       }
     }
