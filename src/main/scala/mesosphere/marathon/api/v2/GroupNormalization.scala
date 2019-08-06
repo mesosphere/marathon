@@ -130,7 +130,7 @@ case class GroupNormalization(conf: MarathonConf, originalRootGroup: RootGroup) 
     * Infers the enforce role field for a top-level group based on the update value and the default behavior.
     *
     * @param groupRoleBehavior The Marathon configured [[GroupRoleBehavior]]
-    * @param maybeEnforceRole The role defined by the updated.
+    * @param maybeEnforceRole The role defined by the update.
     * @return Whether or not to enforce the role.
     */
   private def effectiveEnforceRole(groupRoleBehavior: GroupRoleBehavior, maybeEnforceRole: Option[Boolean]): Boolean = {
