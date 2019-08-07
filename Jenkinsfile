@@ -31,5 +31,10 @@ ansiColor('xterm') {
         archive includes: "*log.tar.gz"
       }
     }
+
+    // TODO: only run when on master
+    stage('Release unstable MoM EE Docker Image') {
+      build job: '/Marathon/job/marathon-dcos-plugins/job/release-mom-ee-docker-image/job/master/', parameters: [string(name: 'from_image_tag', value: 'unstable')], propagate: true
+    }
   }
 }
