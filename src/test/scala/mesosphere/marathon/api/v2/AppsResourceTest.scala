@@ -113,8 +113,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val rootGroup = createRootGroup(groups = Set(group), validate = validate, enabledFeatures = enabledFeatures)
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(normed)).getBytes("UTF-8")
-      println(s"Before ${app.acceptedResourceRoles}")
-      println(s"Normed ${normed.acceptedResourceRoles}")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
       groupManager.rootGroup() returns rootGroup
       groupManager.app(appDef.id) returns Some(appDef)
