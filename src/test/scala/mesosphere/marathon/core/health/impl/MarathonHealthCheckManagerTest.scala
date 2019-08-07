@@ -56,7 +56,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     )
   }
 
-  def setupTrackerWithProvisionedInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
+  def setupTrackerWithProvisionedInstance(appId: AbsolutePathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
     val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version), role = "*")
     val scheduledInstance = Instance.scheduled(app)
     // schedule
@@ -70,7 +70,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     updateEffect.instance
   }
 
-  def setupTrackerWithRunningInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
+  def setupTrackerWithRunningInstance(appId: AbsolutePathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
     val instance: Instance = await(setupTrackerWithProvisionedInstance(appId, version, instanceTracker))
     val (taskId, _) = instance.tasksMap.head
     // update to running
@@ -234,7 +234,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       var instances = new ListBuffer[Instance]()
       var currentApp: AppDefinition = _
 
-      def startInstance(appId: PathId, version: Timestamp, healthChecks: Set[HealthCheck]): (Instance, AppDefinition) = {
+      def startInstance(appId: AbsolutePathId, version: Timestamp, healthChecks: Set[HealthCheck]): (Instance, AppDefinition) = {
         val app = AppDefinition(
           id = appId,
           role = "*",

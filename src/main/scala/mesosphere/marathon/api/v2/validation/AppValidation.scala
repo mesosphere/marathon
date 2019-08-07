@@ -350,7 +350,7 @@ trait AppValidation {
     app.constraints.each must complyWithAppConstraintRules
     app.networks is ramlNetworksValidator
     app is validWithRoleEnforcement(validRoles)
-  } and ExternalVolumes.validAppRaml
+  } and ExternalVolumes.validAppRaml()
 
   def validWithRoleEnforcement(validRoles: Set[String]): Validator[App] = validator[App] { app =>
     app.role is optional(in(validRoles))

@@ -9,7 +9,7 @@ import mesosphere.marathon.core.appinfo.{AppSelector, Selector}
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{AppConversion, AppExternalVolume, AppPersistentVolume, Raml}
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableStrategy}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp, UnreachableStrategy}
 import mesosphere.marathon.stream.Implicits._
 
 object AppHelpers {
@@ -34,7 +34,7 @@ object AppHelpers {
     * using the `PUT` method: an AppUpdate is submitted for an App that doesn't actually exist: we convert the
     * "update" operation into a "create" operation. This helper func facilitates that.
     */
-  def withoutPriorAppDefinition(update: raml.AppUpdate, appId: PathId): raml.App = {
+  def withoutPriorAppDefinition(update: raml.AppUpdate, appId: AbsolutePathId): raml.App = {
     val selectedStrategy = AppConversion.UpgradeStrategyConverter(
       upgradeStrategy = update.upgradeStrategy.map(Raml.fromRaml(_)),
       hasPersistentVolumes = update.container.exists(_.volumes.existsAn[AppPersistentVolume]),
@@ -74,7 +74,7 @@ object AppHelpers {
     * TODO - move async concern out
     */
   def updateOrCreate(
-    appId: PathId,
+    appId: AbsolutePathId,
     existing: Option[AppDefinition],
     appUpdate: raml.AppUpdate,
     partialUpdate: Boolean,

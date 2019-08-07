@@ -36,8 +36,8 @@ object UpdateGroupStructureOp {
     * Creates a new [[state.Group]] from a [[GroupUpdate]], performing both normalization and conversion.
     */
   private def createGroup(groupUpdate: GroupUpdate, gid: AbsolutePathId, version: Timestamp)(implicit cf: App => AppDefinition): CoreGroup = {
-    implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(gid.asAbsolutePath))
-    implicit val appNormalization = normalizeApp(version)
+    implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(gid))
+    implicit val appNormalization: Normalization[AppDefinition] = normalizeApp(version)
 
     val appsById: Map[AppDefinition.AppKey, AppDefinition] = groupUpdate.apps.getOrElse(Set.empty).map { currentApp =>
       val app = cf(currentApp).normalize
@@ -76,7 +76,7 @@ object UpdateGroupStructureOp {
     assert(groupUpdate.enforceRole.isDefined, s"BUG! The group normalization should have set enforceRole for ${groupUpdate.id}.")
 
     implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(current.id))
-    implicit val appNormalization = normalizeApp(timestamp)
+    implicit val appNormalization: Normalization[AppDefinition] = normalizeApp(timestamp)
 
     val effectiveGroups: Map[CoreGroup.GroupKey, CoreGroup] = groupUpdate.groups.fold(current.groupsById) { updates =>
       updates.map { groupUpdate =>

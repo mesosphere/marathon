@@ -1,34 +1,36 @@
 package mesosphere.marathon
 package core.launchqueue
 
+import java.time.Clock
+
 import akka.NotUsed
 import akka.stream.Materializer
 import akka.stream.scaladsl.{Keep, Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
-import java.time.Clock
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{InstancesSnapshot, InstanceChange, InstanceUpdated}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated, InstancesSnapshot}
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics.RunSpecOfferStatistics
 import mesosphere.marathon.core.launchqueue.impl.{OfferMatchStatistics, RateLimiter}
 import mesosphere.marathon.raml.QueueDelay
-import mesosphere.marathon.state.{PathId, RunSpec, RunSpecConfigRef, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, RunSpec, RunSpecConfigRef, Timestamp}
 import mesosphere.marathon.stream.{EnrichedSink, LiveFold}
 import mesosphere.mesos.NoOfferMatchReason
-import scala.concurrent.{ExecutionContext, Future}
-import scala.concurrent.duration._
+
 import scala.async.Async._
+import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * See LaunchStats$.apply
   */
 class LaunchStats private[launchqueue] (
-    getRunSpec: PathId => Option[RunSpec],
+    getRunSpec: AbsolutePathId => Option[RunSpec],
     delays: LiveFold.Folder[Map[RunSpecConfigRef, Timestamp]],
     launchingInstances: LiveFold.Folder[Map[Instance.Id, LaunchStats.LaunchingInstance]],
-    runSpecStatistics: LiveFold.Folder[Map[PathId, RunSpecOfferStatistics]],
-    noMatchStatistics: LiveFold.Folder[Map[PathId, Map[String, OfferMatchResult.NoMatch]]])(implicit ec: ExecutionContext) {
+    runSpecStatistics: LiveFold.Folder[Map[AbsolutePathId, RunSpecOfferStatistics]],
+    noMatchStatistics: LiveFold.Folder[Map[AbsolutePathId, Map[String, OfferMatchResult.NoMatch]]])(implicit ec: ExecutionContext) {
 
   def getStatistics(): Future[Seq[LaunchStats.QueuedInstanceInfoWithStatistics]] = async {
     /**
@@ -143,7 +145,7 @@ object LaunchStats extends StrictLogging {
         .alsoToMat(OfferMatchStatistics.runSpecStatisticsSink)(Keep.right)
         .toMat(OfferMatchStatistics.noMatchStatisticsSink)(Keep.both)
         .run
-    new LaunchStats(groupManager.runSpec(_), delays, launchingInstances, runSpecStatistics, noMatchStatistics)
+    new LaunchStats(groupManager.runSpec, delays, launchingInstances, runSpecStatistics, noMatchStatistics)
   }
 
   /**

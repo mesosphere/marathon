@@ -11,7 +11,7 @@ import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreVersione
 import mesosphere.marathon.core.storage.store.impl.memory.{Identity, RamId}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AbsolutePathId, PathId}
 import mesosphere.marathon.storage.store.{InMemoryStoreSerialization, ZkStoreSerialization}
 
 trait ServiceDefinitionRepository extends ReadOnlyVersionedRepository[PathId, ServiceDefinition]
@@ -20,18 +20,18 @@ private[storage] object ServiceDefinitionRepository {
 
   import PathId._
 
-  implicit val memServiceDefResolver: IdResolver[PathId, ServiceDefinition, String, RamId] =
+  implicit val memServiceDefResolver: IdResolver[AbsolutePathId, ServiceDefinition, String, RamId] =
     new InMemoryStoreSerialization.InMemPathIdResolver[ServiceDefinition](
       "app", true, v => OffsetDateTime.parse(v.getVersion))
 
-  implicit val zkServiceDefResolver: IdResolver[PathId, ServiceDefinition, String, ZkId] =
+  implicit val zkServiceDefResolver: IdResolver[AbsolutePathId, ServiceDefinition, String, ZkId] =
     new ZkStoreSerialization.ZkPathIdResolver[ServiceDefinition]("apps", true, v => OffsetDateTime.parse(v.getVersion))
 
   private[this] class ServiceDefinitionRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-      ir: IdResolver[PathId, ServiceDefinition, C, K],
+      ir: IdResolver[AbsolutePathId, ServiceDefinition, C, K],
       marshaller: Marshaller[ServiceDefinition, S],
-      unmarshaller: Unmarshaller[S, ServiceDefinition]) extends PersistenceStoreVersionedRepository[PathId, ServiceDefinition, K, C, S](
-    persistenceStore, _.getId.toPath, v => OffsetDateTime.parse(v.getVersion)
+      unmarshaller: Unmarshaller[S, ServiceDefinition]) extends PersistenceStoreVersionedRepository[AbsolutePathId, ServiceDefinition, K, C, S](
+    persistenceStore, _.getId.toAbsolutePath, v => OffsetDateTime.parse(v.getVersion)
   )(ir, marshaller, unmarshaller) with ServiceDefinitionRepository
 
   def inMemRepository(

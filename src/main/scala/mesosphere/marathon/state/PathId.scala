@@ -121,6 +121,8 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
 
 case class AbsolutePathId(path: Seq[String]) extends PathId {
   override val absolute: Boolean = true
+
+  @deprecated("Calling this method is a no-op")
   override def asAbsolutePath: AbsolutePathId = this
   protected def toString(delimiter: String): String =
     path.mkString("/", delimiter, "")

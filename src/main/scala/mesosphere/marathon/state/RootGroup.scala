@@ -22,7 +22,7 @@ import scala.collection.JavaConverters._
   */
 class RootGroup(
     apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PathId, PodDefinition] = Group.defaultPods,
+    pods: Map[PodDefinition.PodKey, PodDefinition] = Group.defaultPods,
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
     dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion) extends Group(
@@ -241,8 +241,8 @@ class RootGroup(
     * @return the new root group with the specified app updated.
     */
   def updateApp(
-    appId: PathId, fn: Option[AppDefinition] => AppDefinition, version: Timestamp = Group.defaultVersion): RootGroup = {
-    val oldGroup = group(appId.parent.asAbsolutePath).getOrElse(Group.empty(appId.parent.asAbsolutePath))
+    appId: AppDefinition.AppKey, fn: Option[AppDefinition] => AppDefinition, version: Timestamp = Group.defaultVersion): RootGroup = {
+    val oldGroup = group(appId.parent).getOrElse(Group.empty(appId.parent))
     val newApp = fn(app(appId))
     require(newApp.id == appId, "app id must not be changed by `fn`.")
     val newGroup = Group(
@@ -277,8 +277,8 @@ class RootGroup(
     * @return the new root group with the specified pod updated.
     */
   def updatePod(
-    podId: PathId, fn: Option[PodDefinition] => PodDefinition, version: Timestamp = Group.defaultVersion): RootGroup = {
-    val oldGroup = group(podId.parent.asAbsolutePath).getOrElse(Group.empty(podId.parent.asAbsolutePath))
+    podId: PodDefinition.PodKey, fn: Option[PodDefinition] => PodDefinition, version: Timestamp = Group.defaultVersion): RootGroup = {
+    val oldGroup = group(podId.parent).getOrElse(Group.empty(podId.parent))
     val newPod = fn(pod(podId))
     require(newPod.id == podId, "pod id must not be changed by `fn`.")
     val newGroup = Group(
@@ -366,9 +366,9 @@ class RootGroup(
     * @param version the new version of the root group
     * @return the new root group with the specified app removed.
     */
-  def removeApp(appId: PathId, version: Timestamp = Group.defaultVersion): RootGroup = {
+  def removeApp(appId: AppDefinition.AppKey, version: Timestamp = Group.defaultVersion): RootGroup = {
     app(appId).fold(updateVersion(version)) { oldApp =>
-      val oldGroup = transitiveGroupsById(oldApp.id.parent.asAbsolutePath)
+      val oldGroup = transitiveGroupsById(oldApp.id.parent)
       putGroup(Group(
         id = oldGroup.id,
         apps = oldGroup.apps - oldApp.id,
@@ -389,9 +389,9 @@ class RootGroup(
     * @param version the new version of the root group
     * @return the new root group with the specified pod removed.
     */
-  def removePod(podId: PathId, version: Timestamp = Group.defaultVersion): RootGroup = {
+  def removePod(podId: PodDefinition.PodKey, version: Timestamp = Group.defaultVersion): RootGroup = {
     pod(podId).fold(updateVersion(version)) { oldPod =>
-      val oldGroup = transitiveGroupsById(oldPod.id.parent.asAbsolutePath)
+      val oldGroup = transitiveGroupsById(oldPod.id.parent)
       putGroup(Group(
         id = oldGroup.id,
         apps = oldGroup.apps,
@@ -424,7 +424,7 @@ class RootGroup(
 object RootGroup {
   def apply(
     apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PathId, PodDefinition] = Group.defaultPods,
+    pods: Map[PodDefinition.PodKey, PodDefinition] = Group.defaultPods,
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
     dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion): RootGroup = new RootGroup(apps, pods, groupsById, dependencies, version)

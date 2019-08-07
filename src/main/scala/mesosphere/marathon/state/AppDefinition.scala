@@ -30,7 +30,7 @@ import scala.concurrent.duration._
 
 case class AppDefinition(
 
-    id: PathId,
+    id: AbsolutePathId,
 
     override val cmd: Option[String] = App.DefaultCmd,
 
@@ -68,7 +68,7 @@ case class AppDefinition(
 
     taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
 
-    dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
+    dependencies: Set[AbsolutePathId] = AppDefinition.DefaultDependencies,
 
     upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
 
@@ -288,7 +288,7 @@ case class AppDefinition(
     }
 
     AppDefinition(
-      id = PathId(proto.getId),
+      id = AbsolutePathId(proto.getId), // TODO AN: Are we sure that we have always stored an absolute path id in the past?
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
       cmd = commandOption,
       args = argsOption,
@@ -323,7 +323,8 @@ case class AppDefinition(
       upgradeStrategy =
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
-      dependencies = proto.getDependenciesList.map(PathId(_))(collection.breakOut),
+      // TODO AN: Do we store dependencies as relative pathes????
+      dependencies = proto.getDependenciesList.map(AbsolutePathId(_))(collection.breakOut),
       networks = if (networks.isEmpty) AppDefinition.DefaultNetworks else networks,
       secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut),
       unreachableStrategy = unreachableStrategy,
@@ -416,7 +417,7 @@ case class AppDefinition(
 
 object AppDefinition extends GeneralPurposeCombinators {
 
-  type AppKey = PathId
+  type AppKey = AbsolutePathId
 
   val RandomPortValue: Int = 0
   val RandomPortDefinition: PortDefinition = PortDefinition(RandomPortValue, "tcp", None, Map.empty[String, String])
@@ -445,7 +446,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultTaskKillGracePeriod = Option.empty[FiniteDuration]
 
-  val DefaultDependencies = Set.empty[PathId]
+  val DefaultDependencies = Set.empty[AbsolutePathId]
 
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
 

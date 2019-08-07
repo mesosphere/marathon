@@ -8,7 +8,7 @@ import com.wix.accord
 trait GroupCreation {
   def createRootGroup(
     apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PathId, PodDefinition] = Group.defaultPods,
+    pods: Map[PodDefinition.PodKey, PodDefinition] = Group.defaultPods,
     groups: Set[Group] = Set.empty,
     dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
@@ -28,7 +28,7 @@ trait GroupCreation {
   def createGroup(
     id: AbsolutePathId,
     apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PathId, PodDefinition] = Group.defaultPods,
+    pods: Map[PodDefinition.PodKey, PodDefinition] = Group.defaultPods,
     groups: Set[Group] = Set.empty,
     dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,

@@ -37,7 +37,7 @@ private[launchqueue] object TaskLauncherActor {
     rateLimiterActor: ActorRef,
     offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
     localRegion: () => Option[Region])(
-    runSpecId: PathId): Props = {
+    runSpecId: AbsolutePathId): Props = {
     Props(new TaskLauncherActor(
       config,
       offerMatcherManager,
@@ -69,7 +69,7 @@ private class TaskLauncherActor(
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
     offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
-    runSpecId: PathId,
+    runSpecId: AbsolutePathId,
     localRegion: () => Option[Region]) extends Actor with StrictLogging with Stash {
   // scalastyle:on parameter.number
 

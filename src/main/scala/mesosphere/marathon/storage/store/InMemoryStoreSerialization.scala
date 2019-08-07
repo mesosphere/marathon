@@ -11,7 +11,7 @@ import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.storage.store.impl.memory.{Identity, RamId}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.RuntimeConfiguration
-import mesosphere.marathon.state.{AppDefinition, Instance, PathId, TaskFailure}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Instance, TaskFailure}
 import mesosphere.marathon.storage.repository.{StoredGroup, StoredPlan}
 import mesosphere.util.state.FrameworkId
 
@@ -25,19 +25,19 @@ trait InMemoryStoreSerialization {
       val category: String,
       val hasVersions: Boolean,
       getVersion: T => OffsetDateTime)
-    extends IdResolver[PathId, T, String, RamId] {
-    override def toStorageId(id: PathId, version: Option[OffsetDateTime]): RamId =
+    extends IdResolver[AbsolutePathId, T, String, RamId] {
+    override def toStorageId(id: AbsolutePathId, version: Option[OffsetDateTime]): RamId =
       RamId(category, id.path.mkString("_"), version)
 
-    override def fromStorageId(key: RamId): PathId = PathId(key.id.split("_").toList, absolute = true)
+    override def fromStorageId(key: RamId): AbsolutePathId = AbsolutePathId(key.id.split("_").toList)
 
     override def version(v: T): OffsetDateTime = getVersion(v)
   }
 
-  implicit def appDefResolver: IdResolver[PathId, AppDefinition, String, RamId] =
+  implicit def appDefResolver: IdResolver[AppDefinition.AppKey, AppDefinition, String, RamId] =
     new InMemPathIdResolver[AppDefinition]("app", true, _.version.toOffsetDateTime)
 
-  implicit val podDefResolver: IdResolver[PathId, PodDefinition, String, RamId] =
+  implicit val podDefResolver: IdResolver[PodDefinition.PodKey, PodDefinition, String, RamId] =
     new InMemPathIdResolver[PodDefinition]("pod", true, _.version.toOffsetDateTime)
 
   implicit val instanceResolver: IdResolver[Id, Instance, String, RamId] =
@@ -70,10 +70,10 @@ trait InMemoryStoreSerialization {
       override def version(v: StoredPlan): OffsetDateTime = OffsetDateTime.MIN
     }
 
-  implicit def taskFailureResolver: IdResolver[PathId, TaskFailure, String, RamId] =
+  implicit def taskFailureResolver: IdResolver[AbsolutePathId, TaskFailure, String, RamId] =
     new InMemPathIdResolver[TaskFailure]("taskfailure", true, _.version.toOffsetDateTime)
 
-  implicit def groupResolver: IdResolver[PathId, StoredGroup, String, RamId] =
+  implicit def groupResolver: IdResolver[AbsolutePathId, StoredGroup, String, RamId] =
     new InMemPathIdResolver[StoredGroup]("group", true, _.version)
 
   implicit val frameworkIdResolver = new IdResolver[String, FrameworkId, String, RamId] {

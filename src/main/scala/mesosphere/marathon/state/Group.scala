@@ -18,7 +18,7 @@ import mesosphere.util.summarize
 class Group(
     val id: AbsolutePathId,
     val apps: Map[AppDefinition.AppKey, AppDefinition] = defaultApps,
-    val pods: Map[PathId, PodDefinition] = defaultPods,
+    val pods: Map[PodDefinition.PodKey, PodDefinition] = defaultPods,
     val groupsById: Map[Group.GroupKey, Group] = defaultGroups,
     val dependencies: Set[AbsolutePathId] = defaultDependencies,
     val version: Timestamp = defaultVersion,
@@ -32,7 +32,7 @@ class Group(
     * @param appId The app to retrieve.
     * @return None if the app was not found or non empty option with app.
     */
-  def app(appId: PathId): Option[AppDefinition] = {
+  def app(appId: AbsolutePathId): Option[AppDefinition] = {
     apps.get(appId) orElse group(appId.parent.asAbsolutePath).flatMap(_.apps.get(appId))
   }
 
@@ -42,7 +42,7 @@ class Group(
     * @param podId The pod to retrieve.
     * @return None if the pod was not found or non empty option with pod.
     */
-  def pod(podId: PathId): Option[PodDefinition] = {
+  def pod(podId: AbsolutePathId): Option[PodDefinition] = {
     pods.get(podId) orElse group(podId.parent.asAbsolutePath).flatMap(_.pods.get(podId))
   }
 
@@ -52,7 +52,7 @@ class Group(
     * @param id The path of the run spec to retrieve.
     * @return None of run spec was not found or non empty option with run spec.
     */
-  def runSpec(id: PathId): Option[RunSpec] = {
+  def runSpec(id: AbsolutePathId): Option[RunSpec] = {
     val maybeApp = this.app(id)
     if (maybeApp.isDefined) maybeApp else this.pod(id)
   }
@@ -63,7 +63,7 @@ class Group(
     * @param id Id of an app or pod.
     * @return True if app or pod exists, false otherwise.
     */
-  def exists(id: PathId): Boolean = runSpec(id).isDefined
+  def exists(id: AbsolutePathId): Boolean = runSpec(id).isDefined
 
   /**
     * Find and return the child group for the given path.
@@ -74,17 +74,17 @@ class Group(
   def group(gid: AbsolutePathId): Option[Group] = transitiveGroupsById.get(gid)
 
   def transitiveAppsIterator(): Iterator[AppDefinition] = apps.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppsIterator())
-  private def transitiveAppIdsIterator(): Iterator[PathId] = apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppIdsIterator())
+  private def transitiveAppIdsIterator(): Iterator[AbsolutePathId] = apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppIdsIterator())
   lazy val transitiveApps: Iterable[AppDefinition] = transitiveAppsIterator().toVector
-  lazy val transitiveAppIds: Iterable[PathId] = transitiveAppIdsIterator().toVector
+  lazy val transitiveAppIds: Iterable[AbsolutePathId] = transitiveAppIdsIterator().toVector
 
   def transitivePodsIterator(): Iterator[PodDefinition] = pods.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodsIterator())
-  private def transitivePodIdsIterator(): Iterator[PathId] = pods.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodIdsIterator())
+  private def transitivePodIdsIterator(): Iterator[AbsolutePathId] = pods.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodIdsIterator())
   lazy val transitivePods: Iterable[PodDefinition] = transitivePodsIterator().toVector
-  lazy val transitivePodIds: Iterable[PathId] = transitivePodIdsIterator().toVector
+  lazy val transitivePodIds: Iterable[AbsolutePathId] = transitivePodIdsIterator().toVector
 
   lazy val transitiveRunSpecs: Iterable[RunSpec] = transitiveApps ++ transitivePods
-  lazy val transitiveRunSpecIds: Iterable[PathId] = transitiveAppIds ++ transitivePodIds
+  lazy val transitiveRunSpecIds: Iterable[AbsolutePathId] = transitiveAppIds ++ transitivePodIds
 
   def transitiveGroups(): Iterator[(Group.GroupKey, Group)] = groupsById.iterator ++ groupsById.valuesIterator.flatMap(_.transitiveGroups())
   lazy val transitiveGroupsById: Map[Group.GroupKey, Group] = {
@@ -190,7 +190,7 @@ object Group extends StrictLogging {
   def apply(
     id: AbsolutePathId,
     apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PathId, PodDefinition] = Group.defaultPods,
+    pods: Map[PodDefinition.PodKey, PodDefinition] = Group.defaultPods,
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
     dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
@@ -201,11 +201,11 @@ object Group extends StrictLogging {
   def empty(id: AbsolutePathId): Group =
     Group(id = id, version = Timestamp(0))
 
-  def defaultApps: Map[AppDefinition.AppKey, AppDefinition] = Map.empty
-  val defaultPods = Map.empty[PathId, PodDefinition]
-  def defaultGroups: Map[Group.GroupKey, Group] = Map.empty
-  def defaultDependencies: Set[AbsolutePathId] = Set.empty
-  def defaultVersion: Timestamp = Timestamp.now()
+  val defaultApps = Map.empty[AppDefinition.AppKey, AppDefinition]
+  val defaultPods = Map.empty[PodDefinition.PodKey, PodDefinition]
+  val defaultGroups = Map.empty[Group.GroupKey, Group]
+  val defaultDependencies = Set.empty[AbsolutePathId]
+  val defaultVersion = Timestamp.now()
 
   def validGroup(base: AbsolutePathId, config: MarathonConf): Validator[Group] =
     validator[Group] { group =>

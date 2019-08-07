@@ -5,9 +5,8 @@ import akka.stream.scaladsl.Sink
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.stream.{EnrichedSink, LiveFold}
 import mesosphere.mesos.NoOfferMatchReason
-
 import OfferMatchResult._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AbsolutePathId, PathId}
 
 /**
   * The OfferMatchStatistics is responsible for creating statistics for matched/unmatched offers based on RunSpecId.
@@ -17,8 +16,8 @@ import mesosphere.marathon.state.PathId
   */
 object OfferMatchStatistics {
 
-  def runSpecStatisticsSink: Sink[OfferMatchUpdate, LiveFold.Folder[Map[PathId, RunSpecOfferStatistics]]] = {
-    val zero = Map.empty[PathId, RunSpecOfferStatistics].withDefaultValue(RunSpecOfferStatistics.empty)
+  def runSpecStatisticsSink: Sink[OfferMatchUpdate, LiveFold.Folder[Map[AbsolutePathId, RunSpecOfferStatistics]]] = {
+    val zero = Map.empty[AbsolutePathId, RunSpecOfferStatistics].withDefaultValue(RunSpecOfferStatistics.empty)
     EnrichedSink.liveFold(zero) { (runSpecStatistics, offerMatchUpdate: OfferMatchUpdate) =>
       offerMatchUpdate match {
         case MatchResult(withMatch: Match) =>
@@ -35,8 +34,8 @@ object OfferMatchStatistics {
     }
   }
 
-  def noMatchStatisticsSink: Sink[OfferMatchUpdate, LiveFold.Folder[Map[PathId, Map[String, NoMatch]]]] = {
-    val zero = Map.empty[PathId, Map[String, NoMatch]].withDefaultValue(Map.empty)
+  def noMatchStatisticsSink: Sink[OfferMatchUpdate, LiveFold.Folder[Map[AbsolutePathId, Map[String, NoMatch]]]] = {
+    val zero = Map.empty[AbsolutePathId, Map[String, NoMatch]].withDefaultValue(Map.empty)
     EnrichedSink.liveFold(zero) { (lastNoMatches, offerMatchUpdate: OfferMatchUpdate) =>
       offerMatchUpdate match {
         case MatchResult(withMatch: Match) =>
@@ -92,6 +91,6 @@ object OfferMatchStatistics {
   }
 
   sealed trait OfferMatchUpdate
-  case class LaunchFinished(runSpecId: PathId) extends OfferMatchUpdate
+  case class LaunchFinished(runSpecId: AbsolutePathId) extends OfferMatchUpdate
   case class MatchResult(matchResult: OfferMatchResult) extends OfferMatchUpdate
 }

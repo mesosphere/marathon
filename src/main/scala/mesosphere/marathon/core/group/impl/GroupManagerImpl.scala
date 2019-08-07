@@ -72,47 +72,47 @@ class GroupManagerImpl(
 
   override def rootGroupOption(): Option[RootGroup] = root.get()
 
-  override def versions(id: PathId): Source[Timestamp, NotUsed] = {
+  override def versions(id: AbsolutePathId): Source[Timestamp, NotUsed] = {
     groupRepository.rootVersions().mapAsync(RepositoryConstants.maxConcurrency) { version =>
       groupRepository.rootVersion(version)
     }.collect { case Some(g) if g.group(id.asAbsolutePath).isDefined => g.version }
   }
 
-  override def appVersions(id: PathId): Source[OffsetDateTime, NotUsed] = {
+  override def appVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed] = {
     groupRepository.appVersions(id)
   }
 
-  override def appVersion(id: PathId, version: OffsetDateTime): Future[Option[AppDefinition]] = {
+  override def appVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Option[AppDefinition]] = {
     groupRepository.appVersion(id, version)
   }
 
-  override def podVersions(id: PathId): Source[OffsetDateTime, NotUsed] = {
+  override def podVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed] = {
     groupRepository.podVersions(id)
   }
 
-  override def podVersion(id: PathId, version: OffsetDateTime): Future[Option[PodDefinition]] = {
+  override def podVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Option[PodDefinition]] = {
     groupRepository.podVersion(id, version)
   }
 
-  override def group(id: PathId): Option[Group] = rootGroup().group(id.asAbsolutePath)
+  override def group(id: AbsolutePathId): Option[Group] = rootGroup().group(id.asAbsolutePath)
 
-  override def group(id: PathId, version: Timestamp): Future[Option[Group]] = async {
+  override def group(id: AbsolutePathId, version: Timestamp): Future[Option[Group]] = async {
     val root = await(groupRepository.rootVersion(version.toOffsetDateTime))
     root.flatMap(_.group(id.asAbsolutePath))
   }
 
-  override def runSpec(id: PathId): Option[RunSpec] = app(id).orElse(pod(id))
+  override def runSpec(id: AbsolutePathId): Option[RunSpec] = app(id).orElse(pod(id))
 
-  override def app(id: PathId): Option[AppDefinition] = rootGroup().app(id)
+  override def app(id: AbsolutePathId): Option[AppDefinition] = rootGroup().app(id)
 
-  override def apps(ids: Set[PathId]) = ids.map(appId => appId -> app(appId))(collection.breakOut)
+  override def apps(ids: Set[AbsolutePathId]) = ids.map(appId => appId -> app(appId))(collection.breakOut)
 
-  override def pod(id: PathId): Option[PodDefinition] = rootGroup().pod(id)
+  override def pod(id: AbsolutePathId): Option[PodDefinition] = rootGroup().pod(id)
 
   override def updateRootEither[T](
-    id: PathId,
-    change: (RootGroup) => Future[Either[T, RootGroup]],
-    version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
+    id: AbsolutePathId,
+    change: RootGroup => Future[Either[T, RootGroup]],
+    version: Timestamp, force: Boolean, toKill: Map[AbsolutePathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
     rootGroupUpdatesMetric.increment()
 
