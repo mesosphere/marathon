@@ -5,7 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.TestTaskBuilder
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinition}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PortDefinition}
 
 class ReadinessCheckSpecTest extends UnitTest {
   "ReadinessCheckSpec" should {
@@ -96,7 +96,7 @@ class ReadinessCheckSpecTest extends UnitTest {
   }
 
   class Fixture {
-    val appId: PathId = PathId("/test")
+    val appId: AbsolutePathId = AbsolutePathId("/test")
     val hostName = "some.host"
 
     val appWithOneReadinessCheck = AppDefinition(

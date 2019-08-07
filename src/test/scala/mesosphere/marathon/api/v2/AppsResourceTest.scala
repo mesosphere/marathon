@@ -1173,12 +1173,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     "Replace an existing application" in new Fixture {
       Given("An app and group")
-      val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"), role = "*")
+      val app = AppDefinition(id = AbsolutePathId("/app"), cmd = Some("foo"), role = "*")
       val rootGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = """{ "cmd": "bla" }""".getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
-      groupManager.app(PathId("/app")) returns Some(app)
+      groupManager.app(AbsolutePathId("/app")) returns Some(app)
 
       When("The application is updated")
       val response = asyncRequest { r =>
@@ -1594,7 +1594,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Replacing an existing docker application, upgrading from host to user networking" in new Fixture {
       Given("a docker app using host networking and non-empty port definitions")
       val app = AppDefinition(
-        id = PathId("/app"), container = Some(Container.Docker(image = "foo")), portDefinitions = PortDefinitions(0), role = "*")
+        id = AbsolutePathId("/app"), container = Some(Container.Docker(image = "foo")), portDefinitions = PortDefinitions(0), role = "*")
 
       When("upgraded to user networking using full-replacement semantics (no port definitions)")
       val body =
@@ -1625,11 +1625,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     }
 
     "Restart an existing app" in new Fixture {
-      val app = AppDefinition(id = PathId("/app"), cmd = Some("sleep"), role = "*")
+      val app = AppDefinition(id = AbsolutePathId("/app"), cmd = Some("sleep"), role = "*")
       val rootGroup = createRootGroup(Map(app.id -> app))
       val plan = DeploymentPlan(rootGroup, rootGroup)
       service.deploy(any, any) returns Future.successful(Done)
-      groupManager.app(PathId("/app")) returns Some(app)
+      groupManager.app(AbsolutePathId("/app")) returns Some(app)
 
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
       val response = asyncRequest { r =>
@@ -1641,8 +1641,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     }
 
     "Restart a non existing app will fail" in new Fixture {
-      val missing = PathId("/app")
-      groupManager.app(PathId("/app")) returns None
+      val missing = AbsolutePathId("/app")
+      groupManager.app(AbsolutePathId("/app")) returns None
       groupManager.updateApp(any, any, any, any, any) returns Future.failed(AppNotFoundException(missing))
 
       val response = asyncRequest { r =>
@@ -1653,7 +1653,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     "Index has counts and deployments by default (regression for #2171)" in new Fixture {
       Given("An app and group")
-      val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"), role = "*")
+      val app = AppDefinition(id = AbsolutePathId("/app"), cmd = Some("foo"), role = "*")
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments)
       val appInfo = AppInfo(app, maybeDeployments = Some(Seq(Identifiable("deployment-123"))), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
       appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
@@ -1669,7 +1669,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     "Index passes with embed LastTaskFailure (regression for #4765)" in new Fixture {
       Given("An app and group")
-      val app = AppDefinition(id = PathId("/app"), cmd = Some("foo"), role = "*")
+      val app = AppDefinition(id = AbsolutePathId("/app"), cmd = Some("foo"), role = "*")
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments, Embed.LastTaskFailure)
       val taskFailure = TaskFailure.empty
       val appInfo = AppInfo(app, maybeLastTaskFailure = Some(taskFailure), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
@@ -1687,8 +1687,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     }
 
     "Search apps can be filtered" in new Fixture {
-      val app1 = AppDefinition(id = PathId("/app/service-a"), cmd = Some("party hard"), labels = Map("a" -> "1", "b" -> "2"), role = "*")
-      val app2 = AppDefinition(id = PathId("/app/service-b"), cmd = Some("work hard"), labels = Map("a" -> "1", "b" -> "3"), role = "*")
+      val app1 = AppDefinition(id = AbsolutePathId("/app/service-a"), cmd = Some("party hard"), labels = Map("a" -> "1", "b" -> "2"), role = "*")
+      val app2 = AppDefinition(id = AbsolutePathId("/app/service-b"), cmd = Some("work hard"), labels = Map("a" -> "1", "b" -> "3"), role = "*")
       val apps = Set(app1, app2)
 
       def search(cmd: Option[String], id: Option[String], label: Option[String]): Set[AppDefinition] = {
@@ -1846,11 +1846,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       implicit val identity = auth.identity
       val selector = appsResource.selectAuthorized(Selector.forall(Seq.empty))
       val apps = Seq(
-        AppDefinition("/visible/app".toPath, role = "*"),
-        AppDefinition("/visible/other/foo/app".toPath, role = "*"),
-        AppDefinition("/secure/app".toPath, role = "*"),
-        AppDefinition("/root".toPath, role = "*"),
-        AppDefinition("/other/great/app".toPath, role = "*")
+        AppDefinition(AbsolutePathId("/visible/app"), role = "*"),
+        AppDefinition(AbsolutePathId("/visible/other/foo/app"), role = "*"),
+        AppDefinition(AbsolutePathId("/secure/app"), role = "*"),
+        AppDefinition(AbsolutePathId("/root"), role = "*"),
+        AppDefinition(AbsolutePathId("/other/great/app"), role = "*")
       )
 
       When("The selector selects applications")
@@ -1880,7 +1880,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "AppUpdate does not change existing versionInfo" in new Fixture {
       implicit val identity = auth.identity
       val app = AppDefinition(
-        id = PathId("test"),
+        id = AbsolutePathId("/test"),
         cmd = Some("sleep 1"),
         versionInfo = VersionInfo.forNewConfig(Timestamp(1)),
         role = "*"
@@ -2243,7 +2243,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       response.getStatus should be(201)
 
-      val Some(app) = groupManager.rootGroup().app("/dev/sleeper".toPath)
+      val Some(app) = groupManager.rootGroup().app(AbsolutePathId("/dev/sleeper"))
 
       app.role shouldBe "dev"
     }

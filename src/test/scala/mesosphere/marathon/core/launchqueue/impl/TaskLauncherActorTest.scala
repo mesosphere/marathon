@@ -52,7 +52,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       ref.underlyingActor.inFlightInstanceOperations.nonEmpty
 
   object f {
-    val app = AppDefinition(id = PathId("/testapp"), role = "*")
+    val app = AppDefinition(id = AbsolutePathId("/testapp"), role = "*")
     val scheduledInstance = Instance.scheduled(app)
     val taskId = Task.Id(scheduledInstance.instanceId)
     val provisionedTasks = Tasks.provisioned(taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now())
@@ -89,7 +89,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
     instanceTracker.forceExpunge(any) returns Future.successful(Done)
     instanceTracker.schedule(any[Instance]) returns Future.successful(Done)
 
-    private[impl] def createLauncherRef(appToLaunch: PathId = f.app.id): TestActorRef[TaskLauncherActor] = {
+    private[impl] def createLauncherRef(appToLaunch: AbsolutePathId = f.app.id): TestActorRef[TaskLauncherActor] = {
       val props = TaskLauncherActor.props(
         launchQueueConfig,
         offerMatcherManager, clock, instanceOpFactory,

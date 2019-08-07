@@ -5,16 +5,16 @@ import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.storage.repository.{FrameworkIdRepository, InstanceRepository}
 import mesosphere.marathon.test.TestCrashStrategy
-
 import org.scalatest.Inside
-import scala.util.{Try, Failure}
+
+import scala.util.{Failure, Try}
 
 class SchedulerDriverFactoryTest extends AkkaUnitTest with Inside {
   val metrics = DummyMetrics
-  val appId = "/test/foo/bla/rest".toPath
+  val appId = AbsolutePathId("/test/foo/bla/rest")
   val instanceId = Instance.Id.forRunSpec(appId)
 
   class Fixture {

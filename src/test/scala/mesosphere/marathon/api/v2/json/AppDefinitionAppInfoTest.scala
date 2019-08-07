@@ -17,7 +17,7 @@ import scala.collection.immutable.Seq
 class AppDefinitionAppInfoTest extends UnitTest {
   import Formats._
 
-  val app = AppDefinition(PathId("/test"), cmd = Some("sleep 123"), role = "*")
+  val app = AppDefinition(AbsolutePathId("/test"), cmd = Some("sleep 123"), role = "*")
 
   val counts = TaskCounts(
     tasksStaged = 3,
@@ -104,7 +104,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
     "app with lastTaskFailure" in {
       Given("an app with a lastTaskFailure")
       val lastTaskFailure = new TaskFailure(
-        appId = PathId("/myapp"),
+        appId = AbsolutePathId("/myapp"),
         taskId = mesos.TaskID.newBuilder().setValue("myapp.2da6109e-4cce-11e5-98c1-be5b2935a987").build(),
         state = mesos.TaskState.TASK_FAILED,
         message = "Command exited with status 1",

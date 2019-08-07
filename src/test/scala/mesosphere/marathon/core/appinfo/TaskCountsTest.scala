@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{Goal, Instance, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
 
 import scala.collection.immutable.Seq
 
@@ -204,7 +204,7 @@ object Fixture {
 }
 
 class Fixture {
-  val runSpecId = PathId("/test")
+  val runSpecId = AbsolutePathId("/test")
   val instanceId = Instance.Id.forRunSpec(runSpecId)
   val taskId = Task.Id(instanceId)
   val taskWithoutState = Task(

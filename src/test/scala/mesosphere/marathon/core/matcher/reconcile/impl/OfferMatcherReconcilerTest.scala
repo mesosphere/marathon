@@ -31,7 +31,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
     "offer with volume for unknown tasks/apps leads to unreserve/destroy" in {
       val f = new Fixture
       Given("an offer with volume")
-      val appId = PathId("/test")
+      val appId = AbsolutePathId("/test")
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
@@ -61,7 +61,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
     "offer with volume for unknown tasks leads to unreserve/destroy" in {
       val f = new Fixture
       Given("an offer with volume")
-      val appId = PathId("/test")
+      val appId = AbsolutePathId("/test")
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
@@ -91,7 +91,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
     "offer with volume for unknown apps leads to unreserve/destroy" in {
       val f = new Fixture
       Given("an offer with volume")
-      val appId = PathId("/test")
+      val appId = AbsolutePathId("/test")
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")
@@ -121,7 +121,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
     "offer with volume for known tasks/apps DOES NOT lead to unreserve/destroy" in {
       val f = new Fixture
       Given("an offer with volume")
-      val appId = PathId("/test")
+      val appId = AbsolutePathId("/test")
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
       val localVolumeIdLaunched = LocalVolumeId(appId, "persistent-volume-launched", "uuidLaunched")

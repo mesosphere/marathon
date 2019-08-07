@@ -281,7 +281,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       "gpus" -> gpus
     )
 
-    def appId(suffix: String): PathId = PathId(s"/$testBasePath/app-$suffix")
+    def appId(suffix: String): PathId = AbsolutePathId(s"/$testBasePath/app-$suffix")
 
     def createSuccessfully(app: App): App = {
       waitForDeployment(createAsynchronously(app))

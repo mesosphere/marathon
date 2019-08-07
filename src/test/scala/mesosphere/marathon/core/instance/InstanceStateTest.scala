@@ -5,8 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{Timestamp, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp, UnreachableEnabled, UnreachableStrategy}
 import mesosphere.marathon.test.SettableClock
 import org.scalatest.prop.TableDrivenPropertyChecks
 
@@ -137,7 +136,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
   }
 
   class Fixture {
-    val id = "/test".toPath
+    val id = AbsolutePathId("/test")
     val clock = new SettableClock()
 
     def tasks(statuses: Condition*): Map[Task.Id, Task] = tasks(statuses.to[Seq])

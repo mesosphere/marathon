@@ -6,7 +6,6 @@ import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.EnvVarValue._
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{Protos => mesos}
 
@@ -15,12 +14,12 @@ import scala.concurrent.duration._
 class AppDefinitionTest extends UnitTest {
 
   val fullVersion = VersionInfo.forNewConfig(Timestamp(1))
-  val runSpecId = PathId("/test")
+  val runSpecId = AbsolutePathId("/test")
 
   "AppDefinition" should {
     "ToProto with port definitions" in {
       val app1 = AppDefinition(
-        id = "play".toPath,
+        id = AbsolutePathId("/play"),
         role = "*",
         cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
         resources = Resources(cpus = 4.0, mem = 256.0),
@@ -48,7 +47,7 @@ class AppDefinitionTest extends UnitTest {
       assert(proto1.getAcceptedResourceRoles == Protos.ResourceRoles.newBuilder().addRole("a").addRole("b").build())
 
       val app2 = AppDefinition(
-        id = "play".toPath,
+        id = AbsolutePathId("/play"),
         role = "*",
         cmd = None,
         args = Seq("a", "b", "c"),
@@ -78,7 +77,7 @@ class AppDefinitionTest extends UnitTest {
 
     "CMD to proto and back again" in {
       val app = AppDefinition(
-        id = "play".toPath,
+        id = AbsolutePathId("/play"),
         role = "*",
         cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
         versionInfo = fullVersion
@@ -96,7 +95,7 @@ class AppDefinitionTest extends UnitTest {
 
     "ARGS to proto and back again" in {
       val app = AppDefinition(
-        id = "play".toPath,
+        id = AbsolutePathId("/play"),
         role = "*",
         args = Seq("bash", "foo-*/start", "-Dhttp.port=$PORT"),
         versionInfo = fullVersion
@@ -115,7 +114,7 @@ class AppDefinitionTest extends UnitTest {
 
     "app w/ basic container network to proto and back again" in {
       val app = AppDefinition(
-        id = "app-with-ip-address".toPath,
+        id = AbsolutePathId("/app-with-ip-address"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
@@ -140,7 +139,7 @@ class AppDefinitionTest extends UnitTest {
 
     "app to proto and back again w/ Docker container w/ virtual networking" in {
       val app = AppDefinition(
-        id = "app-with-port-mappings".toPath,
+        id = AbsolutePathId("/app-with-port-mappings"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
@@ -175,7 +174,7 @@ class AppDefinitionTest extends UnitTest {
 
     "ipAddress to proto and back again w/ Docker container w/ bridge" in {
       val app = AppDefinition(
-        id = "app-with-ip-address".toPath,
+        id = AbsolutePathId("/app-with-ip-address"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
@@ -191,7 +190,7 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val proto = app.toProto
-      proto.getId should be("app-with-ip-address")
+      proto.getId should be("/app-with-ip-address")
 
       val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto)
       read should be(app)
@@ -199,7 +198,7 @@ class AppDefinitionTest extends UnitTest {
 
     "ipAddress discovery to proto and back again" in {
       val app = AppDefinition(
-        id = "app-with-ip-address".toPath,
+        id = AbsolutePathId("/app-with-ip-address"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
@@ -268,7 +267,7 @@ class AppDefinitionTest extends UnitTest {
 
     "ProtoRoundtrip" in {
       val app1 = AppDefinition(
-        id = "play".toPath,
+        id = AbsolutePathId("/play"),
         role = "*",
         cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
         resources = Resources(cpus = 4.0, mem = 256.0),

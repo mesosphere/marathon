@@ -12,9 +12,8 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.{App, Resources}
 import mesosphere.marathon.state.Container.{Docker, Mesos, PortMapping}
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
-import mesosphere.marathon.state.{AppDefinition, Container, PathId, Timestamp, _}
+import mesosphere.marathon.state.{AppDefinition, Container, AbsolutePathId, Timestamp, _}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import mesosphere.marathon.{Protos, _}
@@ -40,7 +39,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
@@ -63,7 +62,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
@@ -98,7 +97,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(
@@ -123,7 +122,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
@@ -168,7 +167,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
@@ -203,7 +202,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
@@ -253,7 +252,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           resources = Resources(
             cpus = 1.0,
@@ -312,7 +311,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
@@ -335,7 +334,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
@@ -363,7 +362,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(disk = 0.0)
@@ -385,7 +384,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
@@ -416,7 +415,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 32.0),
@@ -455,7 +454,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 32.0),
@@ -515,7 +514,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 32.0),
@@ -577,7 +576,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 32.0),
@@ -644,7 +643,7 @@ class TaskBuilderTest extends UnitTest {
       val dockerPullConfig = Container.DockerPullConfig(dockerPullConfigSecret)
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer, AppDefinition(
-        id = "/testApp".toPath,
+        id = AbsolutePathId("/testApp"),
         role = "*",
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
@@ -682,7 +681,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
@@ -707,7 +706,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/testApp".toPath,
+          id = AbsolutePathId("/testApp"),
           role = "*",
           args = Seq("a", "b", "c"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
@@ -746,7 +745,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
@@ -771,7 +770,7 @@ class TaskBuilderTest extends UnitTest {
       networkName: Option[String] = None) = buildIfMatches(
       offer,
       AppDefinition(
-        id = "/testApp".toPath,
+        id = AbsolutePathId("/testApp"),
         role = "*",
         args = Seq("a", "b", "c"),
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
@@ -926,7 +925,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/testApp".toPath,
+          id = AbsolutePathId("/testApp"),
           role = "*",
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           cmd = Some("foo"),
@@ -954,7 +953,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/testApp".toPath,
+          id = AbsolutePathId("/testApp"),
           role = "*",
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           args = Seq("a", "b", "c"),
@@ -979,7 +978,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/testApp".toPath,
+          id = AbsolutePathId("/testApp"),
           role = "*",
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           args = Seq("a", "b", "c"),
@@ -1015,7 +1014,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/testApp".toPath,
+          id = AbsolutePathId("/testApp"),
           role = "*",
           resources = Resources(cpus = 2.0, mem = 200.0, disk = 2.0),
           executor = "//cmd",
@@ -1055,7 +1054,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, NetworkInfo)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/testApp".toPath,
+          id = AbsolutePathId("/testApp"),
           role = "*",
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
           executor = "//cmd",
@@ -1089,7 +1088,7 @@ class TaskBuilderTest extends UnitTest {
 
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer, AppDefinition(
-        id = "/testApp".toPath,
+        id = AbsolutePathId("/testApp"),
         role = "*",
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
@@ -1118,7 +1117,7 @@ class TaskBuilderTest extends UnitTest {
 
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer, AppDefinition(
-        id = "/testApp".toPath,
+        id = AbsolutePathId("/testApp"),
         role = "*",
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
@@ -1150,7 +1149,7 @@ class TaskBuilderTest extends UnitTest {
         .build
 
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, AppDefinition(
-        id = "/testApp".toPath,
+        id = AbsolutePathId("/testApp"),
         role = "*",
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
@@ -1186,7 +1185,7 @@ class TaskBuilderTest extends UnitTest {
         .build
 
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(offer, AppDefinition(
-        id = "/testApp".toPath,
+        id = AbsolutePathId("/testApp"),
         role = "*",
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
@@ -1227,7 +1226,7 @@ class TaskBuilderTest extends UnitTest {
 
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer, AppDefinition(
-        id = "/testApp".toPath,
+        id = AbsolutePathId("/testApp"),
         role = "*",
         resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
         executor = "//cmd",
@@ -1400,7 +1399,7 @@ class TaskBuilderTest extends UnitTest {
     "TaskContextEnv empty when no taskId given" in {
       val version = VersionInfo.forNewConfig(Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC)))
       val runSpec = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         versionInfo = version
       )
@@ -1412,12 +1411,12 @@ class TaskBuilderTest extends UnitTest {
     "TaskContextEnv minimal" in {
       val version = VersionInfo.forNewConfig(Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC)))
       val runSpec = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         versionInfo = version
       )
 
-      val taskId = Task.LegacyId(PathId("/app"), ".", uuid)
+      val taskId = Task.LegacyId(AbsolutePathId("/app"), ".", uuid)
       val env2 = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = Some(taskId), enforceRole = None)
 
       assert(
@@ -1436,7 +1435,7 @@ class TaskBuilderTest extends UnitTest {
 
     "TaskContextEnv all fields" in {
       val version = VersionInfo.forNewConfig(Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC)))
-      val runSpecId = PathId("/app")
+      val runSpecId = AbsolutePathId("/app")
       val runSpec = AppDefinition(
         id = runSpecId,
         role = "*",
@@ -1478,7 +1477,7 @@ class TaskBuilderTest extends UnitTest {
       val longValue = "longvalue" * EnvironmentHelper.maxEnvironmentVarLength
 
       val runSpec = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         labels = Map(
           "label" -> "VALUE1",
@@ -1503,7 +1502,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "AppContextEnvironment" in {
-      val runSpecId = PathId("/test")
+      val runSpecId = AbsolutePathId("/test")
       val command =
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
@@ -1533,7 +1532,7 @@ class TaskBuilderTest extends UnitTest {
       // why?
       // see https://github.com/mesosphere/marathon/issues/905
 
-      val runSpecId = PathId("/test")
+      val runSpecId = AbsolutePathId("/test")
       val command =
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
@@ -1567,7 +1566,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "PortsEnvWithOnlyPorts" in {
-      val runSpecId = PathId("/test")
+      val runSpecId = AbsolutePathId("/test")
       val command =
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
@@ -1589,7 +1588,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "PortsEnvWithCustomPrefix" in {
-      val runSpecId = PathId("/test")
+      val runSpecId = AbsolutePathId("/test")
       val command =
         TaskBuilder.commandInfo(
           AppDefinition(
@@ -1623,7 +1622,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "OnlyWhitelistedUnprefixedVariablesWithCustomPrefix" in {
-      val runSpecId = PathId("/test")
+      val runSpecId = AbsolutePathId("/test")
       val command =
         TaskBuilder.commandInfo(
           AppDefinition(
@@ -1650,7 +1649,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "PortsEnvWithOnlyMappings" in {
-      val runSpecId = PathId("/test")
+      val runSpecId = AbsolutePathId("/test")
       val command =
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
@@ -1680,7 +1679,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "PortsEnvWithOnlyMappingsAndUserNetworking" in {
-      val runSpecId = PathId("/test")
+      val runSpecId = AbsolutePathId("/test")
       val command =
         TaskBuilder.commandInfo(
           runSpec = AppDefinition(
@@ -1714,7 +1713,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "PortsEnvWithBothPortsAndMappings" in {
-      val runSpecId = PathId("/test")
+      val runSpecId = AbsolutePathId("/test")
       a[IllegalArgumentException] shouldBe thrownBy {
         val appDef = AppDefinition(
           id = runSpecId,
@@ -1740,7 +1739,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "TaskWillCopyFetchIntoCommand" in {
-      val runSpecId = PathId("/test")
+      val runSpecId = AbsolutePathId("/test")
       val command = TaskBuilder.commandInfo(
         runSpec = AppDefinition(
           id = runSpecId,
@@ -1775,7 +1774,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           portDefinitions = PortDefinitions(25552, 25551),
@@ -1809,7 +1808,7 @@ class TaskBuilderTest extends UnitTest {
       val task: Option[(MesosProtos.TaskInfo, _)] = buildIfMatches(
         offer,
         AppDefinition(
-          id = "/product/frontend".toPath,
+          id = AbsolutePathId("/product/frontend"),
           role = "*",
           cmd = Some("foo"),
           networks = Seq(ContainerNetwork("vnet")), container = Some(Docker(
@@ -1917,7 +1916,7 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "tty defined in an app will render ContainerInfo correctly" in {
-      val appWithTTY = AppDefinition(id = PathId("/tty"), role = "*", container = Some(Docker()), tty = Some(true))
+      val appWithTTY = AppDefinition(id = AbsolutePathId("/tty"), role = "*", container = Some(Docker()), tty = Some(true))
       val instanceId = Instance.Id.forRunSpec(appWithTTY.id)
       val taskId = Task.Id(instanceId) // What about container?
       val builder = new TaskBuilder(appWithTTY, taskId, MarathonTestHelper.defaultConfig())
@@ -2005,7 +2004,7 @@ class TaskBuilderTest extends UnitTest {
     }
   }
 
-  def makeSampleInstance(appId: PathId, attr: String, attrVal: String) = {
+  def makeSampleInstance(appId: AbsolutePathId, attr: String, attrVal: String) = {
     TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskStaged()
       .withNetworkInfo(hostPorts = Seq(999))
       .build()

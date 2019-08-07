@@ -31,7 +31,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "replace old tasks without health checks" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = "/myApp".toPath,
+        id = AbsolutePathId("/myApp"),
         role = "*",
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
@@ -63,7 +63,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "not kill new and already started tasks" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = "/myApp".toPath,
+        id = AbsolutePathId("/myApp"),
         role = "*",
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
@@ -98,7 +98,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "replace old tasks with health checks" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = "/myApp".toPath,
+        id = AbsolutePathId("/myApp"),
         role = "*",
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
@@ -133,7 +133,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "replace and scale down from more than new minCapacity" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = "/myApp".toPath,
+        id = AbsolutePathId("/myApp"),
         role = "*",
         instances = 2,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
@@ -179,7 +179,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "replace tasks with minimum running number of tasks" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = "/myApp".toPath,
+        id = AbsolutePathId("/myApp"),
         role = "*",
         instances = 3,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
@@ -238,7 +238,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "replace tasks during rolling upgrade *without* over-capacity" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = "/myApp".toPath,
+        id = AbsolutePathId("/myApp"),
         role = "*",
         instances = 3,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
@@ -307,7 +307,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "replace tasks during rolling upgrade *with* minimal over-capacity" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = "/myApp".toPath,
+        id = AbsolutePathId("/myApp"),
         role = "*",
         instances = 3,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
@@ -374,7 +374,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "replace tasks during rolling upgrade with 2/3 over-capacity" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = "/myApp".toPath,
+        id = AbsolutePathId("/myApp"),
         role = "*",
         instances = 3,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
@@ -439,7 +439,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "downscale tasks during rolling upgrade with 1 over-capacity" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = "/myApp".toPath,
+        id = AbsolutePathId("/myApp"),
         role = "*",
         instances = 3,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
@@ -514,7 +514,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "stop the actor if all tasks are replaced already" in {
       Given("An app without health checks and readiness checks, as well as 2 tasks of this version")
       val f = new Fixture
-      val app = AppDefinition(id = "/myApp".toPath, instances = 2, role = "*")
+      val app = AppDefinition(id = AbsolutePathId("/myApp"), instances = 2, role = "*")
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
       f.tracker.specInstancesSync(app.id, readAfterWrite = true) returns Seq(instanceA, instanceB)
@@ -536,7 +536,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val check = ReadinessCheck()
       val port = PortDefinition(0, name = Some(check.portName))
-      val app = AppDefinition(id = "/myApp".toPath, role = "*", instances = 1, portDefinitions = Seq(port), readinessChecks = Seq(check))
+      val app = AppDefinition(id = AbsolutePathId("/myApp"), role = "*", instances = 1, portDefinitions = Seq(port), readinessChecks = Seq(check))
       val instance = f.runningInstance(app)
       f.tracker.specInstancesSync(app.id, readAfterWrite = true) returns Seq(instance)
       f.tracker.get(instance.instanceId) returns Future.successful(Some(instance))
@@ -558,7 +558,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       val port = PortDefinition(0, name = Some(ready.portName))
       val app = AppDefinition(
-        id = "/myApp".toPath,
+        id = AbsolutePathId("/myApp"),
         role = "*",
         instances = 1,
         portDefinitions = Seq(port),
@@ -585,7 +585,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "wait until the tasks are killed" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = "/myApp".toPath,
+        id = AbsolutePathId("/myApp"),
         role = "*",
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
@@ -618,7 +618,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "wait for health and readiness checks for new tasks" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = "/myApp".toPath,
+        id = AbsolutePathId("/myApp"),
         role = "*",
         instances = 1,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
@@ -678,7 +678,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     "only handle InstanceChanged events of its own RunSpec" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = "/myApp".toPath,
+        id = AbsolutePathId("/myApp"),
         role = "*",
         instances = 1,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)))
@@ -698,7 +698,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val subscriber = TestProbe()
       system.eventStream.subscribe(subscriber.ref, classOf[UnhandledMessage])
 
-      val otherApp = AppDefinition(id = "/some-other-app".toPath, role = "*")
+      val otherApp = AppDefinition(id = AbsolutePathId("/some-other-app"), role = "*")
       ref ! f.instanceChanged(otherApp, Killed)
       subscriber.expectMsgClass(classOf[UnhandledMessage])
 

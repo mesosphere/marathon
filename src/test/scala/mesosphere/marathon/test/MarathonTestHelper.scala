@@ -355,7 +355,7 @@ object MarathonTestHelper {
       .addResources(ScalarResource(Resource.CPUS, 1.0, ResourceRole.Unreserved))
   }
 
-  def makeBasicApp(id: PathId = "/test-app".toPath) = AppDefinition(
+  def makeBasicApp(id: AbsolutePathId = AbsolutePathId("/test-app")) = AppDefinition(
     id,
     cmd = Some("sleep 60"),
     resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),

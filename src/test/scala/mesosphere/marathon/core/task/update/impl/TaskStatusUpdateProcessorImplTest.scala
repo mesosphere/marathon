@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusU
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.SchedulerDriver
 
@@ -246,7 +246,7 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
     }
 
     "receiving an running update for unknown task" in new Fixture {
-      val appId = PathId("/app")
+      val appId = AbsolutePathId("/app")
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val status = MesosTaskStatusTestHelper.running(instance.appTask.taskId)
 
@@ -265,7 +265,7 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
     }
 
     "kill the orphaned task when receiving an running update for the known instance but unknown task" in new Fixture {
-      val appId = PathId("/app")
+      val appId = AbsolutePathId("/app")
       val instance = TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched(Seq.empty).getInstance()
       val incrementedTaskId = Task.Id.nextIncarnationFor(Task.Id(instance.instanceId, None))
       val status = MesosTaskStatusTestHelper.running(incrementedTaskId)
@@ -285,7 +285,7 @@ class TaskStatusUpdateProcessorImplTest extends AkkaUnitTest {
     }
   }
 
-  lazy val appId = PathId("/app")
+  lazy val appId = AbsolutePathId("/app")
 
   class Fixture {
     lazy val clock: SettableClock = new SettableClock()

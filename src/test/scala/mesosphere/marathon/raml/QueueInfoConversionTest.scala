@@ -2,11 +2,10 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.LaunchStats.QueuedInstanceInfoWithStatistics
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import mesosphere.mesos.NoOfferMatchReason
 
 class QueueInfoConversionTest extends UnitTest {
@@ -25,7 +24,7 @@ class QueueInfoConversionTest extends UnitTest {
 
     "A NoMatch is converted correctly" in {
       Given("A NoMatch")
-      val app = AppDefinition(PathId("/test"), role = "*")
+      val app = AppDefinition(AbsolutePathId("/test"), role = "*")
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val noMatch = OfferMatchResult.NoMatch(app, offer, Seq(NoOfferMatchReason.InsufficientCpus), Timestamp.now())
 
@@ -42,7 +41,7 @@ class QueueInfoConversionTest extends UnitTest {
       Given("A QueueInfoWithStatistics")
       val clock = new SettableClock()
       val now = clock.now()
-      val app = AppDefinition(PathId("/test"), role = "*")
+      val app = AppDefinition(AbsolutePathId("/test"), role = "*")
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val noMatch = Seq(
         OfferMatchResult.NoMatch(app, offer, Seq(NoOfferMatchReason.InsufficientCpus), now),

@@ -5,7 +5,7 @@ import com.fasterxml.uuid.Generators
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AbsolutePathId, PathId}
 import mesosphere.marathon.state.PathId._
 import org.apache.mesos.Protos.TaskID
 import org.scalatest.Inside
@@ -13,7 +13,7 @@ import org.scalatest.Inside
 class TaskIdTest extends UnitTest with Inside {
   "TaskIds" should {
     "AppIds can be converted to TaskIds and back to AppIds" in {
-      val appId = "/test/foo/bla/rest".toPath
+      val appId = AbsolutePathId("/test/foo/bla/rest")
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
       taskId.runSpecId should equal(appId)
@@ -54,7 +54,7 @@ class TaskIdTest extends UnitTest with Inside {
 
     "TaskIds for resident tasks can be created from legacy taskIds" in {
       val uuidGenerator = Generators.timeBasedGenerator()
-      val originalId = Task.LegacyId(PathId("/app"), "-", uuidGenerator.generate())
+      val originalId = Task.LegacyId(AbsolutePathId("/app"), "-", uuidGenerator.generate())
 
       val newTaskId = Task.Id.nextIncarnationFor(originalId)
       // this is considered the first attempt
@@ -89,7 +89,7 @@ class TaskIdTest extends UnitTest with Inside {
     }
 
     "TaskId with incarnation can be parsed from idString" in {
-      val originalId = Task.Id(Instance.Id.forRunSpec(PathId("/app/test/23")), None)
+      val originalId = Task.Id(Instance.Id.forRunSpec(AbsolutePathId("/app/test/23")), None)
 
       val idString = originalId.idString
 

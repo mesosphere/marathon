@@ -2,16 +2,15 @@ package mesosphere.marathon
 package core.instance
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, UnreachableStrategy}
-import org.scalatest.prop.TableDrivenPropertyChecks
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, UnreachableStrategy}
+import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos.Attribute
 import org.apache.mesos.Protos.Value.{Text, Type}
+import org.scalatest.prop.TableDrivenPropertyChecks
 import play.api.libs.json._
 
 class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
@@ -121,7 +120,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
   }
 
   class Fixture {
-    val id = "/test".toPath
+    val id = AbsolutePathId("/test")
     val app = AppDefinition(id, role = "*")
     val clock = new SettableClock()
 

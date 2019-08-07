@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
-import mesosphere.marathon.state.{Instance, PathId}
+import mesosphere.marathon.state.{AbsolutePathId, Instance}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import play.api.libs.json.{JsObject, JsValue, Json}
 
@@ -21,9 +21,9 @@ class InstanceMigrationTest extends AkkaUnitTest with StrictLogging {
       Given("two instances")
       val f = new Fixture()
 
-      val instanceId1 = Id.forRunSpec(PathId("/app"))
-      val instanceId2 = Id.forRunSpec(PathId("/app2"))
-      val unknownInstanceId = Id.forRunSpec(PathId("/app3"))
+      val instanceId1 = Id.forRunSpec(AbsolutePathId("/app"))
+      val instanceId2 = Id.forRunSpec(AbsolutePathId("/app2"))
+      val unknownInstanceId = Id.forRunSpec(AbsolutePathId("/app3"))
 
       f.instanceRepository.ids() returns Source(List(instanceId1, instanceId2, unknownInstanceId))
       f.persistenceStore.get[Id, JsValue](equalTo(instanceId1))(any, any) returns Future(Some(f.legacyInstanceJson(instanceId1)))

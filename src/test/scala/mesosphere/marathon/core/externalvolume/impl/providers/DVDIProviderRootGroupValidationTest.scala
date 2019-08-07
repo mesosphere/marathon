@@ -18,8 +18,8 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
     "two volumes with different names should not result in an error" in {
       val f = new Fixture
       Given("a root group with two apps and conflicting volumes")
-      val app1 = f.appWithDVDIVolume(appId = PathId("/nested/foo1"), volumeName = "vol1")
-      val app2 = f.appWithDVDIVolume(appId = PathId("/nested/foo2"), volumeName = "vol2")
+      val app1 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/foo1"), volumeName = "vol1")
+      val app2 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/foo2"), volumeName = "vol2")
       val rootGroup = createRootGroup(
         groups = Set(
           createGroup(
@@ -43,8 +43,8 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
     "two volumes with same name result in an error" in {
       val f = new Fixture
       Given("a root group with two apps and conflicting volumes")
-      val app1 = f.appWithDVDIVolume(appId = PathId("/nested/app1"), volumeName = "vol")
-      val app2 = f.appWithDVDIVolume(appId = PathId("/nested/app2"), volumeName = "vol")
+      val app1 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app1"), volumeName = "vol")
+      val app2 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app2"), volumeName = "vol")
       val rootGroup = createRootGroup(
         groups = Set(
           createGroup(
@@ -75,7 +75,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
     }
 
     class Fixture {
-      def appWithDVDIVolume(appId: PathId, volumeName: String, provider: String = DVDIProvider.name): AppDefinition = {
+      def appWithDVDIVolume(appId: AbsolutePathId, volumeName: String, provider: String = DVDIProvider.name): AppDefinition = {
         AppDefinition(
           id = appId,
           role = "*",

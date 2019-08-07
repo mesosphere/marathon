@@ -6,7 +6,7 @@ import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealth
 import mesosphere.marathon.core.instance.Reservation
 import mesosphere.marathon.core.pod.{ContainerNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos
@@ -423,11 +423,11 @@ class PodStatusConversionTest extends UnitTest {
 
     "a stateful pod with one container and one persistent volume" in {
       val localVolumeId = core.instance.LocalVolumeId(
-        PathId("/persistent"), "volume", "5425cbaa-8fd3-45f0-afa4-74ef4fcc594b")
+        AbsolutePathId("/persistent"), "volume", "5425cbaa-8fd3-45f0-afa4-74ef4fcc594b")
       val reservation = core.instance.Reservation(
         volumeIds = Seq(localVolumeId),
         state = core.instance.Reservation.State.New(timeout = None),
-        Reservation.SimplifiedId(core.instance.Instance.Id.forRunSpec(PathId("/persistent")))
+        Reservation.SimplifiedId(core.instance.Instance.Id.forRunSpec(AbsolutePathId("/persistent")))
       )
 
       implicit val clock = new SettableClock()
@@ -450,7 +450,7 @@ object PodStatusConversionTest {
   val containerResources = Resources(cpus = 0.01, mem = 100)
 
   val basicOneContainerPod = PodDefinition(
-    id = PathId("/foo"),
+    id = AbsolutePathId("/foo"),
     role = "*",
     containers = Seq(
       MesosContainer(
@@ -468,7 +468,7 @@ object PodStatusConversionTest {
   )
 
   val podWithPersistentVolume = PodDefinition(
-    id = PathId("/persistent"),
+    id = AbsolutePathId("/persistent"),
     role = "*",
     containers = Seq(
       MesosContainer(

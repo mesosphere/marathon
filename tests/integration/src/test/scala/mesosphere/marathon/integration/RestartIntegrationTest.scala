@@ -32,7 +32,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       Given("a new app with an impossible constraint")
       // Running locally, the constraint of a unique hostname should prevent the second instance from deploying.
       val constraint = raml.Constraints("hostname" -> "UNIQUE")
-      val app = f.appProxy(PathId("/restart-dont-kill"), "v2", instances = 2, healthCheck = None)
+      val app = f.appProxy(AbsolutePathId("/restart-dont-kill"), "v2", instances = 2, healthCheck = None)
         .copy(constraints = constraint)
       f.marathon.createAppV2(app)
 

@@ -921,7 +921,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "update an app and make sure ports are set correctly" in {
       Given("an app update app")
-      val applicationId = PathId("/tomcat")
+      val applicationId = AbsolutePathId("/tomcat")
 
       val appUpdateJson = """{
                             |  "id":"tomcat",

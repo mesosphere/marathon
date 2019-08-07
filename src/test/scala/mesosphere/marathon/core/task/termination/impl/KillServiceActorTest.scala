@@ -21,7 +21,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.raml.Resources
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.SettableClock
 import org.apache.mesos
@@ -64,7 +64,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging with Eventual
     "asked to kill an unknown instance" should {
       "issue a kill to the driver" in withActor(defaultConfig) { (f, actor) =>
 
-        val instanceId = Instance.Id.forRunSpec(PathId("/unknown"))
+        val instanceId = Instance.Id.forRunSpec(AbsolutePathId("/unknown"))
         val taskId = Task.Id(instanceId)
         actor ! KillServiceActor.KillUnknownTaskById(taskId)
         f.publishUnknownInstanceTerminated(instanceId)
@@ -310,7 +310,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging with Eventual
 
     "KillServiceActor" should {
       "not put scheduled instance into the actor queue" in withActor(defaultConfig) { (f, actor) =>
-        val scheduledInstance = Instance.scheduled(AppDefinition(PathId("/scheduled-instance"), role = "*"))
+        val scheduledInstance = Instance.scheduled(AppDefinition(AbsolutePathId("/scheduled-instance"), role = "*"))
 
         val promise = Promise[Done]()
         actor ! KillServiceActor.KillInstances(Seq(scheduledInstance), promise)
@@ -327,7 +327,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging with Eventual
     "initialize actor based on not running instances from tracker state" in {
       Given("KillServiceActor and instance tracker with active and decommissioned instance")
       val f = new Fixture(defaultConfig)
-      val decommissionedInstance = TestInstanceBuilder.newBuilder(PathId("/decommissioned-app"))
+      val decommissionedInstance = TestInstanceBuilder.newBuilder(AbsolutePathId("/decommissioned-app"))
         .decommissioned()
         .addTaskRunning()
         .getInstance()
@@ -370,7 +370,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging with Eventual
 
   class Fixture(val killConfig: KillConfig) {
 
-    val runSpecId = PathId("/test")
+    val runSpecId = AbsolutePathId("/test")
     val driver = mock[SchedulerDriver]
     val driverHolder: MarathonSchedulerDriverHolder = {
       val holder = new MarathonSchedulerDriverHolder
@@ -382,7 +382,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging with Eventual
     val clock = new SettableClock()
     val metrics: Metrics = DummyMetrics
 
-    def mockInstance(appId: PathId, stagedAt: Timestamp, mesosState: mesos.Protos.TaskState): Instance = {
+    def mockInstance(appId: AbsolutePathId, stagedAt: Timestamp, mesosState: mesos.Protos.TaskState): Instance = {
       TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskForStatus(mesosState, stagedAt).build().getInstance()
     }
 

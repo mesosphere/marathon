@@ -6,7 +6,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{Instance, TestTaskBuilder}
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos.TaskState
 
@@ -69,7 +69,7 @@ class TaskStatusUpdateTest extends UnitTest {
   }
 
   class Fixture {
-    val appId = PathId("/app")
+    val appId = AbsolutePathId("/app")
     val clock = new SettableClock()
   }
 }

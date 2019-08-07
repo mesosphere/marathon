@@ -28,7 +28,7 @@ import scala.concurrent.duration._
 class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
   class Fixture {
-    val runSpecId = PathId("/test")
+    val runSpecId = AbsolutePathId("/test")
     lazy val clock = new SettableClock()
     lazy val instanceTracker = mock[InstanceTracker]
     lazy val healthCheckManager = mock[HealthCheckManager]
@@ -80,9 +80,9 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
     }
   }
 
-  val app = AppDefinition(PathId("/test"), role = "*")
-  val other = AppDefinition(PathId("/other"), role = "*")
-  val pod = PodDefinition(id = PathId("/pod"), role = "*", networks = Seq(HostNetwork), containers = Seq(
+  val app = AppDefinition(AbsolutePathId("/test"), role = "*")
+  val other = AppDefinition(AbsolutePathId("/other"), role = "*")
+  val pod = PodDefinition(id = AbsolutePathId("/pod"), role = "*", networks = Seq(HostNetwork), containers = Seq(
     MesosContainer(name = "ct1", resources = Resources(0.01, 32))
   ))
 

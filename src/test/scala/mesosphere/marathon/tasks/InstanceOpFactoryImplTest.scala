@@ -32,7 +32,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
     "Copy SlaveID from Offer to Task" in {
       val f = new Fixture
 
-      val appId = PathId("/test")
+      val appId = AbsolutePathId("/test")
       val offer = MarathonTestHelper.makeBasicOffer()
         .setHostname(f.defaultHostName)
         .setSlaveId(SlaveID("some slave ID"))
@@ -114,7 +114,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       Given("A resident pod, a normal offer and no tasks")
       val f = new Fixture
       val pod = PodDefinition(
-        PathId("/test-pod"),
+        AbsolutePathId("/test-pod"),
         containers = Seq(MesosContainer(
           name = "first",
           resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
@@ -206,7 +206,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
     "enforceRole property is propagated to task environment for pods" in {
       val f = new Fixture
       f.rootGroup = f.rootGroup.putGroup(Group(AbsolutePathId("/dev"), enforceRole = true))
-      val podId = PathId("/dev/testing")
+      val podId = AbsolutePathId("/dev/testing")
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(podId, f.clock.now()).getInstance()
       val pod: PodDefinition = PodDefinition(
@@ -237,7 +237,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
     "enforceRole property is propagated to task environment for apps" in {
       val f = new Fixture
       f.rootGroup = f.rootGroup.putGroup(Group(AbsolutePathId("/dev"), enforceRole = true))
-      val appId = PathId("/dev/testing")
+      val appId = AbsolutePathId("/dev/testing")
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, f.clock.now()).getInstance()
       val app: AppDefinition = AppDefinition(id = appId, portDefinitions = List(), role = "*")
@@ -278,10 +278,10 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume().copy(role = "test")
 
-    def scheduledReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
+    def scheduledReservedInstance(appId: AbsolutePathId, volumeIds: LocalVolumeId*) =
       TestInstanceBuilder.scheduledWithReservation(residentApp, Seq(volumeIds: _*))
 
-    def residentLaunchedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
+    def residentLaunchedInstance(appId: AbsolutePathId, volumeIds: LocalVolumeId*) =
       TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched(Seq(volumeIds: _*)).getInstance()
 
     def offer = MTH.makeBasicOffer().build()

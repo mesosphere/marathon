@@ -618,7 +618,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       implicit val podStatusService = mock[PodStatusService]
       val f = Fixture()
 
-      podStatusService.selectPodStatus(any, any).returns(Future(Some(PodStatus("mypod", Pod("mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
+      podStatusService.selectPodStatus(any, any).returns(Future(Some(PodStatus("mypod", Pod("/mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
 
       val response = asyncRequest { r => f.podsResource.status("/mypod", f.auth.request, r) }
 
@@ -626,7 +626,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         response.getStatus should be(HttpServletResponse.SC_OK)
 
         val jsonBody = Json.parse(response.getEntity.asInstanceOf[String])
-        (jsonBody \ "id").get.asInstanceOf[JsString].value shouldEqual "mypod"
+        (jsonBody \ "id").get.asInstanceOf[JsString].value shouldEqual "/mypod"
       }
     }
 
@@ -635,8 +635,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       implicit val podSystem = mock[PodManager]
       val f = Fixture()
 
-      podSystem.ids().returns(Set(PathId("mypod")))
-      podStatusService.selectPodStatuses(any, any).returns(Future(Seq(PodStatus("mypod", Pod("mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
+      podSystem.ids().returns(Set(AbsolutePathId("/mypod")))
+      podStatusService.selectPodStatuses(any, any).returns(Future(Seq(PodStatus("/mypod", Pod("/mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
 
       val response = asyncRequest { r => f.podsResource.allStatus(f.auth.request, r) }
 
@@ -1065,7 +1065,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
         podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-        val existingPodId = PathId("/dev/pod")
+        val existingPodId = AbsolutePathId("/dev/pod")
         f.prepareGroup("/dev", pods = Map(existingPodId -> PodDefinition(id = existingPodId, role = "differentCustomRole")))
 
         val podJson =
@@ -1104,7 +1104,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
         podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
-        val existingPodId = PathId("/dev/pod")
+        val existingPodId = AbsolutePathId("/dev/pod")
         f.prepareGroup("/dev", pods = Map(existingPodId -> PodDefinition(id = existingPodId, role = "someCustomRole")))
 
         val podJson =
@@ -2000,7 +2000,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       groupManager: GroupManager
   ) extends GroupCreation {
 
-    def prepareGroup(groupId: String, pods: Map[PathId, PodDefinition] = Group.defaultPods): Unit = {
+    def prepareGroup(groupId: String, pods: Map[PodDefinition.PodKey, PodDefinition] = Group.defaultPods): Unit = {
       val groupPath = AbsolutePathId(groupId)
 
       val group = createGroup(groupPath, pods = pods)

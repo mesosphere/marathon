@@ -63,5 +63,5 @@ class AgentGoneByOperatorIntegrationTest extends AkkaIntegrationTest with Embedd
     result
   }
 
-  def appId(suffix: String): PathId = PathId(s"/$testBasePath/app-$suffix")
+  def appId(suffix: String): PathId = AbsolutePathId(s"/$testBasePath/app-$suffix")
 }

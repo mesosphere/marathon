@@ -29,7 +29,7 @@ object DependencyGraphBenchmark {
     val paths: Vector[Vector[PathId]] =
       groupIds.map { groupId =>
         appIds.map { appId =>
-          s"/supergroup-${superGroupId}/group-${groupId}/app-${appId}".toPath
+          AbsolutePathId(s"/supergroup-${superGroupId}/group-${groupId}/app-${appId}")
         }.toVector
       }(breakOut)
 
@@ -71,7 +71,7 @@ object DependencyGraphBenchmark {
   val upgraded = RootGroup(
     groupsById = superGroups.map {
       case (superGroupId, superGroup) =>
-        if (superGroupId == "/supergroup-0".toPath) {
+        if (superGroupId == AbsolutePathId("/supergroup-0")) {
           superGroupId -> Group(
             id = superGroupId,
             groupsById = superGroup.groupsById.map {

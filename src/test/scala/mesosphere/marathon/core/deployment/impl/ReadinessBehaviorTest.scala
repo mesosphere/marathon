@@ -201,7 +201,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
     val plan = DeploymentPlan("deploy", createRootGroup(), createRootGroup(), Seq(step), Timestamp.now())
     val deploymentStatus = DeploymentStatus(plan, step)
     val tracker = mock[InstanceTracker]
-    val appId = PathId("/test")
+    val appId = AbsolutePathId("/test")
     val app = AppDefinition(appId, role = "*")
     val instanceId = Instance.Id.forRunSpec(appId)
     val taskId = Task.Id(instanceId)

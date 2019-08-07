@@ -157,7 +157,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
     "deleteOne" in new Fixture {
       val clock = new SettableClock()
-      val appId = PathId("/my/app")
+      val appId = AbsolutePathId("/my/app")
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val toKill = Seq(instance1)
@@ -201,7 +201,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
     }
 
     "deleteOne with scale and wipe fails" in new Fixture {
-      val appId = PathId("/my/app")
+      val appId = AbsolutePathId("/my/app")
       val instanceId = Instance.Id.forRunSpec(appId)
       val id = Task.Id(instanceId)
 
@@ -217,7 +217,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
     "deleteOne with wipe delegates to taskKiller with wipe value" in new Fixture {
       val clock = new SettableClock()
-      val appId = PathId("/my/app")
+      val appId = AbsolutePathId("/my/app")
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val toKill = Seq(instance1)
@@ -262,7 +262,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
     "get tasks" in new Fixture {
       val clock = new SettableClock()
 
-      val appId = PathId("/my/app")
+      val appId = AbsolutePathId("/my/app")
 
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, clock.now()).getInstance()
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, clock.now()).getInstance()
@@ -448,7 +448,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       auth.authenticated = true
       auth.authorized = false
       val req = auth.request
-      val appId = PathId("/app")
+      val appId = AbsolutePathId("/app")
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
 
@@ -469,7 +469,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       auth.authenticated = true
       auth.authorized = false
       val req = auth.request
-      val appId = PathId("/app")
+      val appId = AbsolutePathId("/app")
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
 
