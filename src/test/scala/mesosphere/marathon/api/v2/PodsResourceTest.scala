@@ -618,7 +618,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       implicit val podStatusService = mock[PodStatusService]
       val f = Fixture()
 
-      podStatusService.selectPodStatus(any, any).returns(Future(Some(PodStatus("mypod", Pod("/mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
+      podStatusService.selectPodStatus(any, any).returns(Future(Some(PodStatus("/mypod", Pod("/mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
 
       val response = asyncRequest { r => f.podsResource.status("/mypod", f.auth.request, r) }
 

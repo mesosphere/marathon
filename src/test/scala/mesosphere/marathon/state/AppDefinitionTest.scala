@@ -30,7 +30,7 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val proto1 = app1.toProto
-      assert("play" == proto1.getId)
+      assert("/play" == proto1.getId)
       assert(proto1.getCmd.hasValue)
       assert(proto1.getCmd.getShell)
       assert("bash foo-*/start -Dhttp.port=$PORT" == proto1.getCmd.getValue)
@@ -60,7 +60,7 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val proto2 = app2.toProto
-      assert("play" == proto2.getId)
+      assert("/play" == proto2.getId)
       assert(!proto2.getCmd.hasValue)
       assert(!proto2.getCmd.getShell)
       proto2.getCmd.getArgumentsList should contain theSameElementsInOrderAs Seq("a", "b", "c")
@@ -84,7 +84,7 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val proto = app.toProto
-      proto.getId should be("play")
+      proto.getId should be("/play")
       proto.getCmd.hasValue should be(true)
       proto.getCmd.getShell should be(true)
       proto.getCmd.getValue should be("bash foo-*/start -Dhttp.port=$PORT")
@@ -102,7 +102,7 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val proto = app.toProto
-      proto.getId should be("play")
+      proto.getId should be("/play")
       proto.getCmd.hasValue should be(true)
       proto.getCmd.getShell should be(false)
       proto.getCmd.getValue should be("bash")
@@ -130,7 +130,7 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val proto = app.toProto
-      proto.getId should be("app-with-ip-address")
+      proto.getId should be("/app-with-ip-address")
       assert(proto.getNetworksCount > 0)
 
       val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto)
@@ -165,7 +165,7 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val proto = app.toProto
-      proto.getId should be("app-with-port-mappings")
+      proto.getId should be("/app-with-port-mappings")
       assert(proto.getNetworksCount > 0)
 
       val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto)
@@ -232,7 +232,7 @@ class AppDefinitionTest extends UnitTest {
         .setValue("bash foo-*/start -Dhttp.port=$PORT")
 
       val proto1 = ServiceDefinition.newBuilder
-        .setId("play")
+        .setId("/play")
         .setCmd(cmd)
         .setInstances(3)
         .setExecutor("//cmd")
@@ -241,7 +241,7 @@ class AppDefinitionTest extends UnitTest {
 
       val app1 = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto1)
 
-      assert("play" == app1.id.toString)
+      assert("/play" == app1.id.toString)
       assert(3 == app1.instances)
       assert("//cmd" == app1.executor)
       assert(app1.cmd.contains("bash foo-*/start -Dhttp.port=$PORT"))
