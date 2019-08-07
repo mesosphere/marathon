@@ -51,8 +51,8 @@ class AppsResource @Inject() (
 
   private[this] val ListApps = """^((?:.+/)|)\*$""".r
 
-  private def createValidatorAndNormalizerForApp(pathId: AbsolutePathId): (Normalization[raml.App], Validator[AppDefinition]) = {
-    val roleSettings = RoleSettings.forService(config, pathId, groupManager.rootGroup())
+  private def createValidatorAndNormalizerForApp(pathId: AbsolutePathId, forceRoleUpdate: Boolean): (Normalization[raml.App], Validator[AppDefinition]) = {
+    val roleSettings = RoleSettings.forService(config, pathId, groupManager.rootGroup(), forceRoleUpdate)
     val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
     val normalizer: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
     val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(config.availableFeatures, roleSettings)(pluginManager)
@@ -60,8 +60,8 @@ class AppsResource @Inject() (
     (normalizer, validator)
   }
 
-  private def createValidatorAndNormalizerForAppUpdate(pathId: AbsolutePathId): (Normalization[raml.AppUpdate], Validator[AppDefinition]) = {
-    val roleSettings = RoleSettings.forService(config, pathId, groupManager.rootGroup())
+  private def createValidatorAndNormalizerForAppUpdate(pathId: AbsolutePathId, forceRoleUpdate: Boolean): (Normalization[raml.AppUpdate], Validator[AppDefinition]) = {
+    val roleSettings = RoleSettings.forService(config, pathId, groupManager.rootGroup(), forceRoleUpdate)
     val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
     val normalizer: Normalization[raml.AppUpdate] = appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
     val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(config.availableFeatures, roleSettings)(pluginManager)
@@ -100,7 +100,7 @@ class AppsResource @Inject() (
 
       val ramlApp = Json.parse(body).as[raml.App]
 
-      implicit val (normalize, validate) = createValidatorAndNormalizerForApp(PathId(ramlApp.id).canonicalPath(PathId.root))
+      implicit val (normalize, validate) = createValidatorAndNormalizerForApp(PathId(ramlApp.id).canonicalPath(PathId.root), false)
 
       val now = clock.now()
 
@@ -176,8 +176,8 @@ class AppsResource @Inject() (
     * @param body is the raw, unparsed JSON
     * @param updateType CompleteReplacement if we want to replace the app entirely, PartialUpdate if we only want to update provided parts
     */
-  def canonicalAppUpdateFromJson(appId: AbsolutePathId, body: Array[Byte], updateType: UpdateType): raml.AppUpdate = {
-    val roleSettings = RoleSettings.forService(config, appId, groupManager.rootGroup())
+  def canonicalAppUpdateFromJson(appId: AbsolutePathId, body: Array[Byte], updateType: UpdateType, forceRoleUpdate: Boolean): raml.AppUpdate = {
+    val roleSettings = RoleSettings.forService(config, appId, groupManager.rootGroup(), forceRoleUpdate)
     val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
 
     implicit val normalizerApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
@@ -212,12 +212,12 @@ class AppsResource @Inject() (
     * @param partialUpdate true if the JSON should be parsed as a partial application update (all fields optional)
     *                      or as a wholesale replacement (parsed like an app definition would be)
     */
-  def canonicalAppUpdatesFromJson(basePath: AbsolutePathId, body: Array[Byte], partialUpdate: Boolean): Seq[raml.AppUpdate] = {
+  def canonicalAppUpdatesFromJson(basePath: AbsolutePathId, body: Array[Byte], partialUpdate: Boolean, forceRoleUpdate: Boolean): Seq[raml.AppUpdate] = {
     if (partialUpdate) {
       Json.parse(body).as[Seq[raml.AppUpdate]].map { appUpdate =>
         require(appUpdate.id.isDefined, "App Update must have app id set")
 
-        implicit val (normalizer, _) = createValidatorAndNormalizerForAppUpdate(PathId(appUpdate.id.get).canonicalPath(basePath))
+        implicit val (normalizer, _) = createValidatorAndNormalizerForAppUpdate(PathId(appUpdate.id.get).canonicalPath(basePath), forceRoleUpdate)
         appUpdate.normalize
       }
     } else {
@@ -226,7 +226,7 @@ class AppsResource @Inject() (
       // the version is thrown away in toUpdate so just pass `zero` for now.
       Json.parse(body).as[Seq[raml.App]].map { app =>
 
-        implicit val (normalizer, _) = createValidatorAndNormalizerForApp(app.id.toPath.canonicalPath(basePath))
+        implicit val (normalizer, _) = createValidatorAndNormalizerForApp(app.id.toPath.canonicalPath(basePath), forceRoleUpdate)
         app.normalize.toRaml[raml.AppUpdate]
       }
     }
@@ -270,7 +270,8 @@ class AppsResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      await(updateMultiple(PathId.root, force, partialUpdate, body, allowCreation = true))
+      // TODO: Do we want to reuse force for forceRoleUpdate?
+      await(updateMultiple(PathId.root, force, partialUpdate, body, allowCreation = true, forceRoleUpdate = force))
     }
   }
 
@@ -282,7 +283,8 @@ class AppsResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      await(updateMultiple(PathId.root, force, partialUpdate = true, body, allowCreation = false))
+      // TODO: Do we want to reuse force for forceRoleUpdate?
+      await(updateMultiple(PathId.root, force, partialUpdate = true, body, allowCreation = false, forceRoleUpdate = force))
     }
   }
 
@@ -374,9 +376,9 @@ class AppsResource @Inject() (
       case (_, false) => CompleteReplacement
     }
 
-    implicit val (normalizer, validate) = createValidatorAndNormalizerForApp(appId)
+    implicit val (normalizer, validate) = createValidatorAndNormalizerForApp(appId, force)
 
-    val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType)
+    val appUpdate = canonicalAppUpdateFromJson(appId, body, updateType, force)
 
     val version = clock.now()
     val plan = await(groupManager.updateApp(appId, AppHelpers.updateOrCreate(appId, _, appUpdate, partialUpdate, allowCreation, clock.now(), service), version, force))
@@ -392,23 +394,24 @@ class AppsResource @Inject() (
   /**
     * Internal representation of `replace or update` logic for multiple apps.
     *
-    * @param force force update?
+    * @param forceDeployment force update?
+    * @param forceRoleUpdate force role update?
     * @param partialUpdate partial update?
     * @param body request body
     * @param allowCreation is creation allowed?
     * @param identity implicit identity
     * @return http servlet response
     */
-  private[this] def updateMultiple(basePath: AbsolutePathId, force: Boolean, partialUpdate: Boolean,
-    body: Array[Byte], allowCreation: Boolean)(implicit identity: Identity): Future[Response] = async {
+  private[this] def updateMultiple(basePath: AbsolutePathId, forceDeployment: Boolean, partialUpdate: Boolean,
+    body: Array[Byte], allowCreation: Boolean, forceRoleUpdate: Boolean)(implicit identity: Identity): Future[Response] = async {
 
     val version = clock.now()
-    val updates = canonicalAppUpdatesFromJson(basePath, body, partialUpdate)
+    val updates = canonicalAppUpdatesFromJson(basePath, body, partialUpdate, forceRoleUpdate)
 
     def updateGroup(rootGroup: RootGroup): RootGroup = updates.foldLeft(rootGroup) { (group, update) =>
       update.id.map(_.toPath.canonicalPath(basePath)) match {
         case Some(id) => {
-          implicit val (normalizer, validate) = createValidatorAndNormalizerForApp(id)
+          implicit val (normalizer, validate) = createValidatorAndNormalizerForApp(id, forceRoleUpdate)
 
           group.updateApp(id, AppHelpers.updateOrCreate(id, _, update, partialUpdate, allowCreation = allowCreation, clock.now(), service), version)
         }
@@ -416,7 +419,7 @@ class AppsResource @Inject() (
       }
     }
 
-    deploymentResult(await(groupManager.updateRoot(PathId.root, updateGroup, version, force)))
+    deploymentResult(await(groupManager.updateRoot(PathId.root, updateGroup, version, forceDeployment)))
   }
 
   private def maybePostEvent(req: HttpServletRequest, app: AppDefinition) =

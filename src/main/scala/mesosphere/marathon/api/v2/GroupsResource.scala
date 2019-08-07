@@ -162,7 +162,8 @@ class GroupsResource @Inject() (
           originalRootGroup,
           rootPath,
           normalized,
-          config
+          config,
+          force // TODO: Do we want to reuse force parameter for force role update?
         ))(groupValidator)
 
       def throwIfConflicting[A](conflict: Option[Any], msg: String) = {
@@ -257,7 +258,8 @@ class GroupsResource @Inject() (
           originalRootGroup,
           effectivePath,
           normalized,
-          config
+          config,
+          force // TODO: Do we want to reuse force parameter for force role update?
         ))(groupValidator)
 
       if (dryRun) {
@@ -357,7 +359,7 @@ object GroupsResource {
   /**
     * performs basic app validation and normalization for all apps (transitively) for the given group-update.
     */
-  def normalizeApps(rootGroup: RootGroup, rootPath: AbsolutePathId, update: raml.GroupUpdate, config: MarathonConf): raml.GroupUpdate = {
+  def normalizeApps(rootGroup: RootGroup, rootPath: AbsolutePathId, update: raml.GroupUpdate, config: MarathonConf, forceRoleUpdate: Boolean): raml.GroupUpdate = {
     // note: we take special care to:
     // (a) canonize and rewrite the app ID before normalization, and;
     // (b) canonize BUT NOT REWRITE the group ID while iterating (validation has special rules re: number of set fields)
@@ -366,7 +368,7 @@ object GroupsResource {
     val groupPath = update.id.map(PathId(_).canonicalPath(rootPath)).getOrElse(rootPath)
     val apps = update.apps.map(_.map { a =>
 
-      val roleSettings = RoleSettings.forService(config, PathId(a.id).canonicalPath(groupPath), rootGroup)
+      val roleSettings = RoleSettings.forService(config, PathId(a.id).canonicalPath(groupPath), rootGroup, forceRoleUpdate)
       val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
       implicit val validateAndNormalizeApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 
@@ -374,7 +376,7 @@ object GroupsResource {
     })
 
     val groups = update.groups.map(_.map { g =>
-      normalizeApps(rootGroup, groupPath, g, config)
+      normalizeApps(rootGroup, groupPath, g, config, forceRoleUpdate)
     })
 
     update.copy(apps = apps, groups = groups)

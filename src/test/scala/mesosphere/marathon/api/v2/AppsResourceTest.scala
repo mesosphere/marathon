@@ -15,7 +15,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
-import mesosphere.marathon.raml.{App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarSecret, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, LinuxInfo, Network, NetworkMode, Raml, Seccomp, SecretDef, Container => RamlContainer}
+import mesosphere.marathon.raml.{App, AppPersistentVolume, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarSecret, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, LinuxInfo, Network, NetworkMode, Raml, ReadMode, Seccomp, SecretDef, Container => RamlContainer}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -1609,7 +1609,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |  },
           |  "ipAddress": { "networkName": "dcos" }
           |}""".stripMargin.getBytes("UTF-8")
-      val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id.asAbsolutePath, body, CompleteReplacement)
+      val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id.asAbsolutePath, body, CompleteReplacement, false)
 
       Then("the application is updated")
       implicit val identity = auth.identity
@@ -1617,7 +1617,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true, now = clock.now(), service = service)
 
       And("also works when the update operation uses partial-update semantics, dropping portDefinitions")
-      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id.asAbsolutePath, body, PartialUpdate(app))
+      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id.asAbsolutePath, body, PartialUpdate(app), false)
       val app2 = AppHelpers.updateOrCreate(
         app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false, now = clock.now(), service = service)
 
@@ -2246,6 +2246,45 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val Some(app) = groupManager.rootGroup().app("/dev/sleeper".toPath)
 
       app.role shouldBe "dev"
+    }
+
+    "Create a new resident app with role * should reject " in new Fixture() {
+      Given("An app with non-default role")
+      val app = App(
+        id = "/dev/app",
+        role = Some("*"),
+        cmd = Some("cmd"),
+        container = Some(raml.Container(
+          docker = Some(DockerContainer(
+            image = "someimage")
+          ),
+          volumes = Seq(
+            AppPersistentVolume(
+              containerPath = "helloworld",
+              mode = ReadMode.Rw,
+              persistent = raml.PersistentVolumeInfo(size = 10)
+            )
+          )
+        ))
+      )
+
+      prepareGroup("/dev", groupManager)
+
+      val body = Json.stringify(Json.toJson(normalize(app))).getBytes("UTF-8")
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
+        Then("The return code indicates a validation error")
+        response.getStatus should be(422)
+        response.getEntity.toString should include("/role")
+        response.getEntity.toString should include("Resident apps cannot have the role *")
+      }
     }
 
   }

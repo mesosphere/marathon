@@ -465,6 +465,79 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
     }
 
+    "fail to update a pod with a persistent volume without force parameter" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+
+      val pathId = "/foo/mypod".toAbsolutePath
+      val existingPod = PodDefinition(id = pathId, role = "*")
+
+      f.prepareGroup("/foo", Map(pathId.asAbsolutePath -> existingPod))
+
+      podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val podSpecJsonWithPersistentVolume =
+        """
+          | { "id": "/foo/mypod",
+          |   "role": "foo",
+          |   "containers": [ {
+          |     "name": "dataapp",
+          |     "resources": { "cpus": 0.03, "mem": 64 },
+          |     "image": { "kind": "DOCKER", "id": "busybox" },
+          |     "exec": { "command": { "shell": "sleep 1" } },
+          |     "volumeMounts": [ { "name": "pst", "mountPath": "pst1", "readOnly": false } ]
+          |   } ],
+          |   "volumes": [ {
+          |     "name": "pst",
+          |     "persistent": { "type": "root", "size": 10 }
+          |   } ] }
+        """.stripMargin
+
+      val response = asyncRequest { r =>
+        f.podsResource.update("/foo/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request, r)
+      }
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(422)
+        response.getEntity.toString should include("It is not possible to change the role for existing reservations. If you proceed with this change, all existing instances will continue to under the previous role")
+      }
+    }
+
+    "update a pod with a persistent volume with force parameter" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+
+      val pathId = "/foo/mypod".toAbsolutePath
+      val existingPod = PodDefinition(id = pathId, role = "*")
+
+      f.prepareGroup("/foo", Map(pathId.asAbsolutePath -> existingPod))
+
+      podSystem.update(any, eq(true)).returns(Future.successful(DeploymentPlan.empty))
+
+      val podSpecJsonWithPersistentVolume =
+        """
+          | { "id": "/foo/mypod",
+          |   "role": "foo",
+          |   "containers": [ {
+          |     "name": "dataapp",
+          |     "resources": { "cpus": 0.03, "mem": 64 },
+          |     "image": { "kind": "DOCKER", "id": "busybox" },
+          |     "exec": { "command": { "shell": "sleep 1" } },
+          |     "volumeMounts": [ { "name": "pst", "mountPath": "pst1", "readOnly": false } ]
+          |   } ],
+          |   "volumes": [ {
+          |     "name": "pst",
+          |     "persistent": { "type": "root", "size": 10 }
+          |   } ] }
+        """.stripMargin
+
+      val response = asyncRequest { r =>
+        f.podsResource.update("/foo/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = true, f.auth.request, r)
+      }
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(HttpServletResponse.SC_OK)
+      }
+    }
+
     "fail to create a pod with a persistent volume if unreachable strategy is enabled" in {
       implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--mesos_role", "foo"))

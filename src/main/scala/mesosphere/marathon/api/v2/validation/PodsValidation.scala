@@ -12,7 +12,7 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{PathId, ResourceRole, RootGroup}
+import mesosphere.marathon.state.{PathId, ResourceRole, Role, RootGroup}
 import mesosphere.marathon.util.{RoleSettings, SemanticVersion}
 // scalastyle:on
 
@@ -249,9 +249,15 @@ trait PodsValidation extends GeneralPurposeCombinators {
 
   def validPodDefinitionWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[PodDefinition] = validator[PodDefinition] { pod =>
     pod.role is in(roleEnforcement.validRoles)
+    // DO NOT MERGE THESE TWO similar if blocks! Wix Accord macros do weird stuff otherwise.
     if (pod.isResident) {
-      pod.role is isTrue(s"Resident pods cannot have the role ${ResourceRole.Unreserved}") { role: String =>
+      pod.role is isTrue(s"Resident pods cannot have the role ${ResourceRole.Unreserved}") { role: Role =>
         !role.equals(ResourceRole.Unreserved)
+      }
+    }
+    if (pod.isResident) {
+      pod.role is isTrue((role: Role) => s"It is not possible to change the role for existing reservations. If you proceed with this change, all existing instances will continue to under the previous role, ${roleEnforcement.previousRole.get}. Only new instances will be allocated with the new role, ${role}. In order to continue, retry your request with force=true") { role: Role =>
+        roleEnforcement.previousRole.map(_.equals(role) || roleEnforcement.forceRoleUpdate).getOrElse(true)
       }
     }
     pod.acceptedResourceRoles is valid(ResourceRole.validForRole(pod.role))
