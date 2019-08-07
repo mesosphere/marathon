@@ -21,7 +21,7 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.AnyToRaml
 import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AbsolutePathId, PathId}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.util.toRichFuture
 
@@ -70,7 +70,7 @@ class AppTasksResource @Inject() (
     }
   }
 
-  def runningTasks(appIds: Iterable[PathId], instancesBySpec: InstancesBySpec): Future[Vector[EnrichedTask]] = {
+  def runningTasks(appIds: Iterable[AbsolutePathId], instancesBySpec: InstancesBySpec): Future[Vector[EnrichedTask]] = {
     Future.sequence(appIds.withFilter(instancesBySpec.hasSpecInstances).map { id =>
       async {
         val health = await(healthCheckManager.statuses(id))

@@ -14,7 +14,7 @@ import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.state.{AbsolutePathId, PathId}
 import mesosphere.marathon.storage.store.{InMemoryStoreSerialization, ZkStoreSerialization}
 
-trait ServiceDefinitionRepository extends ReadOnlyVersionedRepository[PathId, ServiceDefinition]
+trait ServiceDefinitionRepository extends ReadOnlyVersionedRepository[AbsolutePathId, ServiceDefinition]
 
 private[storage] object ServiceDefinitionRepository {
 

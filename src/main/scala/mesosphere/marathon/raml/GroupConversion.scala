@@ -27,20 +27,26 @@ object UpdateGroupStructureOp {
     )
   }
 
-  private def normalizeApp(version: Timestamp)(implicit normalPaths: Normalization[PathId]): Normalization[AppDefinition] = Normalization { app =>
-    app.copy(id = app.id.normalize, dependencies = app.dependencies.map(_.normalize),
-      versionInfo = CoreVersionInfo.OnlyVersion(version))
+  private def normalizeAppDefinition(version: Timestamp): Normalization[AppDefinition] = Normalization { app =>
+    app.copy(versionInfo = CoreVersionInfo.OnlyVersion(version))
+  }
+
+  private def normalizeApp(pathNormalization: Normalization[String]): Normalization[App] = Normalization { app =>
+    app.copy(
+      id = app.id.normalize(pathNormalization),
+      dependencies = app.dependencies.map(_.normalize(pathNormalization)))
   }
 
   /**
     * Creates a new [[state.Group]] from a [[GroupUpdate]], performing both normalization and conversion.
     */
   private def createGroup(groupUpdate: GroupUpdate, gid: AbsolutePathId, version: Timestamp)(implicit cf: App => AppDefinition): CoreGroup = {
-    implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(gid))
-    implicit val appNormalization: Normalization[AppDefinition] = normalizeApp(version)
+    val pathNormalization: Normalization[String] = Normalization(PathId(_).canonicalPath(gid).toString)
+    implicit val appNormalization: Normalization[App] = normalizeApp(pathNormalization)
+    implicit val appDefinitionNormalization: Normalization[AppDefinition] = normalizeAppDefinition(version)
 
     val appsById: Map[AppDefinition.AppKey, AppDefinition] = groupUpdate.apps.getOrElse(Set.empty).map { currentApp =>
-      val app = cf(currentApp).normalize
+      val app = cf(currentApp.normalize).normalize
       app.id -> app
     }(collection.breakOut)
 
@@ -76,7 +82,7 @@ object UpdateGroupStructureOp {
     assert(groupUpdate.enforceRole.isDefined, s"BUG! The group normalization should have set enforceRole for ${groupUpdate.id}.")
 
     implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(current.id))
-    implicit val appNormalization: Normalization[AppDefinition] = normalizeApp(timestamp)
+    implicit val appNormalization: Normalization[AppDefinition] = normalizeAppDefinition(timestamp)
 
     val effectiveGroups: Map[CoreGroup.GroupKey, CoreGroup] = groupUpdate.groups.fold(current.groupsById) { updates =>
       updates.map { groupUpdate =>

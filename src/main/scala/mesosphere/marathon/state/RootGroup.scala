@@ -57,7 +57,7 @@ class RootGroup(
       app <- group.apps.values
       dependencyId <- app.dependencies
       dependentApp = this.app(dependencyId).map(Set(_))
-      dependentGroup = transitiveGroupsById.get(dependencyId.asAbsolutePath).map(_.transitiveApps)
+      dependentGroup = transitiveGroupsById.get(dependencyId).map(_.transitiveApps)
       dependent <- dependentApp orElse dependentGroup getOrElse Set.empty
     } result ::= app -> dependent
     result
@@ -452,11 +452,11 @@ object RootGroup {
     isTrue("Dependency graph has cyclic dependencies.") { _.hasNonCyclicDependencies }
 
   private def validAppRole(config: MarathonConf, rootGroup: RootGroup): Validator[AppDefinition] = (app: AppDefinition) => {
-    AppDefinition.validWithRoleEnforcement(RoleSettings.forService(config, app.id.asAbsolutePath, rootGroup)).apply(app)
+    AppDefinition.validWithRoleEnforcement(RoleSettings.forService(config, app.id, rootGroup)).apply(app)
   }
 
   private def validPodRole(config: MarathonConf, rootGroup: RootGroup): Validator[PodDefinition] = (pod: PodDefinition) => {
-    PodsValidation.validPodDefinitionWithRoleEnforcement(RoleSettings.forService(config, pod.id.asAbsolutePath, rootGroup)).apply(pod)
+    PodsValidation.validPodDefinitionWithRoleEnforcement(RoleSettings.forService(config, pod.id, rootGroup)).apply(pod)
   }
 
 }

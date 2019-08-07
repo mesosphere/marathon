@@ -223,7 +223,7 @@ object InstanceRepository {
   }
 }
 
-trait TaskFailureRepository extends VersionedRepository[PathId, TaskFailure]
+trait TaskFailureRepository extends VersionedRepository[AbsolutePathId, TaskFailure]
 
 object TaskFailureRepository {
 

@@ -75,7 +75,7 @@ class GroupManagerImpl(
   override def versions(id: AbsolutePathId): Source[Timestamp, NotUsed] = {
     groupRepository.rootVersions().mapAsync(RepositoryConstants.maxConcurrency) { version =>
       groupRepository.rootVersion(version)
-    }.collect { case Some(g) if g.group(id.asAbsolutePath).isDefined => g.version }
+    }.collect { case Some(g) if g.group(id).isDefined => g.version }
   }
 
   override def appVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed] = {
@@ -94,11 +94,11 @@ class GroupManagerImpl(
     groupRepository.podVersion(id, version)
   }
 
-  override def group(id: AbsolutePathId): Option[Group] = rootGroup().group(id.asAbsolutePath)
+  override def group(id: AbsolutePathId): Option[Group] = rootGroup().group(id)
 
   override def group(id: AbsolutePathId, version: Timestamp): Future[Option[Group]] = async {
     val root = await(groupRepository.rootVersion(version.toOffsetDateTime))
-    root.flatMap(_.group(id.asAbsolutePath))
+    root.flatMap(_.group(id))
   }
 
   override def runSpec(id: AbsolutePathId): Option[RunSpec] = app(id).orElse(pod(id))
