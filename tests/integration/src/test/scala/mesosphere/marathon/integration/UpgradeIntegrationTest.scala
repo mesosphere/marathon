@@ -72,7 +72,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       implicit
       val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
-    override val conf = Map("min_revive_offers_interval" -> "100")
+    override def conf = Map("min_revive_offers_interval" -> "100")
 
     override val processBuilder = {
       val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
@@ -87,7 +87,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       implicit
       val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
 
-    override val conf = Map("min_revive_offers_interval" -> "100")
+    override def conf = Map("min_revive_offers_interval" -> "100")
 
     override val processBuilder = {
       val bin = new File(marathonPackage, "marathon-1.5.15/bin/marathon").getCanonicalPath

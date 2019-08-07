@@ -49,7 +49,7 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
   val suiteName: String
   val masterUrl: String
   val zkUrl: String
-  val conf: Map[String, String] = Map.empty
+  def conf: Map[String, String] = Map.empty
 
   implicit val system: ActorSystem
   implicit val mat: Materializer
