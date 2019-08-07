@@ -2047,7 +2047,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates a validation error")
         response.getStatus should be(422)
         response.getEntity.toString should include("/role")
@@ -2067,7 +2066,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates success")
         response.getStatus should be(201)
       }
@@ -2089,7 +2087,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates a validation error")
         response.getStatus should be(422)
         response.getEntity.toString should include("/role")
@@ -2112,7 +2109,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates success")
         response.getStatus should be(201)
       }
@@ -2135,7 +2131,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates a validation error")
         response.getStatus should be(422)
         response.getEntity.toString should include("/role")
@@ -2155,7 +2150,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates success")
         response.getStatus should be(201)
       }
@@ -2173,7 +2167,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates success")
         response.getStatus should be(201)
       }
@@ -2195,7 +2188,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates success")
         response.getStatus should be(422)
         response.getEntity.toString should include("/role")
@@ -2215,7 +2207,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates success")
         response.getStatus should be(201)
       }
@@ -2248,5 +2239,21 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       app.role shouldBe "dev"
     }
 
+    "Create an app in root with configured Mesos role" in new Fixture(configArgs = Seq("--mesos_role", "customMesosRole")) {
+      Given("An app with the default Mesos role")
+      val app = App(id = "/app-with-default", cmd = Some("cmd"), acceptedResourceRoles = Some(Set(config.mesosRole())))
+      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        Then("The return code indicates success")
+        response.getStatus should be(201)
+      }
+    }
   }
 }
