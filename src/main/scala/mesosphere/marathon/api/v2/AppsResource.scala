@@ -99,6 +99,7 @@ class AppsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
 
       val ramlApp = Json.parse(body).as[raml.App]
+      println(s"Raw: ${ramlApp.acceptedResourceRoles}")
 
       implicit val (normalize, validate) = createValidatorAndNormalizerForApp(PathId(ramlApp.id).canonicalPath(PathId.root))
 

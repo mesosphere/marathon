@@ -18,9 +18,12 @@ object AppHelpers {
 
     validateOrThrow(app)(AppValidation.validateOldAppAPI)
     val migrated = AppNormalization.forDeprecated(config).normalized(app)
+    val normalized = AppNormalization(config).normalized(migrated)
+    println(app.acceptedResourceRoles)
+    println(migrated.acceptedResourceRoles)
+    println(normalized.acceptedResourceRoles)
     validateOrThrow(migrated)(AppValidation.validateCanonicalAppAPI(config.enabledFeatures, () => config.defaultNetworkName, validRoles))
-    AppNormalization(config).normalized(migrated)
-
+    normalized
   }
 
   def appUpdateNormalization(config: AppNormalization.Config): Normalization[raml.AppUpdate] = Normalization { app =>
