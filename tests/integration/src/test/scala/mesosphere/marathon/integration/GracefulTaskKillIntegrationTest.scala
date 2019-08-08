@@ -5,7 +5,7 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 
 import scala.concurrent.duration._
 
@@ -31,12 +31,12 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       Then("The app is created")
       result should be(Created)
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1)
+      waitForTasks(AbsolutePathId(app.id), 1)
       //make sure, the app has really started
-      val taskId = marathon.tasks(app.id.toPath).value.head.id
+      val taskId = marathon.tasks(AbsolutePathId(app.id)).value.head.id
 
       When("a task of an app is killed")
-      marathon.killTask(app.id.toPath, taskId, scale = true) should be(OK)
+      marathon.killTask(AbsolutePathId(app.id), taskId, scale = true) should be(OK)
       val taskKillSentTimestamp = Timestamp.now()
 
       val taskKilledEvent = waitForStatusUpdates("TASK_KILLED").head
@@ -61,12 +61,12 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       Then("The app is created")
       result should be(Created)
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1)
+      waitForTasks(AbsolutePathId(app.id), 1)
       //make sure, the app has really started
-      val taskId = marathon.tasks(app.id.toPath).value.head.id
+      val taskId = marathon.tasks(AbsolutePathId(app.id)).value.head.id
 
       When("a task of an app is killed")
-      marathon.killTask(app.id.toPath, taskId, scale = true) should be(OK)
+      marathon.killTask(AbsolutePathId(app.id), taskId, scale = true) should be(OK)
       val taskKillSentTimestamp = Timestamp.now()
 
       val taskKilledEvent = waitForStatusUpdates("TASK_KILLED").head

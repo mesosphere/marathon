@@ -4,7 +4,7 @@ package integration
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup.{BaseMarathon, EmbeddedMarathonTest, MesosConfig}
 import mesosphere.marathon.raml.AppUpdate
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import org.scalatest.time.{Seconds, Span}
 
 class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
@@ -30,7 +30,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Then("The apps are created")
       resultInDev should be(Created)
       waitForDeployment(resultInDev)
-      waitForTasks(PathId(appInDev.id), 1) //make sure the app has really started
+      waitForTasks(AbsolutePathId(appInDev.id), 1) //make sure the app has really started
 
       Given("an app in role metrics")
       val appInMetrics = appProxy(AbsolutePathId("/metrics/app-with-role"), "v1", instances = 1, role = Some("metrics"))
@@ -41,7 +41,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Then("The apps are created")
       resultInMetrics should be(Created)
       waitForDeployment(resultInMetrics)
-      waitForTasks(PathId(appInMetrics.id), 1) //make sure the app has really started
+      waitForTasks(AbsolutePathId(appInMetrics.id), 1) //make sure the app has really started
     }
 
     "Marathon should launch an resident app as specified role" in {
@@ -54,7 +54,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Then("The apps are created")
       resultInDev should be(Created)
       waitForDeployment(resultInDev)
-      waitForTasks(PathId(appInDev.id), 1) //make sure the app has really started
+      waitForTasks(AbsolutePathId(appInDev.id), 1) //make sure the app has really started
     }
 
     "An Instance should keep it's previous role in a resident app" in {
@@ -69,7 +69,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Then("The apps are created")
       resultInDev should be(Created)
       waitForDeployment(resultInDev)
-      waitForTasks(PathId(appInDev.id), 1) //make sure the app has really started
+      waitForTasks(AbsolutePathId(appInDev.id), 1) //make sure the app has really started
 
       Given("The App is updated to a new role")
       val updatedApp = AppUpdate(id = Some(appId.toString), role = Some("dev"), acceptedResourceRoles = Some(Set("*")))
@@ -81,7 +81,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       resultOfUpdate should be(OK)
       waitForDeployment(resultOfUpdate)
 
-      waitForTasks(PathId(appInDev.id), 1) //make sure the app has restarted
+      waitForTasks(AbsolutePathId(appInDev.id), 1) //make sure the app has restarted
 
       Given("The Update is done")
       var taskListResult = marathon.tasks(appId)
@@ -98,7 +98,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       resultOfScale should be(OK)
       waitForDeployment(resultOfScale)
 
-      waitForTasks(PathId(appInDev.id), 2) // make sure both apps have started
+      waitForTasks(AbsolutePathId(appInDev.id), 2) // make sure both apps have started
 
       Given("The Update is done")
       taskListResult = marathon.tasks(appId)
@@ -123,7 +123,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Then("The app is created")
       resultInDev should be(Created)
       waitForDeployment(resultInDev)
-      waitForTasks(PathId(appInDev.id), 1) //make sure the app has really started
+      waitForTasks(AbsolutePathId(appInDev.id), 1) //make sure the app has really started
     }
 
   }

@@ -4,6 +4,7 @@ package integration
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType, Network, NetworkMode}
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.state.PathId._
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 
@@ -28,8 +29,9 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
   def healthyDockerApp(testName: String, f: (App) => App = (x) => x) =
     testName taggedAs WhenEnvSet(envVar, default = "true") in {
       Given("a new app")
-      val app = f(dockerAppProxy(testBasePath / "docker-http-app", "v1", instances = 1, healthCheck = Some(appProxyHealthCheck())))
-      val check = registerAppProxyHealthCheck(app.id.toPath, "v1", state = true)
+      val appId = testBasePath / "docker-http-app"
+      val app = f(dockerAppProxy(appId, "v1", instances = 1, healthCheck = Some(appProxyHealthCheck())))
+      val check = registerAppProxyHealthCheck(appId, "v1", state = true)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -61,7 +63,7 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1) // The app has really started
+      waitForTasks(AbsolutePathId(app.id), 1) // The app has really started
     }
 
     behave like healthyDockerApp(

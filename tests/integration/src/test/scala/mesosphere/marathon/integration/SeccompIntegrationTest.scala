@@ -4,8 +4,7 @@ package integration
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType, LinuxInfo, Seccomp}
-import mesosphere.marathon.state.PathId
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 
 class SeccompIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
@@ -33,7 +32,7 @@ class SeccompIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
     waitForDeployment(result)
 
     And("the task is running")
-    waitForTasks(app.id.toPath, app.instances)
+    waitForTasks(AbsolutePathId(app.id), app.instances)
   }
 
   "An app definition WITHOUT seccomp profile and unconfined = true" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
@@ -46,7 +45,7 @@ class SeccompIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
     waitForDeployment(result)
 
     And("the task is running")
-    waitForTasks(app.id.toPath, app.instances)
+    waitForTasks(AbsolutePathId(app.id), app.instances)
   }
 
   "A pod definition WITH seccomp profile defined and unconfined = false" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
@@ -75,7 +74,7 @@ class SeccompIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
     eventually { marathon.status(pod.id) should be(Stable) }
   }
 
-  def seccompPod(podId: PathId, unconfined: Boolean, profileName: Option[String] = None): PodDefinition = {
+  def seccompPod(podId: AbsolutePathId, unconfined: Boolean, profileName: Option[String] = None): PodDefinition = {
     PodDefinition(
       id = podId,
       role = "foo",
@@ -96,7 +95,7 @@ class SeccompIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
       ))
   }
 
-  def seccompApp(appId: PathId, unconfined: Boolean, profileName: Option[String] = None): App = {
+  def seccompApp(appId: AbsolutePathId, unconfined: Boolean, profileName: Option[String] = None): App = {
     App(
       id = appId.toString,
       cmd = Some("sleep 232323"),

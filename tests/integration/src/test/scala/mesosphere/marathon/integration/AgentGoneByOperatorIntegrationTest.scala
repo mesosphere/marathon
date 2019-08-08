@@ -7,7 +7,7 @@ import mesosphere.marathon.core.task.Task.TaskIdWithIncarnation
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig, RestResult}
 import mesosphere.marathon.raml.App
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import org.scalatest.Inside
 
 class AgentGoneByOperatorIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
@@ -63,5 +63,5 @@ class AgentGoneByOperatorIntegrationTest extends AkkaIntegrationTest with Embedd
     result
   }
 
-  def appId(suffix: String): PathId = AbsolutePathId(s"/$testBasePath/app-$suffix")
+  def appId(suffix: String): AbsolutePathId = AbsolutePathId(s"/$testBasePath/app-$suffix")
 }

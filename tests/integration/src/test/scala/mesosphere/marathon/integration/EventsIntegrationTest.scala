@@ -4,7 +4,7 @@ package integration
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AbsolutePathId, PathId}
 import mesosphere.marathon.state.PathId._
 
 import scala.concurrent.Future
@@ -32,7 +32,7 @@ class EventsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
 
       And("we wait for deployment")
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1)
+      waitForTasks(AbsolutePathId(app.id), 1)
 
       Then("deployment events should be filtered")
       val allEventsResult = allEvents.futureValue
@@ -54,7 +54,7 @@ class EventsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
 
       And("we wait for deployment")
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1)
+      waitForTasks(AbsolutePathId(app.id), 1)
 
       Then("deployment events should not include the original and target groups")
       val eventsResult = events.futureValue
