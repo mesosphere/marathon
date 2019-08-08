@@ -7,7 +7,6 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.App
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{AbsolutePathId, UnreachableDisabled}
 import org.scalatest.Inside
 import org.scalatest.Inspectors.forAll

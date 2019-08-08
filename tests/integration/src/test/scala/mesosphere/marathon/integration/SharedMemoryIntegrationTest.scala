@@ -164,7 +164,6 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
     )
 
     val body: Pod = Raml.toRaml(pod)
-    val bodyString = Json.prettyPrint(Pod.playJsonFormat.writes(body))
 
     When("The pod is deployed")
     val createResult = marathon.createPodV2(pod)

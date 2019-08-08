@@ -912,7 +912,7 @@ trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with Zookee
       override def marathonUrl: String = s"http://localhost:${marathonServer.httpPort}"
       override def marathon: MarathonFacade = marathonServer.client
       override def mesos: MesosFacade = MarathonFixture.this.mesos
-      override val testBasePath: PathId = PathId("/")
+      override val testBasePath: AbsolutePathId = AbsolutePathId("/")
       override implicit val system: ActorSystem = MarathonFixture.this.system
       override implicit val mat: Materializer = MarathonFixture.this.mat
       override implicit val ctx: ExecutionContext = MarathonFixture.this.ctx

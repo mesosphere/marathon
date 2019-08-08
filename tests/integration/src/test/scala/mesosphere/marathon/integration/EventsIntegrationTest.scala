@@ -5,7 +5,6 @@ import akka.stream.scaladsl.Sink
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.{AbsolutePathId, PathId}
-import mesosphere.marathon.state.PathId._
 
 import scala.concurrent.Future
 

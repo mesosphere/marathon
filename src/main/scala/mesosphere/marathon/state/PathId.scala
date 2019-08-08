@@ -203,6 +203,11 @@ object PathId {
     sanitized(raw, in.startsWith("/"))
   }
 
+  def apply(in: String, absolute: Boolean): PathId = {
+    val raw = in.replaceAll("""(^/+)|(/+$)""", "").split("/")
+    sanitized(raw, absolute)
+  }
+
   def root: AbsolutePathId = AbsolutePathId(Nil)
 
   implicit class StringPathId(val stringPath: String) extends AnyVal {

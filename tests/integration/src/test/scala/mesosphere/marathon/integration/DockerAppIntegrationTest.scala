@@ -5,7 +5,6 @@ import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType, Network, NetworkMode}
 import mesosphere.marathon.state.AbsolutePathId
-import mesosphere.marathon.state.PathId._
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 
 class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {

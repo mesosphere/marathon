@@ -12,7 +12,7 @@ import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
-import mesosphere.marathon.state.{AbsolutePathId, PathId, PersistentVolume, PersistentVolumeInfo, VolumeMount}
+import mesosphere.marathon.state.{AbsolutePathId, PersistentVolume, PersistentVolumeInfo, VolumeMount}
 import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import org.apache.commons.io.FileUtils

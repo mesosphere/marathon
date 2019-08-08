@@ -55,11 +55,6 @@ trait Formats
   with EventFormats
   with PluginFormats {
 
-  implicit lazy val AbsolutePathIdFormat: Format[AbsolutePathId] = Format(
-    Reads.of[String](Reads.minLength[String](1)).map(AbsolutePathId(_)),
-    Writes[AbsolutePathId] { id => JsString(id.toString) }
-  )
-
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
     Json.obj(
       "appId" -> failure.appId,
@@ -119,6 +114,10 @@ trait Formats
     Reads.of[String](Reads.minLength[String](1)).map(PathId(_)),
     Writes[PathId] { id => JsString(id.toString) }
   )
+
+  implicit lazy val PathIdWrites: Writes[PathId] = Writes{ id => JsString(id.toString) }
+
+  implicit lazy val AbsolutePathIdReads: Reads[AbsolutePathId] = Reads.of[String](Reads.minLength[String](1)).map(AbsolutePathId(_))
 
   implicit lazy val TimestampFormat: Format[Timestamp] = Format(
     Reads.of[String].map(Timestamp(_)),
