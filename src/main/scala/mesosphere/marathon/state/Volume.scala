@@ -314,15 +314,12 @@ object PathPatterns {
 /**
   * ExternalVolumeInfo captures the specification for a volume that survives task restarts.
   *
-  * `name` is the *unique name* of the storage volume. names should be treated as case insensitive labels
+  * `name` is the name of the storage volume. names should be treated as case insensitive labels
   * derived from an alpha-numeric character range [a-z0-9]. while there is no prescribed length limit for
   * volume names it has been observed that some storage provider implementations may refuse names greater
-  * than 31 characters. YMMV. Although `name` is optional, some storage providers may require it.
-  *
-  * `name` uniqueness:
-  *  <li> A volume name MUST be unique within the scope of a volume provider.
-  *  <li> A fully-qualified volume name is expected to be unique across the cluster and may formed, for example,
-  *       by concatenating the volume provider name with the volume name. E.g “dvdi.volume123”
+  * than 31 characters. YMMV. Although `name` is optional, some storage providers may require it. There
+  * is no fully validation on the name, as some providers use the name to pass options, therefore we can't
+  * rely on a simple validation rule.
   *
   * `provider` is optional; if specified it indicates which storage provider will implement volume
   * lifecycle management operations for the external volume. if unspecified, “agent” is assumed.
@@ -364,7 +361,6 @@ object ExternalVolumeInfo {
 
   implicit val validExternalVolumeInfo = validator[ExternalVolumeInfo] { info =>
     info.size.each should be > 0L
-    info.name should matchRegex(LabelRegex)
     info.provider should matchRegex(LabelRegex)
     info.options is validOptions
   }

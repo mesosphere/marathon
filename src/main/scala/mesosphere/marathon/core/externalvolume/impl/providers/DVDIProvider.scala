@@ -89,68 +89,15 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
   import DVDIProvider._
   import mesosphere.marathon.api.v2.Validation._
 
-  // group-level validation for DVDI volumes: the same volume name may only be referenced by a single
-  // task instance across the entire cluster.
   override lazy val rootGroup = new Validator[RootGroup] {
     override def apply(rootGroup: RootGroup): Result = {
-      val appsByVolume: Map[String, Iterable[PathId]] =
-        rootGroup.transitiveApps
-          .flatMap { app => namesOfMatchingVolumes(app).map(_ -> app.id) }
-          .groupBy { case (volumeName, _) => volumeName }
-          .map { case (volumeName, volumes) => volumeName -> volumes.map { case (_, appId) => appId } }
-
-      val appValid: Validator[AppDefinition] = {
-        def volumeNameUnique(appId: PathId): Validator[ExternalVolume] = {
-          def conflictingApps(vol: ExternalVolume): Iterable[PathId] =
-            appsByVolume.getOrElse(vol.external.name, Iterable.empty).filter(_ != appId)
-
-          isTrue { (vol: ExternalVolume) =>
-            val conflictingAppIds = conflictingApps(vol).mkString(", ")
-            s"Volume name '${vol.external.name}' in $appId conflicts with volume(s) of same name in app(s): " +
-              s"$conflictingAppIds"
-          }{ vol => conflictingApps(vol).isEmpty }
-        }
-
-        validator[AppDefinition] { app =>
-          app.externalVolumes is every(volumeNameUnique(app.id))
-        }
-      }
-
-      def groupValid: Validator[Group] = validator[Group] { group =>
-        group.apps.values as "apps" is every(appValid)
-        group.groupsById.values as "groups" is every(groupValid)
-      }
-
-      // We need to call the validators recursively such that the "description" of the rule violations
-      // is correctly calculated.
-      groupValid(rootGroup)
+       // If we need validation that checks values between different volumes, it
+       // can be placed here.
+       Success
     }
-
   }
 
   override lazy val ramlApp = {
-    val haveOnlyOneInstance: Validator[App] =
-      isTrue[App](
-        (app: App) => s"Number of instances is limited to 1 when declaring DVDI volumes in app [$app.id]"
-      ) {
-          _.instances <= 1
-        }
-
-    case object haveUniqueExternalVolumeNames extends Validator[App] {
-      override def apply(app: App): Result = {
-        val conflicts = volumeNameCounts(app).filter { case (volumeName, number) => number > 1 }.keys
-        group(
-          conflicts.toSet[String].map { e =>
-            RuleViolation(app.id, s"Requested DVDI volume '$e' is declared more than once within app ${app.id}")
-          }
-        )
-      }
-
-      /** @return a count of volume references-by-name within an app spec */
-      def volumeNameCounts(app: App): Map[String, Int] =
-        namesOfMatchingVolumes(app).groupBy(identity).map { case (name, names) => name -> names.size }(collection.breakOut)
-    }
-
     val validContainer = {
       import PathPatterns._
 
@@ -184,8 +131,6 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     }
 
     validator[App] { app =>
-      app should haveUniqueExternalVolumeNames
-      app should haveOnlyOneInstance
       app.container is optional(validContainer)
       app.upgradeStrategy is optional(SchedulingValidation.validForResidentTasks)
     }
