@@ -103,6 +103,9 @@ object ReviveOffersStreamLogic extends StrictLogging {
     def lastOffersWantedVersion(lastState: Map[Role, VersionedRoleState], role: Role): Option[Long] =
       lastState.get(role).collect { case VersionedRoleState(version, OffersWanted) => version }
 
+    def lastOffersNotWantedVersion(lastState: Map[Role, VersionedRoleState], role: Role): Option[Long] =
+      lastState.get(role).collect { case VersionedRoleState(version, OffersNotWanted) => version }
+
     def directivesForDiff(lastState: Map[Role, VersionedRoleState], newState: Map[Role, VersionedRoleState]): List[RoleDirective]
   }
 
@@ -126,7 +129,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
       val needsExplicitRevive = newState.iterator
         .collect {
           case (role, VersionedRoleState(_, OffersWanted)) if !lastState.get(role).exists(_.roleState.isWanted) => role
-          case (role, VersionedRoleState(version, OffersWanted)) if lastOffersWantedVersion(lastState, role).exists(_ < version) => role
+          case (role, VersionedRoleState(_, OffersWanted)) if lastOffersNotWantedVersion(lastState, role).isDefined => role
         }
         .toSet
 
@@ -168,13 +171,15 @@ object ReviveOffersStreamLogic extends StrictLogging {
       }
 
       val rolesNeedingRevive = newState.view
-        .collect { case (role, VersionedRoleState(version, OffersWanted)) if lastOffersWantedVersion(lastState, role).exists(_ < version) => role }.toSet
+        .collect {
+          case (role, VersionedRoleState(version, OffersWanted)) if lastOffersWantedVersion(lastState, role).exists(_ < version) => role
+          case (role, VersionedRoleState(version, OffersWanted)) if lastOffersNotWantedVersion(lastState, role).isDefined => role
+        }.toSet
 
       if (rolesNeedingRevive.nonEmpty)
         directives += IssueRevive(rolesNeedingRevive)
 
       directives.result()
-
     }
   }
 
@@ -235,7 +240,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
       repeatIn = newRepeatIn
 
       if (rolesForReviveRepetition.isEmpty) {
-        logger.info(s"Found no roles to revive.")
+        logger.info(s"Found no roles suitable for revive repetition.")
         Nil
       } else {
         logger.info(s"Repeat revive for roles $rolesForReviveRepetition.")
