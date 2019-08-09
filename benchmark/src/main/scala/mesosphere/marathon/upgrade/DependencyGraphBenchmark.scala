@@ -6,7 +6,6 @@ import java.util.concurrent.TimeUnit
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.state.AppDefinition.AppKey
 import mesosphere.marathon.state.Group.GroupKey
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import org.openjdk.jmh.annotations.{Group => _, _}
 import org.openjdk.jmh.infra.Blackhole
@@ -26,7 +25,7 @@ object DependencyGraphBenchmark {
 
   val superGroups: Map[GroupKey, Group] = superGroupIds.map { superGroupId =>
 
-    val paths: Vector[Vector[PathId]] =
+    val paths: Vector[Vector[AbsolutePathId]] =
       groupIds.map { groupId =>
         appIds.map { appId =>
           AbsolutePathId(s"/supergroup-${superGroupId}/group-${groupId}/app-${appId}")
@@ -54,11 +53,11 @@ object DependencyGraphBenchmark {
       }(breakOut)
 
     val subGroups: Map[GroupKey, Group] = groupIds.map { groupId =>
-      val id = s"/supergroup-${superGroupId}/group-${groupId}".toAbsolutePath
+      val id = AbsolutePathId(s"/supergroup-${superGroupId}/group-${groupId}")
       id -> Group(id = id)
     }(breakOut)
 
-    val id = s"/supergroup-${superGroupId}".toAbsolutePath
+    val id = AbsolutePathId(s"/supergroup-${superGroupId}")
     id -> Group(
       id = id,
       groupsById = subGroups

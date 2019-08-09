@@ -9,15 +9,15 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.storage.zookeeper.{AsyncCuratorBuilderFactory, AsyncCuratorBuilderSettings, ZooKeeperPersistenceStore}
-import mesosphere.marathon.experimental.repository.TemplateRepositoryLike.Template
 import mesosphere.marathon.experimental.repository.TemplateRepository
+import mesosphere.marathon.experimental.repository.TemplateRepositoryLike.Template
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.BoundedExponentialBackoffRetry
 import org.apache.curator.x.async.api.CreateOption
-import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Fork, Level, Measurement, Mode, OutputTimeUnit, Param, Scope, State, TearDown, Warmup}
+import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.concurrent.duration.Duration
@@ -108,8 +108,8 @@ object TemplateRepositoryBenchmark extends StrictLogging {
 
   val random = new Random()
 
-  def randomPathId(prefix: String) = PathId(s"/$prefix/sleep-${random.alphanumeric.take(8).mkString}")
-  def randomRangedPathId(prefix: String, maxRange: Int) = PathId(s"/$prefix/sleep-${random.nextInt(maxRange) + 1}")
+  def randomPathId(prefix: String) = AbsolutePathId(s"/$prefix/sleep-${random.alphanumeric.take(8).mkString}")
+  def randomRangedPathId(prefix: String, maxRange: Int) = AbsolutePathId(s"/$prefix/sleep-${random.nextInt(maxRange) + 1}")
 
   /**
     * Return an [[AppDefinition]] with given pathId. We simulate big app definitions by creating a label with a given value length.
@@ -121,7 +121,7 @@ object TemplateRepositoryBenchmark extends StrictLogging {
     * @param labelSize
     * @return
     */
-  def appDef(pathId: PathId, labelSize: Int = 1): AppDefinition = AppDefinition(
+  def appDef(pathId: AbsolutePathId, labelSize: Int = 1): AppDefinition = AppDefinition(
     id = pathId,
     role = "someRole",
     labels = Map("a" -> random.alphanumeric.take(labelSize).mkString)
@@ -146,7 +146,7 @@ object TemplateRepositoryBenchmark extends StrictLogging {
   def main(args: Array[String]): Unit = {
     def populate(size: Int, num: Int): Future[Done] = {
       Source(1 to num)
-        .map(i => PathId(s"/$size/sleep-$i"))
+        .map(i => AbsolutePathId(s"/$size/sleep-$i"))
         .map(pathId => appDef(pathId, labelSize = size))
         .map(app => repository.toNode(app))
         .via(repository.store.createFlow)
