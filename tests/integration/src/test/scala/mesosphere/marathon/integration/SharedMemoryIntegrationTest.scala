@@ -10,7 +10,6 @@ import mesosphere.marathon.state.{HostVolume, VolumeMount}
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import org.scalatest.Inside
 import org.scalatest.time.{Seconds, Span}
-import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 

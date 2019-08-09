@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.appinfo
 
-import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Group}
+import mesosphere.marathon.state.{AppDefinition, Group}
 
 import scala.concurrent.Future
 

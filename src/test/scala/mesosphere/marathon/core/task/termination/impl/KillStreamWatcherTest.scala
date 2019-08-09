@@ -9,7 +9,7 @@ import mesosphere.marathon.core.instance.update.{InstanceDeleted, InstanceUpdate
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AbsolutePathId, PathId}
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.util.StreamHelpers
 
 class KillStreamWatcherTest extends AkkaUnitTest {

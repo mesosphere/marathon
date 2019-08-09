@@ -5,7 +5,7 @@ import com.fasterxml.uuid.Generators
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{AbsolutePathId, PathId}
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.state.PathId._
 import org.apache.mesos.Protos.TaskID
 import org.scalatest.Inside

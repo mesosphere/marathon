@@ -3,10 +3,10 @@ package mesosphere.mesos
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
-import mesosphere.marathon.Protos.Constraint.Operator.{CLUSTER, GROUP_BY, IS, LIKE, MAX_PER, UNIQUE, UNLIKE}
+import mesosphere.marathon.Protos.Constraint.Operator._
 import mesosphere.marathon._
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
-import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.{FrameworkID, OfferID, SlaveID}
@@ -17,8 +17,8 @@ import org.scalatest.matchers.{MatchResult, Matcher}
 import scala.util.Random
 
 class ConstraintsTest extends UnitTest {
+  import Constraints.{hostnameField, regionField, zoneField}
   import mesosphere.mesos.protos.Implicits._
-  import Constraints.{zoneField, regionField, hostnameField}
 
   val rackIdField = "rackid"
   val jdkField = "jdk"

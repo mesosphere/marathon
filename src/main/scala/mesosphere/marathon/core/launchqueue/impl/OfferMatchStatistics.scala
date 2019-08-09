@@ -3,10 +3,10 @@ package core.launchqueue.impl
 
 import akka.stream.scaladsl.Sink
 import mesosphere.marathon.core.launcher.OfferMatchResult
+import mesosphere.marathon.core.launcher.OfferMatchResult._
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.stream.{EnrichedSink, LiveFold}
 import mesosphere.mesos.NoOfferMatchReason
-import OfferMatchResult._
-import mesosphere.marathon.state.{AbsolutePathId, PathId}
 
 /**
   * The OfferMatchStatistics is responsible for creating statistics for matched/unmatched offers based on RunSpecId.

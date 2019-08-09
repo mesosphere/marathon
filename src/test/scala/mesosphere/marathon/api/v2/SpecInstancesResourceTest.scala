@@ -5,9 +5,6 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{JsonTestHelper, TaskKiller, TestAuthFixture}
-import mesosphere.marathon.test.JerseyTest
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
@@ -15,11 +12,12 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{PathId, _}
-import mesosphere.marathon.test.{GroupCreation, SettableClock}
+import mesosphere.marathon.state._
+import mesosphere.marathon.test.{GroupCreation, JerseyTest, SettableClock}
 import org.mockito.Matchers
 import org.mockito.Mockito._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -75,7 +73,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
   "SpecInstancesResource" should {
     "deleteMany" in new Fixture {
-      val appId = "/my/app".toAbsolutePath
+      val appId = AbsolutePathId("/my/app")
       val host = "host"
       val clock = new SettableClock()
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).addTaskStaged().getInstance()

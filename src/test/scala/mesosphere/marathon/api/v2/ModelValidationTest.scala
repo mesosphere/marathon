@@ -6,7 +6,6 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.core.pod.BridgeNetwork
 import mesosphere.marathon.raml.GroupUpdate
 import mesosphere.marathon.state.Container._
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 import mesosphere.{UnitTest, ValidationTestLike}

@@ -9,8 +9,6 @@ import javax.ws.rs.core.{Context, MediaType}
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.EnrichedTask
-
-import scala.concurrent.ExecutionContext
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
@@ -21,12 +19,12 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.AnyToRaml
 import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
-import mesosphere.marathon.state.{AbsolutePathId, PathId}
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.util.toRichFuture
 
 import scala.async.Async._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 @Consumes(Array(MediaType.APPLICATION_JSON))
