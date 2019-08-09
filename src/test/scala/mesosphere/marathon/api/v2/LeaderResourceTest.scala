@@ -66,7 +66,7 @@ class LeaderResourceTest extends UnitTest with JerseyTest {
       Then("we receive a authorized response")
       delete.getStatus should be(200)
       verify(f.electionService, times(0)).abdicateLeadership()
-      f.clock += 500.millis
+      f.clock advanceBy 500.millis
       verify(f.electionService, times(1)).abdicateLeadership()
     }
   }
