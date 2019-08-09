@@ -62,15 +62,15 @@ case class ReviveOffersState(
       case Some(wantedInfo) =>
         wantedInfo.reason match {
           case OffersWantedReason.Launching =>
-            logger.debug(s"Adding ${instanceId} to scheduled instances.")
+            logger.info(s">>> Adding ${instanceId} to scheduled instances.")
           case OffersWantedReason.CleaningUpReservations =>
-            logger.debug(s"$instanceId is terminal but has a reservation.")
+            logger.info(s">>> $instanceId is terminal but has a reservation.")
         }
         val newRoleOffersWanted = instancesWantingOffers.getOrElse(role, Map.empty) + (instanceId -> wantedInfo)
         instancesWantingOffers + (role -> newRoleOffersWanted)
       case None =>
         if (hasRecordOfInstanceWantingOffers(role, instanceId))
-          logger.debug(s"Removing ${instanceId} from instances wanting offers.")
+          logger.info(s">>> Removing ${instanceId} from instances wanting offers.")
         val newRoleOffersWanted = instancesWantingOffers.getOrElse(role, Map.empty) - instanceId
 
         /* we don't clean up empty entries on purpose; this allows us to continue to signal that at one point in time,
@@ -115,7 +115,7 @@ case class ReviveOffersState(
     * @return this state with removed ref from [[activeDelays]].
     */
   def withoutDelay(ref: RunSpecConfigRef): ReviveOffersState = {
-    logger.debug(s"Marking $ref as no longer actively delayed")
+    logger.info(s">>> Marking $ref as no longer actively delayed")
 
     // This is not optimized
     val bumpedVersions = instancesWantingOffers.map {
@@ -133,7 +133,7 @@ case class ReviveOffersState(
 
   /** @return this state with updated [[activeDelays]]. */
   def withDelay(ref: RunSpecConfigRef): ReviveOffersState = {
-    logger.debug(s"Marking $ref as actively delayed")
+    logger.info(s">>> Marking $ref as actively delayed")
     copyBumpingVersion(activeDelays = activeDelays + ref)
   }
 
@@ -163,7 +163,9 @@ case class ReviveOffersState(
 
   /** @return true if a instance has no active delay, or the instance requires clean up. */
   private def launchAllowedOrCleanUpRequired(wantedInfo: OffersWantedInfo): Boolean = {
-    wantedInfo.reason == OffersWantedReason.CleaningUpReservations || !activeDelays.contains(wantedInfo.ref)
+    val res = wantedInfo.reason == OffersWantedReason.CleaningUpReservations || !activeDelays.contains(wantedInfo.ref)
+    logger.info(s">>> launchAllowedOrCleanUpRequired $res for ref ${wantedInfo.ref} reason ${wantedInfo.reason} and is actively delayed ${activeDelays.contains(wantedInfo.ref)}")
+    res
   }
 }
 
