@@ -133,7 +133,7 @@ case class ReviveOffersState(
 
   /** @return this state with updated [[activeDelays]]. */
   def withDelay(ref: RunSpecConfigRef): ReviveOffersState = {
-    logger.debug(s"Marking $ref as actively delayed for suppress/revive")
+    logger.info(s"Marking $ref as actively delayed for suppress/revive")
     copyBumpingVersion(activeDelays = activeDelays + ref)
   }
 

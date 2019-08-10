@@ -184,13 +184,13 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
         .futureValue
 
       inside(results) {
-        case Seq(updateFramework: UpdateFramework, updateFrameworkWithOffersWanted: UpdateFramework, firstRevive: IssueRevive, secondRevive: IssueRevive) =>
+        case Seq(updateFramework: UpdateFramework, updateToReviveForFirstInstance: UpdateFramework, reviveForSecondInstance: IssueRevive) =>
           updateFramework.roleState shouldBe Map("web" -> OffersNotWanted)
 
-          updateFrameworkWithOffersWanted.roleState shouldBe Map("web" -> OffersWanted)
-          updateFrameworkWithOffersWanted.newlyRevived shouldBe Set("web")
+          updateToReviveForFirstInstance.roleState shouldBe Map("web" -> OffersWanted)
+          updateToReviveForFirstInstance.newlyRevived shouldBe Set("web")
 
-          firstRevive.roles shouldBe Set("web")
+          reviveForSecondInstance.roles shouldBe Set("web")
       }
     }
 
@@ -207,13 +207,11 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
         .futureValue
 
       inside(results) {
-        case Seq(updateFramework: UpdateFramework, updateToReviveForFirstInstance: UpdateFramework, reviveForTheFirstInstance: IssueRevive) =>
+        case Seq(updateFramework: UpdateFramework, updateToReviveForFirstInstance: UpdateFramework) =>
           updateFramework.roleState shouldBe Map("web" -> OffersNotWanted)
 
           updateToReviveForFirstInstance.roleState shouldBe Map("web" -> OffersWanted)
           updateToReviveForFirstInstance.newlyRevived shouldBe Set("web")
-
-          reviveForTheFirstInstance.roles shouldBe Set("web")
       }
     }
 
@@ -249,7 +247,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
         .futureValue
 
       inside(results) {
-        case Seq(initialUpdate: UpdateFramework, update1: UpdateFramework, firstRevive: IssueRevive, update2: UpdateFramework, update3: UpdateFramework, secondRevive: IssueRevive) =>
+        case Seq(initialUpdate: UpdateFramework, update1: UpdateFramework, update2: UpdateFramework, update3: UpdateFramework) =>
           initialUpdate.roleState("web") shouldBe OffersNotWanted
           update1.roleState("web") shouldBe OffersWanted
           update2.roleState("web") shouldBe OffersNotWanted
