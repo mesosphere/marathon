@@ -235,7 +235,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
       repeatIn = newRepeatIn
 
       if (rolesForReviveRepetition.isEmpty) {
-        logger.info(s"Found no roles to revive.")
+        logger.info(s"Found no roles suitable for revive repetition.")
         Nil
       } else {
         logger.info(s"Repeat revive for roles $rolesForReviveRepetition.")
