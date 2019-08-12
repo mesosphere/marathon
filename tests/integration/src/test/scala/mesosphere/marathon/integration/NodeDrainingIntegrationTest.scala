@@ -1,41 +1,40 @@
 package mesosphere.marathon
 package integration
 
-import akka.stream.scaladsl.Sink
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
-import mesosphere.marathon.raml.App
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
+import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig, RestResult}
+import mesosphere.marathon.state.AbsolutePathId
 
 class NodeDrainingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  val pathId = PathId("/back-the-world-off")
-  val app = App(
-    id = pathId.toString,
-    cmd = Some("sleep 1 && exit 1"),
-    backoffSeconds = 3600,
-    backoffFactor = 10,
-    maxLaunchDelaySeconds = 86400)
+  val pathId = AbsolutePathId("/back-the-world-off")
+
+  override lazy val mesosConfig = MesosConfig(numAgents = 2)
 
   "Draining a node" should {
     "reset any backoff delay" in {
       Given("an app with high backoff setting")
-
-      // attach to the event stream so we can figure out a valid agentId w/o
-      // having to query for short lived tasks
-      val events = marathon.events().futureValue
-        .takeWhile(_.eventType != "deployment_success", inclusive = true)
-        .runWith(Sink.seq)
+      val app = appProxy(pathId, "v1", instances = 1, healthCheck = None,
+        constraints = Set(Seq("hostname", "UNIQUE")),
+        backoffSeconds = 3600, backoffFactor = 10, maxLaunchDelaySeconds = 86400)
 
       When("the app is deployed")
       val result = marathon.createAppV2(app)
       result should be(Created)
 
-      val maybeAgentId = events.futureValue.find(_.eventType == "status_update_event").map(_.info("slaveId").asInstanceOf[String])
-      maybeAgentId should not be empty
-      val agentId = maybeAgentId.value
+      val firstTask = eventually {
+        val tasksResult: RestResult[List[ITEnrichedTask]] = marathon.tasks(pathId)
+        tasksResult should be(OK)
+        tasksResult.value.size shouldBe 1
+        tasksResult.value.forall(_.launched) shouldBe true
+        tasksResult.value.head
+      }
 
-      Then("the task will eventually fail resulting in a huge backoff")
+      When("the first task fails")
+      AppMockFacade(firstTask).suicide()
+
+      Then("the task fail will result in a huge backoff")
       waitForStatusUpdates("TASK_FAILED")
       eventually {
         val queue = marathon.launchQueueForAppId(pathId).value
@@ -47,6 +46,9 @@ class NodeDrainingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       }
 
       When("the node is drained")
+      val agentId = firstTask.slaveId.getOrElse {
+        fail(s"Cannot drain agent because $firstTask has no associated agentId")
+      }
       mesos.drainAgent(agentId) should be(OK)
 
       Then("the delay is reset")
@@ -58,6 +60,17 @@ class NodeDrainingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
         logger.info(s"delay.timeLeftSeconds is at ${queueItem.delay.timeLeftSeconds}")
         queueItem.delay.timeLeftSeconds should be <= 0
       }
+
+      And("a new task is launched on the other agent")
+      val secondTask = eventually {
+        val tasksResult: RestResult[List[ITEnrichedTask]] = marathon.tasks(pathId)
+        tasksResult should be(OK)
+        tasksResult.value.size shouldBe 1
+        tasksResult.value.forall(_.launched) shouldBe true
+        tasksResult.value.head
+      }
+
+      secondTask.slaveId should not equal firstTask.slaveId
     }
   }
 }

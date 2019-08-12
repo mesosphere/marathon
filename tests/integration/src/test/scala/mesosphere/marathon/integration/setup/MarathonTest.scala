@@ -390,7 +390,11 @@ trait MarathonAppFixtures {
   def appProxy(appId: PathId, versionId: String, instances: Int,
     healthCheck: Option[raml.AppHealthCheck] = Some(appProxyHealthCheck()),
     dependencies: Set[PathId] = Set.empty, gpus: Int = 0, role: Option[String] = None,
-    check: Option[AppCheck] = None): App = {
+    check: Option[AppCheck] = None,
+    backoffSeconds: Int = App.DefaultBackoffSeconds,
+    backoffFactor: Double = App.DefaultBackoffFactor,
+    maxLaunchDelaySeconds: Int = App.DefaultMaxLaunchDelaySeconds,
+    constraints: Set[Seq[String]] = App.DefaultConstraints): App = {
 
     val cmd = appMockCmd(appId, versionId)
 
@@ -403,7 +407,11 @@ trait MarathonAppFixtures {
       healthChecks = healthCheck.toSet,
       dependencies = dependencies.map(_.toString),
       role = role,
-      check = check
+      check = check,
+      backoffSeconds = backoffSeconds,
+      backoffFactor = backoffFactor,
+      maxLaunchDelaySeconds = maxLaunchDelaySeconds,
+      constraints = constraints
     )
   }
 
