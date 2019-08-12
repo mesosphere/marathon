@@ -75,6 +75,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
       .via(RateLimiterFlow.apply(minReviveOffersInterval))
       .map(_.roleReviveVersions)
       .via(reviveDirectiveFlow(enableSuppress))
+      .map(l => { logger.info(s"Issuing following suppress/revive directives: = ${l}"); l })
       .via(reviveRepeaterWithTicks)
   }
 
