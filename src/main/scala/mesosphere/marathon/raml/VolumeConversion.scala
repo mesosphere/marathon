@@ -92,7 +92,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   implicit val volumeWrites: Writes[state.VolumeWithMount[Volume], AppVolume] = Writes { volumeWithMount =>
 
     implicit val externalVolumeWrites: Writes[state.ExternalVolumeInfo, ExternalVolumeInfo] = Writes { ev =>
-      ExternalVolumeInfo(size = ev.size, name = Some(ev.name), provider = Some(ev.provider), options = ev.options)
+      ExternalVolumeInfo(size = ev.size, name = Some(ev.name), provider = Some(ev.provider), options = ev.options, shared = ev.shared)
     }
 
     val volume = volumeWithMount.volume
@@ -132,7 +132,8 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         throw SerializationFailedException("external volume requires a name")),
       provider = volumeRaml.external.provider.getOrElse(
         throw SerializationFailedException("external volume requires a provider")),
-      options = volumeRaml.external.options
+      options = volumeRaml.external.options,
+      shared = volumeRaml.external.shared
     )
     val volume = state.ExternalVolume(name = None, external = info)
     val mount = state.VolumeMount(
@@ -201,7 +202,8 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         options = volume.whenOrElse(
           _.getOptionsCount > 0,
           _.getOptionsList.map { x => x.getKey -> x.getValue }(collection.breakOut),
-          ExternalVolumeInfo.DefaultOptions)
+          ExternalVolumeInfo.DefaultOptions),
+        shared = volume.when(_.hasShared, _.getShared).getOrElse(ExternalVolumeInfo.DefaultShared)
       )
     }
 
