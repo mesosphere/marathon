@@ -29,11 +29,11 @@ class RateLimiterFlow[U] private (rate: FiniteDuration, clock: Clock = Clock.sys
     setHandler(output, new OutHandler {
       override def onPull(): Unit = {
         val now = clock.instant()
-        if (now.isAfter(nextPullAllowed)) {
-          doPull()
-        } else {
+        if (now.isBefore(nextPullAllowed)) {
           val pendingTime = JavaDuration.between(now, nextPullAllowed)
           scheduleOnce("pull", DurationConverters.toScala(pendingTime))
+        } else {
+          doPull()
         }
       }
     })

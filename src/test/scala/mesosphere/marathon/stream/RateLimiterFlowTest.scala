@@ -8,14 +8,19 @@ import akka.stream.scaladsl.{Keep, Sink, Source}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.test.SettableClock
 
-import scala.compat.java8.DurationConverters
 import scala.concurrent.duration._
 
 class RateLimiterFlowTest extends AkkaUnitTest {
-  def durationOf(f: => Unit): FiniteDuration = {
-    val now = Instant.now
-    f
-    DurationConverters.toScala(JavaDuration.between(now, Instant.now))
+  "does not delay the very first element" in {
+    val clock = new SettableClock()
+
+    // if the first element is delayed, then the buffer will receive back-pressure signal and it will be dropped
+    Source(List(1, 2))
+      .buffer(1, OverflowStrategy.dropTail)
+      .via(RateLimiterFlow[Int](100.millis, clock))
+      .runWith(Sink.seq)
+      .futureValue
+      .shouldBe(Seq(1, 2))
   }
 
   "delay the pulling of elements by the specified rate" in {
