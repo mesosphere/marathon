@@ -2239,21 +2239,25 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       app.role shouldBe "dev"
     }
 
-    "Create an app in root with configured Mesos role" in new Fixture(configArgs = Seq("--mesos_role", "customMesosRole")) {
-      Given("An app with the default Mesos role")
-      val app = App(id = "/app-with-default", cmd = Some("cmd"), acceptedResourceRoles = Some(Set(config.mesosRole())))
-      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
-
-      When("The create request is made")
-      clock += 5.seconds
+    "Create an app in root with configured Mesos role" in new Fixture(configArgs = Seq("--mesos_role", "slave_public")) {
+      Given("An app with acceptedResourceRoles = the default Mesos role")
       val response = asyncRequest { r =>
-        appsResource.create(body, force = false, auth.request, r)
+        val body =
+          """
+            |{
+            |  "id": "app-with-accepted-mesos-default-role",
+            |  "cmd": "sleep 3600",
+            |  "instances": 1,
+            |  "cpus": 0.05,
+            |  "mem": 128,
+            |  "acceptedResourceRoles": ["slave_public"]
+            |}
+          """.stripMargin
+        appsResource.create(body.getBytes, force = false, auth.request, r)
       }
 
-      withClue(response.getEntity.toString) {
-        Then("The return code indicates success")
-        response.getStatus should be(201)
-      }
+      Then("the app should be created successfully")
+      response.getStatus should be(201)
     }
   }
 }
