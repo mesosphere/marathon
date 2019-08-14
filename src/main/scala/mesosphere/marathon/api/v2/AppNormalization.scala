@@ -297,6 +297,10 @@ object AppNormalization {
     )
   }
 
+/** 
+ * This is a partial normalization, which currently only normalizes the [[App.role]] and [[App.acceptedResourceRoles]] fields.
+ * We do this because app validation is relying on these fields being set correctly.
+ */
   def forPreValidation(config: Config): Normalization[App] = Normalization{ app =>
     val role = app.role.getOrElse(config.defaultRole)
 
@@ -334,8 +338,8 @@ object AppNormalization {
   }
 
   def apply(config: Config): Normalization[App] = Normalization { app =>
-    val app1 = forPreValidation(config).normalized(app)
-    forPostValidation(config).normalized(app1)
+    val preNormalized = forPreValidation(config).normalized(app)
+    forPostValidation(config).normalized(preNormalized)
   }
 
   /** dynamic app normalization configuration, useful for migration and/or testing */
