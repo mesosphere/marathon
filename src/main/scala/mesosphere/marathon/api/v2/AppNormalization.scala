@@ -297,7 +297,22 @@ object AppNormalization {
     )
   }
 
-  def apply(config: Config): Normalization[App] = Normalization { app =>
+  def forPreValidation(config: Config): Normalization[App] = Normalization{ app =>
+    val role = app.role.getOrElse(config.defaultRole)
+
+    // sanitize accepted resource roles if enabled
+    val acceptedResourceRoles =
+      if (config.sanitizeAcceptedResourceRoles) {
+        sanitizeAcceptedResourceRoles(app, role)
+      } else app.acceptedResourceRoles
+
+    app.copy(
+      role = Some(role),
+      acceptedResourceRoles = acceptedResourceRoles
+    )
+  }
+
+  def forPostValidation(config: Config): Normalization[App] = Normalization { app =>
     val networks = Networks(config, Some(app.networks)).normalize.networks.filter(_.nonEmpty).getOrElse(DefaultNetworks)
     NetworkNormalization.requireContainerNetworkNameResolution(networks)
     val container = NetworkedContainer(Some(networks), app.container).normalize.container
@@ -310,22 +325,17 @@ object AppNormalization {
     // requirePorts only applies for host-mode networking
     val requirePorts = networks.find(_.mode != NetworkMode.Host).fold(app.requirePorts)(_ => false)
 
-    val role = app.role.getOrElse(config.defaultRole)
-
-    // sanitize accepted resource roles if enabled
-    val acceptedResourceRoles =
-      if (config.sanitizeAcceptedResourceRoles) {
-        sanitizeAcceptedResourceRoles(app, role)
-      } else app.acceptedResourceRoles
-
     app.copy(
       container = container,
       networks = networks,
       unreachableStrategy = app.unreachableStrategy.orElse(Option(defaultUnreachable)),
       requirePorts = requirePorts,
-      role = Some(role),
-      acceptedResourceRoles = acceptedResourceRoles
     )
+  }
+
+  def apply(config: Config): Normalization[App] = Normalization { app =>
+    val app1 = forPreValidation(config).normalized(app)
+    forPostValidation(config).normalized(app1)
   }
 
   /** dynamic app normalization configuration, useful for migration and/or testing */

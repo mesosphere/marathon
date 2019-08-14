@@ -2246,7 +2246,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         cmd = Some("cmd"),
         acceptedResourceRoles = Some(Set("customMesosRole")))
 
-      val (body, _) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
       clock += 5.seconds
