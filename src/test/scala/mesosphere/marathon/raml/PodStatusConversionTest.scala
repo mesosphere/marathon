@@ -99,7 +99,7 @@ class PodStatusConversionTest extends UnitTest {
       implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
-      clock advanceBy 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = provisionedInstance(pod)
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -129,7 +129,7 @@ class PodStatusConversionTest extends UnitTest {
       implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
-      clock advanceBy 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = stagingInstance(pod)
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -160,7 +160,7 @@ class PodStatusConversionTest extends UnitTest {
       implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
-      clock advanceBy 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = startingInstance(pod)
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -194,7 +194,7 @@ class PodStatusConversionTest extends UnitTest {
       implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
-      clock advanceBy 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = runningInstance(pod)
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -232,7 +232,7 @@ class PodStatusConversionTest extends UnitTest {
       implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
-      clock advanceBy 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = runningInstance(pod = pod, maybeHealthy = Some(false)) // task status will say unhealthy
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -270,7 +270,7 @@ class PodStatusConversionTest extends UnitTest {
       implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
-      clock advanceBy 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = runningInstance(pod = pod, maybeHealthy = Some(true)) // task status will say healthy
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -309,7 +309,7 @@ class PodStatusConversionTest extends UnitTest {
 
       val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now())))
 
-      clock advanceBy 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = runningInstance(pod = pod) // mesos task status health is missing
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -348,7 +348,7 @@ class PodStatusConversionTest extends UnitTest {
 
       val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now())))
 
-      clock advanceBy 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = runningInstance(pod = pod, maybeHealthy = Some(false)) // task status will say unhealthy
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -387,7 +387,7 @@ class PodStatusConversionTest extends UnitTest {
 
       val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now())))
 
-      clock advanceBy 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = runningInstance(pod = pod, maybeHealthy = Some(true)) // task status will say healthy
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))

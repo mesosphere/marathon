@@ -73,7 +73,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
       val newMesosStatus = MesosTaskStatusTestHelper.unreachable(f.taskId, since = f.clock.now())
 
       // Forward time to expire unreachable status
-      f.clock advanceBy unreachableInactiveAfter + 1.minute
+      f.clock.advanceBy(unreachableInactiveAfter + 1.minute)
       val operation = InstanceUpdateOperation.MesosUpdate(f.instance, newMesosStatus, f.clock.now())
       val result = InstanceUpdater.mesosUpdate(f.instance, operation)
 
@@ -206,7 +206,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
         runSpec = updatedRunSpec)
 
       // Move time forward
-      f.clock advanceBy 5.minutes
+      f.clock.advanceBy(5.minutes)
       // Update unreachableInstance with unreachable Mesos status.
       val operation = InstanceUpdateOperation.MesosUpdate(unreachableInstance, mesosTaskStatus, f.clock.now())
       val result = InstanceUpdater.mesosUpdate(unreachableInstance, operation)
@@ -233,7 +233,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
         runSpec = updatedRunSpec)
 
       // Move time forward
-      f.clock advanceBy 5.minutes
+      f.clock.advanceBy(5.minutes)
 
       // Update unreachableInstance with unreachable Mesos status.
       val operation = InstanceUpdateOperation.MesosUpdate(unreachableInactiveInstance, mesosTaskStatus, f.clock.now())
