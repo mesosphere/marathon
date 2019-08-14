@@ -1,5 +1,24 @@
 ## Changes from 1.8.194 to 1.9.xxx
 
+## Changes from 1.8.212 to 1.9.xxx
+
+### Multirole Support
+???
+#### Changes in `acceptedResourceRoles` Behavior
+`acceptedResourceRole` field defines what *reserved* resources would be used by the service. Previously, a Marathon instance started with `--mesos_role *` would accept following service definition:
+```json
+{
+   "id": "/sleep",
+   "cmd": "sleep 3600"
+   "acceptedResourceRoles": ["foo"]
+}
+``` 
+but wouldn't be able to start the task since it is not subscribed for the role `foo`. 
+
+This behavior has been changed with the implementation of the Multirole support. A new deprecated feature flag was introduced: `sanitize_accepted_resource_roles` which is `true` by default in 1.9. With this feature flag active, Marathon would sanitize the `acceptedResourceRoles` array, removing all invalid roles and leaving `*` (unreserved) by default. In the example above, the service definition will be still accepted, however, `foo` will be removed and `"acceptedResourceRoles": ["*"]` would be used instead so that the task *will start*. 
+
+Starting with Marathon 1.10, one will have to set the feature flag manually, otherwise a validation error will be returned for the above example.     
+ 
 ### Introduce SharedMemory/IPC configuration to Marathon Apps and Pods
 
 When running Marathon Apps or Pods it is now possible to configure the IPC separation level and shared memory size.
