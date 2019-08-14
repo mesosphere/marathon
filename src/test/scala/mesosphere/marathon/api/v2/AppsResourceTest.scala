@@ -55,12 +55,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     implicit val authenticator: Authenticator = auth.auth
     implicit val authorizer: Authorizer = auth.auth
 
-    val normalizationConfig = AppNormalization.Configuration(
-      config.defaultNetworkName.toOption,
-      config.mesosBridgeName(),
-      config.availableFeatures,
-      config.mesosRole(),
-      config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles))
+    val normalizationConfig = AppNormalization.Configuration(config, config.mesosRole())
     implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, ValidationHelper.roleSettings())(PluginManager.None)
 
     implicit val validateAndNormalizeApp: Normalization[raml.App] =
@@ -244,7 +239,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Some(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
-      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
       clock += 5.seconds
@@ -1948,7 +1943,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Some(container),
         networks = Seq(Network(name = Some("name_with_underscore"), mode = NetworkMode.Container)))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock += 5.seconds
@@ -2257,6 +2252,60 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       withClue(response.getEntity.toString) {
         Then("The return code indicates success")
         response.getStatus should be(201)
+      }
+    }
+
+    "Create an app in root with acceptedResourceRoles = customMesosRole and sanitizeAcceptedResourceRoles = true" in new Fixture(
+      configArgs = Seq("--deprecated_features", "sanitize_accepted_resource_roles")
+    ) {
+
+      Given("An app with an unknown acceptedResourceRole")
+      val app = App(
+        id = "/app-with-accepted-unknown-mesos-role",
+        cmd = Some("cmd"),
+        acceptedResourceRoles = Some(Set("customMesosRole")))
+
+      val (body, _) = prepareApp(app, groupManager, validate = false)
+
+      When("The create request is made")
+      clock += 5.seconds
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        Then("The return code indicates success")
+        response.getStatus should be(201)
+      }
+
+      And("resulting app has acceptedResourceRoles sanitized (equals default one)")
+      val appJson = Json.parse(response.getEntity.asInstanceOf[String])
+      (appJson \ "acceptedResourceRoles" \ 0 ) should be (JsDefined(JsString(ResourceRole.Unreserved)))
+    }
+
+    "Create an app in root with acceptedResourceRoles = customMesosRole and sanitizeAcceptedResourceRoles = false" in new Fixture {
+
+      // TODO(ad) Instead of BuildInfo hack, I'd love to keep this test activated and somehow disable DeprecatedFeature.sanitizeAcceptedResourceRoles
+      if (BuildInfo.version >= DeprecatedFeatures.sanitizeAcceptedResourceRoles.softRemoveVersion) {
+        Given("An app with an unknown acceptedResourceRole")
+        val app = App(
+          id = "/app-with-not-accepted-unknown-mesos-role",
+          cmd = Some("cmd"),
+          acceptedResourceRoles = Some(Set("customMesosRole")))
+
+        val (body, _) = prepareApp(app, groupManager, validate = false)
+
+        When("The create request is made")
+        clock += 5.seconds
+        val response = asyncRequest { r =>
+          appsResource.create(body, force = false, auth.request, r)
+        }
+
+        withClue(response.getEntity.toString) {
+          Then("The return code indicates a failure")
+          response.getStatus should be(422)
+          response.getEntity.asInstanceOf[String] contains "acceptedResourceRoles can only contain *"
+        }
       }
     }
   }

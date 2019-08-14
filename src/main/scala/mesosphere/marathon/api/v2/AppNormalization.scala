@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{AbsolutePathId, FetchUri, PathId}
+import mesosphere.marathon.state.{AbsolutePathId, FetchUri, PathId, ResourceRole}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.Role
 
@@ -202,10 +202,17 @@ object AppNormalization {
       else c
     }
 
-  def sanitizeAcceptedResourceRoles(app: App, effectiveRole: String): Option[Set[String]] =
+  def sanitizeAcceptedResourceRoles(app: App, effectiveRole: String): Option[Set[String]] = {
     app.acceptedResourceRoles.map { roles =>
-      roles.filter(role => role == "*" || role == effectiveRole)
+      val sanitized = roles.filter(role => role == "*" || role == effectiveRole)
+
+      // This method is only called when [[DeprecatedFeatures.sanitizeAcceptedResourceRoles]] is ON. In this
+      // case we not only filter out invalid roles, but also fallback to the default (*) one. Note that acceptedResourceRoles
+      // is about reservations and NOT allocation, so the default one is (*) and not (--mesos_role)
+      if (sanitized.isEmpty) Set(ResourceRole.Unreserved)
+      else sanitized
     }
+  }
 
   def maybeDropPortMappings(c: Container, networks: Seq[Network]): Container =
     // empty networks Seq defaults to host-mode later on, so consider it now as indicating host-mode networking
