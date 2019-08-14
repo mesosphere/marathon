@@ -79,10 +79,10 @@ As the uniqueness check is based on the volume name, this may lead to some incon
 
 #### Optional uniqueness check
 
-Additionally, there is a validation that prevents an external volume with the same name to be used on multiple apps. Multiple external volume providers now
-allow shared access to mounted volumes, so we introduced a way to remove this uniqueness check:
+Previously, Marathon would validate that an external volume with the same name is only used once across multiple apps. This was due to the initial implementation being focused on Rexray+EBS. However, multiple external volume providers now
+allow shared access to mounted volumes, so we introduced a way to disable the uniqueness check:
 
-There is a new field, `container.volumes[n].external.shared` which defaults to `false`. If set to true, the same volume name can be used
+A new field, `container.volumes[n].external.shared` which defaults to `false`. If set to true, the same volume name can be used
 by multiple containers.
 
 ```json
