@@ -409,5 +409,34 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       Then("the request succeeds")
       patchResult should be(OK)
     }
+
+    "Groups with relative dependencies still can be deployed" in temporaryGroup { gid =>
+
+      Given(s"A group with id $gid with 3 dependent applications")
+      val db = appProxy(gid / "db" / "db1", "v1", 0)
+      val service = appProxy(gid / "service" / "service1", "v1", 0, dependencies = Set(PathId("../db/db1")))
+      val frontend = appProxy(gid / "frontend" / "frontend1", "v1", 0)
+
+      val group = GroupUpdate(
+        Option(gid.toString),
+        Option(Set.empty[App]),
+        Option(Set(
+          GroupUpdate(Some("db"), apps = Some(Set(db))),
+          GroupUpdate(Some("service"), apps = Some(Set(service))),
+          GroupUpdate(Some("frontend"), apps = Some(Set(frontend)), dependencies = Some(Set("../service")))
+        ))
+      )
+
+      When("The group gets deployed")
+      waitForDeployment(marathon.createGroup(group))
+
+      Then("The returned group dependencies are correctly returned as absolute dependencies")
+      val groupInfo = marathon.group(gid).value
+
+      logger.info("GroupInfo: " + groupInfo)
+
+      groupInfo.groups.find(_.id == (gid / "frontend").toString).value.dependencies should be(Set((gid / "service").toString))
+      groupInfo.groups.find(_.id == (gid / "service").toString).value.apps.find(_.id.endsWith("service1")).value.dependencies should be(Set((gid / "db" / "db1").toString))
+    }
   }
 }
