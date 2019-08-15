@@ -1,4 +1,64 @@
-## Changes from 1.8.194 to 1.8.xxx
+## Changes from 1.8.218 to 1.8.xxx
+
+### External Volume Validation changes
+
+#### Relaxed name validation
+
+As there are some external volume providers which require options in the volume name, the strict validation of the name on the external volume is now removed.
+
+As the uniqueness check is based on the volume name, this may lead to some inconsistencies, for the sake of uniqueness, the following volumes are distinct:
+
+```json
+"volumes": [
+      {
+        "external": {
+          "name": "name=volumename,option1=value",
+        },
+      }
+    ],
+```
+
+```json
+"volumes": [
+      {
+        "external": {
+          "name": "option1=value,name=volumename",
+        },
+      }
+    ],
+```
+
+#### Optional uniqueness check
+
+Previously, Marathon would validate that an external volume with the same name is only used once across all apps. This was due to the initial implementation being focused on Rexray+EBS. However, multiple external volume providers now
+allow shared access to mounted volumes, so we introduced a way to disable the uniqueness check:
+
+A new field, `container.volumes[n].external.shared` which defaults to `false`. If set to true, the same volume name can be used
+by multiple containers. The `shared` flag has to be set to `true` on all external volumes with the same name, otherwise a conflict is reported on the volume without the `shared=true` flag.
+
+```json
+  "container": {
+    "type": "MESOS",
+    "volumes": [
+      {
+        "external": {
+          "size": 5,
+          "name": "volumename",
+          "provider": "dvdi",
+          "shared": "true",
+          "options": {
+            "dvdi/driver": "pxd",
+            "dvdi/shared": "true"
+          }
+        },
+        "mode": "RW",
+        "containerPath": "/mnt/nginx"
+      }
+    ],
+  }
+```
+
+## Changes from 1.8.194 to 1.8.218
 
 ### Revive and Suppress Refactoring
 

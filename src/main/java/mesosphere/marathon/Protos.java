@@ -34585,6 +34585,15 @@ public final class Protos {
        */
       org.apache.mesos.Protos.LabelOrBuilder getOptionsOrBuilder(
           int index);
+
+      /**
+       * <code>optional bool shared = 5 [default = false];</code>
+       */
+      boolean hasShared();
+      /**
+       * <code>optional bool shared = 5 [default = false];</code>
+       */
+      boolean getShared();
     }
     /**
      * <pre>
@@ -34606,6 +34615,7 @@ public final class Protos {
         name_ = "";
         provider_ = "";
         options_ = java.util.Collections.emptyList();
+        shared_ = false;
       }
 
       @java.lang.Override
@@ -34660,6 +34670,11 @@ public final class Protos {
                 }
                 options_.add(
                     input.readMessage(org.apache.mesos.Protos.Label.PARSER, extensionRegistry));
+                break;
+              }
+              case 40: {
+                bitField0_ |= 0x00000008;
+                shared_ = input.readBool();
                 break;
               }
             }
@@ -34824,6 +34839,21 @@ public final class Protos {
         return options_.get(index);
       }
 
+      public static final int SHARED_FIELD_NUMBER = 5;
+      private boolean shared_;
+      /**
+       * <code>optional bool shared = 5 [default = false];</code>
+       */
+      public boolean hasShared() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional bool shared = 5 [default = false];</code>
+       */
+      public boolean getShared() {
+        return shared_;
+      }
+
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
         byte isInitialized = memoizedIsInitialized;
@@ -34862,6 +34892,9 @@ public final class Protos {
         for (int i = 0; i < options_.size(); i++) {
           output.writeMessage(4, options_.get(i));
         }
+        if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          output.writeBool(5, shared_);
+        }
         unknownFields.writeTo(output);
       }
 
@@ -34883,6 +34916,10 @@ public final class Protos {
         for (int i = 0; i < options_.size(); i++) {
           size += com.google.protobuf.CodedOutputStream
             .computeMessageSize(4, options_.get(i));
+        }
+        if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBoolSize(5, shared_);
         }
         size += unknownFields.getSerializedSize();
         memoizedSize = size;
@@ -34918,6 +34955,11 @@ public final class Protos {
         }
         result = result && getOptionsList()
             .equals(other.getOptionsList());
+        result = result && (hasShared() == other.hasShared());
+        if (hasShared()) {
+          result = result && (getShared()
+              == other.getShared());
+        }
         result = result && unknownFields.equals(other.unknownFields);
         return result;
       }
@@ -34945,6 +34987,11 @@ public final class Protos {
         if (getOptionsCount() > 0) {
           hash = (37 * hash) + OPTIONS_FIELD_NUMBER;
           hash = (53 * hash) + getOptionsList().hashCode();
+        }
+        if (hasShared()) {
+          hash = (37 * hash) + SHARED_FIELD_NUMBER;
+          hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+              getShared());
         }
         hash = (29 * hash) + unknownFields.hashCode();
         memoizedHashCode = hash;
@@ -35092,6 +35139,8 @@ public final class Protos {
           } else {
             optionsBuilder_.clear();
           }
+          shared_ = false;
+          bitField0_ = (bitField0_ & ~0x00000010);
           return this;
         }
 
@@ -35137,6 +35186,10 @@ public final class Protos {
           } else {
             result.options_ = optionsBuilder_.build();
           }
+          if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+            to_bitField0_ |= 0x00000008;
+          }
+          result.shared_ = shared_;
           result.bitField0_ = to_bitField0_;
           onBuilt();
           return result;
@@ -35217,6 +35270,9 @@ public final class Protos {
                 optionsBuilder_.addAllMessages(other.options_);
               }
             }
+          }
+          if (other.hasShared()) {
+            setShared(other.getShared());
           }
           this.mergeUnknownFields(other.unknownFields);
           onChanged();
@@ -35679,6 +35735,38 @@ public final class Protos {
             options_ = null;
           }
           return optionsBuilder_;
+        }
+
+        private boolean shared_ ;
+        /**
+         * <code>optional bool shared = 5 [default = false];</code>
+         */
+        public boolean hasShared() {
+          return ((bitField0_ & 0x00000010) == 0x00000010);
+        }
+        /**
+         * <code>optional bool shared = 5 [default = false];</code>
+         */
+        public boolean getShared() {
+          return shared_;
+        }
+        /**
+         * <code>optional bool shared = 5 [default = false];</code>
+         */
+        public Builder setShared(boolean value) {
+          bitField0_ |= 0x00000010;
+          shared_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional bool shared = 5 [default = false];</code>
+         */
+        public Builder clearShared() {
+          bitField0_ = (bitField0_ & ~0x00000010);
+          shared_ = false;
+          onChanged();
+          return this;
         }
         public final Builder setUnknownFields(
             final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -50695,7 +50783,7 @@ public final class Protos {
       "host_port\030\001 \001(\r\022\026\n\016container_port\030\002 \002(\r\022" +
       "\020\n\010protocol\030\003 \001(\t\022\014\n\004name\030\004 \001(\t\022\034\n\006label" +
       "s\030\005 \003(\0132\014.mesos.Label\022\027\n\014service_port\030\006 " +
-      "\001(\r:\0010\022\025\n\rnetwork_names\030\007 \003(\t\"\366\004\n\006Volume" +
+      "\001(\r:\0010\022\025\n\rnetwork_names\030\007 \003(\t\"\215\005\n\006Volume" +
       "\022 \n\004mode\030\003 \002(\0162\022.mesos.Volume.Mode\022\026\n\016co" +
       "ntainer_path\030\001 \002(\t\022\021\n\thost_path\030\002 \001(\t\022\033\n" +
       "\005image\030\004 \001(\0132\014.mesos.Image\022D\n\npersistent" +
@@ -50708,55 +50796,56 @@ public final class Protos {
       "mesos.Resource.DiskInfo.Source.Type\0224\n\013c" +
       "onstraints\030\003 \003(\0132\037.mesosphere.marathon.C" +
       "onstraint\022\017\n\007maxSize\030\004 \001(\004\022\023\n\013profileNam" +
-      "e\030\005 \001(\t\032a\n\022ExternalVolumeInfo\022\014\n\004size\030\001 " +
+      "e\030\005 \001(\t\032x\n\022ExternalVolumeInfo\022\014\n\004size\030\001 " +
       "\001(\004\022\014\n\004name\030\002 \002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007o" +
-      "ptions\030\004 \003(\0132\014.mesos.Label\032\"\n\020SecretVolu" +
-      "meInfo\022\016\n\006secret\030\001 \002(\t\"\274\001\n\016StorageVersio",
-      "n\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch" +
-      "\030\003 \002(\r\022I\n\006format\030\004 \001(\01621.mesosphere.mara" +
-      "thon.StorageVersion.StorageFormat:\006LEGAC" +
-      "Y\"2\n\rStorageFormat\022\n\n\006LEGACY\020\000\022\025\n\021PERSIS" +
-      "TENCE_STORE\020\001\"Z\n\031UpgradeStrategyDefiniti" +
-      "on\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\036\n\023max" +
-      "imumOverCapacity\030\002 \001(\001:\0011\"\236\003\n\017GroupDefin" +
-      "ition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022?\n\017de" +
-      "precated_apps\030\003 \003(\0132&.mesosphere.maratho" +
-      "n.ServiceDefinition\0222\n\017deprecated_pods\030\010",
-      " \003(\0132\031.mesosphere.marathon.Json\0224\n\006group" +
-      "s\030\004 \003(\0132$.mesosphere.marathon.GroupDefin" +
-      "ition\022\024\n\014dependencies\030\005 \003(\t\022?\n\004apps\030\006 \003(" +
-      "\01321.mesosphere.marathon.GroupDefinition." +
-      "AppReference\022?\n\004pods\030\007 \003(\01321.mesosphere." +
-      "marathon.GroupDefinition.AppReference\032+\n" +
-      "\014AppReference\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002" +
-      "(\t\"\371\001\n\030DeploymentPlanDefinition\022\n\n\002id\030\001 " +
-      "\002(\t\022\021\n\ttimestamp\030\002 \001(\t\022A\n\023deprecated_ori" +
-      "ginal\030\004 \001(\0132$.mesosphere.marathon.GroupD",
-      "efinition\022?\n\021deprecated_target\030\005 \001(\0132$.m" +
-      "esosphere.marathon.GroupDefinition\022\035\n\025or" +
-      "iginal_root_version\030\006 \001(\t\022\033\n\023target_root" +
-      "_version\030\007 \001(\t\"\306\001\n\013TaskFailure\022\016\n\006app_id" +
-      "\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037" +
-      "\n\005state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007messa" +
-      "ge\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 " +
-      "\002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132" +
-      "\016.mesos.SlaveID\"T\n\014ZKStoreEntry\022\014\n\004name\030" +
-      "\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\nco",
-      "mpressed\030\004 \001(\010:\005false\"\326\001\n\023ResidencyDefin" +
-      "ition\022(\n relaunchEscalationTimeoutSecond" +
-      "s\030\001 \001(\003\022S\n\020taskLostBehavior\030\002 \001(\01629.meso" +
-      "sphere.marathon.ResidencyDefinition.Task" +
-      "LostBehavior\"@\n\020TaskLostBehavior\022\032\n\026RELA" +
-      "UNCH_AFTER_TIMEOUT\020\000\022\020\n\014WAIT_FOREVER\020\001\"$" +
-      "\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006source\030\002 \002(\t\"\262\001\n" +
-      "\017EnvVarReference\0227\n\004type\030\001 \002(\0162).mesosph" +
-      "ere.marathon.EnvVarReference.Type\022\014\n\004nam" +
-      "e\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(\0132$.mesosphere.",
-      "marathon.EnvVarSecretRef\"\037\n\004Type\022\013\n\007UNKN" +
-      "OWN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvVarSecretRef\022\020\n\010" +
-      "secretId\030\001 \002(\t*3\n\rKillSelection\022\021\n\rYoung" +
-      "estFirst\020\001\022\017\n\013OldestFirst\020\002B\035\n\023mesospher" +
-      "e.marathonB\006Protos"
+      "ptions\030\004 \003(\0132\014.mesos.Label\022\025\n\006shared\030\005 \001" +
+      "(\010:\005false\032\"\n\020SecretVolumeInfo\022\016\n\006secret\030",
+      "\001 \002(\t\"\274\001\n\016StorageVersion\022\r\n\005major\030\001 \002(\r\022" +
+      "\r\n\005minor\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\022I\n\006format\030" +
+      "\004 \001(\01621.mesosphere.marathon.StorageVersi" +
+      "on.StorageFormat:\006LEGACY\"2\n\rStorageForma" +
+      "t\022\n\n\006LEGACY\020\000\022\025\n\021PERSISTENCE_STORE\020\001\"Z\n\031" +
+      "UpgradeStrategyDefinition\022\035\n\025minimumHeal" +
+      "thCapacity\030\001 \002(\001\022\036\n\023maximumOverCapacity\030" +
+      "\002 \001(\001:\0011\"\236\003\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t" +
+      "\022\017\n\007version\030\002 \002(\t\022?\n\017deprecated_apps\030\003 \003" +
+      "(\0132&.mesosphere.marathon.ServiceDefiniti",
+      "on\0222\n\017deprecated_pods\030\010 \003(\0132\031.mesosphere" +
+      ".marathon.Json\0224\n\006groups\030\004 \003(\0132$.mesosph" +
+      "ere.marathon.GroupDefinition\022\024\n\014dependen" +
+      "cies\030\005 \003(\t\022?\n\004apps\030\006 \003(\01321.mesosphere.ma" +
+      "rathon.GroupDefinition.AppReference\022?\n\004p" +
+      "ods\030\007 \003(\01321.mesosphere.marathon.GroupDef" +
+      "inition.AppReference\032+\n\014AppReference\022\n\n\002" +
+      "id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\"\371\001\n\030Deployment" +
+      "PlanDefinition\022\n\n\002id\030\001 \002(\t\022\021\n\ttimestamp\030" +
+      "\002 \001(\t\022A\n\023deprecated_original\030\004 \001(\0132$.mes",
+      "osphere.marathon.GroupDefinition\022?\n\021depr" +
+      "ecated_target\030\005 \001(\0132$.mesosphere.maratho" +
+      "n.GroupDefinition\022\035\n\025original_root_versi" +
+      "on\030\006 \001(\t\022\033\n\023target_root_version\030\007 \001(\t\"\306\001" +
+      "\n\013TaskFailure\022\016\n\006app_id\030\001 \002(\t\022\036\n\007task_id" +
+      "\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005state\030\003 \002(\0162\020.m" +
+      "esos.TaskState\022\021\n\007message\030\004 \001(\t:\000\022\016\n\004hos" +
+      "t\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(\t\022\021\n\ttimestamp\030" +
+      "\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016.mesos.SlaveID\"T" +
+      "\n\014ZKStoreEntry\022\014\n\004name\030\001 \002(\t\022\014\n\004uuid\030\002 \002",
+      "(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncompressed\030\004 \001(\010:\005f" +
+      "alse\"\326\001\n\023ResidencyDefinition\022(\n relaunch" +
+      "EscalationTimeoutSeconds\030\001 \001(\003\022S\n\020taskLo" +
+      "stBehavior\030\002 \001(\01629.mesosphere.marathon.R" +
+      "esidencyDefinition.TaskLostBehavior\"@\n\020T" +
+      "askLostBehavior\022\032\n\026RELAUNCH_AFTER_TIMEOU" +
+      "T\020\000\022\020\n\014WAIT_FOREVER\020\001\"$\n\006Secret\022\n\n\002id\030\001 " +
+      "\002(\t\022\016\n\006source\030\002 \002(\t\"\262\001\n\017EnvVarReference\022" +
+      "7\n\004type\030\001 \002(\0162).mesosphere.marathon.EnvV" +
+      "arReference.Type\022\014\n\004name\030\002 \002(\t\0227\n\tsecret",
+      "Ref\030\003 \001(\0132$.mesosphere.marathon.EnvVarSe" +
+      "cretRef\"\037\n\004Type\022\013\n\007UNKNOWN\020\000\022\n\n\006SECRET\020\001" +
+      "\"#\n\017EnvVarSecretRef\022\020\n\010secretId\030\001 \002(\t*3\n" +
+      "\rKillSelection\022\021\n\rYoungestFirst\020\001\022\017\n\013Old" +
+      "estFirst\020\002B\035\n\023mesosphere.marathonB\006Proto" +
+      "s"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -50914,7 +51003,7 @@ public final class Protos {
     internal_static_mesosphere_marathon_Volume_ExternalVolumeInfo_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_mesosphere_marathon_Volume_ExternalVolumeInfo_descriptor,
-        new java.lang.String[] { "Size", "Name", "Provider", "Options", });
+        new java.lang.String[] { "Size", "Name", "Provider", "Options", "Shared", });
     internal_static_mesosphere_marathon_Volume_SecretVolumeInfo_descriptor =
       internal_static_mesosphere_marathon_Volume_descriptor.getNestedTypes().get(2);
     internal_static_mesosphere_marathon_Volume_SecretVolumeInfo_fieldAccessorTable = new
