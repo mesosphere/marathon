@@ -25,6 +25,10 @@ types:
         type: label.KVLabels
         (pragma.omitEmpty):
         description: Provider specific volume configuration options
+      shared?:
+        type: boolean
+        default: false
+        description: If true, excludes this volume from the global unique volume name check
   PersistentVolumeType:
     type: string
     description: |
