@@ -55,7 +55,7 @@ For more detailed information, see the JIRA ticket [MARATHON-8663](https://jira.
 
 As there are some external volume providers which require options in the volume name, the strict validation of the name on the external volume is now removed.
 
-As the uniqueness check is based on the volume name, this may lead to some inconsistencies, for the sake of uniquenes, the following volumes are distinct:
+As the uniqueness check is based on the volume name, this may lead to some inconsistencies, for the sake of uniqueness, the following volumes are distinct:
 
 ```json
 "volumes": [
@@ -79,7 +79,7 @@ As the uniqueness check is based on the volume name, this may lead to some incon
 
 #### Optional uniqueness check
 
-Previously, Marathon would validate that an external volume with the same name is only used once across multiple apps. This was due to the initial implementation being focused on Rexray+EBS. However, multiple external volume providers now
+Previously, Marathon would validate that an external volume with the same name is only used once across all apps. This was due to the initial implementation being focused on Rexray+EBS. However, multiple external volume providers now
 allow shared access to mounted volumes, so we introduced a way to disable the uniqueness check:
 
 A new field, `container.volumes[n].external.shared` which defaults to `false`. If set to true, the same volume name can be used
