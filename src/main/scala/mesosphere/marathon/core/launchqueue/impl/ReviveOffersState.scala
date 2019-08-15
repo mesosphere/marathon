@@ -115,7 +115,7 @@ case class ReviveOffersState(
     * @return this state with removed ref from [[activeDelays]].
     */
   def withoutDelay(ref: RunSpecConfigRef): ReviveOffersState = {
-    logger.debug(s"Marking $ref as no longer actively delayed")
+    logger.info(s"Marking $ref as no longer actively delayed for suppress/revive")
 
     // This is not optimized
     val bumpedVersions = instancesWantingOffers.map {
@@ -133,7 +133,7 @@ case class ReviveOffersState(
 
   /** @return this state with updated [[activeDelays]]. */
   def withDelay(ref: RunSpecConfigRef): ReviveOffersState = {
-    logger.debug(s"Marking $ref as actively delayed")
+    logger.info(s"Marking $ref as actively delayed for suppress/revive")
     copyBumpingVersion(activeDelays = activeDelays + ref)
   }
 

@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{InstanceChangeOrSnapshot, InstanceDeleted, InstanceUpdated, InstancesSnapshot}
 import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.Role
 import mesosphere.marathon.state.RunSpecConfigRef
-import mesosphere.marathon.stream.TimedEmitter
+import mesosphere.marathon.stream.{RateLimiterFlow, TimedEmitter}
 
 import scala.concurrent.duration._
 
@@ -72,11 +72,10 @@ object ReviveOffersStreamLogic extends StrictLogging {
 
     reviveStateFromInstancesAndDelays(defaultRole)
       .buffer(1, OverflowStrategy.dropHead) // While we are back-pressured, we drop older interim frames
-      .throttle(1, minReviveOffersInterval)
+      .via(RateLimiterFlow.apply(minReviveOffersInterval))
       .map(_.roleReviveVersions)
-      .map(l => { logger.info(s"roleReviveVersions = ${l}"); l })
       .via(reviveDirectiveFlow(enableSuppress))
-      .map(l => { logger.info(s"reviveDirectiveFlow = ${l}"); l })
+      .map(l => { logger.info(s"Issuing following suppress/revive directives: = ${l}"); l })
       .via(reviveRepeaterWithTicks)
   }
 
@@ -235,7 +234,7 @@ object ReviveOffersStreamLogic extends StrictLogging {
       repeatIn = newRepeatIn
 
       if (rolesForReviveRepetition.isEmpty) {
-        logger.info(s"Found no roles to revive.")
+        logger.info(s"Found no roles suitable for revive repetition.")
         Nil
       } else {
         logger.info(s"Repeat revive for roles $rolesForReviveRepetition.")

@@ -39,11 +39,6 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
       When("An initial snapshot with a launched instance is offered")
       input.offer(Left(InstancesSnapshot(List(launchedInstance)))).futureValue
 
-      And("3 instance updates are sent for the role 'web'")
-      Future.sequence(Seq(instance1, instance2, instance3).map { i =>
-        input.offer(Left(InstanceUpdated(i, None, Nil)))
-      }).futureValue
-
       Then("An update framework event is issued with the role suppressed in response to the snapshot")
       inside(output.pull().futureValue) {
         case Some(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
@@ -51,6 +46,11 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
           newlyRevived shouldBe Set.empty
           newlySuppressed shouldBe Set.empty
       }
+
+      And("3 instance updates are sent for the role 'web'")
+      Future.sequence(Seq(instance1, instance2, instance3).map { i =>
+        input.offer(Left(InstanceUpdated(i, None, Nil)))
+      }).futureValue
 
       Then("The revives from the instances get combined in to a single update framework call")
       inside(output.pull().futureValue) {

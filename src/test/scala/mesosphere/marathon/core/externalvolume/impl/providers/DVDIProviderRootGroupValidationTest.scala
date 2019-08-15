@@ -74,8 +74,63 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
       )
     }
 
+    "two volumes with same name and shared true result in no error" in {
+      val f = new Fixture
+      Given("a root group with two apps and conflicting volumes")
+      val app1 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app1"), volumeName = "vol", shared = true)
+      val app2 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app2"), volumeName = "vol", shared = true)
+      val rootGroup = createRootGroup(
+        groups = Set(
+          createGroup(
+            id = AbsolutePathId("/nested"),
+            apps = Map(
+              app1.id -> app1,
+              app2.id -> app2
+            ),
+            validate = false
+          )
+        ),
+        validate = false
+      )
+
+      f.checkResult(
+        rootGroup,
+        expectedViolations = Set.empty
+      )
+    }
+
+    "two volumes with same name and only one has shared true result in an error" in {
+      val f = new Fixture
+      Given("a root group with two apps and conflicting volumes")
+      val app1 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app1"), volumeName = "vol", shared = true)
+      val app2 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app2"), volumeName = "vol", shared = false)
+      val rootGroup = createRootGroup(
+        groups = Set(
+          createGroup(
+            id = AbsolutePathId("/nested"),
+            apps = Map(
+              app1.id -> app1,
+              app2.id -> app2
+            ),
+            validate = false
+          )
+        ),
+        validate = false
+      )
+
+      f.checkResult(
+        rootGroup,
+        expectedViolations = Set(
+          ConstraintViolation(
+            constraint = "Volume name 'vol' in /nested/app1 conflicts with volume(s) of same name in app(s): /nested/app2",
+            path = "/groups(0)/apps(0)/externalVolumes(0)"
+          )
+        )
+      )
+    }
+
     class Fixture {
-      def appWithDVDIVolume(appId: AbsolutePathId, volumeName: String, provider: String = DVDIProvider.name): AppDefinition = {
+      def appWithDVDIVolume(appId: AbsolutePathId, volumeName: String, provider: String = DVDIProvider.name, shared: Boolean = false): AppDefinition = {
         AppDefinition(
           id = appId,
           role = "*",
@@ -89,6 +144,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
                     name = None,
                     external = ExternalVolumeInfo(
                       name = volumeName,
+                      shared = shared,
                       provider = provider,
                       options = Map(
                         DVDIProvider.driverOption -> "rexray"))),
