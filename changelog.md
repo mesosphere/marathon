@@ -83,7 +83,7 @@ Previously, Marathon would validate that an external volume with the same name i
 allow shared access to mounted volumes, so we introduced a way to disable the uniqueness check:
 
 A new field, `container.volumes[n].external.shared` which defaults to `false`. If set to true, the same volume name can be used
-by multiple containers.
+by multiple containers. The `shared` flag has to be set to `true` on all external volumes with the same name, otherwise a conflict is reported on the volume without the `shared=true` flag.
 
 ```json
   "container": {

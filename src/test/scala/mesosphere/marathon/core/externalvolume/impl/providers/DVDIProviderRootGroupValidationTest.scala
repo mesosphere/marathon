@@ -99,6 +99,36 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
       )
     }
 
+    "two volumes with same name and only one has shared true result in an error" in {
+      val f = new Fixture
+      Given("a root group with two apps and conflicting volumes")
+      val app1 = f.appWithDVDIVolume(appId = PathId("/nested/app1"), volumeName = "vol", shared = true)
+      val app2 = f.appWithDVDIVolume(appId = PathId("/nested/app2"), volumeName = "vol", shared = false)
+      val rootGroup = createRootGroup(
+        groups = Set(
+          createGroup(
+            id = AbsolutePathId("/nested"),
+            apps = Map(
+              app1.id -> app1,
+              app2.id -> app2
+            ),
+            validate = false
+          )
+        ),
+        validate = false
+      )
+
+      f.checkResult(
+        rootGroup,
+        expectedViolations = Set(
+          ConstraintViolation(
+            constraint = "Volume name 'vol' in /nested/app1 conflicts with volume(s) of same name in app(s): /nested/app2",
+            path = "/groups(0)/apps(0)/externalVolumes(0)"
+          )
+        )
+      )
+    }
+
     class Fixture {
       def appWithDVDIVolume(appId: PathId, volumeName: String, provider: String = DVDIProvider.name, shared: Boolean = false): AppDefinition = {
         AppDefinition(
