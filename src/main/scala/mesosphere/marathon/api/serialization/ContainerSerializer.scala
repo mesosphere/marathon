@@ -205,6 +205,7 @@ object ExternalVolumeInfoSerializer {
     val builder = Protos.Volume.ExternalVolumeInfo.newBuilder()
       .setName(info.name)
       .setProvider(info.provider)
+      .setShared(info.shared)
 
     info.size.foreach(builder.setSize)
     info.options.map{

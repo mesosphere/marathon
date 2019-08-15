@@ -49,7 +49,7 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks {
   }
 
   "core ExternalVolume conversion" when {
-    val external = state.ExternalVolumeInfo(Some(123L), "external", "foo", Map("foo" -> "bla"))
+    val external = state.ExternalVolumeInfo(Some(123L), "external", "foo", Map("foo" -> "bla"), shared = true)
     val externalVolume = state.ExternalVolume(None, external)
     val mount = state.VolumeMount(None, "/container")
     val volume = state.VolumeWithMount(externalVolume, mount)
@@ -65,6 +65,7 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks {
         externalRaml.external.options should be(external.options)
         externalRaml.external.provider should be(Some(external.provider))
         externalRaml.external.size should be(external.size)
+        externalRaml.external.shared should be(true)
       }
     }
   }
@@ -72,7 +73,7 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks {
   "RAML external volume conversion" when {
     val volume = AppExternalVolume(
       "/container",
-      ExternalVolumeInfo(Some(1L), Some("vol-name"), Some("provider"), Map("foo" -> "bla")), ReadMode.Rw)
+      ExternalVolumeInfo(Some(1L), Some("vol-name"), Some("provider"), Map("foo" -> "bla"), shared = true), ReadMode.Rw)
     "converting to core ExternalVolume" should {
       val (externalVolume, mount) = Some(volume.fromRaml).collect {
         case state.VolumeWithMount(v: state.ExternalVolume, m) => (v, m)
@@ -84,6 +85,7 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks {
         externalVolume.external.provider should be(volume.external.provider.head)
         externalVolume.external.size should be(volume.external.size)
         externalVolume.external.options should be(volume.external.options)
+        externalVolume.external.shared should be(volume.external.shared)
       }
     }
   }
