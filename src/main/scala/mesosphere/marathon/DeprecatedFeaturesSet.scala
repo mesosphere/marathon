@@ -6,11 +6,11 @@ import com.typesafe.scalalogging.StrictLogging
   * Encloses a list of explicitly-enabled deprecated features
   *
   * @param currentVersion The current version of Marathon
-  * @param enabledDeprecatedFeatures The deprecated features specified to be enable
+  * @param deprecatedFeatureSettings Map of deprecated features specified to be enabled or disabled
   */
-case class DeprecatedFeatureSet(
+case class DeprecatedFeatureConfig(
     currentVersion: SemVer,
-    enabledDeprecatedFeatures: Set[DeprecatedFeature]) extends StrictLogging {
+    deprecatedFeatureSettings: Map[DeprecatedFeature, Boolean]) extends StrictLogging {
 
   /**
     * If a deprecated feature has not been soft-removed (still enabled by default), then return true
@@ -18,24 +18,28 @@ case class DeprecatedFeatureSet(
     * Otherwise, only return true if the feature in question has been explicitly enabled.
     */
   def isEnabled(df: DeprecatedFeature) =
-    enabledDeprecatedFeatures.contains(df) || (currentVersion < df.softRemoveVersion)
+    deprecatedFeatureSettings.getOrElse(df, currentVersion < df.softRemoveVersion)
 
-  private def softRemovedFeatures =
+  val enabledDeprecatedFeatures: Set[DeprecatedFeature] = deprecatedFeatureSettings
+    .collect { case (df, true) => df }
+    .toSet
+
+  private def softRemovedEnabledFeatures =
     enabledDeprecatedFeatures.filter { df => currentVersion >= df.softRemoveVersion && currentVersion < df.hardRemoveVersion }
 
-  private def hardRemovedFeatures =
+  private def hardRemovedEnabledFeatures =
     enabledDeprecatedFeatures.filter { df => currentVersion >= df.hardRemoveVersion }
 
   /**
     * Log appropriate warnings for soft-removed features, errors for hard-removed.
     */
   def logDeprecationWarningsAndErrors(): Unit = {
-    softRemovedFeatures.foreach { df =>
+    softRemovedEnabledFeatures.foreach { df =>
       logger.warn(s"Deprecated feature ${df.key} is scheduled to be removed in ${df.hardRemoveVersion}. You should " +
         "remove the deprecated feature flag as soon possible.")
     }
 
-    hardRemovedFeatures.foreach { df =>
+    hardRemovedEnabledFeatures.foreach { df =>
       logger.error(s"${df.key} has been removed as of ${df.hardRemoveVersion}. It has the following description:\n\n" +
         df.description + "\n\n" +
         "You should migrate back to a previous version of Marathon, remove the deprecated feature flag, ensure that " +
@@ -49,10 +53,10 @@ case class DeprecatedFeatureSet(
     */
   def isValid(): Boolean = {
     logDeprecationWarningsAndErrors()
-    hardRemovedFeatures.isEmpty
+    hardRemovedEnabledFeatures.isEmpty
   }
 }
 
-object DeprecatedFeatureSet {
-  def empty(currentVersion: SemVer): DeprecatedFeatureSet = DeprecatedFeatureSet(currentVersion, Set.empty)
+object DeprecatedFeatureConfig {
+  def empty(currentVersion: SemVer): DeprecatedFeatureConfig = DeprecatedFeatureConfig(currentVersion, Map.empty)
 }
