@@ -124,7 +124,7 @@ object Dependency {
     val Logback = "1.2.3"
     val Logstash = "4.9"
     val MarathonApiConsole = "3.0.8-accept"
-    val MarathonUI = "1.3.1"
+    val MarathonUI = "1.3.2"
     val Mesos = "1.9.0-SNAPSHOT"
     val Mustache = "0.9.0"
     val PlayJson = "2.6.7"
