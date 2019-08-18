@@ -198,6 +198,10 @@ When using Debian packages, the ideal way to customize Marathon is to specify co
 * <span class="label label-default">v1.6.0</span>`--[disable]_maintenance_mode` (Optional. Default: enabled) Specifies
     if Marathon should enable maintenance mode support. See the [maintenance mode docs](./maintenance-mode.html) for
     more information.
+* <span class="label label-default">v1.9.0</span>`--new_group_enforce_role` (Optional. Default: off) Specifies
+    the default enforceRole value behavior for new Marathon groups. See the [multi-role](./multirole.html) for more information.
+    - "off" causes all groups to default to false.
+    - "top" causes new top-level groups to enable enforceRole by default
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 
