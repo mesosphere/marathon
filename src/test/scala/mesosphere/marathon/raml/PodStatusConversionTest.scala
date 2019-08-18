@@ -357,6 +357,7 @@ class PodStatusConversionTest extends UnitTest {
       status.agentId should be (Some("agentId1"))
       status.status should be(PodInstanceState.Degraded)
       status.resources should be(Some(pod.aggregateResources()))
+      status.role should be("test")
       status.containers should be(Seq(
         ContainerStatus(
           name = "ct1",
@@ -564,7 +565,7 @@ object PodStatusConversionTest {
       ).map(t => t.taskId -> t)(collection.breakOut),
       runSpec = pod,
       reservation = maybeReservation,
-      role = "*"
+      role = "test"
     )
 
     InstanceFixture(since, agentInfo, taskIds, instance)
