@@ -17,7 +17,7 @@ Each Marathon service now contains a "role" field. By default, this "role" field
 
 ```
 {
-  "id": "/dev/sleeper",
+  "id": "/dev/bigbusiness",
   "cmd": "sleep 3600",
   "instances": 10,
   "cpus": 0.05,
@@ -29,7 +29,7 @@ Each Marathon service now contains a "role" field. By default, this "role" field
 
 ```
 {
-  "id": "/dev/sleeper",
+  "id": "/dev/bigbusiness",
   "cmd": "set; sleep 3600",
   "instances": 10,
   "cpus": 0.05,
@@ -42,16 +42,16 @@ Marathon will then proceed to revive offers for the role `"slave_public",` and m
 
 # Group role
 
-The group role is the name of the top-level group, as seen in the following table:
+The group role is the name of the top-level group, as illustrated by the following table:
 
 | Full service id | Marathon group | Group-role |
 | --------------- | -------------- | --------- |
-| /dev/sleeper | /dev | "dev" |
-| /sleeper | / | `"*"` |
-| /dev/team1/sleeper | /dev/team1 | "dev" |
+| /dev/bigbusiness | /dev | "dev" |
+| /bigbusiness | / | N/A |
+| /dev/team1/bigbusiness | /dev/team1 | "dev" |
 | /frontend/ui | /frontend | "frontend" |
 
-A service may  only be assigned one of two possible roles: the default role (that which is specified by `--mesos_role`), or, the group role.
+Note that services placed directly in the root group do not have a group-role. A service may only be assigned one of two possible roles: the default role (that which is specified by `--mesos_role`), or, the group role.
 
 # Migrating existing services
 
@@ -61,13 +61,13 @@ Migrating ephemeral services is straightforward: update the role, and Marathon r
 
 ## Ephemeral service multi-role migration
 
-In order to migrate the sleeper app described earlier in this document from using the default Mesos role to the group role, we can simply post the following:
+In order to migrate the bigbusiness app described earlier in this document from using the default Mesos role to the group role, we can simply post the following:
 
 ```
-echo '{"role": "dev"} | curl -X PATCH http://local:8080/v2/apps/dev/sleeper -H "Content-Type: application/json" --data "@-"
+echo '{"role": "dev"} | curl -X PATCH http://local:8080/v2/apps/dev/bigbusiness -H "Content-Type: application/json" --data "@-"
 ```
 
-This will trigger a deployment where all of the old sleeper instances running as the role `"slave_public"` are killed, and replaced by new instances running as the role "dev". Further, Marathon will update its FrameworkInfo information with Mesos to also include the role "dev", so that it can begin receiving offers allocated to the role. This may require the Mesos create role permission if the role does not already exist. See the section below on Mesos permission caveats.
+This will trigger a deployment where all of the old bigbusiness instances running as the role `"slave_public"` are killed, and replaced by new instances running as the role "dev". Further, Marathon will update its FrameworkInfo information with Mesos to also include the role "dev", so that it can begin receiving offers allocated to the role. This may require the Mesos create role permission if the role does not already exist. See the section below on Mesos permission caveats.
 
 ## Resident service multi-role migration
 
@@ -78,7 +78,7 @@ For example, say that we have deployed the following resident service:
 ```
 $ cat <<EOF | curl -v -X POST http://localhost:8080/v2/pods -H "Content-Type: application/json" --data "@-"
 {
-  "id": "/dev/sleeper",
+  "id": "/dev/bigbusiness",
   "containers": [
     {
       "name": "sleep1",
@@ -103,15 +103,15 @@ EOF
 When we check the roles for the running instances, we will see that the instances were launched with the role `"slave_public":`
 
 ```
-$ curl http://localhost:8080/v2/pods/dev/sleeper::status | jq '.instances[].role'
+$ curl http://localhost:8080/v2/pods/dev/bigbusiness::status | jq '.instances[].role'
 ```
 
 When we attempt to PUT the update with the role "dev" to the pods endpoint, as follows:
 
 ```
-$ cat <<EOF | curl -v -X PUT http://localhost:8080/v2/pods/dev/sleeper -H "Content-Type: application/json" --data "@-"
+$ cat <<EOF | curl -v -X PUT http://localhost:8080/v2/pods/dev/bigbusiness -H "Content-Type: application/json" --data "@-"
 {
-  "id": "/dev/sleeper",
+  "id": "/dev/bigbusiness",
   "containers": [
     {
       "name": "sleep1",
@@ -137,9 +137,9 @@ EOF
 ... the API request will fail, indicating that resident services cannot change the role for existing instances. In our case, we would like to proceed, so that new instances are allocated to the new role, so we can try again with the parameter "? force=true":
 
 ```
-cat <<EOF | curl -v -X PUT http://localhost:8080/v2/pods/dev/sleeper?force=true -H "Content-Type: application/json" --data "@-"
+cat <<EOF | curl -v -X PUT http://localhost:8080/v2/pods/dev/bigbusiness?force=true -H "Content-Type: application/json" --data "@-"
 {
-  "id": "/dev/sleeper",
+  "id": "/dev/bigbusiness",
   "containers": [
     {
       "name": "sleep1",
@@ -165,7 +165,7 @@ EOF
 The deployment may take a little bit of time to succeed. Let's check our pod spec role versus the instance role:
 
 ```
-$ curl http://localhost:8080/v2/pods/dev/sleeper::status | jq '{specRole: .spec.role, instanceRoles: [.instances[].role]}'
+$ curl http://localhost:8080/v2/pods/dev/bigbusiness::status | jq '{specRole: .spec.role, instanceRoles: [.instances[].role]}'
 
 {
   "specRole": "dev",
@@ -180,9 +180,9 @@ We can see our spec's role was updated, but the instance we launched prior to th
 Let's scale up the pod!
 
 ```
-cat <<EOF | curl -v -X PUT http://localhost:8080/v2/pods/dev/sleeper?force=true -H "Content-Type: application/json" --data "@-"
+cat <<EOF | curl -v -X PUT http://localhost:8080/v2/pods/dev/bigbusiness?force=true -H "Content-Type: application/json" --data "@-"
 {
-  "id": "/dev/sleeper",
+  "id": "/dev/bigbusiness",
   "scaling": {"instances": 2, "kind": "fixed"},
   "containers": [
     {
@@ -209,7 +209,7 @@ EOF
 Then, let's check the role of our instances now that we have a freshly added instance after the role change:
 
 ```
-curl http://localhost:8080/v2/pods/dev/sleeper::status | jq '{role: .spec.role, instanceRoles: [.instances[].role]}'
+curl http://localhost:8080/v2/pods/dev/bigbusiness::status | jq '{role: .spec.role, instanceRoles: [.instances[].role]}'
 
 {
   "role": "dev",
@@ -230,11 +230,11 @@ Marathon allows the mixed role usage in order to support a reasonable, increment
 
 The group `enforceRole` property is settable only for top-level groups; when enabled, it forces all **new** services in that group (or in subgroups) to use the group role, and receive the group role as a default. Existing services still must be migrated to multi-role, by modifying the respective "role" field for each of the existing services.
 
-As an example, let's say we have deployed the following sleeper app, using the default role:
+As an example, let's say we have deployed the following bigbusiness app, using the default role:
 
 ```
 {
-  "id": "/dev/sleeper",
+  "id": "/dev/bigbusiness",
   "cmd": "set; sleep 3600",
   "instances": 10,
   "cpus": 0.05,
@@ -263,7 +263,7 @@ Now that `enforceRole` is enabled for the top-level group "/dev", we can see tha
 ```
 $ cat <<EOF | curl -f -X POST http://localhost:8080/v2/apps -H "Content-Type: application/json" --data "@-"
 {
-  "id": "/dev/sleeper-role-enforced",
+  "id": "/dev/bigbusiness-role-enforced",
   "cmd": "set; sleep 3600",
   "instances": 10,
   "cpus": 0.05,
@@ -272,7 +272,7 @@ $ cat <<EOF | curl -f -X POST http://localhost:8080/v2/apps -H "Content-Type: ap
 EOF
 
 {
-  "id":"/dev/sleeper-role-enforced",
+  "id":"/dev/bigbusiness-role-enforced",
   ...
   "role":"dev"
 }
@@ -281,7 +281,7 @@ EOF
 From this point on, if we try to update any service in the top-level group "/dev" from the role "dev" back to` "slave_public",` then we will get a validation rejection.
 
 ```
-$ echo '{"role": "slave_public"}' | curl -v  -X PATCH http://localhost:8080/v2/apps/dev/sleeper-role-enforced -H "Content-Type: application/json" --data "@-"
+$ echo '{"role": "slave_public"}' | curl -v  -X PATCH http://localhost:8080/v2/apps/dev/bigbusiness-role-enforced -H "Content-Type: application/json" --data "@-"
 
 ...
 {"message":"Object is not valid","details":[{"path":"/role","errors":["got slave_public, expected one of: [dev]"]}]}
@@ -290,17 +290,17 @@ $ echo '{"role": "slave_public"}' | curl -v  -X PATCH http://localhost:8080/v2/a
 We are allowed to modify services in "/dev" use the old role `"slave_public";` but, after we migrated, it is rejected:
 
 ```
-$ echo '{"instances": 2, "role": "slave_public"}' | curl -v  -X PATCH http://localhost:8080/v2/apps/dev/sleeper -H "Content-Type: application/json" --data "@-"
+$ echo '{"instances": 2, "role": "slave_public"}' | curl -v  -X PATCH http://localhost:8080/v2/apps/dev/bigbusiness -H "Content-Type: application/json" --data "@-"
 
 ...
 {"version":"2019-08-18T21:11:33.328Z","deploymentId":"d1f5654c-95f9-45ca-9fdd-0a08eceba7fb"}
 
-$ echo '{"role": "dev"}' | curl -v  -X PATCH http://localhost:8080/v2/apps/dev/sleeper -H "Content-Type: application/json" --data "@-"
+$ echo '{"role": "dev"}' | curl -v  -X PATCH http://localhost:8080/v2/apps/dev/bigbusiness -H "Content-Type: application/json" --data "@-"
 
 ...
 {"version":"2019-08-18T21:12:34.259Z","deploymentId":"ac0930bf-8141-4452-967e-9f4b66229cef"}
 
-$ echo '{"role": "slave_public"}' | curl -v  -X PATCH http://localhost:8080/v2/apps/dev/sleeper -H "Content-Type: application/json" --data "@-"
+$ echo '{"role": "slave_public"}' | curl -v  -X PATCH http://localhost:8080/v2/apps/dev/bigbusiness -H "Content-Type: application/json" --data "@-"
 
 ...
 {"message":"Object is not valid","details":[{"path":"/role","errors":["got slave_public, expected one of: [dev]"]}]}
