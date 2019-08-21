@@ -12,7 +12,7 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{AppDefinition, PathId, ResourceRole, Role, RootGroup}
+import mesosphere.marathon.state.{PathId, ResourceRole, Role, RootGroup}
 import mesosphere.marathon.util.{RoleSettings, SemanticVersion}
 // scalastyle:on
 
