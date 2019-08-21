@@ -84,7 +84,7 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
         implicit val clock = new SettableClock()
         val store = newStore
         val original = TestClass1("abc", 1)
-        clock.plus(1.minute)
+        clock.advanceBy(1.minute)
         val updated = TestClass1("def", 2)
         store.store("task-1", original).futureValue should be(Done)
         store.store("task-1", updated).futureValue should be(Done)
@@ -104,14 +104,14 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
       "store the multiple versions of the old values" in {
         val clock = new SettableClock()
         val versions = 0.until(10).map { i =>
-          clock.plus(1.minute)
+          clock.advanceBy(1.minute)
           TestClass1("abc", i, OffsetDateTime.now(clock))
         }
         val store = newStore
         versions.foreach { v =>
           store.store("task", v).futureValue should be(Done)
         }
-        clock.plus(1.hour)
+        clock.advanceBy(1.hour)
         val newestVersion = TestClass1("def", 3, OffsetDateTime.now(clock))
         store.store("task", newestVersion).futureValue should be(Done)
         // it should have dropped one element.

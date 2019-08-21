@@ -429,13 +429,13 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val v1 = VersionInfo.OnlyVersion(f.clock.now())
       val podspec1 = pod.copy(versionInfo = v1)
 
-      f.clock += 1.minute
+      f.clock.advanceBy(1.minute)
 
       // the same as podspec1 but with a new version and a renamed container
       val v2 = VersionInfo.OnlyVersion(f.clock.now())
       val podspec2 = pod.copy(versionInfo = v2, containers = pod.containers.map(_.copy(name = "ct2")))
 
-      f.clock += 1.minute
+      f.clock.advanceBy(1.minute)
 
       When("requesting pod instance status")
       val instanceV1 = f.fakeInstance(podspec1)
