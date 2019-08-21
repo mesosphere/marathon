@@ -72,4 +72,8 @@ object RoleSettings extends StrictLogging {
     }
   }
 
+  def residentRoleChangeWarningMessage(previousRole: String, newRole: String): String =
+    "It is not possible to change the role for existing reservations. If you proceed with this change, all existing " +
+      "instances will continue to run under the previous role, " + previousRole + ". Only new instances will be " +
+      "allocated with the new role, " + newRole + ". In order to continue, retry your request with ?force=true"
 }

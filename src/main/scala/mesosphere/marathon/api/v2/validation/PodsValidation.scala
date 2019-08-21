@@ -12,7 +12,7 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{PathId, ResourceRole, Role, RootGroup}
+import mesosphere.marathon.state.{AppDefinition, PathId, ResourceRole, Role, RootGroup}
 import mesosphere.marathon.util.{RoleSettings, SemanticVersion}
 // scalastyle:on
 
@@ -256,7 +256,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
       }
     }
     if (pod.isResident) {
-      pod.role is isTrue((role: Role) => s"It is not possible to change the role for existing reservations. If you proceed with this change, all existing instances will continue to run under the previous role, ${roleEnforcement.previousRole.get}. Only new instances will be allocated with the new role, ${role}. In order to continue, retry your request with force=true") { role: Role =>
+      pod.role is isTrue((role: Role) => RoleSettings.residentRoleChangeWarningMessage(roleEnforcement.previousRole.get, role)) { role: Role =>
         roleEnforcement.previousRole.map(_.equals(role) || roleEnforcement.forceRoleUpdate).getOrElse(true)
       }
     }

@@ -25,7 +25,7 @@ import mesosphere.marathon.raml.{EnvVarSecret, ExecutorResources, FixedPodScalin
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.{GroupCreation, JerseyTest, Mockito, SettableClock}
-import mesosphere.marathon.util.SemanticVersion
+import mesosphere.marathon.util.{RoleSettings, SemanticVersion}
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
@@ -498,7 +498,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(422)
-        response.getEntity.toString should include("It is not possible to change the role for existing reservations. If you proceed with this change, all existing instances will continue to under the previous role")
+        response.getEntity.toString should include(RoleSettings.residentRoleChangeWarningMessage("*", "foo"))
       }
     }
 
