@@ -93,7 +93,7 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       val podRaml = unmarshal(body)
 
-      val roleSettings = RoleSettings.forService(config, PathId(podRaml.id).canonicalPath(PathId.root), groupManager.rootGroup())
+      val roleSettings = RoleSettings.forService(config, PathId(podRaml.id).canonicalPath(PathId.root), groupManager.rootGroup(), false)
       implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
       implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
       implicit val podDefValidator: Validator[PodDefinition] = PodsValidation.podDefValidator(pluginManager, roleSettings)
@@ -127,7 +127,7 @@ class PodsResource @Inject() (
       val podId = id.toAbsolutePath
       val podRaml = unmarshal(body)
 
-      val roleSettings = RoleSettings.forService(config, podId, groupManager.rootGroup())
+      val roleSettings = RoleSettings.forService(config, podId, groupManager.rootGroup(), force)
       implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
       implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
       implicit val podDefValidator: Validator[PodDefinition] = PodsValidation.podDefValidator(pluginManager, roleSettings)
