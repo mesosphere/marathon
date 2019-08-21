@@ -9,7 +9,7 @@ While it is possible to partially use multi-role in Marathon, it is recommended 
 * All top-level services (those not in groups) are moved to a group.
 * All services are updated to use the group-role
 * `enforceRole` is enabled for all top-level groups
-* The `--new_group_enforce_role` command-line parameter is set to `"top"`.
+* The `--new_group_enforce_role` command-line parameter is set to `top`.
 
 # Service role field
 
@@ -243,7 +243,7 @@ As an example, say you have deployed the following bigbusiness app, using the de
 }
 ```
 
-Now, we use the PATCH method to enable role enforcement for a group:
+Now, use the PATCH method to enable role enforcement for a group:
 
 ```
 $ echo '{"enforceRole": true}' | curl -f -X PATCH http://localhost:8080/v2/groups/dev -H "Content-Type: application/json" --data "@-"
@@ -324,7 +324,7 @@ With this in mind, given a service with the role `dev`, only the following `acce
 
 * `["*"]` - only unreserved resources will be considered; resources already reserved for the role `dev` will be declined.
 * `["*", "dev"]` - either unreserved resources, or resources already reserved for the role `dev` will be considered for offer matching.
-* `["dev"]` - only resources already reserved for "dev" will be considered for offer matching. Unreserved resources will be declined.
+* `["dev"]` - only resources already reserved for `dev` will be considered for offer matching. Unreserved resources will be declined.
 
 Specifying a role other than the service role, or `"*"`, are considered invalid, and Marathon will deprecate the sanitization of this field, rejecting invalid values in Marathon 1.10 and later.
 
