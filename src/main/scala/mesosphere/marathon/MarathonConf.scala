@@ -133,11 +133,6 @@ trait MarathonConf
       "resources with the role designation '*'.",
     default = Some(ResourceRole.Unreserved))
 
-  def expectedResourceRoles: Set[String] = mesosRole.toOption match {
-    case Some(role) => Set(role, ResourceRole.Unreserved)
-    case None => Set(ResourceRole.Unreserved)
-  }
-
   lazy val groupRoleBehavior = opt[GroupRoleBehavior](
     name = "new_group_enforce_role",
     descr = "Used to control whether role enforcement is enabled for new top-level groups; 'top' means that all new" +
@@ -145,14 +140,13 @@ trait MarathonConf
       " group-role (a role that matches the top-level group's name).",
     default = Some(GroupRoleBehavior.Off))(groupRoleBehaviorConverter)
 
-  lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.getOrElse(expectedResourceRoles)
-
-  lazy val defaultAcceptedResourceRoles = opt[String](
+  @deprecated("Accepted resource roles can not be set directly anymore. Use accepted_resource_roles_default_behavior.", since = "1.9")
+  private[this] lazy val defaultAcceptedResourceRoles = opt[String](
     "default_accepted_resource_roles",
     descr =
-      "Default for the defaultAcceptedResourceRoles attribute of all app definitions" +
+      "(Deprecated) Default for the defaultAcceptedResourceRoles attribute of all app definitions" +
         " as a comma-separated list of strings. " +
-        "This defaults to all roles for which this Marathon instance is configured to receive offers.",
+        "This parameter is deprecated, please use --accepted_resource_roles_default_behavior",
     default = None,
     validate = validateDefaultAcceptedResourceRoles).map(parseDefaultAcceptedResourceRoles)
 
@@ -160,6 +154,11 @@ trait MarathonConf
     str.split(',').map(_.trim).toSet
 
   private[this] def validateDefaultAcceptedResourceRoles(str: String): Boolean = {
+    def expectedResourceRoles: Set[String] = mesosRole.toOption match {
+      case Some(role) => Set(role, ResourceRole.Unreserved)
+      case None => Set(ResourceRole.Unreserved)
+    }
+
     val parsed = parseDefaultAcceptedResourceRoles(str)
 
     // throw exceptions for better error messages
@@ -171,6 +170,28 @@ trait MarathonConf
 
     true
   }
+
+  private[this] def deriveDefaultAcceptedResourceRolesDefaultBehavior: Option[AcceptedResourceRolesDefaultBehavior] = {
+    defaultAcceptedResourceRoles.toOption match {
+      case Some(set) if set == Set(ResourceRole.Unreserved) => Some(AcceptedResourceRolesDefaultBehavior.Unreserved)
+      case Some(set) if set == Set(mesosRole()) => Some(AcceptedResourceRolesDefaultBehavior.Reserved)
+      case _ => Some(AcceptedResourceRolesDefaultBehavior.Any)
+    }
+  }
+
+  def defaultAcceptedResourceRolesSet(serviceRole: Role): Set[String] = {
+    acceptedResourceRolesDefaultBehavior() match {
+      case AcceptedResourceRolesDefaultBehavior.Any => Set(serviceRole, ResourceRole.Unreserved)
+      case AcceptedResourceRolesDefaultBehavior.Unreserved => Set(ResourceRole.Unreserved)
+      case AcceptedResourceRolesDefaultBehavior.Reserved => Set(serviceRole)
+    }
+  }
+
+  lazy val acceptedResourceRolesDefaultBehavior = opt[AcceptedResourceRolesDefaultBehavior](
+    name = "accepted_resource_roles_default_behavior",
+    descr = "Default behavior for acceptedResourceRoles if not explicitly set on a service." +
+      "This defaults to 'any', which allows either unreserved or reserved resources",
+    default = deriveDefaultAcceptedResourceRolesDefaultBehavior)(acceptedResourceRolesDefaultBehaviorConverter)
 
   lazy val gracefulShutdownTimeout = opt[Long] (
     "graceful_shutdown_timeout",
@@ -388,6 +409,22 @@ object MarathonConf extends StrictLogging {
         Right(None)
       case other =>
         Left("Expected exactly one default enforce group role")
+    }
+  }
+
+  val acceptedResourceRolesDefaultBehaviorConverter = new ValueConverter[AcceptedResourceRolesDefaultBehavior] {
+    val argType = org.rogach.scallop.ArgType.SINGLE
+
+    override def parse(s: List[(String, List[String])]): Either[String, Option[AcceptedResourceRolesDefaultBehavior]] = s match {
+      case (_, acceptedResourceRolesDefaultBehavior :: Nil) :: Nil =>
+        AcceptedResourceRolesDefaultBehavior.fromString(acceptedResourceRolesDefaultBehavior) match {
+          case o @ Some(_) => Right(o)
+          case None => Left(s"Setting $acceptedResourceRolesDefaultBehavior is invalid. Valid settings are ${AcceptedResourceRolesDefaultBehavior.all.map(_.name).mkString(", ")}")
+        }
+      case Nil =>
+        Right(None)
+      case other =>
+        Left("Expected exactly one acceptedResourceRoles default behavior")
     }
   }
 

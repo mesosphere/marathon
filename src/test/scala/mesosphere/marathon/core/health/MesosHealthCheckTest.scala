@@ -880,7 +880,7 @@ class MesosHealthCheckTest extends UnitTest {
     val taskId = Task.Id(instanceId)
     val builder = new TaskBuilder(app, taskId, config)
     val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, Seq.empty,
-      config.defaultAcceptedResourceRolesSet, config, Seq.empty)
+      config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
     resourceMatch match {
       case matches: ResourceMatchResponse.Match => Some(builder.build(offer, matches.resourceMatch, None, enforceRole = true))
       case _ => None
