@@ -70,5 +70,4 @@ class RateLimiterFlowTest extends AkkaUnitTest {
     output shouldBe input
   }
 
-
 }
