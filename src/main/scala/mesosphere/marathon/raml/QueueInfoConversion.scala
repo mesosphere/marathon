@@ -51,9 +51,10 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
         )
       }
 
-      def queueItem[A](create: (Int, QueueDelay, OffsetDateTime, ProcessedOffersSummary, Option[Seq[UnusedOffer]]) => A): A = {
+      def queueItem[A](create: (Int, String, QueueDelay, OffsetDateTime, ProcessedOffersSummary, Option[Seq[UnusedOffer]]) => A): A = {
         create(
           info.instancesLeftToLaunch,
+          info.role,
           delay,
           info.startedAt.toOffsetDateTime,
           processedOffersSummary,
@@ -62,8 +63,8 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
       }
 
       info.runSpec match {
-        case app: AppDefinition => queueItem(QueueApp(_, _, _, _, _, Raml.toRaml(app)))
-        case pod: PodDefinition => queueItem(QueuePod(_, _, _, _, _, Raml.toRaml(pod)))
+        case app: AppDefinition => queueItem(QueueApp(_, _, _, _, _, _, Raml.toRaml(app)))
+        case pod: PodDefinition => queueItem(QueuePod(_, _, _, _, _, _, Raml.toRaml(pod)))
       }
   }
 
