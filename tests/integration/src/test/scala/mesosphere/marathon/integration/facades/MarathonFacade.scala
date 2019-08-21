@@ -21,6 +21,7 @@ import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.integration.raml18.PodStatus18
 import mesosphere.marathon.integration.setup.{AkkaHttpResponse, RestResult}
 import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
 import mesosphere.marathon.state._
@@ -281,6 +282,18 @@ class MarathonFacade(
   def status(podId: PathId): RestResult[PodStatus] = {
     requireInBaseGroup(podId)
     result(requestFor[PodStatus](Get(s"$url/v2/pods$podId::status")), waitTime)
+  }
+
+  /**
+    * ================================= NOTE =================================
+    * This is a copy of [[status()]] method which uses [[PodStatus18]] class that doesn't have `role` field for the pod
+    * instances. This is ONLY used in [[mesosphere.marathon.integration.UpgradeIntegrationTest]] where we query old
+    * Marathon instances.
+    * ========================================================================
+    */
+  def status18(podId: PathId): RestResult[PodStatus18] = {
+    requireInBaseGroup(podId)
+    result(requestFor[PodStatus18](Get(s"$url/v2/pods$podId::status")), waitTime)
   }
 
   def listPodVersions(podId: PathId): RestResult[Seq[Timestamp]] = {

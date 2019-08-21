@@ -2280,7 +2280,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       And("resulting app has acceptedResourceRoles sanitized (equals default one)")
       val appJson = Json.parse(response.getEntity.asInstanceOf[String])
-      (appJson \ "acceptedResourceRoles" \ 0 ) should be (JsDefined(JsString(ResourceRole.Unreserved)))
+      (appJson \ "acceptedResourceRoles" \ 0) should be (JsDefined(JsString(ResourceRole.Unreserved)))
     }
 
     "Create an app in root with acceptedResourceRoles = customMesosRole and sanitizeAcceptedResourceRoles = false" in new Fixture {
