@@ -2334,7 +2334,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val body = Json.stringify(Json.toJson(normalize(app))).getBytes("UTF-8")
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
