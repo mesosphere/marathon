@@ -135,8 +135,7 @@ class MarathonConfTest extends UnitTest {
         "--mesos_role", "marathon",
         "--default_accepted_resource_roles", "*,marathon"
       )
-
-      assert(conf.defaultAcceptedResourceRolesSet == Set(ResourceRole.Unreserved, "marathon"))
+      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Any)
     }
 
     "--default_accepted_resource_roles *" in {
@@ -144,14 +143,14 @@ class MarathonConfTest extends UnitTest {
         "--master", "127.0.0.1:5050",
         "--default_accepted_resource_roles", "*"
       )
-      assert(conf.defaultAcceptedResourceRolesSet == Set(ResourceRole.Unreserved))
+      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Unreserved)
     }
 
     "--default_accepted_resource_roles default without --mesos_role" in {
       val conf = MarathonTestHelper.makeConfig(
         "--master", "127.0.0.1:5050"
       )
-      assert(conf.defaultAcceptedResourceRolesSet == Set(ResourceRole.Unreserved))
+      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Any)
     }
 
     "--default_accepted_resource_roles default with --mesos_role" in {
@@ -159,7 +158,68 @@ class MarathonConfTest extends UnitTest {
         "--master", "127.0.0.1:5050",
         "--mesos_role", "marathon"
       )
-      assert(conf.defaultAcceptedResourceRolesSet == Set(ResourceRole.Unreserved, "marathon"))
+      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Any)
     }
+
+    "--accepted_resource_roles_default_behavior any without --default_accepted_resource_roles" in {
+      val conf = MarathonTestHelper.makeConfig(
+        "--master", "127.0.0.1:5050",
+        "--accepted_resource_roles_default_behavior", "any"
+      )
+      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Any)
+    }
+
+    "--accepted_resource_roles_default_behavior reserved without --default_accepted_resource_roles" in {
+      val conf = MarathonTestHelper.makeConfig(
+        "--master", "127.0.0.1:5050",
+        "--accepted_resource_roles_default_behavior", "reserved"
+      )
+      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Reserved)
+    }
+
+    "--accepted_resource_roles_default_behavior unreserved without --default_accepted_resource_roles" in {
+      val conf = MarathonTestHelper.makeConfig(
+        "--master", "127.0.0.1:5050",
+        "--accepted_resource_roles_default_behavior", "unreserved"
+      )
+      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Unreserved)
+    }
+
+    "--accepted_resource_roles_default_behavior overrides --default_accepted_resource_roles *" in {
+      val conf = MarathonTestHelper.makeConfig(
+        "--master", "127.0.0.1:5050",
+        "--default_accepted_resource_roles", "*",
+        "--accepted_resource_roles_default_behavior", "any"
+      )
+      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Any)
+    }
+
+    "--accepted_resource_roles_default_behavior overrides --default_accepted_resource_roles * and mesos_role" in {
+      val conf = MarathonTestHelper.makeConfig(
+        "--master", "127.0.0.1:5050",
+        "--mesos_role", "marathon",
+        "--default_accepted_resource_roles", "*,marathon",
+        "--accepted_resource_roles_default_behavior", "reserved"
+      )
+      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Reserved)
+    }
+
+    "--accepted_resource_roles_default_behavior overrides --default_accepted_resource_roles mesos_role" in {
+      val conf = MarathonTestHelper.makeConfig(
+        "--master", "127.0.0.1:5050",
+        "--mesos_role", "marathon",
+        "--default_accepted_resource_roles", "marathon",
+        "--accepted_resource_roles_default_behavior", "unreserved"
+      )
+      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Unreserved)
+    }
+
+    "--accepted_resource_roles_default_behavior not set nor --default_accepted_resource_roles set" in {
+      val conf = MarathonTestHelper.makeConfig(
+        "--master", "127.0.0.1:5050",
+      )
+      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Any)
+    }
+
   }
 }
