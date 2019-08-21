@@ -139,9 +139,10 @@ trait MarathonConf
   }
 
   lazy val groupRoleBehavior = opt[GroupRoleBehavior](
-    name = "group_role_behavior",
-    descr = "Defines the behavior for group roles. 'Top' means that all new child apps and pods are launched" +
-      "with a role that matches the top-level group's name.",
+    name = "new_group_enforce_role",
+    descr = "Used to control whether role enforcement is enabled for new top-level groups; 'top' means that all new" +
+      " top-level groups will have enforceRole enabled, and the contained services will be required to use the" +
+      " group-role (a role that matches the top-level group's name).",
     default = Some(GroupRoleBehavior.Off))(groupRoleBehaviorConverter)
 
   lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.getOrElse(expectedResourceRoles)
