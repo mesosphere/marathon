@@ -38,7 +38,7 @@ Each Marathon service now contains a `role` field, which defaults to the role sp
 }
 ```
 
-Marathon will then revive offers for the role `slave_public` and match offers allocated to the role `slave_public` in order to launch this app.
+Marathon will then revive offers for the role `slave_public` and match offers allocated to the role `slave_public` in order to launch this service.
 
 # Group role
 
@@ -113,7 +113,7 @@ $ curl http://localhost:8080/v2/pods/dev/bigbusiness::status | jq '{specRole: .s
 }
 ```
 
-When you attempt to PUT the update with the role "dev" to the pods endpoint, as follows:
+When you attempt to PUT the update with the role `dev` to the pods endpoint, as follows:
 
 ```
 $ cat <<EOF | curl -v -X PUT http://localhost:8080/v2/pods/dev/bigbusiness -H "Content-Type: application/json" --data "@-"
