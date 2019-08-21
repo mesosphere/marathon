@@ -199,7 +199,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val result = Try {
         val response = asyncRequest { r =>
           appsResource.create(body, force = false, auth.request, r)
@@ -242,7 +242,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -265,7 +265,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -288,7 +288,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -310,7 +310,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -591,7 +591,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -623,7 +623,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -699,7 +699,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -729,7 +729,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -764,7 +764,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -804,7 +804,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -850,7 +850,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       groupManager.app(appDef.id) returns Some(appDef)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -907,7 +907,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       """.stripMargin.getBytes
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -951,7 +951,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -980,7 +980,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -1001,7 +1001,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -1033,7 +1033,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -1058,7 +1058,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -1119,7 +1119,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val body = Json.stringify(appJson).getBytes("UTF-8")
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -1946,7 +1946,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -1961,7 +1961,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
 
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
@@ -1972,7 +1972,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       When("Env is updated with a PUT request")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
 
       val update =
         """
@@ -2001,7 +2001,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val result = Try {
         val response = asyncRequest { r =>
           appsResource.create(body, force = false, auth.request, r)
@@ -2036,7 +2036,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -2055,7 +2055,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -2076,7 +2076,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       //      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -2098,7 +2098,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -2120,7 +2120,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val body = Json.stringify(Json.toJson(normalize(appWithDifferentCustomRole))).getBytes("UTF-8")
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -2139,7 +2139,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -2156,7 +2156,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -2177,7 +2177,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       //      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -2196,7 +2196,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }

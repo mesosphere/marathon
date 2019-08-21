@@ -214,7 +214,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
       started.future.futureValue shouldBe Done
       (1 to 3) foreach { _ =>
-        f.clock += Migration.statusLoggingInterval
+        f.clock advanceBy Migration.statusLoggingInterval
       }
       eventually {
         f.notificationCounter.get shouldBe 3
