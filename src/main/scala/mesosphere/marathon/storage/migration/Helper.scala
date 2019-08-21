@@ -20,7 +20,6 @@ import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistence
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkPersistenceStore, ZkSerialized}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.{AppDefinition, Instance, PathId, Timestamp}
-import mesosphere.marathon.storage.migration.MigrationTo19300.{appMigratingFlow, logger, maybeStore}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.storage.store.ZkStoreSerialization
 import play.api.libs.json._
@@ -183,7 +182,7 @@ object InstanceMigration extends MaybeStore with StrictLogging {
   def appTask(tasksMap: Map[Task.Id, Task]): Option[Task] = tasksMap.headOption.map(_._2)
 }
 
-object ServiceMigration extends StrictLogging {
+object ServiceMigration extends StrictLogging with MaybeStore {
   /**
     * Helper method to migrate all versions for all apps by loading them, threading them through the provided flow, and
     * then storing them. Filtered entities are simply unaffected in persistence.
