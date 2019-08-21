@@ -261,7 +261,6 @@ Note: the API will simply respond with an empty entity, with a 200 status if the
 ```
 
 $ curl http://localhost:8080/v2/groups/dev | jq .enforceRole
-
 true
 ```
 
