@@ -10,9 +10,11 @@ import scala.collection.SortedSet
 object ResourceRole {
   val Unreserved: String = "*"
 
-  def validForRole(validRole: Role): Validator[Set[String]] = {
-    isTrue(s"""acceptedResourceRoles can only contain ${SortedSet(Unreserved, validRole).mkString("", " and ", "")}""") { acceptedResourceRoles =>
-      val validRolesSet = SortedSet(Unreserved, validRole)
+  def validForRole(validRole: Role): Validator[Set[String]] = validForRole(Some(validRole))
+
+  def validForRole(validRole: Option[Role]): Validator[Set[String]] = {
+    isTrue(s"""acceptedResourceRoles can only contain ${(SortedSet(Unreserved) ++ validRole).mkString("", " and ", "")}""") { acceptedResourceRoles =>
+      val validRolesSet = SortedSet(Unreserved) ++ validRole
       acceptedResourceRoles.isEmpty ||
         ((acceptedResourceRoles.size <= 2) && acceptedResourceRoles.subsetOf(validRolesSet))
     }

@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api.v2.json
 
-import mesosphere.marathon.api.v2.{AppNormalization, Validation, ValidationHelper}
+import mesosphere.marathon.api.v2.{AppNormalization, Validation}
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
@@ -42,7 +42,7 @@ class AppDefinitionFormatsTest extends UnitTest
   }
 
   def normalizeAndConvert(app: raml.App, sanitizeAcceptedResourceRoles: Boolean = true): AppDefinition = {
-    val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings, sanitizeAcceptedResourceRoles)
+    val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved, sanitizeAcceptedResourceRoles)
     Raml.fromRaml(
       // this is roughly the equivalent of how the original Formats behaved, which is notable because Formats
       // (like this code) reverses the order of validation and normalization
@@ -50,7 +50,7 @@ class AppDefinitionFormatsTest extends UnitTest
         AppNormalization.apply(config)
           .normalized(Validation.validateOrThrow(
             AppNormalization.forDeprecated(config).normalized(app))(AppValidation.validateOldAppAPI)))(
-          AppValidation.validateCanonicalAppAPI(Set.empty, () => None)
+          AppValidation.validateCanonicalAppAPI(Set.empty, () => None, Set(ResourceRole.Unreserved, "production"))
         )
     )
   }
@@ -200,7 +200,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     """FromJSON should parse "acceptedResourceRoles": ["production", "*"] """ in {
-      val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": ["production", "*"] }""")
+      val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": ["production", "*"], "role": "production" }""")
       val appDef = normalizeAndConvert(json.as[raml.App], false)
       appDef.acceptedResourceRoles should equal(Set("production", ResourceRole.Unreserved))
     }
@@ -211,9 +211,10 @@ class AppDefinitionFormatsTest extends UnitTest
       appDef.acceptedResourceRoles should equal(Set(ResourceRole.Unreserved))
     }
 
-    "FromJSON should fail when 'acceptedResourceRoles' is defined but empty" in {
+    "FromJSON should is sanitized when 'acceptedResourceRoles' is defined but empty" in {
       val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": [] }""")
-      a[ValidationFailedException] shouldBe thrownBy { normalizeAndConvert(json.as[raml.App]) }
+      val appDef = normalizeAndConvert(json.as[raml.App])
+      appDef.acceptedResourceRoles should equal(Set(ResourceRole.Unreserved))
     }
 
     "FromJSON should read the default upgrade strategy" in {
@@ -575,7 +576,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should fail for empty container (#4978)" in {
-      val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings, true)
+      val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved, true)
       val json = Json.parse(
         """{
           |  "id": "/docker-compose-demo",
@@ -583,7 +584,7 @@ class AppDefinitionFormatsTest extends UnitTest
           |  "container": {}
           |}""".stripMargin)
       val ramlApp = json.as[raml.App]
-      val validator = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)
+      val validator = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName, Set(ResourceRole.Unreserved))
       validator(ramlApp) should haveViolations("/container/docker" -> "not defined")
     }
 

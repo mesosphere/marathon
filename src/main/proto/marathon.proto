@@ -338,6 +338,7 @@ message Volume {
     required string name = 2;
     required string provider = 3;
     repeated mesos.Label options = 4;
+    optional bool shared = 5 [default = false];
   }
 
   // Defining properties of secret volumes

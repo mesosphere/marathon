@@ -67,7 +67,7 @@ class TaskKillerTest extends UnitTest {
 
       when(f.tracker.instancesBySpec()).thenReturn(Future.successful(InstancesBySpec.forInstances(tasksToKill: _*)))
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
-      when(f.groupManager.group(appId.parent)).thenReturn(Some(Group.empty(appId.parent)))
+      when(f.groupManager.group(appId.parent.asAbsolutePath)).thenReturn(Some(Group.empty(appId.parent.asAbsolutePath)))
 
       val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(RootGroup) => RootGroup])
       val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])
@@ -113,7 +113,7 @@ class TaskKillerTest extends UnitTest {
 
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
       when(f.tracker.instancesBySpec()).thenReturn(Future.successful(InstancesBySpec.forInstances(tasksToKill: _*)))
-      when(f.groupManager.group(appId.parent)).thenReturn(Some(Group.empty(appId.parent)))
+      when(f.groupManager.group(appId.parent)).thenReturn(Some(Group.empty(appId.parent.asAbsolutePath)))
       val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(RootGroup) => RootGroup])
       val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])
       when(f.groupManager.updateRoot(

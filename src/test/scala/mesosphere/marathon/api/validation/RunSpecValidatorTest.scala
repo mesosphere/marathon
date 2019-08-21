@@ -19,9 +19,9 @@ import scala.reflect.ClassTag
 class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
   val config =
-    AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings("foo"), true)
-  private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set(), () => config.defaultNetworkName)
-  private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), config.roleSettings)(PluginManager.None)
+    AppNormalization.Configuration(None, "mesos-bridge-name", Set(), "foo", true)
+  private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set(), () => config.defaultNetworkName, Set("foo"))
+  private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings("foo"))(PluginManager.None)
   private def validContainer(networks: Seq[Network] = Nil) = Container.validContainer(networks, Set())
 
   private[this] def testValidId(id: String): Unit = {
@@ -592,7 +592,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
       val f = new Fixture
       val app = Json.parse(f.cassandraWithoutResidency).as[App]
-      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings, true)
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved, true)
       val result = validAppDefinition(Raml.fromRaml(
         AppNormalization(config).normalized(
           validateOrThrow(
@@ -605,7 +605,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       val f = new Fixture
       val base = Json.parse(f.cassandraWithoutResidency).as[App]
       val app = base.copy(upgradeStrategy = Some(raml.UpgradeStrategy(0, 0)))
-      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings, true)
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved, true)
       val result = validAppDefinition(Raml.fromRaml(
         AppNormalization(config).normalized(
           validateOrThrow(
@@ -639,7 +639,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         }
         def definitions: PluginDefinitions = PluginDefinitions.None
       }
-      AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings)(pm)(app).isFailure shouldBe true
+      AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings())(pm)(app).isFailure shouldBe true
 
       Given("An app without an invalid label")
       val app2 = AppDefinition(
@@ -652,7 +652,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         ))
       )
       Then("the validation succeeds")
-      AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings)(pm)(app2).isSuccess shouldBe true
+      AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings())(pm)(app2).isSuccess shouldBe true
     }
 
     class Fixture {

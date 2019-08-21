@@ -53,8 +53,8 @@ class AppsResource @Inject() (
 
   private def createValidatorAndNormalizerForApp(pathId: AbsolutePathId, forceRoleUpdate: Boolean): (Normalization[raml.App], Validator[AppDefinition]) = {
     val roleSettings = RoleSettings.forService(config, pathId, groupManager.rootGroup(), forceRoleUpdate)
-    val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
-    val normalizer: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+    val normalizationConfig = AppNormalization.Configuration(config, roleSettings.defaultRole)
+    val normalizer: Normalization[raml.App] = appNormalization(normalizationConfig, roleSettings.validRoles)(AppNormalization.withCanonizedIds())
     val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(config.availableFeatures, roleSettings)(pluginManager)
 
     (normalizer, validator)
@@ -62,7 +62,7 @@ class AppsResource @Inject() (
 
   private def createValidatorAndNormalizerForAppUpdate(pathId: AbsolutePathId, forceRoleUpdate: Boolean): (Normalization[raml.AppUpdate], Validator[AppDefinition]) = {
     val roleSettings = RoleSettings.forService(config, pathId, groupManager.rootGroup(), forceRoleUpdate)
-    val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
+    val normalizationConfig = AppNormalization.Configuration(config, roleSettings.defaultRole)
     val normalizer: Normalization[raml.AppUpdate] = appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
     val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(config.availableFeatures, roleSettings)(pluginManager)
 
@@ -178,9 +178,9 @@ class AppsResource @Inject() (
     */
   def canonicalAppUpdateFromJson(appId: AbsolutePathId, body: Array[Byte], updateType: UpdateType, forceRoleUpdate: Boolean): raml.AppUpdate = {
     val roleSettings = RoleSettings.forService(config, appId, groupManager.rootGroup(), forceRoleUpdate)
-    val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
+    val normalizationConfig = AppNormalization.Configuration(config, roleSettings.defaultRole)
 
-    implicit val normalizerApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
+    implicit val normalizerApp: Normalization[raml.App] = appNormalization(normalizationConfig, roleSettings.validRoles)(AppNormalization.withCanonizedIds())
     implicit val normalizerUpdate: Normalization[raml.AppUpdate] = appUpdateNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
 
     updateType match {
@@ -270,7 +270,6 @@ class AppsResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      // TODO: Do we want to reuse force for forceRoleUpdate?
       await(updateMultiple(PathId.root, force, partialUpdate, body, allowCreation = true, forceRoleUpdate = force))
     }
   }
@@ -283,7 +282,6 @@ class AppsResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      // TODO: Do we want to reuse force for forceRoleUpdate?
       await(updateMultiple(PathId.root, force, partialUpdate = true, body, allowCreation = false, forceRoleUpdate = force))
     }
   }

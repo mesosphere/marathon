@@ -14,13 +14,14 @@ import mesosphere.marathon.stream.Implicits._
 
 object AppHelpers {
 
-  def appNormalization(config: AppNormalization.Config): Normalization[raml.App] = Normalization { app =>
+  def appNormalization(config: AppNormalization.Config, validRoles: Set[String]): Normalization[raml.App] = Normalization { app =>
 
     validateOrThrow(app)(AppValidation.validateOldAppAPI)
-    val migrated = AppNormalization.forDeprecated(config).normalized(app)
-    validateOrThrow(migrated)(AppValidation.validateCanonicalAppAPI(config.enabledFeatures, () => config.defaultNetworkName))
-    AppNormalization(config).normalized(migrated)
 
+    val migrated = AppNormalization.forDeprecated(config).normalized(app)
+    val preNormalized = AppNormalization.forPreValidation(config).normalized(migrated)
+    validateOrThrow(preNormalized)(AppValidation.validateCanonicalAppAPI(config.enabledFeatures, () => config.defaultNetworkName, validRoles))
+    AppNormalization.forPostValidation(config).normalized(preNormalized)
   }
 
   def appUpdateNormalization(config: AppNormalization.Config): Normalization[raml.AppUpdate] = Normalization { app =>

@@ -10,7 +10,6 @@ import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.{Context, MediaType, Response}
 import akka.stream.Materializer
-import mesosphere.marathon.api.v2.AppHelpers.appNormalization
 import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
@@ -22,7 +21,6 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util.RoleSettings
 import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -154,10 +152,11 @@ class GroupsResource @Inject() (
       val rootPath = validateOrThrow(id.toAbsolutePath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
-      val normalized = GroupNormalization.updateNormalization(config, effectivePath).normalized(raw)
 
       val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath, originalRootGroup)
       val groupUpdate = validateOrThrow(
+        GroupNormalization(config, originalRootGroup).updateNormalization(effectivePath).normalized(raw)
+      )(groupValidator)
         normalizeApps(
           originalRootGroup,
           rootPath,
@@ -203,7 +202,7 @@ class GroupsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
       val raw = Json.parse(body).as[raml.GroupPartialUpdate]
-      val normalized = GroupNormalization.partialUpdateNormalization(config).normalized(raw)
+      val normalized = GroupNormalization(config, groupManager.rootGroup()).partialUpdateNormalization().normalized(raw)
 
       val groupId = id.toAbsolutePath
       validateOrThrow(groupId)(PathId.topLevel)
@@ -250,10 +249,11 @@ class GroupsResource @Inject() (
       val rootPath = validateOrThrow(id.toAbsolutePath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
-      val normalized = GroupNormalization.updateNormalization(config, effectivePath).normalized(raw)
 
       val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath, originalRootGroup)
       val groupUpdate = validateOrThrow(
+        GroupNormalization(config, originalRootGroup).updateNormalization(effectivePath).normalized(raw)
+      )(groupValidator)
         normalizeApps(
           originalRootGroup,
           effectivePath,
@@ -352,33 +352,5 @@ object GroupsResource {
 
   private def authzSelector(implicit authz: Authorizer, identity: Identity) = Selector[Group] { g =>
     authz.isAuthorized(identity, ViewGroup, g)
-  }
-
-  import Normalization._
-
-  /**
-    * performs basic app validation and normalization for all apps (transitively) for the given group-update.
-    */
-  def normalizeApps(rootGroup: RootGroup, rootPath: AbsolutePathId, update: raml.GroupUpdate, config: MarathonConf, forceRoleUpdate: Boolean): raml.GroupUpdate = {
-    // note: we take special care to:
-    // (a) canonize and rewrite the app ID before normalization, and;
-    // (b) canonize BUT NOT REWRITE the group ID while iterating (validation has special rules re: number of set fields)
-
-    // convert apps to canonical form here
-    val groupPath = update.id.map(PathId(_).canonicalPath(rootPath)).getOrElse(rootPath)
-    val apps = update.apps.map(_.map { a =>
-
-      val roleSettings = RoleSettings.forService(config, PathId(a.id).canonicalPath(groupPath), rootGroup, forceRoleUpdate)
-      val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
-      implicit val validateAndNormalizeApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
-
-      a.copy(id = a.id.toPath.canonicalPath(groupPath).toString).normalize
-    })
-
-    val groups = update.groups.map(_.map { g =>
-      normalizeApps(rootGroup, groupPath, g, config, forceRoleUpdate)
-    })
-
-    update.copy(apps = apps, groups = groups)
   }
 }

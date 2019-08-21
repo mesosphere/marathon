@@ -1,5 +1,25 @@
+
 ## Changes from 1.8.194 to 1.9.xxx
 
+## Changes from 1.8.212 to 1.9.xxx
+
+### Multirole Support
+???
+#### Changes in `acceptedResourceRoles` Behavior
+`acceptedResourceRole` field defines what *reserved* resources would be used by the service. Previously, a Marathon instance started with `--mesos_role *` would accept following service definition:
+```json
+{
+   "id": "/sleep",
+   "cmd": "sleep 3600"
+   "acceptedResourceRoles": ["foo"]
+}
+``` 
+but wouldn't be able to start the task since it is not subscribed for the role `foo`. 
+
+This behavior has been changed with the implementation of the Multirole support. A new deprecated feature flag was introduced: `sanitize_accepted_resource_roles` which is `true` by default in 1.9. With this feature flag active, Marathon would sanitize the `acceptedResourceRoles` array, removing all invalid roles and leaving `*` (unreserved) by default. In the example above, the service definition will be still accepted, however, `foo` will be removed and `"acceptedResourceRoles": ["*"]` would be used instead so that the task *will start*. 
+
+Starting with Marathon 1.10, one will have to set the feature flag manually, otherwise a validation error will be returned for the above example.     
+ 
 ### Introduce SharedMemory/IPC configuration to Marathon Apps and Pods
 
 When running Marathon Apps or Pods it is now possible to configure the IPC separation level and shared memory size.
@@ -46,7 +66,67 @@ Revive offers repetitions functionality no longer optional; after the duration s
 
 For more detailed information, see the JIRA ticket [MARATHON-8663](https://jira.mesosphere.com/browse/MARATHON-8663)
 
-## Changes from 1.8.194 to 1.8.xxx
+## Changes from 1.8.218 to 1.8.xxx
+
+### External Volume Validation changes
+
+#### Relaxed name validation
+
+As there are some external volume providers which require options in the volume name, the strict validation of the name on the external volume is now removed.
+
+As the uniqueness check is based on the volume name, this may lead to some inconsistencies, for the sake of uniqueness, the following volumes are distinct:
+
+```json
+"volumes": [
+      {
+        "external": {
+          "name": "name=volumename,option1=value",
+        },
+      }
+    ],
+```
+
+```json
+"volumes": [
+      {
+        "external": {
+          "name": "option1=value,name=volumename",
+        },
+      }
+    ],
+```
+
+#### Optional uniqueness check
+
+Previously, Marathon would validate that an external volume with the same name is only used once across all apps. This was due to the initial implementation being focused on Rexray+EBS. However, multiple external volume providers now
+allow shared access to mounted volumes, so we introduced a way to disable the uniqueness check:
+
+A new field, `container.volumes[n].external.shared` which defaults to `false`. If set to true, the same volume name can be used
+by multiple containers. The `shared` flag has to be set to `true` on all external volumes with the same name, otherwise a conflict is reported on the volume without the `shared=true` flag.
+
+```json
+  "container": {
+    "type": "MESOS",
+    "volumes": [
+      {
+        "external": {
+          "size": 5,
+          "name": "volumename",
+          "provider": "dvdi",
+          "shared": "true",
+          "options": {
+            "dvdi/driver": "pxd",
+            "dvdi/shared": "true"
+          }
+        },
+        "mode": "RW",
+        "containerPath": "/mnt/nginx"
+      }
+    ],
+  }
+```
+
+## Changes from 1.8.194 to 1.8.218
 
 ### Revive and Suppress Refactoring
 
