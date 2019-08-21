@@ -157,13 +157,6 @@ class GroupsResource @Inject() (
       val groupUpdate = validateOrThrow(
         GroupNormalization(config, originalRootGroup).updateNormalization(effectivePath).normalized(raw)
       )(groupValidator)
-        normalizeApps(
-          originalRootGroup,
-          rootPath,
-          normalized,
-          config,
-          force // TODO: Do we want to reuse force parameter for force role update?
-        ))(groupValidator)
 
       def throwIfConflicting[A](conflict: Option[Any], msg: String) = {
         conflict.map(_ => throw ConflictingChangeException(msg))
@@ -254,13 +247,6 @@ class GroupsResource @Inject() (
       val groupUpdate = validateOrThrow(
         GroupNormalization(config, originalRootGroup).updateNormalization(effectivePath).normalized(raw)
       )(groupValidator)
-        normalizeApps(
-          originalRootGroup,
-          effectivePath,
-          normalized,
-          config,
-          force // TODO: Do we want to reuse force parameter for force role update?
-        ))(groupValidator)
 
       if (dryRun) {
         val newVersion = Timestamp.now()

@@ -127,7 +127,6 @@ class PodsResource @Inject() (
       val podId = id.toAbsolutePath
       val podRaml = unmarshal(body)
 
-      // TODO: Do we want to reuse force parameter for force role update?)
       val roleSettings = RoleSettings.forService(config, podId, groupManager.rootGroup(), force)
       implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
       implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
