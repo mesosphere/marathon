@@ -11,7 +11,7 @@ While it is possible to partially use multi-role in Marathon, it is recommended 
 * `enforceRole` is enabled for all top-level groups
 * The `--new_group_enforce_role` command-line parameter is set to `top`.
 
-# Service role field
+# Service Role Field
 
 Each Marathon service now contains a `role` field, which defaults to the role specified by the command line parameter `--mesos_role`, which defaults to `*`. For example, if the command line parameter `--mesos_role` is `slave_public` (as is the default in DC/OS), and the following service is posted to Marathon `/v2/apps`:
 
@@ -40,7 +40,7 @@ Each Marathon service now contains a `role` field, which defaults to the role sp
 
 Marathon will then revive offers for the role `slave_public` and match offers allocated to the role `slave_public` in order to launch this service.
 
-# Group role
+# Group Role
 
 The group role is the name of the top-level group, as illustrated by the following table:
 
@@ -53,7 +53,7 @@ The group role is the name of the top-level group, as illustrated by the followi
 
 A service may only be assigned one of two possible roles: the default role (that which is specified by `--mesos_role`), or, the group role. Note that services placed directly in the root group do not have a group-role.
 
-# Migrating existing services
+# Migrating Existing Services
 
 Migrating a service to multi-role means modifying an existing service role from using the default Mesos role to using the group role.
 
@@ -229,11 +229,11 @@ curl http://localhost:8080/v2/pods/dev/bigbusiness::status | jq '{role: .spec.ro
 
 You can see that the new pod instance has the new role, while the old pod instance continues to have the old role. Moving forward, all new instances will receive the new role, `dev`.
 
-# Group role enforcement
+# Group Role Enforcement
 
 Marathon allows the mixed role usage in order to support a reasonable, incremental upgrade pathway for users wishing to migrate their existing Marathon instances to use multi-role. However, as stated in the introduction, this isn't the ideal. Ideally, Marathon is configured to enforce services to use the group role. This is why the `enforceRole` property exists on groups.
 
-## Using enforceRole
+## Using `enforceRole`
 
 The group `enforceRole` property is settable only for top-level groups; when enabled, it forces all **new** services in that group (or in subgroups) to use the group role, and receive the group role as a default. Existing services still must be migrated to multi-role, by modifying the respective `role` field for each of the existing services.
 
@@ -313,7 +313,7 @@ $ echo '{"role": "slave_public"}' | curl -v  -X PATCH http://localhost:8080/v2/a
 $
 ```
 
-## Enabling enforceRole for all new groups, by default
+## Enabling `enforceRole` for all new groups, by default
 
 When you begin migrating Marathon to use multi-role, it is recommended to turn on role enforcement for all new groups, by default. This is controlled by specifying the command line parameter open `--new_group_enforce_role top`.
 
