@@ -103,7 +103,14 @@ EOF
 When you check the roles for the running instances, you will see that the instances were launched with the role `slave_public`:
 
 ```
-$ curl http://localhost:8080/v2/pods/dev/bigbusiness::status | jq '.instances[].role'
+$ curl http://localhost:8080/v2/pods/dev/bigbusiness::status | jq '{specRole: .spec.role, instanceRoles: [.instances[].role]}'
+
+{
+  "specRole": "slave_public",
+  "instanceRoles": [
+    "slave_public"
+  ]
+}
 ```
 
 When you attempt to PUT the update with the role "dev" to the pods endpoint, as follows:
@@ -134,7 +141,7 @@ $ cat <<EOF | curl -v -X PUT http://localhost:8080/v2/pods/dev/bigbusiness -H "C
 EOF
 ```
 
-... the API request will fail, indicating that resident services cannot change the role for existing instances. In case you would like to proceed, so that new instances are allocated to the new role, then you can do so by appending  the parameter "?force=true":
+... the API request will fail, indicating that resident services cannot change the role for existing instances. In case you would like to proceed, so that new instances are allocated to the new role, then you can do so by appending the parameter "?force=true":
 
 ```
 cat <<EOF | curl -v -X PUT http://localhost:8080/v2/pods/dev/bigbusiness?force=true -H "Content-Type: application/json" --data "@-"
