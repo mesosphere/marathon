@@ -256,7 +256,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
       }
     }
     if (pod.isResident) {
-      pod.role is isTrue((role: Role) => s"It is not possible to change the role for existing reservations. If you proceed with this change, all existing instances will continue to under the previous role, ${roleEnforcement.previousRole.get}. Only new instances will be allocated with the new role, ${role}. In order to continue, retry your request with force=true") { role: Role =>
+      pod.role is isTrue((role: Role) => s"It is not possible to change the role for existing reservations. If you proceed with this change, all existing instances will continue to run under the previous role, ${roleEnforcement.previousRole.get}. Only new instances will be allocated with the new role, ${role}. In order to continue, retry your request with force=true") { role: Role =>
         roleEnforcement.previousRole.map(_.equals(role) || roleEnforcement.forceRoleUpdate).getOrElse(true)
       }
     }
