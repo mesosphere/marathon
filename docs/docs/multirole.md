@@ -259,8 +259,8 @@ $ echo '{"enforceRole": true}' | curl -f -X PATCH http://localhost:8080/v2/group
 Note: the API will simply respond with an empty entity, with a 200 status if the operation is successful. You can check the value for the `enforceRole` field:
 
 ```
-
 $ curl http://localhost:8080/v2/groups/dev | jq .enforceRole
+
 true
 ```
 
