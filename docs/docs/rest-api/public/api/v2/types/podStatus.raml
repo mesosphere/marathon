@@ -191,6 +191,10 @@ types:
         type: datetime
         description: |
           Time that this status was last modified (some aspect of status did change)
+      role:
+        type: string
+        description: |
+          The Mesos allocation role of the resources used by this instance.
   ContainerTerminationHistory:
     type: object
     properties:
