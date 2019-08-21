@@ -1,13 +1,13 @@
 
 ## Changes from 1.8.212 to 1.9.xxx
 
-### Multirole support
+### Multi-role support
 
-Marathon 1.9 brings support for multirole, enabling you to launch services for different roles (against different Mesos quotas) with the same Marathon instance. This feature is described in greater detail in the [Multi-role docs](https://mesosphere.github.io/marathon/docs/multirole.html).
+Marathon 1.9 brings support for multi-role, enabling you to launch services for different roles (against different Mesos quotas) with the same Marathon instance. This feature is described in greater detail in the [Multi-role docs](https://mesosphere.github.io/marathon/docs/multirole.html).
 
 #### Role field added to services
 
-The role field can now be optionally specified for a service. However, the value of this field may only be sent to 1 of two values:
+The role field can now be optionally specified for a service. However, the value of this field may only be sent to one of two values:
 
 * The default role as specified by `--mesos_role` command line parameter
 * The name of the top-level group (this is referred to as the group-role)
@@ -24,7 +24,7 @@ The role field can now be optionally specified for a service. However, the value
 ``` 
 but wouldn't be able to start the task since it is not subscribed for the role `foo`. 
 
-This behavior has been changed with the implementation of the Multirole support. In Marathon 1.9, Marathon wlll sanitize the `acceptedResourceRoles` value, removing all invalid roles and leaving `*` (unreserved) by default. In the example above, the service definition will be still accepted, however, `foo` will be removed and `"acceptedResourceRoles": ["*"]` would be used instead so that the task *will start*.
+This behavior has been changed with the addition of multi-role support. In Marathon 1.9, Marathon will sanitize the `acceptedResourceRoles` value, removing all invalid roles and leaving `*` (unreserved) by default. Using the example above, the service definition will be still accepted, however, `foo` will be removed and `"acceptedResourceRoles": ["*"]` will be used instead so that the task *will start*.
 
 Starting with Marathon 1.10, Marathon will reject the above service definition as invalid. However, the `sanitize_accepted_resource_roles` feature can be enabled with `--deprecated_features sanitize_accepted_resource_roles`, causing Marathon to continue to auto-sanitize this field value for one more version.
 
