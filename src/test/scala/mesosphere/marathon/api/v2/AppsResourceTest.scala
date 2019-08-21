@@ -2244,7 +2244,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -2268,7 +2268,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -2280,7 +2280,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       And("resulting app has acceptedResourceRoles sanitized (equals default one)")
       val appJson = Json.parse(response.getEntity.asInstanceOf[String])
-      (appJson \ "acceptedResourceRoles" \ 0 ) should be (JsDefined(JsString(ResourceRole.Unreserved)))
+      (appJson \ "acceptedResourceRoles" \ 0) should be (JsDefined(JsString(ResourceRole.Unreserved)))
     }
 
     "Create an app in root with acceptedResourceRoles = customMesosRole and sanitizeAcceptedResourceRoles = false" in new Fixture {
@@ -2296,7 +2296,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         val (body, _) = prepareApp(app, groupManager, validate = false)
 
         When("The create request is made")
-        clock += 5.seconds
+        clock.advanceBy(5.seconds)
         val response = asyncRequest { r =>
           appsResource.create(body, force = false, auth.request, r)
         }
