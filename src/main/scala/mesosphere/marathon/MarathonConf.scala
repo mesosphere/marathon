@@ -189,7 +189,7 @@ trait MarathonConf
   lazy val acceptedResourceRolesDefaultBehavior = opt[AcceptedResourceRolesDefaultBehavior](
     name = "accepted_resource_roles_default_behavior",
     descr = "Default behavior for acceptedResourceRoles if not explicitly set on a service." +
-      "This defaults to 'any', which allows the either unreserved and reserved resources",
+      "This defaults to 'any', which allows either unreserved or reserved resources",
     default = deriveDefaultAcceptedResourceRolesDefaultBehavior)(acceptedResourceRolesDefaultBehaviorConverter)
 
   lazy val gracefulShutdownTimeout = opt[Long] (
