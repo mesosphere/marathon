@@ -93,7 +93,7 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       taskList.head.role.value should be(BaseMarathon.defaultRole)
 
       Given("The app is scaled to 2")
-      val resultOfScale = marathon.updateApp(appId, updatedApp.copy(instances = Some(2)), force = true)
+      val resultOfScale = marathon.updateApp(appId, updatedApp.copy(instances = Some(2)))
 
       resultOfScale should be(OK)
       waitForDeployment(resultOfScale)
