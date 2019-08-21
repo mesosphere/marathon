@@ -1,9 +1,8 @@
 package mesosphere.marathon
 
 import mesosphere.UnitTest
-import mesosphere.marathon.state.ResourceRole
-import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.ZookeeperConf.ZkUrl
+import mesosphere.marathon.test.MarathonTestHelper
 
 import scala.util.{Failure, Try}
 
