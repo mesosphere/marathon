@@ -18,7 +18,6 @@ class EventModule(
     eventBus: EventStream,
     actorSystem: ActorSystem,
     conf: EventConf,
-    deprecatedFeatureSet: DeprecatedFeatureSet,
     electionService: ElectionService,
     authenticator: Authenticator,
     authorizer: Authorizer)(implicit val materializer: Materializer) {
