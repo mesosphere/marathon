@@ -288,7 +288,7 @@ case class AppDefinition(
     }
 
     AppDefinition(
-      id = AbsolutePathId(proto.getId), // TODO AN: Are we sure that we have always stored an absolute path id in the past?
+      id = AbsolutePathId(proto.getId),
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
       cmd = commandOption,
       args = argsOption,

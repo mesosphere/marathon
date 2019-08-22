@@ -10,9 +10,8 @@ import akka.stream.scaladsl.{Sink, Source}
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.deployment.DeploymentPlan
-import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, RootGroup}
+import mesosphere.marathon.state.{AbsolutePathId, RootGroup}
 import mesosphere.marathon.storage.repository.GcActor.{CompactDone, _}
 import mesosphere.marathon.stream.EnrichedSink
 
