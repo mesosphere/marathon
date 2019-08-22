@@ -15,6 +15,7 @@ To rebuild the protos, open a terminal where the current working directory is th
 ```
 $> cd src/main/proto
 $> protoc --java_out=../java/ marathon.proto
+$> sed -i '' -e 's/public final class Protos/@SuppressWarnings("deprecation") public final class Protos/g' ../java/mesosphere/marathon/Protos.java 
 ```
 
 Finally, edit `Protos.java` and add `@SuppressWarnings("deprecation") ` before `public final class Protos`, like so:

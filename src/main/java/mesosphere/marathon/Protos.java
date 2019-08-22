@@ -3,7 +3,7 @@
 
 package mesosphere.marathon;
 
-public final class Protos {
+@SuppressWarnings("deprecation") public final class Protos {
   private Protos() {}
   public static void registerAllExtensions(
       com.google.protobuf.ExtensionRegistryLite registry) {
