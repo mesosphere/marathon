@@ -237,9 +237,11 @@ object PathId {
     * Every relative path can be ignored.
     */
   private def childOf(parent: PathId): Validator[PathId] = {
-    isTrue[PathId](s"Identifier is not child of '$parent'") {
-      case _: RelativePathId => true
-      case c: AbsolutePathId => c.canonicalPath(c.parent).parent == parent
+    isTrue[PathId](s"Identifier is not child of '$parent'") { child =>
+      parent match {
+        case _: RelativePathId => true
+        case p: AbsolutePathId => child.canonicalPath(p).parent == parent
+      }
     }
   }
 
