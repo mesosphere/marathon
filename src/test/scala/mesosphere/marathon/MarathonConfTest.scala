@@ -3,10 +3,11 @@ package mesosphere.marathon
 import mesosphere.UnitTest
 import mesosphere.marathon.ZookeeperConf.ZkUrl
 import mesosphere.marathon.test.MarathonTestHelper
+import org.scalatest.Inside
 
 import scala.util.{Failure, Try}
 
-class MarathonConfTest extends UnitTest {
+class MarathonConfTest extends UnitTest with Inside {
   private[this] val principal = "foo"
   private[this] val secretFile = "/bar/baz"
 
@@ -184,33 +185,15 @@ class MarathonConfTest extends UnitTest {
       assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Unreserved)
     }
 
-    "--accepted_resource_roles_default_behavior overrides --default_accepted_resource_roles *" in {
-      val conf = MarathonTestHelper.makeConfig(
+    "throw an exception when both --accepted_resource_roles_default_behavior and --default_accepted_resource_roles are specified" in {
+      inside(Try(MarathonTestHelper.makeConfig(
         "--master", "127.0.0.1:5050",
         "--default_accepted_resource_roles", "*",
         "--accepted_resource_roles_default_behavior", "any"
-      )
-      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Any)
-    }
-
-    "--accepted_resource_roles_default_behavior overrides --default_accepted_resource_roles * and mesos_role" in {
-      val conf = MarathonTestHelper.makeConfig(
-        "--master", "127.0.0.1:5050",
-        "--mesos_role", "marathon",
-        "--default_accepted_resource_roles", "*,marathon",
-        "--accepted_resource_roles_default_behavior", "reserved"
-      )
-      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Reserved)
-    }
-
-    "--accepted_resource_roles_default_behavior overrides --default_accepted_resource_roles mesos_role" in {
-      val conf = MarathonTestHelper.makeConfig(
-        "--master", "127.0.0.1:5050",
-        "--mesos_role", "marathon",
-        "--default_accepted_resource_roles", "marathon",
-        "--accepted_resource_roles_default_behavior", "unreserved"
-      )
-      assert(conf.acceptedResourceRolesDefaultBehavior() == AcceptedResourceRolesDefaultBehavior.Unreserved)
+      ))) {
+        case Failure(ex) =>
+          ex.toString should include("You may not specify both --default_accepted_resource_roles and --accepted_resource_roles_default_behavior")
+      }
     }
 
     "--accepted_resource_roles_default_behavior not set nor --default_accepted_resource_roles set" in {
