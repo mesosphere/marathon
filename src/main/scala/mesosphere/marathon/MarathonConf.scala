@@ -160,6 +160,7 @@ trait MarathonConf
     }
 
     val parsed = parseDefaultAcceptedResourceRoles(str)
+    require(BuildInfo.version.minor < 10, "This flag has been removed in Marathon 1.10.0; use --accepted_resource_roles_default_behavior, instead.")
 
     // throw exceptions for better error messages
     require(parsed.nonEmpty, "--default_accepted_resource_roles must not be empty")
@@ -187,10 +188,14 @@ trait MarathonConf
     }
   }
 
-  lazy val acceptedResourceRolesDefaultBehavior = opt[AcceptedResourceRolesDefaultBehavior](
+  lazy val acceptedResourceRolesDefaultBehavior: ScallopOption[AcceptedResourceRolesDefaultBehavior] = opt[AcceptedResourceRolesDefaultBehavior](
     name = "accepted_resource_roles_default_behavior",
     descr = "Default behavior for acceptedResourceRoles if not explicitly set on a service." +
       "This defaults to 'any', which allows either unreserved or reserved resources",
+    validate = { _ =>
+      require(!(defaultAcceptedResourceRoles.isSupplied && acceptedResourceRolesDefaultBehavior.isSupplied), "You may not specify both --default_accepted_resource_roles and --accepted_resource_roles_default_behavior")
+      true
+    },
     default = deriveDefaultAcceptedResourceRolesDefaultBehavior)(acceptedResourceRolesDefaultBehaviorConverter)
 
   lazy val gracefulShutdownTimeout = opt[Long] (
