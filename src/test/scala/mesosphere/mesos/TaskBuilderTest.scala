@@ -1263,7 +1263,7 @@ class TaskBuilderTest extends UnitTest {
       val s = Seq(t1, t2)
 
       val config = MarathonTestHelper.defaultConfig()
-      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, s, config.defaultAcceptedResourceRolesSet,
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, s, config.defaultAcceptedResourceRolesSet(app.role),
         config, Seq.empty)
       assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
       // TODO test for resources etc.
@@ -1289,7 +1289,7 @@ class TaskBuilderTest extends UnitTest {
       val builder = new TaskBuilder(app, taskId, config)
       def shouldBuildTask(message: String, offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config, Seq.empty)
+          config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
         withClue(message) {
           assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
         }
@@ -1311,7 +1311,7 @@ class TaskBuilderTest extends UnitTest {
 
       def shouldNotBuildTask(message: String, offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config, Seq.empty)
+          config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch], message)
       }
 
@@ -1358,7 +1358,7 @@ class TaskBuilderTest extends UnitTest {
       val builder = new TaskBuilder(app, taskId, config)
       def shouldBuildTask(offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config, Seq.empty)
+          config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
         val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
         val (taskInfo, networkInfo) = builder.build(offer, matches.resourceMatch, None, enforceRole = true)
@@ -1379,7 +1379,7 @@ class TaskBuilderTest extends UnitTest {
 
       def shouldNotBuildTask(message: String, offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config, Seq.empty)
+          config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch], message)
       }
 
@@ -1901,7 +1901,7 @@ class TaskBuilderTest extends UnitTest {
       val runningInstances = Set.empty[Instance]
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-        config.defaultAcceptedResourceRolesSet, config, Seq.empty)
+        config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
       assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
       val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
       val (taskInfo, _) = builder.build(offer, matches.resourceMatch, None, enforceRole = true)
@@ -1996,7 +1996,7 @@ class TaskBuilderTest extends UnitTest {
 
     val config = MarathonTestHelper.defaultConfig()
     val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, Seq.empty,
-      acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet), config, Seq.empty)
+      acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet(app.role)), config, Seq.empty)
 
     resourceMatch match {
       case matches: ResourceMatchResponse.Match => Some(builder.build(offer, matches.resourceMatch, None, enforceRole = true))

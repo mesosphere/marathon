@@ -74,6 +74,11 @@ types:
         type: number
         format: int32
         description: The number of instances left to launch.
+      role:
+        type: string
+        description: |
+          The role of the instances attempting to be launched; this can differ from the RunSpec for resident services
+          that have had their role changed.
       delay:
         type: QueueDelay
         description: If a runspec has failed too often the launch will be delayed. See backoff to tune this behavior.

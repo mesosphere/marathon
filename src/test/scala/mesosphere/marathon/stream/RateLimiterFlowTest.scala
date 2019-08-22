@@ -50,7 +50,7 @@ class RateLimiterFlowTest extends AkkaUnitTest {
     JavaDuration.between(start, e2Time).toMillis should be >= 100L
 
     When("the clock is advanced by 200 ms")
-    clock.+=(200.millis)
+    clock.advanceBy(200.millis)
     And("element 3 is published")
     input.offer(3)
 
@@ -69,6 +69,5 @@ class RateLimiterFlowTest extends AkkaUnitTest {
 
     output shouldBe input
   }
-
 
 }

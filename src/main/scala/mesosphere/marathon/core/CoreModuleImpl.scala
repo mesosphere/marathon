@@ -194,7 +194,7 @@ class CoreModuleImpl @Inject() (
   // EVENT
 
   override lazy val eventModule: EventModule = new EventModule(
-    metricsModule.metrics, eventStream, actorSystem, marathonConf, marathonConf.deprecatedFeatures(),
+    metricsModule.metrics, eventStream, actorSystem, marathonConf,
     electionModule.service, authModule.authenticator, authModule.authorizer)(actorsModule.materializer)
 
   // HISTORY

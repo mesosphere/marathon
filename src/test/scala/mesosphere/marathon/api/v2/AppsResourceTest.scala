@@ -15,7 +15,7 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
-import mesosphere.marathon.raml.{App, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarSecret, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, LinuxInfo, Network, NetworkMode, Raml, Seccomp, SecretDef, Container => RamlContainer}
+import mesosphere.marathon.raml.{App, AppPersistentVolume, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarSecret, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, LinuxInfo, Network, NetworkMode, Raml, ReadMode, Seccomp, SecretDef, Container => RamlContainer}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -55,12 +55,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     implicit val authenticator: Authenticator = auth.auth
     implicit val authorizer: Authorizer = auth.auth
 
-    val normalizationConfig = AppNormalization.Configuration(
-      config.defaultNetworkName.toOption,
-      config.mesosBridgeName(),
-      config.availableFeatures,
-      ResourceRole.Unreserved,
-      config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles))
+    val normalizationConfig = AppNormalization.Configuration(config, config.mesosRole())
     implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, ValidationHelper.roleSettings())(PluginManager.None)
 
     implicit val validateAndNormalizeApp: Normalization[raml.App] =
@@ -204,7 +199,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val result = Try {
         val response = asyncRequest { r =>
           appsResource.create(body, force = false, auth.request, r)
@@ -244,10 +239,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Some(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
-      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -270,7 +265,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -293,7 +288,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -315,7 +310,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -596,7 +591,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -628,7 +623,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -704,7 +699,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -734,7 +729,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -769,7 +764,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -809,7 +804,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -855,7 +850,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       groupManager.app(appDef.id) returns Some(appDef)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -912,7 +907,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       """.stripMargin.getBytes
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -956,7 +951,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -985,7 +980,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -1006,7 +1001,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -1038,7 +1033,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -1063,7 +1058,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -1124,7 +1119,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val body = Json.stringify(appJson).getBytes("UTF-8")
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -1609,7 +1604,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |  },
           |  "ipAddress": { "networkName": "dcos" }
           |}""".stripMargin.getBytes("UTF-8")
-      val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id.asAbsolutePath, body, CompleteReplacement)
+      val appUpdate = appsResource.canonicalAppUpdateFromJson(app.id.asAbsolutePath, body, CompleteReplacement, false)
 
       Then("the application is updated")
       implicit val identity = auth.identity
@@ -1617,7 +1612,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true, now = clock.now(), service = service)
 
       And("also works when the update operation uses partial-update semantics, dropping portDefinitions")
-      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id.asAbsolutePath, body, PartialUpdate(app))
+      val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id.asAbsolutePath, body, PartialUpdate(app), false)
       val app2 = AppHelpers.updateOrCreate(
         app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false, now = clock.now(), service = service)
 
@@ -1948,10 +1943,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Some(container),
         networks = Seq(Network(name = Some("name_with_underscore"), mode = NetworkMode.Container)))
-      val (body, plan) = prepareApp(app, groupManager)
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
@@ -1966,7 +1961,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
 
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
@@ -1977,7 +1972,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       When("Env is updated with a PUT request")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
 
       val update =
         """
@@ -2006,7 +2001,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val result = Try {
         val response = asyncRequest { r =>
           appsResource.create(body, force = false, auth.request, r)
@@ -2041,13 +2036,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates a validation error")
         response.getStatus should be(422)
         response.getEntity.toString should include("/role")
@@ -2061,13 +2055,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates success")
         response.getStatus should be(201)
       }
@@ -2083,13 +2076,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       //      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates a validation error")
         response.getStatus should be(422)
         response.getEntity.toString should include("/role")
@@ -2106,13 +2098,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates success")
         response.getStatus should be(201)
       }
@@ -2129,13 +2120,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val body = Json.stringify(Json.toJson(normalize(appWithDifferentCustomRole))).getBytes("UTF-8")
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates a validation error")
         response.getStatus should be(422)
         response.getEntity.toString should include("/role")
@@ -2149,13 +2139,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates success")
         response.getStatus should be(201)
       }
@@ -2167,13 +2156,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates success")
         response.getStatus should be(201)
       }
@@ -2189,13 +2177,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       //      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates success")
         response.getStatus should be(422)
         response.getEntity.toString should include("/role")
@@ -2209,13 +2196,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
-      clock += 5.seconds
+      clock.advanceBy(5.seconds)
       val response = asyncRequest { r =>
         appsResource.create(body, force = false, auth.request, r)
       }
 
       withClue(response.getEntity.toString) {
-        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
         Then("The return code indicates success")
         response.getStatus should be(201)
       }
@@ -2246,6 +2232,119 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val Some(app) = groupManager.rootGroup().app(AbsolutePathId("/dev/sleeper"))
 
       app.role shouldBe "dev"
+    }
+
+    "Create an app in root with acceptedResourceRoles = default Mesos role" in new Fixture(configArgs = Seq("--mesos_role", "customMesosRole")) {
+      Given("An app with the mesos_role role")
+      val app = App(
+        id = "/app-with-accepted-default-mesos-role",
+        cmd = Some("cmd"),
+        acceptedResourceRoles = Some(Set("customMesosRole")))
+
+      val (body, _) = prepareApp(app, groupManager, validate = false)
+
+      When("The create request is made")
+      clock.advanceBy(5.seconds)
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        Then("The return code indicates success")
+        response.getStatus should be(201)
+      }
+    }
+
+    "Create an app in root with acceptedResourceRoles = customMesosRole and sanitizeAcceptedResourceRoles = true" in new Fixture(
+      configArgs = Seq("--deprecated_features", "sanitize_accepted_resource_roles")
+    ) {
+
+      Given("An app with an unknown acceptedResourceRole")
+      val app = App(
+        id = "/app-with-accepted-unknown-mesos-role",
+        cmd = Some("cmd"),
+        acceptedResourceRoles = Some(Set("customMesosRole")))
+
+      val (body, _) = prepareApp(app, groupManager, validate = false)
+
+      When("The create request is made")
+      clock.advanceBy(5.seconds)
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        Then("The return code indicates success")
+        response.getStatus should be(201)
+      }
+
+      And("resulting app has acceptedResourceRoles sanitized (equals default one)")
+      val appJson = Json.parse(response.getEntity.asInstanceOf[String])
+      (appJson \ "acceptedResourceRoles" \ 0) should be (JsDefined(JsString(ResourceRole.Unreserved)))
+    }
+
+    "Create an app in root with acceptedResourceRoles = customMesosRole and sanitize_accepted_resource_roles is disabled" in new Fixture(
+      configArgs = Seq("--deprecated_features", "disable_sanitize_accepted_resource_roles")
+    ) {
+      Given("An app with an unknown acceptedResourceRole")
+      val app = App(
+        id = "/app-with-not-accepted-unknown-mesos-role",
+        cmd = Some("cmd"),
+        acceptedResourceRoles = Some(Set("customMesosRole")))
+
+      val (body, _) = prepareApp(app, groupManager, validate = false)
+
+      When("The create request is made")
+      clock.advanceBy(5.seconds)
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        Then("The return code indicates a failure")
+        response.getStatus should be(422)
+        response.getEntity.asInstanceOf[String] contains "acceptedResourceRoles can only contain *"
+      }
+
+    }
+
+    "Create a new resident app with role * should reject " in new Fixture() {
+      Given("An app with non-default role")
+      val app = App(
+        id = "/dev/app",
+        role = Some("*"),
+        cmd = Some("cmd"),
+        container = Some(raml.Container(
+          docker = Some(DockerContainer(
+            image = "someimage")
+          ),
+          volumes = Seq(
+            AppPersistentVolume(
+              containerPath = "helloworld",
+              mode = ReadMode.Rw,
+              persistent = raml.PersistentVolumeInfo(size = 10)
+            )
+          )
+        ))
+      )
+
+      prepareGroup("/dev", groupManager)
+
+      val body = Json.stringify(Json.toJson(normalize(app))).getBytes("UTF-8")
+
+      When("The create request is made")
+      clock.advanceBy(5.seconds)
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        println("Response Status: " + response.getStatus + " >> " + response.getEntity.toString)
+        Then("The return code indicates a validation error")
+        response.getStatus should be(422)
+        response.getEntity.toString should include("/role")
+        response.getEntity.toString should include("Resident apps cannot have the role *")
+      }
     }
 
   }

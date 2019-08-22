@@ -83,7 +83,7 @@ class QueueInfoConversionTest extends UnitTest {
         DeclinedOfferStep("DeclinedScarceResources", 0, 0)
       )
 
-      val info = QueuedInstanceInfoWithStatistics(app, inProgress = true,
+      val info = QueuedInstanceInfoWithStatistics(app, "*", inProgress = true,
         instancesLeftToLaunch = 23,
         finalInstanceCount = 23,
         backOffUntil = None,

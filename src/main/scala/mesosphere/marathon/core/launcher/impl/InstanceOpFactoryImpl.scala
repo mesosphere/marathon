@@ -82,7 +82,7 @@ class InstanceOpFactoryImpl(
     logger.debug(s"Infer for ephemeral pod ${scheduledInstance.instanceId}")
 
     val builderConfig = TaskGroupBuilder.BuilderConfig(
-      config.defaultAcceptedResourceRolesSet,
+      config.defaultAcceptedResourceRolesSet(pod.role),
       config.envVarsPrefix.toOption,
       config.mesosBridgeName())
 
@@ -130,8 +130,14 @@ class InstanceOpFactoryImpl(
     scheduledInstance: Instance): OfferMatchResult = {
 
     val matchResponse =
-      RunSpecOfferMatcher.matchOffer(app, offer, runningInstances,
-        config.defaultAcceptedResourceRolesSet, config, schedulerPlugins, localRegion)
+      RunSpecOfferMatcher.matchOffer(
+        app,
+        offer,
+        runningInstances,
+        config.defaultAcceptedResourceRolesSet(app.role),
+        config,
+        schedulerPlugins,
+        localRegion)
     matchResponse match {
       case matches: ResourceMatchResponse.Match =>
         val taskId = scheduledInstance.tasksMap.headOption match {
@@ -214,7 +220,7 @@ class InstanceOpFactoryImpl(
 
       logger.debug(s"Need to reserve for ${runSpec.id}, version ${runSpec.version}")
       val configuredRoles = if (runSpec.acceptedResourceRoles.isEmpty) {
-        config.defaultAcceptedResourceRolesSet
+        config.defaultAcceptedResourceRolesSet(runSpec.role)
       } else {
         runSpec.acceptedResourceRoles
       }
@@ -290,7 +296,7 @@ class InstanceOpFactoryImpl(
       case pod: PodDefinition =>
         logger.debug(s"Launching resident pod ${reservedInstance.instanceId} on reservation ${reservedInstance.reservation}")
         val builderConfig = TaskGroupBuilder.BuilderConfig(
-          config.defaultAcceptedResourceRolesSet,
+          config.defaultAcceptedResourceRolesSet(pod.role),
           config.envVarsPrefix.toOption,
           config.mesosBridgeName())
 

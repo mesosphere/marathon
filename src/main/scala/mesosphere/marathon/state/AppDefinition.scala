@@ -507,9 +507,15 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   def validWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.role is in(roleEnforcement.validRoles)
+    // DO NOT MERGE THESE TWO similar if blocks! Wix Accord macros does weird stuff otherwise.
     if (app.isResident) {
       app.role is isTrue(s"Resident apps cannot have the role ${ResourceRole.Unreserved}") { role: String =>
         !role.equals(ResourceRole.Unreserved)
+      }
+    }
+    if (app.isResident) {
+      app.role is isTrue((role: Role) => RoleSettings.residentRoleChangeWarningMessage(roleEnforcement.previousRole.get, role)) { role: String =>
+        roleEnforcement.previousRole.map(_.equals(role) || roleEnforcement.forceRoleUpdate).getOrElse(true)
       }
     }
     app.acceptedResourceRoles is ResourceRole.validForRole(app.role)

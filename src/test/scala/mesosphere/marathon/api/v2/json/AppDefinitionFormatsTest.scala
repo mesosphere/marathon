@@ -211,9 +211,10 @@ class AppDefinitionFormatsTest extends UnitTest
       appDef.acceptedResourceRoles should equal(Set(ResourceRole.Unreserved))
     }
 
-    "FromJSON should fail when 'acceptedResourceRoles' is defined but empty" in {
+    "FromJSON should is sanitized when 'acceptedResourceRoles' is defined but empty" in {
       val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": [] }""")
-      a[ValidationFailedException] shouldBe thrownBy { normalizeAndConvert(json.as[raml.App]) }
+      val appDef = normalizeAndConvert(json.as[raml.App])
+      appDef.acceptedResourceRoles should equal(Set(ResourceRole.Unreserved))
     }
 
     "FromJSON should read the default upgrade strategy" in {
