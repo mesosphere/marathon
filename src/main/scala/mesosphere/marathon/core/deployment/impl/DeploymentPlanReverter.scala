@@ -23,7 +23,7 @@ private[deployment] object DeploymentPlanReverter extends StrictLogging {
     */
   def revert(original: RootGroup, target: RootGroup, newVersion: Timestamp = Group.defaultVersion): RootGroup => RootGroup = {
 
-    def changesOnIds[T](originalById: Map[Group.GroupKey, T], targetById: Map[Group.GroupKey, T]): Seq[(Option[T], Option[T])] = {
+    def changesOnIds[T](originalById: Map[AbsolutePathId, T], targetById: Map[AbsolutePathId, T]): Seq[(Option[T], Option[T])] = {
       val ids = originalById.keys ++ targetById.keys
       ids.map { id => originalById.get(id) -> targetById.get(id) }(collection.breakOut)
     }

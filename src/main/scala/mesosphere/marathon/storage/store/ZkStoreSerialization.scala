@@ -31,7 +31,7 @@ trait ZkStoreSerialization {
     override def version(v: T): OffsetDateTime = getVersion(v)
   }
 
-  implicit val appDefResolver: IdResolver[AppDefinition.AppKey, AppDefinition, String, ZkId] =
+  implicit val appDefResolver: IdResolver[AbsolutePathId, AppDefinition, String, ZkId] =
     new ZkPathIdResolver[AppDefinition]("apps", true, _.version.toOffsetDateTime)
 
   implicit val appDefMarshaller: Marshaller[AppDefinition, ZkSerialized] =
@@ -44,7 +44,7 @@ trait ZkStoreSerialization {
         AppDefinition.fromProto(proto)
     }
 
-  implicit val podDefResolver: IdResolver[PodDefinition.PodKey, PodDefinition, String, ZkId] =
+  implicit val podDefResolver: IdResolver[AbsolutePathId, PodDefinition, String, ZkId] =
     new ZkPathIdResolver[PodDefinition]("pods", true, _.version.toOffsetDateTime)
 
   implicit val podDefMarshaller: Marshaller[PodDefinition, ZkSerialized] =

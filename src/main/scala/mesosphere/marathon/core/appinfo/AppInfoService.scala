@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package core.appinfo
 
-import mesosphere.marathon.state.{AppDefinition, Group}
+import mesosphere.marathon.state.AbsolutePathId
 
 import scala.concurrent.Future
 
@@ -14,14 +14,14 @@ trait AppInfoService {
     *
     * @param embed specifies which fields in the resulting AppInfo s are filled.
     */
-  def selectApp(appId: AppDefinition.AppKey, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[AppInfo]]
+  def selectApp(appId: AbsolutePathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[AppInfo]]
   /**
     * Return the app infos for all apps that are directly or indirectly contained in the
     * group with the given path.
     *
     * @param embed specifies which fields in the resulting AppInfo s are filled.
     */
-  def selectAppsInGroup(groupId: Group.GroupKey, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]]
+  def selectAppsInGroup(groupId: AbsolutePathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]]
   /**
     * Return app infos for all apps.
     *

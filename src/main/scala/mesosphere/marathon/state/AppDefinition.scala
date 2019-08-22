@@ -417,8 +417,6 @@ case class AppDefinition(
 
 object AppDefinition extends GeneralPurposeCombinators {
 
-  type AppKey = AbsolutePathId
-
   val RandomPortValue: Int = 0
   val RandomPortDefinition: PortDefinition = PortDefinition(RandomPortValue, "tcp", None, Map.empty[String, String])
 

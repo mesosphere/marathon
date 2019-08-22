@@ -17,9 +17,9 @@ import mesosphere.util.summarize
 
 class Group(
     val id: AbsolutePathId,
-    val apps: Map[AppDefinition.AppKey, AppDefinition] = defaultApps,
-    val pods: Map[PodDefinition.PodKey, PodDefinition] = defaultPods,
-    val groupsById: Map[Group.GroupKey, Group] = defaultGroups,
+    val apps: Map[AbsolutePathId, AppDefinition] = defaultApps,
+    val pods: Map[AbsolutePathId, PodDefinition] = defaultPods,
+    val groupsById: Map[AbsolutePathId, Group] = defaultGroups,
     val dependencies: Set[AbsolutePathId] = defaultDependencies,
     val version: Timestamp = defaultVersion,
     val enforceRole: Boolean = false) extends IGroup {
@@ -86,9 +86,9 @@ class Group(
   lazy val transitiveRunSpecs: Iterable[RunSpec] = transitiveApps ++ transitivePods
   lazy val transitiveRunSpecIds: Iterable[AbsolutePathId] = transitiveAppIds ++ transitivePodIds
 
-  def transitiveGroups(): Iterator[(Group.GroupKey, Group)] = groupsById.iterator ++ groupsById.valuesIterator.flatMap(_.transitiveGroups())
-  lazy val transitiveGroupsById: Map[Group.GroupKey, Group] = {
-    val builder = Map.newBuilder[Group.GroupKey, Group]
+  def transitiveGroups(): Iterator[(AbsolutePathId, Group)] = groupsById.iterator ++ groupsById.valuesIterator.flatMap(_.transitiveGroups())
+  lazy val transitiveGroupsById: Map[AbsolutePathId, Group] = {
+    val builder = Map.newBuilder[AbsolutePathId, Group]
     builder += id -> this
     builder ++= transitiveGroups()
     builder.result()
@@ -185,13 +185,12 @@ class Group(
 }
 
 object Group extends StrictLogging {
-  type GroupKey = AbsolutePathId
 
   def apply(
     id: AbsolutePathId,
-    apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PodDefinition.PodKey, PodDefinition] = Group.defaultPods,
-    groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
+    apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
+    pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
+    groupsById: Map[AbsolutePathId, Group] = Group.defaultGroups,
     dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
     enforceRole: Boolean = false): Group = {
@@ -201,9 +200,9 @@ object Group extends StrictLogging {
   def empty(id: AbsolutePathId): Group =
     Group(id = id, version = Timestamp(0))
 
-  val defaultApps = Map.empty[AppDefinition.AppKey, AppDefinition]
-  val defaultPods = Map.empty[PodDefinition.PodKey, PodDefinition]
-  val defaultGroups = Map.empty[Group.GroupKey, Group]
+  val defaultApps = Map.empty[AbsolutePathId, AppDefinition]
+  val defaultPods = Map.empty[AbsolutePathId, PodDefinition]
+  val defaultGroups = Map.empty[AbsolutePathId, Group]
   val defaultDependencies = Set.empty[AbsolutePathId]
   val defaultVersion = Timestamp.now()
 

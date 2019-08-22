@@ -42,7 +42,6 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
     val result = validate(app)
     result.isFailure should be(true)
-
   }
 
   "RunSpecValidator" should {
@@ -92,35 +91,49 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       testValidId("/trailing/")
     }
 
-    // TODO AN: What to do about these tests?
-    //    "single dots in id '/test/.' pass schema and validation" in {
-    //      testInvalid("/test/.")
-    //    }
-    //
-    //    "single dots in id '/./not.point.less' pass schema and validation" in {
-    //      testInvalid("/./not.point.less")
-    //    }
+    "single dots in id '/test/.' fails in validation" in {
+      val app = App(
+        id = "/test/.",
+        cmd = Some("true"))
 
-    //    // non-absolute paths (could be allowed in some contexts)
-    //    "relative id 'relative/asd' passes schema but not validation" in {
-    //      val app = AppDefinition(
-    //        id = PathId("relative/asd"),
-    //        role = "*",
-    //        cmd = Some("true"))
-    //
-    //      validAppDefinition(app) should haveViolations("/id" -> "Path needs to be absolute")
-    //
-    //    }
-    //
-    //    // non-absolute paths (could be allowed in some contexts)
-    //    "relative id '../relative' passes schema but not validation" in {
-    //      val app = AppDefinition(
-    //        id = PathId("../relative"),
-    //        role = "*",
-    //        cmd = Some("true"))
-    //
-    //      validAppDefinition(app) should haveViolations("/id" -> "Path needs to be absolute")
-    //    }
+      validApp(app) should haveViolations("/id" -> "must not end with any of the following reserved keywords: restart, tasks, versions, ., ..")
+    }
+
+    "single dots in id '/./not.point.less' pass schema and validation" in {
+      val app = App(
+        id = "/./not.point.less",
+        cmd = Some("true"))
+
+      validApp(app) should haveViolations("/id" -> "Identifier is not child of '/.'")
+    }
+
+    "parent of root in id '/../someid' fails in validation" in {
+      val app = App(
+        id = "/../someid",
+        cmd = Some("true"))
+
+      validApp(app) should haveViolations("/id" -> "Identifier is not child of '/..'")
+    }
+
+    // non-absolute paths (could be allowed in some contexts)
+    "relative id 'relative/asd' passes schema but not validation" in {
+      val app = App(
+        id = "relative/asd",
+        role = Some("*"),
+        cmd = Some("true"))
+
+      validApp(app) should haveViolations("/id" -> "Path needs to be absolute")
+    }
+
+    // non-absolute paths (could be allowed in some contexts)
+    "relative id '../relative' passes schema but not validation" in {
+      val app = App(
+        id = "../relative",
+        role = Some("*"),
+        cmd = Some("true"))
+
+      validApp(app) should haveViolations("/id" -> "Path needs to be absolute")
+    }
 
     "id '/.../asd' is INVALID" in {
       testInvalid("/.../asd")

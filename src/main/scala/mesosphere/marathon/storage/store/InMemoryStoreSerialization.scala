@@ -34,10 +34,10 @@ trait InMemoryStoreSerialization {
     override def version(v: T): OffsetDateTime = getVersion(v)
   }
 
-  implicit def appDefResolver: IdResolver[AppDefinition.AppKey, AppDefinition, String, RamId] =
+  implicit def appDefResolver: IdResolver[AbsolutePathId, AppDefinition, String, RamId] =
     new InMemPathIdResolver[AppDefinition]("app", true, _.version.toOffsetDateTime)
 
-  implicit val podDefResolver: IdResolver[PodDefinition.PodKey, PodDefinition, String, RamId] =
+  implicit val podDefResolver: IdResolver[AbsolutePathId, PodDefinition, String, RamId] =
     new InMemPathIdResolver[PodDefinition]("pod", true, _.version.toOffsetDateTime)
 
   implicit val instanceResolver: IdResolver[Id, Instance, String, RamId] =

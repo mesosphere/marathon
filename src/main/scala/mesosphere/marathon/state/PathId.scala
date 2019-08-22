@@ -36,7 +36,7 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
     * @return
     */
   @deprecated("Assuming an absolute path where it may not be is a source of bugs; avoid using this method if possible")
-  def asAbsolutePath: AbsolutePathId
+  protected def asAbsolutePath: AbsolutePathId
 
   lazy val parent: PathId = path match {
     case Nil => PathId.root
@@ -228,7 +228,7 @@ object PathId {
     id.path.forall(part => ID_PATH_SEGMENT_PATTERN.pattern.matcher(part).matches())
   }
 
-  private val reservedKeywords = Seq("restart", "tasks", "versions")
+  private val reservedKeywords = Seq("restart", "tasks", "versions", ".", "..")
 
   private val withoutReservedKeywords = isTrue[PathId](s"must not end with any of the following reserved keywords: ${reservedKeywords.mkString(", ")}") { id =>
     id.path.lastOption.forall(last => !reservedKeywords.contains(id.path.last))
@@ -238,9 +238,9 @@ object PathId {
     * For external usage. Needed to overwrite the whole description, e.g. id.path -> id.
     */
   implicit val pathIdValidator = validator[PathId] { path =>
-    path is childOf(path.parent)
     path is validPathChars
     path is withoutReservedKeywords
+    path is childOf(path.parent)
   }
 
   /**
@@ -248,8 +248,8 @@ object PathId {
     * @param base Path of parent.
     */
   def validPathWithBase(base: PathId): Validator[PathId] = validator[PathId] { path =>
-    path is childOf(base)
     path is validPathChars
+    path is childOf(base)
   }
 
   /**
@@ -257,8 +257,9 @@ object PathId {
     * Every relative path can be ignored.
     */
   private def childOf(parent: PathId): Validator[PathId] = {
-    isTrue[PathId](s"Identifier is not child of $parent. Hint: use relative paths.") { child =>
-      !parent.absolute || (child.canonicalPath(parent.asAbsolutePath).parent == parent)
+    isTrue[PathId](s"Identifier is not child of '$parent'") {
+      case _: RelativePathId => true
+      case c: AbsolutePathId => c.canonicalPath(c.parent).parent == parent
     }
   }
 

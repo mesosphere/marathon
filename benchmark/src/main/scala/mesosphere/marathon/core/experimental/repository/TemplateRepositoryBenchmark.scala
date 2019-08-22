@@ -17,7 +17,7 @@ import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.BoundedExponentialBackoffRetry
 import org.apache.curator.x.async.api.CreateOption
-import org.openjdk.jmh.annotations._
+import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Fork, Level, Measurement, Mode, OutputTimeUnit, Param, Scope, State, TearDown, Warmup}
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.concurrent.duration.Duration

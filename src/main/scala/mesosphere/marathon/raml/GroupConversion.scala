@@ -45,12 +45,12 @@ object UpdateGroupStructureOp {
     implicit val appNormalization: Normalization[App] = normalizeApp(pathNormalization)
     implicit val appDefinitionNormalization: Normalization[AppDefinition] = normalizeAppDefinition(version)
 
-    val appsById: Map[AppDefinition.AppKey, AppDefinition] = groupUpdate.apps.getOrElse(Set.empty).map { currentApp =>
+    val appsById: Map[AbsolutePathId, AppDefinition] = groupUpdate.apps.getOrElse(Set.empty).map { currentApp =>
       val app = cf(currentApp.normalize).normalize
       app.id -> app
     }(collection.breakOut)
 
-    val groupsById: Map[CoreGroup.GroupKey, CoreGroup] = groupUpdate.groups.getOrElse(Seq.empty).map { currentGroup =>
+    val groupsById: Map[AbsolutePathId, CoreGroup] = groupUpdate.groups.getOrElse(Seq.empty).map { currentGroup =>
       // TODO: tailrec needed
       val id = requireGroupPath(currentGroup).canonicalPath(gid)
       val group = createGroup(currentGroup, id, version)
@@ -84,7 +84,7 @@ object UpdateGroupStructureOp {
     implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(current.id))
     implicit val appNormalization: Normalization[AppDefinition] = normalizeAppDefinition(timestamp)
 
-    val effectiveGroups: Map[CoreGroup.GroupKey, CoreGroup] = groupUpdate.groups.fold(current.groupsById) { updates =>
+    val effectiveGroups: Map[AbsolutePathId, CoreGroup] = groupUpdate.groups.fold(current.groupsById) { updates =>
       updates.map { groupUpdate =>
         val gid = requireGroupPath(groupUpdate).canonicalPath(current.id)
         val newGroup = current.groupsById.get(gid).map { group =>
@@ -95,7 +95,7 @@ object UpdateGroupStructureOp {
       }(collection.breakOut)
     }
 
-    val effectiveApps: Map[AppDefinition.AppKey, AppDefinition] = {
+    val effectiveApps: Map[AbsolutePathId, AppDefinition] = {
       groupUpdate.apps.map(_.map(cf)).getOrElse(current.apps.values).map { currentApp =>
         val app = currentApp.normalize
         app.id -> app

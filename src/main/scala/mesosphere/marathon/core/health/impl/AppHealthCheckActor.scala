@@ -5,10 +5,10 @@ import akka.actor.{Actor, Props}
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.InstanceHealthChanged
-import mesosphere.marathon.core.health.impl.AppHealthCheckActor._
+import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{AddHealthCheck, AppHealthCheckProxy, ApplicationKey, HealthCheckStatusChanged, PurgeHealthCheckStatuses, RemoveHealthCheck}
 import mesosphere.marathon.core.health.{Health, HealthCheck}
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{AppDefinition, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 
 import scala.collection.generic.Subtractable
 import scala.collection.mutable
@@ -24,7 +24,7 @@ import scala.collection.mutable
   * - `Healthy` if all statuses of the instance are known and all are healthy
   */
 object AppHealthCheckActor {
-  case class ApplicationKey(appId: AppDefinition.AppKey, version: Timestamp)
+  case class ApplicationKey(appId: AbsolutePathId, version: Timestamp)
   case class InstanceKey(applicationKey: ApplicationKey, instanceId: Instance.Id)
 
   def props(eventBus: EventStream): Props = Props(new AppHealthCheckActor(eventBus))

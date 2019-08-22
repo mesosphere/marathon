@@ -42,18 +42,18 @@ trait GroupRepository {
     * Store the root, new/updated apps and delete apps. fails if it could not
     * update the apps or the root, but deletion errors are ignored.
     */
-  def storeRoot(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], deletedApps: Seq[AppDefinition.AppKey],
-    updatedPods: Seq[PodDefinition], deletedPods: Seq[PodDefinition.PodKey]): Future[Done]
+  def storeRoot(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], deletedApps: Seq[AbsolutePathId],
+    updatedPods: Seq[PodDefinition], deletedPods: Seq[AbsolutePathId]): Future[Done]
 
   def storeRootVersion(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], updatedPods: Seq[PodDefinition]): Future[Done]
 
-  def appVersions(id: AppDefinition.AppKey): Source[OffsetDateTime, NotUsed]
+  def appVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed]
 
-  def appVersion(id: AppDefinition.AppKey, version: OffsetDateTime): Future[Option[AppDefinition]]
+  def appVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Option[AppDefinition]]
 
-  def podVersions(id: PodDefinition.PodKey): Source[OffsetDateTime, NotUsed]
+  def podVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed]
 
-  def podVersion(id: PodDefinition.PodKey, version: OffsetDateTime): Future[Option[PodDefinition]]
+  def podVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Option[PodDefinition]]
 
   def runSpecVersion(id: AbsolutePathId, version: OffsetDateTime)(implicit executionContext: ExecutionContext): Future[Option[RunSpec]] = {
     appVersion(id, version).flatMap {
@@ -101,8 +101,8 @@ object GroupRepository {
   }
 }
 
-trait ReadOnlyAppRepository extends ReadOnlyVersionedRepository[AppDefinition.AppKey, AppDefinition]
-trait AppRepository extends VersionedRepository[AppDefinition.AppKey, AppDefinition] with ReadOnlyAppRepository
+trait ReadOnlyAppRepository extends ReadOnlyVersionedRepository[AbsolutePathId, AppDefinition]
+trait AppRepository extends VersionedRepository[AbsolutePathId, AppDefinition] with ReadOnlyAppRepository
 
 object AppRepository {
   def zkRepository(
@@ -118,8 +118,8 @@ object AppRepository {
   }
 }
 
-trait ReadOnlyPodRepository extends ReadOnlyVersionedRepository[PodDefinition.PodKey, PodDefinition]
-trait PodRepository extends VersionedRepository[PodDefinition.PodKey, PodDefinition] with ReadOnlyPodRepository
+trait ReadOnlyPodRepository extends ReadOnlyVersionedRepository[AbsolutePathId, PodDefinition]
+trait PodRepository extends VersionedRepository[AbsolutePathId, PodDefinition] with ReadOnlyPodRepository
 
 object PodRepository {
   def zkRepository(
@@ -268,17 +268,17 @@ object RuntimeConfigurationRepository {
 }
 
 class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-    ir: IdResolver[AppDefinition.AppKey, AppDefinition, C, K],
+    ir: IdResolver[AbsolutePathId, AppDefinition, C, K],
     marhaller: Marshaller[AppDefinition, S],
     unmarshaller: Unmarshaller[S, AppDefinition],
     ctx: ExecutionContext)
-  extends PersistenceStoreVersionedRepository[AppDefinition.AppKey, AppDefinition, K, C, S](
+  extends PersistenceStoreVersionedRepository[AbsolutePathId, AppDefinition, K, C, S](
     persistenceStore,
     _.id,
     _.version.toOffsetDateTime)
   with AppRepository {
 
-  private[storage] var beforeStore = Option.empty[(AppDefinition.AppKey, Option[OffsetDateTime]) => Future[Done]]
+  private[storage] var beforeStore = Option.empty[(AbsolutePathId, Option[OffsetDateTime]) => Future[Done]]
 
   override def store(v: AppDefinition): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     beforeStore match {
@@ -298,22 +298,22 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
     await(super.storeVersion(v))
   }
 
-  private[storage] def deleteVersion(id: AppDefinition.AppKey, version: OffsetDateTime): Future[Done] = {
+  private[storage] def deleteVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Done] = {
     persistenceStore.deleteVersion(id, version)
   }
 }
 
 class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-    ir: IdResolver[PodDefinition.PodKey, PodDefinition, C, K],
+    ir: IdResolver[AbsolutePathId, PodDefinition, C, K],
     marshaller: Marshaller[PodDefinition, S],
     unmarshaller: Unmarshaller[S, PodDefinition],
     ctx: ExecutionContext)
-  extends PersistenceStoreVersionedRepository[PodDefinition.PodKey, PodDefinition, K, C, S](
+  extends PersistenceStoreVersionedRepository[AbsolutePathId, PodDefinition, K, C, S](
     persistenceStore,
     _.id,
     _.version.toOffsetDateTime
   ) with PodRepository {
-  private[storage] var beforeStore = Option.empty[(PodDefinition.PodKey, Option[OffsetDateTime]) => Future[Done]]
+  private[storage] var beforeStore = Option.empty[(AbsolutePathId, Option[OffsetDateTime]) => Future[Done]]
 
   override def store(v: PodDefinition): Future[Done] = async { // linter:ignore:UnnecessaryElseBranch
     beforeStore match {
@@ -333,7 +333,7 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
     await(super.storeVersion(v))
   }
 
-  private[storage] def deleteVersion(id: PodDefinition.PodKey, version: OffsetDateTime): Future[Done] = {
+  private[storage] def deleteVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Done] = {
     persistenceStore.deleteVersion(id, version)
   }
 }

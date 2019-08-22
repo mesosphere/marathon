@@ -472,7 +472,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       val pathId = "/foo/mypod".toAbsolutePath
       val existingPod = PodDefinition(id = pathId, role = "*")
 
-      f.prepareGroup("/foo", Map(pathId.asAbsolutePath -> existingPod))
+      f.prepareGroup("/foo", Map(pathId -> existingPod))
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -509,7 +509,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       val pathId = "/foo/mypod".toAbsolutePath
       val existingPod = PodDefinition(id = pathId, role = "*")
 
-      f.prepareGroup("/foo", Map(pathId.asAbsolutePath -> existingPod))
+      f.prepareGroup("/foo", Map(pathId -> existingPod))
 
       podSystem.update(any, eq(true)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -2073,7 +2073,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       groupManager: GroupManager
   ) extends GroupCreation {
 
-    def prepareGroup(groupId: String, pods: Map[PodDefinition.PodKey, PodDefinition] = Group.defaultPods): Unit = {
+    def prepareGroup(groupId: String, pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods): Unit = {
       val groupPath = AbsolutePathId(groupId)
 
       val group = createGroup(groupPath, pods = pods)

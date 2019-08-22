@@ -4,8 +4,6 @@ package upgrade
 import java.util.concurrent.TimeUnit
 
 import mesosphere.marathon.core.deployment.DeploymentPlan
-import mesosphere.marathon.state.AppDefinition.AppKey
-import mesosphere.marathon.state.Group.GroupKey
 import mesosphere.marathon.state._
 import org.openjdk.jmh.annotations.{Group => _, _}
 import org.openjdk.jmh.infra.Blackhole
@@ -23,7 +21,7 @@ object DependencyGraphBenchmark {
   val version1 = VersionInfo.forNewConfig(Timestamp(1))
   val version2 = VersionInfo.forNewConfig(Timestamp(2))
 
-  val superGroups: Map[GroupKey, Group] = superGroupIds.map { superGroupId =>
+  val superGroups: Map[AbsolutePathId, Group] = superGroupIds.map { superGroupId =>
 
     val paths: Vector[Vector[AbsolutePathId]] =
       groupIds.map { groupId =>
@@ -32,7 +30,7 @@ object DependencyGraphBenchmark {
         }.toVector
       }(breakOut)
 
-    val appDefs: Map[AppKey, AppDefinition] =
+    val appDefs: Map[AbsolutePathId, AppDefinition] =
       groupIds.flatMap { groupId =>
         appIds.map { appId =>
           val dependencies = for {
@@ -52,7 +50,7 @@ object DependencyGraphBenchmark {
         }(breakOut)
       }(breakOut)
 
-    val subGroups: Map[GroupKey, Group] = groupIds.map { groupId =>
+    val subGroups: Map[AbsolutePathId, Group] = groupIds.map { groupId =>
       val id = AbsolutePathId(s"/supergroup-${superGroupId}/group-${groupId}")
       id -> Group(id = id)
     }(breakOut)
