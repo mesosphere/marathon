@@ -29,15 +29,6 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
     */
   def isRoot: Boolean = path.isEmpty && (absolute == true)
 
-  /**
-    * Workaround method used to cope with the fact that the proper type isn't used for many ids in our code.
-    *
-    * Once Group, AppDefinition and PodDefinition all use AbsolutePathId, we should remove this method
-    * @return
-    */
-  @deprecated("Assuming an absolute path where it may not be is a source of bugs; avoid using this method if possible")
-  protected def asAbsolutePath: AbsolutePathId
-
   lazy val parent: PathId = path match {
     case Nil => PathId.root
     case head +: Nil => PathId.root
@@ -122,8 +113,6 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
 case class AbsolutePathId(path: Seq[String]) extends PathId {
   override val absolute: Boolean = true
 
-  @deprecated("Calling this method is a no-op")
-  override def asAbsolutePath: AbsolutePathId = this
   protected def toString(delimiter: String): String =
     path.mkString("/", delimiter, "")
 
@@ -162,15 +151,6 @@ object AbsolutePathId {
 
 case class RelativePathId(path: Seq[String]) extends PathId with StrictLogging {
   override val absolute: Boolean = false
-  override def asAbsolutePath: AbsolutePathId = {
-    /* There could be some input cases in the wild where this could be hit, but in a benign way
-     * Rather than break Marathon, lets log a loud message and hopefully those cases will be addressed as we remove
-     * this method
-     */
-    val ex = new RuntimeException("An absolute path was expected where we had a relative path")
-    logger.warn(s"Path '${this}' assumed to be an absolute path, but was relative. This is probably a bug.", ex)
-    this.canonicalPath(PathId.root)
-  }
 
   protected def toString(delimiter: String): String =
     path.mkString(delimiter)
