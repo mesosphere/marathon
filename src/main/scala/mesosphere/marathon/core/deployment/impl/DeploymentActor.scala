@@ -51,7 +51,7 @@ private class DeploymentActor(
   // actors are built idempotent which should make restarting them possible.
   // Additionally a BackOffSupervisor is used to make sure child actor failures are not overloading other parts of the system
   // (like LaunchQueue and InstanceTracker) and are not filling the log with exceptions.
-  import akka.pattern.{Backoff, BackoffSupervisor}
+  import akka.pattern.BackoffSupervisor
 
   import scala.concurrent.duration._
 
