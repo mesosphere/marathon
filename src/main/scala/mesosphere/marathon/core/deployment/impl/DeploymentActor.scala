@@ -4,6 +4,7 @@ package core.deployment.impl
 import akka.Done
 import akka.actor._
 import akka.event.EventStream
+import akka.pattern.BackoffOpts
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
@@ -56,7 +57,7 @@ private class DeploymentActor(
 
   def childSupervisor(props: Props, name: String): Props = {
     BackoffSupervisor.props(
-      Backoff.onFailure(
+      BackoffOpts.onFailure(
         childProps = props,
         childName = name,
         minBackoff = 5.seconds,

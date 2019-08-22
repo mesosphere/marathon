@@ -23,7 +23,6 @@ class LeaderProxyFilterModule extends AbstractModule {
   @Singleton
   def provideLeaderProxyFilter(
     httpConf: HttpConf,
-    deprecatedFeaturesSet: DeprecatedFeatureConfig,
     electionService: ElectionService,
     leaderProxyConf: LeaderProxyConf,
     @Named(ModuleNames.HOST_PORT) myHostPort: String
