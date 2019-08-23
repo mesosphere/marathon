@@ -304,10 +304,10 @@ object AppNormalization {
     )
   }
 
-/** 
- * This is a partial normalization, which currently only normalizes the [[App.role]] and [[App.acceptedResourceRoles]] fields.
- * We do this because app validation is relying on these fields being set correctly.
- */
+  /**
+    * This is a partial normalization, which currently only normalizes the [[App.role]] and [[App.acceptedResourceRoles]] fields.
+    * We do this because app validation is relying on these fields being set correctly.
+    */
   def forPreValidation(config: Config): Normalization[App] = Normalization{ app =>
     val role = app.role.getOrElse(config.defaultRole)
 
@@ -340,7 +340,7 @@ object AppNormalization {
       container = container,
       networks = networks,
       unreachableStrategy = app.unreachableStrategy.orElse(Option(defaultUnreachable)),
-      requirePorts = requirePorts,
+      requirePorts = requirePorts
     )
   }
 

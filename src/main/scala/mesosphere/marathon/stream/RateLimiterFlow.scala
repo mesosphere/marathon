@@ -11,7 +11,7 @@ import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import scala.compat.java8.DurationConverters
 import scala.concurrent.duration.FiniteDuration
 
-class RateLimiterFlow[U] private (rate: FiniteDuration, clock: Clock = Clock.systemUTC()) extends GraphStage[FlowShape[U, U]] {
+class RateLimiterFlow[U] private (rate: FiniteDuration, clock: Clock) extends GraphStage[FlowShape[U, U]] {
   val input = Inlet[U]("rate-limiter-input")
   val output = Outlet[U]("rate-limiter-output")
 

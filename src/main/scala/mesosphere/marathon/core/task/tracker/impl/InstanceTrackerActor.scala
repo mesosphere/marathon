@@ -169,7 +169,7 @@ private[impl] class InstanceTrackerActor(
         val originalSender = sender
         val updateEffect = try {
           resolveUpdateEffect(update)
-        } catch { case ex => InstanceUpdateEffect.Failure(ex) }
+        } catch { case ex: Throwable => InstanceUpdateEffect.Failure(ex) }
         import scala.concurrent.ExecutionContext.Implicits.global
 
         updateEffect match {

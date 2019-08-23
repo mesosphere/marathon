@@ -22,14 +22,21 @@ The role field can now be optionally specified for a service. However, the value
    "acceptedResourceRoles": ["foo"]
 }
 ``` 
-but wouldn't be able to start the task since it is not subscribed for the role `foo`. 
+
+... but wouldn't be able to start the task since it is not subscribed for the role `foo`.
 
 This behavior has been changed with the addition of multi-role support. In Marathon 1.9, Marathon will sanitize the `acceptedResourceRoles` value, removing all invalid roles and leaving `*` (unreserved) by default. Using the example above, the service definition will be still accepted, however, `foo` will be removed and `"acceptedResourceRoles": ["*"]` will be used instead so that the task *will start*.
 
 Starting with Marathon 1.10, Marathon will reject the above service definition as invalid. However, the `sanitize_accepted_resource_roles` feature can be enabled with `--deprecated_features sanitize_accepted_resource_roles`, causing Marathon to continue to auto-sanitize this field value for one more version.
 
 In Marathon 1.11, the `sanitize_accepted_resource_roles` deprecated feature will be removed.
- 
+
+#### Command-line flag `--default_accepted_resource_roles` has been replaced with `--accepted_resource_roles_default_behavior`
+
+The command-line flag `--default_accepted_resource_roles` does not work in a multi-role context. A new command-line parameter, `--accepted_resource_roles_default_behavior`, has been introduced, to replace it. See the [command-line-flags](https://mesosphere.github.io/marathon/docs/command-line-flags.html) docs.
+
+The command-line flag `--default_accepted_resource_roles` is deprecated and will be removed in Marathon 1.10.0.
+
 ### Introduce SharedMemory/IPC configuration to Marathon Apps and Pods
 
 When running Marathon Apps or Pods it is now possible to configure the IPC separation level and shared memory size.

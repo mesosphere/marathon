@@ -160,8 +160,7 @@ object TestInstanceBuilder {
     )
   }
 
-  def emptyInstanceForRunSpec(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
-    runSpec: RunSpec, unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default(), instanceId: Instance.Id): Instance = {
+  def emptyInstanceForRunSpec(now: Timestamp = Timestamp.now(), runSpec: RunSpec, instanceId: Instance.Id): Instance = {
     val resolvedInstanceId = Option(instanceId).getOrElse(Instance.Id.forRunSpec(runSpec.id))
 
     require(resolvedInstanceId.runSpecId == runSpec.id, "provided instanceId did not match runSpec")
@@ -195,9 +194,8 @@ object TestInstanceBuilder {
     host = AgentTestDefaults.defaultHostName,
     agentId = Some(AgentTestDefaults.defaultAgentId), region = None, zone = None, attributes = Seq.empty)
 
-  def newBuilderForRunSpec(runSpec: RunSpec, now: Timestamp = Timestamp.now(),
-    version: Timestamp = Timestamp.zero, instanceId: Instance.Id = null): TestInstanceBuilder =
-    TestInstanceBuilder(emptyInstanceForRunSpec(now, version, runSpec, instanceId = instanceId), now)
+  def newBuilderForRunSpec(runSpec: RunSpec, now: Timestamp = Timestamp.now(), instanceId: Instance.Id = null): TestInstanceBuilder =
+    TestInstanceBuilder(emptyInstanceForRunSpec(now, runSpec, instanceId = instanceId), now)
 
   def newBuilder(runSpecId: AbsolutePathId, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
