@@ -281,7 +281,7 @@ object TaskBuilder {
         MARATHON_APP_RESOURCE_MEM -> Some(runSpec.resources.mem.toString),
         MARATHON_APP_RESOURCE_DISK -> Some(runSpec.resources.disk.toString),
         MARATHON_APP_RESOURCE_GPUS -> Some(runSpec.resources.gpus.toString),
-        MARATHON_APP_ENFORCE_GROUP_ROLE -> enforceRole.map(_.toString.toUpperCase()),
+        MARATHON_APP_ENFORCE_GROUP_ROLE -> enforceRole.map(_.toString.toUpperCase())
       ).collect {
           case (key, Some(value)) => key -> value
         }(collection.breakOut)

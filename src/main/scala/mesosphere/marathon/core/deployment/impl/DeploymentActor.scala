@@ -4,6 +4,7 @@ package core.deployment.impl
 import akka.Done
 import akka.actor._
 import akka.event.EventStream
+import akka.pattern.BackoffOpts
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
@@ -50,13 +51,13 @@ private class DeploymentActor(
   // actors are built idempotent which should make restarting them possible.
   // Additionally a BackOffSupervisor is used to make sure child actor failures are not overloading other parts of the system
   // (like LaunchQueue and InstanceTracker) and are not filling the log with exceptions.
-  import akka.pattern.{Backoff, BackoffSupervisor}
+  import akka.pattern.BackoffSupervisor
 
   import scala.concurrent.duration._
 
   def childSupervisor(props: Props, name: String): Props = {
     BackoffSupervisor.props(
-      Backoff.onFailure(
+      BackoffOpts.onFailure(
         childProps = props,
         childName = name,
         minBackoff = 5.seconds,
