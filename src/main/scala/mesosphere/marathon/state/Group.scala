@@ -4,7 +4,7 @@ package state
 import java.util.Objects
 
 import com.typesafe.scalalogging.StrictLogging
-import com.wix.accord.Descriptions.Explicit
+import com.wix.accord.Descriptions.{Explicit, Generic, Path}
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
@@ -16,15 +16,15 @@ import mesosphere.marathon.state.PathId.{StringPathId, validPathWithBase}
 import mesosphere.util.summarize
 
 class Group(
-    val id: PathId,
+    val id: AbsolutePathId,
     val apps: Map[AppDefinition.AppKey, AppDefinition] = defaultApps,
     val pods: Map[PathId, PodDefinition] = defaultPods,
     val groupsById: Map[Group.GroupKey, Group] = defaultGroups,
-    val dependencies: Set[PathId] = defaultDependencies,
+    val dependencies: Set[AbsolutePathId] = defaultDependencies,
     val version: Timestamp = defaultVersion,
-    val enforceRole: Option[Boolean] = None) extends IGroup {
+    val enforceRole: Boolean = false) extends IGroup {
 
-  require((id.parent.isRoot && enforceRole.isDefined) || enforceRole.isEmpty, "Only top-level groups can define the enforce role parameter.")
+  require((!id.parent.isRoot && !enforceRole) || id.parent.isRoot, "Only top-level groups can enforce roles.")
 
   /**
     * Get app from this group or any child group.
@@ -33,7 +33,7 @@ class Group(
     * @return None if the app was not found or non empty option with app.
     */
   def app(appId: PathId): Option[AppDefinition] = {
-    apps.get(appId) orElse group(appId.parent).flatMap(_.apps.get(appId))
+    apps.get(appId) orElse group(appId.parent.asAbsolutePath).flatMap(_.apps.get(appId))
   }
 
   /**
@@ -43,7 +43,7 @@ class Group(
     * @return None if the pod was not found or non empty option with pod.
     */
   def pod(podId: PathId): Option[PodDefinition] = {
-    pods.get(podId) orElse group(podId.parent).flatMap(_.pods.get(podId))
+    pods.get(podId) orElse group(podId.parent.asAbsolutePath).flatMap(_.pods.get(podId))
   }
 
   /**
@@ -71,7 +71,7 @@ class Group(
     * @param gid The path of the group for find.
     * @return None if no group was found or non empty option with group.
     */
-  def group(gid: PathId): Option[Group] = transitiveGroupsById.get(gid)
+  def group(gid: AbsolutePathId): Option[Group] = transitiveGroupsById.get(gid)
 
   def transitiveAppsIterator(): Iterator[AppDefinition] = apps.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppsIterator())
   private def transitiveAppIdsIterator(): Iterator[PathId] = apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppIdsIterator())
@@ -121,34 +121,93 @@ class Group(
     val summarizedGroups = summarize(groupsById.valuesIterator.map(_.id))
     val summarizedDependencies = summarize(dependencies.iterator)
 
-    s"Group($id, apps = $summarizedApps, pods = $summarizedPods, groups = $summarizedGroups, dependencies = $summarizedDependencies, version = $version)"
+    s"Group($id, apps = $summarizedApps, pods = $summarizedPods, groups = $summarizedGroups, dependencies = $summarizedDependencies, version = $version, enforceRole = $enforceRole)"
+  }
+
+  /** @return a copy of this group with an updated `enforceRole` field. */
+  def withEnforceRole(enforceRole: Boolean): Group =
+    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, enforceRole)
+
+  /** @return a copy of this group with the removed `enforceRole` field. */
+  def withoutEnforceRole(): Group =
+    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, false)
+
+  /**
+    * Builds a pretty tree of the group
+    *
+    * {{{
+    * /
+    * ├── apps(0)
+    * ├── pods(0)
+    * ├── def
+    * │    ├── apps(3)
+    * │    └── pods(0)
+    * └── prod
+    *     ├── apps(3)
+    *     └── pods(0)
+    * }}}
+    *
+    * @return the tree as a string.
+    */
+  def prettyTree(): String = {
+    val builder = new StringBuilder()
+    prettyTree(builder, "").toString()
+  }
+
+  private def prettyTree(builder: StringBuilder, indent: String): StringBuilder = {
+
+    builder.append(id.path.lastOption.getOrElse("/"))
+
+    // append apps and pods info
+    builder.append(s"\n$indent├── apps(${apps.size})")
+
+    if (groupsById.nonEmpty) {
+      builder.append(s"\n$indent├── pods(${pods.size})")
+    } else {
+      builder.append(s"\n$indent└── pods(${pods.size})")
+    }
+
+    // append groups
+    val iter = groupsById.valuesIterator
+    while (iter.hasNext) {
+      val childGroup = iter.next()
+      val lastElemet = !iter.hasNext
+      builder.append("\n").append(indent)
+
+      if (lastElemet) builder.append("└── ") else builder.append("├── ")
+
+      val newIndent = if (lastElemet) indent + "    " else indent + "│    "
+      childGroup.prettyTree(builder, indent = newIndent)
+    }
+
+    builder
   }
 }
 
 object Group extends StrictLogging {
-  type GroupKey = PathId
+  type GroupKey = AbsolutePathId
 
   def apply(
-    id: PathId,
+    id: AbsolutePathId,
     apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
     pods: Map[PathId, PodDefinition] = Group.defaultPods,
     groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
-    dependencies: Set[PathId] = Group.defaultDependencies,
-    version: Timestamp = Group.defaultVersion): Group = {
-    if (id.parent.isRoot) new Group(id, apps, pods, groupsById, dependencies, version, Some(false))
-    else new Group(id, apps, pods, groupsById, dependencies, version, None)
+    dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
+    version: Timestamp = Group.defaultVersion,
+    enforceRole: Boolean = false): Group = {
+    new Group(id, apps, pods, groupsById, dependencies, version, enforceRole)
   }
 
-  def empty(id: PathId): Group =
+  def empty(id: AbsolutePathId): Group =
     Group(id = id, version = Timestamp(0))
 
   def defaultApps: Map[AppDefinition.AppKey, AppDefinition] = Map.empty
   val defaultPods = Map.empty[PathId, PodDefinition]
   def defaultGroups: Map[Group.GroupKey, Group] = Map.empty
-  def defaultDependencies: Set[PathId] = Set.empty
+  def defaultDependencies: Set[AbsolutePathId] = Set.empty
   def defaultVersion: Timestamp = Timestamp.now()
 
-  def validGroup(base: PathId, config: MarathonConf): Validator[Group] =
+  def validGroup(base: AbsolutePathId, config: MarathonConf): Validator[Group] =
     validator[Group] { group =>
       group.id is validPathWithBase(base)
 
@@ -217,9 +276,9 @@ object Group extends StrictLogging {
     */
   private def isChildOfParentId(group: Group): Validator[AppDefinition] = {
     isTrue("App has to be child of group with parent id") { app =>
-      if (app.id.parent == group.id) group.apps.contains(app.id)
+      if (app.id.asAbsolutePath.parent == group.id.asAbsolutePath) group.apps.contains(app.id)
       else {
-        group.group(app.id.parent).exists(child => child.apps.contains(app.id))
+        group.group(app.id.parent.asAbsolutePath).exists(child => child.apps.contains(app.id))
       }
     }
   }
@@ -250,9 +309,13 @@ object Group extends StrictLogging {
   def emptyUpdate(id: PathId): raml.GroupUpdate = raml.GroupUpdate(Some(id.toString))
 
   /** requires that apps are in canonical form */
-  def validNestedGroupUpdateWithBase(base: PathId): Validator[raml.GroupUpdate] =
+  def validNestedGroupUpdateWithBase(base: AbsolutePathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] =
     validator[raml.GroupUpdate] { group =>
       group is notNull
+      group is definingEnforcingRoleOnlyIfItsTopLevel(base)
+
+      // Enforce role is not allowed to be updated.
+      group.enforceRole is noEnforceRoleUpdate(originalRootGroup, group.id.map(_.toPath.canonicalPath(base)))
 
       group.version is theOnlyDefinedOptionIn(group)
       group.scaleBy is theOnlyDefinedOptionIn(group)
@@ -264,6 +327,36 @@ object Group extends StrictLogging {
       group.apps is optional(every(
         AppValidation.validNestedApp(group.id.fold(base)(PathId(_).canonicalPath(base)))))
       group.groups is optional(every(
-        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)))))
+        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup)))
     }
+
+  private case class definingEnforcingRoleOnlyIfItsTopLevel(base: AbsolutePathId) extends Validator[raml.GroupUpdate] {
+    override def apply(group: raml.GroupUpdate): Result = {
+      val groupId = group.id.fold(base) { id => PathId(id).canonicalPath(base) }
+      // Only top-level groups are allowed to set the enforce role parameter.
+      if (!groupId.isTopLevel && group.enforceRole.contains(true)) {
+        Failure(Set(RuleViolation(group.enforceRole, s"enforceRole can only be set for top-level groups, and ${groupId} is not top-level", Path(Generic("enforceRole")))))
+      } else {
+        Success
+      }
+    }
+  }
+
+  case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[AbsolutePathId]) extends Validator[Option[Boolean]] {
+
+    override def apply(maybeNewEnforceRole: Option[Boolean]): Result = {
+      val originalGroup = updatedGroupId.flatMap(originalRootGroup.group) // TODO: why is groupUpdate.id optional? What is the semantic there?
+      (maybeNewEnforceRole, originalGroup.map(_.enforceRole)) match {
+        case (None, None) => Success
+        case (Some(newEnforceRole), None) if originalGroup.nonEmpty =>
+          Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated to $newEnforceRole for $updatedGroupId. Use a partial update instead.")))
+        case (None, Some(_)) =>
+          Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be removed from $updatedGroupId.")))
+        case (Some(newEnforceRole), Some(oldEnforceRole)) =>
+          if (newEnforceRole == oldEnforceRole) Success
+          else Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated from $oldEnforceRole to $newEnforceRole for $updatedGroupId. Use a pratial update instead.")))
+        case _ => Success
+      }
+    }
+  }
 }

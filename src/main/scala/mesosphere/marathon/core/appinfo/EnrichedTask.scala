@@ -5,6 +5,7 @@ import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{Instance, Reservation}
+import mesosphere.marathon.state.Role
 import mesosphere.marathon.state.PathId
 
 case class EnrichedTask(
@@ -13,7 +14,8 @@ case class EnrichedTask(
     agentInfo: AgentInfo,
     healthCheckResults: Seq[Health],
     servicePorts: Seq[Int],
-    reservation: Option[Reservation])
+    reservation: Option[Reservation],
+    role: Role)
 
 object EnrichedTask {
 
@@ -29,9 +31,9 @@ object EnrichedTask {
     */
   def fromInstance(instance: Instance, healthCheckResults: Seq[Health] = Nil, servicePorts: Seq[Int] = Nil): Iterable[EnrichedTask] = {
     instance match {
-      case Instance(instanceId, Some(agentInfo), _, tasksMap @ NonEmpty(), _, reservation) =>
+      case Instance(instanceId, Some(agentInfo), _, tasksMap @ NonEmpty(), _, reservation, role) =>
         tasksMap.values.map { task =>
-          EnrichedTask(instanceId.runSpecId, task, agentInfo, healthCheckResults, servicePorts, reservation)
+          EnrichedTask(instanceId.runSpecId, task, agentInfo, healthCheckResults, servicePorts, reservation, role)
         }
       case _ => Seq.empty
     }
@@ -48,8 +50,8 @@ object EnrichedTask {
     */
   def singleFromInstance(instance: Instance, healthCheckResults: Seq[Health] = Nil): Option[EnrichedTask] =
     instance match {
-      case instance @ Instance(instanceId, Some(agentInfo), _, Tasks(firstTask, _*), _, reservation) =>
-        Some(EnrichedTask(instanceId.runSpecId, firstTask, agentInfo, healthCheckResults, Nil, reservation))
+      case instance @ Instance(instanceId, Some(agentInfo), _, Tasks(firstTask, _*), _, reservation, role) =>
+        Some(EnrichedTask(instanceId.runSpecId, firstTask, agentInfo, healthCheckResults, Nil, reservation, role))
       case _ => None
     }
 }

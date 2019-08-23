@@ -10,7 +10,7 @@ import mesosphere.marathon.test.GroupCreation
 class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
   "applications with port definitions" when {
     "apps with port definitions should map dynamic ports to a non-0 value" in {
-      val app = AppDefinition("/app".toRootPath, role = "*", portDefinitions = Seq(PortDefinition(0), PortDefinition(1)), cmd = Some("sleep"))
+      val app = AppDefinition("/app".toAbsolutePath, role = "*", portDefinitions = Seq(PortDefinition(0), PortDefinition(1)), cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app.id -> app))
       val update = AssignDynamicServiceLogic.assignDynamicServicePorts(10.to(20), createRootGroup(), rootGroup)
       update.apps(app.id).portDefinitions.size should equal(2)

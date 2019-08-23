@@ -21,14 +21,16 @@ import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon
 import mesosphere.marathon.core.pod.PodDefinition
+import mesosphere.marathon.integration.raml18.PodStatus18
 import mesosphere.marathon.integration.setup.{AkkaHttpResponse, RestResult}
-import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
+import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.Retry
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
 import mesosphere.marathon.state.PathId._
+
 import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
 import scala.concurrent.Future
@@ -58,6 +60,7 @@ case class ITEnrichedTask(
     version: Option[String],
     region: Option[String],
     zone: Option[String],
+    role: Option[String],
     healthCheckResults: Seq[ITHealthCheckResult]) {
 
   def launched: Boolean = startedAt.nonEmpty
@@ -129,8 +132,9 @@ class MarathonFacade(
     (__ \ "version").formatNullable[String] ~
     (__ \ "region").formatNullable[String] ~
     (__ \ "zone").formatNullable[String] ~
+    (__ \ "role").formatNullable[String] ~
     (__ \ "healthCheckResults").formatWithDefault[Seq[ITHealthCheckResult]](Nil)
-  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
+  )(ITEnrichedTask, unlift(ITEnrichedTask.unapply))
 
   def isInBaseGroup(pathId: PathId): Boolean = {
     pathId.path.startsWith(baseGroup.path)
@@ -280,6 +284,18 @@ class MarathonFacade(
     result(requestFor[PodStatus](Get(s"$url/v2/pods$podId::status")), waitTime)
   }
 
+  /**
+    * ================================= NOTE =================================
+    * This is a copy of [[status()]] method which uses [[PodStatus18]] class that doesn't have `role` field for the pod
+    * instances. This is ONLY used in [[mesosphere.marathon.integration.UpgradeIntegrationTest]] where we query old
+    * Marathon instances.
+    * ========================================================================
+    */
+  def status18(podId: PathId): RestResult[PodStatus18] = {
+    requireInBaseGroup(podId)
+    result(requestFor[PodStatus18](Get(s"$url/v2/pods$podId::status")), waitTime)
+  }
+
   def listPodVersions(podId: PathId): RestResult[Seq[Timestamp]] = {
     requireInBaseGroup(podId)
     result(requestFor[Seq[Timestamp]](Get(s"$url/v2/pods$podId::versions")), waitTime)
@@ -358,6 +374,10 @@ class MarathonFacade(
   def updateGroup(id: PathId, group: GroupUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     result(requestFor[ITDeploymentResult](Put(s"$url/v2/groups$id?force=$force", group)), waitTime)
+  }
+
+  def patchGroup(id: PathId, update: GroupPartialUpdate): RestResult[String] = {
+    result(requestFor[String](Patch(s"$url/v2/groups$id", update)), waitTime)
   }
 
   def rollbackGroup(groupId: PathId, version: Timestamp, force: Boolean = false): RestResult[ITDeploymentResult] = {

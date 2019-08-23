@@ -122,6 +122,33 @@ If you scale your app down to 0 instances, the volume is detached from the agent
 
 The default implicit volume size is 16 GB. If you are using the original Mesos containerizer or the UCR, you can modify this default for a particular volume by setting `volumes[x].external.size`. For the Mesos and Docker containerizers, you can modify the default size for all implicit volumes by [modifying the REX-Ray configuration][11].
 
+#### Shared Volumes
+
+By default, external volumes can not share the same name. As there are providers that allow this, there is a flag that prevents the uniqueness check on the volume name. `volumes[x].external.shared` can be set to true. In this case, this volume is not included when checking if the volume name already exists. It still verifies that no other external volumes with `volumes[x].external.shared=false` exist, so all volumes with the same name must have this flag set.
+
+```
+  "container": {
+    "type": "MESOS",
+    "volumes": [
+      {
+        "external": {
+          "size": 5,
+          "name": "volumename",
+          "provider": "dvdi",
+          "shared": "true",
+          "options": {
+            "dvdi/driver": "pxd",
+            "dvdi/shared": "true"
+          }
+        },
+        "mode": "RW",
+        "containerPath": "/mnt/nginx"
+      }
+    ],
+  }
+```
+
+
 ### Potential Pitfalls
 
 *   If one or more external volumes are declared for a Marathon app, and the Docker image specification includes one or more `VOLUME` entries, Docker may create anonymous external volumes. This is default Docker behavior with respect to volume management when the `--volume-driver` flag is passed to `docker run`. However, anonymous volumes are not automatically deleted and will accumulate over time unless you manually delete them. To prevent Docker from creating anonymous volumes, you can either use a Mesos container with a Docker image or follow these steps:

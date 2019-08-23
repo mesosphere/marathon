@@ -37,7 +37,8 @@ case class MesosConfig(
     agentsFaultDomains: Seq[Option[FaultDomain]] = Seq.empty,
     agentsGpus: Option[Int] = None,
     agentSeccompConfigDir: Option[String] = None,
-    agentSeccompProfileName: Option[String] = None) {
+    agentSeccompProfileName: Option[String] = None,
+    restrictedToRoles: Option[String] = Some("public,foo")) {
 
   require(validQuorumSize, "Mesos quorum size should be 0 or smaller than number of agents")
   require(validSeccompConfig, "To enable seccomp, agentSeccompConfigDir should be defined and isolation \"linux/seccomp\" used")
@@ -222,11 +223,11 @@ case class MesosCluster(
       "MESOS_LAUNCHER" -> "posix",
       "MESOS_CONTAINERIZERS" -> config.containerizers,
       "MESOS_LAUNCHER" -> config.launcher,
-      "MESOS_ROLES" -> "public,foo",
       "MESOS_ACLS" -> s"file://$aclsPath",
       "MESOS_CREDENTIALS" -> s"file://$credentialsPath",
       "MESOS_SYSTEMD_ENABLE_SUPPORT" -> "false",
       "MESOS_SWITCH_USER" -> "false") ++
+      config.restrictedToRoles.map("MESOS_ROLES" -> _).to[Seq] ++
       config.isolation.map("MESOS_ISOLATION" -> _).to[Seq] ++
       config.imageProviders.map("MESOS_IMAGE_PROVIDERS" -> _).to[Seq]
   }
@@ -295,7 +296,7 @@ case class MesosCluster(
       s"--port=$port",
       s"--zk=$masterUrl",
       s"--work_dir=${workDir.getAbsolutePath}") ++ extraArgs,
-      cwd = None, extraEnv = mesosEnv(workDir): _*)
+      cwd = None, extraEnv = Seq(("GLOG_v", "2")) ++ mesosEnv(workDir): _*)
 
     val processName: String = "Master"
   }
@@ -312,7 +313,7 @@ case class MesosCluster(
         s"--resources=${resources.resourceString()}",
         s"--master=$masterUrl",
         s"--work_dir=${workDir.getAbsolutePath}") ++ extraArgs,
-      cwd = None, extraEnv = mesosEnv(workDir): _*)
+      cwd = None, extraEnv = Seq(("GLOG_v", "2")) ++ mesosEnv(workDir): _*)
 
     override val processName = "Agent"
   }

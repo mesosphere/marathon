@@ -28,24 +28,22 @@ class JsonSerializeDeserializeState {
   /**
     * The contents of the JSON mock file as a de-serialised RAML object (for serialisation)
     */
-  lazy val groupMock: raml.Group = {
+  lazy val groupMock: raml.GroupUpdate = {
     val value: JsValue = Json.parse(jsonMockContents)
-    Json.fromJson[raml.Group](value).get
+    Json.fromJson[raml.GroupUpdate](value).get
   }
 
   /**
     * The contents of the JSON mock file as an updatable root group
     */
   lazy val rootGroupMock: Group = {
-    import mesosphere.marathon.raml.GroupConversion._
     val value: JsValue = Json.parse(jsonMockContents)
     val groupUpdate: raml.GroupUpdate = Json.fromJson[raml.GroupUpdate](value).get
 
     val group: RootGroup = RootGroup()
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
 
-    Raml.fromRaml(
-      GroupConversion(groupUpdate, group, Timestamp.zero) -> appConversionFunc)
+    GroupConversion(groupUpdate, group, Timestamp.zero).apply(appConversionFunc)
   }
 
   val jacksonSerializer: ObjectMapper = RamlSerializer.serializer
@@ -72,22 +70,27 @@ class JsonSerializeDeserializeBenchmark extends JsonSerializeDeserializeState {
 
   @Benchmark
   def jsonParseDeserialiseUpdate(hole: Blackhole): Unit = {
-    import mesosphere.marathon.raml.GroupConversion._
     val value: JsValue = Json.parse(jsonMockContents)
     val groupUpdate: raml.GroupUpdate = Json.fromJson[raml.GroupUpdate](value).get
 
     val group: RootGroup = RootGroup()
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
-    val updatedGroup: Group = Raml.fromRaml(
-      GroupConversion(groupUpdate, rootGroupMock, Timestamp.now()) -> appConversionFunc)
+    val updatedGroup: Group = GroupConversion(groupUpdate, rootGroupMock, Timestamp.now()).apply(appConversionFunc)
 
     hole.consume(updatedGroup)
   }
 
   @Benchmark
   def jsonDeserialise(hole: Blackhole): Unit = {
-    val value: JsValue = Json.toJson[raml.Group](groupMock)
+    val value: JsValue = Json.toJson[raml.GroupUpdate](groupMock)
     hole.consume(value)
+  }
+
+  @Benchmark
+  def jsonDeserialiseWrite(hole: Blackhole): Unit = {
+    val value: JsValue = Json.toJson[raml.GroupUpdate](groupMock)
+    val str: String = value.toString()
+    hole.consume(str)
   }
 
 }

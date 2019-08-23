@@ -155,7 +155,25 @@ object TestInstanceBuilder {
       state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
       tasksMap = Map.empty,
       runSpec = runSpec,
-      None
+      reservation = None,
+      role = "*"
+    )
+  }
+
+  def emptyInstanceForRunSpec(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
+    runSpec: RunSpec, unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default(), instanceId: Instance.Id): Instance = {
+    val resolvedInstanceId = Option(instanceId).getOrElse(Instance.Id.forRunSpec(runSpec.id))
+
+    require(resolvedInstanceId.runSpecId == runSpec.id, "provided instanceId did not match runSpec")
+
+    Instance(
+      instanceId = resolvedInstanceId,
+      agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
+      state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
+      tasksMap = Map.empty,
+      runSpec = runSpec,
+      reservation = None,
+      role = runSpec.role
     )
   }
 
@@ -170,16 +188,20 @@ object TestInstanceBuilder {
       role = "*"
     )
 
-    new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, runSpec, None)
+    new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, runSpec, None, "*")
   }
 
   val defaultAgentInfo = Instance.AgentInfo(
     host = AgentTestDefaults.defaultHostName,
     agentId = Some(AgentTestDefaults.defaultAgentId), region = None, zone = None, attributes = Seq.empty)
 
+  def newBuilderForRunSpec(runSpec: RunSpec, now: Timestamp = Timestamp.now(),
+    version: Timestamp = Timestamp.zero, instanceId: Instance.Id = null): TestInstanceBuilder =
+    TestInstanceBuilder(emptyInstanceForRunSpec(now, version, runSpec, instanceId = instanceId), now)
+
   def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
-    newBuilderWithInstanceId(Instance.Id.forRunSpec(runSpecId), now, version)
+    TestInstanceBuilder(emptyInstance(now, version, Instance.Id.forRunSpec(runSpecId)), now)
 
   def newBuilderWithInstanceId(instanceId: Instance.Id, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =

@@ -20,14 +20,7 @@ import scala.collection.immutable.Seq
   *
   * Only 1 update to the root will be processed at a time.
   */
-trait GroupManager {
-
-  /**
-    * Get a root group, fetching it from a persistence store if necessary.
-    *
-    * @return a root group
-    */
-  def rootGroup(): RootGroup
+trait GroupManager extends GroupManager.CurrentRootGroupRetriever {
 
   /**
     * Get a root group.
@@ -150,6 +143,14 @@ trait GroupManager {
     toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[Either[T, DeploymentPlan]]
 
   /**
+    * Updates with root group without triggering a deployment.
+    *
+    * @param fn The update function applied to the root group.
+    * @return done
+    */
+  def patchRoot(fn: RootGroup => RootGroup): Future[Done]
+
+  /**
     * Update application with given identifier and update function.
     * The change could take time to get deployed.
     * For this reason, we return the DeploymentPlan as result, which can be queried in the marathon scheduler.
@@ -203,5 +204,17 @@ trait GroupManager {
     * @return Done if invalidation was successful
     */
   def invalidateGroupCache(): Future[Done]
+
+}
+
+object GroupManager {
+  trait CurrentRootGroupRetriever {
+    /**
+      * Get a root group, fetching it from a persistence store if necessary.
+      *
+      * @return a root group
+      */
+    def rootGroup(): RootGroup
+  }
 
 }

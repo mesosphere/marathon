@@ -1,4 +1,41 @@
-## Changes from 1.8.194 to 1.9.xxx
+
+## Changes from 1.8.212 to 1.9.xxx
+
+### Multi-role support
+
+Marathon 1.9 brings support for multi-role, enabling you to launch services for different roles (against different Mesos quotas) with the same Marathon instance. This feature is described in greater detail in the [Multi-role docs](https://mesosphere.github.io/marathon/docs/multirole.html).
+
+#### Role field added to services
+
+The role field can now be optionally specified for a service. However, the value of this field may only be sent to one of two values:
+
+* The default role as specified by `--mesos_role` command line parameter
+* The name of the top-level group (this is referred to as the group-role)
+
+#### Changes in `acceptedResourceRoles` behavior
+
+`acceptedResourceRole` field defines what *reserved* resources would be used by the service. Previously, a Marathon instance started with `--mesos_role *` would accept following service definition:
+```json
+{
+   "id": "/sleep",
+   "cmd": "sleep 3600"
+   "acceptedResourceRoles": ["foo"]
+}
+``` 
+
+... but wouldn't be able to start the task since it is not subscribed for the role `foo`.
+
+This behavior has been changed with the addition of multi-role support. In Marathon 1.9, Marathon will sanitize the `acceptedResourceRoles` value, removing all invalid roles and leaving `*` (unreserved) by default. Using the example above, the service definition will be still accepted, however, `foo` will be removed and `"acceptedResourceRoles": ["*"]` will be used instead so that the task *will start*.
+
+Starting with Marathon 1.10, Marathon will reject the above service definition as invalid. However, the `sanitize_accepted_resource_roles` feature can be enabled with `--deprecated_features sanitize_accepted_resource_roles`, causing Marathon to continue to auto-sanitize this field value for one more version.
+
+In Marathon 1.11, the `sanitize_accepted_resource_roles` deprecated feature will be removed.
+
+#### Command-line flag `--default_accepted_resource_roles` has been replaced with `--accepted_resource_roles_default_behavior`
+
+The command-line flag `--default_accepted_resource_roles` does not work in a multi-role context. A new command-line parameter, `--accepted_resource_roles_default_behavior`, has been introduced, to replace it. See the [command-line-flags](https://mesosphere.github.io/marathon/docs/command-line-flags.html) docs.
+
+The command-line flag `--default_accepted_resource_roles` is deprecated and will be removed in Marathon 1.10.0.
 
 ### Introduce SharedMemory/IPC configuration to Marathon Apps and Pods
 
@@ -34,7 +71,79 @@ is removed with `1.9.x`.
 
 When Marathon receives a `TASK_GONE_BY_OPERATOR` or `TASK_KILLED` status update with a reason indicating that the agent is being drained, any delay for the related run spec will be deleted. This is to speed up the process of replacing tasks from drained agents.
 
-## Changes from 1.8.194 to 1.8.xxx
+### Deprecated features
+
+#### Deprecation and eventual removal of the command line flags `--revive_offer_repetitions` and `--revive_offers_for_new_apps`
+
+The command line options `--revive_offers_port_new_apps` and `--revive_offers_repetitions` have been deprecated in Marathon 1.9. Specifying these command-line arguments no longer has any effect. These command-line options will be completely removed in Marathon 1.10, where specifying them will be considered an error.
+
+Instead of specifying `--revive_offers_port_new_apps`, one can achieve similar effects by specifying a larger `--min_revive_offers_interval`, which will reduce the burden and offer starvation in clusters with lots of frameworks.
+
+Revive offers repetitions functionality no longer optional; after the duration specified by ```min_revive_offers_interval` since the last revive for role, offers are still wanted, a revive is repeated once (and only once).
+
+For more detailed information, see the JIRA ticket [MARATHON-8663](https://jira.mesosphere.com/browse/MARATHON-8663)
+
+## Changes from 1.8.218 to 1.8.xxx
+
+### External Volume Validation changes
+
+#### Relaxed name validation
+
+As there are some external volume providers which require options in the volume name, the strict validation of the name on the external volume is now removed.
+
+As the uniqueness check is based on the volume name, this may lead to some inconsistencies, for the sake of uniqueness, the following volumes are distinct:
+
+```json
+"volumes": [
+      {
+        "external": {
+          "name": "name=volumename,option1=value",
+        },
+      }
+    ],
+```
+
+```json
+"volumes": [
+      {
+        "external": {
+          "name": "option1=value,name=volumename",
+        },
+      }
+    ],
+```
+
+#### Optional uniqueness check
+
+Previously, Marathon would validate that an external volume with the same name is only used once across all apps. This was due to the initial implementation being focused on Rexray+EBS. However, multiple external volume providers now
+allow shared access to mounted volumes, so we introduced a way to disable the uniqueness check:
+
+A new field, `container.volumes[n].external.shared` which defaults to `false`. If set to true, the same volume name can be used
+by multiple containers. The `shared` flag has to be set to `true` on all external volumes with the same name, otherwise a conflict is reported on the volume without the `shared=true` flag.
+
+```json
+  "container": {
+    "type": "MESOS",
+    "volumes": [
+      {
+        "external": {
+          "size": 5,
+          "name": "volumename",
+          "provider": "dvdi",
+          "shared": "true",
+          "options": {
+            "dvdi/driver": "pxd",
+            "dvdi/shared": "true"
+          }
+        },
+        "mode": "RW",
+        "containerPath": "/mnt/nginx"
+      }
+    ],
+  }
+```
+
+## Changes from 1.8.194 to 1.8.218
 
 ### Revive and Suppress Refactoring
 

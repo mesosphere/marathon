@@ -2,9 +2,9 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{FetchUri, PathId}
+import mesosphere.marathon.state.{AbsolutePathId, FetchUri, PathId, ResourceRole}
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util.RoleSettings
+import mesosphere.mesos.ResourceMatcher.Role
 
 object AppNormalization {
 
@@ -202,6 +202,18 @@ object AppNormalization {
       else c
     }
 
+  def sanitizeAcceptedResourceRoles(app: App, effectiveRole: String): Option[Set[String]] = {
+    app.acceptedResourceRoles.map { roles =>
+      val sanitized = roles.filter(role => role == "*" || role == effectiveRole)
+
+      // This method is only called when [[DeprecatedFeatures.sanitizeAcceptedResourceRoles]] is ON. In this
+      // case we not only filter out invalid roles, but also fallback to the default (*) one. Note that acceptedResourceRoles
+      // is about reservations and NOT allocation, so the default one is (*) and not (--mesos_role)
+      if (sanitized.isEmpty) Set(ResourceRole.Unreserved)
+      else sanitized
+    }
+  }
+
   def maybeDropPortMappings(c: Container, networks: Seq[Network]): Container =
     // empty networks Seq defaults to host-mode later on, so consider it now as indicating host-mode networking
     if (networks.exists(_.mode == NetworkMode.Host) || networks.isEmpty) c.copy(portMappings = None) else c
@@ -274,7 +286,7 @@ object AppNormalization {
     app.copy(
       // it's kind of cheating to do this here, but its required in order to pass canonical validation (that happens
       // before canonical normalization)
-      id = app.id.toRootPath.toString,
+      id = app.id.toAbsolutePath.toString,
       // normalize fetch
       fetch = fetch,
       uris = None,
@@ -292,7 +304,26 @@ object AppNormalization {
     )
   }
 
-  def apply(config: Config): Normalization[App] = Normalization { app =>
+/** 
+ * This is a partial normalization, which currently only normalizes the [[App.role]] and [[App.acceptedResourceRoles]] fields.
+ * We do this because app validation is relying on these fields being set correctly.
+ */
+  def forPreValidation(config: Config): Normalization[App] = Normalization{ app =>
+    val role = app.role.getOrElse(config.defaultRole)
+
+    // sanitize accepted resource roles if enabled
+    val acceptedResourceRoles =
+      if (config.sanitizeAcceptedResourceRoles) {
+        sanitizeAcceptedResourceRoles(app, role)
+      } else app.acceptedResourceRoles
+
+    app.copy(
+      role = Some(role),
+      acceptedResourceRoles = acceptedResourceRoles
+    )
+  }
+
+  def forPostValidation(config: Config): Normalization[App] = Normalization { app =>
     val networks = Networks(config, Some(app.networks)).normalize.networks.filter(_.nonEmpty).getOrElse(DefaultNetworks)
     NetworkNormalization.requireContainerNetworkNameResolution(networks)
     val container = NetworkedContainer(Some(networks), app.container).normalize.container
@@ -305,32 +336,47 @@ object AppNormalization {
     // requirePorts only applies for host-mode networking
     val requirePorts = networks.find(_.mode != NetworkMode.Host).fold(app.requirePorts)(_ => false)
 
-    val role = app.role.getOrElse(config.roleSettings.defaultRole)
-
     app.copy(
       container = container,
       networks = networks,
       unreachableStrategy = app.unreachableStrategy.orElse(Option(defaultUnreachable)),
       requirePorts = requirePorts,
-      role = Some(role)
     )
+  }
+
+  def apply(config: Config): Normalization[App] = Normalization { app =>
+    val preNormalized = forPreValidation(config).normalized(app)
+    forPostValidation(config).normalized(preNormalized)
   }
 
   /** dynamic app normalization configuration, useful for migration and/or testing */
   trait Config extends NetworkNormalization.Config {
     def mesosBridgeName: String
     def enabledFeatures: Set[String]
-    def roleSettings: RoleSettings
+    def defaultRole: Role
+    def sanitizeAcceptedResourceRoles: Boolean
   }
 
   /** static app normalization configuration */
-  case class Configuration(defaultNetworkName: Option[String], override val mesosBridgeName: String, enabledFeatures: Set[String], roleSettings: RoleSettings) extends Config {
+  case class Configuration(
+      defaultNetworkName: Option[String],
+      override val mesosBridgeName: String,
+      enabledFeatures: Set[String],
+      defaultRole: Role,
+      sanitizeAcceptedResourceRoles: Boolean
+  ) extends Config {
 
   }
 
   object Configuration {
-    def apply(config: MarathonConf, roleSettings: RoleSettings): Config =
-      Configuration(config.defaultNetworkName.toOption, config.mesosBridgeName(), config.availableFeatures, roleSettings)
+    def apply(config: MarathonConf, defaultRole: Role): Config =
+      Configuration(
+        config.defaultNetworkName.toOption,
+        config.mesosBridgeName(),
+        config.availableFeatures,
+        defaultRole,
+        config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles)
+      )
   }
 
   /**
@@ -389,7 +435,7 @@ object AppNormalization {
         throw NormalizationException("cannot mix deprecated and canonical network APIs")
     }
   }
-  def withCanonizedIds[T](base: PathId = PathId.empty): Normalization[T] = Normalization {
+  def withCanonizedIds[T](base: AbsolutePathId = PathId.root): Normalization[T] = Normalization {
     case update: AppUpdate =>
       update.copy(
         id = update.id.map(id => PathId(id).canonicalPath(base).toString),

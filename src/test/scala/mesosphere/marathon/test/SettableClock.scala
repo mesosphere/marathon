@@ -1,8 +1,9 @@
 package mesosphere.marathon
 package test
 
-import java.time._
+import java.time.{Duration => JavaDuration, _}
 
+import scala.compat.java8.DurationConverters
 import scala.concurrent.duration.FiniteDuration
 
 object SettableClock {
@@ -24,18 +25,16 @@ class SettableClock(private[this] var clock: Clock = SettableClock.defaultJavaCl
 
   override def withZone(zoneId: ZoneId): Clock = new SettableClock(clock.withZone(zoneId))
 
-  def +=(duration: FiniteDuration): Unit = plus(duration)
+  def advanceBy(duration: FiniteDuration): this.type =
+    advanceBy(DurationConverters.toJava(duration))
 
-  def plus(duration: FiniteDuration): this.type =
-    plus(Duration.ofMillis(duration.toMillis))
-
-  def plus(duration: Duration): this.type = {
+  def advanceBy(duration: JavaDuration): this.type = {
     clock = Clock.offset(clock, duration)
     subscribers.foreach(_())
     this
   }
 
-  def at(instant: Instant): this.type = {
+  def advanceTo(instant: Instant): this.type = {
     clock = Clock.fixed(instant, clock.getZone)
     subscribers.foreach(_())
     this

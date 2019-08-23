@@ -13,6 +13,7 @@ class AllConf(args: Seq[String] = Nil) extends ScallopConf(args)
   with DebugConf
   with PluginManagerConfiguration
   with FeaturesConf {
+  helpWidth(160)
   verify()
 }
 

@@ -26,6 +26,9 @@ def get_transport(host, username, key):
     if host == master_ip():
         transport = paramiko.Transport(host)
     else:
+
+        logger.debug('Connecting to %s@%s with key %s', username, master_ip(), key)
+
         transport_master = paramiko.Transport(master_ip())
         transport_master = start_transport(transport_master, username, key)
 
@@ -98,6 +101,7 @@ def validate_key(key_path):
     key_path = os.path.expanduser(key_path)
 
     if not os.path.isfile(key_path):
+        logger.warning('Provided key %s is not a file.', key_path)
         return False
 
     return paramiko.RSAKey.from_private_key_file(key_path)

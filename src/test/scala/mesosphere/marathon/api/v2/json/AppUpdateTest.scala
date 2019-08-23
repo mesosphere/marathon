@@ -5,7 +5,7 @@ import com.wix.accord.Validator
 import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.validation.AppValidation
-import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization, ValidationHelper}
+import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
 import mesosphere.marathon.raml.{AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, Raml, UpgradeStrategy}
 import mesosphere.marathon.state.PathId._
@@ -25,7 +25,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
     */
   private[this] def fromJsonString(json: String): AppUpdate = {
     val update: AppUpdate = Json.fromJson[AppUpdate](Json.parse(json)).get
-    AppNormalization.forDeprecatedUpdates(AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings))
+    AppNormalization.forDeprecatedUpdates(AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved, true))
       .normalized(update)
   }
 

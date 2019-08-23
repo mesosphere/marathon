@@ -5,7 +5,7 @@ import java.util.UUID
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment._
-import mesosphere.marathon.raml.{App, GroupUpdate, Raml}
+import mesosphere.marathon.raml.{App, GroupUpdate}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{AppDefinition, Group, Timestamp}
 import mesosphere.marathon.test.GroupCreation
@@ -63,11 +63,6 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
       groupFromNull.version should be('empty)
     }
 
-    "Can write/read Group" in {
-      marshalUnmarshal(Raml.toRaml(genGroup()))
-      marshalUnmarshal(Raml.toRaml(genGroup(Set(genGroup(), genGroup(Set(genGroup()))))))
-    }
-
     "Can write/read byte arrays" in {
       marshalUnmarshal("Hello".getBytes)
     }
@@ -108,6 +103,7 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
   def genInt = Random.nextInt(1000)
 
   def genId = UUID.randomUUID().toString.toPath
+  def genAbsoluteId = UUID.randomUUID().toString.toAbsolutePath
 
   def genTimestamp = Timestamp.now()
 
@@ -123,13 +119,13 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
   def genGroup(children: Set[Group] = Set.empty) = {
     val app1 = genApp
     val app2 = genApp
-    createGroup(genId, apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId), version = genTimestamp, validate = false)
+    createGroup(genAbsoluteId, apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genAbsoluteId), version = genTimestamp, validate = false)
   }
 
   def genRootGroup(children: Set[Group] = Set.empty) = {
     val app1 = genApp
     val app2 = genApp
-    createRootGroup(apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId), version = genTimestamp, validate = false)
+    createRootGroup(apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genAbsoluteId), version = genTimestamp, validate = false)
   }
 
   def genGroupUpdate(children: Set[GroupUpdate] = Set.empty) =

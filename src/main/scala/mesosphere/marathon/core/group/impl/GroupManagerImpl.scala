@@ -75,7 +75,7 @@ class GroupManagerImpl(
   override def versions(id: PathId): Source[Timestamp, NotUsed] = {
     groupRepository.rootVersions().mapAsync(RepositoryConstants.maxConcurrency) { version =>
       groupRepository.rootVersion(version)
-    }.collect { case Some(g) if g.group(id).isDefined => g.version }
+    }.collect { case Some(g) if g.group(id.asAbsolutePath).isDefined => g.version }
   }
 
   override def appVersions(id: PathId): Source[OffsetDateTime, NotUsed] = {
@@ -94,11 +94,11 @@ class GroupManagerImpl(
     groupRepository.podVersion(id, version)
   }
 
-  override def group(id: PathId): Option[Group] = rootGroup().group(id)
+  override def group(id: PathId): Option[Group] = rootGroup().group(id.asAbsolutePath)
 
   override def group(id: PathId, version: Timestamp): Future[Option[Group]] = async {
     val root = await(groupRepository.rootVersion(version.toOffsetDateTime))
-    root.flatMap(_.group(id))
+    root.flatMap(_.group(id.asAbsolutePath))
   }
 
   override def runSpec(id: PathId): Option[RunSpec] = app(id).orElse(pod(id))
@@ -185,6 +185,16 @@ class GroupManagerImpl(
       throw new TooManyRunningDeploymentsException(max)
     }
     Done
+  }
+
+  override def patchRoot(change: RootGroup => RootGroup): Future[Done] = {
+    val from = rootGroup()
+    async {
+      val changedGroup = change(from)
+      await(groupRepository.storeRoot(changedGroup, Seq.empty, Seq.empty, Seq.empty, Seq.empty))
+      root := Option(changedGroup)
+      Done
+    }
   }
 
   override def invalidateAndRefreshGroupCache(): Future[Done] = async {

@@ -23,9 +23,9 @@ import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition, PodManager}
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 import mesosphere.marathon.raml.{EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, PersistentVolumeInfo, PersistentVolumeType, Pod, PodPersistentVolume, PodSecretVolume, PodState, PodStatus, Raml, Resources, VolumeMount}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, Group, PathId, ResourceRole, Timestamp, UnreachableStrategy, VersionInfo}
+import mesosphere.marathon.state._
 import mesosphere.marathon.test.{GroupCreation, JerseyTest, Mockito, SettableClock}
-import mesosphere.marathon.util.SemanticVersion
+import mesosphere.marathon.util.{RoleSettings, SemanticVersion}
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
@@ -396,13 +396,14 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
     "create a pod with a persistent volume" in {
       implicit val podSystem = mock[PodManager]
-      val f = Fixture()
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
       val podSpecJsonWithPersistentVolume =
         """
           | { "id": "/mypod",
+          |   "role": "foo",
           |   "containers": [ {
           |     "name": "dataapp",
           |     "resources": { "cpus": 0.03, "mem": 64 },
@@ -432,9 +433,114 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
     }
 
+    "fail to create a pod with a persistent volume if role is set to *" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+
+      podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val podSpecJsonWithPersistentVolume =
+        """
+          | { "id": "/mypod",
+          |   "role": "*",
+          |   "containers": [ {
+          |     "name": "dataapp",
+          |     "resources": { "cpus": 0.03, "mem": 64 },
+          |     "image": { "kind": "DOCKER", "id": "busybox" },
+          |     "exec": { "command": { "shell": "sleep 1" } },
+          |     "volumeMounts": [ { "name": "pst", "mountPath": "pst1", "readOnly": false } ]
+          |   } ],
+          |   "volumes": [ {
+          |     "name": "pst",
+          |     "persistent": { "type": "root", "size": 10 }
+          |   } ] }
+        """.stripMargin
+
+      val response = asyncRequest { r =>
+        f.podsResource.update("/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request, r)
+      }
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(422)
+        response.getEntity.toString should include("Resident pods cannot have the role *")
+      }
+    }
+
+    "fail to update a pod with a persistent volume without force parameter" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+
+      val pathId = "/foo/mypod".toAbsolutePath
+      val existingPod = PodDefinition(id = pathId, role = "*")
+
+      f.prepareGroup("/foo", Map(pathId.asAbsolutePath -> existingPod))
+
+      podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val podSpecJsonWithPersistentVolume =
+        """
+          | { "id": "/foo/mypod",
+          |   "role": "foo",
+          |   "containers": [ {
+          |     "name": "dataapp",
+          |     "resources": { "cpus": 0.03, "mem": 64 },
+          |     "image": { "kind": "DOCKER", "id": "busybox" },
+          |     "exec": { "command": { "shell": "sleep 1" } },
+          |     "volumeMounts": [ { "name": "pst", "mountPath": "pst1", "readOnly": false } ]
+          |   } ],
+          |   "volumes": [ {
+          |     "name": "pst",
+          |     "persistent": { "type": "root", "size": 10 }
+          |   } ] }
+        """.stripMargin
+
+      val response = asyncRequest { r =>
+        f.podsResource.update("/foo/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request, r)
+      }
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(422)
+        response.getEntity.toString should include(RoleSettings.residentRoleChangeWarningMessage("*", "foo"))
+      }
+    }
+
+    "update a pod with a persistent volume with force parameter" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+
+      val pathId = "/foo/mypod".toAbsolutePath
+      val existingPod = PodDefinition(id = pathId, role = "*")
+
+      f.prepareGroup("/foo", Map(pathId.asAbsolutePath -> existingPod))
+
+      podSystem.update(any, eq(true)).returns(Future.successful(DeploymentPlan.empty))
+
+      val podSpecJsonWithPersistentVolume =
+        """
+          | { "id": "/foo/mypod",
+          |   "role": "foo",
+          |   "containers": [ {
+          |     "name": "dataapp",
+          |     "resources": { "cpus": 0.03, "mem": 64 },
+          |     "image": { "kind": "DOCKER", "id": "busybox" },
+          |     "exec": { "command": { "shell": "sleep 1" } },
+          |     "volumeMounts": [ { "name": "pst", "mountPath": "pst1", "readOnly": false } ]
+          |   } ],
+          |   "volumes": [ {
+          |     "name": "pst",
+          |     "persistent": { "type": "root", "size": 10 }
+          |   } ] }
+        """.stripMargin
+
+      val response = asyncRequest { r =>
+        f.podsResource.update("/foo/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = true, f.auth.request, r)
+      }
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(HttpServletResponse.SC_OK)
+      }
+    }
+
     "fail to create a pod with a persistent volume if unreachable strategy is enabled" in {
       implicit val podSystem = mock[PodManager]
-      val f = Fixture()
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -466,7 +572,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
     "fail to create a pod with a persistent volume if upgrade.maximumOverCapacity != 0" in {
       implicit val podSystem = mock[PodManager]
-      val f = Fixture()
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -506,6 +612,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       val podSpecJsonWithPersistentVolume =
         """
           | { "id": "/mypod",
+          |   "role": "foo",
           |   "scheduling": { "placement": { "acceptedResourceRoles": ["*", "slave_public"] } },
           |   "containers": [ {
           |     "name": "dataapp",
@@ -1731,7 +1838,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
       "there are versions" when {
         import mesosphere.marathon.state.PathId._
-        val pod1 = PodDefinition("/id".toRootPath, containers = Seq(MesosContainer(name = "foo", resources = Resources())), role = "*")
+        val pod1 = PodDefinition("/id".toAbsolutePath, containers = Seq(MesosContainer(name = "foo", resources = Resources())), role = "*")
         val pod2 = pod1.copy(versionInfo = VersionInfo.OnlyVersion(pod1.version + 1.minute))
         "list the available versions" in {
           val groupManager = mock[GroupManager]
@@ -1769,14 +1876,15 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         "attempting to kill a single instance" in {
           implicit val killer = mock[TaskKiller]
           val f = Fixture()
-          val runSpec = AppDefinition(id = "/id1".toRootPath, versionInfo = VersionInfo.OnlyVersion(f.clock.now()), role = "*")
+          val runSpec = AppDefinition(id = "/id1".toAbsolutePath, versionInfo = VersionInfo.OnlyVersion(f.clock.now()), role = "*")
           val instanceId = Instance.Id.fromIdString("id1.instance-a905036a-f6ed-11e8-9688-2a978491fd64")
           val instance = Instance(
             instanceId, Some(Instance.AgentInfo("", None, None, None, Nil)),
             InstanceState(Condition.Running, f.clock.now(), Some(f.clock.now()), None, Goal.Running),
             Map.empty,
             runSpec = runSpec,
-            None
+            None,
+            role = "*"
           )
           killer.kill(any, any, any)(any) returns Future.successful(Seq(instance))
           val response = asyncRequest { r =>
@@ -1808,17 +1916,19 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         }
         "attempting to kill multiple instances" in {
           implicit val killer = mock[TaskKiller]
-          val runSpec = AppDefinition(id = "/id1".toRootPath, unreachableStrategy = UnreachableStrategy.default(), role = "*")
+          val runSpec = AppDefinition(id = "/id1".toAbsolutePath, unreachableStrategy = UnreachableStrategy.default(), role = "*")
           val instances = Seq(
             Instance(Instance.Id.forRunSpec(runSpec.id), Some(Instance.AgentInfo("", None, None, None, Nil)),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,
               runSpec,
-              None
+              None,
+              role = "*"
             ),
             Instance(Instance.Id.forRunSpec(runSpec.id), Some(Instance.AgentInfo("", None, None, None, Nil)),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,
               runSpec,
-              None))
+              None,
+              role = "*"))
 
           val f = Fixture()
 
@@ -1964,7 +2074,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
   ) extends GroupCreation {
 
     def prepareGroup(groupId: String, pods: Map[PathId, PodDefinition] = Group.defaultPods): Unit = {
-      val groupPath = PathId(groupId)
+      val groupPath = AbsolutePathId(groupId)
 
       val group = createGroup(groupPath, pods = pods)
 

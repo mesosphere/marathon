@@ -12,6 +12,7 @@ import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
+import mesosphere.marathon.raml.PodState
 import mesosphere.marathon.state.{PathId, PersistentVolume, PersistentVolumeInfo, VolumeMount}
 import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
@@ -25,7 +26,7 @@ import scala.sys.process.Process
 
 /**
   * This integration test starts older Marathon versions one after another and finishes this upgrade procedure with the
-  * current build. In each step we verfiy that all apps are still up and running.
+  * current build. In each step we verify that all apps are still up and running.
   */
 class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonAppFixtures with Eventually {
 
@@ -127,8 +128,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       eventually { marathon149 should have (runningTasksFor(app_149.id.toPath, 1)) }
       eventually { marathon149 should have (runningTasksFor(app_149_fail.id.toPath, 1)) }
 
-      val originalApp149Tasks = marathon149.client.tasks(app_149.id.toPath).value
-      val originalApp149FailedTasks = marathon149.client.tasks(app_149_fail.id.toPath).value
+      val originalApp149Tasks: List[ITEnrichedTask] = marathon149.client.tasks(app_149.id.toPath).value
+      val originalApp149FailedTasks: List[ITEnrichedTask] = marathon149.client.tasks(app_149_fail.id.toPath).value
 
       When("Marathon 1.4.9 is shut down")
       marathon149.stop().futureValue
@@ -153,8 +154,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       eventually { marathon1515 should have (runningTasksFor(app_1515.id.toPath, 1)) }
       eventually { marathon1515 should have (runningTasksFor(app_1515_fail.id.toPath, 1)) }
 
-      val originalApp1515Tasks = marathon1515.client.tasks(app_1515.id.toPath).value
-      val originalApp1515FailedTasks = marathon1515.client.tasks(app_1515_fail.id.toPath).value
+      val originalApp1515Tasks: List[ITEnrichedTask] = marathon1515.client.tasks(app_1515.id.toPath).value
+      val originalApp1515FailedTasks: List[ITEnrichedTask] = marathon1515.client.tasks(app_1515_fail.id.toPath).value
 
       And("All apps from 1.4.9 are still running")
       marathon1515.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
@@ -192,8 +193,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       )
       marathon16549.client.createPodV2(resident_pod_16549) should be(Created)
       val (resident_pod_16549_port, resident_pod_16549_address) = eventually {
-        val status = marathon16549.client.status(resident_pod_16549.id)
-        status should be(Stable)
+        val status = marathon16549.client.status18(resident_pod_16549.id)
+        status.value.status shouldBe PodState.Stable
         status.value.instances(0).containers(0).endpoints(0).allocatedHostPort should be('defined)
         val port = status.value.instances(0).containers(0).endpoints(0).allocatedHostPort.get
         (port, status.value.instances(0).networks(0).addresses(0))
@@ -215,8 +216,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
       Then("All apps from 1.4.9 and 1.5.15 are still running")
-      marathonCurrent.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
-      marathonCurrent.client.tasks(app_1515.id.toPath).value should contain theSameElementsAs (originalApp1515Tasks)
+      val originalApp149TaskIds = originalApp149Tasks.map(_.id)
+      val originalApp1515TaskIds = originalApp1515Tasks.map(_.id)
+      marathonCurrent.client.tasks(app_149.id.toPath).value.map(_.id) should contain theSameElementsAs (originalApp149TaskIds)
+      marathonCurrent.client.tasks(app_1515.id.toPath).value.map(_.id) should contain theSameElementsAs (originalApp1515TaskIds)
 
       And("All apps from 1.4.9 and 1.5.15 are recovered and running again")
       eventually { marathonCurrent should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
@@ -246,14 +249,14 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     val app_16549_fail = appProxy(testBasePath / "app-16549-fail", "v1", instances = 1, healthCheck = None)
     marathon16549.client.createAppV2(app_16549_fail) should be(Created)
 
-    val app_16549 = appProxy(testBasePath / "app-16549", "v1", instances = 1, healthCheck = None)
+    val app_16549 = appProxy(testBasePath / "prod" / "db" / "app-16549", "v1", instances = 1, healthCheck = None)
     marathon16549.client.createAppV2(app_16549) should be(Created)
 
     patienceConfig
     eventually { marathon16549 should have (runningTasksFor(app_16549.id.toPath, 1)) }
     eventually { marathon16549 should have (runningTasksFor(app_16549_fail.id.toPath, 1)) }
 
-    val originalApp16549Tasks = marathon16549.client.tasks(app_16549.id.toPath).value
+    val originalApp16549Tasks: List[ITEnrichedTask] = marathon16549.client.tasks(app_16549.id.toPath).value
     val originalApp16549FailedTasks = marathon16549.client.tasks(app_16549_fail.id.toPath).value
 
     When("Marathon 1.6.549 is shut down")
@@ -268,7 +271,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
     Then("All apps from 1.6.549 are still running")
-    marathonCurrent.client.tasks(app_16549.id.toPath).value should contain theSameElementsAs (originalApp16549Tasks)
+    val originalTaskIds = originalApp16549Tasks.map(_.id)
+    marathonCurrent.client.tasks(app_16549.id.toPath).value.map(_.id) should contain theSameElementsAs (originalTaskIds)
 
     And("All apps from 1.6.549 are recovered and running again")
     eventually { marathonCurrent should have(runningTasksFor(app_16549_fail.id.toPath, 1)) }

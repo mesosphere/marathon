@@ -88,7 +88,7 @@ case class AppDefinition(
 
     tty: Option[Boolean] = AppDefinition.DefaultTTY,
 
-    role: String) extends RunSpec
+    role: Role) extends RunSpec
   with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
@@ -152,7 +152,8 @@ case class AppDefinition(
       taskId = None,
       host = None,
       hostPorts = Seq.empty,
-      envPrefix = None
+      envPrefix = None,
+      enforceRole = None
     )
     val cpusResource = ScalarResource(Resource.CPUS, resources.cpus)
     val memResource = ScalarResource(Resource.MEM, resources.mem)
@@ -261,7 +262,7 @@ case class AppDefinition(
 
     val tty: Option[Boolean] = if (proto.hasTty) Some(proto.getTty) else AppDefinition.DefaultTTY
 
-    val role: String = proto.getRole()
+    val role: Role = proto.getRole()
 
     // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
     // until the deprecation cycle is complete.
@@ -421,7 +422,7 @@ object AppDefinition extends GeneralPurposeCombinators {
   val RandomPortDefinition: PortDefinition = PortDefinition(RandomPortValue, "tcp", None, Map.empty[String, String])
 
   // App defaults
-  val DefaultId = PathId.empty
+  val DefaultId = PathId.root
 
   val DefaultEnv = Map.empty[String, EnvVarValue]
 
@@ -505,6 +506,17 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   def validWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.role is in(roleEnforcement.validRoles)
+    // DO NOT MERGE THESE TWO similar if blocks! Wix Accord macros does weird stuff otherwise.
+    if (app.isResident) {
+      app.role is isTrue(s"Resident apps cannot have the role ${ResourceRole.Unreserved}") { role: String =>
+        !role.equals(ResourceRole.Unreserved)
+      }
+    }
+    if (app.isResident) {
+      app.role is isTrue((role: Role) => RoleSettings.residentRoleChangeWarningMessage(roleEnforcement.previousRole.get, role)) { role: String =>
+        roleEnforcement.previousRole.map(_.equals(role) || roleEnforcement.forceRoleUpdate).getOrElse(true)
+      }
+    }
     app.acceptedResourceRoles is ResourceRole.validForRole(app.role)
   }
 

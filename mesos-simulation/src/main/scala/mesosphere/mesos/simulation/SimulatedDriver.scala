@@ -56,6 +56,8 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver with StrictLog
 
   override def reviveOffers(): Status = driverCmd(DriverActor.ReviveOffers)
 
+  override def reviveOffers(collection: util.Collection[String]): Status = ???
+
   override def declineOffer(offerId: OfferID, filters: Filters): Status = Status.DRIVER_RUNNING
 
   override def launchTasks(offerIds: util.Collection[OfferID], tasks: util.Collection[TaskInfo],
@@ -118,8 +120,6 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver with StrictLog
         Status.DRIVER_STOPPED
     }
   }
-
-  override def reviveOffers(roles: util.Collection[String]): Status = ???
 
   override def suppressOffers(roles: util.Collection[String]): Status = ???
 

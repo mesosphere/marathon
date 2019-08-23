@@ -10,7 +10,6 @@ import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.{Context, MediaType, Response}
 import akka.stream.Materializer
-import mesosphere.marathon.api.v2.AppHelpers.appNormalization
 import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
@@ -22,7 +21,6 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.util.RoleSettings
 import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -109,13 +107,13 @@ class GroupsResource @Inject() (
       }
 
       id match {
-        case ListApps(gid) => await(appsResponse(gid.toRootPath))
-        case ListRootApps() => await(appsResponse(PathId.empty))
-        case ListVersionsRE(gid) => await(versionsResponse(gid.toRootPath))
-        case ListRootVersionRE() => await(versionsResponse(PathId.empty))
-        case GetVersionRE(gid, version) => await(groupVersionResponse(gid.toRootPath, Timestamp(version)))
-        case GetRootVersionRE(version) => await(groupVersionResponse(PathId.empty, Timestamp(version)))
-        case _ => await(groupResponse(id.toRootPath))
+        case ListApps(gid) => await(appsResponse(gid.toAbsolutePath))
+        case ListRootApps() => await(appsResponse(PathId.root))
+        case ListVersionsRE(gid) => await(versionsResponse(gid.toAbsolutePath))
+        case ListRootVersionRE() => await(versionsResponse(PathId.root))
+        case GetVersionRE(gid, version) => await(groupVersionResponse(gid.toAbsolutePath, Timestamp(version)))
+        case GetRootVersionRE(version) => await(groupVersionResponse(PathId.root, Timestamp(version)))
+        case _ => await(groupResponse(id.toAbsolutePath))
       }
     }
   }
@@ -150,30 +148,26 @@ class GroupsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
 
-      val rootGroup = groupManager.rootGroup()
-      val rootPath = validateOrThrow(id.toRootPath)
+      val originalRootGroup = groupManager.rootGroup()
+      val rootPath = validateOrThrow(id.toAbsolutePath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
 
-      val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath)
+      val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath, originalRootGroup)
       val groupUpdate = validateOrThrow(
-        normalizeApps(
-          rootGroup,
-          rootPath,
-          raw,
-          config
-        ))(groupValidator)
+        GroupNormalization(config, originalRootGroup).updateNormalization(effectivePath).normalized(raw)
+      )(groupValidator)
 
       def throwIfConflicting[A](conflict: Option[Any], msg: String) = {
         conflict.map(_ => throw ConflictingChangeException(msg))
       }
 
       throwIfConflicting(
-        rootGroup.group(effectivePath),
+        originalRootGroup.group(effectivePath),
         s"Group $effectivePath is already created. Use PUT to change this group.")
 
       throwIfConflicting(
-        rootGroup.app(effectivePath),
+        originalRootGroup.app(effectivePath),
         s"An app with the path $effectivePath already exists.")
 
       val (deployment, path) = await(updateOrCreate(rootPath, groupUpdate, force))
@@ -189,6 +183,40 @@ class GroupsResource @Inject() (
     @Context req: HttpServletRequest,
     @Suspended asyncResponse: AsyncResponse): Unit = {
     update("", force, dryRun, body, req, asyncResponse)
+  }
+
+  @PATCH
+  @Path("""{id:.+}""")
+  def patchGroup(
+    @PathParam("id") id: String,
+    body: Array[Byte],
+    @Context req: HttpServletRequest,
+    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+    async {
+      implicit val identity = await(authenticatedAsync(req))
+      val raw = Json.parse(body).as[raml.GroupPartialUpdate]
+      val normalized = GroupNormalization(config, groupManager.rootGroup()).partialUpdateNormalization().normalized(raw)
+
+      val groupId = id.toAbsolutePath
+      validateOrThrow(groupId)(PathId.topLevel)
+
+      if (groupManager.group(groupId).isEmpty) {
+        unknownGroup(groupId)
+      } else {
+
+        def updateGroup(maybeGroup: Option[Group]): Group = {
+          maybeGroup match {
+            case Some(group) =>
+              checkAuthorization(UpdateGroup, group)
+              normalized.enforceRole.fold(group.withoutEnforceRole())(group.withEnforceRole(_))
+            case None => throw new RuntimeException(s"This is a bug. Group $id was not found this should have been caught by the validation.")
+          }
+        }
+
+        await(groupManager.patchRoot(_.updateGroup(groupId, updateGroup)))
+        ok()
+      }
+    }
   }
 
   /**
@@ -210,27 +238,23 @@ class GroupsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
 
-      val originalGroup = groupManager.rootGroup()
-      val rootPath = validateOrThrow(id.toRootPath)
+      val originalRootGroup = groupManager.rootGroup()
+      val rootPath = validateOrThrow(id.toAbsolutePath)
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
 
-      val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath)
+      val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath, originalRootGroup)
       val groupUpdate = validateOrThrow(
-        normalizeApps(
-          originalGroup,
-          effectivePath,
-          raw,
-          config
-        ))(groupValidator)
+        GroupNormalization(config, originalRootGroup).updateNormalization(effectivePath).normalized(raw)
+      )(groupValidator)
 
       if (dryRun) {
         val newVersion = Timestamp.now()
-        val updatedGroup = await(groupsService.updateGroup(originalGroup, effectivePath, groupUpdate, newVersion))
+        val updatedGroup = await(groupsService.updateGroup(originalRootGroup, effectivePath, groupUpdate, newVersion))
 
         ok(
           Json.obj(
-            "steps".->(DeploymentPlan(originalGroup, updatedGroup).steps)
+            "steps".->(DeploymentPlan(originalRootGroup, updatedGroup).steps)
           ).toString()
         )
       } else {
@@ -254,7 +278,7 @@ class GroupsResource @Inject() (
         RootGroup(version = version)
       }
 
-      val deployment = await(groupManager.updateRoot(PathId.empty, clearRootGroup, version, force))
+      val deployment = await(groupManager.updateRoot(PathId.root, clearRootGroup, version, force))
       deploymentResult(deployment)
     }
   }
@@ -274,7 +298,7 @@ class GroupsResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val groupId = id.toRootPath
+      val groupId = id.toAbsolutePath
       val version = Timestamp.now()
 
       def deleteGroup(rootGroup: RootGroup) = {
@@ -291,7 +315,7 @@ class GroupsResource @Inject() (
   }
 
   private def updateOrCreate(
-    rootPath: PathId,
+    rootPath: AbsolutePathId,
     update: raml.GroupUpdate,
     force: Boolean)(implicit identity: Identity): Future[(DeploymentPlan, PathId)] = async {
     val version = Timestamp.now()
@@ -314,33 +338,5 @@ object GroupsResource {
 
   private def authzSelector(implicit authz: Authorizer, identity: Identity) = Selector[Group] { g =>
     authz.isAuthorized(identity, ViewGroup, g)
-  }
-
-  import Normalization._
-
-  /**
-    * performs basic app validation and normalization for all apps (transitively) for the given group-update.
-    */
-  def normalizeApps(rootGroup: RootGroup, rootPath: PathId, update: raml.GroupUpdate, config: MarathonConf): raml.GroupUpdate = {
-    // note: we take special care to:
-    // (a) canonize and rewrite the app ID before normalization, and;
-    // (b) canonize BUT NOT REWRITE the group ID while iterating (validation has special rules re: number of set fields)
-
-    // convert apps to canonical form here
-    val groupPath = update.id.map(PathId(_).canonicalPath(rootPath)).getOrElse(rootPath)
-    val apps = update.apps.map(_.map { a =>
-
-      val roleSettings = RoleSettings.forService(config, PathId(a.id), rootGroup)
-      val normalizationConfig = AppNormalization.Configuration(config, roleSettings)
-      implicit val validateAndNormalizeApp: Normalization[raml.App] = appNormalization(normalizationConfig)(AppNormalization.withCanonizedIds())
-
-      a.copy(id = a.id.toPath.canonicalPath(groupPath).toString).normalize
-    })
-
-    val groups = update.groups.map(_.map { g =>
-      normalizeApps(rootGroup, groupPath, g, config)
-    })
-
-    update.copy(apps = apps, groups = groups)
   }
 }

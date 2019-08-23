@@ -5,10 +5,11 @@ import akka.actor.ActorRef
 import akka.util.Timeout
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
+
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
-
 import akka.pattern.ask
+import mesosphere.marathon.core.leadership.LeaderDeferrable
 
 private[matcher] object OfferMatcherManagerDelegate {
   sealed trait ChangeMatchersRequest
@@ -19,7 +20,9 @@ private[matcher] object OfferMatcherManagerDelegate {
   case class MatcherAdded(consumer: OfferMatcher) extends ChangeConsumersResponse
   case class MatcherRemoved(consumer: OfferMatcher) extends ChangeConsumersResponse
 
+  @LeaderDeferrable
   case class SetInstanceLaunchTokens(tokens: Int)
+  @LeaderDeferrable
   case class AddInstanceLaunchTokens(tokens: Int)
 }
 

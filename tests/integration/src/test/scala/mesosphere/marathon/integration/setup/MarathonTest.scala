@@ -59,7 +59,7 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
   lazy val uuid = UUID.randomUUID.toString
   lazy val httpPort = PortAllocator.ephemeralPort()
   lazy val url = conf.get("https_port").fold(s"http://localhost:$httpPort")(httpsPort => s"https://localhost:$httpsPort")
-  lazy val client = new MarathonFacade(url, PathId.empty)
+  lazy val client = new MarathonFacade(url, PathId.root)
 
   val workDir = {
     val f = Files.createTempDirectory(s"marathon-$httpPort").toFile
@@ -77,10 +77,12 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
 
   val secretPath = write(workDir, fileName = "marathon-secret", content = "secret1")
 
+  val mesosRole = conf.getOrElse("mesos_role", BaseMarathon.defaultRole)
+
   val config = Map(
     "master" -> masterUrl,
     "mesos_authentication_principal" -> "principal",
-    "mesos_role" -> "foo",
+    "mesos_role" -> mesosRole,
     "http_port" -> httpPort.toString,
     "zk" -> zkUrl,
     "zk_timeout" -> 20.seconds.toMillis.toString,
@@ -89,7 +91,7 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
     "mesos_authentication_secret_file" -> s"$secretPath",
     "access_control_allow_origin" -> "*",
     "reconciliation_initial_delay" -> 5.minutes.toMillis.toString,
-    "min_revive_offers_interval" -> "100",
+    "min_revive_offers_interval" -> "1000",
     "hostname" -> "localhost",
     "logging_level" -> "debug",
     "offer_matching_timeout" -> 10.seconds.toMillis.toString // see https://github.com/mesosphere/marathon/issues/4920
@@ -188,6 +190,11 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
     "-Dscala.concurrent.context.maxThreads=32"
   )
 }
+
+object BaseMarathon {
+  final val defaultRole = "foo"
+}
+
 /**
   * Runs a marathon server for the given test suite
   * @param suiteName The test suite that owns this marathon
@@ -251,7 +258,7 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
       get {
         path(Segment / Segment / "health") { (uriEncodedAppId, versionId) =>
           import PathId._
-          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
+          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toAbsolutePath
 
           def instance = healthChecks(_.find { c => c.appId == appId && c.versionId == versionId })
 
@@ -265,7 +272,7 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
           }
         } ~ path(Segment / Segment / Segment / "ready") { (uriEncodedAppId, versionId, taskId) =>
           import PathId._
-          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toRootPath
+          val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toAbsolutePath
 
           // Find a fitting registred readiness check. If the check has no task id set we ignore it.
           def check: Option[IntegrationReadinessCheck] = registeredReadinessChecks(_.find { c =>
@@ -335,6 +342,7 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
 trait MarathonAppFixtures {
 
   val testBasePath: PathId
+  val defaultRole: String = BaseMarathon.defaultRole
 
   implicit class PathIdTestHelper(path: String) {
     def toRootTestPath: PathId = testBasePath.append(path).canonicalPath()
@@ -381,7 +389,7 @@ trait MarathonAppFixtures {
 
   def appProxy(appId: PathId, versionId: String, instances: Int,
     healthCheck: Option[raml.AppHealthCheck] = Some(appProxyHealthCheck()),
-    dependencies: Set[PathId] = Set.empty, gpus: Int = 0): App = {
+    dependencies: Set[PathId] = Set.empty, gpus: Int = 0, role: Option[String] = None): App = {
 
     val cmd = appMockCmd(appId, versionId)
 
@@ -392,7 +400,8 @@ trait MarathonAppFixtures {
       instances = instances,
       cpus = 0.01, mem = 32.0, gpus = gpus,
       healthChecks = healthCheck.toSet,
-      dependencies = dependencies.map(_.toString)
+      dependencies = dependencies.map(_.toString),
+      role = role
     )
   }
 
@@ -403,7 +412,8 @@ trait MarathonAppFixtures {
     instances: Int = 1,
     backoffDuration: FiniteDuration = 1.hour,
     portDefinitions: Seq[PortDefinition] = Seq.empty, /* prevent problems by randomized port assignment */
-    constraints: Set[Seq[String]] = Set.empty): App = {
+    constraints: Set[Seq[String]] = Set.empty,
+    role: Option[String] = None): App = {
 
     val cpus: Double = 0.001
     val mem: Double = 1.0
@@ -433,7 +443,8 @@ trait MarathonAppFixtures {
       portDefinitions = Some(portDefinitions),
       backoffSeconds = backoffDuration.toSeconds.toInt,
       upgradeStrategy = Some(UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0.0)),
-      unreachableStrategy = Some(UnreachableDisabled.DefaultValue)
+      unreachableStrategy = Some(UnreachableDisabled.DefaultValue),
+      role = role
     )
 
     app
@@ -467,9 +478,9 @@ trait MarathonAppFixtures {
     )
   }
 
-  def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1): PodDefinition = PodDefinition(
+  def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1, role: String = defaultRole): PodDefinition = PodDefinition(
     id = testBasePath / s"$podId",
-    role = "foo",
+    role = role,
     containers = Seq(
       MesosContainer(
         name = "task1",

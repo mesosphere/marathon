@@ -41,7 +41,7 @@ class TaskStatusUpdateTest extends UnitTest {
       val instance = mock[Instance]
       instance.hasReservation returns false
 
-      f.clock += 5.seconds
+      f.clock.advanceBy(5.seconds)
 
       val status = MesosTaskStatusTestHelper.unreachable(task.taskId, f.clock.now())
 
@@ -58,7 +58,7 @@ class TaskStatusUpdateTest extends UnitTest {
       val instance = mock[Instance]
       instance.hasReservation returns true
 
-      f.clock += 5.seconds
+      f.clock.advanceBy(5.seconds)
 
       val status = MesosTaskStatusTestHelper.unreachable(task.taskId, f.clock.now())
 

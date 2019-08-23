@@ -82,7 +82,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     }
 
     "create a group with applications to start" in {
-      val id = "group-with-appication-to-start".toRootTestPath
+      val id = "group-with-application-to-start".toRootTestPath
       val appId = id / nextAppId()
 
       Given(s"A group with one application with id $appId")
@@ -95,6 +95,10 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       Then("A success event is send and the application has been started")
       val tasks = waitForTasks(PathId(app.id), app.instances)
       tasks should have size 2
+
+      And(s"The group info for $id is complete")
+      val groupInfo = marathon.group(id)
+      groupInfo.value.enforceRole.value should be(false)
     }
 
     "update a group with applications to restart" in {
@@ -281,7 +285,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       waitForDeployment(force)
     }
 
-    "Groups with Applications with circular dependencies can not get deployed" in {
+    "Groups with Applications with circular dependencies cannot get deployed" in {
       val gid = nextGroupId(Some("with-application-with-circular-dependencies-cannot-be-deployed"))
 
       Given(s"A group with id $gid with 3 circular dependent applications")
@@ -294,7 +298,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val result = marathon.createGroup(group)
 
       Then("An unsuccessful response has been posted, with an error indicating cyclic dependencies")
-      result.success should be(false) withClue s"Response code is ${result.code}: ${result.entityString}"
+      result should be (UnprocessableEntity)
 
       val errors = (result.entityJson \ "details" \\ "errors").flatMap(_.as[Seq[String]])
       errors.find(_.contains("cyclic dependencies")) shouldBe defined withClue s"""errors "$errors" did not contain "cyclic dependencies" error."""
@@ -357,6 +361,53 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       ping should have size 3
       ping(db.id) should be < ping(service.id) withClue s"database was deployed at ${ping(db.id)} and service at ${ping(service.id)}"
       ping(service.id) should be < ping(frontend.id) withClue s"service was deployed at ${ping(service.id)} and frontend at ${ping(frontend.id)}"
+    }
+
+    "Groups enforce role setting cannot be changed with an update" in temporaryGroup { gid =>
+      val appId = gid / nextAppId()
+
+      Given(s"A group with one application started with id $appId")
+      val app1V1 = appProxy(appId, "v1", 2, healthCheck = None)
+      waitForDeployment(marathon.createGroup(GroupUpdate(Some(gid.toString), Some(Set(app1V1)))))
+      waitForTasks(PathId(app1V1.id), app1V1.instances)
+      val tasks = marathon.tasks(appId)
+
+      When("The group is updated to change the enforce role setting")
+      val result = marathon.updateGroup(gid, GroupUpdate(id = Some(gid.toString), apps = Some(Set(app1V1)), enforceRole = Some(true)))
+
+      Then("The update fails")
+      result should be(UnprocessableEntity)
+      result.entityString should include("enforce role cannot be updated from false to true")
+    }
+
+    "Patching second level group fails" in {
+      Given("A deployed group with more than one level")
+      val gid = nextGroupId(Some("this/group"))
+      val group = Group.emptyUpdate(gid)
+      val result = marathon.createGroup(group)
+      result should be(Created)
+      waitForDeployment(result)
+
+      When("the second level is patched")
+      val patchResult = marathon.patchGroup(gid, raml.GroupPartialUpdate(Some(true)))
+
+      Then("the request fails")
+      patchResult should be(UnprocessableEntity)
+    }
+
+    "Patching top level group succeeds" in {
+      Given("A deployed group with more than one level")
+      val gid = nextGroupId(Some("other/group"))
+      val group = Group.emptyUpdate(gid)
+      val result = marathon.createGroup(group)
+      result should be(Created)
+      waitForDeployment(result)
+
+      When("the top level is patched")
+      val patchResult = marathon.patchGroup(gid.parent, raml.GroupPartialUpdate(Some(true)))
+
+      Then("the request succeeds")
+      patchResult should be(OK)
     }
   }
 }

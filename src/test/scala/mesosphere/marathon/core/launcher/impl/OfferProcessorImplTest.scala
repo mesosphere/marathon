@@ -52,9 +52,9 @@ class OfferProcessorImplTest extends UnitTest {
   object f {
     import org.apache.mesos.{Protos => Mesos}
     val metrics = DummyMetrics
-    val provision = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
+    val provision = new InstanceOpFactoryHelper(metrics, Some("principal"))
       .provision(_: Mesos.TaskInfo, _: InstanceUpdateOperation.Provision)
-    val launchWithNewTask = new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role"))
+    val launchWithNewTask = new InstanceOpFactoryHelper(metrics, Some("principal"))
       .launchOnReservation(_: Mesos.TaskInfo, _: InstanceUpdateOperation.Provision, _: Instance)
   }
 
@@ -71,14 +71,14 @@ class OfferProcessorImplTest extends UnitTest {
       Given("an offer")
       val dummySource = new DummySource
       val tasksWithSource = tasks.map {
-        case (taskInfo, task, Instance(instanceId, agentInfo, _, tasksMap, runSpec, _)) =>
+        case (taskInfo, task, Instance(instanceId, agentInfo, _, tasksMap, runSpec, _, _)) =>
           val stateOp = InstanceUpdateOperation.Provision(instanceId, agentInfo.get, runSpec, tasksMap, clock.now())
           InstanceOpWithSource(dummySource, f.provision(taskInfo, stateOp))
       }
 
       And("a cooperative offerMatcher and taskTracker")
       offerMatcher.matchOffer(offer) returns Future.successful(MatchedInstanceOps(offerId, tasksWithSource))
-      for ((_, _, Instance(instanceId, agentInfo, _, tasksMap, runSpec, _)) <- tasks) {
+      for ((_, _, Instance(instanceId, agentInfo, _, tasksMap, runSpec, _, _)) <- tasks) {
         val stateOp = InstanceUpdateOperation.Provision(instanceId, agentInfo.get, runSpec, tasksMap, clock.now())
         instanceTracker.process(stateOp) returns Future.successful(arbitraryInstanceUpdateEffect)
       }
@@ -109,7 +109,7 @@ class OfferProcessorImplTest extends UnitTest {
       Given("an offer")
       val dummySource = new DummySource
       val tasksWithSource = tasks.map {
-        case (taskInfo, task, Instance(instanceId, agentInfo, _, tasksMap, runSpec, _)) =>
+        case (taskInfo, task, Instance(instanceId, agentInfo, _, tasksMap, runSpec, _, _)) =>
           val stateOp = InstanceUpdateOperation.Provision(instanceId, agentInfo.get, runSpec, tasksMap, clock.now())
           val op = f.provision(taskInfo, stateOp)
           InstanceOpWithSource(dummySource, op)

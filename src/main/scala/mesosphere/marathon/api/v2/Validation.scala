@@ -221,24 +221,23 @@ trait Validation {
     else Failure(Set(RuleViolation(seq, errorMessage)))
   }
 
-  def theOnlyDefinedOptionIn[A <: Product, B](product: A): Validator[Option[B]] =
-    new Validator[Option[B]] {
-      def apply(option: Option[B]) = {
-        option match {
-          case Some(prop) =>
-            val n = product.productIterator.count {
-              case Some(_) => true
-              case _ => false
-            }
+  case class theOnlyDefinedOptionIn[A <: Product, B](product: A) extends Validator[Option[B]] {
+    def apply(option: Option[B]) = {
+      option match {
+        case Some(prop) =>
+          val n = product.productIterator.count {
+            case Some(_) => true
+            case _ => false
+          }
 
-            if (n == 1)
-              Success
-            else
-              Failure(Set(RuleViolation(product, "not allowed in conjunction with other properties.")))
-          case None => Success
-        }
+          if (n == 1)
+            Success
+          else
+            Failure(Set(RuleViolation(product, "not allowed in conjunction with other properties.")))
+        case None => Success
       }
     }
+  }
 
   def notOneOf[T <: AnyRef](options: T*): Validator[T] = {
     new NullSafeValidator[T](

@@ -18,7 +18,7 @@ trait AppValidation {
   import ArtifactValidation._
   import EnvVarValidation._
   import NetworkValidation._
-  import PathId.{empty => _, _}
+  import PathId.{root => _, _}
   import SchedulingValidation._
   import SecretValidation._
 
@@ -287,8 +287,8 @@ trait AppValidation {
     }
   )
 
-  def validateCanonicalAppAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String]): Validator[App] = forAll(
-    validBasicAppDefinition(enabledFeatures),
+  def validateCanonicalAppAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String], validRoles: Set[String]): Validator[App] = forAll(
+    validBasicAppDefinition(enabledFeatures, validRoles),
     validator[App] { app =>
       PathId(app.id) as "id" is (PathId.pathIdValidator and PathId.absolutePathValidator and PathId.nonEmptyPath)
       app.dependencies.map(PathId(_)) as "dependencies" is every(valid)
@@ -326,7 +326,7 @@ trait AppValidation {
   }
 
   /** validate most canonical API fields */
-  private def validBasicAppDefinition(enabledFeatures: Set[String]): Validator[App] = validator[App] { app =>
+  private def validBasicAppDefinition(enabledFeatures: Set[String], validRoles: Set[String]): Validator[App] = validator[App] { app =>
     app.container is optional(validContainer(enabledFeatures, app.networks, app.secrets))
     app.portDefinitions is optional(portDefinitionsValidator)
     app is containsCmdArgsOrContainer
@@ -349,7 +349,13 @@ trait AppValidation {
     app must requireUnreachableDisabledForResidentTasks
     app.constraints.each must complyWithAppConstraintRules
     app.networks is ramlNetworksValidator
+    app is validWithRoleEnforcement(validRoles)
   } and ExternalVolumes.validAppRaml
+
+  def validWithRoleEnforcement(validRoles: Set[String]): Validator[App] = validator[App] { app =>
+    app.role is optional(in(validRoles))
+    app.acceptedResourceRoles is optional(ResourceRole.validForRole(app.role))
+  }
 
   val requireUnreachableDisabledForResidentTasks =
     conditional((app: App) => app.residency.isDefined && app.unreachableStrategy.isDefined)(

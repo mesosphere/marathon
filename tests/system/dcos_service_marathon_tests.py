@@ -13,7 +13,7 @@ from shakedown.clients import marathon
 from shakedown.dcos.marathon import deployment_wait
 
 
-@retrying.retry(wait_fixed=1000, stop_max_attempt_number=16, retry_on_exception=common.ignore_exception)
+@retrying.retry(wait_fixed=1000, stop_max_attempt_number=16)
 def assert_deployment_not_ready(deployment_id):
     client = marathon.create_client()
     deployment = client.get_deployment(deployment_id)
@@ -38,7 +38,7 @@ def test_deploy_custom_framework():
 def test_framework_readiness_time_check():
     """Tests that an app is being in deployment until the readiness check is done."""
 
-    fw = apps.fake_framework()
+    fw = apps.fake_framework(app_id='framework-readiness-time')
     readiness_time = 15
     fw['readinessChecks'][0]['intervalSeconds'] = readiness_time
 

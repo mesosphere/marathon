@@ -1264,7 +1264,7 @@ class TaskBuilderTest extends UnitTest {
       val s = Seq(t1, t2)
 
       val config = MarathonTestHelper.defaultConfig()
-      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, s, config.defaultAcceptedResourceRolesSet,
+      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, s, config.defaultAcceptedResourceRolesSet(app.role),
         config, Seq.empty)
       assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
       // TODO test for resources etc.
@@ -1290,12 +1290,12 @@ class TaskBuilderTest extends UnitTest {
       val builder = new TaskBuilder(app, taskId, config)
       def shouldBuildTask(message: String, offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config, Seq.empty)
+          config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
         withClue(message) {
           assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
         }
         val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
-        val (taskInfo, networkInfo) = builder.build(offer, matches.resourceMatch, None)
+        val (taskInfo, networkInfo) = builder.build(offer, matches.resourceMatch, None, enforceRole = true)
         val agentInfo = Instance.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
@@ -1312,7 +1312,7 @@ class TaskBuilderTest extends UnitTest {
 
       def shouldNotBuildTask(message: String, offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config, Seq.empty)
+          config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch], message)
       }
 
@@ -1359,10 +1359,10 @@ class TaskBuilderTest extends UnitTest {
       val builder = new TaskBuilder(app, taskId, config)
       def shouldBuildTask(offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config, Seq.empty)
+          config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
         val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
-        val (taskInfo, networkInfo) = builder.build(offer, matches.resourceMatch, None)
+        val (taskInfo, networkInfo) = builder.build(offer, matches.resourceMatch, None, enforceRole = true)
         val agentInfo = Instance.AgentInfo(
           host = offer.getHostname,
           agentId = Some(offer.getSlaveId.getValue),
@@ -1380,7 +1380,7 @@ class TaskBuilderTest extends UnitTest {
 
       def shouldNotBuildTask(message: String, offer: Offer): Unit = {
         val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-          config.defaultAcceptedResourceRolesSet, config, Seq.empty)
+          config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
         assert(resourceMatch.isInstanceOf[ResourceMatchResponse.NoMatch], message)
       }
 
@@ -1404,7 +1404,7 @@ class TaskBuilderTest extends UnitTest {
         role = "*",
         versionInfo = version
       )
-      val env = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = None)
+      val env = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = None, enforceRole = None)
 
       assert(env == Map.empty[String, String])
     }
@@ -1418,7 +1418,7 @@ class TaskBuilderTest extends UnitTest {
       )
 
       val taskId = Task.LegacyId(PathId("/app"), ".", uuid)
-      val env2 = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = Some(taskId))
+      val env2 = TaskBuilder.taskContextEnv(runSpec = runSpec, taskId = Some(taskId), enforceRole = None)
 
       assert(
         env2 == Map(
@@ -1452,7 +1452,7 @@ class TaskBuilderTest extends UnitTest {
       )
       val instanceId = Instance.Id.forRunSpec(runSpecId)
       val taskId = Task.Id(instanceId)
-      val env3 = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(taskId))
+      val env3 = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(taskId), enforceRole = None)
 
       assert(
         env3 == Map(
@@ -1489,7 +1489,7 @@ class TaskBuilderTest extends UnitTest {
         )
       )
 
-      val env4 = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(Task.LegacyId(runSpec.id, ".", uuid)))
+      val env4 = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(Task.LegacyId(runSpec.id, ".", uuid)), enforceRole = None)
         .filterKeys(_.startsWith("MARATHON_APP_LABEL"))
 
       assert(
@@ -1517,7 +1517,8 @@ class TaskBuilderTest extends UnitTest {
           taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
           host = Some("host.mega.corp"),
           hostPorts = Helpers.hostPorts(1000, 1001),
-          envPrefix = None
+          envPrefix = None,
+          enforceRole = None
         )
       val env: Map[String, String] =
         command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
@@ -1546,12 +1547,13 @@ class TaskBuilderTest extends UnitTest {
               "PORT1" -> "2",
               "PORT_8080" -> "port8080",
               "PORT_8081" -> "port8081"
-            ))
+            )),
           ),
           taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
           host = Some("host.mega.corp"),
           hostPorts = Helpers.hostPorts(1000, 1001),
-          envPrefix = None
+          envPrefix = None,
+          enforceRole = None
         )
       val env: Map[String, String] =
         command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
@@ -1576,7 +1578,8 @@ class TaskBuilderTest extends UnitTest {
           taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
           host = Some("host.mega.corp"),
           hostPorts = Helpers.hostPorts(1000, 1001),
-          envPrefix = None
+          envPrefix = None,
+            enforceRole = None
         )
       val env: Map[String, String] =
         command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
@@ -1597,7 +1600,8 @@ class TaskBuilderTest extends UnitTest {
           Some(Task.LegacyId(runSpecId, ".", uuid)),
           Some("host.mega.corp"),
           Helpers.hostPorts(1000, 1001),
-          Some("CUSTOM_PREFIX_")
+          Some("CUSTOM_PREFIX_"),
+            enforceRole = None
         )
       val env: Map[String, String] =
         command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
@@ -1630,7 +1634,9 @@ class TaskBuilderTest extends UnitTest {
           Some(Task.LegacyId(runSpecId, ".", uuid)),
           Some("host.mega.corp"),
           Helpers.hostPorts(1000, 1001),
-          Some("P_")
+          Some("P_"),
+
+          enforceRole = None
         )
       val env: Map[String, String] =
         command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
@@ -1661,7 +1667,8 @@ class TaskBuilderTest extends UnitTest {
           taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
           host = Some("host.mega.corp"),
           hostPorts = Helpers.hostPorts(1000, 1001),
-          envPrefix = None
+          envPrefix = None,
+          enforceRole = None
         )
       val env: Map[String, String] =
         command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
@@ -1690,7 +1697,8 @@ class TaskBuilderTest extends UnitTest {
           taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
           host = Some("host.mega.corp"),
           hostPorts = Seq(None, None),
-          envPrefix = None
+          envPrefix = None,
+          enforceRole = None
         )
 
       val env: Map[String, String] =
@@ -1725,7 +1733,8 @@ class TaskBuilderTest extends UnitTest {
           taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
           host = Some("host.mega.corp"),
           hostPorts = Helpers.hostPorts(1000, 1001),
-          envPrefix = None
+          envPrefix = None,
+          enforceRole = None
         )
       }
     }
@@ -1744,7 +1753,8 @@ class TaskBuilderTest extends UnitTest {
         taskId = Some(Task.LegacyId(runSpecId, ".", uuid)),
         host = Some("host.mega.corp"),
         hostPorts = Helpers.hostPorts(1000, 1001),
-        envPrefix = None
+        envPrefix = None,
+        enforceRole = None
       )
 
       assert(command.getUris(0).getValue.contentEquals("http://www.example.com"))
@@ -1892,10 +1902,10 @@ class TaskBuilderTest extends UnitTest {
       val runningInstances = Set.empty[Instance]
 
       val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-        config.defaultAcceptedResourceRolesSet, config, Seq.empty)
+        config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
       assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
       val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
-      val (taskInfo, _) = builder.build(offer, matches.resourceMatch, None)
+      val (taskInfo, _) = builder.build(offer, matches.resourceMatch, None, enforceRole = true)
 
       assert(taskInfo.hasKillPolicy)
       val killPolicy = taskInfo.getKillPolicy
@@ -1987,10 +1997,10 @@ class TaskBuilderTest extends UnitTest {
 
     val config = MarathonTestHelper.defaultConfig()
     val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, Seq.empty,
-      acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet), config, Seq.empty)
+      acceptedResourceRoles.getOrElse(config.defaultAcceptedResourceRolesSet(app.role)), config, Seq.empty)
 
     resourceMatch match {
-      case matches: ResourceMatchResponse.Match => Some(builder.build(offer, matches.resourceMatch, None))
+      case matches: ResourceMatchResponse.Match => Some(builder.build(offer, matches.resourceMatch, None, enforceRole = true))
       case _ => None
     }
   }
