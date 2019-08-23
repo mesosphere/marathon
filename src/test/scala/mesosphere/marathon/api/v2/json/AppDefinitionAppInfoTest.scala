@@ -108,7 +108,11 @@ class AppDefinitionAppInfoTest extends UnitTest {
     }
 
     "app with lastTaskFailure" in {
+
       Given("an app with a lastTaskFailure")
+
+      // TODO AN: Do something about registering only happens when the companion object is accessed
+      AbsolutePathId("/test")
       TaskFailure.empty
 
       val lastTaskFailure = new TaskFailure(

@@ -1,9 +1,9 @@
 package mesosphere.marathon
 package state
 
-import com.typesafe.scalalogging.StrictLogging
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
+import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation.isTrue
@@ -102,9 +102,9 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
     path.zip(definition.path).forall { case (left, right) => left == right }
   }
 
-  override val toString: String = toString("/")
+  override val toString: String = toStringWithDelimiter("/")
 
-  protected def toString(delimiter: String): String
+  protected def toStringWithDelimiter(delimiter: String): String
 
   override def compare(that: PathId): Int = {
     import Ordering.Implicits._
@@ -120,19 +120,19 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
   }
 
   override val hashCode: Int = scala.util.hashing.MurmurHash3.productHash(this)
-
 }
 
-object PathId extends JacksonSerializable[PathId] {
-
-  override def serializeWithJackson(value: PathId, gen: JsonGenerator, provider: SerializerProvider): Unit = {
-    gen.writeString(value.toString)
-  }
+//object PathId extends JacksonSerializable[PathId] {
+//
+//  override def serializeWithJackson(value: PathId, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+//    gen.writeString(value.toString)
+//  }
+//}
 
 case class AbsolutePathId(path: Seq[String]) extends PathId {
   override val absolute: Boolean = true
   override def asAbsolutePath: AbsolutePathId = this
-  protected def toString(delimiter: String): String =
+  protected def toStringWithDelimiter(delimiter: String): String =
     path.mkString("/", delimiter, "")
 
   override lazy val parent: AbsolutePathId = path match {
@@ -155,7 +155,7 @@ case class AbsolutePathId(path: Seq[String]) extends PathId {
   override def /(id: String): AbsolutePathId = append(id)
 }
 
-object AbsolutePathId {
+object AbsolutePathId extends JacksonSerializable[AbsolutePathId] {
   /**
     * Parse the string as a path, but interpret it as relative to root, if it is relative.
     *
@@ -164,6 +164,10 @@ object AbsolutePathId {
     */
   def apply(path: String): AbsolutePathId = {
     PathId(path).canonicalPath(PathId.root)
+  }
+
+  override def serializeWithJackson(value: AbsolutePathId, gen: JsonGenerator, provider: SerializerProvider): Unit = {
+    gen.writeString(value.toString)
   }
 
 }
@@ -180,7 +184,7 @@ case class RelativePathId(path: Seq[String]) extends PathId with StrictLogging {
     this.canonicalPath(PathId.root)
   }
 
-  protected def toString(delimiter: String): String =
+  protected def toStringWithDelimiter(delimiter: String): String =
     path.mkString(delimiter)
 }
 
