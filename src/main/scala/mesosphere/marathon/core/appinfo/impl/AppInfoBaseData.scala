@@ -91,8 +91,8 @@ class AppInfoBaseData(
       }
     }
 
-    val appInfo = raml.AppInfo(
-      app = Raml.toRaml(app),
+    val appInfo = raml.AppInfo.fromParent(
+      parent = Raml.toRaml(app),
       readinessCheckResults = readinessChecksByAppOpt.map(convertReadinessCheckResults).getOrElse(Nil),
       tasks = enrichedTasksOpt.getOrElse(Seq.empty).map(Raml.toRaml(_)(raml.TaskConversion.enrichedTaskRamlWrite)),
       tasksStaged = taskCountsOpt.map(_.tasksStaged),

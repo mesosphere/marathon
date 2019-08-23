@@ -10,11 +10,26 @@ object ObjectVisitor {
   import mesosphere.raml.backend._
 
   def visit(o: ObjectT): Seq[Tree] = {
-    val ObjectT(name, fields, parentType, comments, childTypes, discriminator, discriminatorValue, serializeOnly) = o
+    val ObjectT(name, fields, parentType, comments, originalChildTypes, discriminator, discriminatorValue, serializeOnly, parentObject) = o
+
+    val createBaseTrait = originalChildTypes.nonEmpty && discriminator.isEmpty
+    val baseTraitName = s"${name}Base"
+    val childTypes = if (createBaseTrait) {
+      originalChildTypes.map(_.copy(parentType = Some(baseTraitName), parentObject = Some(o)))
+    } else {
+      originalChildTypes
+    }
 
     val actualFields = fields.filter(_.rawName != discriminator.getOrElse(""))
-    val params = FieldVisitor.visit(actualFields)
-    val klass = if (childTypes.nonEmpty) {
+
+    val params = parentObject.map( parent => {
+      val parentFieldNames = parent.fields.map(_.name)
+      val parentFields = fields.filter( f => parentFieldNames.contains(f.name))
+      val additionalFields = fields.filterNot( f => parentFieldNames.contains(f.name))
+      FieldVisitor.visit(parentFields, Seq(Flags.OVERRIDE)) ++ FieldVisitor.visit(additionalFields)
+    }).getOrElse(FieldVisitor.visit(actualFields))
+
+    val klass = if (childTypes.nonEmpty && !createBaseTrait) {
       if (params.nonEmpty) {
         parentType.fold(TRAITDEF(name) withParents("RamlGenerated", "Product", "Serializable") := BLOCK(params))(parent =>
           TRAITDEF(name) withParents(parent, "Product", "Serializable") := BLOCK(params)
@@ -25,10 +40,23 @@ object ObjectVisitor {
         )
       }
     } else {
-      parentType.fold(CASECLASSDEF(name) withParents("RamlGenerated") withParams params)(parent =>
-        CASECLASSDEF(name) withParams params withParents parent
-      ).tree
+      if (createBaseTrait) {
+        val paramsWithOverride = FieldVisitor.visit(actualFields, Seq(Flags.OVERRIDE))
+        parentType.fold(CASECLASSDEF(name) withParents("RamlGenerated", s"${name}Base") withParams paramsWithOverride)(parent =>
+          CASECLASSDEF(name) withParams paramsWithOverride withParents parent
+        ).tree
+      } else {
+        parentType.fold(CASECLASSDEF(name) withParents("RamlGenerated") withParams params)(parent =>
+          CASECLASSDEF(name) withParams params withParents parent
+        ).tree
+      }
     }
+
+    val baseTrait = if (createBaseTrait) {
+      Some(parentType.fold(TRAITDEF(s"${name}Base") withParents("RamlGenerated", "Product", "Serializable") := BLOCK(params))(parent =>
+        TRAITDEF(name) withParents(parent, "Product", "Serializable") := BLOCK(params)
+      ))
+    } else None
 
     val playFormat = if (discriminator.isDefined) {
       Seq(
@@ -78,9 +106,9 @@ object ObjectVisitor {
       actualFields.map(_.toString).exists(t => t.toString.startsWith(name) || t.toString.contains(s"[$name]"))) {
       actualFields.map(_.constraints).requiredImports ++ Seq(
         OBJECTDEF("playJsonFormat") withParents (if (serializeOnly) PLAY_JSON_WRITES(name) else PLAY_JSON_FORMAT(name)) withFlags Flags.IMPLICIT := BLOCK(
-          if (serializeOnly) {
+          (if (serializeOnly) {
             Seq()
-          } else  Seq(DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
+          } else Seq(DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
             BLOCK(
               actualFields.map { field =>
                 VAL(field.name) := FieldVisitor.playValidator(field)
@@ -96,7 +124,7 @@ object ObjectVisitor {
                     }))
               )
             )
-          }) ++ Seq(
+          })) ++ Seq(
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
               actualFields.withFilter(_.name != AdditionalProperties).map { field =>
                 val serialized = REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
@@ -150,9 +178,28 @@ object ObjectVisitor {
         Seq(VAL("Default") withType (name) := REF(name) APPLY())
       } else Nil
 
-    val obj = if (childTypes.isEmpty || serializeOnly) {
+    val applyMethodForParent = parentObject.map(parent => {
+      val parentFieldNames = parent.fields.map(_.name)
+      val additionalFields = fields.filterNot( f => parentFieldNames.contains(f.name))
+
+      val applyParams = Seq( PARAM("parent", parent.name).empty ) ++ FieldVisitor.visit(additionalFields)
+      Seq(DEF("fromParent", TYPE_REF(name)) withParams applyParams := BLOCK(
+          REF(name) APPLY
+            parent.fields.map( f => {
+              REF(f.name) := (REF("parent") DOT f.name)
+            }) ++
+            additionalFields.map( f => {
+              REF(f.name) := REF(f.name)
+            })
+        )
+      )
+    }).getOrElse(Seq())
+
+    val allChildrenAreSerializeOnly = childTypes.forall(_.serializeOnly)
+
+    val obj = if (childTypes.isEmpty || serializeOnly || allChildrenAreSerializeOnly) {
       (OBJECTDEF(name)) := BLOCK(
-        playFormat ++ defaultFields ++ defaultInstance ++ fields.flatMap { f =>
+        playFormat ++ applyMethodForParent ++ defaultFields ++ defaultInstance ++ fields.flatMap { f =>
           f.constraints.flatMap { constraint => FieldVisitor.limitField(constraint, f) }
         }
       )
@@ -185,6 +232,6 @@ object ObjectVisitor {
     }
 
     val commentBlock = comments ++ actualFields.map(_.comment)(collection.breakOut)
-    Seq(klass.withDoc(commentBlock)) ++ childTypes.flatMap(Visitor.visit(_)) ++ Seq(obj)
+    baseTrait ++ Seq(klass.withDoc(commentBlock)) ++ childTypes.flatMap(Visitor.visit(_)) ++ Seq(obj)
   }
 }

@@ -344,9 +344,9 @@ types:
       versions: datetime[]
 
   AppInfo:
-    type: object
+    type: App
+    (pragma.serializeOnly): # Used only for serialization
     properties:
-      app: App
       tasksStaged?:
         type: integer
         format: int32

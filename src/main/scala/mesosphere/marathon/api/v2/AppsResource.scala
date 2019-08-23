@@ -112,8 +112,8 @@ class AppsResource @Inject() (
         .getOrElse(app)
 
       val plan = await(groupManager.updateApp(app.id, createOrThrow, app.version, force))
-      val appWithDeployments = raml.AppInfo(
-        app = Raml.toRaml(app),
+      val appWithDeployments = raml.AppInfo.fromParent(
+        parent = Raml.toRaml(app),
         tasksStaged = Some(0),
         tasksRunning = Some(0),
         tasksHealthy = Some(0),
@@ -161,9 +161,14 @@ class AppsResource @Inject() (
         case _ =>
           val appId = id.toAbsolutePath
           await(appInfoService.selectApp(appId, authzSelector, resolvedEmbed)) match {
-            case Some(appInfo) =>
-              checkAuthorization(ViewRunSpec, Raml.fromRaml(appInfo.app))
-              ok(jsonObjString("app" -> appInfo))
+            case Some(appInfo) => {
+              groupManager.app(appId) match {
+                case Some(app) =>
+                  checkAuthorization(ViewRunSpec, app)
+                  ok(jsonObjString("app" -> appInfo))
+                case None => unknownApp(appId)
+              }
+            }
             case None => unknownApp(appId)
           }
       }
