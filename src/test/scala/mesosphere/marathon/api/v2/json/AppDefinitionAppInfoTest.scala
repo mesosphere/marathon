@@ -39,7 +39,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
   "AppDefinitionAppInfo" should {
     "app with taskCounts" in {
       Given("an app with counts")
-      val extended = raml.AppInfo(app, tasksStaged = Some(3), tasksRunning = Some(5), tasksHealthy = Some(4), tasksUnhealthy = Some(1))
+      val extended = raml.AppInfo.fromParent(parent = app, tasksStaged = Some(3), tasksRunning = Some(5), tasksHealthy = Some(4), tasksUnhealthy = Some(1))
 
       Then("the result contains all fields of the app plus the counts")
       val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
@@ -53,7 +53,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
     "app with deployments" in {
       Given("an app with deployments")
-      val extended = raml.AppInfo(app, deployments = deployments)
+      val extended = raml.AppInfo.fromParent(parent = app, deployments = deployments)
 
       Then("the result contains all fields of the app plus the deployments")
       val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
@@ -64,7 +64,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
     "app with readiness results" in {
       Given("an app with deployments")
-      val extended = raml.AppInfo(app, readinessCheckResults = readinessCheckResults)
+      val extended = raml.AppInfo.fromParent(app, readinessCheckResults = readinessCheckResults)
 
       Then("the result contains all fields of the app plus the deployments")
       val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
@@ -84,7 +84,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
     "app with taskCounts + deployments (show that combinations work)" in {
       Given("an app with counts")
-      val extended = raml.AppInfo(app, tasksStaged = Some(3), tasksRunning = Some(5), tasksHealthy = Some(4), tasksUnhealthy = Some(1), deployments = deployments)
+      val extended = raml.AppInfo.fromParent(parent = app, tasksStaged = Some(3), tasksRunning = Some(5), tasksHealthy = Some(4), tasksUnhealthy = Some(1), deployments = deployments)
 
       Then("the result contains all fields of the app plus the counts")
       val expectedJson =
@@ -112,7 +112,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
         version = Timestamp("2015-08-27T14:13:05.942Z").toOffsetDateTime,
         slaveId = Some("slave34")
       )
-      val extended = raml.AppInfo(app, lastTaskFailure = Some(lastTaskFailure))
+      val extended = raml.AppInfo.fromParent(parent = app, lastTaskFailure = Some(lastTaskFailure))
 
       Then("the result contains all fields of the app plus the deployments")
       val lastTaskFailureJson = Json.parse(

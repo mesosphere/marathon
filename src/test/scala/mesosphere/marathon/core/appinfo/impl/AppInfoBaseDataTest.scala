@@ -2,8 +2,7 @@ package mesosphere.marathon
 package core.appinfo.impl
 
 import mesosphere.UnitTest
-import mesosphere.marathon.core.appinfo.{AppInfo, EnrichedTask, TaskCounts, TaskStatsByVersion}
-import mesosphere.marathon.test.SettableClock
+import mesosphere.marathon.core.appinfo.{AppInfo, EnrichedTask}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep, DeploymentStepInfo}
 import mesosphere.marathon.core.group.GroupManager
@@ -18,7 +17,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.{Raml, Resources}
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.TaskFailureRepository
-import mesosphere.marathon.test.GroupCreation
+import mesosphere.marathon.test.{GroupCreation, SettableClock}
 import play.api.libs.json.Json
 
 import scala.collection.immutable.{Map, Seq}
@@ -95,7 +94,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set.empty).futureValue
 
       Then("we get an empty appInfo")
-      appInfo should be(raml.AppInfo(Raml.toRaml(app)))
+      appInfo should be(raml.AppInfo.fromParent(parent = Raml.toRaml(app)))
 
       And("we have no more interactions")
       f.verifyNoMoreInteractions()
@@ -172,7 +171,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
         running2.appTask.taskId.idString,
         running3.appTask.taskId.idString))
 
-      appInfo should be(raml.AppInfo(Raml.toRaml(app), tasks =
+      appInfo should be(raml.AppInfo.fromParent(parent = Raml.toRaml(app), tasks =
         Seq(
           Raml.toRaml(EnrichedTask(running1.runSpecId, running1.appTask, TestInstanceBuilder.defaultAgentInfo, Nil, Nil, None, "*")),
           Raml.toRaml(EnrichedTask(running2.runSpecId, running2.appTask, TestInstanceBuilder.defaultAgentInfo, Seq(alive), Nil, None, "*")),
@@ -218,7 +217,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Counts)).futureValue
 
       Then("we get counts object in the appInfo")
-      appInfo should be(raml.AppInfo(Raml.toRaml(app), tasksStaged = Some(1), tasksRunning = Some(2), tasksHealthy = Some(1), tasksUnhealthy = Some(1)))
+      appInfo should be(raml.AppInfo.fromParent(parent = Raml.toRaml(app), tasksStaged = Some(1), tasksRunning = Some(2), tasksHealthy = Some(1), tasksUnhealthy = Some(1)))
 
       And("the taskTracker should have been called")
       verify(f.instanceTracker, times(1)).instancesBySpec()
@@ -245,7 +244,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Deployments)).futureValue
 
       Then("we get an counts in the appInfo")
-      appInfo should be(raml.AppInfo(Raml.toRaml(app), deployments = Seq(raml.Identifiable(relatedDeployment.id))))
+      appInfo should be(raml.AppInfo.fromParent(parent = Raml.toRaml(app), deployments = Seq(raml.Identifiable(relatedDeployment.id))))
 
       And("the marathonSchedulerService should have been called to retrieve the deployments")
       verify(f.marathonSchedulerService, times(1)).listRunningDeployments()
@@ -265,7 +264,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Deployments)).futureValue
 
       Then("we get an empty list of deployments")
-      appInfo should be(raml.AppInfo(Raml.toRaml(app), deployments = Seq.empty))
+      appInfo should be(raml.AppInfo.fromParent(parent = Raml.toRaml(app), deployments = Seq.empty))
 
       And("the marathonSchedulerService should have been called to retrieve the deployments")
       verify(f.marathonSchedulerService, times(1)).listRunningDeployments()
@@ -291,7 +290,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Readiness)).futureValue
 
       Then("we get an counts in the appInfo")
-      appInfo should be(raml.AppInfo(Raml.toRaml(app), readinessCheckResults = Seq(resultRaml)))
+      appInfo should be(raml.AppInfo.fromParent(parent = Raml.toRaml(app), readinessCheckResults = Seq(resultRaml)))
 
       And("the marathonSchedulerService should have been called to retrieve the deployments")
       verify(f.marathonSchedulerService, times(1)).listRunningDeployments()
@@ -309,7 +308,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.LastTaskFailure)).futureValue
 
       Then("we get the failure in the app info")
-      appInfo should be(raml.AppInfo(Raml.toRaml(app), lastTaskFailure = None)) //Some(TaskFailureTestHelper.taskFailure)))
+      appInfo should be(raml.AppInfo.fromParent(parent = Raml.toRaml(app), lastTaskFailure = None)) //Some(TaskFailureTestHelper.taskFailure)))
 
       And("the taskFailureRepository should have been called to retrieve the failure")
       verify(f.taskFailureRepository, times(1)).get(app.id)
@@ -327,7 +326,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.LastTaskFailure)).futureValue
 
       Then("we get no failure in the app info")
-      appInfo should be(raml.AppInfo(Raml.toRaml(app)))
+      appInfo should be(raml.AppInfo.fromParent(parent = Raml.toRaml(app)))
 
       And("the taskFailureRepository should have been called to retrieve the failure")
       verify(f.taskFailureRepository, times(1)).get(app.id)
@@ -369,8 +368,8 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
         appInfo.tasksStats.value.totalSummary.value.stats.counts.staged should be (1)
         appInfo.tasksStats.value.totalSummary.value.stats.counts.running should be (2)
 
-        appInfo should be(raml.AppInfo(
-          Raml.toRaml(app),
+        appInfo should be(raml.AppInfo.fromParent(
+          parent = Raml.toRaml(app),
           tasksStats = None //Some(TaskStatsByVersion(f.clock.now(), app.versionInfo, instances, statuses))
         ))
       }
@@ -397,8 +396,8 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments)).futureValue
 
       Then("we get the failure in the app info")
-      appInfo should be(raml.AppInfo(
-        Raml.toRaml(app),
+      appInfo should be(raml.AppInfo.fromParent(
+        parent = Raml.toRaml(app),
         lastTaskFailure = None, //Some(TaskFailureTestHelper.taskFailure),
         deployments = Seq.empty
       ))

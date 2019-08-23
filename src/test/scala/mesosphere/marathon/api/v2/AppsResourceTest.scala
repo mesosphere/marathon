@@ -230,9 +230,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
         And("the JSON is as expected, including a newly generated version")
-        val expected = raml.AppInfo(
+        val expected = raml.AppInfo.fromParent(
           // TODO: The raml conversion sets the upgrade startegy to 1, 1. This should probably happen during the normalization
-          normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some("*"), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+          parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some("*"), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
           tasks = Seq.empty,
           tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
           deployments = Seq(raml.Identifiable(plan.id))
@@ -621,8 +621,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      val expected = raml.AppInfo(
-        normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
         tasks = Seq.empty,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Seq(raml.Identifiable(plan.id))
@@ -651,8 +651,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      val expected = raml.AppInfo(
-        normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
         tasks = Seq.empty,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Seq(raml.Identifiable(plan.id))
@@ -726,8 +726,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      val expected = raml.AppInfo(
-        normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
         tasks = Seq.empty,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Seq(raml.Identifiable(plan.id))
@@ -755,8 +755,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      val expected = raml.AppInfo(
-        normalize(app).copy(
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(
           version = Some(clock.now().toOffsetDateTime),
           role = Some(ResourceRole.Unreserved),
           networks = Seq(raml.Network(name = Some("bar"))),
@@ -790,8 +790,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      val expected = raml.AppInfo(
-        normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
         tasks = Seq.empty,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Seq(raml.Identifiable(plan.id))
@@ -829,8 +829,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      val expected = raml.AppInfo(
-        normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
         tasks = Seq.empty,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Seq(raml.Identifiable(plan.id))
@@ -875,8 +875,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       And("the JSON is as expected, including a newly generated version")
       val containerDef = appDef.container
-      val expected = raml.AppInfo(
-        Raml.toRaml(appDef.copy(
+      val expected = raml.AppInfo.fromParent(
+        parent = Raml.toRaml(appDef.copy(
           versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved,
           container = containerDef.map(_.copyWith(
             portMappings = Seq(
@@ -974,8 +974,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      val expected = raml.AppInfo(
-        normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
         tasks = Seq.empty,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Seq(raml.Identifiable(plan.id))
@@ -1023,8 +1023,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      val expected = raml.AppInfo(
-        normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
         tasks = Seq.empty,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Seq(raml.Identifiable(plan.id))
@@ -1139,8 +1139,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
 
       And("the JSON is as expected, including a newly generated version")
-      val expected = raml.AppInfo(
-        normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
         tasks = Seq.empty,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Seq(raml.Identifiable(plan.id))
@@ -1660,7 +1660,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("An app and group")
       val app = raml.App(id = "/app", cmd = Some("foo"), role = Some("*"))
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments)
-      val appInfo = raml.AppInfo(app, deployments = Seq(raml.Identifiable("deployment-123")),
+      val appInfo = raml.AppInfo.fromParent(parent = app, deployments = Seq(raml.Identifiable("deployment-123")),
         tasksStaged = Some(1), tasksRunning = Some(2), tasksHealthy = Some(3), tasksUnhealthy = Some(4))
       appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
 
@@ -1677,8 +1677,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("An app and group")
       val app = raml.App(id = "/app", cmd = Some("foo"), role = Some("*"))
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments, Embed.LastTaskFailure)
-      val appInfo = raml.AppInfo(
-        app,
+      val appInfo = raml.AppInfo.fromParent(
+        parent = app,
         lastTaskFailure = Some(raml.TaskFailure("/", "", "", "TASK_STAGING", "", Timestamp.now().toOffsetDateTime, Timestamp.now().toOffsetDateTime)),
         tasksStaged = Some(1), tasksRunning = Some(2), tasksHealthy = Some(3), tasksUnhealthy = Some(4))
       appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
@@ -2025,8 +2025,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         response.getStatus should be(201)
 
         And("the JSON is as expected, including a defined role")
-        val expected = raml.AppInfo(
-          normalize(app).copy(role = Some(ResourceRole.Unreserved), version = Some(clock.now().toOffsetDateTime), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        val expected = raml.AppInfo.fromParent(
+          parent = normalize(app).copy(role = Some(ResourceRole.Unreserved), version = Some(clock.now().toOffsetDateTime), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
           tasks = Seq.empty,
           tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
           deployments = Seq(raml.Identifiable(plan.id))
