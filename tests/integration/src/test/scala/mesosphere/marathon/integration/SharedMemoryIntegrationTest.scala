@@ -5,7 +5,7 @@ import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.AppMockFacade
 import mesosphere.marathon.integration.setup.{BaseMarathon, EmbeddedMarathonTest, MesosConfig}
-import mesosphere.marathon.raml.{Pod, Raml}
+import mesosphere.marathon.raml.{EngineType, Pod, Raml}
 import mesosphere.marathon.state.{HostVolume, VolumeMount}
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import org.scalatest.Inside
@@ -92,6 +92,49 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
     }
 
     Then("The shared memory size from the pod should be as configured")
+    shmSizeFromPod should be(shmSize.toString)
+  }
+
+  "get correct shm size from app" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+    Given("an app with a single task and a volume")
+    val containerDir = "marathon"
+    val id = testBasePath / "simple-app-with-shm-setup"
+
+    val shmSize = 11
+
+    val appTpl = dockerAppProxy(id, "v1", 1)
+    val app = appTpl.copy(container = Some(appTpl.container.get.copy(
+      `type` = EngineType.Mesos,
+      linuxInfo = Some(raml.LinuxInfo(
+        ipcInfo = Some(raml.IPCInfo(
+          mode: raml.IPCMode.Private,
+          shmSize: Some(shmSize)
+        ))
+      ))
+    )))
+
+    When("The app is deployed")
+    val createResult = marathon.createAppV2(app)
+    createResult should be(Created)
+    waitForDeployment(createResult)
+    val shmSizeFromPod: String = eventually {
+      marathon.status(id) should be(Stable)
+      val status = marathon.status(id).value
+      val host = inside(status.instances.flatMap(_.agentHostname)) {
+        case Seq(host) => host
+      }
+      val port = inside(status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))) {
+        case Seq(port) => port
+      }
+
+      val facade = AppMockFacade(host, port)
+
+      val shmSize = facade.get("/ipcshm").futureValue
+
+      shmSize
+    }
+
+    Then("The shared memory size from the app should be as configured")
     shmSizeFromPod should be(shmSize.toString)
   }
 
