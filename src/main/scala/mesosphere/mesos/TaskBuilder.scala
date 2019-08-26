@@ -16,7 +16,6 @@ import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.ScalarResource
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos._
-import org.apache.mesos.{Protos => mesos}
 
 import scala.collection.immutable.Seq
 
@@ -188,27 +187,11 @@ class TaskBuilder(
       if (!builder.hasType)
         builder.setType(ContainerInfo.Type.MESOS)
 
-      if (builder.getType.equals(ContainerInfo.Type.MESOS)) {
-
-        if (!builder.hasMesos) {
-          // The comments in "mesos.proto" are fuzzy about whether a miranda MesosInfo
-          // is required, but we err on the safe side here and provide one
-          builder.setMesos(ContainerInfo.MesosInfo.newBuilder.build)
-        }
-
-        runSpec.container.foreach { c =>
-          c.linuxInfo.foreach { linuxInfo =>
-            val linuxInfoBuilder = mesos.LinuxInfo.newBuilder
-
-            linuxInfo.ipcInfo.foreach { ipcInfo =>
-              ipcInfo.shmSize.foreach(linuxInfoBuilder.setShmSize)
-              linuxInfoBuilder.setIpcMode(ipcInfo.ipcMode.toMesos)
-            }
-            builder.setLinuxInfo(linuxInfoBuilder.build)
-          }
-        }
+      if (builder.getType.equals(ContainerInfo.Type.MESOS) && !builder.hasMesos) {
+        // The comments in "mesos.proto" are fuzzy about whether a miranda MesosInfo
+        // is required, but we err on the safe side here and provide one
+        builder.setMesos(ContainerInfo.MesosInfo.newBuilder.build)
       }
-
       Some(builder.build)
     }
   }
