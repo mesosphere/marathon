@@ -16,6 +16,7 @@ import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.ScalarResource
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos._
+import org.apache.mesos.{Protos => mesos}
 
 import scala.collection.immutable.Seq
 
@@ -197,7 +198,7 @@ class TaskBuilder(
 
         runSpec.container.foreach { c =>
           c.linuxInfo.foreach { linuxInfo =>
-            val linuxInfoBuilder = LinuxInfo.newBuilder
+            val linuxInfoBuilder = mesos.LinuxInfo.newBuilder
 
             linuxInfo.ipcInfo.foreach { ipcInfo =>
               ipcInfo.shmSize.foreach(linuxInfoBuilder.setShmSize)
