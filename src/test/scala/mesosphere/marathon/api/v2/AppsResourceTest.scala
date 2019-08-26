@@ -17,7 +17,8 @@ import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 import mesosphere.marathon.raml.{
   App,
- AppPersistentVolume, AppSecretVolume,
+  AppPersistentVolume,
+  AppSecretVolume,
   AppUpdate,
   ContainerPortMapping,
   DockerContainer,
@@ -33,7 +34,8 @@ import mesosphere.marathon.raml.{
   Network,
   NetworkMode,
   Raml,
- ReadMode, Seccomp,
+  ReadMode,
+  Seccomp,
   SecretDef,
   Container => RamlContainer
 }
