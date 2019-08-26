@@ -9,7 +9,7 @@ import mesosphere.marathon.state._
 
 class AppDefinitionSchedulerValidationTest extends UnitTest {
 
-  private lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings)(PluginManager.None)
+  private lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings())(PluginManager.None)
 
   class Fixture {
     def normalApp = AppDefinition(

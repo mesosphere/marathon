@@ -12,6 +12,7 @@ import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
+import mesosphere.marathon.raml.PodState
 import mesosphere.marathon.state.{PathId, PersistentVolume, PersistentVolumeInfo, VolumeMount}
 import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
@@ -25,7 +26,7 @@ import scala.sys.process.Process
 
 /**
   * This integration test starts older Marathon versions one after another and finishes this upgrade procedure with the
-  * current build. In each step we verfiy that all apps are still up and running.
+  * current build. In each step we verify that all apps are still up and running.
   */
 class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonAppFixtures with Eventually {
 
@@ -192,8 +193,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       )
       marathon16549.client.createPodV2(resident_pod_16549) should be(Created)
       val (resident_pod_16549_port, resident_pod_16549_address) = eventually {
-        val status = marathon16549.client.status(resident_pod_16549.id)
-        status should be(Stable)
+        val status = marathon16549.client.status18(resident_pod_16549.id)
+        status.value.status shouldBe PodState.Stable
         status.value.instances(0).containers(0).endpoints(0).allocatedHostPort should be('defined)
         val port = status.value.instances(0).containers(0).endpoints(0).allocatedHostPort.get
         (port, status.value.instances(0).networks(0).addresses(0))

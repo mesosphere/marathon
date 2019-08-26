@@ -12,7 +12,7 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml._
-import mesosphere.marathon.state.{PathId, ResourceRole, RootGroup}
+import mesosphere.marathon.state.{PathId, ResourceRole, Role, RootGroup}
 import mesosphere.marathon.util.{RoleSettings, SemanticVersion}
 // scalastyle:on
 
@@ -208,7 +208,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
       }
     }
 
-  private def haveValidAcceptedResourceRoles(validRoles: Set[String]): Validator[Pod] = validator[Pod] { pod =>
+  private def haveValidAcceptedResourceRoles: Validator[Pod] = validator[Pod] { pod =>
     (podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is empty or valid(ResourceRole.validAcceptedResourceRoles("pod", podPersistentVolumes(pod).nonEmpty)))
   }
 
@@ -238,7 +238,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
     pod should complyWithPodUpgradeStrategyRules
     pod should haveUnreachableDisabledForResidentPods
-    pod should haveValidAcceptedResourceRoles(roleSettings.validRoles)
+    pod should haveValidAcceptedResourceRoles
     pod.linuxInfo is optional(state.LinuxInfo.validLinuxInfoForPodRaml)
   }
 
@@ -249,9 +249,15 @@ trait PodsValidation extends GeneralPurposeCombinators {
 
   def validPodDefinitionWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[PodDefinition] = validator[PodDefinition] { pod =>
     pod.role is in(roleEnforcement.validRoles)
+    // DO NOT MERGE THESE TWO similar if blocks! Wix Accord macros do weird stuff otherwise.
     if (pod.isResident) {
-      pod.role is isTrue(s"Resident pods cannot have the role ${ResourceRole.Unreserved}") { role: String =>
+      pod.role is isTrue(s"Resident pods cannot have the role ${ResourceRole.Unreserved}") { role: Role =>
         !role.equals(ResourceRole.Unreserved)
+      }
+    }
+    if (pod.isResident) {
+      pod.role is isTrue((role: Role) => RoleSettings.residentRoleChangeWarningMessage(roleEnforcement.previousRole.get, role)) { role: Role =>
+        roleEnforcement.previousRole.map(_.equals(role) || roleEnforcement.forceRoleUpdate).getOrElse(true)
       }
     }
     pod.acceptedResourceRoles is valid(ResourceRole.validForRole(pod.role))

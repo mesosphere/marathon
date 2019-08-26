@@ -221,7 +221,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging with Eventual
         val (taskId, _) = instance.tasksMap.head
         verify(f.driver, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).killTask(taskId.mesosTaskId)
 
-        f.clock.+=(10.seconds)
+        f.clock.advanceBy(10.seconds)
 
         verify(f.driver, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).killTask(taskId.mesosTaskId)
       }
@@ -250,7 +250,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging with Eventual
         captor.getAllValues should contain(f.taskIdFor(instance, stagingContainer))
         captor.getAllValues should contain(f.taskIdFor(instance, runningContainer))
 
-        f.clock.+=(10.seconds)
+        f.clock.advanceBy(10.seconds)
 
         val (taskId, _) = instance.tasksMap.head
         verify(f.driver, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).killTask(taskId.mesosTaskId)
@@ -280,7 +280,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging with Eventual
         captor.getAllValues should contain(f.taskIdFor(instance, stagingContainer))
         captor.getAllValues should contain(f.taskIdFor(instance, runningContainer))
 
-        f.clock.+=(10.seconds)
+        f.clock.advanceBy(10.seconds)
 
         val (taskId, _) = instance.tasksMap.head
         verify(f.driver, timeout(f.killConfig.killRetryTimeout.toMillis.toInt * 2)).killTask(taskId.mesosTaskId)

@@ -242,7 +242,7 @@ class RootGroup(
     */
   def updateApp(
     appId: PathId, fn: Option[AppDefinition] => AppDefinition, version: Timestamp = Group.defaultVersion): RootGroup = {
-    val oldGroup = group(appId.parent).getOrElse(Group.empty(appId.parent))
+    val oldGroup = group(appId.parent.asAbsolutePath).getOrElse(Group.empty(appId.parent.asAbsolutePath))
     val newApp = fn(app(appId))
     require(newApp.id == appId, "app id must not be changed by `fn`.")
     val newGroup = Group(
@@ -278,7 +278,7 @@ class RootGroup(
     */
   def updatePod(
     podId: PathId, fn: Option[PodDefinition] => PodDefinition, version: Timestamp = Group.defaultVersion): RootGroup = {
-    val oldGroup = group(podId.parent).getOrElse(Group.empty(podId.parent))
+    val oldGroup = group(podId.parent.asAbsolutePath).getOrElse(Group.empty(podId.parent.asAbsolutePath))
     val newPod = fn(pod(podId))
     require(newPod.id == podId, "pod id must not be changed by `fn`.")
     val newGroup = Group(
@@ -368,7 +368,7 @@ class RootGroup(
     */
   def removeApp(appId: PathId, version: Timestamp = Group.defaultVersion): RootGroup = {
     app(appId).fold(updateVersion(version)) { oldApp =>
-      val oldGroup = transitiveGroupsById(oldApp.id.parent)
+      val oldGroup = transitiveGroupsById(oldApp.id.parent.asAbsolutePath)
       putGroup(Group(
         id = oldGroup.id,
         apps = oldGroup.apps - oldApp.id,
@@ -391,7 +391,7 @@ class RootGroup(
     */
   def removePod(podId: PathId, version: Timestamp = Group.defaultVersion): RootGroup = {
     pod(podId).fold(updateVersion(version)) { oldPod =>
-      val oldGroup = transitiveGroupsById(oldPod.id.parent)
+      val oldGroup = transitiveGroupsById(oldPod.id.parent.asAbsolutePath)
       putGroup(Group(
         id = oldGroup.id,
         apps = oldGroup.apps,
@@ -452,11 +452,11 @@ object RootGroup {
     isTrue("Dependency graph has cyclic dependencies.") { _.hasNonCyclicDependencies }
 
   private def validAppRole(config: MarathonConf, rootGroup: RootGroup): Validator[AppDefinition] = (app: AppDefinition) => {
-    AppDefinition.validWithRoleEnforcement(RoleSettings.forService(config, app.id.asAbsolutePath, rootGroup)).apply(app)
+    AppDefinition.validWithRoleEnforcement(RoleSettings.forService(config, app.id.asAbsolutePath, rootGroup, false)).apply(app)
   }
 
   private def validPodRole(config: MarathonConf, rootGroup: RootGroup): Validator[PodDefinition] = (pod: PodDefinition) => {
-    PodsValidation.validPodDefinitionWithRoleEnforcement(RoleSettings.forService(config, pod.id.asAbsolutePath, rootGroup)).apply(pod)
+    PodsValidation.validPodDefinitionWithRoleEnforcement(RoleSettings.forService(config, pod.id.asAbsolutePath, rootGroup, false)).apply(pod)
   }
 
 }

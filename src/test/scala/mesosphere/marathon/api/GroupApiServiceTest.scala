@@ -5,17 +5,18 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.v2.GroupNormalization
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
+import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.raml.{App, GroupUpdate, Network, NetworkMode}
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 import mesosphere.marathon.state.PathId._
+import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
-class GroupApiServiceTest extends UnitTest with GroupCreation {
+class GroupApiServiceTest extends UnitTest with Inside with GroupCreation {
   implicit val identity: Identity = new Identity {}
   val noEnabledFeatures = AllConf.withTestConfig()
 
@@ -84,16 +85,17 @@ class GroupApiServiceTest extends UnitTest with GroupCreation {
     groupManager.group(groupId).returns(Some(existingGroup))
     val f = Fixture(groupManager = groupManager)
     When("Calling update with new apps being added to a group")
-    val update = GroupUpdate(apps = Some(Set(App("/app", role = Some(ResourceRole.Unreserved), networks = Seq(Network(mode = NetworkMode.ContainerBridge))))))
-    val normalizedUpdate = GroupNormalization.updateNormalization(noEnabledFeatures, PathId.root).normalized(update)
+    val update = GroupUpdate(apps = Some(Set(App("/app", role = Some(ResourceRole.Unreserved), cmd = Some("sleep 1000"), networks = Seq(Network(mode = NetworkMode.ContainerBridge))))))
+    val rootGroup = createRootGroup()
+    val normalizedUpdate = GroupNormalization(noEnabledFeatures, rootGroup).updateNormalization(PathId.root).normalized(update)
     val updatedGroup = f.groupApiService.updateGroup(
-      createRootGroup(),
+      rootGroup,
       PathId.root,
       normalizedUpdate,
       newVersion).futureValue
 
     Then("Group will contain those apps after an update")
-    updatedGroup.apps(PathId("/app")) should be (AppDefinition("/app".toAbsolutePath, networks = Seq(BridgeNetwork()), versionInfo = VersionInfo.OnlyVersion(newVersion), role = "*"))
+    updatedGroup.apps.get(PathId("/app")).value.versionInfo should be(VersionInfo.OnlyVersion(newVersion))
   }
 
   case class Fixture(

@@ -166,7 +166,7 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       When("1 offer is send, which is passed to the matcher, 2 offers are send and queued with a 10 millis gap")
       offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer1, offerMatch1)
       offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer2, offerMatch2)
-      clock += 10.millis
+      clock.advanceBy(10.millis)
       offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer3, offerMatch3)
 
       Then("offer-2 is declined, due to timeout but not offer-3")
@@ -175,7 +175,7 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       offerMatch1.isCompleted should be(false)
 
       And("After 10 millis also offer-2 is declined")
-      clock += 10.millis
+      clock.advanceBy(10.millis)
       offerMatch3.future.futureValue.opsWithSource should be('empty)
       offerMatch1.isCompleted should be(false)
     }
@@ -189,7 +189,7 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
 
       When("1 offer is send, which is passed to the matcher, but the matcher does not respond")
       offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer1, offerMatch1)
-      clock += 30.millis
+      clock.advanceBy(30.millis)
 
       Then("offer-1 is declined, since the actor did not respond in time")
       offerMatch1.future.futureValue.opsWithSource should be('empty)

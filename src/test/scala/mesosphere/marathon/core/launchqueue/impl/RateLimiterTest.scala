@@ -51,7 +51,7 @@ class RateLimiterTest extends UnitTest {
 
       // after advancing the clock by (threshold + 1), the existing delays
       // with maxLaunchDelay < (threshold + 1) should be gone
-      clock += threshold + 1.seconds
+      clock.advanceBy(threshold + 1.seconds)
       limiter.cleanUpOverdueDelays()
       limiter.getDelay(appWithOverdueDelay.configRef) shouldBe empty
       limiter.getDelay(appWithValidDelay.configRef).value.deadline should be(time_origin + 20.seconds)

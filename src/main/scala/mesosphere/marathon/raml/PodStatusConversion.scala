@@ -99,7 +99,8 @@ trait PodStatusConversion {
       message = message,
       specReference = Some(s"/v2/pods${pod.id}::versions/${instance.runSpecVersion.toOffsetDateTime}"),
       lastUpdated = instance.state.since.toOffsetDateTime, // TODO(jdef) pods we don't actually track lastUpdated yet
-      lastChanged = instance.state.since.toOffsetDateTime
+      lastChanged = instance.state.since.toOffsetDateTime,
+      role = instance.role
     )
   }
 

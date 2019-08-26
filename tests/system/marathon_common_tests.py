@@ -211,15 +211,14 @@ def test_launch_app_timed():
     """
 
     app_def = apps.mesos_app(app_id='/timed-launch-app')
+    app_id = app_def["id"]
 
     client = marathon.create_client()
     client.add_app(app_def)
 
-    # if not launched in 3 sec fail
-    time.sleep(3)
-    tasks = client.get_tasks(app_def["id"])
-
-    assert len(tasks) == 1, "The number of tasks is {} after deployment, but 1 was expected".format(len(tasks))
+    # if not launched in 10 sec fail
+    assert_that(lambda: client.get_tasks(app_id),
+                eventually(has_len(equal_to(1)), max_attempts=10))
 
 
 def test_ui_available(marathon_service_name):
@@ -995,10 +994,17 @@ def test_default_user():
 
 @common.marathon_1_4
 def test_declined_offer_due_to_resource_role():
-    """Tests that an offer gets declined because the role doesn't exist."""
+    """Tests that an offer gets declined because no resources are allocated for the role.
+       In the multi role world Marathon does not accept an `acceptedResourceRole` which is not also
+       the app `role` (it doesn't make sense, since the app will never start).
+       In oder to use an acceptedResourceRoles: ["very-random-role"] we need to deploy the app
+       in a top-level group with the same name ("very-random-role") and since enforceRole is by
+       default false, we also set the role field explicitly (to the same value).
+    """
 
-    app_def = apps.sleep_app()
-    app_def["acceptedResourceRoles"] = ["very_random_role"]
+    app_def = apps.sleep_app(app_id="/very-random-role/sleep-that-doesnt-start-because-no-resources")
+    app_def["role"] = "very-random-role"
+    app_def["acceptedResourceRoles"] = ["very-random-role"]
     _test_declined_offer(app_def, 'UnfulfilledRole')
 
 

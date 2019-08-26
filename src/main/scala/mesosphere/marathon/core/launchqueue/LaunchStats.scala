@@ -46,7 +46,8 @@ class LaunchStats private[launchqueue] (
     val currentRunSpecStatistics = await(runSpecStatistics.readCurrentResult())
 
     val results = for {
-      (path, instances) <- launchingInstancesByRunSpec
+      (path, allInstances) <- launchingInstancesByRunSpec
+      (role, instances) <- allInstances.groupBy(_.instance.role)
       runSpec <- getRunSpec(path)
     } yield {
       val lastOffers: Seq[OfferMatchResult.NoMatch] = lastNoMatches.get(path).map(_.values.toVector).getOrElse(Nil)
@@ -55,6 +56,7 @@ class LaunchStats private[launchqueue] (
 
       LaunchStats.QueuedInstanceInfoWithStatistics(
         runSpec = runSpec,
+        role = role,
         inProgress = true,
         finalInstanceCount = runSpec.instances,
         instancesLeftToLaunch = instances.size,
@@ -148,6 +150,7 @@ object LaunchStats extends StrictLogging {
 
   /**
     * @param runSpec the associated runSpec
+    * @param role the role attempting to be launched
     * @param inProgress true if the launch queue currently tries to launch more instances
     * @param instancesLeftToLaunch number of instances to launch
     * @param finalInstanceCount the final number of instances currently targeted
@@ -155,6 +158,7 @@ object LaunchStats extends StrictLogging {
     */
   case class QueuedInstanceInfoWithStatistics(
       runSpec: RunSpec,
+      role: String,
       inProgress: Boolean,
       instancesLeftToLaunch: Int,
       finalInstanceCount: Int,

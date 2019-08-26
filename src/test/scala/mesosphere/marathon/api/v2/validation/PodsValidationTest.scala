@@ -275,7 +275,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
         unreachableStrategy = Some(UnreachableDisabled()))))
 
     val features: Set[String] = if (validateSecrets) Set(Features.SECRETS) else Set.empty
-    implicit val validator: Validator[Pod] = podValidator(features, SemanticVersion.zero, None, ValidationHelper.roleSettings)
+    implicit val validator: Validator[Pod] = podValidator(features, SemanticVersion.zero, None, ValidationHelper.roleSettings())
 
     val pluginManager: PluginManager = PluginManager.None
 
@@ -284,7 +284,8 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
   }
 
   "network validation" when {
-    implicit val validator: Validator[Pod] = podValidator(Set.empty, SemanticVersion.zero, Some("default-network-name"), ValidationHelper.roleSettings)
+    implicit val validator: Validator[Pod] =
+      podValidator(Set.empty, SemanticVersion.zero, Some("default-network-name"), ValidationHelper.roleSettings())
 
     def podContainer(name: String = "ct1", resources: Resources = Resources(), endpoints: Seq[Endpoint]) =
       PodContainer(

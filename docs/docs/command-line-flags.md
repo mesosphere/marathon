@@ -92,10 +92,13 @@ When using Debian packages, the ideal way to customize Marathon is to specify co
 * `--mesos_role` (Optional. Default: None): Mesos role for this framework. If set, Marathon receives resource offers
     for the specified role in addition to resources with the role designation '*'. Marathon currently 
     supports only one Mesos role. Support for multiple roles will be added in the future. _Note: When using Mesos prior to version 1.3, this parameter is applied when the framework registers with Mesos for the first time, and changing it after that has no effect if the framework is re-registered._
-* <span class="label label-default">v0.9.0</span> `--default_accepted_resource_roles` (Optional. Default: all roles):
-    Default for the `"acceptedResourceRoles"`
-    attribute as a comma-separated list of strings. All app definitions which do not specify this attribute explicitly
-    use this value for launching new tasks. Examples: `*`, `production,*`, `production`
+* <span class="label label-default">v1.9.0</span> `--accepted_resource_roles_default_behavior` (Optional):
+    Controls the defaulting behavior for "acceptedResourceRoles" when the field is unspecified for a service. Valid values:
+
+    * `any` - Either unreserved or reserved resources are accepted
+    * `unreserved` - Only accept resources that are unreserved
+    * `reserved` - Only accept resources that are reserved
+
 * `--mesos_user` (Optional. Default: current user): Mesos user for
     this framework. _Note: Default is determined by
     [`SystemProperties.get("user.name")`](http://www.scala-lang.org/api/current/index.html#scala.sys.SystemProperties@get\(key:String\):Option[String]),
@@ -198,6 +201,10 @@ When using Debian packages, the ideal way to customize Marathon is to specify co
 * <span class="label label-default">v1.6.0</span>`--[disable]_maintenance_mode` (Optional. Default: enabled) Specifies
     if Marathon should enable maintenance mode support. See the [maintenance mode docs](./maintenance-mode.html) for
     more information.
+* <span class="label label-default">v1.9</span>`--new_group_enforce_role` (Optional. Default: off) Specifies
+    the default `enforceRole` value for new Marathon groups. See the [multi-role](./multirole.html) docs for more information.
+    - `off` causes all groups to default to false.
+    - `top` causes new top-level groups to enable enforceRole by default
 
 ## Tuning Flags for Offer Matching/Launching Tasks
 

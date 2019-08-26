@@ -2,7 +2,6 @@ package mesosphere.marathon
 package raml
 
 import java.time.Clock
-import java.time.OffsetDateTime
 
 import mesosphere.marathon.core.launcher.OfferMatchResult
 import mesosphere.marathon.core.launchqueue.LaunchStats.QueuedInstanceInfoWithStatistics
@@ -51,19 +50,27 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
         )
       }
 
-      def queueItem[A](create: (Int, QueueDelay, OffsetDateTime, ProcessedOffersSummary, Option[Seq[UnusedOffer]]) => A): A = {
-        create(
-          info.instancesLeftToLaunch,
-          delay,
-          info.startedAt.toOffsetDateTime,
-          processedOffersSummary,
-          if (withLastUnused) Some(Raml.toRaml(info.lastNoMatches)) else None
-        )
-      }
+      val lastUnusedOffers = if (withLastUnused) Some(Raml.toRaml(info.lastNoMatches)) else None
 
       info.runSpec match {
-        case app: AppDefinition => queueItem(QueueApp(_, _, _, _, _, Raml.toRaml(app)))
-        case pod: PodDefinition => queueItem(QueuePod(_, _, _, _, _, Raml.toRaml(pod)))
+        case app: AppDefinition =>
+          QueueApp(
+            info.instancesLeftToLaunch,
+            info.role,
+            delay,
+            info.startedAt.toOffsetDateTime,
+            processedOffersSummary,
+            lastUnusedOffers,
+            Raml.toRaml(app))
+        case pod: PodDefinition =>
+          QueuePod(
+            info.instancesLeftToLaunch,
+            info.role,
+            delay,
+            info.startedAt.toOffsetDateTime,
+            processedOffersSummary,
+            lastUnusedOffers,
+            Raml.toRaml(pod))
       }
   }
 

@@ -227,7 +227,7 @@ object ResourceMatcher extends StrictLogging {
         // Add constraints to noOfferMatchReasons
         noOfferMatchReasons += NoOfferMatchReason.UnfulfilledConstraint
         logger.info(
-          s"Offer [${offer.getId.getValue}]. Constraints for run spec [${runSpec.id}] not satisfied.\n" +
+          s"Offer [${offer.getId.getValue}] with role [${offer.getAllocationInfo.getRole}]. Constraints for run spec [${runSpec.id}] not satisfied.\n" +
             s"The conflicting constraints are: [${badConstraints.mkString(", ")}]"
         )
       }
@@ -566,7 +566,7 @@ object ResourceMatcher extends StrictLogging {
     if (scalarMatchResults.exists(!_.matches)) {
       val basicResourceString = scalarMatchResults.mkString(", ")
       logger.info(
-        s"Offer [${offer.getId.getValue}]. " +
+        s"Offer [${offer.getId.getValue}] with role ${offer.getAllocationInfo.getRole}. " +
           s"$selector. " +
           s"Not all basic resources satisfied: $basicResourceString")
     }

@@ -26,6 +26,6 @@ object ValidationHelper {
     }
   }
 
-  def roleSettings = RoleSettings(validRoles = Set(ResourceRole.Unreserved), defaultRole = ResourceRole.Unreserved)
-  def roleSettings(role: String) = RoleSettings(validRoles = Set(role, ResourceRole.Unreserved), defaultRole = role)
+  def roleSettings(role: String = ResourceRole.Unreserved) =
+    RoleSettings(validRoles = Set(role, ResourceRole.Unreserved), defaultRole = role)
 }

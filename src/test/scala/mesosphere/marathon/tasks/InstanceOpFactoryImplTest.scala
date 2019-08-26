@@ -279,7 +279,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
     def residentApp = MTH.appWithPersistentVolume().copy(role = "test")
 
     def scheduledReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
-      TestInstanceBuilder.scheduledWithReservation(residentApp, Seq(volumeIds: _*))
+      TestInstanceBuilder.scheduledWithReservation(residentApp.copy(id = appId), Seq(volumeIds: _*))
 
     def residentLaunchedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
       TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched(Seq(volumeIds: _*)).getInstance()
