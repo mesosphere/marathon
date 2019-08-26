@@ -3,8 +3,9 @@ package integration
 
 import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
-import mesosphere.marathon.integration.facades.AppMockFacade
-import mesosphere.marathon.integration.setup.{BaseMarathon, EmbeddedMarathonTest, MesosConfig}
+import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
+import mesosphere.marathon.integration.facades.MarathonFacade.extractDeploymentIds
+import mesosphere.marathon.integration.setup.{BaseMarathon, EmbeddedMarathonTest, MesosConfig, RestResult}
 import mesosphere.marathon.raml.{EngineType, Pod, Raml}
 import mesosphere.marathon.state.{HostVolume, VolumeMount}
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
@@ -115,16 +116,15 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
     When("The app is deployed")
     val createResult = marathon.createAppV2(app)
     createResult should be(Created)
+    extractDeploymentIds(createResult) should have size 1
     waitForDeployment(createResult)
-    val shmSizeFromPod: String = eventually {
-      marathon.status(id) should be(Stable)
-      val status = marathon.status(id).value
-      val host = inside(status.instances.flatMap(_.agentHostname)) {
-        case Seq(host) => host
-      }
-      val port = inside(status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))) {
-        case Seq(port) => port
-      }
+
+    val shmSizeFromApp: String = eventually {
+      val tasksResult: RestResult[List[ITEnrichedTask]] = marathon.tasks(id)
+      tasksResult should be(OK)
+
+      val host = tasksResult.value.head.host
+      val port = tasksResult.value.head.ports.value.head
 
       val facade = AppMockFacade(host, port)
 
@@ -134,7 +134,7 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
     }
 
     Then("The shared memory size from the app should be as configured")
-    shmSizeFromPod should be(shmSize.toString)
+    shmSizeFromApp should be(shmSize.toString)
   }
 
   "check share parent shm works" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
