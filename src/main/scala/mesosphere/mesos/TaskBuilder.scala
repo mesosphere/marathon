@@ -187,11 +187,27 @@ class TaskBuilder(
       if (!builder.hasType)
         builder.setType(ContainerInfo.Type.MESOS)
 
-      if (builder.getType.equals(ContainerInfo.Type.MESOS) && !builder.hasMesos) {
-        // The comments in "mesos.proto" are fuzzy about whether a miranda MesosInfo
-        // is required, but we err on the safe side here and provide one
-        builder.setMesos(ContainerInfo.MesosInfo.newBuilder.build)
+      if (builder.getType.equals(ContainerInfo.Type.MESOS)) {
+
+        if (!builder.hasMesos) {
+          // The comments in "mesos.proto" are fuzzy about whether a miranda MesosInfo
+          // is required, but we err on the safe side here and provide one
+          builder.setMesos(ContainerInfo.MesosInfo.newBuilder.build)
+        }
+
+        runSpec.container.foreach { c =>
+          c.linuxInfo.foreach { linuxInfo =>
+            val linuxInfoBuilder = LinuxInfo.newBuilder
+
+            linuxInfo.ipcInfo.foreach { ipcInfo =>
+              ipcInfo.shmSize.foreach(linuxInfoBuilder.setShmSize)
+              linuxInfoBuilder.setIpcMode(ipcInfo.ipcMode.toMesos)
+            }
+            builder.setLinuxInfo(linuxInfoBuilder.build)
+          }
+        }
       }
+
       Some(builder.build)
     }
   }

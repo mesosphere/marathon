@@ -97,18 +97,17 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
   "get correct shm size from app" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
     Given("an app with a single task and a volume")
-    val containerDir = "marathon"
     val id = testBasePath / "simple-app-with-shm-setup"
 
-    val shmSize = 11
+    val shmSize: Int = 11
 
     val appTpl = dockerAppProxy(id, "v1", 1)
     val app = appTpl.copy(container = Some(appTpl.container.get.copy(
       `type` = EngineType.Mesos,
       linuxInfo = Some(raml.LinuxInfo(
         ipcInfo = Some(raml.IPCInfo(
-          mode: raml.IPCMode.Private,
-          shmSize: Some(shmSize)
+          mode = raml.IPCMode.Private,
+          shmSize = Some(shmSize)
         ))
       ))
     )))
