@@ -91,7 +91,7 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       shmSize
     }
 
-    Then( "The shared memory size from the pod should be as configured")
+    Then("The shared memory size from the pod should be as configured")
     shmSizeFromPod should be(shmSize.toString)
   }
 

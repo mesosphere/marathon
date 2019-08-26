@@ -22,7 +22,7 @@ import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.setup.{AkkaHttpResponse, RestResult}
-import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
+import mesosphere.marathon.raml.{App, AppUpdate, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.Retry
@@ -274,7 +274,7 @@ class MarathonFacade(
 
   def updatePod(id: PathId, pod: PodDefinition, force: Boolean = false): RestResult[PodDefinition] = {
     requireInBaseGroup(id)
-    val res = result(requestFor[Pod](Put(s"$url/v2/pods$id?force=$force", pod)), waitTime)
+    val res = result(requestFor[Pod](Put(s"$url/v2/pods$id?force=$force", Raml.toRaml(pod))), waitTime)
     res.map(Raml.fromRaml(_))
   }
 
@@ -328,10 +328,10 @@ class MarathonFacade(
 
   //group resource -------------------------------------------
 
-  def listGroupsInBaseGroup: RestResult[Set[GroupInfo]] = {
+  def listGroupIdsInBaseGroup: RestResult[Set[String]] = {
     import PathId._
-    val root = result(requestFor[GroupInfo](Get(s"$url/v2/groups")), waitTime)
-    root.map(_.groups.filter(group => isInBaseGroup(group.id.toPath)))
+    val root = result(requestFor[JsObject](Get(s"$url/v2/groups")), waitTime)
+    root.map(_.value.get("groups").get.asInstanceOf[JsArray].value.map(_.asInstanceOf[JsObject].value.get("id").get.asInstanceOf[JsString].value).filter(gid => isInBaseGroup(gid.toPath)).toSet)
   }
 
   def listGroupVersions(id: PathId): RestResult[List[String]] = {
@@ -339,9 +339,9 @@ class MarathonFacade(
     result(requestFor[List[String]](Get(s"$url/v2/groups$id/versions")), waitTime)
   }
 
-  def group(id: PathId): RestResult[GroupInfo] = {
+  def group(id: PathId): RestResult[JsObject] = {
     requireInBaseGroup(id)
-    result(requestFor[GroupInfo](Get(s"$url/v2/groups$id")), waitTime)
+    result(requestFor[JsObject](Get(s"$url/v2/groups$id")), waitTime)
   }
 
   def createGroup(group: GroupUpdate): RestResult[ITDeploymentResult] = {

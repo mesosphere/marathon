@@ -51,18 +51,19 @@ trait Formats
   with EventFormats
   with PluginFormats {
 
-  implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
-    Json.obj(
-      "appId" -> failure.appId,
-      "host" -> failure.host,
-      "message" -> failure.message,
-      "state" -> failure.state.name(),
-      "taskId" -> failure.taskId.getValue,
-      "timestamp" -> failure.timestamp,
-      "version" -> failure.version,
-      "slaveId" -> failure.slaveId.fold[JsValue](JsNull){ slaveId => JsString(slaveId.getValue) }
-    )
-  }
+//  @deprecated("TODO: DELETE ME!")
+//  implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
+//    Json.obj(
+//      "appId" -> failure.appId,
+//      "host" -> failure.host,
+//      "message" -> failure.message,
+//      "state" -> failure.state.name(),
+//      "taskId" -> failure.taskId.getValue,
+//      "timestamp" -> failure.timestamp,
+//      "version" -> failure.version,
+//      "slaveId" -> failure.slaveId.fold[JsValue](JsNull){ slaveId => JsString(slaveId.getValue) }
+//    )
+//  }
 
   implicit lazy val networkInfoProtocolWrites = Writes[mesos.NetworkInfo.Protocol] { protocol =>
     JsString(protocol.name)

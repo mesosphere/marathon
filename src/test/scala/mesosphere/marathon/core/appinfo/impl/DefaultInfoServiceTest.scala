@@ -169,8 +169,9 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
         Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
 
       Then("The group info contains apps and groups")
+      result.futureValue.value.apps should have size 3
       result.futureValue.value.groups should have size 1
-      result.futureValue.value.apps should have size 5
+      result.futureValue.value.groups.head.apps should have size 2
 
       When("querying extending group information without apps")
       val result2 = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty,
@@ -206,9 +207,11 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val result = f.infoService.selectGroup(rootGroup.id, selector, Set.empty, Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
 
       Then("The result is filtered by the selector")
-      result.futureValue.value.groups should be('nonEmpty)
-      result.futureValue.value.apps should have size 2
-      //      result.futureValue.get.transitiveGroups.get should have size 2
+      val res = result.futureValue.value
+      res.groups should have size 1
+      res.groups.head.apps should have size 1
+      res.groups.head.groups should have size 1
+      res.groups.head.apps should have size 1
     }
 
     "Selecting with App Selector implicitly gives access to parent groups" in {
@@ -236,9 +239,21 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
 
       Then("The result is filtered by the selector")
       result.futureValue.value.groups should have size 1
-      result.futureValue.value.groups.head should be(nestedGroup)
-      //      result.futureValue.get.transitiveApps.get should have size 1
-      //      result.futureValue.get.transitiveApps.get.head.app should be(nestedApp1)
+
+      val apps: Set[AppDefinition] = Set(nestedApp1)
+      val expectedApps = apps.map(app => raml.AppInfo.fromParent(Raml.toRaml(app)))
+
+      val expectedGroupInfo = raml.GroupInfo(
+        id = nestedGroup.id.toString,
+        apps = expectedApps,
+        pods = Set(),
+        groups = Set(),
+        version = Some(nestedGroup.version.toOffsetDateTime),
+        enforceRole = Some(nestedGroup.enforceRole))
+
+      result.futureValue.value.groups should have size 1
+      result.futureValue.value.groups.head should be(expectedGroupInfo)
+      result.futureValue.value.groups.head.apps should have size 1
     }
   }
 

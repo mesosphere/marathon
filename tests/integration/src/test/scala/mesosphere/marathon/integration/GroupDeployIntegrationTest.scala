@@ -7,6 +7,7 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, IntegrationHealthCheck}
 import mesosphere.marathon.raml.{App, GroupUpdate, UpgradeStrategy}
 import mesosphere.marathon.state.{Group, PathId}
+import play.api.libs.json.{JsArray, JsBoolean, JsString}
 
 import scala.concurrent.duration._
 
@@ -55,7 +56,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       Then("The group is updated")
       val result = marathon.group("test2".toRootTestPath)
       result should be(OK)
-      result.value.dependencies should be(dependencies)
+      result.value.value.get("dependencies").value.as[JsArray].value.map(_.as[JsString].value).toSet should be(dependencies)
     }
 
     "deleting an existing group gives a 200 http response" in {
@@ -70,7 +71,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       Then("The group is deleted")
       result should be(OK)
       // only expect the test base group itself
-      marathon.listGroupsInBaseGroup.value.map(_.id) should not contain (group.id)
+      marathon.listGroupIdsInBaseGroup.value should not contain (group.id)
     }
 
     "delete a non existing group should give a 404 http response" in {
@@ -98,7 +99,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       And(s"The group info for $id is complete")
       val groupInfo = marathon.group(id)
-      groupInfo.value.enforceRole.value should be(false)
+      groupInfo.value.value.get("enforceRole").value.as[JsBoolean].value should be(false)
     }
 
     "update a group with applications to restart" in {

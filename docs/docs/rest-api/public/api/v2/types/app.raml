@@ -359,9 +359,15 @@ types:
       tasksUnhealthy?:
         type: integer
         format: int32
-      deployments?: strings.Identifiable[]
-      readinessCheckResults?: readiness.TaskReadinessCheckResult[]
-      tasks?: task.Task[]
+      deployments?:
+        type: strings.Identifiable[]
+        (pragma.omitEmpty):
+      readinessCheckResults?:
+        type: readiness.TaskReadinessCheckResult[]
+        (pragma.omitEmpty):
+      tasks?:
+        type: task.Task[]
+        (pragma.omitEmpty):
       lastTaskFailure?: task.TaskFailure
       tasksStats?: task.TaskStatsByVersion
 

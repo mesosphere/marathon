@@ -154,6 +154,7 @@ private[appinfo] class DefaultInfoService(
             apps = apps,
             pods = pods,
             groups = groups,
+            dependencies = ref.dependencies.map(_.toString),
             version = Some(ref.version.toOffsetDateTime),
             enforceRole = Some(ref.enforceRole)))
         } else None
