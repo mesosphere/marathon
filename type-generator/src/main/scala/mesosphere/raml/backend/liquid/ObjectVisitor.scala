@@ -6,7 +6,7 @@ import scala.collection.JavaConverters._
 object ObjectVisitor {
 
   def visit(objectT: ObjectT): Seq[String] = {
-    val ObjectT(name, fields, parentType, comments, childTypes, discriminator, discriminatorValue, serializeOnly) = objectT
+    val ObjectT(name, fields, parentType, comments, childTypes, discriminator, discriminatorValue, serializeOnly, parentObject) = objectT
 
     val actualFields = fields.filter(_.rawName != discriminator.getOrElse(""))
     val params = FieldVisitor.visit(actualFields).asJava
