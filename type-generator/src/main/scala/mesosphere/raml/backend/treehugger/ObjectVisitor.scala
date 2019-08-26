@@ -104,7 +104,8 @@ object ObjectVisitor {
       )
     } else if (actualFields.size > 22 || actualFields.exists(f => f.repeated || f.omitEmpty || f.constraints.nonEmpty) ||
       actualFields.map(_.toString).exists(t => t.toString.startsWith(name) || t.toString.contains(s"[$name]"))) {
-      actualFields.map(_.constraints).requiredImports ++ Seq(
+      val imports = if (serializeOnly) Seq() else actualFields.map(_.constraints).requiredImports
+      imports ++ Seq(
         OBJECTDEF("playJsonFormat") withParents (if (serializeOnly) PLAY_JSON_WRITES(name) else PLAY_JSON_FORMAT(name)) withFlags Flags.IMPLICIT := BLOCK(
           (if (serializeOnly) {
             Seq()
