@@ -6,7 +6,7 @@ import java.time.Clock
 import akka.actor._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
@@ -99,7 +99,7 @@ private[jobs] object OverdueInstancesActor {
 
     private[this] def overdueReservations(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
       instances.filter { instance =>
-        instance.isScheduled && instance.reservation.exists(_.state.timeout.exists(_.deadline <= now))
+        (instance.isScheduled || instance.state.goal == Goal.Decommissioned) && instance.reservation.exists(_.state.timeout.exists(_.deadline <= now))
       }
     }
   }
