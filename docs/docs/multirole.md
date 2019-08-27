@@ -227,7 +227,7 @@ curl http://localhost:8080/v2/pods/dev/bigbusiness::status | jq '{role: .spec.ro
 }
 ```
 
-You can see that the new pod instance has the new role, `dev`, while the old pod instance continues to have the old role, `slave_public`. Moving forward, all new instances of the bigbusiness pod will receive the new role, `dev`.
+You can see that the new pod instance has the new role, `dev`, while the old pod instance continues to have the old role, `slave_public`. Moving forward, all new instances of the bigbusiness pod will be launched with the new role, `dev`.
 
 # Group Role Enforcement
 
