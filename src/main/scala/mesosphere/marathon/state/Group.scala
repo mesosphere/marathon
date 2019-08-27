@@ -353,7 +353,7 @@ object Group extends StrictLogging {
           Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be removed from $updatedGroupId.")))
         case (Some(newEnforceRole), Some(oldEnforceRole)) =>
           if (newEnforceRole == oldEnforceRole) Success
-          else Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated from $oldEnforceRole to $newEnforceRole for $updatedGroupId. Use a pratial update instead.")))
+          else Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated from $oldEnforceRole to $newEnforceRole for $updatedGroupId. Use a PATCH request, instead.")))
         case _ => Success
       }
     }
