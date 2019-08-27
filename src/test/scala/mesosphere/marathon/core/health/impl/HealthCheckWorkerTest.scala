@@ -14,7 +14,7 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinition, UnreachableStrategy}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PortDefinition, UnreachableStrategy}
 
 import scala.collection.immutable.Seq
 import scala.concurrent.{Future, Promise}
@@ -30,7 +30,7 @@ class HealthCheckWorkerTest extends AkkaUnitTest with ImplicitSender {
         socket.accept().close()
       }
 
-      val appId = PathId(s"/app-with-tcp-health-check-${UUID.randomUUID()}")
+      val appId = AbsolutePathId(s"/app-with-tcp-health-check-${UUID.randomUUID()}")
       val app = AppDefinition(id = appId, role = "*", portDefinitions = Seq(PortDefinition(0)))
       val hostName = InetAddress.getLocalHost.getCanonicalHostName
       val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), region = None, zone = None, attributes = Nil)
@@ -74,7 +74,7 @@ class HealthCheckWorkerTest extends AkkaUnitTest with ImplicitSender {
       val port = binding.localAddress.getPort
 
       val hostName = "localhost"
-      val appId = PathId(s"/app-with-http-health-check-${UUID.randomUUID()}")
+      val appId = AbsolutePathId(s"/app-with-http-health-check-${UUID.randomUUID()}")
       val app = AppDefinition(id = appId, role = "*", portDefinitions = Seq(PortDefinition(0)))
       val agentInfo = AgentInfo(host = hostName, agentId = Some("agent"), region = None, zone = None, attributes = Nil)
       val task = {

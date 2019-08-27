@@ -5,7 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep, DeploymentStepInfo}
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
 import mesosphere.marathon.test.{GroupCreation, JerseyTest}
 
 import scala.collection.immutable.Seq
@@ -27,7 +27,7 @@ class DeploymentsResourceTest extends UnitTest with GroupCreation with JerseyTes
       Given("An unauthenticated request")
       auth.authenticated = false
       val req = auth.request
-      val app = AppDefinition(PathId("/test"), cmd = Some("sleep"), role = "*")
+      val app = AppDefinition(AbsolutePathId("/test"), cmd = Some("sleep"), role = "*")
       val targetGroup = createRootGroup(apps = Map(app.id -> app))
       val deployment = DeploymentStepInfo(DeploymentPlan(createRootGroup(), targetGroup), DeploymentStep(Seq.empty), 1)
       service.listRunningDeployments() returns Future.successful(Seq(deployment))
@@ -48,7 +48,7 @@ class DeploymentsResourceTest extends UnitTest with GroupCreation with JerseyTes
       auth.authenticated = true
       auth.authorized = false
       val req = auth.request
-      val app = AppDefinition(PathId("/test"), cmd = Some("sleep"), role = "*")
+      val app = AppDefinition(AbsolutePathId("/test"), cmd = Some("sleep"), role = "*")
       val targetGroup = createRootGroup(apps = Map(app.id -> app))
       val deployment = DeploymentStepInfo(DeploymentPlan(createRootGroup(), targetGroup), DeploymentStep(Seq.empty), 1)
       service.listRunningDeployments() returns Future.successful(Seq(deployment))

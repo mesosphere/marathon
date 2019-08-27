@@ -4,9 +4,9 @@ package core.instance.update
 import akka.Done
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
-import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 
 import scala.concurrent.Future
 
@@ -40,7 +40,7 @@ sealed trait InstanceChange extends InstanceChangeOrSnapshot with Product with S
   /** Condition of the [[Instance]] */
   val condition: Condition = instance.state.condition
   /** Id of the related [[mesosphere.marathon.state.RunSpec]] */
-  val runSpecId: PathId = id.runSpecId
+  val runSpecId: AbsolutePathId = id.runSpecId
   /** the previous state of this instance */
   def lastState: Option[InstanceState]
   /** Events that should be published for this change */

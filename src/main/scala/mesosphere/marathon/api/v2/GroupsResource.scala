@@ -84,23 +84,23 @@ class GroupsResource @Inject() (
       val (appEmbed, groupEmbed) = resolveAppGroup(embeds)
 
       //format:off
-      def appsResponse(id: PathId) =
+      def appsResponse(id: AbsolutePathId) =
         infoService.selectAppsInGroup(id, authorizationSelectors.appSelector, appEmbed).map(info => ok(info))
 
-      def groupResponse(id: PathId) =
+      def groupResponse(id: AbsolutePathId) =
         infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {
           case Some(info) => ok(info)
           case None if id.isRoot => ok(GroupInfo.empty)
           case None => unknownGroup(id)
         }
 
-      def groupVersionResponse(id: PathId, version: Timestamp) =
+      def groupVersionResponse(id: AbsolutePathId, version: Timestamp) =
         infoService.selectGroupVersion(id, version, authorizationSelectors, groupEmbed).map {
           case Some(info) => ok(info)
           case None => unknownGroup(id)
         }
 
-      def versionsResponse(groupId: PathId) = {
+      def versionsResponse(groupId: AbsolutePathId) = {
         withAuthorization(ViewGroup, groupManager.group(groupId), Future.successful(unknownGroup(groupId))) { _ =>
           groupManager.versions(groupId).runWith(Sink.seq).map(versions => ok(versions))
         }

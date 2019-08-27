@@ -6,7 +6,7 @@ import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AppDefinition, PathId, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, VersionInfo}
 import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository, InstanceView}
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 
@@ -42,13 +42,13 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       val f = new Fixture
 
       Given("instances for multiple runSpecs")
-      val app1Id = PathId("/app1")
+      val app1Id = AbsolutePathId("/app1")
       val app1Instance1 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1Instance2 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1 = app1Instance1.runSpec
       f.groupRepository.runSpecVersion(eq(app1Id), eq(app1.version.toOffsetDateTime))(any) returns Future.successful(Some(app1))
 
-      val app2Id = PathId("/app2")
+      val app2Id = AbsolutePathId("/app2")
       val app2Instance1 = TestInstanceBuilder.newBuilder(app2Id).getInstance()
       val app2 = app2Instance1.runSpec
       f.groupRepository.runSpecVersion(eq(app2Id), eq(app2.version.toOffsetDateTime))(any) returns Future.successful(Some(app2))
@@ -77,14 +77,14 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       val f = new Fixture
 
       Given("instances for multiple runSpecs")
-      val app1Id = PathId("/app1")
+      val app1Id = AbsolutePathId("/app1")
       val app1Instance1 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1Instance2 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1 = app1Instance1.runSpec
       f.groupRepository.runSpecVersion(eq(app1Id), eq(app1.version.toOffsetDateTime))(any) returns Future.successful(Some(app1))
 
       And(s"no run spec for app 2 version ${f.clock.now()}")
-      val app2Id = PathId("/app2")
+      val app2Id = AbsolutePathId("/app2")
       val app2 = AppDefinition(id = app2Id, role = "*", versionInfo = VersionInfo.OnlyVersion(f.clock.now()))
       val app2Instance1 = TestInstanceBuilder.emptyInstance(instanceId = Instance.Id.forRunSpec(app2Id)).copy(runSpec = app2)
       f.groupRepository.runSpecVersion(eq(app2Id), eq(app2Instance1.runSpecVersion.toOffsetDateTime))(any) returns Future.successful(None)
@@ -118,13 +118,13 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       val f = new Fixture
 
       Given("instances for multiple runSpecs")
-      val app1Id = PathId("/app1")
+      val app1Id = AbsolutePathId("/app1")
       val app1Instance1 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1Instance2 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1 = app1Instance1.runSpec
       f.groupRepository.runSpecVersion(eq(app1Id), eq(app1.version.toOffsetDateTime))(any) returns Future.successful(Some(app1))
 
-      val app2Id = PathId("/app2")
+      val app2Id = AbsolutePathId("/app2")
       val app2Instance1 = TestInstanceBuilder.newBuilder(app2Id).getInstance()
       f.groupRepository.runSpecVersion(eq(app2Id), eq(app2Instance1.runSpecVersion.toOffsetDateTime))(any) returns Future.successful(None)
       f.groupRepository.latestRunSpec(eq(app2Id))(any, any) returns Future.successful(None)

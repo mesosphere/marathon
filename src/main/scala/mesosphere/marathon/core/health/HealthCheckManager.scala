@@ -3,18 +3,18 @@ package core.health
 
 import akka.Done
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
 import org.apache.mesos.Protos.TaskStatus
 
-import scala.concurrent.Future
 import scala.collection.immutable.{Map, Seq}
+import scala.concurrent.Future
 
 trait HealthCheckManager {
 
   /**
     * Returns the active health checks for the app with the supplied id.
     */
-  def list(appId: PathId): Set[HealthCheck]
+  def list(appId: AbsolutePathId): Set[HealthCheck]
 
   /**
     * Adds a health check of the supplied app.
@@ -29,7 +29,7 @@ trait HealthCheckManager {
   /**
     * Removes a health check from the app with the supplied id.
     */
-  def remove(appId: PathId, version: Timestamp, healthCheck: HealthCheck): Unit
+  def remove(appId: AbsolutePathId, version: Timestamp, healthCheck: HealthCheck): Unit
 
   /**
     * Removes all health checks.
@@ -39,7 +39,7 @@ trait HealthCheckManager {
   /**
     * Removes all health checks for the app with the supplied id.
     */
-  def removeAllFor(appId: PathId): Unit
+  def removeAllFor(appId: AbsolutePathId): Unit
 
   /**
     * Reconciles active health checks with those defined for all supplied apps.
@@ -55,10 +55,10 @@ trait HealthCheckManager {
   /**
     * Returns the health status of the supplied instance.
     */
-  def status(appId: PathId, instanceId: Instance.Id): Future[Seq[Health]]
+  def status(appId: AbsolutePathId, instanceId: Instance.Id): Future[Seq[Health]]
 
   /**
     * Returns the health status of all instances of the supplied app.
     */
-  def statuses(appId: PathId): Future[Map[Instance.Id, Seq[Health]]]
+  def statuses(appId: AbsolutePathId): Future[Map[Instance.Id, Seq[Health]]]
 }

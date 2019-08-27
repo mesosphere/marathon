@@ -188,13 +188,13 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     """ToJSON should correctly handle missing acceptedResourceRoles""" in {
-      val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = Set.empty, role = "*")
+      val appDefinition = AppDefinition(id = AbsolutePathId("/test"), acceptedResourceRoles = Set.empty, role = "*")
       val json = Json.toJson(appDefinition)
       (json \ "acceptedResourceRoles").asOpt[Set[String]] should be(None)
     }
 
     """ToJSON should correctly handle acceptedResourceRoles""" in {
-      val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = Set("a"), role = "*")
+      val appDefinition = AppDefinition(id = AbsolutePathId("/test"), acceptedResourceRoles = Set("a"), role = "*")
       val json = Json.toJson(appDefinition)
       (json \ "acceptedResourceRoles").as[Set[String]] should be(Set("a"))
     }
@@ -246,7 +246,7 @@ class AppDefinitionFormatsTest extends UnitTest
 
     "AppDefinition JSON includes readinessChecks" in {
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("sleep 123"),
         readinessChecks = Seq(
@@ -518,7 +518,7 @@ class AppDefinitionFormatsTest extends UnitTest
 
     "ToJSON should serialize unreachable instance strategy" in {
       val strategy = UnreachableEnabled(6.minutes, 12.minutes)
-      val appDef = AppDefinition(id = PathId("test"), unreachableStrategy = strategy, role = "*")
+      val appDef = AppDefinition(id = AbsolutePathId("/test"), unreachableStrategy = strategy, role = "*")
 
       val json = Json.toJson(Raml.toRaml(appDef))
 
@@ -550,7 +550,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "ToJSON should serialize kill selection" in {
-      val appDef = AppDefinition(id = PathId("test"), killSelection = KillSelection.OldestFirst, role = "*")
+      val appDef = AppDefinition(id = AbsolutePathId("/test"), killSelection = KillSelection.OldestFirst, role = "*")
 
       val json = Json.toJson(Raml.toRaml(appDef))
 

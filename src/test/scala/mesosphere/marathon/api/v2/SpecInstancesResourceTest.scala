@@ -5,9 +5,6 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{JsonTestHelper, TaskKiller, TestAuthFixture}
-import mesosphere.marathon.test.JerseyTest
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
@@ -15,11 +12,12 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{PathId, _}
-import mesosphere.marathon.test.{GroupCreation, SettableClock}
+import mesosphere.marathon.state._
+import mesosphere.marathon.test.{GroupCreation, JerseyTest, SettableClock}
 import org.mockito.Matchers
 import org.mockito.Mockito._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -75,7 +73,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
   "SpecInstancesResource" should {
     "deleteMany" in new Fixture {
-      val appId = "/my/app".toAbsolutePath
+      val appId = AbsolutePathId("/my/app")
       val host = "host"
       val clock = new SettableClock()
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).addTaskStaged().getInstance()
@@ -157,7 +155,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
     "deleteOne" in new Fixture {
       val clock = new SettableClock()
-      val appId = PathId("/my/app")
+      val appId = AbsolutePathId("/my/app")
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val toKill = Seq(instance1)
@@ -201,7 +199,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
     }
 
     "deleteOne with scale and wipe fails" in new Fixture {
-      val appId = PathId("/my/app")
+      val appId = AbsolutePathId("/my/app")
       val instanceId = Instance.Id.forRunSpec(appId)
       val id = Task.Id(instanceId)
 
@@ -217,7 +215,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
     "deleteOne with wipe delegates to taskKiller with wipe value" in new Fixture {
       val clock = new SettableClock()
-      val appId = PathId("/my/app")
+      val appId = AbsolutePathId("/my/app")
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val toKill = Seq(instance1)
@@ -262,7 +260,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
     "get tasks" in new Fixture {
       val clock = new SettableClock()
 
-      val appId = PathId("/my/app")
+      val appId = AbsolutePathId("/my/app")
 
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, clock.now()).getInstance()
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, clock.now()).getInstance()
@@ -448,7 +446,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       auth.authenticated = true
       auth.authorized = false
       val req = auth.request
-      val appId = PathId("/app")
+      val appId = AbsolutePathId("/app")
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
 
@@ -469,7 +467,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       auth.authenticated = true
       auth.authorized = false
       val req = auth.request
-      val appId = PathId("/app")
+      val appId = AbsolutePathId("/app")
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
 

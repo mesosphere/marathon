@@ -369,7 +369,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
         val response = asyncRequest { r =>
           groupsResource.createWithPath("/foo", false, body.getBytes, auth.request, r)
         }
-        response.getEntity.toString.should(include("Identifier is not child of /foo/sub."))
+        response.getEntity.toString.should(include("Identifier is not child of '/foo/sub'"))
         response.getStatus shouldBe 422
       }
     }
@@ -398,7 +398,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/foo", "/foo/sub", "/foo/sub")
-        rootGroup.app(PathId("/foo/sub/bibi")).shouldNot(be(empty))
+        rootGroup.app(AbsolutePathId("/foo/sub/bibi")).shouldNot(be(empty))
       }
     }
 
@@ -429,7 +429,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/test-group", "/test-group/sleep")
-        rootGroup.app(PathId("/test-group/sleep/goodnight")).shouldNot(be(empty))
+        rootGroup.app(AbsolutePathId("/test-group/sleep/goodnight")).shouldNot(be(empty))
       }
     }
 
@@ -463,7 +463,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/prod", "/prod/sleep")
-        rootGroup.app(PathId("/prod/sleep/goodnight")).value.role should be("prod")
+        rootGroup.app(AbsolutePathId("/prod/sleep/goodnight")).value.role should be("prod")
       }
     }
 
@@ -526,7 +526,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/prod", "/prod/sleep")
-        rootGroup.app(PathId("/prod/sleep/goodnight")).value.role should be("prod")
+        rootGroup.app(AbsolutePathId("/prod/sleep/goodnight")).value.role should be("prod")
       }
     }
 
@@ -559,7 +559,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/prod", "/prod/sleep")
-        rootGroup.app(PathId("/prod/sleep/goodnight")).value.role should be(config.mesosRole())
+        rootGroup.app(AbsolutePathId("/prod/sleep/goodnight")).value.role should be(config.mesosRole())
       }
     }
   }

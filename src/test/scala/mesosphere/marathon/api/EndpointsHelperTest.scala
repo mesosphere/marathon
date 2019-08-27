@@ -49,7 +49,7 @@ class EndpointsHelperTest extends UnitTest {
     InstancesBySpec(Map(app.id -> instances))
   }
 
-  def fakeApp(appId: PathId = PathId("/foo"), container: => Option[Container] = None, network: => Network): AppDefinition =
+  def fakeApp(appId: AbsolutePathId = AbsolutePathId("/foo"), container: => Option[Container] = None, network: => Network): AppDefinition =
     AppDefinition(appId, cmd = Option("sleep"), container = container, networks = Seq(network), role = "*")
 
   def endpointsWithoutServicePorts(app: AppDefinition): Unit = {

@@ -1,15 +1,14 @@
 package mesosphere.marathon
 package core.appinfo
 
-import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{Instance, Reservation}
-import mesosphere.marathon.state.Role
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.core.task.{Task, Tasks}
+import mesosphere.marathon.state.{AbsolutePathId, Role}
 
 case class EnrichedTask(
-    appId: PathId,
+    appId: AbsolutePathId,
     task: Task,
     agentInfo: AgentInfo,
     healthCheckResults: Seq[Health],

@@ -197,7 +197,7 @@ object TestInstanceBuilder {
   def newBuilderForRunSpec(runSpec: RunSpec, now: Timestamp = Timestamp.now(), instanceId: Instance.Id = null): TestInstanceBuilder =
     TestInstanceBuilder(emptyInstanceForRunSpec(now, runSpec, instanceId = instanceId), now)
 
-  def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now(),
+  def newBuilder(runSpecId: AbsolutePathId, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
     TestInstanceBuilder(emptyInstance(now, version, Instance.Id.forRunSpec(runSpecId)), now)
 
@@ -205,7 +205,7 @@ object TestInstanceBuilder {
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
     TestInstanceBuilder(emptyInstance(now, version, instanceId), now)
 
-  def newBuilderWithLaunchedTask(runSpecId: PathId, now: Timestamp = Timestamp.now(),
+  def newBuilderWithLaunchedTask(runSpecId: AbsolutePathId, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
     newBuilder(runSpecId, now, version)
       .addTaskLaunched()

@@ -5,10 +5,10 @@ import akka.NotUsed
 import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.update.{InstanceChangeOrSnapshot, InstanceUpdated, InstancesSnapshot}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.{DelayedStatus, IssueRevive, RoleDirective, UpdateFramework}
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
 import org.scalatest.Inside
 
 import scala.concurrent.Future
@@ -18,8 +18,8 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
 
   import ReviveOffersStreamLogic.{Delayed, NotDelayed}
 
-  val webApp = AppDefinition(id = PathId("/test"), role = "web")
-  val monitoringApp = AppDefinition(id = PathId("/test2"), role = "monitoring")
+  val webApp = AppDefinition(id = AbsolutePathId("/test"), role = "web")
+  val monitoringApp = AppDefinition(id = AbsolutePathId("/test2"), role = "monitoring")
 
   val inputSourceQueue = Source.queue[Either[InstanceChangeOrSnapshot, DelayedStatus]](16, OverflowStrategy.fail)
   val outputSinkQueue = Sink.queue[RoleDirective]()

@@ -3,8 +3,8 @@ package core.launchqueue.impl
 
 import akka.NotUsed
 import akka.actor._
-import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.stream.scaladsl.Source
+import akka.stream.{ActorMaterializer, OverflowStrategy}
 import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated, InstancesSnapshot}
@@ -12,20 +12,20 @@ import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
 import mesosphere.marathon.util.StreamHelpers
 import org.apache.mesos.Protos.FrameworkInfo
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito
 import org.mockito.verification.VerificationMode
 
+import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.collection.JavaConverters._
 
 class ReviveOffersActorTest extends AkkaUnitTest {
 
-  val testApp = AppDefinition(id = PathId("/test"), role = "role")
+  val testApp = AppDefinition(id = AbsolutePathId("/test"), role = "role")
 
   "ReviveOffersActor" should {
 

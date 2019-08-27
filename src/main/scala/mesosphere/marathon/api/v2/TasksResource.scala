@@ -22,7 +22,7 @@ import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateRunSpec
 import mesosphere.marathon.raml.AnyToRaml
 import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AbsolutePathId, PathId}
 import mesosphere.marathon.stream.Implicits._
 import play.api.libs.json.Json
 
@@ -54,7 +54,7 @@ class TasksResource @Inject() (
       val futureEnrichedTasks = async {
         val instancesBySpec = await(instanceTracker.instancesBySpec)
 
-        val appIds: Set[PathId] = instancesBySpec.allSpecIdsWithInstances
+        val appIds: Set[AbsolutePathId] = instancesBySpec.allSpecIdsWithInstances
 
         val appIdsToApps = groupManager.apps(appIds)
 
@@ -120,7 +120,7 @@ class TasksResource @Inject() (
       if (scale && wipe) throw new BadRequestException("You cannot use scale and wipe at the same time.")
 
       val taskIds = (Json.parse(body) \ "ids").as[Set[String]]
-      val tasksIdToAppId: Map[Instance.Id, PathId] = taskIds.map { id =>
+      val tasksIdToAppId: Map[Instance.Id, AbsolutePathId] = taskIds.map { id =>
         try {
           val taskId = Task.Id.parse(id)
           taskId.instanceId -> taskId.instanceId.runSpecId
@@ -129,12 +129,12 @@ class TasksResource @Inject() (
         }
       }(collection.breakOut)
 
-      def scaleAppWithKill(toKill: Map[PathId, Seq[Instance]]): Future[Response] = async {
+      def scaleAppWithKill(toKill: Map[AbsolutePathId, Seq[Instance]]): Future[Response] = async {
         val killAndScale = await(taskKiller.killAndScale(toKill, force))
         deploymentResult(killAndScale)
       }
 
-      def doKillTasks(toKill: Map[PathId, Seq[Instance]]): Future[Response] = async {
+      def doKillTasks(toKill: Map[AbsolutePathId, Seq[Instance]]): Future[Response] = async {
         val affectedApps = tasksIdToAppId.values.flatMap(appId => groupManager.app(appId))(collection.breakOut)
         // FIXME (gkleiman): taskKiller.kill a few lines below also checks authorization, but we need to check ALL before
         // starting to kill tasks
@@ -150,7 +150,7 @@ class TasksResource @Inject() (
 
       val maybeInstances: Iterable[Option[Instance]] = await(Future.sequence(tasksIdToAppId.view
         .map { case (taskId, _) => instanceTracker.instancesBySpec.map(_.instance(taskId)) }))
-      val tasksByAppId: Map[PathId, Seq[Instance]] = maybeInstances.flatten
+      val tasksByAppId: Map[AbsolutePathId, Seq[Instance]] = maybeInstances.flatten
         .groupBy(instance => instance.instanceId.runSpecId)
         .map { case (appId, instances) => appId -> instances.to[Seq] }(collection.breakOut)
       val response =

@@ -6,7 +6,7 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.storage.repository.InstanceRepository
 import play.api.libs.json.{JsObject, JsString, Json}
 
@@ -20,8 +20,8 @@ class MigrationTo19200Test extends AkkaUnitTest {
 
       Given("an instance with and one without role")
       val f = new Fixture()
-      val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
-      val instanceId2 = Instance.Id.forRunSpec(PathId("/app2"))
+      val instanceId1 = Instance.Id.forRunSpec(AbsolutePathId("/app"))
+      val instanceId2 = Instance.Id.forRunSpec(AbsolutePathId("/app2"))
 
       val instances = Source(List(
         f.legacyInstanceJson(instanceId1),

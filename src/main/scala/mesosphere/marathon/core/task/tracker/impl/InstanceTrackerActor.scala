@@ -18,7 +18,7 @@ import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{RepositoryStateUpdated, UpdateContext}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.metrics.{Metrics, SettableGauge}
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceView
 
 import scala.concurrent.Future
@@ -40,8 +40,8 @@ object InstanceTrackerActor {
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
   private[impl] case object List
 
-  /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]] by RunSpec [[PathId]]. */
-  private[impl] case class ListBySpec(appId: PathId)
+  /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]] by RunSpec [[AbsolutePathId]]. */
+  private[impl] case class ListBySpec(appId: AbsolutePathId)
 
   private[impl] case class Get(instanceId: Instance.Id)
 
@@ -50,7 +50,7 @@ object InstanceTrackerActor {
   private[impl] case object Unsubscribe
 
   private[impl] case class UpdateContext(deadline: Timestamp, operation: InstanceUpdateOperation) {
-    def appId: PathId = operation.instanceId.runSpecId
+    def appId: AbsolutePathId = operation.instanceId.runSpecId
     def instanceId: Instance.Id = operation.instanceId
   }
 
@@ -157,7 +157,7 @@ private[impl] class InstanceTrackerActor(
       case InstanceTrackerActor.List =>
         sender() ! instancesBySpec
 
-      case InstanceTrackerActor.ListBySpec(appId: PathId) =>
+      case InstanceTrackerActor.ListBySpec(appId: AbsolutePathId) =>
         sender() ! instancesBySpec.specInstances(appId)
 
       case InstanceTrackerActor.Get(instanceId) =>
@@ -251,7 +251,7 @@ private[impl] class InstanceTrackerActor(
     * @param instanceId The identifier of the instance that is removed, added or updated.
     * @param newInstance A new or updated instance, or none if it is expunged.
     */
-  def updateApp(appId: PathId, instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
+  def updateApp(appId: AbsolutePathId, instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
     val updatedAppInstances = newInstance match {
       case None =>
         logger.debug(s"Expunging $instanceId from the in-memory state")

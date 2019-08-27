@@ -13,7 +13,7 @@ import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.test.{GroupCreation, Mockito}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.metrics.dummy.DummyMetrics
@@ -36,12 +36,12 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
   }
 
   def compactWaitOnSem(
-    appsToDelete: AtomicReference[Set[PathId]],
-    appVersionsToDelete: AtomicReference[Map[PathId, Set[OffsetDateTime]]],
-    podsToDelete: AtomicReference[Set[PathId]],
-    podVersionsToDelete: AtomicReference[Map[PathId, Set[OffsetDateTime]]],
+    appsToDelete: AtomicReference[Set[AbsolutePathId]],
+    appVersionsToDelete: AtomicReference[Map[AbsolutePathId, Set[OffsetDateTime]]],
+    podsToDelete: AtomicReference[Set[AbsolutePathId]],
+    podVersionsToDelete: AtomicReference[Map[AbsolutePathId, Set[OffsetDateTime]]],
     rootVersionsToDelete: AtomicReference[Set[OffsetDateTime]],
-    sem: Semaphore): Option[(Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[OffsetDateTime]) => Future[CompactDone]] = {
+    sem: Semaphore): Option[(Set[AbsolutePathId], Map[AbsolutePathId, Set[OffsetDateTime]], Set[AbsolutePathId], Map[AbsolutePathId, Set[OffsetDateTime]], Set[OffsetDateTime]) => Future[CompactDone]] = {
     Some((apps, appVersions, pods, podVersions, roots) => Future {
       appsToDelete.set(apps)
       appVersionsToDelete.set(appVersions)
@@ -57,7 +57,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
   val metrics = DummyMetrics
   case class Fixture(maxVersions: Int)(
       testScan: Option[() => Future[ScanDone]] = None)(
-      testCompact: Option[(Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[PathId], Map[PathId, Set[OffsetDateTime]], Set[OffsetDateTime]) => Future[CompactDone]] = None) {
+      testCompact: Option[(Set[AbsolutePathId], Map[AbsolutePathId, Set[OffsetDateTime]], Set[AbsolutePathId], Map[AbsolutePathId, Set[OffsetDateTime]], Set[OffsetDateTime]) => Future[CompactDone]] = None) {
     val store = new InMemoryPersistenceStore(metrics)
     store.markOpen()
     val appRepo = AppRepository.inMemRepository(store)
@@ -70,10 +70,10 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       }
 
       override def compact(
-        appsToDelete: Set[PathId],
-        appVersionsToDelete: Map[PathId, Set[OffsetDateTime]],
-        podsToDelete: Set[PathId],
-        podVersionsToDelete: Map[PathId, Set[OffsetDateTime]],
+        appsToDelete: Set[AbsolutePathId],
+        appVersionsToDelete: Map[AbsolutePathId, Set[OffsetDateTime]],
+        podsToDelete: Set[AbsolutePathId],
+        podVersionsToDelete: Map[AbsolutePathId, Set[OffsetDateTime]],
         rootVersionsToDelete: Set[OffsetDateTime]): Future[CompactDone] = {
         testCompact.fold(super.compact(appsToDelete, appVersionsToDelete, podsToDelete, podVersionsToDelete, rootVersionsToDelete)) {
           _(appsToDelete, appVersionsToDelete, podsToDelete, podVersionsToDelete, rootVersionsToDelete)
@@ -217,10 +217,10 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       }
       "remove stores from deletions when scan is done" in {
         val sem = new Semaphore(0)
-        val compactedAppIds = new AtomicReference[Set[PathId]]()
-        val compactedAppVersions = new AtomicReference[Map[PathId, Set[OffsetDateTime]]]()
-        val compactedPodIds = new AtomicReference[Set[PathId]]()
-        val compactedPodVersions = new AtomicReference[Map[PathId, Set[OffsetDateTime]]]()
+        val compactedAppIds = new AtomicReference[Set[AbsolutePathId]]()
+        val compactedAppVersions = new AtomicReference[Map[AbsolutePathId, Set[OffsetDateTime]]]()
+        val compactedPodIds = new AtomicReference[Set[AbsolutePathId]]()
+        val compactedPodVersions = new AtomicReference[Map[AbsolutePathId, Set[OffsetDateTime]]]()
         val compactedRoots = new AtomicReference[Set[OffsetDateTime]]()
         val f = Fixture(5)()(compactWaitOnSem(compactedAppIds, compactedAppVersions,
           compactedPodIds, compactedPodVersions, compactedRoots, sem))
@@ -479,10 +479,10 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       }
       "do nothing if there are less than max roots" in {
         val sem = new Semaphore(0)
-        val compactedAppIds = new AtomicReference[Set[PathId]]()
-        val compactedAppVersions = new AtomicReference[Map[PathId, Set[OffsetDateTime]]]()
-        val compactedPodIds = new AtomicReference[Set[PathId]]()
-        val compactedPodVersions = new AtomicReference[Map[PathId, Set[OffsetDateTime]]]()
+        val compactedAppIds = new AtomicReference[Set[AbsolutePathId]]()
+        val compactedAppVersions = new AtomicReference[Map[AbsolutePathId, Set[OffsetDateTime]]]()
+        val compactedPodIds = new AtomicReference[Set[AbsolutePathId]]()
+        val compactedPodVersions = new AtomicReference[Map[AbsolutePathId, Set[OffsetDateTime]]]()
         val compactedRoots = new AtomicReference[Set[OffsetDateTime]]()
         val f = Fixture(2)()(compactWaitOnSem(compactedAppIds, compactedAppVersions,
           compactedPodIds, compactedPodVersions, compactedRoots, sem))
@@ -499,10 +499,10 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
       }
       "do nothing if all of the roots are in use" in {
         val sem = new Semaphore(0)
-        val compactedAppIds = new AtomicReference[Set[PathId]]()
-        val compactedAppVersions = new AtomicReference[Map[PathId, Set[OffsetDateTime]]]()
-        val compactedPodIds = new AtomicReference[Set[PathId]]()
-        val compactedPodVersions = new AtomicReference[Map[PathId, Set[OffsetDateTime]]]()
+        val compactedAppIds = new AtomicReference[Set[AbsolutePathId]]()
+        val compactedAppVersions = new AtomicReference[Map[AbsolutePathId, Set[OffsetDateTime]]]()
+        val compactedPodIds = new AtomicReference[Set[AbsolutePathId]]()
+        val compactedPodVersions = new AtomicReference[Map[AbsolutePathId, Set[OffsetDateTime]]]()
         val compactedRoots = new AtomicReference[Set[OffsetDateTime]]()
         val f = Fixture(1)()(compactWaitOnSem(compactedAppIds, compactedAppVersions,
           compactedPodIds, compactedPodVersions, compactedRoots, sem))

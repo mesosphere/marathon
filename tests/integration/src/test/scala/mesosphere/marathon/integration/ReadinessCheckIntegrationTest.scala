@@ -4,7 +4,7 @@ package integration
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{AppHealthCheck, AppHealthCheckProtocol, AppUpdate, PortDefinition, ReadinessCheck}
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AbsolutePathId, PathId}
 import org.scalatest.concurrent.Eventually
 
 class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Eventually {
@@ -40,7 +40,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
         )
 
       And("The app is not ready")
-      val readinessCheck = registerProxyReadinessCheck(PathId(app.id), "v1")
+      val readinessCheck = registerProxyReadinessCheck(AbsolutePathId(app.id), "v1")
       readinessCheck.isReady.set(false)
 
       When("The app is created")
@@ -79,8 +79,8 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
 
       And("The app is not ready and not healthy")
       //TODO start with state - false
-      registerAppProxyHealthCheck(PathId(app.id), "v1", state = true)
-      val readinessCheck = registerProxyReadinessCheck(PathId(app.id), "v1")
+      registerAppProxyHealthCheck(AbsolutePathId(app.id), "v1", state = true)
+      val readinessCheck = registerProxyReadinessCheck(AbsolutePathId(app.id), "v1")
       readinessCheck.isReady.set(false)
 
       When("The app is created")
@@ -117,7 +117,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
 
         )
       And("The app is not ready")
-      val readinessCheckV1 = registerProxyReadinessCheck(PathId(appV1.id), "v1")
+      val readinessCheckV1 = registerProxyReadinessCheck(AbsolutePathId(appV1.id), "v1")
       readinessCheckV1.isReady.set(true)
 
       When("The app is created")
@@ -134,7 +134,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
       When("The service is upgraded and the upgrade is not ready")
       val readinessCheckV2 = registerProxyReadinessCheck(appV1.id.toTestPath, "v2")
       readinessCheckV2.isReady.set(false)
-      val update = marathon.updateApp(PathId(appV1.id), AppUpdate(cmd = appProxy(appV1.id.toTestPath, "v2", 1).cmd))
+      val update = marathon.updateApp(AbsolutePathId(appV1.id), AppUpdate(cmd = appProxy(appV1.id.toTestPath, "v2", 1).cmd))
       update.success should be(true) withClue (update.entityString)
 
       (1 to 3).foreach { _ =>

@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Status
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.state.{AppDefinition, EnvVarString, PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, EnvVarString, Timestamp}
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 import play.api.libs.json.Json
@@ -54,7 +54,7 @@ object JsonFormatBenchmark extends AppAndGroupFormats {
       */
     val numLabels = 11
 
-    val appId = PathId("benchmark/app/definition")
+    val appId = AbsolutePathId("/benchmark/app/definition")
 
     AppInfo(
       app = AppDefinition(

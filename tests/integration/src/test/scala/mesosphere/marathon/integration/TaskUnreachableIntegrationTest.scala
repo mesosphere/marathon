@@ -7,8 +7,7 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.App
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.UnreachableDisabled
+import mesosphere.marathon.state.{AbsolutePathId, UnreachableDisabled}
 import org.scalatest.Inside
 import org.scalatest.Inspectors.forAll
 
@@ -59,7 +58,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
         unreachableStrategy = Option(strategy)
       )
       waitForDeployment(marathon.createAppV2(app))
-      val task = waitForTasks(app.id.toPath, 1).head
+      val task = waitForTasks(AbsolutePathId(app.id), 1).head
 
       When("the slave is partitioned")
       mesosCluster.agents(0).stop()
@@ -75,7 +74,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       And("a replacement task is started on a different slave")
       mesosCluster.agents(1).start() // Start an alternative slave
       waitForStatusUpdates("TASK_RUNNING")
-      val tasks = marathon.tasks(app.id.toPath).value
+      val tasks = marathon.tasks(AbsolutePathId(app.id)).value
       tasks should have size 2
       tasks.groupBy(_.state).keySet should be(Set("TASK_RUNNING", "TASK_UNREACHABLE"))
       val replacement = tasks.find(_.state == "TASK_RUNNING").get
@@ -94,8 +93,8 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       }
 
       And("there is only one running task left")
-      marathon.tasks(app.id.toPath).value should have size 1
-      marathon.tasks(app.id.toPath).value.head.state should be("TASK_RUNNING")
+      marathon.tasks(AbsolutePathId(app.id)).value should have size 1
+      marathon.tasks(AbsolutePathId(app.id)).value.head.state should be("TASK_RUNNING")
     }
 
     "A task unreachable update with inactiveAfterSeconds 0 will trigger a replacement task instantly" in {
@@ -105,7 +104,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
         unreachableStrategy = Option(strategy)
       )
       waitForDeployment(marathon.createAppV2(app))
-      val task = waitForTasks(app.id.toPath, 1).head
+      val task = waitForTasks(AbsolutePathId(app.id), 1).head
 
       When("the slave is partitioned")
       mesosCluster.agents(0).stop()
@@ -123,7 +122,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       }
 
       // immediate replacement should be started
-      val tasks = marathon.tasks(app.id.toPath).value
+      val tasks = marathon.tasks(AbsolutePathId(app.id)).value
       tasks should have size 2
       tasks.groupBy(_.state).keySet should be(Set("TASK_RUNNING", "TASK_UNREACHABLE"))
     }
@@ -141,7 +140,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
         .copy(constraints = constraint, unreachableStrategy = Option(strategy))
 
       waitForDeployment(marathon.createAppV2(app))
-      val enrichedTasks = waitForTasks(app.id.toPath, num = 2)
+      val enrichedTasks = waitForTasks(AbsolutePathId(app.id), num = 2)
       val clusterState = mesosCluster.state.value
       val slaveId = clusterState.agents.find(_.attributes.attributes("node").toString.toDouble.toInt == 0).getOrElse(
         throw new RuntimeException(s"failed to find agent1: attributes by agent=${clusterState.agents.map(_.attributes.attributes)}")
@@ -158,14 +157,14 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       }
 
       And("the task is not removed from the task list")
-      inside(waitForTasks(app.id.toPath, num = 2)) {
+      inside(waitForTasks(AbsolutePathId(app.id), num = 2)) {
         case tasks =>
           tasks should have size 2
           tasks.exists(_.state == "TASK_UNREACHABLE") shouldBe true
       }
 
       When("we try to scale down to one instance")
-      val update = marathon.updateApp(app.id.toPath, raml.AppUpdate(instances = Some(1)))
+      val update = marathon.updateApp(AbsolutePathId(app.id), raml.AppUpdate(instances = Some(1)))
       waitForEventMatching("deployment to scale down should be triggered") {
         matchDeploymentStart(app.id)
       }
@@ -177,7 +176,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       implicit val patienceConfig: PatienceConfig = PatienceConfig(interval = 500 milliseconds, timeout = 300 seconds)
 
       And("The unreachable task is expunged")
-      eventually(inside(marathon.tasks(app.id.toPath).value) {
+      eventually(inside(marathon.tasks(AbsolutePathId(app.id)).value) {
         case t :: Nil =>
           t.state shouldBe "TASK_RUNNING"
       })

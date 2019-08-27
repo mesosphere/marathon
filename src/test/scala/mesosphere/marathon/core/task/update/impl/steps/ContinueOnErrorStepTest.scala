@@ -6,7 +6,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler}
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.test.CaptureLogEvents
 
 import scala.concurrent.Future
@@ -66,7 +66,7 @@ class ContinueOnErrorStepTest extends UnitTest {
     }
   }
   class Fixture {
-    private[this] val appId: PathId = PathId("/test")
+    private[this] val appId: AbsolutePathId = AbsolutePathId("/test")
     val dummyInstanceBuilder = TestInstanceBuilder.newBuilderWithLaunchedTask(appId)
     val dummyInstance = dummyInstanceBuilder.getInstance()
     val nested = mock[InstanceChangeHandler]

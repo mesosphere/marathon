@@ -5,7 +5,7 @@ import java.util.UUID
 
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.instance.Instance.Prefix
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, PathId, Timestamp}
 import play.api.libs.json._
 
 /**
@@ -31,7 +31,7 @@ object Reservation {
     * @param separator The separator of run spec id and uuid.
     * @param uuid The unique id of the reservation. It is the same id of the instance.
     */
-  case class LegacyId(runSpecId: PathId, separator: String, uuid: UUID) extends Id {
+  case class LegacyId(runSpecId: AbsolutePathId, separator: String, uuid: UUID) extends Id {
     override lazy val label: String = runSpecId.safePath + separator + uuid
 
     /**

@@ -1,8 +1,8 @@
 package mesosphere.marathon
 package core.matcher.manager.impl
 
-import java.util.UUID
 import java.time.Clock
+import java.util.UUID
 
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
@@ -16,7 +16,7 @@ import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
 import mesosphere.marathon.core.matcher.manager.{OfferMatcherManagerConfig, OfferMatcherManagerModule}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.marathon.test.MarathonTestHelper
@@ -38,7 +38,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
   object F {
     import org.apache.mesos.{Protos => Mesos}
     val metrics = DummyMetrics
-    val runSpecId = PathId("/test")
+    val runSpecId = AbsolutePathId("/test")
     val instanceId = Instance.Id.forRunSpec(runSpecId)
     val launch = new InstanceOpFactoryHelper(
       metrics,

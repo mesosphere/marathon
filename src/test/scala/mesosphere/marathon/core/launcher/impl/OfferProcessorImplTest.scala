@@ -3,19 +3,18 @@ package core.launcher.impl
 
 import akka.Done
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launcher.{InstanceOp, OfferProcessorConfig, TaskLauncher}
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.OfferMatcher.{InstanceOpSource, InstanceOpWithSource, MatchedInstanceOps}
-import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
 
 import scala.collection.immutable.Seq
@@ -25,7 +24,7 @@ import scala.concurrent.duration._
 class OfferProcessorImplTest extends UnitTest {
   private[this] val offer = MarathonTestHelper.makeBasicOffer().build()
   private[this] val offerId = offer.getId
-  private val appId: PathId = PathId("/testapp")
+  private val appId: AbsolutePathId = AbsolutePathId("/testapp")
   private[this] val instanceId1 = Instance.Id.forRunSpec(appId)
   private[this] val instanceId2 = Instance.Id.forRunSpec(appId)
   private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id(instanceId1)).build()

@@ -29,15 +29,6 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
     */
   def isRoot: Boolean = path.isEmpty && (absolute == true)
 
-  /**
-    * Workaround method used to cope with the fact that the proper type isn't used for many ids in our code.
-    *
-    * Once Group, AppDefinition and PodDefinition all use AbsolutePathId, we should remove this method
-    * @return
-    */
-  @deprecated("Assuming an absolute path where it may not be is a source of bugs; avoid using this method if possible")
-  def asAbsolutePath: AbsolutePathId
-
   lazy val parent: PathId = path match {
     case Nil => PathId.root
     case head +: Nil => PathId.root
@@ -121,7 +112,7 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
 
 case class AbsolutePathId(path: Seq[String]) extends PathId {
   override val absolute: Boolean = true
-  override def asAbsolutePath: AbsolutePathId = this
+
   protected def toString(delimiter: String): String =
     path.mkString("/", delimiter, "")
 
@@ -160,15 +151,6 @@ object AbsolutePathId {
 
 case class RelativePathId(path: Seq[String]) extends PathId with StrictLogging {
   override val absolute: Boolean = false
-  override def asAbsolutePath: AbsolutePathId = {
-    /* There could be some input cases in the wild where this could be hit, but in a benign way
-     * Rather than break Marathon, lets log a loud message and hopefully those cases will be addressed as we remove
-     * this method
-     */
-    val ex = new RuntimeException("An absolute path was expected where we had a relative path")
-    logger.warn(s"Path '${this}' assumed to be an absolute path, but was relative. This is probably a bug.", ex)
-    this.canonicalPath(PathId.root)
-  }
 
   protected def toString(delimiter: String): String =
     path.mkString(delimiter)
@@ -201,6 +183,11 @@ object PathId {
     sanitized(raw, in.startsWith("/"))
   }
 
+  def apply(in: String, absolute: Boolean): PathId = {
+    val raw = in.replaceAll("""(^/+)|(/+$)""", "").split("/")
+    sanitized(raw, absolute)
+  }
+
   def root: AbsolutePathId = AbsolutePathId(Nil)
 
   implicit class StringPathId(val stringPath: String) extends AnyVal {
@@ -221,7 +208,7 @@ object PathId {
     id.path.forall(part => ID_PATH_SEGMENT_PATTERN.pattern.matcher(part).matches())
   }
 
-  private val reservedKeywords = Seq("restart", "tasks", "versions")
+  private val reservedKeywords = Seq("restart", "tasks", "versions", ".", "..")
 
   private val withoutReservedKeywords = isTrue[PathId](s"must not end with any of the following reserved keywords: ${reservedKeywords.mkString(", ")}") { id =>
     id.path.lastOption.forall(last => !reservedKeywords.contains(id.path.last))
@@ -231,9 +218,9 @@ object PathId {
     * For external usage. Needed to overwrite the whole description, e.g. id.path -> id.
     */
   implicit val pathIdValidator = validator[PathId] { path =>
-    path is childOf(path.parent)
     path is validPathChars
     path is withoutReservedKeywords
+    path is childOf(path.parent)
   }
 
   /**
@@ -241,8 +228,8 @@ object PathId {
     * @param base Path of parent.
     */
   def validPathWithBase(base: PathId): Validator[PathId] = validator[PathId] { path =>
-    path is childOf(base)
     path is validPathChars
+    path is childOf(base)
   }
 
   /**
@@ -250,8 +237,11 @@ object PathId {
     * Every relative path can be ignored.
     */
   private def childOf(parent: PathId): Validator[PathId] = {
-    isTrue[PathId](s"Identifier is not child of $parent. Hint: use relative paths.") { child =>
-      !parent.absolute || (child.canonicalPath(parent.asAbsolutePath).parent == parent)
+    isTrue[PathId](s"Identifier is not child of '$parent'") { child =>
+      parent match {
+        case _: RelativePathId => true
+        case p: AbsolutePathId => child.canonicalPath(p).parent == parent
+      }
     }
   }
 
