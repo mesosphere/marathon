@@ -98,6 +98,11 @@ private[jobs] object OverdueInstancesActor {
     }
 
     private[this] def overdueReservations(now: Timestamp, instances: Seq[Instance]): Seq[Instance] = {
+      // We're mainly checking if the reservation timeout is expired, i.e. we have send a reservation to mesos
+      // but didn't receive an offer with the requested reservation back in time.
+      //
+      // Usually, the instance is scheduled, but in rare cases it can get decommissioned before the reservation
+      // times out, so we need to check that as well
       instances.filter { instance =>
         (instance.isScheduled || instance.state.goal == Goal.Decommissioned) && instance.reservation.exists(_.state.timeout.exists(_.deadline <= now))
       }
