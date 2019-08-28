@@ -35,7 +35,7 @@ class GroupValidationTest extends UnitTest with ValidationTestLike {
       )
     }
 
-    "allows changes to enforceRole if other services are modified with the request" in {
+    "allows changes to enforceRole if other services are not modified with the request" in {
       val originalGroup = RootGroup.empty.putGroup(Group(AbsolutePathId("/dev"), enforceRole = false))
       val groupValidator = Group.validNestedGroupUpdateWithBase(AbsolutePathId("/"), originalGroup, servicesGloballyModified = false)
 
