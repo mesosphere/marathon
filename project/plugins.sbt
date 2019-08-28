@@ -16,6 +16,7 @@ addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.3.9")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.27")
 addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.3")
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "0.99.12")
+addSbtPlugin("com.github.gseitz" % "sbt-protobuf" % "0.6.5")
 
 // Plugin dependency hell got you down?
 // Run sbt inside of `./project` and inspect dependencies using the coursierDependencyInverseTree command
@@ -25,7 +26,8 @@ libraryDependencies ++= Seq(
   "org.raml" % "raml-parser-2" % "1.0.3",
   "com.eed3si9n" %% "treehugger" % "0.4.3",
   "org.slf4j" % "slf4j-nop" % "1.7.25",
-  "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.6"
+  "com.trueaccord.scalapb" %% "compilerplugin" % "0.6.6",
+  "com.github.os72" % "protoc-jar" % "3.8.0"
 )
 
 sbtPlugin := true

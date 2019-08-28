@@ -1,13 +1,10 @@
-import java.time.{LocalDate, ZoneOffset}
-import java.time.format.DateTimeFormatter
-
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import com.typesafe.sbt.SbtNativePackager.autoImport.NativePackagerHelper.directory
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import com.typesafe.sbt.packager.docker.Cmd
 import mesosphere.maven.MavenSettings.{loadM2Credentials, loadM2Resolvers}
 import mesosphere.raml.RamlGeneratorPlugin
-import NativePackagerHelper.directory
-
+import sbtprotobuf.ProtobufPlugin
 import scalariform.formatter.preferences._
 
 credentials ++= loadM2Credentials(streams.value.log)
@@ -66,6 +63,12 @@ lazy val integrationTestSettings = Seq(
     "-Dscala.concurrent.context.maxThreads=32"
   ),
   concurrentRestrictions in Test := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2)))
+)
+
+val pbSettings = ProtobufPlugin.projectSettings ++ Seq(
+  (version in ProtobufConfig) := "3.5.0",
+  (includeFilter in ProtobufConfig) := "marathon.proto",
+  (protobufRunProtoc in ProtobufConfig) := (args => com.github.os72.protocjar.Protoc.runProtoc("-v330" +: args.toArray))
 )
 
 lazy val commonSettings = Seq(
@@ -214,8 +217,9 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
 
 lazy val marathon = (project in file("."))
   .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin,
-    RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning)
+    RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning, ProtobufPlugin)
   .dependsOn(`plugin-interface`)
+  .settings(pbSettings)
   .settings(testSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
