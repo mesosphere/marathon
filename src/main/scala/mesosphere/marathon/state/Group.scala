@@ -361,7 +361,7 @@ object Group extends StrictLogging {
   }
 
   def updateModifiesServices(update: raml.GroupUpdate): Boolean = {
-    update.version.nonEmpty || update.scaleBy.nonEmpty || update.apps.exists(_.nonEmpty) || update.groups.getOrElse(Set.empty).exists { group =>
+    update.version.nonEmpty || update.scaleBy.nonEmpty || update.apps.nonEmpty || update.groups.getOrElse(Set.empty).exists { group =>
       updateModifiesServices(group)
     }
   }
