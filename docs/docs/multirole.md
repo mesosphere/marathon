@@ -227,7 +227,7 @@ curl http://localhost:8080/v2/pods/dev/bigbusiness::status | jq '{role: .spec.ro
 }
 ```
 
-You can see that the new pod instance has the new role, while the old pod instance continues to have the old role. Moving forward, all new instances will receive the new role, `dev`.
+You can see that the new pod instance has the new role, `dev`, while the old pod instance continues to have the old role, `slave_public`. Moving forward, all new instances of the bigbusiness pod will be launched with the new role, `dev`.
 
 # Group Role Enforcement
 
@@ -329,15 +329,15 @@ With the introduction of the `role` field, the field `acceptedResourceRoles` is 
 With this in mind, given a service with the role `dev`, only the following `acceptedResourceRoles` field values are valid, and have the following interpretation:
 
 * `["*"]` - only unreserved resources will be considered; resources already reserved for the role `dev` will be declined.
-* `["*", "dev"]` - either unreserved resources, or resources already reserved for the role `dev` will be considered for offer matching.
+* `["*", "dev"]` - both unreserved resources and resources already reserved for the role `dev` will be considered for offer matching.
 * `["dev"]` - only resources already reserved for `dev` will be considered for offer matching. Unreserved resources will be declined.
 
-Specifying a role other than the service role, or `"*"`, are considered invalid, and Marathon will deprecate the sanitization of this field, rejecting invalid values in Marathon 1.10 and later.
+It is invalid to specify a role other than the service role or `"*"` in `acceptedResourceRoles`. In Marathon 1.9, invalid roles in `acceptedResourceRoles` will be automatically removed, and `acceptedResourceRoles` will default to `["*"]` if all specified roles are removed. In Marathon 1.10 and later, invalid resource roles will be rejected with a validation error.
 
 # Mesos Permissions Caveats
 
 It is vitally important that Marathon has access to use the roles that are specified in services.
 
-Marathon blindly assumes it has the permissions to create and use the new roles specified. If Marathon attempts to subscribe to a role to which it does not have permission, then this results in a non-functional Marathon, as Mesos reacts to unauthorized role subscriptions by dropping the connection.
+Marathon blindly assumes it has the permissions to **both** create and use the new roles specified. If Marathon attempts to subscribe to a role to which it does not have permission, then this results in a non-functional Marathon, as Mesos reacts to unauthorized role subscriptions by dropping the connection.
 
-See the [http://mesos.apache.org/documentation/latest/authorization/](Authorization) section in Mesos to enable this. In DC/OS, this is already enabled for the root Marathon.
+See the [http://mesos.apache.org/documentation/latest/authorization/](Authorization) section in Mesos for documentation on the respective permissions. In DC/OS, the appropriate permissions are granted for the root Marathon out-of-the-box.
