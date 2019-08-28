@@ -342,7 +342,7 @@ object Group extends StrictLogging {
     import disallowEnforceRoleChangeIfServicesChanged.EnforceRoleCantBeChangedMessage
 
     override def apply(group: raml.GroupUpdate): Result = {
-      if (servicesGloballyModified == false) {
+      if (!servicesGloballyModified) {
         Success
       } else {
         val updatedGroupId = group.id.map { id => id.toPath.canonicalPath(base) }
