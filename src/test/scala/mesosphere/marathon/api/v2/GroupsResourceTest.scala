@@ -467,6 +467,39 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       }
     }
 
+    "Fail a batch update when apps are modified and enforceRole is changed for an unrelated group" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(Group(id = AbsolutePathId("/dev"), enforceRole = false)))) {
+        val body =
+          """
+        {
+          "groups": [
+            {
+              "id": "unrelated",
+              "apps": [
+                {
+                  "id": "goodnight",
+                  "cmd": "sleep 1",
+                  "instances": 0
+                }
+              ]
+            },
+            {
+              "id": "/dev",
+              "enforceRole": true
+            }
+          ],
+          "id": "/"
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("", false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 422
+        response.getEntity.toString.should(include(Group.disallowEnforceRoleChangeIfServicesChanged.EnforceRoleCantBeChangedMessage))
+      }
+    }
+
     "Fail a batch update when app role is invalid" in {
       new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
         val body =
