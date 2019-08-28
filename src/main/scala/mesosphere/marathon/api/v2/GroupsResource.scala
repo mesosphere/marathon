@@ -153,7 +153,7 @@ class GroupsResource @Inject() (
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
 
-      val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath, originalRootGroup)
+      val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath, originalRootGroup, Group.updateModifiesServices(raw))
       val groupUpdate = validateOrThrow(
         GroupNormalization(config, originalRootGroup).updateNormalization(effectivePath).normalized(raw)
       )(groupValidator)
@@ -243,7 +243,7 @@ class GroupsResource @Inject() (
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
 
-      val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath, originalRootGroup)
+      val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath, originalRootGroup, Group.updateModifiesServices(raw))
       val groupUpdate = validateOrThrow(
         GroupNormalization(config, originalRootGroup).updateNormalization(effectivePath).normalized(raw)
       )(groupValidator)

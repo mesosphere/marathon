@@ -308,13 +308,10 @@ object Group extends StrictLogging {
   def emptyUpdate(id: PathId): raml.GroupUpdate = raml.GroupUpdate(Some(id.toString))
 
   /** requires that apps are in canonical form */
-  def validNestedGroupUpdateWithBase(base: AbsolutePathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] =
+  def validNestedGroupUpdateWithBase(base: AbsolutePathId, originalRootGroup: RootGroup, servicesGloballyModified: Boolean): Validator[raml.GroupUpdate] =
     validator[raml.GroupUpdate] { group =>
       group is notNull
       group is definingEnforcingRoleOnlyIfItsTopLevel(base)
-
-      // Enforce role is not allowed to be updated.
-      group.enforceRole is noEnforceRoleUpdate(originalRootGroup, group.id.map(_.toPath.canonicalPath(base)))
 
       group.version is theOnlyDefinedOptionIn(group)
       group.scaleBy is theOnlyDefinedOptionIn(group)
@@ -326,8 +323,8 @@ object Group extends StrictLogging {
       group.apps is optional(every(
         AppValidation.validNestedApp(group.id.fold(base)(PathId(_).canonicalPath(base)))))
       group.groups is optional(every(
-        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup)))
-    }
+        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup, servicesGloballyModified)))
+    }.and(disallowEnforceRoleChangeIfServicesChanged(originalRootGroup, base, servicesGloballyModified))
 
   private case class definingEnforcingRoleOnlyIfItsTopLevel(base: AbsolutePathId) extends Validator[raml.GroupUpdate] {
     override def apply(group: raml.GroupUpdate): Result = {
@@ -341,21 +338,31 @@ object Group extends StrictLogging {
     }
   }
 
-  case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[AbsolutePathId]) extends Validator[Option[Boolean]] {
+  case class disallowEnforceRoleChangeIfServicesChanged(originalRootGroup: RootGroup, base: AbsolutePathId, servicesGloballyModified: Boolean) extends Validator[raml.GroupUpdate] {
+    import disallowEnforceRoleChangeIfServicesChanged.EnforceRoleCantBeChangedMessage
 
-    override def apply(maybeNewEnforceRole: Option[Boolean]): Result = {
-      val originalGroup = updatedGroupId.flatMap(originalRootGroup.group) // TODO: why is groupUpdate.id optional? What is the semantic there?
-      (maybeNewEnforceRole, originalGroup.map(_.enforceRole)) match {
-        case (None, None) => Success
-        case (Some(newEnforceRole), None) if originalGroup.nonEmpty =>
-          Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated to $newEnforceRole for $updatedGroupId. Use a partial update instead.")))
-        case (None, Some(_)) =>
-          Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be removed from $updatedGroupId.")))
-        case (Some(newEnforceRole), Some(oldEnforceRole)) =>
-          if (newEnforceRole == oldEnforceRole) Success
-          else Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated from $oldEnforceRole to $newEnforceRole for $updatedGroupId. Use a PATCH request, instead.")))
-        case _ => Success
+    override def apply(group: raml.GroupUpdate): Result = {
+      if (servicesGloballyModified == false) {
+        Success
+      } else {
+        val updatedGroupId = group.id.map { id => id.toPath.canonicalPath(base) }
+        val originalGroup = updatedGroupId.flatMap { id => originalRootGroup.group(id) } // TODO: why is groupUpdate.id optional? What is the semantic there?
+        if (originalGroup.isDefined && (group.enforceRole != originalGroup.map(_.enforceRole))) {
+          Failure(Set(RuleViolation(group.enforceRole, EnforceRoleCantBeChangedMessage, path = Path(Generic("enforceRole")))))
+        } else {
+          Success
+        }
       }
+    }
+  }
+
+  object disallowEnforceRoleChangeIfServicesChanged {
+    val EnforceRoleCantBeChangedMessage = "enforceRole cannot be modified in a request that adds, removes or modifies services; please make these changes in separate requests."
+  }
+
+  def updateModifiesServices(update: raml.GroupUpdate): Boolean = {
+    update.version.nonEmpty || update.scaleBy.nonEmpty || update.apps.exists(_.nonEmpty) || update.groups.getOrElse(Set.empty).exists { group =>
+      updateModifiesServices(group)
     }
   }
 }
