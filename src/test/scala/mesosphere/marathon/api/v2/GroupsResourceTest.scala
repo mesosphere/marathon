@@ -16,12 +16,13 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.{GroupCreation, JerseyTest}
 import mesosphere.marathon.util.ScallopStub
+import org.scalatest.Inside
 import play.api.libs.json.{JsObject, Json}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
+class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest with Inside {
   case class Fixture(
       config: MarathonConf = mock[MarathonConf],
       groupManager: GroupManager = mock[GroupManager],
@@ -497,6 +498,22 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
         }
         response.getStatus shouldBe 422
         response.getEntity.toString.should(include(Group.disallowEnforceRoleChangeIfServicesChanged.EnforceRoleCantBeChangedMessage))
+      }
+    }
+
+    "allow an update to enforceRole when id is not specified" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(Group("/dev".toAbsolutePath, enforceRole = false)))) {
+        val body = """{"enforceRole": true}"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.update("/dev", false, false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 200
+        inside(groupManager.rootGroup().group("/dev".toAbsolutePath)) {
+          case Some(devGroup) =>
+            devGroup.enforceRole shouldBe true
+        }
       }
     }
 
