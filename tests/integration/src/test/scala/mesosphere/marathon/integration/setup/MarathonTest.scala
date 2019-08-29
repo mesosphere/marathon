@@ -91,7 +91,7 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
     "reconciliation_initial_delay" -> 5.minutes.toMillis.toString,
     "min_revive_offers_interval" -> "100",
     "hostname" -> "localhost",
-    "logging_level" -> "debug",
+    "logging_level" -> "info",
     "offer_matching_timeout" -> 10.seconds.toMillis.toString // see https://github.com/mesosphere/marathon/issues/4920
   ) ++ conf
 

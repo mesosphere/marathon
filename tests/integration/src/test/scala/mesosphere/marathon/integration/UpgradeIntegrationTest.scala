@@ -289,7 +289,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     val residentApp_16549 = residentApp(
       id = testBasePath / "resident-app-16549",
       containerPath = containerPath,
-      cmd = s"""echo "data" >> $containerPath/data && sleep 1000""")
+      cmd = s"""echo $$MESOS_TASK_ID >> $containerPath/data && sleep 1000""")
     marathon16549.client.createAppV2(residentApp_16549) should be(Created)
 
     patienceConfig
