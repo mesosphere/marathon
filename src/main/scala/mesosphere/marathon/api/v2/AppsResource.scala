@@ -160,16 +160,15 @@ class AppsResource @Inject() (
           }
         case _ =>
           val appId = id.toAbsolutePath
-          await(appInfoService.selectApp(appId, authzSelector, resolvedEmbed)) match {
-            case Some(appInfo) => {
-              groupManager.app(appId) match {
-                case Some(app) =>
-                  checkAuthorization(ViewRunSpec, app)
-                  ok(jsonObjString("app" -> appInfo))
-                case None => unknownApp(appId)
-              }
-            }
-            case None => unknownApp(appId)
+
+          val appInfo = await(appInfoService.selectApp(appId, authzSelector, resolvedEmbed))
+          val appDef  = groupManager.app(appId)
+
+          (appInfo, appDef) match {
+            case (Some(info), Some(app)) =>
+              checkAuthorization(ViewRunSpec, app)
+              ok(jsonObjString("app" -> info))
+            case _ => unknownApp(appId)
           }
       }
     }
