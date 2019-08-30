@@ -145,7 +145,7 @@ private[appinfo] class DefaultInfoService(
               Set.empty
           val pods: Set[PodStatus] =
             if (groupEmbedPods)
-              ref.pods.keys.flatMap(statusById.get)(collection.breakOut).sortBy(_.id).toSet
+              ref.pods.keys.flatMap(statusById.get)(collection.breakOut).toSet
             else
               Set.empty
 

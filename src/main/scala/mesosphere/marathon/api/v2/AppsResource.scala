@@ -162,7 +162,7 @@ class AppsResource @Inject() (
           val appId = id.toAbsolutePath
 
           val appInfo = await(appInfoService.selectApp(appId, authzSelector, resolvedEmbed))
-          val appDef  = groupManager.app(appId)
+          val appDef = groupManager.app(appId)
 
           (appInfo, appDef) match {
             case (Some(info), Some(app)) =>

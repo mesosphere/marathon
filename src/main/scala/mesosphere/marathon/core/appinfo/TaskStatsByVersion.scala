@@ -9,42 +9,38 @@ import mesosphere.marathon.state.{Timestamp, VersionInfo}
 
 object TaskStatsByVersion {
 
-  def apply(
-    versionInfo: VersionInfo,
-    tasks: Seq[TaskForStatistics]): raml.TaskStatsByVersion =
-    {
-      def statsForVersion(versionTest: Timestamp => Boolean): Option[raml.TaskStats] = {
-        TaskStats.forSomeTasks(tasks.filter(task => versionTest(task.version)))
-      }
-
-      val maybeFullVersionInfo = versionInfo match {
-        case full: FullVersionInfo => Some(full)
-        case _ => None
-      }
-
-      raml.TaskStatsByVersion(
-        totalSummary = TaskStats.forSomeTasks(tasks).map(raml.Stats(_)),
-        startedAfterLastScaling = maybeFullVersionInfo.flatMap { vi =>
-          statsForVersion(_ >= vi.lastScalingAt)
-        }.map(raml.Stats(_)),
-        withLatestConfig = maybeFullVersionInfo.flatMap { vi =>
-          statsForVersion(_ >= vi.lastConfigChangeAt)
-        }.map(raml.Stats(_)),
-        withOutdatedConfig = maybeFullVersionInfo.flatMap { vi =>
-          statsForVersion(_ < vi.lastConfigChangeAt)
-        }.map(raml.Stats(_))
-      )
-
+  def apply(versionInfo: VersionInfo, tasks: Seq[TaskForStatistics]): raml.TaskStatsByVersion = {
+    def statsForVersion(versionTest: Timestamp => Boolean): Option[raml.TaskStats] = {
+      TaskStats.forSomeTasks(tasks.filter(task => versionTest(task.version)))
     }
+
+    val maybeFullVersionInfo = versionInfo match {
+      case full: FullVersionInfo => Some(full)
+      case _ => None
+    }
+
+    raml.TaskStatsByVersion(
+      totalSummary = TaskStats.forSomeTasks(tasks).map(raml.Stats(_)),
+      startedAfterLastScaling = maybeFullVersionInfo.flatMap { vi =>
+        statsForVersion(_ >= vi.lastScalingAt)
+      }.map(raml.Stats(_)),
+      withLatestConfig = maybeFullVersionInfo.flatMap { vi =>
+        statsForVersion(_ >= vi.lastConfigChangeAt)
+      }.map(raml.Stats(_)),
+      withOutdatedConfig = maybeFullVersionInfo.flatMap { vi =>
+        statsForVersion(_ < vi.lastConfigChangeAt)
+      }.map(raml.Stats(_))
+    )
+
+  }
 
   def apply(
     now: Timestamp,
     versionInfo: VersionInfo,
     instances: Seq[Instance],
-    statuses: Map[Instance.Id, Seq[Health]]): raml.TaskStatsByVersion =
-    {
-      TaskStatsByVersion(versionInfo, TaskForStatistics.forInstances(now, instances, statuses))
-    }
+    statuses: Map[Instance.Id, Seq[Health]]): raml.TaskStatsByVersion = {
+    TaskStatsByVersion(versionInfo, TaskForStatistics.forInstances(now, instances, statuses))
+  }
 }
 
 object TaskStats {
