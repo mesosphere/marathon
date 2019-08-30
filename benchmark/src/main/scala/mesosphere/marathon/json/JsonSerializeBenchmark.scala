@@ -14,7 +14,7 @@ class JsonSerializeBenchmark extends JsonSerializeDeserializeState {
 
   @Benchmark
   def jsonSerialiseWrite(hole: Blackhole): Unit = {
-    val value: JsValue = Json.toJson[raml.Group](groupMock)
+    val value: JsValue = Json.toJson[raml.GroupUpdate](groupMock)
     val str: String = value.toString()
     hole.consume(str)
   }
