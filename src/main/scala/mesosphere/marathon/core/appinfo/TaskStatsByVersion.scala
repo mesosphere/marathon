@@ -48,11 +48,6 @@ object TaskStatsByVersion {
 }
 
 object TaskStats {
-  def forSomeTasks(
-    now: Timestamp, instances: Seq[Instance], statuses: Map[Instance.Id, Seq[Health]]): Option[raml.TaskStats] =
-    {
-      forSomeTasks(TaskForStatistics.forInstances(now, instances, statuses))
-    }
 
   def forSomeTasks(tasks: Seq[TaskForStatistics]): Option[raml.TaskStats] = {
     if (tasks.isEmpty) {
@@ -67,4 +62,5 @@ object TaskStats {
       )
     }
   }
+
 }
