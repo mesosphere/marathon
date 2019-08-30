@@ -70,7 +70,7 @@ Instructions on how to install prepackaged releases of Mesos are available [in t
 ##### Building Mesos from source
 **NOTE:** *Choose this option only if building Marathon from source, else there might be version incompatibility between pre-packaged releases of Marathon and Mesos built from source.*
 
-You can find the instructions for compiling Mesos from source in the [Apache Mesos getting started docs](http://mesos.apache.org/gettingstarted/). If you want Mesos to install libraries and executables in a non-default location use the --prefix option during configuration as follows:
+You can find the instructions for compiling Mesos from source in the [Apache Mesos getting started docs](http://mesos.apache.org/getting-started/). If you want Mesos to install libraries and executables in a non-default location use the --prefix option during configuration as follows:
 
 ```console
 ./configure --prefix=<path to Mesos installation>
