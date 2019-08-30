@@ -7,11 +7,11 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.MarathonFacade.extractDeploymentIds
 import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.{App, AppCheck, CommandCheck, ShellCommand}
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 
 class MesosCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  def appId(suffix: Option[String] = None): PathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
+  def appId(suffix: Option[String] = None): AbsolutePathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
   val appCommand: String = s"sleep 100"
 
   "AppDeploy with mesos checks" should {

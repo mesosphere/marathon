@@ -133,7 +133,7 @@ class MarathonFacade(
     (__ \ "http").formatNullable[ITHttpCheckStatus] ~
     (__ \ "tcp").formatNullable[ITTCPCheckStatus] ~
     (__ \ "command").formatNullable[ITCommandCheckStatus]
-  )(ITCheckResult( _, _, _), unlift(ITCheckResult.unapply))
+  )(ITCheckResult(_, _, _), unlift(ITCheckResult.unapply))
 
   implicit lazy val itEnrichedTaskFormat: Format[ITEnrichedTask] = (
     (__ \ "appId").format[String] ~
