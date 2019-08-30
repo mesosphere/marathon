@@ -8,7 +8,6 @@ import java.util.concurrent.TimeUnit
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import mesosphere.marathon.api.v2.json.JacksonSerializable
-import mesosphere.marathon.state.Timestamp.formatter
 import org.apache.mesos
 
 import scala.concurrent.duration.FiniteDuration
