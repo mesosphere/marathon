@@ -10,7 +10,6 @@ import mesosphere.marathon.state.{HostVolume, VolumeMount}
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import org.scalatest.Inside
 import org.scalatest.time.{Seconds, Span}
-import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 
@@ -164,7 +163,6 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
     )
 
     val body: Pod = Raml.toRaml(pod)
-    val bodyString = Json.prettyPrint(Pod.playJsonFormat.writes(body))
 
     When("The pod is deployed")
     val createResult = marathon.createPodV2(pod)

@@ -141,13 +141,12 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     state.VolumeWithMount[Volume](volume = volume, mount = mount)
   }
 
-  implicit val volumeTypeReads: Reads[Option[PersistentVolumeType], Option[DiskType]] = Reads {
-    case Some(definedType) => definedType match {
+  implicit val volumeTypeReads: Reads[Option[PersistentVolumeType], Option[DiskType]] = Reads { maybeType =>
+    maybeType.flatMap {
       case PersistentVolumeType.Root => Some(DiskType.Root)
       case PersistentVolumeType.Mount => Some(DiskType.Mount)
       case PersistentVolumeType.Path => Some(DiskType.Path)
     }
-    case None => None
   }
 
   implicit val volumeConstraintsReads: Reads[Set[Seq[String]], Set[Protos.Constraint]] = Reads { constraints =>

@@ -16,7 +16,7 @@ import scala.collection.immutable.Seq
   * A definition for Pods.
   */
 case class PodDefinition(
-    id: PathId = PodDefinition.DefaultId,
+    id: AbsolutePathId = PodDefinition.DefaultId,
     user: Option[String] = PodDefinition.DefaultUser,
     env: Map[String, EnvVarValue] = PodDefinition.DefaultEnv,
     labels: Map[String, String] = PodDefinition.DefaultLabels,
@@ -119,6 +119,7 @@ case class PodDefinition(
 }
 
 object PodDefinition {
+
   def fromProto(proto: Protos.Json): PodDefinition = {
     Raml.fromRaml(Json.parse(proto.getJson).as[Pod])
   }

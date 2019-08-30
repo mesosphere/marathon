@@ -6,7 +6,7 @@ import akka.stream.scaladsl.{Flow, Keep, Source}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.launcher.{InstanceOp, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics.LaunchFinished
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.NoOfferMatchReason
 import org.apache.mesos.{Protos => Mesos}
@@ -14,7 +14,7 @@ import org.scalatest.Inside
 import org.scalatest.concurrent.Eventually
 
 class OfferMatchStatisticsActorTest extends AkkaUnitTest with Eventually with Inside {
-  import OfferMatchStatistics.{OfferMatchUpdate, MatchResult}
+  import OfferMatchStatistics.{MatchResult, OfferMatchUpdate}
 
   override def materializerSettings =
     super.materializerSettings.withDispatcher(akka.testkit.CallingThreadDispatcher.Id)
@@ -125,9 +125,9 @@ class OfferMatchStatisticsActorTest extends AkkaUnitTest with Eventually with In
     .toMat(OfferMatchStatistics.noMatchStatisticsSink)(Keep.both)
 
   class Fixture {
-    val runSpecA = AppDefinition(PathId("/a"), role = "*")
-    val runSpecB = AppDefinition(PathId("/b"), role = "*")
-    val runSpecC = AppDefinition(PathId("/c"), role = "*")
+    val runSpecA = AppDefinition(AbsolutePathId("/a"), role = "*")
+    val runSpecB = AppDefinition(AbsolutePathId("/b"), role = "*")
+    val runSpecC = AppDefinition(AbsolutePathId("/c"), role = "*")
     def offerFrom(agent: String, cpus: Double = 4) = MarathonTestHelper.makeBasicOffer(cpus = cpus).setSlaveId(Mesos.SlaveID.newBuilder().setValue(agent)).build()
     val instanceOp = mock[InstanceOp]
     import mesosphere.mesos.NoOfferMatchReason._

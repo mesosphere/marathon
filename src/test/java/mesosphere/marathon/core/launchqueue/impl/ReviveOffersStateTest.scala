@@ -5,13 +5,13 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.update.InstancesSnapshot
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.VersionedRoleState
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
 import org.scalatest.Inside
 
 class ReviveOffersStateTest extends UnitTest with Inside {
 
-  val webApp = AppDefinition(id = PathId("/test"), role = "web")
-  val monitoringApp = AppDefinition(id = PathId("/test2"), role = "monitoring")
+  val webApp = AppDefinition(id = AbsolutePathId("/test"), role = "web")
+  val monitoringApp = AppDefinition(id = AbsolutePathId("/test2"), role = "monitoring")
 
   "register the existence of roles for already-running instances" in {
     val webRunningInstance = TestInstanceBuilder.newBuilderForRunSpec(webApp).addTaskRunning().instance

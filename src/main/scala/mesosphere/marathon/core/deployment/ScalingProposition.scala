@@ -5,7 +5,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.UnreachableInactive
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.state.{KillSelection, PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, KillSelection, Timestamp}
 
 case class ScalingProposition(toDecommission: Seq[Instance], toStart: Int)
 
@@ -17,7 +17,7 @@ object ScalingProposition extends StrictLogging {
     meetConstraints: ((Seq[Instance], Int) => Seq[Instance]),
     scaleTo: Int,
     killSelection: KillSelection,
-    runSpecId: PathId): ScalingProposition = {
+    runSpecId: AbsolutePathId): ScalingProposition = {
 
     val instancesGoalRunning: Map[Instance.Id, Instance] = instances
       .filter(_.state.goal == Goal.Running)

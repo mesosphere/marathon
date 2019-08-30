@@ -7,7 +7,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment._
 import mesosphere.marathon.raml.{App, GroupUpdate}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, Group, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Group, Timestamp}
 import mesosphere.marathon.test.GroupCreation
 import play.api.libs.json._
 
@@ -102,12 +102,12 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
 
   def genInt = Random.nextInt(1000)
 
-  def genId = UUID.randomUUID().toString.toPath
-  def genAbsoluteId = UUID.randomUUID().toString.toAbsolutePath
+  def genId = UUID.randomUUID().toString
+  def genAbsoluteId = AbsolutePathId(s"/${UUID.randomUUID().toString}")
 
   def genTimestamp = Timestamp.now()
 
-  def genApp = AppDefinition(id = genId, role = "*", cmd = Some("sleep"))
+  def genApp = AppDefinition(id = genAbsoluteId, role = "*", cmd = Some("sleep"))
 
   def genStep = DeploymentStep(actions = Seq(
     StartApplication(genApp),
@@ -130,10 +130,10 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
 
   def genGroupUpdate(children: Set[GroupUpdate] = Set.empty) =
     GroupUpdate(
-      Some(genId.toString),
-      Some(Set(App(id = genId.toString), App(id = genId.toString))),
+      Some(genAbsoluteId.toString),
+      Some(Set(App(id = genId), App(id = genId))),
       Some(children),
-      Some(Set(genId.toString)),
+      Some(Set(genId)),
       Some(23),
       Some(genTimestamp.toOffsetDateTime)
     )

@@ -92,7 +92,7 @@ case class ITEvent(eventType: String, info: Map[String, Any]) extends ITSSEEvent
   * @param url the url of the remote marathon instance
   */
 class MarathonFacade(
-    val url: String, baseGroup: PathId, implicit val waitTime: FiniteDuration = 30.seconds)(
+    val url: String, baseGroup: AbsolutePathId, implicit val waitTime: FiniteDuration = 30.seconds)(
     implicit
     val system: ActorSystem, mat: Materializer)
   extends PodConversion with StrictLogging {
@@ -183,12 +183,12 @@ class MarathonFacade(
     res.map(_.apps.filterAs(app => isInBaseGroup(app.id.toPath))(collection.breakOut))
   }
 
-  def listAppsInBaseGroupForAppId(appId: PathId): RestResult[List[App]] = {
+  def listAppsInBaseGroupForAppId(appId: AbsolutePathId): RestResult[List[App]] = {
     val res = result(requestFor[ITListAppsResult](Get(s"$url/v2/apps")), waitTime)
     res.map(_.apps.filterAs(app => isInBaseGroup(app.id.toPath) && app.id.toPath == appId)(collection.breakOut))
   }
 
-  def app(id: PathId): RestResult[ITAppDefinition] = {
+  def app(id: AbsolutePathId): RestResult[ITAppDefinition] = {
     requireInBaseGroup(id)
     val getUrl: String = s"$url/v2/apps$id"
     logger.info(s"get url = $getUrl")
@@ -200,12 +200,12 @@ class MarathonFacade(
     result(requestFor[App](Post(s"$url/v2/apps", app)), waitTime)
   }
 
-  def deleteApp(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def deleteApp(id: AbsolutePathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     result(requestFor[ITDeploymentResult](Delete(s"$url/v2/apps$id?force=$force")), waitTime)
   }
 
-  def updateApp(id: PathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def updateApp(id: AbsolutePathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     val putUrl: String = s"$url/v2/apps$id?force=$force"
     logger.info(s"put url = $putUrl")
@@ -213,13 +213,13 @@ class MarathonFacade(
     result(requestFor[ITDeploymentResult](Put(putUrl, app)), waitTime)
   }
 
-  def putAppByteString(id: PathId, app: ByteString): RestResult[ITDeploymentResult] = {
+  def putAppByteString(id: AbsolutePathId, app: ByteString): RestResult[ITDeploymentResult] = {
     val putUrl: String = s"$url/v2/apps$id"
     logger.info(s"put url = $putUrl")
     result(requestFor[ITDeploymentResult](Put(putUrl, HttpEntity.Strict(ContentTypes.`application/json`, app))), waitTime)
   }
 
-  def patchApp(id: PathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def patchApp(id: AbsolutePathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     val putUrl: String = s"$url/v2/apps$id?force=$force"
     logger.info(s"put url = $putUrl")
@@ -227,17 +227,17 @@ class MarathonFacade(
     result(requestFor[ITDeploymentResult](Patch(putUrl, app)), waitTime)
   }
 
-  def restartApp(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def restartApp(id: AbsolutePathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     result(requestFor[ITDeploymentResult](Post(s"$url/v2/apps$id/restart?force=$force")), waitTime)
   }
 
-  def listAppVersions(id: PathId): RestResult[ITAppVersions] = {
+  def listAppVersions(id: AbsolutePathId): RestResult[ITAppVersions] = {
     requireInBaseGroup(id)
     result(requestFor[ITAppVersions](Get(s"$url/v2/apps$id/versions")), waitTime)
   }
 
-  def appVersion(id: PathId, version: Timestamp): RestResult[App] = {
+  def appVersion(id: AbsolutePathId, version: Timestamp): RestResult[App] = {
     requireInBaseGroup(id)
     result(requestFor[App](Get(s"$url/v2/apps$id/versions/$version")), waitTime)
   }
@@ -249,18 +249,18 @@ class MarathonFacade(
     res.map(_.map(Raml.fromRaml(_))).map(_.filter(pod => isInBaseGroup(pod.id)))
   }
 
-  def listPodsInBaseGroupByPodId(podId: PathId): RestResult[Seq[PodDefinition]] = {
+  def listPodsInBaseGroupByPodId(podId: AbsolutePathId): RestResult[Seq[PodDefinition]] = {
     val res = result(requestFor[Seq[Pod]](Get(s"$url/v2/pods")), waitTime)
     res.map(_.map(Raml.fromRaml(_))).map(_.filter(_.id == podId))
   }
 
-  def pod(id: PathId): RestResult[PodDefinition] = {
+  def pod(id: AbsolutePathId): RestResult[PodDefinition] = {
     requireInBaseGroup(id)
     val res = result(requestFor[Pod](Get(s"$url/v2/pods$id")), waitTime)
     res.map(Raml.fromRaml(_))
   }
 
-  def podTasksIds(podId: PathId): Seq[String] = status(podId).value.instances.flatMap(_.containers.flatMap(_.containerId))
+  def podTasksIds(podId: AbsolutePathId): Seq[String] = status(podId).value.instances.flatMap(_.containers.flatMap(_.containerId))
 
   def createPodV2(pod: PodDefinition): RestResult[PodDefinition] = {
     requireInBaseGroup(pod.id)
@@ -268,18 +268,18 @@ class MarathonFacade(
     res.map(Raml.fromRaml(_))
   }
 
-  def deletePod(id: PathId, force: Boolean = false): RestResult[HttpResponse] = {
+  def deletePod(id: AbsolutePathId, force: Boolean = false): RestResult[HttpResponse] = {
     requireInBaseGroup(id)
     result(request(Delete(s"$url/v2/pods$id?force=$force")), waitTime)
   }
 
-  def updatePod(id: PathId, pod: PodDefinition, force: Boolean = false): RestResult[PodDefinition] = {
+  def updatePod(id: AbsolutePathId, pod: PodDefinition, force: Boolean = false): RestResult[PodDefinition] = {
     requireInBaseGroup(id)
     val res = result(requestFor[Pod](Put(s"$url/v2/pods$id?force=$force", pod)), waitTime)
     res.map(Raml.fromRaml(_))
   }
 
-  def status(podId: PathId): RestResult[PodStatus] = {
+  def status(podId: AbsolutePathId): RestResult[PodStatus] = {
     requireInBaseGroup(podId)
     result(requestFor[PodStatus](Get(s"$url/v2/pods$podId::status")), waitTime)
   }
@@ -296,45 +296,45 @@ class MarathonFacade(
     result(requestFor[PodStatus18](Get(s"$url/v2/pods$podId::status")), waitTime)
   }
 
-  def listPodVersions(podId: PathId): RestResult[Seq[Timestamp]] = {
+  def listPodVersions(podId: AbsolutePathId): RestResult[Seq[Timestamp]] = {
     requireInBaseGroup(podId)
     result(requestFor[Seq[Timestamp]](Get(s"$url/v2/pods$podId::versions")), waitTime)
   }
 
-  def podVersion(podId: PathId, version: Timestamp): RestResult[PodDefinition] = {
+  def podVersion(podId: AbsolutePathId, version: Timestamp): RestResult[PodDefinition] = {
     requireInBaseGroup(podId)
     val res = result(requestFor[Pod](Get(s"$url/v2/pods$podId::versions/$version")), waitTime)
     res.map(Raml.fromRaml(_))
   }
 
-  def deleteAllInstances(podId: PathId): RestResult[List[PodInstanceStatus]] = {
+  def deleteAllInstances(podId: AbsolutePathId): RestResult[List[PodInstanceStatus]] = {
     requireInBaseGroup(podId)
     result(requestFor[List[PodInstanceStatus]](Delete(s"$url/v2/pods$podId::instances")), waitTime)
   }
 
-  def deleteInstance(podId: PathId, instance: String, wipe: Boolean = false): RestResult[PodInstanceStatus] = {
+  def deleteInstance(podId: AbsolutePathId, instance: String, wipe: Boolean = false): RestResult[PodInstanceStatus] = {
     requireInBaseGroup(podId)
     result(requestFor[PodInstanceStatus](Delete(s"$url/v2/pods$podId::instances/$instance?wipe=$wipe")), waitTime)
   }
 
   //apps tasks resource --------------------------------------
-  def tasks(appId: PathId): RestResult[List[ITEnrichedTask]] = {
+  def tasks(appId: AbsolutePathId): RestResult[List[ITEnrichedTask]] = {
     requireInBaseGroup(appId)
     val res = result(requestFor[ITListTasks](Get(s"$url/v2/apps$appId/tasks")), waitTime)
     res.map(_.tasks.toList)
   }
 
-  def killAllTasks(appId: PathId, scale: Boolean = false): RestResult[ITListTasks] = {
+  def killAllTasks(appId: AbsolutePathId, scale: Boolean = false): RestResult[ITListTasks] = {
     requireInBaseGroup(appId)
     result(requestFor[ITListTasks](Delete(s"$url/v2/apps$appId/tasks?scale=$scale")), waitTime)
   }
 
-  def killAllTasksAndScale(appId: PathId): RestResult[ITDeploymentPlan] = {
+  def killAllTasksAndScale(appId: AbsolutePathId): RestResult[ITDeploymentPlan] = {
     requireInBaseGroup(appId)
     result(requestFor[ITDeploymentPlan](Delete(s"$url/v2/apps$appId/tasks?scale=true")), waitTime)
   }
 
-  def killTask(appId: PathId, taskId: String, scale: Boolean = false, wipe: Boolean = false): RestResult[HttpResponse] = {
+  def killTask(appId: AbsolutePathId, taskId: String, scale: Boolean = false, wipe: Boolean = false): RestResult[HttpResponse] = {
     requireInBaseGroup(appId)
     result(request(Delete(s"$url/v2/apps$appId/tasks/$taskId?scale=$scale&wipe=$wipe")), waitTime)
   }
@@ -347,12 +347,12 @@ class MarathonFacade(
     root.map(_.groups.filter(group => isInBaseGroup(group.id.toPath)))
   }
 
-  def listGroupVersions(id: PathId): RestResult[List[String]] = {
+  def listGroupVersions(id: AbsolutePathId): RestResult[List[String]] = {
     requireInBaseGroup(id)
     result(requestFor[List[String]](Get(s"$url/v2/groups$id/versions")), waitTime)
   }
 
-  def group(id: PathId): RestResult[GroupInfo] = {
+  def group(id: AbsolutePathId): RestResult[GroupInfo] = {
     requireInBaseGroup(id)
     result(requestFor[GroupInfo](Get(s"$url/v2/groups$id")), waitTime)
   }
@@ -362,7 +362,7 @@ class MarathonFacade(
     result(requestFor[ITDeploymentResult](Post(s"$url/v2/groups", group)), waitTime)
   }
 
-  def deleteGroup(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def deleteGroup(id: AbsolutePathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     result(requestFor[ITDeploymentResult](Delete(s"$url/v2/groups$id?force=$force")), waitTime)
   }
@@ -371,16 +371,16 @@ class MarathonFacade(
     result(requestFor[ITDeploymentResult](Delete(s"$url/v2/groups?force=$force")), waitTime)
   }
 
-  def updateGroup(id: PathId, group: GroupUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def updateGroup(id: AbsolutePathId, group: GroupUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     result(requestFor[ITDeploymentResult](Put(s"$url/v2/groups$id?force=$force", group)), waitTime)
   }
 
-  def patchGroup(id: PathId, update: GroupPartialUpdate): RestResult[String] = {
+  def patchGroup(id: AbsolutePathId, update: GroupPartialUpdate): RestResult[String] = {
     result(requestFor[String](Patch(s"$url/v2/groups$id", update)), waitTime)
   }
 
-  def rollbackGroup(groupId: PathId, version: Timestamp, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def rollbackGroup(groupId: AbsolutePathId, version: Timestamp, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(groupId)
     updateGroup(groupId, GroupUpdate(None, version = Some(version.toOffsetDateTime)), force)
   }
@@ -396,7 +396,7 @@ class MarathonFacade(
     }
   }
 
-  def listDeploymentsForPathId(pathId: PathId): RestResult[List[ITDeployment]] = {
+  def listDeploymentsForPathId(pathId: AbsolutePathId): RestResult[List[ITDeployment]] = {
     result(requestFor[List[ITDeployment]](Get(s"$url/v2/deployments")), waitTime).map { deployments =>
       deployments.filter { deployment =>
         deployment.affectedApps.map(PathId(_)).contains(pathId) ||
@@ -454,12 +454,12 @@ class MarathonFacade(
     result(requestFor[ITLaunchQueue](Get(s"$url/v2/queue")), waitTime)
   }
 
-  def launchQueueForAppId(appId: PathId): RestResult[List[ITQueueItem]] = {
+  def launchQueueForAppId(appId: AbsolutePathId): RestResult[List[ITQueueItem]] = {
     val res = result(requestFor[ITLaunchQueue](Get(s"$url/v2/queue")), waitTime)
     res.map(_.queue.filterAs(q => q.app.id.toPath == appId)(collection.breakOut))
   }
 
-  def launchQueueDelayReset(appId: PathId): RestResult[HttpResponse] =
+  def launchQueueDelayReset(appId: AbsolutePathId): RestResult[HttpResponse] =
     result(request(Delete(s"$url/v2/queue/$appId/delay")), waitTime)
 
   //resources -------------------------------------------

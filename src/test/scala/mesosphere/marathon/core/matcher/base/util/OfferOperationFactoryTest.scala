@@ -122,7 +122,7 @@ class OfferOperationFactoryTest extends UnitTest {
     }
   }
   class Fixture {
-    val runSpecId = PathId("/my-app")
+    val runSpecId = AbsolutePathId("/my-app")
     val instanceId = Instance.Id.forRunSpec(runSpecId)
     val taskId = Task.Id(instanceId)
     val reservationId = Reservation.SimplifiedId(instanceId)

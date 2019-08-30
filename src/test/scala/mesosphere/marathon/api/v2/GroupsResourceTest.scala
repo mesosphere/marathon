@@ -369,7 +369,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
         val response = asyncRequest { r =>
           groupsResource.createWithPath("/foo", false, body.getBytes, auth.request, r)
         }
-        response.getEntity.toString.should(include("Identifier is not child of /foo/sub."))
+        response.getEntity.toString.should(include("Identifier is not child of '/foo/sub'"))
         response.getStatus shouldBe 422
       }
     }
@@ -398,7 +398,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/foo", "/foo/sub", "/foo/sub")
-        rootGroup.app(PathId("/foo/sub/bibi")).shouldNot(be(empty))
+        rootGroup.app(AbsolutePathId("/foo/sub/bibi")).shouldNot(be(empty))
       }
     }
 
@@ -429,7 +429,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/test-group", "/test-group/sleep")
-        rootGroup.app(PathId("/test-group/sleep/goodnight")).shouldNot(be(empty))
+        rootGroup.app(AbsolutePathId("/test-group/sleep/goodnight")).shouldNot(be(empty))
       }
     }
 
@@ -463,7 +463,40 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/prod", "/prod/sleep")
-        rootGroup.app(PathId("/prod/sleep/goodnight")).value.role should be("prod")
+        rootGroup.app(AbsolutePathId("/prod/sleep/goodnight")).value.role should be("prod")
+      }
+    }
+
+    "Fail a batch update when apps are modified and enforceRole is changed for an unrelated group" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(Group(id = AbsolutePathId("/dev"), enforceRole = false)))) {
+        val body =
+          """
+        {
+          "groups": [
+            {
+              "id": "unrelated",
+              "apps": [
+                {
+                  "id": "goodnight",
+                  "cmd": "sleep 1",
+                  "instances": 0
+                }
+              ]
+            },
+            {
+              "id": "/dev",
+              "enforceRole": true
+            }
+          ],
+          "id": "/"
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("", false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 422
+        response.getEntity.toString.should(include(Group.disallowEnforceRoleChangeIfServicesChanged.EnforceRoleCantBeChangedMessage))
       }
     }
 
@@ -526,7 +559,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/prod", "/prod/sleep")
-        rootGroup.app(PathId("/prod/sleep/goodnight")).value.role should be("prod")
+        rootGroup.app(AbsolutePathId("/prod/sleep/goodnight")).value.role should be("prod")
       }
     }
 
@@ -559,7 +592,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/prod", "/prod/sleep")
-        rootGroup.app(PathId("/prod/sleep/goodnight")).value.role should be(config.mesosRole())
+        rootGroup.app(AbsolutePathId("/prod/sleep/goodnight")).value.role should be(config.mesosRole())
       }
     }
   }

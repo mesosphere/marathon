@@ -6,7 +6,7 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import play.api.libs.json.Json
 
 class ReadinessCheckResultFormatTest extends UnitTest {
@@ -27,7 +27,7 @@ class ReadinessCheckResultFormatTest extends UnitTest {
 
   object Fixture {
     val httpResponse = HttpResponse(200, "application/json", "{}")
-    val instanceId = Instance.Id.forRunSpec(PathId("/foo/bar"))
+    val instanceId = Instance.Id.forRunSpec(AbsolutePathId("/foo/bar"))
     val taskId = Task.Id(instanceId)
     val readinessCheckResult = ReadinessCheckResult(
       "readinessCheck",

@@ -133,7 +133,7 @@ class CoreModuleImpl @Inject() (
   private[this] lazy val offerMatcherReconcilerModule =
     new OfferMatcherReconciliationModule(
       instanceTrackerModule.instanceTracker,
-      storageModule.groupRepository,
+      storageModule.groupRepository
     )
 
   override lazy val launcherModule = new LauncherModule(

@@ -146,7 +146,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
 
     "match resources success with preserved reservations" in {
-      val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
+      val instanceId = Instance.Id(AbsolutePathId("/my/app"), PrefixInstance, UUID.randomUUID())
       val labels = TaskLabels.labelsForTask(FrameworkId("foo"), Reservation.SimplifiedId(instanceId)).labels
       val cpuReservation = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
       val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal", labels)
@@ -267,7 +267,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
 
     "dynamically reserved resources are NOT matched if they have known labels" in {
-      val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
+      val instanceId = Instance.Id(AbsolutePathId("/my/app"), PrefixInstance, UUID.randomUUID())
       val cpuReservation = MarathonTestHelper.reservation(principal = "cpuPrincipal")
       val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal")
       val memReservation = MarathonTestHelper.reservation(
@@ -1395,7 +1395,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
   }
 
-  val appId = PathId("/test")
+  val appId = AbsolutePathId("/test")
   def instance(id: String, version: Timestamp, attrs: Map[String, String]): Instance = { // linter:ignore:UnusedParameter
     val attributes: Seq[Attribute] = attrs.map {
       case (name, v) => TextAttribute(name, v): Attribute

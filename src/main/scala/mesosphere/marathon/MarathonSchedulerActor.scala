@@ -17,7 +17,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.termination.impl.KillStreamWatcher
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{PathId, RunSpec}
+import mesosphere.marathon.state.{AbsolutePathId, RunSpec}
 import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Constraints
@@ -58,7 +58,7 @@ class MarathonSchedulerActor private (
     * Since multiple conflicting deployment can be handled at the same time lockedRunSpecs saves
     * the lock count for each affected PathId. Lock is removed if lock count == 0.
     */
-  val lockedRunSpecs = collection.mutable.Map[PathId, Int]().withDefaultValue(0)
+  val lockedRunSpecs = collection.mutable.Map[AbsolutePathId, Int]().withDefaultValue(0)
   var historyActor: ActorRef = _
   var activeReconciliation: Option[Future[Status]] = None
   var electionEventsSubscription: Option[Cancellable] = None
@@ -197,7 +197,7 @@ class MarathonSchedulerActor private (
     * @param runSpecIds the set of runSpecIds for which to acquire the lock
     * @param f the by-name reference that is evaluated if the lock acquisition is successful
     */
-  def withLockFor[A](runSpecIds: Set[PathId])(f: => A): Option[A] = {
+  def withLockFor[A](runSpecIds: Set[AbsolutePathId])(f: => A): Option[A] = {
     // there's no need for synchronization here, because this is being
     // executed inside an actor, i.e. single threaded
     if (noConflictsWith(runSpecIds)) {
@@ -208,13 +208,13 @@ class MarathonSchedulerActor private (
     }
   }
 
-  def noConflictsWith(runSpecIds: Set[PathId]): Boolean = {
+  def noConflictsWith(runSpecIds: Set[AbsolutePathId]): Boolean = {
     val conflicts = lockedRunSpecs.keySet intersect runSpecIds
     conflicts.isEmpty
   }
 
-  def removeLocks(runSpecIds: Set[PathId]): Unit = runSpecIds.foreach(removeLock)
-  def removeLock(runSpecId: PathId): Unit = {
+  def removeLocks(runSpecIds: Set[AbsolutePathId]): Unit = runSpecIds.foreach(removeLock)
+  def removeLock(runSpecId: AbsolutePathId): Unit = {
     if (lockedRunSpecs.contains(runSpecId)) {
       val locks = lockedRunSpecs(runSpecId) - 1
       if (locks <= 0) lockedRunSpecs -= runSpecId else lockedRunSpecs(runSpecId) -= 1
@@ -222,8 +222,8 @@ class MarathonSchedulerActor private (
     }
   }
 
-  def addLocks(runSpecIds: Set[PathId]): Unit = runSpecIds.foreach(addLock)
-  def addLock(runSpecId: PathId): Unit = {
+  def addLocks(runSpecIds: Set[AbsolutePathId]): Unit = runSpecIds.foreach(addLock)
+  def addLock(runSpecId: AbsolutePathId): Unit = {
     lockedRunSpecs(runSpecId) += 1
     logger.debug(s"Added to lock for run spec: id=$runSpecId locks=${lockedRunSpecs(runSpecId)} lockedRunSpec=$lockedRunSpecs")
   }
@@ -307,7 +307,7 @@ object MarathonSchedulerActor {
 
   case object ScaleRunSpecs
 
-  case class ScaleRunSpec(runSpecId: PathId) extends Command {
+  case class ScaleRunSpec(runSpecId: AbsolutePathId) extends Command {
     def answer: Event = RunSpecScaled(runSpecId)
   }
 
@@ -320,12 +320,12 @@ object MarathonSchedulerActor {
   }
 
   sealed trait Event
-  case class RunSpecScaled(runSpecId: PathId) extends Event
+  case class RunSpecScaled(runSpecId: AbsolutePathId) extends Event
   case object TasksReconciled extends Event
   case class DeploymentStarted(plan: DeploymentPlan) extends Event
   case class DeploymentFailed(plan: DeploymentPlan, reason: Throwable) extends Event
   case class DeploymentFinished(plan: DeploymentPlan) extends Event
-  case class TasksKilled(runSpecId: PathId, taskIds: Seq[Instance.Id]) extends Event
+  case class TasksKilled(runSpecId: AbsolutePathId, taskIds: Seq[Instance.Id]) extends Event
   case class CommandFailed(cmd: Command, reason: Throwable) extends Event
 }
 
@@ -423,7 +423,7 @@ class SchedulerActions(
     Done
   }
 
-  def scale(runSpecId: PathId): Future[Done] = async {
+  def scale(runSpecId: AbsolutePathId): Future[Done] = async {
     val runSpec = await(runSpecById(runSpecId))
     runSpec match {
       case Some(runSpec) =>
@@ -434,7 +434,7 @@ class SchedulerActions(
     }
   }
 
-  def runSpecById(id: PathId): Future[Option[RunSpec]] = {
+  def runSpecById(id: AbsolutePathId): Future[Option[RunSpec]] = {
     groupRepository.root().map(_.runSpec(id))
   }
 }

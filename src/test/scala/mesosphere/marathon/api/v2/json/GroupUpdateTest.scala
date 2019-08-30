@@ -52,12 +52,12 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       apps.get.apps should have size 1
       val app = apps.get.apps.head
       app._1.toString should be ("/apps/app1")
-      app._2.dependencies should be (Set("/apps/d1".toPath, "/test/foo".toPath, "/test".toPath))
+      app._2.dependencies should be (Set(AbsolutePathId("/apps/d1"), AbsolutePathId("/test/foo"), AbsolutePathId("/test")))
     }
 
     "A group update can be applied to existing entries" in {
       Given("A group with updates of existing nodes")
-      val blaApp = AppDefinition("/test/bla".toPath, Some("foo"), role = "*")
+      val blaApp = AppDefinition(AbsolutePathId("/test/bla"), Some("foo"), role = "*")
       val actual = createRootGroup(groups = Set(
         createGroup("/test".toAbsolutePath, apps = Map(blaApp.id -> blaApp)),
         createGroup("/apps".toAbsolutePath, groups = Set(createGroup("/apps/foo".toAbsolutePath)))
@@ -99,13 +99,13 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       apps.get.apps should have size 1
       val app = apps.get.apps.head
       app._1.toString should be ("/apps/app1")
-      app._2.dependencies should be (Set("/apps/d1".toPath, "/test/foo".toPath, "/test".toPath))
+      app._2.dependencies should be (Set(AbsolutePathId("/apps/d1"), AbsolutePathId("/test/foo"), AbsolutePathId("/test")))
     }
 
     "GroupUpdate will update a Group correctly" in {
       Given("An existing group with two subgroups")
-      val app1 = AppDefinition("/test/group1/app1".toPath, Some("foo"), role = "*")
-      val app2 = AppDefinition("/test/group2/app2".toPath, Some("foo"), role = "*")
+      val app1 = AppDefinition(AbsolutePathId("/test/group1/app1"), Some("foo"), role = "*")
+      val app2 = AppDefinition(AbsolutePathId("/test/group2/app2"), Some("foo"), role = "*")
       val current = createGroup(
         "/test".toAbsolutePath,
         groups = Set(
@@ -146,9 +146,9 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       group0.groupsById should have size 2
       val group1 = result.group("/test/group1".toAbsolutePath).get
       group1.id should be("/test/group1".toAbsolutePath)
-      group1.apps.head._1 should be("/test/group1/app3".toPath)
+      group1.apps.head._1 should be(AbsolutePathId("/test/group1/app3"))
       val group3 = result.group("/test/group3".toAbsolutePath).get
-      group3.id should be("/test/group3".toPath)
+      group3.id should be(AbsolutePathId("/test/group3"))
       group3.apps should be('empty)
     }
 
@@ -188,7 +188,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       group should be('defined)
       group.get.apps should have size 2
       val dependentApp = group.get.app("/test-group/test-app2".toAbsolutePath).get
-      dependentApp.dependencies should be (Set("/test-group/test-app1".toPath))
+      dependentApp.dependencies should be (Set(AbsolutePathId("/test-group/test-app1")))
     }
   }
 }

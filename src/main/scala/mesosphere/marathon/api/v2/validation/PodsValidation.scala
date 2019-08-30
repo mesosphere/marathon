@@ -208,7 +208,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
       }
     }
 
-  private def haveValidAcceptedResourceRoles(validRoles: Set[String]): Validator[Pod] = validator[Pod] { pod =>
+  private def haveValidAcceptedResourceRoles: Validator[Pod] = validator[Pod] { pod =>
     (podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is empty or valid(ResourceRole.validAcceptedResourceRoles("pod", podPersistentVolumes(pod).nonEmpty)))
   }
 
@@ -238,7 +238,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
     pod should complyWithPodUpgradeStrategyRules
     pod should haveUnreachableDisabledForResidentPods
-    pod should haveValidAcceptedResourceRoles(roleSettings.validRoles)
+    pod should haveValidAcceptedResourceRoles
     pod.linuxInfo is optional(state.LinuxInfo.validLinuxInfoForPodRaml)
   }
 

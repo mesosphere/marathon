@@ -95,7 +95,7 @@ class GroupApiServiceTest extends UnitTest with Inside with GroupCreation {
       newVersion).futureValue
 
     Then("Group will contain those apps after an update")
-    updatedGroup.apps.get(PathId("/app")).value.versionInfo should be(VersionInfo.OnlyVersion(newVersion))
+    updatedGroup.apps.get(AbsolutePathId("/app")).value.versionInfo should be(VersionInfo.OnlyVersion(newVersion))
   }
 
   case class Fixture(

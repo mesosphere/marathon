@@ -7,18 +7,17 @@ import akka.Done
 import akka.actor._
 import akka.testkit.TestProbe
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.{Instance, Reservation, TestInstanceBuilder}
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.apache.mesos.SchedulerDriver
-import org.mockito.{ArgumentCaptor, Mockito}
 import org.mockito.Mockito._
+import org.mockito.{ArgumentCaptor, Mockito}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
@@ -73,7 +72,7 @@ class OverdueInstancesActorTest extends AkkaUnitTest {
 
     "some overdue tasks" in new Fixture {
       Given("one overdue task")
-      val appId = PathId("/some")
+      val appId = AbsolutePathId("/some")
       val mockInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
       val app = InstanceTracker.InstancesBySpec.forInstances(mockInstance)
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
@@ -92,7 +91,7 @@ class OverdueInstancesActorTest extends AkkaUnitTest {
     "ensure that check kills tasks disregarding the stagedAt property" in new Fixture {
       val now = clock.now()
 
-      val appId = PathId("/ignored")
+      val appId = AbsolutePathId("/ignored")
       val overdueUnstagedTask = TestInstanceBuilder.newBuilder(appId).addTaskStarting(Timestamp(1)).getInstance()
       assert(overdueUnstagedTask.tasksMap.valuesIterator.forall(_.status.startedAt.isEmpty))
 
@@ -140,7 +139,7 @@ class OverdueInstancesActorTest extends AkkaUnitTest {
 
     "reservations with a timeout in the past are processed" in new Fixture {
       Given("one overdue reservation")
-      val appId = PathId("/test")
+      val appId = AbsolutePathId("/test")
       val overdueReserved = reservedWithTimeout(appId, deadline = clock.now() - 1.second)
       val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
       val app = InstanceTracker.InstancesBySpec.forInstances(recentReserved, overdueReserved)
@@ -158,7 +157,7 @@ class OverdueInstancesActorTest extends AkkaUnitTest {
       verifyClean()
     }
   }
-  private[this] def reservedWithTimeout(appId: PathId, deadline: Timestamp): Instance = {
+  private[this] def reservedWithTimeout(appId: AbsolutePathId, deadline: Timestamp): Instance = {
     val state = Reservation.State.New(timeout = Some(Reservation.Timeout(
       initiated = Timestamp.zero,
       deadline = deadline,

@@ -358,7 +358,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = PortDefinitions(9001, 9002),
@@ -375,7 +375,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -393,7 +393,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -415,7 +415,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -434,7 +434,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -451,7 +451,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -476,7 +476,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -608,7 +608,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
     "Serialize deserialize path with fetch" in {
       val app = AppDefinition(
-        id = "app-with-fetch".toPath,
+        id = AbsolutePathId("/app-with-fetch"),
         role = "*",
         cmd = Some("brew update"),
         fetch = Seq(
@@ -813,7 +813,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     }
 
     "container port mappings when empty stays empty" in {
-      val appDef = AppDefinition(id = PathId("/test"), container = Some(Docker()), role = "*")
+      val appDef = AppDefinition(id = AbsolutePathId("/test"), container = Some(Docker()), role = "*")
       val roundTripped = AppDefinition.fromProto(appDef.toProto)
       roundTripped should equal(appDef)
       roundTripped.container.map(_.portMappings) should equal(appDef.container.map(_.portMappings))

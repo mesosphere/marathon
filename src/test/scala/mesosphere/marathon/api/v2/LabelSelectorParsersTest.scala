@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.UnitTest
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
 
 class LabelSelectorParsersTest extends UnitTest {
 
@@ -97,5 +97,5 @@ class LabelSelectorParsersTest extends UnitTest {
       }
     }
   }
-  val runSpecId = PathId("/test")
+  val runSpecId = AbsolutePathId("/test")
 }

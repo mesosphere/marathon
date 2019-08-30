@@ -9,7 +9,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
 import mesosphere.marathon.core.instance.update.InstanceUpdated
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 
 class ScaleAppUpdateStepImplTest extends UnitTest {
 
@@ -46,7 +46,7 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
     "receiving multiple failed tasks" should {
       val f = new Fixture
 
-      val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
+      val instance = TestInstanceBuilder.newBuilder(AbsolutePathId("/app"))
         .addTaskUnreachable(containerName = Some("unreachable1"))
         .getInstance()
 
@@ -65,7 +65,7 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
       s"receiving a not scaling worthy status update '$newStatus' on a previously scaling worthy condition" should {
         val f = new Fixture
 
-        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
+        val instance = TestInstanceBuilder.newBuilder(AbsolutePathId("/app"))
           .addTaskUnreachable(containerName = Some("unreachable1"))
           .getInstance()
 
@@ -81,7 +81,7 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
       s"receiving a scaling worthy status update '$newStatus' on a previously scaling worthy condition" should {
         val f = new Fixture
 
-        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
+        val instance = TestInstanceBuilder.newBuilder(AbsolutePathId("/app"))
           .addTaskFailed(containerName = Some("failed1"))
           .getInstance()
 
@@ -97,7 +97,7 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
       s"receiving a scaling worthy status update '$newStatus' on a previously non scaling worthy condition" should {
         val f = new Fixture
 
-        val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
+        val instance = TestInstanceBuilder.newBuilder(AbsolutePathId("/app"))
           .addTaskRunning(containerName = Some("running1"))
           .getInstance()
 
@@ -112,7 +112,7 @@ class ScaleAppUpdateStepImplTest extends UnitTest {
     "receiving a task failed without lastState" should {
       val f = new Fixture
 
-      val instance = TestInstanceBuilder.newBuilder(PathId("/app"))
+      val instance = TestInstanceBuilder.newBuilder(AbsolutePathId("/app"))
         .addTaskUnreachable(containerName = Some("unreachable1"))
         .getInstance()
 

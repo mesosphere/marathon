@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import org.apache.mesos
 import org.apache.mesos.Protos.NetworkInfo.Protocol
@@ -27,9 +27,9 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
       Given("two instances in Created state")
       val f = new Fixture()
 
-      val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
-      val instanceId2 = Instance.Id.forRunSpec(PathId("/app2"))
-      val instanceId3 = Instance.Id.forRunSpec(PathId("/app3"))
+      val instanceId1 = Instance.Id.forRunSpec(AbsolutePathId("/app"))
+      val instanceId2 = Instance.Id.forRunSpec(AbsolutePathId("/app2"))
+      val instanceId3 = Instance.Id.forRunSpec(AbsolutePathId("/app3"))
 
       val instance1Json = f.created(instanceId1)
       val instance1 = instance1Json.as[state.Instance]

@@ -19,7 +19,7 @@ import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistence
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkPersistenceStore, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{AppDefinition, Instance, PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Instance, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.storage.store.ZkStoreSerialization
 import play.api.libs.functional.syntax._
@@ -202,7 +202,7 @@ object ServiceMigration extends StrictLogging with MaybeStore {
     implicit val appProtosMarshaller: Marshaller[Protos.ServiceDefinition, ZkSerialized] =
       Marshaller.opaque(appProtos => ZkSerialized(ByteString(appProtos.toByteArray)))
 
-    implicit val appIdResolver: IdResolver[PathId, Protos.ServiceDefinition, String, ZkId] =
+    implicit val appIdResolver: IdResolver[AbsolutePathId, Protos.ServiceDefinition, String, ZkId] =
       new ZkStoreSerialization.ZkPathIdResolver[Protos.ServiceDefinition]("apps", true, AppDefinition.versionInfoFrom(_).version.toOffsetDateTime)
 
     val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }
@@ -222,8 +222,8 @@ object ServiceMigration extends StrictLogging with MaybeStore {
         .collect{ case (Some(appProtos), optVersion) if !appProtos.hasRole => (appProtos, optVersion) }
         .via(migratingFlow)
         .mapAsync(Migration.maxConcurrency) {
-          case (appProtos, Some(version)) => zkStore.store(PathId(appProtos.getId), appProtos, version)
-          case (appProtos, None) => zkStore.store(PathId(appProtos.getId), appProtos)
+          case (appProtos, Some(version)) => zkStore.store(AbsolutePathId(appProtos.getId), appProtos, version)
+          case (appProtos, None) => zkStore.store(AbsolutePathId(appProtos.getId), appProtos)
         }
         .alsoTo(countingSink)
         .runWith(Sink.ignore)
@@ -273,8 +273,8 @@ object ServiceMigration extends StrictLogging with MaybeStore {
         .collect{ case (Some(podRaml), optVersion) if podRaml.role.isEmpty => (podRaml, optVersion) }
         .via(migratingFlow)
         .mapAsync(Migration.maxConcurrency) {
-          case (podRaml, Some(version)) => zkStore.store(PathId(podRaml.id), podRaml, version)
-          case (podRaml, None) => zkStore.store(PathId(podRaml.id), podRaml)
+          case (podRaml, Some(version)) => zkStore.store(AbsolutePathId(podRaml.id), podRaml, version)
+          case (podRaml, None) => zkStore.store(AbsolutePathId(podRaml.id), podRaml)
         }
         .alsoTo(countingSink)
         .runWith(Sink.ignore)

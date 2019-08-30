@@ -16,7 +16,7 @@ import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{ListBySpec, UpdateContext}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import org.apache.mesos
 
 import scala.concurrent.duration._
@@ -53,21 +53,21 @@ private[tracker] class InstanceTrackerDelegate(
     }
 
   // TODO(jdef) support pods when counting launched instances
-  override def countActiveSpecInstances(appId: PathId): Future[Int] = {
+  override def countActiveSpecInstances(appId: AbsolutePathId): Future[Int] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     specInstances(appId).map(_.count(instance => instance.isActive))
   }
 
-  override def hasSpecInstancesSync(appId: PathId): Boolean = specInstancesSync(appId).nonEmpty
-  override def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean] =
+  override def hasSpecInstancesSync(appId: AbsolutePathId): Boolean = specInstancesSync(appId).nonEmpty
+  override def hasSpecInstances(appId: AbsolutePathId)(implicit ec: ExecutionContext): Future[Boolean] =
     specInstances(appId).map(_.nonEmpty)
 
-  override def specInstancesSync(appId: PathId, readAfterWrite: Boolean = false): Seq[Instance] = {
+  override def specInstancesSync(appId: AbsolutePathId, readAfterWrite: Boolean = false): Seq[Instance] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     Await.result(specInstances(appId, readAfterWrite), instanceTrackerQueryTimeout.duration)
   }
 
-  override def specInstances(appId: PathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]] = {
+  override def specInstances(appId: AbsolutePathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]] = {
     val query = InstanceTrackerActor.ListBySpec(appId)
     if (readAfterWrite) {
       val promise = Promise[Seq[Instance]]

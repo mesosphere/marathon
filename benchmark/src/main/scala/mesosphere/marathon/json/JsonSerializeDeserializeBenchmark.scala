@@ -73,8 +73,7 @@ class JsonSerializeDeserializeBenchmark extends JsonSerializeDeserializeState {
     val value: JsValue = Json.parse(jsonMockContents)
     val groupUpdate: raml.GroupUpdate = Json.fromJson[raml.GroupUpdate](value).get
 
-    val group: RootGroup = RootGroup()
-    val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
+    val appConversionFunc: raml.App => AppDefinition = Raml.fromRaml[raml.App, AppDefinition]
     val updatedGroup: Group = GroupConversion(groupUpdate, rootGroupMock, Timestamp.now()).apply(appConversionFunc)
 
     hole.consume(updatedGroup)

@@ -10,7 +10,7 @@ import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.{Protos => mesos}
 
 case class TaskFailure(
-    appId: PathId,
+    appId: AbsolutePathId,
     taskId: mesos.TaskID,
     state: mesos.TaskState,
     message: String = "",
@@ -57,7 +57,7 @@ object TaskFailure extends JacksonSerializable[TaskFailure] {
 
   def apply(proto: Protos.TaskFailure): TaskFailure =
     TaskFailure(
-      appId = PathId(proto.getAppId),
+      appId = AbsolutePathId(proto.getAppId),
       taskId = proto.getTaskId,
       state = proto.getState,
       message = proto.getMessage,

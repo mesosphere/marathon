@@ -95,7 +95,7 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
     implicit val appProtosMarshaller: Marshaller[Protos.ServiceDefinition, ZkSerialized] =
       Marshaller.opaque(appProtos => ZkSerialized(ByteString(appProtos.toByteArray)))
 
-    implicit val appIdResolver: IdResolver[PathId, Protos.ServiceDefinition, String, ZkId] =
+    implicit val appIdResolver: IdResolver[AbsolutePathId, Protos.ServiceDefinition, String, ZkId] =
       new ZkStoreSerialization.ZkPathIdResolver[Protos.ServiceDefinition]("apps", true, AppDefinition.versionInfoFrom(_).version.toOffsetDateTime)
 
     val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }
@@ -117,8 +117,8 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
           case (appProtos, optVersion) => migrateApp(appProtos, optVersion, defaultMesosRole)
         }
         .mapAsync(Migration.maxConcurrency) {
-          case (appProtos, Some(version)) => zkStore.store(PathId(appProtos.getId), appProtos, version)
-          case (appProtos, None) => zkStore.store(PathId(appProtos.getId), appProtos)
+          case (appProtos, Some(version)) => zkStore.store(AbsolutePathId(appProtos.getId), appProtos, version)
+          case (appProtos, None) => zkStore.store(AbsolutePathId(appProtos.getId), appProtos)
         }
         .alsoTo(countingSink)
         .runWith(Sink.ignore)
@@ -168,8 +168,8 @@ object MigrationTo19100 extends MaybeStore with StrictLogging {
           case (podRaml, optVersion) => migratePod(podRaml, optVersion, defaultMesosRole)
         }
         .mapAsync(Migration.maxConcurrency) {
-          case (podRaml, Some(version)) => zkStore.store(PathId(podRaml.id), podRaml, version)
-          case (podRaml, None) => zkStore.store(PathId(podRaml.id), podRaml)
+          case (podRaml, Some(version)) => zkStore.store(AbsolutePathId(podRaml.id), podRaml, version)
+          case (podRaml, None) => zkStore.store(AbsolutePathId(podRaml.id), podRaml)
         }
         .alsoTo(countingSink)
         .runWith(Sink.ignore)

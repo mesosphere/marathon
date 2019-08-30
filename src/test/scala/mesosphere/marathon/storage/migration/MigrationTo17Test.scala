@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import org.apache.mesos.{Protos => MesosProtos}
 import org.scalatest.Inspectors
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -20,8 +20,8 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
 
       Given("two ephemeral instances and one that was not found")
       val f = new Fixture()
-      val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
-      val instanceId2 = Instance.Id.forRunSpec(PathId("/app2"))
+      val instanceId1 = Instance.Id.forRunSpec(AbsolutePathId("/app"))
+      val instanceId2 = Instance.Id.forRunSpec(AbsolutePathId("/app2"))
 
       val instances = Source(List(f.legacyInstanceJson(instanceId1), f.legacyInstanceJson(instanceId2)))
 
@@ -37,8 +37,8 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
 
       Given("an ephemeral and a resident instance")
       val f = new Fixture()
-      val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
-      val instanceId2 = Instance.Id.forRunSpec(PathId("/app2"))
+      val instanceId1 = Instance.Id.forRunSpec(AbsolutePathId("/app"))
+      val instanceId2 = Instance.Id.forRunSpec(AbsolutePathId("/app2"))
 
       val instances = Source(List(f.legacyInstanceJson(instanceId1), f.legacyResidentInstanceJson(instanceId2)))
 

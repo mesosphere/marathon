@@ -87,7 +87,7 @@ class AppDefinitionReadinessCheckValidationTest extends UnitTest {
         )): AppDefinition =
 
         AppDefinition(
-          id = PathId("/test"),
+          id = AbsolutePathId("/test"),
           role = "*",
           cmd = Some("sleep 1000"),
           instances = 1,

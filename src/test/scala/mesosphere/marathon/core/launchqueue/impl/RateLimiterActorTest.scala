@@ -5,11 +5,11 @@ import akka.pattern.ask
 import akka.testkit.TestProbe
 import akka.util.Timeout
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
-import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AppDefinition, BackoffStrategy, PathId}
 import mesosphere.marathon.core.launchqueue.impl.RateLimiter.Delay
+import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, BackoffStrategy}
+import mesosphere.marathon.test.SettableClock
 import org.mockito.Mockito
 
 import scala.concurrent.duration._
@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 class RateLimiterActorTest extends AkkaUnitTest {
   private val backoff = 10.seconds
   private val backoffStrategy = BackoffStrategy(backoff = backoff, factor = 2.0)
-  private[this] val app = AppDefinition(id = PathId("/test"), role = "*", backoffStrategy = backoffStrategy)
+  private[this] val app = AppDefinition(id = AbsolutePathId("/test"), role = "*", backoffStrategy = backoffStrategy)
 
   private[this] implicit val timeout: Timeout = 3.seconds
 

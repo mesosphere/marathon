@@ -134,6 +134,10 @@ trait Formats
     Writes[PathId] { id => JsString(id.toString) }
   )
 
+  implicit lazy val PathIdWrites: Writes[PathId] = Writes{ id => JsString(id.toString) }
+
+  implicit lazy val AbsolutePathIdReads: Reads[AbsolutePathId] = Reads.of[String](Reads.minLength[String](1)).map(AbsolutePathId(_))
+
   implicit lazy val TimestampFormat: Format[Timestamp] = Format(
     Reads.of[String].map(Timestamp(_)),
     Writes[Timestamp] { t => JsString(t.toString) }
