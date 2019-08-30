@@ -342,9 +342,11 @@ class MarathonFacade(
   //group resource -------------------------------------------
 
   def listGroupIdsInBaseGroup: RestResult[Set[String]] = {
-    import PathId._
-    val root = result(requestFor[JsObject](Get(s"$url/v2/groups")), waitTime)
-    root.map(_.value.get("groups").get.asInstanceOf[JsArray].value.map(_.asInstanceOf[JsObject].value.get("id").get.asInstanceOf[JsString].value).filter(gid => isInBaseGroup(gid.toPath)).toSet)
+    // This actually returns GroupInfo, not GroupUpdate, but it maps mostly the same and we don't have a
+    // deserializer for GroupInfo at the moment
+    val root = result(requestFor[raml.GroupUpdate](Get(s"$url/v2/groups")), waitTime)
+
+    root.map(_.groups.getOrElse(Set.empty).filter(subGroup => isInBaseGroup(PathId(subGroup.id.get))).map(_.id.get))
   }
 
   def listGroupVersions(id: AbsolutePathId): RestResult[List[String]] = {
@@ -358,7 +360,7 @@ class MarathonFacade(
     */
   def group(id: AbsolutePathId): RestResult[raml.GroupUpdate] = {
     requireInBaseGroup(id)
-    result(requestFor[JsObject](Get(s"$url/v2/groups$id")), waitTime)
+    result(requestFor[raml.GroupUpdate](Get(s"$url/v2/groups$id")), waitTime)
   }
 
   def createGroup(group: GroupUpdate): RestResult[ITDeploymentResult] = {
