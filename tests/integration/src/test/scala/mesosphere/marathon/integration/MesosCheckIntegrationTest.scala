@@ -1,4 +1,5 @@
-package mesosphere.marathon.integration
+package mesosphere.marathon
+package integration
 
 import java.util.UUID
 
