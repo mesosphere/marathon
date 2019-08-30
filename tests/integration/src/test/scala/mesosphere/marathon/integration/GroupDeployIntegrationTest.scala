@@ -56,7 +56,6 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val result = marathon.group("test2".toRootTestPath)
       result should be(OK)
       result.value.dependencies should be(dependencies)
-//      result.value.value.get("dependencies").value.as[JsArray].value.map(_.as[JsString].value).toSet should be(dependencies)
     }
 
     "deleting an existing group gives a 200 http response" in {
