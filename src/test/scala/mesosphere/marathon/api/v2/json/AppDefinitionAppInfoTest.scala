@@ -14,7 +14,6 @@ import play.api.libs.json.{JsObject, Json}
 import scala.collection.immutable.Seq
 
 class AppDefinitionAppInfoTest extends UnitTest {
-  import PathId._
 
   val app = raml.App("/test", cmd = Some("sleep 123"), role = Some("*"))
 
@@ -26,7 +25,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
   )
 
   val uuid = UUID.fromString("b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6")
-  val taskId = Task.LegacyId(app.id.toPath, ".", uuid)
+  val taskId = Task.LegacyId(AbsolutePathId(app.id), ".", uuid)
 
   val readinessCheckResults = Seq(
     raml.TaskReadinessCheckResult("foo", taskId.idString, false, Some(raml.ReadinessCheckHttpResponse(503, "text/plain", "n/a")))

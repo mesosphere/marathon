@@ -103,8 +103,8 @@ private[appinfo] class DefaultInfoService(
         if (groupEmbedApps) {
           val filteredApps: IndexedSeq[AppDefinition] =
             group.transitiveApps.filterAs(selectors.appSelector.matches)(collection.breakOut)
-          await(resolveAppInfos(filteredApps, appEmbed, cachedBaseData.value)).map {
-            info => PathId(info.id) -> info
+          await(resolveAppInfos(filteredApps, appEmbed, cachedBaseData.value)).map { info =>
+            AbsolutePathId(info.id) -> info
           }(collection.breakOut)
         } else {
           Map.empty[AbsolutePathId, raml.AppInfo]
