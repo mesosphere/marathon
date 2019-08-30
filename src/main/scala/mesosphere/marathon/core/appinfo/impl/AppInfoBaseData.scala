@@ -245,7 +245,7 @@ class AppInfoBaseData(
     maybePodSpec.map { pod => Raml.toRaml(pod -> instance) }
   }
 
-  protected def isPodTerminating(id: PathId): Future[Boolean] =
+  protected def isPodTerminating(id: AbsolutePathId): Future[Boolean] =
     runningDeployments.map { infos =>
       infos.exists(_.plan.deletedPods.contains(id))
     }
