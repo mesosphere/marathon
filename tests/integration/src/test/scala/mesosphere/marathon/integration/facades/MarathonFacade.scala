@@ -352,7 +352,11 @@ class MarathonFacade(
     result(requestFor[List[String]](Get(s"$url/v2/groups$id/versions")), waitTime)
   }
 
-  def group(id: AbsolutePathId): RestResult[JsObject] = {
+  /**
+    * This should actually return a raml.GroupInfo, but we dont' have deserialization for that. GroupUpdate is only missing the
+    * pods, sooo, close enough
+    */
+  def group(id: AbsolutePathId): RestResult[raml.GroupUpdate] = {
     requireInBaseGroup(id)
     result(requestFor[JsObject](Get(s"$url/v2/groups$id")), waitTime)
   }
