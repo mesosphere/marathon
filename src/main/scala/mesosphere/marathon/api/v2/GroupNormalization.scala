@@ -42,7 +42,7 @@ case class GroupNormalization(conf: MarathonConf, originalRootGroup: RootGroup) 
   def visitTopLevelGroup(conf: MarathonConf, groupUpdate: raml.GroupUpdate, groupPath: AbsolutePathId, groupRoleBehavior: GroupRoleBehavior, mesosRole: Role): raml.GroupUpdate = {
     // Infer enforce role field and default role for all apps.
     val enforceRole = effectiveEnforceRole(groupRoleBehavior, groupUpdate.enforceRole)
-    val defaultRole = if (enforceRole) PathId(groupUpdate.id.get).root else mesosRole
+    val defaultRole = if (enforceRole) groupUpdate.id.map(PathId(_)).getOrElse(PathId.relativeEmpty).canonicalPath(groupPath).root else mesosRole
 
     // Visit children.
     val children = groupUpdate.groups.map(_.map { childGroup =>
