@@ -4,16 +4,16 @@ package core.launcher.impl
 import java.time.Clock
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
-import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.Task.{EphemeralTaskId, TaskIdWithIncarnation}
 import mesosphere.marathon.core.task.state.NetworkInfo
+import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.raml.{Endpoint, Resources}
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
+import mesosphere.marathon.test.SettableClock
 import mesosphere.mesos.TaskGroupBuilder
 
 import scala.collection.immutable.Seq
@@ -155,7 +155,7 @@ object InstanceOpFactoryImplTest {
   val fakeAllocatedPort = 99
 
   val minimalPod = PodDefinition(
-    id = PathId("/foo"),
+    id = AbsolutePathId("/foo"),
     containers = Seq(MesosContainer(name = "ct1", resources = someRes)),
     role = "*"
   )

@@ -20,7 +20,7 @@ private[appinfo] class DefaultInfoService(
     newBaseData: () => AppInfoBaseData)(implicit ec: ExecutionContext)
   extends AppInfoService with GroupInfoService with PodStatusService with StrictLogging {
 
-  override def selectPodStatus(id: PathId, selector: PodSelector): Future[Option[PodStatus]] =
+  override def selectPodStatus(id: AbsolutePathId, selector: PodSelector): Future[Option[PodStatus]] =
     async { // linter:ignore UnnecessaryElseBranch
       logger.debug(s"query for pod $id")
       val maybePod = groupManager.pod(id)
@@ -30,14 +30,14 @@ private[appinfo] class DefaultInfoService(
       }
     }
 
-  override def selectPodStatuses(ids: Set[PathId], selector: PodSelector): Future[Seq[PodStatus]] = {
+  override def selectPodStatuses(ids: Set[AbsolutePathId], selector: PodSelector): Future[Seq[PodStatus]] = {
     val baseData = newBaseData()
 
     val pods = ids.toVector.flatMap(groupManager.pod(_)).filter(selector.matches)
     resolvePodInfos(pods, baseData)
   }
 
-  override def selectApp(id: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[raml.AppInfo]] = {
+  override def selectApp(id: AbsolutePathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Option[raml.AppInfo]] = {
     logger.debug(s"queryForAppId $id")
     groupManager.app(id) match {
       case Some(app) if selector.matches(app) => newBaseData().appInfoFuture(app, embed).map(Some(_))
@@ -54,7 +54,7 @@ private[appinfo] class DefaultInfoService(
       infos
     }
 
-  override def selectAppsInGroup(groupId: PathId, selector: AppSelector,
+  override def selectAppsInGroup(groupId: AbsolutePathId, selector: AppSelector,
     embed: Set[AppInfo.Embed]): Future[Seq[raml.AppInfo]] =
 
     async { // linter:ignore UnnecessaryElseBranch
@@ -68,7 +68,7 @@ private[appinfo] class DefaultInfoService(
       }
     }
 
-  override def selectGroup(groupId: PathId, selectors: GroupInfoService.Selectors,
+  override def selectGroup(groupId: AbsolutePathId, selectors: GroupInfoService.Selectors,
     appEmbed: Set[Embed], groupEmbed: Set[GroupInfo.Embed]): Future[Option[raml.GroupInfo]] = {
     groupManager.group(groupId) match {
       case Some(group) => queryForGroup(group, selectors, appEmbed, groupEmbed)
@@ -76,7 +76,7 @@ private[appinfo] class DefaultInfoService(
     }
   }
 
-  override def selectGroupVersion(groupId: PathId, version: Timestamp, selectors: GroupInfoService.Selectors,
+  override def selectGroupVersion(groupId: AbsolutePathId, version: Timestamp, selectors: GroupInfoService.Selectors,
     groupEmbed: Set[GroupInfo.Embed]): Future[Option[raml.GroupInfo]] = {
     groupManager.group(groupId, version).flatMap {
       case Some(group) => queryForGroup(group, selectors, Set.empty, groupEmbed)
@@ -99,7 +99,7 @@ private[appinfo] class DefaultInfoService(
       val groupEmbedPods = groupEmbed(GroupInfo.Embed.Pods)
 
       //fetch all transitive app infos and pod statuses with one request
-      val infoById: Map[PathId, raml.AppInfo] =
+      val infoById: Map[AbsolutePathId, raml.AppInfo] =
         if (groupEmbedApps) {
           val filteredApps: IndexedSeq[AppDefinition] =
             group.transitiveApps.filterAs(selectors.appSelector.matches)(collection.breakOut)
@@ -107,18 +107,18 @@ private[appinfo] class DefaultInfoService(
             info => PathId(info.id) -> info
           }(collection.breakOut)
         } else {
-          Map.empty[PathId, raml.AppInfo]
+          Map.empty[AbsolutePathId, raml.AppInfo]
         }
 
-      val statusById: Map[PathId, PodStatus] =
+      val statusById: Map[AbsolutePathId, PodStatus] =
         if (groupEmbedPods) {
           val filteredPods: IndexedSeq[PodDefinition] =
             group.transitivePods.filterAs(selectors.podSelector.matches)(collection.breakOut)
           await(resolvePodInfos(filteredPods, cachedBaseData.value)).map { status =>
-            PathId(status.id) -> status
+            AbsolutePathId(status.id) -> status
           }(collection.breakOut)
         } else {
-          Map.empty[PathId, PodStatus]
+          Map.empty[AbsolutePathId, PodStatus]
         }
 
       //already matched groups are stored here for performance reasons (match only once)

@@ -17,9 +17,9 @@ import mesosphere.util.summarize
 
 class Group(
     val id: AbsolutePathId,
-    val apps: Map[AppDefinition.AppKey, AppDefinition] = defaultApps,
-    val pods: Map[PathId, PodDefinition] = defaultPods,
-    val groupsById: Map[Group.GroupKey, Group] = defaultGroups,
+    val apps: Map[AbsolutePathId, AppDefinition] = defaultApps,
+    val pods: Map[AbsolutePathId, PodDefinition] = defaultPods,
+    val groupsById: Map[AbsolutePathId, Group] = defaultGroups,
     val dependencies: Set[AbsolutePathId] = defaultDependencies,
     val version: Timestamp = defaultVersion,
     val enforceRole: Boolean = false) extends IGroup {
@@ -32,8 +32,8 @@ class Group(
     * @param appId The app to retrieve.
     * @return None if the app was not found or non empty option with app.
     */
-  def app(appId: PathId): Option[AppDefinition] = {
-    apps.get(appId) orElse group(appId.parent.asAbsolutePath).flatMap(_.apps.get(appId))
+  def app(appId: AbsolutePathId): Option[AppDefinition] = {
+    apps.get(appId) orElse group(appId.parent).flatMap(_.apps.get(appId))
   }
 
   /**
@@ -42,8 +42,8 @@ class Group(
     * @param podId The pod to retrieve.
     * @return None if the pod was not found or non empty option with pod.
     */
-  def pod(podId: PathId): Option[PodDefinition] = {
-    pods.get(podId) orElse group(podId.parent.asAbsolutePath).flatMap(_.pods.get(podId))
+  def pod(podId: AbsolutePathId): Option[PodDefinition] = {
+    pods.get(podId) orElse group(podId.parent).flatMap(_.pods.get(podId))
   }
 
   /**
@@ -52,7 +52,7 @@ class Group(
     * @param id The path of the run spec to retrieve.
     * @return None of run spec was not found or non empty option with run spec.
     */
-  def runSpec(id: PathId): Option[RunSpec] = {
+  def runSpec(id: AbsolutePathId): Option[RunSpec] = {
     val maybeApp = this.app(id)
     if (maybeApp.isDefined) maybeApp else this.pod(id)
   }
@@ -63,7 +63,7 @@ class Group(
     * @param id Id of an app or pod.
     * @return True if app or pod exists, false otherwise.
     */
-  def exists(id: PathId): Boolean = runSpec(id).isDefined
+  def exists(id: AbsolutePathId): Boolean = runSpec(id).isDefined
 
   /**
     * Find and return the child group for the given path.
@@ -74,21 +74,21 @@ class Group(
   def group(gid: AbsolutePathId): Option[Group] = transitiveGroupsById.get(gid)
 
   def transitiveAppsIterator(): Iterator[AppDefinition] = apps.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppsIterator())
-  private def transitiveAppIdsIterator(): Iterator[PathId] = apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppIdsIterator())
+  private def transitiveAppIdsIterator(): Iterator[AbsolutePathId] = apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppIdsIterator())
   lazy val transitiveApps: Iterable[AppDefinition] = transitiveAppsIterator().toVector
-  lazy val transitiveAppIds: Iterable[PathId] = transitiveAppIdsIterator().toVector
+  lazy val transitiveAppIds: Iterable[AbsolutePathId] = transitiveAppIdsIterator().toVector
 
   def transitivePodsIterator(): Iterator[PodDefinition] = pods.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodsIterator())
-  private def transitivePodIdsIterator(): Iterator[PathId] = pods.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodIdsIterator())
+  private def transitivePodIdsIterator(): Iterator[AbsolutePathId] = pods.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodIdsIterator())
   lazy val transitivePods: Iterable[PodDefinition] = transitivePodsIterator().toVector
-  lazy val transitivePodIds: Iterable[PathId] = transitivePodIdsIterator().toVector
+  lazy val transitivePodIds: Iterable[AbsolutePathId] = transitivePodIdsIterator().toVector
 
   lazy val transitiveRunSpecs: Iterable[RunSpec] = transitiveApps ++ transitivePods
-  lazy val transitiveRunSpecIds: Iterable[PathId] = transitiveAppIds ++ transitivePodIds
+  lazy val transitiveRunSpecIds: Iterable[AbsolutePathId] = transitiveAppIds ++ transitivePodIds
 
-  def transitiveGroups(): Iterator[(Group.GroupKey, Group)] = groupsById.iterator ++ groupsById.valuesIterator.flatMap(_.transitiveGroups())
-  lazy val transitiveGroupsById: Map[Group.GroupKey, Group] = {
-    val builder = Map.newBuilder[Group.GroupKey, Group]
+  def transitiveGroups(): Iterator[(AbsolutePathId, Group)] = groupsById.iterator ++ groupsById.valuesIterator.flatMap(_.transitiveGroups())
+  lazy val transitiveGroupsById: Map[AbsolutePathId, Group] = {
+    val builder = Map.newBuilder[AbsolutePathId, Group]
     builder += id -> this
     builder ++= transitiveGroups()
     builder.result()
@@ -185,13 +185,12 @@ class Group(
 }
 
 object Group extends StrictLogging {
-  type GroupKey = AbsolutePathId
 
   def apply(
     id: AbsolutePathId,
-    apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PathId, PodDefinition] = Group.defaultPods,
-    groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
+    apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
+    pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
+    groupsById: Map[AbsolutePathId, Group] = Group.defaultGroups,
     dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
     enforceRole: Boolean = false): Group = {
@@ -201,11 +200,11 @@ object Group extends StrictLogging {
   def empty(id: AbsolutePathId): Group =
     Group(id = id, version = Timestamp(0))
 
-  def defaultApps: Map[AppDefinition.AppKey, AppDefinition] = Map.empty
-  val defaultPods = Map.empty[PathId, PodDefinition]
-  def defaultGroups: Map[Group.GroupKey, Group] = Map.empty
-  def defaultDependencies: Set[AbsolutePathId] = Set.empty
-  def defaultVersion: Timestamp = Timestamp.now()
+  val defaultApps = Map.empty[AbsolutePathId, AppDefinition]
+  val defaultPods = Map.empty[AbsolutePathId, PodDefinition]
+  val defaultGroups = Map.empty[AbsolutePathId, Group]
+  val defaultDependencies = Set.empty[AbsolutePathId]
+  val defaultVersion = Timestamp.now()
 
   def validGroup(base: AbsolutePathId, config: MarathonConf): Validator[Group] =
     validator[Group] { group =>
@@ -276,9 +275,9 @@ object Group extends StrictLogging {
     */
   private def isChildOfParentId(group: Group): Validator[AppDefinition] = {
     isTrue("App has to be child of group with parent id") { app =>
-      if (app.id.asAbsolutePath.parent == group.id.asAbsolutePath) group.apps.contains(app.id)
+      if (app.id.parent == group.id) group.apps.contains(app.id)
       else {
-        group.group(app.id.parent.asAbsolutePath).exists(child => child.apps.contains(app.id))
+        group.group(app.id.parent).exists(child => child.apps.contains(app.id))
       }
     }
   }
@@ -309,13 +308,10 @@ object Group extends StrictLogging {
   def emptyUpdate(id: PathId): raml.GroupUpdate = raml.GroupUpdate(Some(id.toString))
 
   /** requires that apps are in canonical form */
-  def validNestedGroupUpdateWithBase(base: AbsolutePathId, originalRootGroup: RootGroup): Validator[raml.GroupUpdate] =
+  def validNestedGroupUpdateWithBase(base: AbsolutePathId, originalRootGroup: RootGroup, servicesGloballyModified: Boolean): Validator[raml.GroupUpdate] =
     validator[raml.GroupUpdate] { group =>
       group is notNull
       group is definingEnforcingRoleOnlyIfItsTopLevel(base)
-
-      // Enforce role is not allowed to be updated.
-      group.enforceRole is noEnforceRoleUpdate(originalRootGroup, group.id.map(_.toPath.canonicalPath(base)))
 
       group.version is theOnlyDefinedOptionIn(group)
       group.scaleBy is theOnlyDefinedOptionIn(group)
@@ -327,8 +323,8 @@ object Group extends StrictLogging {
       group.apps is optional(every(
         AppValidation.validNestedApp(group.id.fold(base)(PathId(_).canonicalPath(base)))))
       group.groups is optional(every(
-        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup)))
-    }
+        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup, servicesGloballyModified)))
+    }.and(disallowEnforceRoleChangeIfServicesChanged(originalRootGroup, base, servicesGloballyModified))
 
   private case class definingEnforcingRoleOnlyIfItsTopLevel(base: AbsolutePathId) extends Validator[raml.GroupUpdate] {
     override def apply(group: raml.GroupUpdate): Result = {
@@ -342,21 +338,31 @@ object Group extends StrictLogging {
     }
   }
 
-  case class noEnforceRoleUpdate(originalRootGroup: RootGroup, updatedGroupId: Option[AbsolutePathId]) extends Validator[Option[Boolean]] {
+  case class disallowEnforceRoleChangeIfServicesChanged(originalRootGroup: RootGroup, base: AbsolutePathId, servicesGloballyModified: Boolean) extends Validator[raml.GroupUpdate] {
+    import disallowEnforceRoleChangeIfServicesChanged.EnforceRoleCantBeChangedMessage
 
-    override def apply(maybeNewEnforceRole: Option[Boolean]): Result = {
-      val originalGroup = updatedGroupId.flatMap(originalRootGroup.group) // TODO: why is groupUpdate.id optional? What is the semantic there?
-      (maybeNewEnforceRole, originalGroup.map(_.enforceRole)) match {
-        case (None, None) => Success
-        case (Some(newEnforceRole), None) if originalGroup.nonEmpty =>
-          Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated to $newEnforceRole for $updatedGroupId. Use a partial update instead.")))
-        case (None, Some(_)) =>
-          Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be removed from $updatedGroupId.")))
-        case (Some(newEnforceRole), Some(oldEnforceRole)) =>
-          if (newEnforceRole == oldEnforceRole) Success
-          else Failure(Set(RuleViolation(maybeNewEnforceRole, s"enforce role cannot be updated from $oldEnforceRole to $newEnforceRole for $updatedGroupId. Use a pratial update instead.")))
-        case _ => Success
+    override def apply(group: raml.GroupUpdate): Result = {
+      if (!servicesGloballyModified) {
+        Success
+      } else {
+        val updatedGroupId = group.id.map { id => id.toPath.canonicalPath(base) }
+        val originalGroup = updatedGroupId.flatMap { id => originalRootGroup.group(id) } // TODO: why is groupUpdate.id optional? What is the semantic there?
+        if (originalGroup.isDefined && (group.enforceRole != originalGroup.map(_.enforceRole))) {
+          Failure(Set(RuleViolation(group.enforceRole, EnforceRoleCantBeChangedMessage, path = Path(Generic("enforceRole")))))
+        } else {
+          Success
+        }
       }
+    }
+  }
+
+  object disallowEnforceRoleChangeIfServicesChanged {
+    val EnforceRoleCantBeChangedMessage = "enforceRole cannot be modified in a request that adds, removes or modifies services; please make these changes in separate requests."
+  }
+
+  def updateModifiesServices(update: raml.GroupUpdate): Boolean = {
+    update.version.nonEmpty || update.scaleBy.nonEmpty || update.apps.nonEmpty || update.groups.getOrElse(Set.empty).exists { group =>
+      updateModifiesServices(group)
     }
   }
 }

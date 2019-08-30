@@ -8,7 +8,7 @@ import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder, TestTaskBuilder}
-import mesosphere.marathon.state.{PathId, Timestamp, UnreachableStrategy, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp, UnreachableStrategy, VersionInfo}
 import play.api.libs.json.Json
 
 import scala.concurrent.duration._
@@ -94,7 +94,7 @@ class TaskStatsByVersionTest extends UnitTest {
     lastScalingAt = lastScalingAt,
     lastConfigChangeAt = lastConfigChangeAt
   )
-  val appId = PathId("/test")
+  val appId = AbsolutePathId("/test")
   private[this] def newInstanceId(): Instance.Id = Instance.Id.forRunSpec(appId)
 
   private[this] def runningInstanceStartedAt(version: Timestamp, startingDelay: FiniteDuration): Instance = {

@@ -49,7 +49,7 @@ object JsonFormatBenchmark {
       */
     val numLabels = 11
 
-    val appId = PathId("benchmark/app/definition")
+    val appId = AbsolutePathId("/benchmark/app/definition")
 
     raml.AppInfo(
       id = appId.toString,

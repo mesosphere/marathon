@@ -6,7 +6,7 @@ import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.event.HealthStatusChanged
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import play.api.libs.json._
 
 class HealthTest extends UnitTest with Formats {
@@ -64,7 +64,7 @@ class HealthTest extends UnitTest with Formats {
   }
 
   class Fixture {
-    val appId = PathId("/test")
+    val appId = AbsolutePathId("/test")
     val version = Timestamp(1)
     val now = Timestamp(2)
     val instanceId = Instance.Id.forRunSpec(appId)

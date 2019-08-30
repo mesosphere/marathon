@@ -7,7 +7,6 @@ import mesosphere.marathon.core.group.impl.AssignDynamicServiceLogic
 import mesosphere.marathon.core.pod.{BridgeNetwork, MesosContainer}
 import mesosphere.marathon.raml.{Endpoint, Image, ImageType, Resources}
 import mesosphere.marathon.state.Container
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.core.pod.PodDefinition
 import org.openjdk.jmh.annotations.{Group => _, _}
@@ -20,7 +19,7 @@ class GroupBenchmark {
 
   val version = VersionInfo.forNewConfig(Timestamp(1))
 
-  def makeApp(path: PathId) =
+  def makeApp(path: AbsolutePathId) =
     AppDefinition(
       id = path,
       role = "someRole",
@@ -31,7 +30,7 @@ class GroupBenchmark {
         Container.Docker(Nil, "alpine", List(Container.PortMapping(2015, Some(0), 10000, "tcp", Some("thing")))))
     )
 
-  def makePod(path: PathId) =
+  def makePod(path: AbsolutePathId) =
     PodDefinition(
       id = path,
       role = "someRole",
@@ -59,8 +58,8 @@ class GroupBenchmark {
   var numberOfGroups: Int = _
   lazy val groupIds = 0 until numberOfGroups
 
-  lazy val childGroupPaths: Vector[PathId] = groupIds.map { groupId =>
-    s"group-$groupId".toAbsolutePath
+  lazy val childGroupPaths: Vector[AbsolutePathId] = groupIds.map { groupId =>
+    AbsolutePathId(s"/group-$groupId")
   }(breakOut)
 
   lazy val rootGroup: RootGroup = fillRootGroup()

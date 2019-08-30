@@ -343,7 +343,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Reading AppDefinition adds portIndex to a Marathon HTTP health check if the app has ports" in {
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = PortDefinitions(9001, 9002),
@@ -359,7 +359,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Reading AppDefinition does not add portIndex to a Marathon HTTP health check if the app doesn't have ports" in {
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -376,7 +376,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Reading AppDefinition adds portIndex to a Marathon HTTP health check if it has at least one portMapping" in {
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -397,7 +397,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Reading AppDefinition does not add portIndex to a Marathon HTTP health check if it has no ports nor portMappings" in {
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -415,7 +415,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Reading AppDefinition does not add portIndex to a Mesos HTTP health check if the app doesn't have ports" in {
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -431,7 +431,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Reading AppDefinition adds portIndex to a Mesos HTTP health check if it has at least one portMapping" in {
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -455,7 +455,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Reading AppDefinition does not add portIndex to a Mesos HTTP health check if it has no ports nor portMappings" in {
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -587,7 +587,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
     "Serialize deserialize path with fetch" in {
       val app = AppDefinition(
-        id = "app-with-fetch".toPath,
+        id = AbsolutePathId("/app-with-fetch"),
         role = "*",
         cmd = Some("brew update"),
         fetch = Seq(
@@ -791,7 +791,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     }
 
     "container port mappings when empty stays empty" in {
-      val appDef = AppDefinition(id = PathId("/test"), container = Some(Docker()), role = "*")
+      val appDef = AppDefinition(id = AbsolutePathId("/test"), container = Some(Docker()), role = "*")
       val roundTripped = AppDefinition.fromProto(appDef.toProto)
       roundTripped should equal(appDef)
       roundTripped.container.map(_.portMappings) should equal(appDef.container.map(_.portMappings))

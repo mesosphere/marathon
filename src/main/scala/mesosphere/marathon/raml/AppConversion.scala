@@ -141,7 +141,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
     val role = app.role.getOrElse(throw new IllegalArgumentException("Failed to convert raml.App, no role provided. This is a bug in AppNormalization."))
 
     val result: AppDefinition = AppDefinition(
-      id = PathId(app.id),
+      id = AbsolutePathId(app.id),
       cmd = app.cmd,
       args = app.args,
       user = app.user,
@@ -159,7 +159,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       check = app.check.map(Raml.fromRaml(_)),
       readinessChecks = app.readinessChecks.map(Raml.fromRaml(_)),
       taskKillGracePeriod = app.taskKillGracePeriodSeconds.map(_.second),
-      dependencies = app.dependencies.map(PathId(_))(collection.breakOut),
+      dependencies = app.dependencies.map(AbsolutePathId(_))(collection.breakOut),
       upgradeStrategy = selectedStrategy,
       labels = app.labels,
       acceptedResourceRoles = app.acceptedResourceRoles.getOrElse(AppDefinition.DefaultAcceptedResourceRoles),

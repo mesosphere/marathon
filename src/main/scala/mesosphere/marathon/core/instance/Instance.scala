@@ -44,7 +44,7 @@ case class Instance(
     reservation: Option[Reservation],
     role: Role) extends Placed {
 
-  def runSpecId: PathId = runSpec.id
+  def runSpecId: AbsolutePathId = runSpec.id
   def runSpecVersion: Timestamp = runSpec.version
   def unreachableStrategy = runSpec.unreachableStrategy
 
@@ -299,13 +299,13 @@ object Instance {
     }
   }
 
-  case class Id(val runSpecId: PathId, val prefix: Prefix, uuid: UUID) extends Ordered[Id] {
-    lazy val safeRunSpecId = runSpecId.safePath
+  case class Id(runSpecId: AbsolutePathId, prefix: Prefix, uuid: UUID) extends Ordered[Id] {
+    lazy val safeRunSpecId: String = runSpecId.safePath
     lazy val executorIdString: String = prefix + safeRunSpecId + "." + uuid
 
     // Must match Id.InstanceIdRegex
     // TODO: Unit test against regex
-    lazy val idString = safeRunSpecId + "." + prefix + uuid
+    lazy val idString: String = safeRunSpecId + "." + prefix + uuid
 
     /**
       * String representation used for logging and debugging. Should *not* be used for Mesos task ids. Use `idString`
@@ -328,7 +328,7 @@ object Instance {
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
-    def forRunSpec(id: PathId): Id = Instance.Id(id, PrefixInstance, uuidGenerator.generate())
+    def forRunSpec(id: AbsolutePathId): Id = Instance.Id(id, PrefixInstance, uuidGenerator.generate())
 
     def fromIdString(idString: String): Instance.Id = {
       idString match {

@@ -6,7 +6,6 @@ import mesosphere.marathon.core.pod.{MesosContainer, BridgeNetwork}
 import mesosphere.marathon.raml.{Endpoint, Image, ImageType, Resources}
 import mesosphere.marathon.state.Container
 
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.pod.PodDefinition
@@ -20,7 +19,7 @@ object FlatDependencyBenchmark {
 
   val version = VersionInfo.forNewConfig(Timestamp(1))
 
-  def makeApp(path: PathId) =
+  def makeApp(path: AbsolutePathId) =
     AppDefinition(
       id = path,
       role = "someRole",
@@ -31,7 +30,7 @@ object FlatDependencyBenchmark {
         Container.Docker(Nil, "alpine", List(Container.PortMapping(2015, Some(0), 10000, "tcp", Some("thing")))))
     )
 
-  def makePod(path: PathId) =
+  def makePod(path: AbsolutePathId) =
     PodDefinition(
       id = path,
       role = "someRole",
@@ -53,25 +52,25 @@ object FlatDependencyBenchmark {
 
   val ids = 0 to 900
 
-  val podPaths: Vector[PathId] = ids.map { podId =>
-    s"/pod-${podId}".toPath
+  val podPaths: Vector[AbsolutePathId] = ids.map { podId =>
+    AbsolutePathId(s"/pod-${podId}")
   }(breakOut)
 
-  val appPaths: Vector[PathId] = ids.map { appId =>
-    s"/app-${appId}".toPath
+  val appPaths: Vector[AbsolutePathId] = ids.map { appId =>
+    AbsolutePathId(s"/app-${appId}")
   }(breakOut)
 
-  val appDefs: Map[PathId, AppDefinition] = appPaths.map { path =>
+  val appDefs: Map[AbsolutePathId, AppDefinition] = appPaths.map { path =>
     path -> makeApp(path)
   }(breakOut)
 
-  val podDefs: Map[PathId, PodDefinition] = podPaths.map { path =>
+  val podDefs: Map[AbsolutePathId, PodDefinition] = podPaths.map { path =>
     path -> makePod(path)
   }(breakOut)
 
   val rootGroup = RootGroup(apps = appDefs, pods = podDefs)
   def upgraded = {
-    val pathId = "/app-901".toPath
+    val pathId = AbsolutePathId("/app-901")
     RootGroup(
       apps = rootGroup.apps + (pathId -> makeApp(pathId)),
       pods = rootGroup.pods + (pathId -> makePod(pathId))

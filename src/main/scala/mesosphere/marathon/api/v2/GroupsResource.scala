@@ -84,23 +84,23 @@ class GroupsResource @Inject() (
       val (appEmbed, groupEmbed) = resolveAppGroup(embeds)
 
       //format:off
-      def appsResponse(id: PathId) =
+      def appsResponse(id: AbsolutePathId) =
         infoService.selectAppsInGroup(id, authorizationSelectors.appSelector, appEmbed).map(info => ok(info))
 
-      def groupResponse(id: PathId) =
+      def groupResponse(id: AbsolutePathId) =
         infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {
           case Some(info) => ok(info)
           case None if id.isRoot => ok(raml.GroupInfo(RootGroup.empty.id.toString))
           case None => unknownGroup(id)
         }
 
-      def groupVersionResponse(id: PathId, version: Timestamp) =
+      def groupVersionResponse(id: AbsolutePathId, version: Timestamp) =
         infoService.selectGroupVersion(id, version, authorizationSelectors, groupEmbed).map {
           case Some(info) => ok(info)
           case None => unknownGroup(id)
         }
 
-      def versionsResponse(groupId: PathId) = {
+      def versionsResponse(groupId: AbsolutePathId) = {
         withAuthorization(ViewGroup, groupManager.group(groupId), Future.successful(unknownGroup(groupId))) { _ =>
           groupManager.versions(groupId).runWith(Sink.seq).map(versions => ok(versions))
         }
@@ -153,7 +153,7 @@ class GroupsResource @Inject() (
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
 
-      val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath, originalRootGroup)
+      val groupValidator = Group.validNestedGroupUpdateWithBase(rootPath, originalRootGroup, Group.updateModifiesServices(raw))
       val groupUpdate = validateOrThrow(
         GroupNormalization(config, originalRootGroup).updateNormalization(effectivePath).normalized(raw)
       )(groupValidator)
@@ -243,7 +243,7 @@ class GroupsResource @Inject() (
       val raw = Json.parse(body).as[raml.GroupUpdate]
       val effectivePath = raw.id.map(id => validateOrThrow(PathId(id)).canonicalPath(rootPath)).getOrElse(rootPath)
 
-      val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath, originalRootGroup)
+      val groupValidator = Group.validNestedGroupUpdateWithBase(effectivePath, originalRootGroup, Group.updateModifiesServices(raw))
       val groupUpdate = validateOrThrow(
         GroupNormalization(config, originalRootGroup).updateNormalization(effectivePath).normalized(raw)
       )(groupValidator)

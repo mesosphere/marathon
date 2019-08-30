@@ -176,7 +176,7 @@ object Task {
     val idString: String
 
     // Quick access to the underlying run spec identifier of the task.
-    val runSpecId: PathId
+    val runSpecId: AbsolutePathId
 
     // Quick access to the underlying instance identifier of the task.
     val instanceId: Instance.Id
@@ -214,7 +214,7 @@ object Task {
     * @param separator This can be "." or "_".
     * @param uuid A unique identifier of the task.
     */
-  case class LegacyId private (val runSpecId: PathId, separator: String, uuid: UUID) extends Id {
+  case class LegacyId private (runSpecId: AbsolutePathId, separator: String, uuid: UUID) extends Id {
 
     // A stringifed version of the id.
     override val idString: String = runSpecId.safePath + separator + uuid
@@ -239,7 +239,7 @@ object Task {
     * @param uuid A unique identifier of the task.
     * @param attempt Counts how often a task has been launched on a specific reservation.
     */
-  case class LegacyResidentId private (val runSpecId: PathId, separator: String, uuid: UUID, attempt: Long) extends Id {
+  case class LegacyResidentId private (runSpecId: AbsolutePathId, separator: String, uuid: UUID, attempt: Long) extends Id {
 
     // A stringifed version of the id.
     override val idString: String = runSpecId.safePath + separator + uuid + "." + attempt
@@ -266,13 +266,13 @@ object Task {
     * @param instanceId Identifies the instance the task belongs to.
     * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
     */
-  case class EphemeralTaskId private (val instanceId: Instance.Id, val containerName: Option[String]) extends Id {
+  case class EphemeralTaskId private (instanceId: Instance.Id, containerName: Option[String]) extends Id {
 
     // A stringifed version of the id.
-    override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer)
+    override val idString: String = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer)
 
     // Quick access to the underlying run spec identifier of the task.
-    override lazy val runSpecId: PathId = instanceId.runSpecId
+    override lazy val runSpecId: AbsolutePathId = instanceId.runSpecId
   }
 
   /**
@@ -297,7 +297,7 @@ object Task {
     override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + "." + incarnation
 
     // Quick access to the underlying run spec identifier of the task.
-    override lazy val runSpecId: PathId = instanceId.runSpecId
+    override lazy val runSpecId: AbsolutePathId = instanceId.runSpecId
   }
 
   object Id {

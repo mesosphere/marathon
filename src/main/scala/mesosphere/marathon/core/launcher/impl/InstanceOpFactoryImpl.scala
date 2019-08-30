@@ -332,12 +332,12 @@ class InstanceOpFactoryImpl(
     }
   }
 
-  private def getEnforceRole(pathId: PathId): Boolean = {
+  private def getEnforceRole(pathId: AbsolutePathId): Boolean = {
     val topLevelPath = pathId.rootPath
     val topLevelGroup = if (topLevelPath.isEmpty)
       None
     else
-      rootGroupRetriever.rootGroup().group(topLevelPath.asAbsolutePath)
+      rootGroupRetriever.rootGroup().group(topLevelPath)
 
     topLevelGroup
       .map { _.enforceRole }

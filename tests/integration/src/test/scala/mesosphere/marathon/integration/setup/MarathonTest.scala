@@ -24,7 +24,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades._
 import mesosphere.marathon.raml.{App, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
-import mesosphere.marathon.state.{PathId, PersistentVolume, VolumeMount}
+import mesosphere.marathon.state.{AbsolutePathId, PathId, PersistentVolume, VolumeMount}
 import mesosphere.marathon.util.{Lock, Retry, Timeout, ZookeeperServerTest}
 import mesosphere.util.PortAllocator
 import mesosphere.{AkkaUnitTestLike, WaitTestSupport}
@@ -311,7 +311,7 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
     * @param state The initial health status of the app mock
     * @return The IntegrationHealthCheck object which is used to control the replies.
     */
-  def registerAppProxyHealthCheck(appId: PathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
+  def registerAppProxyHealthCheck(appId: AbsolutePathId, versionId: String, state: Boolean): IntegrationHealthCheck = {
     val check = new IntegrationHealthCheck(appId, versionId, state)
     healthChecks { checks =>
       checks.filter(c => c.appId == appId && c.versionId == versionId).foreach(checks -= _)
@@ -329,7 +329,7 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
     * @param taskId Optional task id to identify the task of the app mock.
     * @return The IntegrationReadinessCheck object which is used to control replies.
     */
-  def registerProxyReadinessCheck(appId: PathId, versionId: String, taskId: Option[String] = None): IntegrationReadinessCheck = {
+  def registerProxyReadinessCheck(appId: AbsolutePathId, versionId: String, taskId: Option[String] = None): IntegrationReadinessCheck = {
     val check = new IntegrationReadinessCheck(appId, versionId, taskId)
     registeredReadinessChecks { checks =>
       checks.filter(c => c.appId == appId && c.versionId == versionId && c.taskId == taskId).foreach(checks -= _)
@@ -341,12 +341,12 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
 
 trait MarathonAppFixtures {
 
-  val testBasePath: PathId
+  val testBasePath: AbsolutePathId
   val defaultRole: String = BaseMarathon.defaultRole
 
   implicit class PathIdTestHelper(path: String) {
-    def toRootTestPath: PathId = testBasePath.append(path).canonicalPath()
-    def toTestPath: PathId = testBasePath.append(path)
+    def toRootTestPath: AbsolutePathId = testBasePath.append(path).canonicalPath()
+    def toTestPath: AbsolutePathId = testBasePath.append(path)
   }
 
   val healthCheckPort: Int
@@ -567,7 +567,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
 
   protected val events = new ConcurrentLinkedQueue[ITSSEEvent]()
 
-  def waitForTasks(appId: PathId, num: Int, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis)(implicit facade: MarathonFacade = marathon): List[ITEnrichedTask] = {
+  def waitForTasks(appId: AbsolutePathId, num: Int, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis)(implicit facade: MarathonFacade = marathon): List[ITEnrichedTask] = {
     eventually(timeout(Span(maxWait.toMillis, Milliseconds))) {
       val tasks = Try(facade.tasks(appId)).map(_.value).getOrElse(Nil).filter(_.launched)
       logger.info(s"${tasks.size}/$num tasks launched for $appId")
@@ -912,7 +912,7 @@ trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with Zookee
       override def marathonUrl: String = s"http://localhost:${marathonServer.httpPort}"
       override def marathon: MarathonFacade = marathonServer.client
       override def mesos: MesosFacade = MarathonFixture.this.mesos
-      override val testBasePath: PathId = PathId("/")
+      override val testBasePath: AbsolutePathId = AbsolutePathId("/")
       override implicit val system: ActorSystem = MarathonFixture.this.system
       override implicit val mat: Materializer = MarathonFixture.this.mat
       override implicit val ctx: ExecutionContext = MarathonFixture.this.ctx
@@ -960,7 +960,7 @@ trait LocalMarathonTest extends MarathonTest with ScalaFutures
     conf = marathonArgs)
   lazy val marathonUrl = s"http://localhost:${marathonServer.httpPort}"
 
-  val testBasePath: PathId = PathId("/")
+  val testBasePath: AbsolutePathId = AbsolutePathId("/")
   lazy val marathon = marathonServer.client
   lazy val appMock: AppMockFacade = new AppMockFacade()
 

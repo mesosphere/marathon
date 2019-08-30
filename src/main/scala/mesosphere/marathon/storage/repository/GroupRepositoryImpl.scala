@@ -29,15 +29,15 @@ import scala.util.{Failure, Success}
 
 case class StoredGroup(
     id: AbsolutePathId,
-    appIds: Map[PathId, OffsetDateTime],
-    podIds: Map[PathId, OffsetDateTime],
+    appIds: Map[AbsolutePathId, OffsetDateTime],
+    podIds: Map[AbsolutePathId, OffsetDateTime],
     storedGroups: Seq[StoredGroup],
     dependencies: Set[AbsolutePathId],
     version: OffsetDateTime,
     enforceRole: Option[Boolean]) extends StrictLogging {
 
-  lazy val transitiveAppIds: Map[PathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
-  lazy val transitivePodIds: Map[PathId, OffsetDateTime] = podIds ++ storedGroups.flatMap(_.podIds)
+  lazy val transitiveAppIds: Map[AbsolutePathId, OffsetDateTime] = appIds ++ storedGroups.flatMap(_.appIds)
+  lazy val transitivePodIds: Map[AbsolutePathId, OffsetDateTime] = podIds ++ storedGroups.flatMap(_.podIds)
 
   /**
     * Load all apps and pods referenced by id and version.
@@ -91,17 +91,17 @@ case class StoredGroup(
       logger.warn(s"Group $id $version is missing pods: $summarizedMissingPods")
     }
 
-    val apps: Map[PathId, AppDefinition] = allApps.collect {
+    val apps: Map[AbsolutePathId, AppDefinition] = allApps.collect {
       case (_, Some(app: AppDefinition)) =>
         app.id -> app
     }(collection.breakOut)
 
-    val pods: Map[PathId, PodDefinition] = allPods.collect {
+    val pods: Map[AbsolutePathId, PodDefinition] = allPods.collect {
       case (_, Some(pod: PodDefinition)) =>
         pod.id -> pod
     }(collection.breakOut)
 
-    val groups: Map[Group.GroupKey, Group] = await(Future.sequence(groupFutures)).map { group =>
+    val groups: Map[AbsolutePathId, Group] = await(Future.sequence(groupFutures)).map { group =>
       group.id -> group
     }(collection.breakOut)
 
@@ -162,11 +162,11 @@ object StoredGroup {
       enforceRole = Some(group.enforceRole))
 
   def apply(proto: Protos.GroupDefinition): StoredGroup = {
-    val apps: Map[PathId, OffsetDateTime] = proto.getAppsList.map { appId =>
+    val apps: Map[AbsolutePathId, OffsetDateTime] = proto.getAppsList.map { appId =>
       PathId.fromSafePath(appId.getId) -> OffsetDateTime.parse(appId.getVersion, DateFormat)
     }(collection.breakOut)
 
-    val pods: Map[PathId, OffsetDateTime] = proto.getPodsList.map { podId =>
+    val pods: Map[AbsolutePathId, OffsetDateTime] = proto.getPodsList.map { podId =>
       PathId.fromSafePath(podId.getId) -> OffsetDateTime.parse(podId.getVersion, DateFormat)
     }(collection.breakOut)
 
@@ -197,7 +197,7 @@ class StoredGroupRepositoryImpl[K, C, S](
     podRepository: PodRepository,
     versionCacheMaxSize: Int)(
     implicit
-    ir: IdResolver[PathId, StoredGroup, C, K],
+    ir: IdResolver[AbsolutePathId, StoredGroup, C, K],
     marshaller: Marshaller[StoredGroup, S],
     unmarshaller: Unmarshaller[S, StoredGroup],
     val ctx: ExecutionContext,
@@ -217,7 +217,7 @@ class StoredGroupRepositoryImpl[K, C, S](
   private val lock = RichLock()
   private val rootNotLoaded: Future[RootGroup] = Future.failed[RootGroup](new Exception("Root not yet loaded"))
   private var rootFuture: Future[RootGroup] = rootNotLoaded
-  private[storage] var beforeStore = Option.empty[(StoredGroup) => Future[Done]]
+  private[storage] var beforeStore = Option.empty[StoredGroup => Future[Done]]
   private val versionCache = TrieMap.empty[OffsetDateTime, Group]
 
   private val storedRepo = {
@@ -228,7 +228,7 @@ class StoredGroupRepositoryImpl[K, C, S](
       case s: LazyCachingPersistenceStore[K, C, S] => leafStore(s.store)
       case s: LazyVersionCachingPersistentStore[K, C, S] => leafStore(s.store)
     }
-    new PersistenceStoreVersionedRepository[PathId, StoredGroup, K, C, S](leafStore(persistenceStore), _.id, _.version)
+    new PersistenceStoreVersionedRepository[AbsolutePathId, StoredGroup, K, C, S](leafStore(persistenceStore), _.id, _.version)
   }
 
   def addToVersionCache(version: Option[OffsetDateTime], group: Group): Group = {
@@ -305,8 +305,8 @@ class StoredGroupRepositoryImpl[K, C, S](
     }
   }
 
-  override def storeRoot(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
-    updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done] =
+  override def storeRoot(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], deletedApps: Seq[AbsolutePathId],
+    updatedPods: Seq[PodDefinition], deletedPods: Seq[AbsolutePathId]): Future[Done] =
     async {
       val storedGroup = StoredGroup(rootGroup)
       beforeStore match {
@@ -405,15 +405,15 @@ class StoredGroupRepositoryImpl[K, C, S](
     persistenceStore.deleteVersion(RootId, version)
   }
 
-  override def appVersions(id: PathId): Source[OffsetDateTime, NotUsed] = appRepository.versions(id)
+  override def appVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed] = appRepository.versions(id)
 
-  override def appVersion(id: PathId, version: OffsetDateTime): Future[Option[AppDefinition]] = appRepository.getVersion(id, version)
+  override def appVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Option[AppDefinition]] = appRepository.getVersion(id, version)
 
-  override def podVersions(id: PathId): Source[OffsetDateTime, NotUsed] = podRepository.versions(id)
+  override def podVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed] = podRepository.versions(id)
 
-  override def podVersion(id: PathId, version: OffsetDateTime): Future[Option[PodDefinition]] = podRepository.getVersion(id, version)
+  override def podVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Option[PodDefinition]] = podRepository.getVersion(id, version)
 }
 
 object StoredGroupRepositoryImpl {
-  val RootId: PathId = PathId.root
+  val RootId: AbsolutePathId = PathId.root
 }

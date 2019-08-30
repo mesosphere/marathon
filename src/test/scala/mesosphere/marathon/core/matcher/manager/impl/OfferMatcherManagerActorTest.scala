@@ -8,13 +8,14 @@ import akka.testkit.TestActorRef
 import akka.util.Timeout
 import java.util
 import java.util.concurrent.TimeUnit
+
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.LocalVolumeId
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AbsolutePathId, PathId}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos.Offer
@@ -31,7 +32,7 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
     "The list of OfferMatchers is random without precedence" in new Fixture {
       Given("OfferMatcher with num normal matchers")
       val num = 5
-      val appId = PathId("/some/app")
+      val appId = AbsolutePathId("/some/app")
       val manager = offerMatcherManager
       val matchers = 1.to(num).map(_ => matcher())
       matchers.map { matcher => manager ? OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcher) }
@@ -47,7 +48,7 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
     "The list of OfferMatchers is sorted by precedence" in new Fixture {
       Given("OfferMatcher with num precedence and num normal matchers, registered in mixed order")
       val num = 5
-      val appId = PathId("/some/app")
+      val appId = AbsolutePathId("/some/app")
       val manager = offerMatcherManager
       1.to(num).flatMap(_ => Seq(matcher(), matcher(Some(appId)))).map { matcher =>
         manager ? OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcher)

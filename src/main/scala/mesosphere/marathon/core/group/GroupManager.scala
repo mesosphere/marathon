@@ -3,16 +3,16 @@ package core.group
 
 import java.time.OffsetDateTime
 
-import akka.{Done, NotUsed}
 import akka.stream.scaladsl.Source
+import akka.{Done, NotUsed}
+import mesosphere.marathon.core.async.ExecutionContexts
+import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.core.async.ExecutionContexts
-import mesosphere.marathon.state.{AppDefinition, Group, PathId, RootGroup, RunSpec, Timestamp}
-import mesosphere.marathon.core.deployment.DeploymentPlan
+import mesosphere.marathon.state._
 
-import scala.concurrent.Future
 import scala.collection.immutable.Seq
+import scala.concurrent.Future
 
 /**
   * The group manager is the facade for all group related actions.
@@ -34,34 +34,34 @@ trait GroupManager extends GroupManager.CurrentRootGroupRetriever {
     * @param id the identifier of the group.
     * @return the list of versions of this object.
     */
-  def versions(id: PathId): Source[Timestamp, NotUsed]
+  def versions(id: AbsolutePathId): Source[Timestamp, NotUsed]
 
   /**
     * Get all available app versions for a given app id
     */
-  def appVersions(id: PathId): Source[OffsetDateTime, NotUsed]
+  def appVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed]
 
   /**
     * Get the app definition for an id at a specific version
     */
-  def appVersion(id: PathId, version: OffsetDateTime): Future[Option[AppDefinition]]
+  def appVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Option[AppDefinition]]
 
   /**
     * Get all available pod versions for a given pod id
     */
-  def podVersions(id: PathId): Source[OffsetDateTime, NotUsed]
+  def podVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed]
 
   /**
     * Get the pod definition for an id at a specific version
     */
-  def podVersion(id: PathId, version: OffsetDateTime): Future[Option[PodDefinition]]
+  def podVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Option[PodDefinition]]
 
   /**
     * Get a specific group by its id.
     * @param id the id of the group.
     * @return the group if it is found, otherwise None
     */
-  def group(id: PathId): Option[Group]
+  def group(id: AbsolutePathId): Option[Group]
 
   /**
     * Get a specific group with a specific version.
@@ -69,35 +69,35 @@ trait GroupManager extends GroupManager.CurrentRootGroupRetriever {
     * @param version the version of the group.
     * @return the group if it is found, otherwise None
     */
-  def group(id: PathId, version: Timestamp): Future[Option[Group]]
+  def group(id: AbsolutePathId, version: Timestamp): Future[Option[Group]]
 
   /**
     * Get a specific run spec by its Id
     * @param id The id of the runSpec
     * @return The run spec if it is found, otherwise None.
     */
-  def runSpec(id: PathId): Option[RunSpec]
+  def runSpec(id: AbsolutePathId): Option[RunSpec]
 
   /**
     * Get a specific app definition by its id.
     * @param id the id of the app.
     * @return the app if it is found, otherwise None
     */
-  def app(id: PathId): Option[AppDefinition]
+  def app(id: AbsolutePathId): Option[AppDefinition]
 
   /**
     * Get a specific app definition by its id.
     * @param ids the ids of the apps.
     * @return the app if it is found, otherwise false
     */
-  def apps(ids: Set[PathId]): Map[PathId, Option[AppDefinition]]
+  def apps(ids: Set[AbsolutePathId]): Map[AbsolutePathId, Option[AppDefinition]]
 
   /**
     * Get a specific pod definition by its id.
     * @param id the id of the pod.
     * @return the pod if it is found, otherwise None
     */
-  def pod(id: PathId): Option[PodDefinition]
+  def pod(id: AbsolutePathId): Option[PodDefinition]
 
   /**
     * Update a group with given identifier.
@@ -119,28 +119,28 @@ trait GroupManager extends GroupManager.CurrentRootGroupRetriever {
     * @return the deployment plan which will be executed.
     */
   final def updateRoot(
-    id: PathId,
+    id: AbsolutePathId,
     fn: RootGroup => RootGroup,
     version: Timestamp = Group.defaultVersion,
     force: Boolean = false,
-    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan] = updateRootAsync(id, (g: RootGroup) => Future.successful(fn(g)), version, force, toKill)
+    toKill: Map[AbsolutePathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan] = updateRootAsync(id, (g: RootGroup) => Future.successful(fn(g)), version, force, toKill)
 
   final def updateRootAsync(
-    id: PathId,
+    id: AbsolutePathId,
     fn: RootGroup => Future[RootGroup],
     version: Timestamp = Group.defaultVersion,
     force: Boolean = false,
-    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan] = {
+    toKill: Map[AbsolutePathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan] = {
     updateRootEither[Nothing](id, fn(_).map(Right(_))(ExecutionContexts.callerThread), version, force, toKill)
       .map(_.right.getOrElse(throw new RuntimeException("Either must be Right here")))(ExecutionContexts.callerThread)
   }
 
   def updateRootEither[T](
-    id: PathId,
+    id: AbsolutePathId,
     fn: RootGroup => Future[Either[T, RootGroup]],
     version: Timestamp = Timestamp.now(),
     force: Boolean = false,
-    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[Either[T, DeploymentPlan]]
+    toKill: Map[AbsolutePathId, Seq[Instance]] = Map.empty): Future[Either[T, DeploymentPlan]]
 
   /**
     * Updates with root group without triggering a deployment.
@@ -162,7 +162,7 @@ trait GroupManager extends GroupManager.CurrentRootGroupRetriever {
     * @return the deployment plan which will be executed.
     */
   def updateApp(
-    appId: PathId,
+    appId: AbsolutePathId,
     fn: Option[AppDefinition] => AppDefinition,
     version: Timestamp = Group.defaultVersion,
     force: Boolean = false,
@@ -181,7 +181,7 @@ trait GroupManager extends GroupManager.CurrentRootGroupRetriever {
     * @return the deployment plan which will be executed.
     */
   def updatePod(
-    podId: PathId,
+    podId: AbsolutePathId,
     fn: Option[PodDefinition] => PodDefinition,
     version: Timestamp = Group.defaultVersion,
     force: Boolean = false,

@@ -4,22 +4,14 @@ package core.health.impl
 import akka.testkit.{TestActorRef, TestProbe}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.InstanceHealthChanged
-import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{
-  AddHealthCheck,
-  ApplicationKey,
-  HealthCheckStatusChanged,
-  RemoveHealthCheck,
-  InstanceKey,
-  PurgeHealthCheckStatuses
-}
+import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{AddHealthCheck, ApplicationKey, HealthCheckStatusChanged, InstanceKey, PurgeHealthCheckStatuses, RemoveHealthCheck}
 import mesosphere.marathon.core.health.{Health, MarathonHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.PathId.StringPathId
-import mesosphere.marathon.state.Timestamp
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 
 class AppHealthCheckActorTest extends AkkaUnitTest {
   class Fixture {
-    val appId = "/test".toPath
+    val appId = AbsolutePathId("/test")
     val appVersion = Timestamp(1)
     val appKey = ApplicationKey(appId, appVersion)
     val hcPort80 = MarathonHttpHealthCheck(portIndex = Some(PortReference(80)))

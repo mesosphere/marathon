@@ -17,7 +17,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       .build()
 
     AppDefinition(
-      id = PathId("/docker-bridge-app"),
+      id = AbsolutePathId("/docker-bridge-app"),
       cmd = Some("test"),
       user = Some("user"),
       env = Map("A" -> state.EnvVarString("test"), "password" -> state.EnvVarSecretRef("secret0")),
@@ -45,7 +45,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
     )
   }
   private lazy val hostApp = AppDefinition(
-    id = PathId("/host-app"),
+    id = AbsolutePathId("/host-app"),
     role = "*",
     networks = Seq(HostNetwork),
     cmd = Option("whatever"),
@@ -54,23 +54,23 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
     unreachableStrategy = state.UnreachableDisabled
   )
   private lazy val argsOnlyApp = AppDefinition(
-    id = PathId("/args-only-app"),
+    id = AbsolutePathId("/args-only-app"),
     role = "*",
     args = Seq("whatever", "one", "two", "three")
   )
   private lazy val simpleDockerApp = AppDefinition(
-    id = PathId("/simple-docker-app"),
+    id = AbsolutePathId("/simple-docker-app"),
     role = "*",
     container = Some(state.Container.Docker(image = "foo/bla"))
   )
   private lazy val dockerWithArgsApp = AppDefinition(
-    id = PathId("/docker-with-args-app"),
+    id = AbsolutePathId("/docker-with-args-app"),
     role = "*",
     args = Seq("whatever", "one", "two", "three"),
     container = Some(state.Container.Docker(image = "foo/bla"))
   )
   private lazy val mesosWithLinuxInfo = AppDefinition(
-    id = PathId("/mesos-with-linux-info"),
+    id = AbsolutePathId("/mesos-with-linux-info"),
     role = "*",
     cmd = Option("whatever"),
 

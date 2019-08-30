@@ -9,7 +9,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.AnyToRaml
 import mesosphere.marathon.raml.TaskConversion._
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{Protos => MesosProtos}
 
@@ -18,7 +18,7 @@ class EnrichedTaskWritesTest extends UnitTest {
   class Fixture {
     val time = Timestamp(1024)
 
-    val runSpec = AppDefinition(id = PathId("/foo/bar"), role = "*")
+    val runSpec = AppDefinition(id = AbsolutePathId("/foo/bar"), role = "*")
     val runSpecId = runSpec.id
     val hostName = "agent1.mesos"
     val agentId = "abcd-1234"
@@ -49,7 +49,7 @@ class EnrichedTaskWritesTest extends UnitTest {
     }
 
     val taskWithMultipleIPs = {
-      val instanceId = Instance.Id.forRunSpec(PathId("/foo/bar"))
+      val instanceId = Instance.Id.forRunSpec(AbsolutePathId("/foo/bar"))
       val taskStatus = mesosStatus(Task.Id(instanceId))
       val networkInfo = NetworkInfo(hostName, hostPorts = Nil, ipAddresses = Nil).update(taskStatus)
       val instance = TestInstanceBuilder.newBuilder(runSpecId = runSpecId, version = time)

@@ -3,7 +3,7 @@ package integration
 
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.util.ZookeeperServerTest
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.Eventually
@@ -15,7 +15,6 @@ import scala.collection.immutable
   * while deploying)
   */
 class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonFixture with Inspectors with Eventually {
-  import PathId._
 
   "Restarting Marathon" when {
     /**
@@ -32,16 +31,16 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       Given("a new app with an impossible constraint")
       // Running locally, the constraint of a unique hostname should prevent the second instance from deploying.
       val constraint = raml.Constraints("hostname" -> "UNIQUE")
-      val app = f.appProxy(PathId("/restart-dont-kill"), "v2", instances = 2, healthCheck = None)
+      val app = f.appProxy(AbsolutePathId("/restart-dont-kill"), "v2", instances = 2, healthCheck = None)
         .copy(constraints = constraint)
       f.marathon.createAppV2(app)
 
       When("one of the tasks is deployed")
-      val tasksBeforeAbdication = f.waitForTasks(app.id.toPath, 1)
+      val tasksBeforeAbdication = f.waitForTasks(AbsolutePathId(app.id), 1)
 
       And("the leader abdicates")
       server.restart().futureValue
-      val tasksAfterFirstAbdication = f.waitForTasks(app.id.toPath, 1)
+      val tasksAfterFirstAbdication = f.waitForTasks(AbsolutePathId(app.id), 1)
       Then("the already running task should not be killed")
       tasksBeforeAbdication should be(tasksAfterFirstAbdication) withClue (s"Tasks before (${tasksBeforeAbdication}) and after (${tasksAfterFirstAbdication}) abdication are different")
     }
