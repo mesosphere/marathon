@@ -1,19 +1,19 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.{Done, NotUsed}
 import akka.actor.{Actor, Props}
 import akka.pattern.ask
 import akka.stream.scaladsl.Source
 import akka.testkit.ImplicitSender
 import akka.util.Timeout
+import akka.{Done, NotUsed}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation, InstanceUpdated}
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, RunSpec}
 import mesosphere.marathon.stream.EnrichedSource
 import org.rogach.scallop.ScallopConf
 
@@ -39,7 +39,7 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
       Given("A LaunchQueueActor with a task launcher for app /foo")
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
-      instanceTracker.specInstances(any[PathId], anyBoolean)(any) returns Future.successful(Seq.empty)
+      instanceTracker.specInstances(any[AbsolutePathId], anyBoolean)(any) returns Future.successful(Seq.empty)
       launchQueue.ask(LaunchQueueDelegate.Add(app, 3)).futureValue
 
       When("An InstanceChange is send to the task launcher actor")
@@ -55,7 +55,7 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
         verify()
       }
       def runSpecActorProps(runSpec: RunSpec) = Props(new TestLauncherActor) // linter:ignore UnusedParameter
-      val app = AppDefinition(PathId("/foo"))
+      val app = AppDefinition(AbsolutePathId("/foo"), role = "*")
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
       val instanceTracker = mock[InstanceTracker]

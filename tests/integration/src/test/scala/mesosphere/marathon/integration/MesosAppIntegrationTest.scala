@@ -11,8 +11,7 @@ import mesosphere.marathon.integration.facades.AppMockFacade
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType}
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{HostVolume, PersistentVolume, VolumeMount}
+import mesosphere.marathon.state.{AbsolutePathId, HostVolume, PersistentVolume, VolumeMount}
 import mesosphere.mesos.Constraints.hostnameField
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport, WhenEnvSet}
 import org.scalatest.Inside
@@ -47,7 +46,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1) // The app has really started
+      waitForTasks(AbsolutePathId(app.id), 1) // The app has really started
     }
 
     "deploy a simple Docker app that uses Entrypoint/Cmd using the Mesos containerizer" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
@@ -67,9 +66,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1) // The app has really started
+      waitForTasks(AbsolutePathId(app.id), 1) // The app has really started
 
-      marathon.deleteApp(app.id.toPath) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
+      marathon.deleteApp(AbsolutePathId(app.id)) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
     }
 
     "deploy a simple pod" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
@@ -122,16 +121,16 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val projectDir = sys.props.getOrElse("user.dir", ".")
       val containerDir = "marathon"
       val id = testBasePath / "recover-simple-persistent-pod"
-      //val cmd = s"""echo hello >> $containerPath/data && ${appMockCmd(id, "v1")}"""
       def appMockCommand(port: String) =
         s"""
            |echo APP PROXY $$MESOS_TASK_ID RUNNING; \\
-           |echo "hello" >> $containerDir/data/test; \\
+           |echo "hello" >> $containerDir/data/test && \\
            |$containerDir/python/app_mock.py $port $id v1 http://httpbin.org/anything
         """.stripMargin
 
       val pod = PodDefinition(
         id = id,
+        role = "foo",
         containers = Seq(
           MesosContainer(
             name = "task1",
@@ -140,8 +139,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
             endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
             healthCheck = Some(MesosHttpHealthCheck(portIndex = Some(PortReference("task1")), path = Some("/ping"))),
             volumeMounts = Seq(
-              VolumeMount(Some("python"), s"$containerDir/python", false),
-              VolumeMount(Some("data"), s"$containerDir/data", true)
+              VolumeMount(Some("python"), s"$containerDir/python", true),
+              VolumeMount(Some("data"), s"$containerDir/data", false)
             )
           )
         ),
@@ -193,6 +192,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
       val pod = PodDefinition(
         id = podId,
+        role = "foo",
         containers = Seq(
           MesosContainer(
             name = "task1",

@@ -105,8 +105,8 @@ object Dependencies {
 object Dependency {
   object V {
     // runtime deps versions
-    val Akka = "2.5.14"
-    val AkkaHttp = "10.0.11"
+    val Akka = "2.5.23"
+    val AkkaHttp = "10.0.15"
     val Alpakka  = "0.14"
     val ApacheCommonsCompress = "1.13"
     val ApacheCommonsIO = "2.6"
@@ -124,8 +124,8 @@ object Dependency {
     val Logback = "1.2.3"
     val Logstash = "4.9"
     val MarathonApiConsole = "3.0.8-accept"
-    val MarathonUI = "1.3.1"
-    val Mesos = "1.8.0"
+    val MarathonUI = "1.3.2"
+    val Mesos = "1.9.0-SNAPSHOT"
     val Mustache = "0.9.0"
     val PlayJson = "2.6.7"
     val Raven = "8.0.3"
@@ -138,7 +138,7 @@ object Dependency {
     val WixAccord = "0.7.1"
 
     // Version of Mesos to use in Dockerfile.
-    val MesosDebian = "1.5.1-2.0.1"
+    val MesosDebian = "1.9.0-0.1.972.pre.20190722gitb485f1883"
 
     // test deps versions
     val JMH = "1.19"

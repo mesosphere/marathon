@@ -3,9 +3,10 @@ package raml
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.VolumeSerializer
-import mesosphere.marathon.state.Volume
+import mesosphere.marathon.state.{DiskType, Volume}
+import org.scalatest.prop.TableDrivenPropertyChecks
 
-class VolumeConversionTest extends UnitTest {
+class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks {
 
   def convertToProtobufThenToRAML(volumeWithMount: => state.VolumeWithMount[Volume], raml: => AppVolume): Unit = {
     "convert to protobuf, then to RAML" in {
@@ -48,7 +49,7 @@ class VolumeConversionTest extends UnitTest {
   }
 
   "core ExternalVolume conversion" when {
-    val external = state.ExternalVolumeInfo(Some(123L), "external", "foo", Map("foo" -> "bla"))
+    val external = state.ExternalVolumeInfo(Some(123L), "external", "foo", Map("foo" -> "bla"), shared = true)
     val externalVolume = state.ExternalVolume(None, external)
     val mount = state.VolumeMount(None, "/container")
     val volume = state.VolumeWithMount(externalVolume, mount)
@@ -64,6 +65,7 @@ class VolumeConversionTest extends UnitTest {
         externalRaml.external.options should be(external.options)
         externalRaml.external.provider should be(Some(external.provider))
         externalRaml.external.size should be(external.size)
+        externalRaml.external.shared should be(true)
       }
     }
   }
@@ -71,7 +73,7 @@ class VolumeConversionTest extends UnitTest {
   "RAML external volume conversion" when {
     val volume = AppExternalVolume(
       "/container",
-      ExternalVolumeInfo(Some(1L), Some("vol-name"), Some("provider"), Map("foo" -> "bla")), ReadMode.Rw)
+      ExternalVolumeInfo(Some(1L), Some("vol-name"), Some("provider"), Map("foo" -> "bla"), shared = true), ReadMode.Rw)
     "converting to core ExternalVolume" should {
       val (externalVolume, mount) = Some(volume.fromRaml).collect {
         case state.VolumeWithMount(v: state.ExternalVolume, m) => (v, m)
@@ -83,6 +85,7 @@ class VolumeConversionTest extends UnitTest {
         externalVolume.external.provider should be(volume.external.provider.head)
         externalVolume.external.size should be(volume.external.size)
         externalVolume.external.options should be(volume.external.options)
+        externalVolume.external.shared should be(volume.external.shared)
       }
     }
   }
@@ -109,10 +112,10 @@ class VolumeConversionTest extends UnitTest {
     }
   }
 
-  "RAML persistent volume conversion" when {
+  "RAML persistent volume conversion for apps" when {
     val volume = AppPersistentVolume(
       "/container",
-      PersistentVolumeInfo(None, size = 123L, maxSize = Some(1234L), profileName = Some("ssd-fast"),
+      PersistentVolumeInfo(None, size = 123L, maxSize = Some(1234L), profileName = None,
         constraints = Set.empty),
       ReadMode.Rw)
     "converting from RAML" should {
@@ -131,12 +134,59 @@ class VolumeConversionTest extends UnitTest {
     }
   }
 
+  def persistentVolumeFrom(raml: AppPersistentVolume): state.PersistentVolume = {
+    Some(raml.fromRaml).collect {
+      case state.VolumeWithMount(v: state.PersistentVolume, _) => v
+    }.getOrElse(fail("expected PersistentVolume"))
+  }
+
+  def persistentVolumeFrom(raml: PodPersistentVolume): state.PersistentVolume = {
+    Some(raml.asInstanceOf[PodVolume].fromRaml)
+        .collect { case pv: state.PersistentVolume => pv }
+        .getOrElse(fail("expected PersistentVolume"))
+  }
+
+  val diskProfileCombinations = Table (
+    ("configured disk type",            "configured profile", "expected disk type"),
+    (None,                              None,                 DiskType.Root),
+    (Some(PersistentVolumeType.Root),   None,                 DiskType.Root),
+    (Some(PersistentVolumeType.Path),   None,                 DiskType.Path),
+    (Some(PersistentVolumeType.Mount),  None,                 DiskType.Mount),
+    (None,                              Some("ssd"),          DiskType.Mount),
+    (Some(PersistentVolumeType.Root),   Some("ssd"),          DiskType.Root), // this won't work with DSS
+    (Some(PersistentVolumeType.Path),   Some("ssd"),          DiskType.Path), // this won't work with DSS
+    (Some(PersistentVolumeType.Mount),  Some("ssd"),          DiskType.Mount),
+  )
+
+  "test disk type profile combinations" when {
+    forAll (diskProfileCombinations) { (configuredDiskType: Option[PersistentVolumeType], configuredProfile: Option[String], expectedDiskType: DiskType) =>
+      s"configuring disk type <$configuredDiskType> with profile <$configuredProfile>" should {
+        s"result in expected disk type <$expectedDiskType> for apps" in {
+          val raml = AppPersistentVolume(
+            "/container",
+            PersistentVolumeInfo(`type` = configuredDiskType, profileName = configuredProfile,
+              size = 123L, maxSize = Some(1234L), constraints = Set.empty), ReadMode.Rw)
+          val volume = persistentVolumeFrom(raml)
+          volume.persistent.`type` shouldBe expectedDiskType
+        }
+        s"result in expected disk type <$expectedDiskType> for pods" in {
+          val raml = PodPersistentVolume(
+            "/container",
+            PersistentVolumeInfo(`type` = configuredDiskType, profileName = configuredProfile,
+              size = 123L, maxSize = Some(1234L), constraints = Set.empty))
+          val volume = persistentVolumeFrom(raml)
+          volume.persistent.`type` shouldBe expectedDiskType
+        }
+      }
+    }
+  }
+
   "RAML persistent volume conversion for pods" when {
 
     "converting PersistentVolume from RAML" should {
       val ramlVolume = PodPersistentVolume(
         "/container",
-        PersistentVolumeInfo(None, size = 123L, maxSize = Some(1234L), profileName = Some("ssd-fast"),
+        PersistentVolumeInfo(None, size = 123L, maxSize = Some(1234L), profileName = None,
           constraints = Set.empty))
       val persistentVolume = Some(ramlVolume.asInstanceOf[PodVolume].fromRaml)
         .collect { case pv @ state.PersistentVolume(_, _) => pv }
@@ -155,7 +205,7 @@ class VolumeConversionTest extends UnitTest {
     "converting PersistentVolume to RAML" should {
       val persistentVolume = state.PersistentVolume(
         Some("/container"),
-        state.PersistentVolumeInfo(size = 123L, maxSize = Some(1234L), profileName = Some("ssd-fast"),
+        state.PersistentVolumeInfo(size = 123L, maxSize = Some(1234L), `type` = DiskType.Mount, profileName = Some("ssd-fast"),
           constraints = Set.empty))
       val ramlVolume = Some(persistentVolume.asInstanceOf[Volume].toRaml[PodVolume])
         .collect { case pv @ PodPersistentVolume(_, _) => pv }
@@ -163,7 +213,7 @@ class VolumeConversionTest extends UnitTest {
       "convert all fields to core" in {
         persistentVolume.name should be(Some(ramlVolume.name))
         val info = persistentVolume.persistent
-        info.`type` should be(state.DiskType.Root)
+        info.`type` should be(state.DiskType.Mount)
         info.size should be(ramlVolume.persistent.size)
         info.maxSize should be(ramlVolume.persistent.maxSize)
         info.profileName should be(ramlVolume.persistent.profileName)

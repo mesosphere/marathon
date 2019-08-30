@@ -86,7 +86,7 @@ class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
     }
   }
 
-  val app = AppDefinition("app".toRootPath, cmd = Some("sleep"))
+  val app = AppDefinition("app".toAbsolutePath, role = "*", cmd = Some("sleep"))
   val oldGroup = createRootGroup()
   val newGroup = createRootGroup(Map(app.id -> app))
   val plan = DeploymentPlan(oldGroup, newGroup)

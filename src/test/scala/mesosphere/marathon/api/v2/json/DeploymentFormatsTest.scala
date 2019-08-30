@@ -5,9 +5,9 @@ import java.util.UUID
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment._
-import mesosphere.marathon.raml.{App, GroupUpdate, Raml}
+import mesosphere.marathon.raml.{App, GroupUpdate}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, Group, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Group, Timestamp}
 import mesosphere.marathon.test.GroupCreation
 import play.api.libs.json._
 
@@ -63,11 +63,6 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
       groupFromNull.version should be('empty)
     }
 
-    "Can write/read Group" in {
-      marshalUnmarshal(Raml.toRaml(genGroup()))
-      marshalUnmarshal(Raml.toRaml(genGroup(Set(genGroup(), genGroup(Set(genGroup()))))))
-    }
-
     "Can write/read byte arrays" in {
       marshalUnmarshal("Hello".getBytes)
     }
@@ -107,11 +102,12 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
 
   def genInt = Random.nextInt(1000)
 
-  def genId = UUID.randomUUID().toString.toPath
+  def genId = UUID.randomUUID().toString
+  def genAbsoluteId = AbsolutePathId(s"/${UUID.randomUUID().toString}")
 
   def genTimestamp = Timestamp.now()
 
-  def genApp = AppDefinition(id = genId, cmd = Some("sleep"))
+  def genApp = AppDefinition(id = genAbsoluteId, role = "*", cmd = Some("sleep"))
 
   def genStep = DeploymentStep(actions = Seq(
     StartApplication(genApp),
@@ -123,21 +119,21 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
   def genGroup(children: Set[Group] = Set.empty) = {
     val app1 = genApp
     val app2 = genApp
-    createGroup(genId, apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId), version = genTimestamp, validate = false)
+    createGroup(genAbsoluteId, apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genAbsoluteId), version = genTimestamp, validate = false)
   }
 
   def genRootGroup(children: Set[Group] = Set.empty) = {
     val app1 = genApp
     val app2 = genApp
-    createRootGroup(apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genId), version = genTimestamp, validate = false)
+    createRootGroup(apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genAbsoluteId), version = genTimestamp, validate = false)
   }
 
   def genGroupUpdate(children: Set[GroupUpdate] = Set.empty) =
     GroupUpdate(
-      Some(genId.toString),
-      Some(Set(App(id = genId.toString), App(id = genId.toString))),
+      Some(genAbsoluteId.toString),
+      Some(Set(App(id = genId), App(id = genId))),
       Some(children),
-      Some(Set(genId.toString)),
+      Some(Set(genId)),
       Some(23),
       Some(genTimestamp.toOffsetDateTime)
     )

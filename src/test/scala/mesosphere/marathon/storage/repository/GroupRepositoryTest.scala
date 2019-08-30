@@ -51,10 +51,10 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
       "store new apps when storing the root" in {
         val appRepo = mock[AppRepository]
         val repo = createRepo(appRepo, mock[PodRepository], 1)
-        val apps = Seq(AppDefinition("app1".toRootPath), AppDefinition("app2".toRootPath))
+        val apps = Seq(AppDefinition("app1".toAbsolutePath, role = "*"), AppDefinition("app2".toAbsolutePath, role = "*"))
         val root = repo.root().futureValue
 
-        val newRoot = root.updateApps(PathId.empty, _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
+        val newRoot = root.updateApps(PathId.root, _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
 
         appRepo.store(any) returns Future.successful(Done)
 
@@ -69,11 +69,11 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
       "not store the group if updating apps fails" in {
         val appRepo = mock[AppRepository]
         val repo = createRepo(appRepo, mock[PodRepository], 1)
-        val apps = Seq(AppDefinition("app1".toRootPath), AppDefinition("app2".toRootPath))
+        val apps = Seq(AppDefinition("app1".toAbsolutePath, role = "*"), AppDefinition("app2".toAbsolutePath, role = "*"))
         val root = repo.root().futureValue
         repo.storeRoot(root, Nil, Nil, Nil, Nil).futureValue
 
-        val newRoot = root.updateApps(PathId.empty, apps = _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
+        val newRoot = root.updateApps(PathId.root, apps = _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
 
         val exception = new Exception("App Store Failed")
         appRepo.store(any) returns Future.failed(exception)
@@ -93,14 +93,14 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
       "store the group if deleting apps fails" in {
         val appRepo = mock[AppRepository]
         val repo = createRepo(appRepo, mock[PodRepository], 1)
-        val app1 = AppDefinition("app1".toRootPath)
-        val app2 = AppDefinition("app2".toRootPath)
+        val app1 = AppDefinition("app1".toAbsolutePath, role = "*")
+        val app2 = AppDefinition("app2".toAbsolutePath, role = "*")
         val apps = Seq(app1, app2)
         val root = repo.root().futureValue
         repo.storeRoot(root, Nil, Nil, Nil, Nil).futureValue
-        val deleted = "deleteMe".toRootPath
+        val deleted = "deleteMe".toAbsolutePath
 
-        val newRoot = root.updateApps(PathId.empty, _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
+        val newRoot = root.updateApps(PathId.root, _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
 
         val exception = new Exception("App Delete Failed")
         appRepo.store(any) returns Future.successful(Done)
@@ -129,14 +129,14 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         val appRepo = AppRepository.inMemRepository(store)
         val repo = createRepo(appRepo, mock[PodRepository], 2)
 
-        val app1 = AppDefinition("app1".toRootPath)
-        val app2 = AppDefinition("app2".toRootPath)
+        val app1 = AppDefinition("app1".toAbsolutePath, role = "*")
+        val app2 = AppDefinition("app2".toAbsolutePath, role = "*")
 
         val initialRoot = repo.root().futureValue
-        val firstRoot = initialRoot.updateApps(PathId.empty, _ => Map(app1.id -> app1), initialRoot.version)
+        val firstRoot = initialRoot.updateApps(PathId.root, _ => Map(app1.id -> app1), initialRoot.version)
         repo.storeRoot(firstRoot, Seq(app1), Nil, Nil, Nil).futureValue
 
-        val nextRoot = initialRoot.updateApps(PathId.empty, _ => Map(app2.id -> app2), version = Timestamp(1))
+        val nextRoot = initialRoot.updateApps(PathId.root, _ => Map(app2.id -> app2), version = Timestamp(1))
         repo.storeRoot(nextRoot, Seq(app2), Seq(app1.id), Nil, Nil).futureValue
 
         repo.rootVersion(firstRoot.version.toOffsetDateTime).futureValue.value should equal(firstRoot)

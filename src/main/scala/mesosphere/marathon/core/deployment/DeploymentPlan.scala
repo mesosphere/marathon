@@ -91,7 +91,7 @@ case class DeploymentStepInfo(
     step: DeploymentStep,
     stepIndex: Int,
     readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {
-  lazy val readinessChecksByApp: Map[PathId, Seq[ReadinessCheckResult]] = {
+  lazy val readinessChecksByApp: Map[AbsolutePathId, Seq[ReadinessCheckResult]] = {
     readinessChecks.values.groupBy(_.taskId.runSpecId).map { case (k, v) => k -> v.to[Seq] }.withDefaultValue(Seq.empty)
   }
 }
@@ -108,7 +108,7 @@ case class DeploymentStepInfo(
   * by prior steps.
   */
 case class DeploymentPlan(
-    id: String,
+    id: String, // This is a UUID, *not* a path in any way
     original: RootGroup,
     target: RootGroup,
     steps: Seq[DeploymentStep],
@@ -126,10 +126,10 @@ case class DeploymentPlan(
   lazy val affectedRunSpecs: Set[RunSpec] = steps.flatMap(_.actions.map(_.runSpec))(collection.breakOut)
 
   /** @return all ids of apps which are referenced in any deployment actions */
-  lazy val affectedRunSpecIds: Set[PathId] = steps.flatMap(_.actions.map(_.runSpec.id))(collection.breakOut)
+  lazy val affectedRunSpecIds: Set[AbsolutePathId] = steps.flatMap(_.actions.map(_.runSpec.id))(collection.breakOut)
 
-  def affectedAppIds: Set[PathId] = affectedRunSpecs.collect{ case app: AppDefinition => app.id }
-  def affectedPodIds: Set[PathId] = affectedRunSpecs.collect{ case pod: PodDefinition => pod.id }
+  def affectedAppIds: Set[AbsolutePathId] = affectedRunSpecs.collect{ case app: AppDefinition => app.id }
+  def affectedPodIds: Set[AbsolutePathId] = affectedRunSpecs.collect{ case pod: PodDefinition => pod.id }
 
   def isAffectedBy(other: DeploymentPlan): Boolean =
     // FIXME: check for group change conflicts?
@@ -140,7 +140,7 @@ case class DeploymentPlan(
     target.transitiveApps.filterAs(app => affectedRunSpecIds(app.id))(collection.breakOut)
   }
 
-  lazy val deletedApps: Seq[PathId] = {
+  lazy val deletedApps: Seq[AbsolutePathId] = {
     original.transitiveAppIds.filter(appId => target.app(appId).isEmpty).toIndexedSeq
   }
 
@@ -148,7 +148,7 @@ case class DeploymentPlan(
     target.transitivePods.filter(pod => affectedRunSpecIds(pod.id)).toIndexedSeq
   }
 
-  lazy val deletedPods: Seq[PathId] = {
+  lazy val deletedPods: Seq[AbsolutePathId] = {
     original.transitivePodIds.filter(podId => target.pod(podId).isEmpty).toIndexedSeq
   }
 
@@ -160,7 +160,7 @@ case class DeploymentPlan(
     }
     def podString(pod: PodDefinition): String = {
       val containers = pod.containers.map(containerString).mkString(", ")
-      s"""Pod(id="${pod.id}", containers=[$containers])"""
+      s"""Pod(id="${pod.id}", containers=[$containers], role=${pod.role})"""
     }
     def containerString(container: MesosContainer): String = {
       val command = container.exec.map{
@@ -178,7 +178,7 @@ case class DeploymentPlan(
       val maybeDockerImage: Option[String] = app.container.collect { case c: Docker => c.image }
       val dockerImageString = maybeDockerImage.fold("")(image => ", image=\"" + image + "\"")
 
-      s"App(${app.id}$dockerImageString$cmdString$argsString))"
+      s"App(${app.id}$dockerImageString$cmdString$argsString, role = ${app.role}))"
     }
     def actionString(a: DeploymentAction): String = a match {
       case StartApplication(spec) => s"Start(${specString(spec)}, instances=0)"
@@ -212,7 +212,7 @@ object DeploymentPlan {
     * The "layered" aspect groups the run specs that have the same length of dependencies for parallel deployment.
     */
   private[deployment] def runSpecsGroupedByLongestPath(
-    affectedRunSpecIds: Set[PathId],
+    affectedRunSpecIds: Set[AbsolutePathId],
     rootGroup: RootGroup): SortedMap[Int, Iterable[RunSpec]] = {
 
     import org.jgrapht.DirectedGraph
@@ -246,13 +246,13 @@ object DeploymentPlan {
     * Returns a sequence of deployment steps, the order of which is derived
     * from the topology of the target group's dependency graph.
     */
-  def dependencyOrderedSteps(original: RootGroup, target: RootGroup, affectedIds: Set[PathId],
-    toKill: Map[PathId, Seq[Instance]]): Seq[DeploymentStep] = {
+  def dependencyOrderedSteps(original: RootGroup, target: RootGroup, affectedIds: Set[AbsolutePathId],
+    toKill: Map[AbsolutePathId, Seq[Instance]]): Seq[DeploymentStep] = {
 
     val runsByLongestPath: SortedMap[Int, Iterable[RunSpec]] = runSpecsGroupedByLongestPath(affectedIds, target)
 
-    runsByLongestPath.values.map { (equivalenceClass: Iterable[RunSpec]) =>
-      val actions: Iterable[DeploymentAction] = equivalenceClass.flatMap { (newSpec: RunSpec) =>
+    runsByLongestPath.values.map { equivalenceClass: Iterable[RunSpec] =>
+      val actions: Iterable[DeploymentAction] = equivalenceClass.flatMap { newSpec: RunSpec =>
         original.runSpec(newSpec.id) match {
           // New run spec.
           case None =>
@@ -287,7 +287,7 @@ object DeploymentPlan {
     original: RootGroup,
     target: RootGroup,
     version: Timestamp = Timestamp.now(),
-    toKill: Map[PathId, Seq[Instance]] = Map.empty,
+    toKill: Map[AbsolutePathId, Seq[Instance]] = Map.empty,
     id: Option[String] = None): DeploymentPlan = {
 
     // A collection of deployment steps for this plan.
@@ -310,15 +310,15 @@ object DeploymentPlan {
     )
 
     // applications that are either new or the specs are different should be considered for the dependency graph
-    val addedOrChanged: Iterable[PathId] = target.transitiveRunSpecs.collect {
+    val addedOrChanged: Iterable[AbsolutePathId] = target.transitiveRunSpecs.collect {
       case (spec) if (!original.runSpec(spec.id).contains(spec)) =>
         // the above could be optimized/refined further by checking the version info. The tests are actually
         // really bad about structuring this correctly though, so for now, we just make sure that
         // the specs are different (or brand new)
         spec.id
     }
-    val affectedApplications: Set[PathId] = {
-      val builder = Set.newBuilder[PathId]
+    val affectedApplications: Set[AbsolutePathId] = {
+      val builder = Set.newBuilder[AbsolutePathId]
       builder ++= addedOrChanged
       builder ++= original.transitiveRunSpecIds.filter(id => !target.exists(id))
       builder.result()

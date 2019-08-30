@@ -7,17 +7,18 @@ import com.wix.accord
 
 trait GroupCreation {
   def createRootGroup(
-    apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PathId, PodDefinition] = Group.defaultPods,
+    apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
+    pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
     groups: Set[Group] = Set.empty,
-    dependencies: Set[PathId] = Group.defaultDependencies,
+    dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
     validate: Boolean = true,
     enabledFeatures: Set[String] = Set.empty): RootGroup = {
     val group = RootGroup(apps, pods, groups.map(group => group.id -> group)(collection.breakOut), dependencies, version)
 
     if (validate) {
-      val validation = accord.validate(group)(RootGroup.rootGroupValidator(enabledFeatures))
+      val conf = if (enabledFeatures.isEmpty) AllConf.withTestConfig() else AllConf.withTestConfig("--enable_features", enabledFeatures.mkString(","))
+      val validation = accord.validate(group)(RootGroup.validRootGroup(conf))
       assert(validation.isSuccess, s"Provided test root group was not valid: ${validation.toString}")
     }
 
@@ -25,25 +26,28 @@ trait GroupCreation {
   }
 
   def createGroup(
-    id: PathId,
-    apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PathId, PodDefinition] = Group.defaultPods,
+    id: AbsolutePathId,
+    apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
+    pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
     groups: Set[Group] = Set.empty,
-    dependencies: Set[PathId] = Group.defaultDependencies,
+    dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
     validate: Boolean = true,
-    enabledFeatures: Set[String] = Set.empty): Group = {
-    val groupsById: Map[Group.GroupKey, Group] = groups.map(group => group.id -> group)(collection.breakOut)
+    enabledFeatures: Set[String] = Set.empty,
+    enforceRole: Boolean = false): Group = {
+    val groupsById: Map[AbsolutePathId, Group] = groups.map(group => group.id -> group)(collection.breakOut)
     val group = Group(
       id,
       apps,
       pods,
       groupsById,
       dependencies,
-      version)
+      version,
+      enforceRole)
 
     if (validate) {
-      val validation = accord.validate(group)(Group.validGroup(id.parent, enabledFeatures))
+      val conf = if (enabledFeatures.isEmpty) AllConf.withTestConfig() else AllConf.withTestConfig("--enable_features", enabledFeatures.mkString(","))
+      val validation = accord.validate(group)(Group.validGroup(id.parent, conf))
       assert(validation.isSuccess, s"Provided test group was not valid: ${validation.toString}")
     }
 

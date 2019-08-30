@@ -1,37 +1,37 @@
 package mesosphere.marathon
 package api.v2
 
-import java.time.Clock
 import java.net.URI
+import java.time.Clock
 
+import akka.event.EventStream
+import akka.stream.Materializer
+import akka.stream.scaladsl.Sink
+import com.wix.accord.Validator
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{Context, MediaType, Response}
-import akka.event.EventStream
-import akka.stream.Materializer
-import akka.stream.scaladsl.Sink
-import com.wix.accord.Validator
-import mesosphere.marathon.api.v2.validation.PodsValidation
+import mesosphere.marathon.Normalization._
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
+import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.{AuthResource, RestResource, TaskKiller}
 import mesosphere.marathon.core.appinfo.{PodSelector, PodStatusService, Selector}
 import mesosphere.marathon.core.event._
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.{Pod, Raml}
 import mesosphere.marathon.state.{PathId, Timestamp, VersionInfo}
-import mesosphere.marathon.util.SemanticVersion
+import mesosphere.marathon.util.RoleSettings
 import play.api.libs.json.Json
-import Normalization._
-import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.api.v2.Validation._
 
-import scala.concurrent.ExecutionContext
 import scala.async.Async._
+import scala.concurrent.ExecutionContext
 
 @Path("v2/pods")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -48,19 +48,11 @@ class PodsResource @Inject() (
     mat: Materializer,
     clock: Clock,
     scheduler: MarathonScheduler,
+    groupManager: GroupManager,
     pluginManager: PluginManager,
     val executionContext: ExecutionContext) extends RestResource with AuthResource {
 
   import PodsResource._
-  implicit def podDefValidator: Validator[Pod] =
-    PodsValidation.podValidator(
-      config.availableFeatures,
-      scheduler.mesosMasterVersion().getOrElse(SemanticVersion(0, 0, 0)), config.defaultNetworkName.toOption)
-
-  // If we change/add/upgrade the notion of a Pod and can't do it purely in the internal model,
-  // update the json first
-  private implicit val normalizer = PodNormalization.apply(PodNormalization.Configuration(
-    config.defaultNetworkName.toOption))
 
   // If we can normalize using the internal model, do that instead.
   // The version of the pod is changed here to make sure, the user has not send a version.
@@ -99,18 +91,24 @@ class PodsResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val podDef = unmarshal(body)
-      validateOrThrow(podDef)
-      val pod = normalize(Raml.fromRaml(podDef.normalize))
-      validateOrThrow(pod)(PodsValidation.pluginValidators)
+      val podRaml = unmarshal(body)
 
-      checkAuthorization(CreateRunSpec, pod)
-      val deployment = await(podSystem.create(pod, force))
+      val roleSettings = RoleSettings.forService(config, PathId(podRaml.id).canonicalPath(PathId.root), groupManager.rootGroup(), false)
+      implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
+      implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
+      implicit val podDefValidator: Validator[PodDefinition] = PodsValidation.podDefValidator(pluginManager, roleSettings)
+
+      validateOrThrow(podRaml)
+      val podDef = normalize(Raml.fromRaml(podRaml.normalize))
+      validateOrThrow(podDef)(podDefValidator)
+
+      checkAuthorization(CreateRunSpec, podDef)
+      val deployment = await(podSystem.create(podDef, force))
       eventBus.publish(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Created))
 
-      Response.created(new URI(pod.id.toString))
+      Response.created(new URI(podDef.id.toString))
         .header(RestResource.DeploymentHeader, deployment.id)
-        .entity(marshal(pod))
+        .entity(marshal(podDef))
         .build()
     }
   }
@@ -126,26 +124,32 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       import PathId._
 
-      val podId = id.toRootPath
-      val podDef = unmarshal(body)
-      validateOrThrow(podDef)
-      if (podId != podDef.id.toRootPath) {
+      val podId = id.toAbsolutePath
+      val podRaml = unmarshal(body)
+
+      val roleSettings = RoleSettings.forService(config, podId, groupManager.rootGroup(), force)
+      implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
+      implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
+      implicit val podDefValidator: Validator[PodDefinition] = PodsValidation.podDefValidator(pluginManager, roleSettings)
+
+      validateOrThrow(podRaml)
+      if (podId != podRaml.id.toAbsolutePath) {
         Response.status(Status.BAD_REQUEST).entity(
           s"""
-            |{"message": "'$podId' does not match definition's id ('${podDef.id}')" }
+            |{"message": "'$podId' does not match definition's id ('${podRaml.id}')" }
           """.stripMargin
         ).build()
       } else {
-        val pod = normalize(Raml.fromRaml(podDef.normalize))
-        validateOrThrow(pod)(PodsValidation.pluginValidators)
+        val podDef = normalize(Raml.fromRaml(podRaml.normalize))
+        validateOrThrow(podDef)
 
-        checkAuthorization(UpdateRunSpec, pod)
-        val deployment = await(podSystem.update(pod, force))
+        checkAuthorization(UpdateRunSpec, podDef)
+        val deployment = await(podSystem.update(podDef, force))
         eventBus.publish(PodEvent(req.getRemoteAddr, req.getRequestURI, PodEvent.Updated))
 
         val builder = Response
-          .ok(new URI(pod.id.toString))
-          .entity(marshal(pod))
+          .ok(new URI(podDef.id.toString))
+          .entity(marshal(podDef))
           .header(RestResource.DeploymentHeader, deployment.id)
         builder.build()
       }
@@ -171,7 +175,7 @@ class PodsResource @Inject() (
 
       import PathId._
 
-      withValid(id.toRootPath) { id =>
+      withValid(id.toAbsolutePath) { id =>
         podSystem.find(id).fold(notFound(s"""{"message": "pod with $id does not exist"}""")) { pod =>
           withAuthorization(ViewRunSpec, pod) {
             ok(marshal(pod))
@@ -192,7 +196,7 @@ class PodsResource @Inject() (
 
       import PathId._
 
-      val id = idOrig.toRootPath
+      val id = idOrig.toAbsolutePath
       validateOrThrow(id)
       podSystem.find(id) match {
         case Some(pod) =>
@@ -221,7 +225,7 @@ class PodsResource @Inject() (
 
       import PathId._
 
-      await(withValidF(id.toRootPath) { id =>
+      await(withValidF(id.toAbsolutePath) { id =>
         podStatusService.selectPodStatus(id, authzSelector).map {
           case None => notFound(id)
           case Some(status) => ok(Json.stringify(Json.toJson(status)))
@@ -240,7 +244,7 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       import PathId._
       import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-      await(withValidF(id.toRootPath) { id =>
+      await(withValidF(id.toAbsolutePath) { id =>
         async {
           val versions = await(podSystem.versions(id).runWith(Sink.seq))
           podSystem.find(id).fold(notFound(id)) { pod =>
@@ -262,7 +266,7 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       import PathId._
       val version = Timestamp(versionString)
-      await(withValidF(id.toRootPath) { id =>
+      await(withValidF(id.toAbsolutePath) { id =>
         async {
           await(podSystem.version(id, version)).fold(notFound(id)) { pod =>
             withAuthorization(ViewRunSpec, pod) {
@@ -302,7 +306,7 @@ class PodsResource @Inject() (
         ids should matchRegexFully(Instance.Id.InstanceIdRegex)
       }
       // don't need to authorize as taskKiller will do so.
-      val id = idOrig.toRootPath
+      val id = idOrig.toAbsolutePath
       validateOrThrow(id)
       validateOrThrow(instanceId)
       val parsedInstanceId = Instance.Id.fromIdString(instanceId)
@@ -336,7 +340,7 @@ class PodsResource @Inject() (
       }
 
       // don't need to authorize as taskKiller will do so.
-      val id = idOrig.toRootPath
+      val id = idOrig.toAbsolutePath
       validateOrThrow(id)
       val instancesToKill = Json.parse(body).as[Set[String]]
       validateOrThrow(instancesToKill)

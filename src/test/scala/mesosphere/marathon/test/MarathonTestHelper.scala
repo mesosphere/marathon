@@ -18,7 +18,6 @@ import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.PortMapping
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{AppRepository, GroupRepository, InstanceRepository, PodRepository}
 import mesosphere.marathon.stream.Implicits._
@@ -28,7 +27,7 @@ import mesosphere.mesos.protos.Implicits._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.DomainInfo
 import org.apache.mesos.Protos.DomainInfo.FaultDomain
-import org.apache.mesos.Protos.Resource.{DiskInfo, ReservationInfo}
+import org.apache.mesos.Protos.Resource.{AllocationInfo, DiskInfo, ReservationInfo}
 import org.apache.mesos.Protos._
 import org.apache.mesos.{Protos => Mesos}
 
@@ -110,6 +109,8 @@ object MarathonTestHelper {
     } else {
       None
     }
+
+    val allocationInfo = AllocationInfo.newBuilder().setRole("*")
     val offerBuilder = Offer.newBuilder
       .setId(OfferID("1"))
       .setFrameworkId(frameworkID)
@@ -119,6 +120,7 @@ object MarathonTestHelper {
       .addResources(gpuResource)
       .addResources(memResource)
       .addResources(diskResource)
+      .setAllocationInfo(allocationInfo)
 
     portsResource.foreach(offerBuilder.addResources)
 
@@ -352,12 +354,13 @@ object MarathonTestHelper {
       .addResources(ScalarResource(Resource.CPUS, 1.0, ResourceRole.Unreserved))
   }
 
-  def makeBasicApp(id: PathId = "/test-app".toPath) = AppDefinition(
+  def makeBasicApp(id: AbsolutePathId = AbsolutePathId("/test-app")) = AppDefinition(
     id,
     cmd = Some("sleep 60"),
     resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
     executor = "//cmd",
-    portDefinitions = Seq(PortDefinition(0))
+    portDefinitions = Seq(PortDefinition(0)),
+    role = "*"
   )
 
   def createTaskTrackerModule(
@@ -382,7 +385,8 @@ object MarathonTestHelper {
     }
     val updateSteps = Seq.empty[InstanceChangeHandler]
 
-    new InstanceTrackerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, groupRepo, updateSteps) {
+    val crashStrategy = new TestCrashStrategy
+    new InstanceTrackerModule(metrics, clock, defaultConfig(), leadershipModule, instanceRepo, groupRepo, updateSteps, crashStrategy) {
       // some tests create only one actor system but create multiple task trackers
       override protected lazy val instanceTrackerActorName: String = s"taskTracker_${Random.alphanumeric.take(10).mkString}"
     }
@@ -424,23 +428,23 @@ object MarathonTestHelper {
 
   def offerWithVolumes(taskId: Task.Id, hostname: String, agentId: String, localVolumeIds: LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer(
-      reservation = Some(TaskLabels.labelsForTask(frameworkId, taskId.reservationId)),
+      reservation = Some(TaskLabels.labelsForTask(frameworkId, Reservation.SimplifiedId(taskId.instanceId))),
       role = "test"
     ).setHostname(hostname)
       .setSlaveId(Mesos.SlaveID.newBuilder().setValue(agentId).build())
-      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava).build()
+      .addAllResources(persistentVolumeResources(Reservation.SimplifiedId(taskId.instanceId), localVolumeIds: _*).asJava).build()
   }
 
   def offerWithVolumesOnly(taskId: Task.Id, localVolumeIds: LocalVolumeId*) = {
     MarathonTestHelper.makeBasicOffer()
       .clearResources()
-      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava)
+      .addAllResources(persistentVolumeResources(Reservation.SimplifiedId(taskId.instanceId), localVolumeIds: _*).asJava)
       .build()
   }
 
   def addVolumesToOffer(offer: Offer.Builder, taskId: Task.Id, localVolumeIds: LocalVolumeId*): Offer.Builder = {
     offer
-      .addAllResources(persistentVolumeResources(taskId.reservationId, localVolumeIds: _*).asJava)
+      .addAllResources(persistentVolumeResources(Reservation.SimplifiedId(taskId.instanceId), localVolumeIds: _*).asJava)
   }
 
   def appWithPersistentVolume(): AppDefinition = {

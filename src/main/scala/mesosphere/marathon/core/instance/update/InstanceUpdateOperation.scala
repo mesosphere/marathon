@@ -28,6 +28,7 @@ object InstanceUpdateOperation {
   case class RescheduleReserved(instanceId: Instance.Id, runSpec: RunSpec) extends InstanceUpdateOperation
 
   case class Reserve(instanceId: Instance.Id, reservation: Reservation, agentInfo: AgentInfo) extends InstanceUpdateOperation
+  case class Unreserve(instanceId: Instance.Id) extends InstanceUpdateOperation
 
   /**
     * Creates a new instance. Scheduled instance has no information where it might run.

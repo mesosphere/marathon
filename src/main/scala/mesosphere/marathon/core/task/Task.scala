@@ -6,7 +6,7 @@ import java.util.{Base64, UUID}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
-import mesosphere.marathon.core.instance.{Instance, Reservation}
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
@@ -176,12 +176,10 @@ object Task {
     val idString: String
 
     // Quick access to the underlying run spec identifier of the task.
-    val runSpecId: PathId
+    val runSpecId: AbsolutePathId
 
     // Quick access to the underlying instance identifier of the task.
     val instanceId: Instance.Id
-
-    val reservationId: Reservation.Id
 
     // The Mesos task id representation of the task.
     lazy val mesosTaskId: MesosProtos.TaskID = MesosProtos.TaskID.newBuilder().setValue(idString).build()
@@ -216,14 +214,12 @@ object Task {
     * @param separator This can be "." or "_".
     * @param uuid A unique identifier of the task.
     */
-  case class LegacyId private (val runSpecId: PathId, separator: String, uuid: UUID) extends Id {
+  case class LegacyId private (runSpecId: AbsolutePathId, separator: String, uuid: UUID) extends Id {
 
     // A stringifed version of the id.
     override val idString: String = runSpecId.safePath + separator + uuid
 
     override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
-
-    override val reservationId = Reservation.LegacyId(runSpecId, separator, uuid)
 
     override val containerName: Option[String] = None
   }
@@ -243,14 +239,12 @@ object Task {
     * @param uuid A unique identifier of the task.
     * @param attempt Counts how often a task has been launched on a specific reservation.
     */
-  case class LegacyResidentId private (val runSpecId: PathId, separator: String, uuid: UUID, attempt: Long) extends Id {
+  case class LegacyResidentId private (runSpecId: AbsolutePathId, separator: String, uuid: UUID, attempt: Long) extends Id {
 
     // A stringifed version of the id.
     override val idString: String = runSpecId.safePath + separator + uuid + "." + attempt
 
     override lazy val instanceId: Instance.Id = Instance.Id(runSpecId, Instance.PrefixMarathon, uuid)
-
-    override val reservationId = Reservation.LegacyId(runSpecId, separator, uuid)
 
     override val containerName: Option[String] = None
   }
@@ -272,15 +266,13 @@ object Task {
     * @param instanceId Identifies the instance the task belongs to.
     * @param containerName If set identifies the container in the pod. Defaults to [[Task.Id.Names.anonymousContainer]].
     */
-  case class EphemeralTaskId private (val instanceId: Instance.Id, val containerName: Option[String]) extends Id {
+  case class EphemeralTaskId private (instanceId: Instance.Id, containerName: Option[String]) extends Id {
 
     // A stringifed version of the id.
-    override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer)
+    override val idString: String = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer)
 
     // Quick access to the underlying run spec identifier of the task.
-    override lazy val runSpecId: PathId = instanceId.runSpecId
-
-    override lazy val reservationId = Reservation.SimplifiedId(instanceId)
+    override lazy val runSpecId: AbsolutePathId = instanceId.runSpecId
   }
 
   /**
@@ -305,9 +297,7 @@ object Task {
     override val idString = instanceId.idString + "." + containerName.getOrElse(Id.Names.anonymousContainer) + "." + incarnation
 
     // Quick access to the underlying run spec identifier of the task.
-    override lazy val runSpecId: PathId = instanceId.runSpecId
-
-    override lazy val reservationId = Reservation.SimplifiedId(instanceId)
+    override lazy val runSpecId: AbsolutePathId = instanceId.runSpecId
   }
 
   object Id {

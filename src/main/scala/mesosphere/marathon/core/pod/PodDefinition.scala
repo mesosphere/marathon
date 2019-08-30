@@ -5,6 +5,7 @@ package core.pod
 import mesosphere.marathon.api.v2.PodNormalization
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.{Endpoint, ExecutorResources, Pod, Raml, Resources}
+import mesosphere.marathon.state.Role
 import mesosphere.marathon.state._
 import play.api.libs.json.Json
 
@@ -15,7 +16,7 @@ import scala.collection.immutable.Seq
   * A definition for Pods.
   */
 case class PodDefinition(
-    id: PathId = PodDefinition.DefaultId,
+    id: AbsolutePathId = PodDefinition.DefaultId,
     user: Option[String] = PodDefinition.DefaultUser,
     env: Map[String, EnvVarValue] = PodDefinition.DefaultEnv,
     labels: Map[String, String] = PodDefinition.DefaultLabels,
@@ -29,9 +30,11 @@ case class PodDefinition(
     backoffStrategy: BackoffStrategy = PodDefinition.DefaultBackoffStrategy,
     upgradeStrategy: UpgradeStrategy = PodDefinition.DefaultUpgradeStrategy,
     executorResources: Resources = PodDefinition.DefaultExecutorResources,
+    linuxInfo: Option[LinuxInfo] = PodDefinition.DefaultLinuxInfo,
     override val volumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,
-    override val killSelection: KillSelection = KillSelection.DefaultKillSelection
+    override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
+    role: Role
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
   /**
@@ -76,7 +79,9 @@ case class PodDefinition(
           volumes != to.volumes ||
           networks != to.networks ||
           backoffStrategy != to.backoffStrategy ||
-          upgradeStrategy != to.upgradeStrategy
+          upgradeStrategy != to.upgradeStrategy ||
+          role != to.role ||
+          linuxInfo != to.linuxInfo
       }
     case _ =>
       // A validation rule will ensure, this can not happen
@@ -114,12 +119,14 @@ case class PodDefinition(
 }
 
 object PodDefinition {
+
   def fromProto(proto: Protos.Json): PodDefinition = {
     Raml.fromRaml(Json.parse(proto.getJson).as[Pod])
   }
 
   val DefaultExecutorResources: Resources = ExecutorResources().fromRaml
-  val DefaultId = PathId.empty
+  val DefaultLinuxInfo = Option.empty[LinuxInfo]
+  val DefaultId = PathId.root
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]
   val DefaultLabels = Map.empty[String, String]

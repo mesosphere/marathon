@@ -6,7 +6,7 @@ import java.util
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.AbsolutePathId
 import org.apache.zookeeper.ZooDefs.Perms
 import org.apache.zookeeper.data.{ACL, Id}
 import org.apache.zookeeper.{WatchedEvent, Watcher, ZooDefs, ZooKeeper}
@@ -90,7 +90,7 @@ class AuthorizedZooKeeperTest extends AkkaIntegrationTest with EmbeddedMarathonT
         result.code should be (201) //Created
         extractDeploymentIds(result) should have size 1
         waitForDeployment(result)
-        waitForTasks(app.id.toPath, 1) //make sure, the app has really started
+        waitForTasks(AbsolutePathId(app.id), 1) //make sure, the app has really started
       } finally {
         zooKeeper.close()
       }

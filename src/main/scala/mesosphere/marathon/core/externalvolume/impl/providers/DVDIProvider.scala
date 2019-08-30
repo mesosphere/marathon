@@ -83,6 +83,9 @@ private[externalvolume] case object DVDIProvider extends ExternalVolumeProvider 
 
   val driverOption = "dvdi/driver"
   val quotedDriverOption = '"' + driverOption + '"'
+
+  val driverValueRexRay = "rexray"
+
 }
 
 private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
@@ -238,7 +241,6 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       def volumeValidator(container: Container) = container match {
         case _: Container.Mesos => validMesosVolume
         case _: Container.MesosDocker => validMesosVolume
-        case _: Container.MesosAppC => validMesosVolume
         case _: Container.Docker => validDockerVolume
       }
 
@@ -284,7 +286,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       v.external.options.get(driverOption) as s""""external/options($quotedDriverOption)"""" is
         definedAnd(validLabel)
       v.external.options as "external/options" is
-        conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions)
+        conditional[Map[String, String]](_.get(driverOption).contains(driverValueRexRay))(validRexRayOptions)
     }
   }
 
@@ -309,7 +311,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       v.name is definedAnd(notEmpty)
       v.provider is definedAnd(equalTo(name))
       v.options.get(driverOption) as s"options($quotedDriverOption)" is definedAnd(validLabel)
-      v.options is conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions)
+      v.options is conditional[Map[String, String]](_.get(driverOption).contains(driverValueRexRay))(validRexRayOptions)
     }
     forAll(
       validator[AppExternalVolume] { v =>
@@ -326,10 +328,20 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
   private[this] def matchesProvider(volume: ExternalVolume): Boolean = volume.external.provider == name
   private[this] def matchesProviderRaml(volume: AppExternalVolume): Boolean = volume.external.provider.contains(name)
 
+  private[this] def isForUniquenessCheck(volume: ExternalVolume): Boolean = !volume.external.shared
+  private[this] def isForUniquenessCheckRaml(volume: AppExternalVolume): Boolean = !volume.external.shared
+
   private[this] def namesOfMatchingVolumes(app: AppDefinition): Seq[String] =
-    app.externalVolumes.withFilter(matchesProvider).map(_.external.name)
+    app
+      .externalVolumes
+      .withFilter(matchesProvider)
+      .withFilter(isForUniquenessCheck)
+      .map(_.external.name)
 
   private[this] def namesOfMatchingVolumes(app: App): Seq[String] =
-    app.container.fold(Seq.empty[AppExternalVolume])(_.volumes.collect{ case v: AppExternalVolume => v })
-      .withFilter(matchesProviderRaml).flatMap(_.external.name)
+    app.container
+      .fold(Seq.empty[AppExternalVolume])(_.volumes.collect{ case v: AppExternalVolume => v })
+      .withFilter(matchesProviderRaml)
+      .withFilter(isForUniquenessCheckRaml)
+      .flatMap(_.external.name)
 }

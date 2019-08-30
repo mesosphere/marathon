@@ -18,7 +18,7 @@ import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 import org.apache.mesos.Protos.DomainInfo.FaultDomain
 
-import scala.concurrent.Future
+import scala.concurrent.{Future, Promise}
 
 class MarathonSchedulerTest extends AkkaUnitTest {
   class Fixture {
@@ -40,7 +40,8 @@ class MarathonSchedulerTest extends AkkaUnitTest {
       frameworkIdRepository,
       mesosLeaderInfo,
       config,
-      crashStrategy) {
+      crashStrategy,
+      Promise[FrameworkID]) {
     }
   }
 

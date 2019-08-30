@@ -13,7 +13,7 @@ import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.util.ZookeeperServerTest
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.stream.EnrichedSink
 import org.scalatest.GivenWhenThen
 import org.scalatest.time.{Seconds, Span}
@@ -21,14 +21,14 @@ import org.scalatest.time.{Seconds, Span}
 class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhenThen {
   import PathId._
 
-  def randomAppId = UUID.randomUUID().toString.toRootPath
-  def randomApp = AppDefinition(randomAppId, versionInfo = VersionInfo.OnlyVersion(Timestamp.now()))
+  def randomAppId = UUID.randomUUID().toString.toAbsolutePath
+  def randomApp = AppDefinition(randomAppId, role = "*", versionInfo = VersionInfo.OnlyVersion(Timestamp.now()))
 
   override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(30, Seconds))
 
   val metrics: Metrics = DummyMetrics
 
-  def basic(name: String, createRepo: () => Repository[PathId, AppDefinition]): Unit = {
+  def basic(name: String, createRepo: () => Repository[AbsolutePathId, AppDefinition]): Unit = {
     s"$name:unversioned" should {
       "get of a non-existent value should return nothing" in {
         val repo = createRepo()
@@ -90,7 +90,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
     }
   }
 
-  def versioned(name: String, createRepo: () => VersionedRepository[PathId, AppDefinition]): Unit = {
+  def versioned(name: String, createRepo: () => VersionedRepository[AbsolutePathId, AppDefinition]): Unit = {
     s"$name:versioned" should {
       "list no versions when empty" in {
         val repo = createRepo()

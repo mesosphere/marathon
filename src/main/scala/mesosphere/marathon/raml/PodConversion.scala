@@ -43,6 +43,10 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
 
     val executorResources: ExecutorResources = podd.executorResources.getOrElse(PodDefinition.DefaultExecutorResources.toRaml)
 
+    val role = podd.role.getOrElse(throw new IllegalArgumentException("Failed to convert raml.Pod, no role provided. This is a bug in PodNormalization."))
+
+    val linuxInfo: Option[raml.LinuxInfo] = podd.linuxInfo.orElse(PodDefinition.DefaultLinuxInfo.map(_.toRaml))
+
     new PodDefinition(
       id = PathId(podd.id).canonicalPath(),
       user = podd.user,
@@ -59,8 +63,10 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       backoffStrategy = backoffStrategy,
       upgradeStrategy = upgradeStrategy,
       executorResources = executorResources.fromRaml,
+      linuxInfo = linuxInfo.map(Raml.fromRaml(_)),
       unreachableStrategy = unreachableStrategy,
-      killSelection = killSelection
+      killSelection = killSelection,
+      role = role
     )
   }
 
@@ -99,7 +105,9 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       scheduling = Some(schedulingPolicy),
       volumes = podDef.volumes.map(Raml.toRaml(_)),
       networks = podDef.networks.map(Raml.toRaml(_)),
-      executorResources = Some(podDef.executorResources.toRaml)
+      executorResources = Some(podDef.executorResources.toRaml),
+      role = Some(podDef.role),
+      linuxInfo = Raml.toRaml(podDef.linuxInfo)
     )
   }
 

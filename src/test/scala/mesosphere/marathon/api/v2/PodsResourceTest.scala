@@ -23,9 +23,9 @@ import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition, PodManager}
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
 import mesosphere.marathon.raml.{EnvVarSecret, ExecutorResources, FixedPodScalingPolicy, NetworkMode, PersistentVolumeInfo, PersistentVolumeType, Pod, PodPersistentVolume, PodSecretVolume, PodState, PodStatus, Raml, Resources, VolumeMount}
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, UnreachableStrategy, VersionInfo}
-import mesosphere.marathon.test.{JerseyTest, Mockito, SettableClock}
-import mesosphere.marathon.util.SemanticVersion
+import mesosphere.marathon.state._
+import mesosphere.marathon.test.{GroupCreation, JerseyTest, Mockito, SettableClock}
+import mesosphere.marathon.util.{RoleSettings, SemanticVersion}
 import play.api.libs.json._
 
 import scala.collection.immutable.Seq
@@ -396,13 +396,14 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
     "create a pod with a persistent volume" in {
       implicit val podSystem = mock[PodManager]
-      val f = Fixture()
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
       val podSpecJsonWithPersistentVolume =
         """
           | { "id": "/mypod",
+          |   "role": "foo",
           |   "containers": [ {
           |     "name": "dataapp",
           |     "resources": { "cpus": 0.03, "mem": 64 },
@@ -432,9 +433,114 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
     }
 
+    "fail to create a pod with a persistent volume if role is set to *" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+
+      podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val podSpecJsonWithPersistentVolume =
+        """
+          | { "id": "/mypod",
+          |   "role": "*",
+          |   "containers": [ {
+          |     "name": "dataapp",
+          |     "resources": { "cpus": 0.03, "mem": 64 },
+          |     "image": { "kind": "DOCKER", "id": "busybox" },
+          |     "exec": { "command": { "shell": "sleep 1" } },
+          |     "volumeMounts": [ { "name": "pst", "mountPath": "pst1", "readOnly": false } ]
+          |   } ],
+          |   "volumes": [ {
+          |     "name": "pst",
+          |     "persistent": { "type": "root", "size": 10 }
+          |   } ] }
+        """.stripMargin
+
+      val response = asyncRequest { r =>
+        f.podsResource.update("/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request, r)
+      }
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(422)
+        response.getEntity.toString should include("Resident pods cannot have the role *")
+      }
+    }
+
+    "fail to update a pod with a persistent volume without force parameter" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+
+      val pathId = "/foo/mypod".toAbsolutePath
+      val existingPod = PodDefinition(id = pathId, role = "*")
+
+      f.prepareGroup("/foo", Map(pathId -> existingPod))
+
+      podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+      val podSpecJsonWithPersistentVolume =
+        """
+          | { "id": "/foo/mypod",
+          |   "role": "foo",
+          |   "containers": [ {
+          |     "name": "dataapp",
+          |     "resources": { "cpus": 0.03, "mem": 64 },
+          |     "image": { "kind": "DOCKER", "id": "busybox" },
+          |     "exec": { "command": { "shell": "sleep 1" } },
+          |     "volumeMounts": [ { "name": "pst", "mountPath": "pst1", "readOnly": false } ]
+          |   } ],
+          |   "volumes": [ {
+          |     "name": "pst",
+          |     "persistent": { "type": "root", "size": 10 }
+          |   } ] }
+        """.stripMargin
+
+      val response = asyncRequest { r =>
+        f.podsResource.update("/foo/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = false, f.auth.request, r)
+      }
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(422)
+        response.getEntity.toString should include(RoleSettings.residentRoleChangeWarningMessage("*", "foo"))
+      }
+    }
+
+    "update a pod with a persistent volume with force parameter" in {
+      implicit val podSystem = mock[PodManager]
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+
+      val pathId = "/foo/mypod".toAbsolutePath
+      val existingPod = PodDefinition(id = pathId, role = "*")
+
+      f.prepareGroup("/foo", Map(pathId -> existingPod))
+
+      podSystem.update(any, eq(true)).returns(Future.successful(DeploymentPlan.empty))
+
+      val podSpecJsonWithPersistentVolume =
+        """
+          | { "id": "/foo/mypod",
+          |   "role": "foo",
+          |   "containers": [ {
+          |     "name": "dataapp",
+          |     "resources": { "cpus": 0.03, "mem": 64 },
+          |     "image": { "kind": "DOCKER", "id": "busybox" },
+          |     "exec": { "command": { "shell": "sleep 1" } },
+          |     "volumeMounts": [ { "name": "pst", "mountPath": "pst1", "readOnly": false } ]
+          |   } ],
+          |   "volumes": [ {
+          |     "name": "pst",
+          |     "persistent": { "type": "root", "size": 10 }
+          |   } ] }
+        """.stripMargin
+
+      val response = asyncRequest { r =>
+        f.podsResource.update("/foo/mypod", podSpecJsonWithPersistentVolume.getBytes(), force = true, f.auth.request, r)
+      }
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(HttpServletResponse.SC_OK)
+      }
+    }
+
     "fail to create a pod with a persistent volume if unreachable strategy is enabled" in {
       implicit val podSystem = mock[PodManager]
-      val f = Fixture()
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -466,7 +572,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
     "fail to create a pod with a persistent volume if upgrade.maximumOverCapacity != 0" in {
       implicit val podSystem = mock[PodManager]
-      val f = Fixture()
+      val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -506,6 +612,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       val podSpecJsonWithPersistentVolume =
         """
           | { "id": "/mypod",
+          |   "role": "foo",
           |   "scheduling": { "placement": { "acceptedResourceRoles": ["*", "slave_public"] } },
           |   "containers": [ {
           |     "name": "dataapp",
@@ -534,7 +641,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       implicit val podSystem = mock[PodManager]
       val f = Fixture()
 
-      podSystem.find(any).returns(Some(PodDefinition()))
+      podSystem.find(any).returns(Some(PodDefinition(role = "*")))
       podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
       val response = asyncRequest { r =>
         f.podsResource.remove("/mypod", force = false, f.auth.request, r)
@@ -569,7 +676,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       implicit val podSystem = mock[PodManager]
       val f = Fixture()
 
-      podSystem.findAll(any).returns(List(PodDefinition(), PodDefinition()))
+      podSystem.findAll(any).returns(List(PodDefinition(role = "*"), PodDefinition(role = "*")))
       val response = asyncRequest { r => f.podsResource.findAll(f.auth.request, r) }
 
       withClue(s"response body: ${response.getEntity}") {
@@ -584,7 +691,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       implicit val podStatusService = mock[PodStatusService]
       val f = Fixture()
 
-      podStatusService.selectPodStatus(any, any).returns(Future(Some(PodStatus("mypod", Pod("mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
+      podStatusService.selectPodStatus(any, any).returns(Future(Some(PodStatus("/mypod", Pod("/mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
 
       val response = asyncRequest { r => f.podsResource.status("/mypod", f.auth.request, r) }
 
@@ -592,7 +699,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         response.getStatus should be(HttpServletResponse.SC_OK)
 
         val jsonBody = Json.parse(response.getEntity.asInstanceOf[String])
-        (jsonBody \ "id").get.asInstanceOf[JsString].value shouldEqual "mypod"
+        (jsonBody \ "id").get.asInstanceOf[JsString].value shouldEqual "/mypod"
       }
     }
 
@@ -601,8 +708,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       implicit val podSystem = mock[PodManager]
       val f = Fixture()
 
-      podSystem.ids().returns(Set(PathId("mypod")))
-      podStatusService.selectPodStatuses(any, any).returns(Future(Seq(PodStatus("mypod", Pod("mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
+      podSystem.ids().returns(Set(AbsolutePathId("/mypod")))
+      podStatusService.selectPodStatuses(any, any).returns(Future(Seq(PodStatus("/mypod", Pod("/mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
 
       val response = asyncRequest { r => f.podsResource.allStatus(f.auth.request, r) }
 
@@ -672,53 +779,6 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         pullConfig.secret should be ("pullConfigSecret")
 
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
-      }
-    }
-
-    "Creating a new pod with w/ AppC image and config.json should fail" in {
-      implicit val podSystem = mock[PodManager]
-      val f = Fixture(configArgs = Seq("--enable_features", "secrets"))
-
-      podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
-
-      val podJson =
-        """
-          |{
-          |    "id": "/pod",
-          |    "containers": [{
-          |        "name": "container0",
-          |        "resources": {
-          |            "cpus": 0.1,
-          |            "mem": 32
-          |        },
-          |        "image": {
-          |            "kind": "APPC",
-          |            "id": "private/image",
-          |            "pullConfig": {
-          |                "secret": "pullConfigSecret"
-          |            }
-          |        },
-          |        "exec": {
-          |            "command": {
-          |                "shell": "sleep 1"
-          |            }
-          |        }
-          |    }],
-          |    "secrets": {
-          |        "pullConfigSecret": {
-          |            "source": "/config"
-          |        }
-          |    }
-          |}
-        """.stripMargin
-
-      val response = asyncRequest { r =>
-        f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
-      }
-
-      withClue(s"response body: ${response.getEntity}") {
-        response.getStatus should be(422)
-        response.getEntity.toString should include("pullConfig is supported only with Docker images")
       }
     }
 
@@ -811,6 +871,344 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         response.getEntity.toString should include("Feature secrets is not enabled. Enable with --enable_features secrets)")
         response.getEntity.toString should include("pullConfig.secret must refer to an existing secret")
       }
+    }
+
+    "Support multi-roles" when {
+
+      "A pod definition with no role defined should be success and have default role set" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+          val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
+          pod.role should be(ResourceRole.Unreserved)
+        }
+      }
+
+      "A pod definition with no role defined should be success and have mesos_role role set" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture(configArgs = Seq("--mesos_role", "customMesosRole"))
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+          val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
+          pod.role should be("customMesosRole")
+        }
+      }
+
+      "A pod definition with role defined the same as mesos_role should be success" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture(configArgs = Seq("--mesos_role", "customMesosRole"))
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "role": "customMesosRole",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+          val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
+          pod.role should be("customMesosRole")
+        }
+      }
+
+      "A pod definition with not default role defined should fail" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "role": "NotTheDefaultRole",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(422)
+          response.getEntity.toString should include("expected one of: ")
+        }
+      }
+
+      "A pod definition in a top-level group with no role defined should have the default role" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        f.prepareGroup("/dev")
+
+        val podJson =
+          """
+            |{
+            |    "id": "/dev/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+          val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[String])).get)
+          pod.role should be(ResourceRole.Unreserved)
+        }
+      }
+
+      "A pod definition in a top-level group with the group role defined should be success" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        f.prepareGroup("/dev")
+
+        val podJson =
+          """
+            |{
+            |    "id": "/dev/pod",
+            |    "role": "dev",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "A pod definition in a top-level group with the group role defined should be success, even if group does not exist" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        f.prepareRootGroup()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/dev/pod",
+            |    "role": "dev",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "A pod update with a custom role should fail if the existing pod has a different custom role" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val existingPodId = AbsolutePathId("/dev/pod")
+        f.prepareGroup("/dev", pods = Map(existingPodId -> PodDefinition(id = existingPodId, role = "differentCustomRole")))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/dev/pod",
+            |    "role": "someCustomRole",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.update("/dev/pod", podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(422)
+          response.getEntity.toString should include("expected one of: ")
+        }
+      }
+
+      "A pod update with a custom role should be success if the existing pod has the same role" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val existingPodId = AbsolutePathId("/dev/pod")
+        f.prepareGroup("/dev", pods = Map(existingPodId -> PodDefinition(id = existingPodId, role = "someCustomRole")))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/dev/pod",
+            |    "role": "someCustomRole",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.update("/dev/pod", podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(200)
+        }
+      }
+
     }
 
     "Support seccomp" when {
@@ -990,6 +1388,422 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           response.getEntity.toString should include("Seccomp unconfined must be true when Profile is NOT defined")
         }
       }
+
+      "Decline a pod definition with ANY seccomp configuration on executor level" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }],
+            |    "linuxInfo": {
+            |        "seccomp": {
+            |        }
+            |    }
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(422)
+          response.getEntity.toString should include("Seccomp configuration on executor level is not supported")
+        }
+      }
+    }
+
+    "Support shared memory" when {
+
+      "Accept a pod definition with private IPC and shm size defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "SHARE_PARENT"
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }],
+            |    "linuxInfo": {
+            |       "ipcInfo": {
+            |           "mode": "PRIVATE",
+            |           "shmSize": 16
+            |       }
+            |    }
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "Accept a pod definition with private IPC and shm size NOT defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "SHARE_PARENT"
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }],
+            |    "linuxInfo": {
+            |       "ipcInfo": {
+            |           "mode": "PRIVATE"
+            |       }
+            |    }
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "Decline a pod definition with shared parent IPC and shm size defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "SHARE_PARENT"
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }],
+            |    "linuxInfo": {
+            |        "ipcInfo": {
+            |            "mode": "SHARE_PARENT",
+            |            "shmSize": 16
+            |        }
+            |    }
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(422)
+          response.getEntity.toString should include("ipcInfo shmSize can NOT be set when mode is SHARE_PARENT")
+        }
+      }
+
+      "Accept a pod definition with shared Parent IPC and shm size NOT defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "SHARE_PARENT"
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }],
+            |    "linuxInfo": {
+            |       "ipcInfo": {
+            |           "mode": "SHARE_PARENT"
+            |       }
+            |    }
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "Accept a pod definition with container that has private IPC and shm size defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "PRIVATE",
+            |              "shmSize": 16
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "Accept a pod definition with container that has private IPC and shm size NOT defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "PRIVATE"
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
+
+      "Decline a pod definition with container that has shared parent IPC and shm size defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "SHARE_PARENT",
+            |              "shmSize": 16
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(422)
+          response.getEntity.toString should include("ipcInfo shmSize can NOT be set when mode is SHARE_PARENT")
+        }
+      }
+
+      "Accept a pod definition with container that has shared parent IPC and shm size NOT defined" in {
+        implicit val podSystem = mock[PodManager]
+        val f = Fixture()
+
+        podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
+
+        val podJson =
+          """
+            |{
+            |    "id": "/pod",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": {
+            |            "kind": "DOCKER",
+            |            "id": "private/image"
+            |        },
+            |        "linuxInfo": {
+            |          "ipcInfo": {
+            |              "mode": "SHARE_PARENT"
+            |          }
+            |        },
+            |        "exec": {
+            |            "command": {
+            |                "shell": "sleep 1"
+            |            }
+            |        }
+            |    }]
+            |}
+          """.stripMargin
+
+        val response = asyncRequest { r =>
+          f.podsResource.create(podJson.getBytes(), force = false, f.auth.request, r)
+        }
+
+        withClue(s"response body: ${response.getEntity}") {
+          response.getStatus should be(201)
+        }
+      }
     }
 
     "support versions" when {
@@ -1024,7 +1838,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
       "there are versions" when {
         import mesosphere.marathon.state.PathId._
-        val pod1 = PodDefinition("/id".toRootPath, containers = Seq(MesosContainer(name = "foo", resources = Resources())))
+        val pod1 = PodDefinition("/id".toAbsolutePath, containers = Seq(MesosContainer(name = "foo", resources = Resources())), role = "*")
         val pod2 = pod1.copy(versionInfo = VersionInfo.OnlyVersion(pod1.version + 1.minute))
         "list the available versions" in {
           val groupManager = mock[GroupManager]
@@ -1062,14 +1876,15 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         "attempting to kill a single instance" in {
           implicit val killer = mock[TaskKiller]
           val f = Fixture()
-          val runSpec = AppDefinition(id = "/id1".toRootPath, versionInfo = VersionInfo.OnlyVersion(f.clock.now()))
+          val runSpec = AppDefinition(id = "/id1".toAbsolutePath, versionInfo = VersionInfo.OnlyVersion(f.clock.now()), role = "*")
           val instanceId = Instance.Id.fromIdString("id1.instance-a905036a-f6ed-11e8-9688-2a978491fd64")
           val instance = Instance(
             instanceId, Some(Instance.AgentInfo("", None, None, None, Nil)),
             InstanceState(Condition.Running, f.clock.now(), Some(f.clock.now()), None, Goal.Running),
             Map.empty,
             runSpec = runSpec,
-            None
+            None,
+            role = "*"
           )
           killer.kill(any, any, any)(any) returns Future.successful(Seq(instance))
           val response = asyncRequest { r =>
@@ -1101,17 +1916,19 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         }
         "attempting to kill multiple instances" in {
           implicit val killer = mock[TaskKiller]
-          val runSpec = AppDefinition(id = "/id1".toRootPath, unreachableStrategy = UnreachableStrategy.default())
+          val runSpec = AppDefinition(id = "/id1".toAbsolutePath, unreachableStrategy = UnreachableStrategy.default(), role = "*")
           val instances = Seq(
             Instance(Instance.Id.forRunSpec(runSpec.id), Some(Instance.AgentInfo("", None, None, None, Nil)),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,
               runSpec,
-              None
+              None,
+              role = "*"
             ),
             Instance(Instance.Id.forRunSpec(runSpec.id), Some(Instance.AgentInfo("", None, None, None, Nil)),
               InstanceState(Condition.Running, Timestamp.now(), Some(Timestamp.now()), None, Goal.Running), Map.empty,
               runSpec,
-              None))
+              None,
+              role = "*"))
 
           val f = Fixture()
 
@@ -1134,7 +1951,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         "delete a pod without auth access" in {
           implicit val podSystem = mock[PodManager]
           val f = Fixture()
-          podSystem.find(any).returns(Some(PodDefinition()))
+          podSystem.find(any).returns(Some(PodDefinition(role = "*")))
           podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
           f.auth.authorized = false
           val response = asyncRequest { r =>
@@ -1152,10 +1969,10 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
         implicit val podSystem = mock[PodManager]
         val fixture = Fixture()
         podSystem.findAll(any).returns(Seq.empty)
-        podSystem.find(any).returns(Some(PodDefinition()))
+        podSystem.find(any).returns(Some(PodDefinition(role = "*")))
         podSystem.delete(any, any).returns(Future.successful(DeploymentPlan.empty))
         podSystem.ids().returns(Set.empty)
-        podSystem.version(any, any).returns(Future.successful(Some(PodDefinition())))
+        podSystem.version(any, any).returns(Future.successful(Some(PodDefinition(role = "*"))))
         podSystem.versions(any).returns(Source.empty)
         fixture.auth.authorized = authorized
         fixture.auth.authenticated = authenticated
@@ -1252,8 +2069,26 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       podsResource: PodsResource,
       auth: TestAuthFixture,
       podSystem: PodManager,
-      clock: SettableClock
-  )
+      clock: SettableClock,
+      groupManager: GroupManager
+  ) extends GroupCreation {
+
+    def prepareGroup(groupId: String, pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods): Unit = {
+      val groupPath = AbsolutePathId(groupId)
+
+      val group = createGroup(groupPath, pods = pods)
+
+      val root = createRootGroup(groups = Set(group))
+
+      groupManager.group(groupPath) returns Some(group)
+      groupManager.rootGroup() returns root
+    }
+
+    def prepareRootGroup(): Unit = {
+      val root = createRootGroup()
+      groupManager.rootGroup() returns root
+    }
+  }
 
   object Fixture {
     def apply(
@@ -1271,13 +2106,18 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       implicit val authn: Authenticator = auth.auth
       implicit val clock = new SettableClock()
       implicit val pluginManager: PluginManager = PluginManager.None
+      implicit val groupManager: GroupManager = mock[GroupManager]
+
       scheduler.mesosMasterVersion() returns Some(SemanticVersion(0, 0, 0))
+
       new Fixture(
         new PodsResource(config),
         auth,
         podSystem,
-        clock
+        clock,
+        groupManager
       )
     }
+
   }
 }

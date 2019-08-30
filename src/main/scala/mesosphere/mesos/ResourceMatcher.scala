@@ -227,7 +227,7 @@ object ResourceMatcher extends StrictLogging {
         // Add constraints to noOfferMatchReasons
         noOfferMatchReasons += NoOfferMatchReason.UnfulfilledConstraint
         logger.info(
-          s"Offer [${offer.getId.getValue}]. Constraints for run spec [${runSpec.id}] not satisfied.\n" +
+          s"Offer [${offer.getId.getValue}] with role [${offer.getAllocationInfo.getRole}]. Constraints for run spec [${runSpec.id}] not satisfied.\n" +
             s"The conflicting constraints are: [${badConstraints.mkString(", ")}]"
         )
       }
@@ -255,13 +255,6 @@ object ResourceMatcher extends StrictLogging {
       val availableGPUs = groupedResources.getOrElse(Resource.GPUS, Nil).foldLeft(0.0)(_ + _.getScalar.getValue)
       val gpuResourcesAreWasted = availableGPUs > 0 && runSpec.resources.gpus == 0
       applicationSpecificGpuBehavior.getOrElse(conf.gpuSchedulingBehavior()) match {
-        case GpuSchedulingBehavior.Undefined =>
-          if (gpuResourcesAreWasted) {
-            addOnMatch(() => logger.warn(s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
-              "will be launched on an agent with GPU resources."))
-          }
-          true
-
         case GpuSchedulingBehavior.Restricted =>
           val noPersistentVolumeToMatch = PersistentVolumeMatcher.matchVolumes(offer, reservedInstances).isEmpty
           if (!gpuResourcesAreWasted) {
@@ -376,13 +369,6 @@ object ResourceMatcher extends StrictLogging {
     volumesWithMounts: Seq[VolumeWithMount[PersistentVolume]],
     scope: ScalarMatchResult.Scope): Seq[ScalarMatchResult] = {
 
-    def matchesProfileName(profileName: Option[String], resource: Protos.Resource): Boolean = {
-      profileName.forall { specifiedProfileName =>
-        resource.hasDisk && resource.getDisk.hasSource && resource.getDisk.getSource.hasProfile &&
-          specifiedProfileName == resource.getDisk.getSource.getProfile
-      }
-    }
-
     @tailrec
     def findMatches(
       diskType: DiskType,
@@ -400,7 +386,7 @@ object ResourceMatcher extends StrictLogging {
             case Right(VolumeWithMount(volume, _)) =>
               def matcher(resource: Protos.Resource): Boolean = {
                 VolumeConstraints.meetsAllConstraints(resource, volume.persistent.constraints) &&
-                  matchesProfileName(volume.persistent.profileName, resource)
+                  VolumeProfileMatcher.matchesProfileName(volume.persistent.profileName, resource)
               }
 
               (matcher _, volume.persistent.size.toDouble)
@@ -448,7 +434,7 @@ object ResourceMatcher extends StrictLogging {
             VolumeConstraints.meetsAllConstraints(resource, nextAllocation.volume.persistent.constraints) &&
               (resourceSize >= nextAllocation.volume.persistent.size) &&
               (resourceSize <= nextAllocation.volume.persistent.maxSize.getOrElse(Long.MaxValue)) &&
-              matchesProfileName(nextAllocation.volume.persistent.profileName, resource)
+              VolumeProfileMatcher.matchesProfileName(nextAllocation.volume.persistent.profileName, resource)
           } match {
             case Some(matchedResource) =>
               val consumedAmount = matchedResource.getScalar.getValue
@@ -580,7 +566,7 @@ object ResourceMatcher extends StrictLogging {
     if (scalarMatchResults.exists(!_.matches)) {
       val basicResourceString = scalarMatchResults.mkString(", ")
       logger.info(
-        s"Offer [${offer.getId.getValue}]. " +
+        s"Offer [${offer.getId.getValue}] with role ${offer.getAllocationInfo.getRole}. " +
           s"$selector. " +
           s"Not all basic resources satisfied: $basicResourceString")
     }

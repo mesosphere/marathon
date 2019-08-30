@@ -5,13 +5,16 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.TaskIdWithIncarnation
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, RestResult}
+import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig, RestResult}
 import mesosphere.marathon.raml.App
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import org.scalatest.Inside
 
 class AgentGoneByOperatorIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
-  override lazy val mesosNumSlaves = 2
+
+  override lazy val mesosConfig = MesosConfig(
+    numAgents = 2
+  )
 
   "resident task will be expunged and a new instance will be created in response to TASK_GONE_BY_OPERATOR" in {
     Given("An app with a persistent volume")
@@ -60,5 +63,5 @@ class AgentGoneByOperatorIntegrationTest extends AkkaIntegrationTest with Embedd
     result
   }
 
-  def appId(suffix: String): PathId = PathId(s"/$testBasePath/app-$suffix")
+  def appId(suffix: String): AbsolutePathId = AbsolutePathId(s"/$testBasePath/app-$suffix")
 }

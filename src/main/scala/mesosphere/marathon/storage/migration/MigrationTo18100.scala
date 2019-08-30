@@ -83,14 +83,18 @@ object MigrationTo18100 extends StrictLogging {
       (__ \ "tasksMap").read[Map[Task.Id, Task]](taskMapReads17) ~
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[InstanceState](instanceStateReads17) ~
-      (__ \ "reservation").readNullable[Reservation]
-    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation) =>
+      (__ \ "reservation").readNullable[JsObject]
+    ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, rawReservation) =>
         logger.info(s"Migrate $instanceId")
+
+        val reservation = rawReservation.map { raw =>
+          raw.as[Reservation](InstanceMigration.legacyReservationReads(tasksMap, instanceId))
+        }
 
         // Override Condition.Unknown with inferred condition.
         val condition = tasksMap.valuesIterator.map(_.status.condition).minBy(InstanceState.conditionHierarchy)
         val updatedState = state.copy(condition = condition)
-        new Instance(instanceId, Some(agentInfo), updatedState, tasksMap, runSpecVersion, reservation)
+        new Instance(instanceId, Some(agentInfo), updatedState, tasksMap, runSpecVersion, reservation, None)
       }
   }
 

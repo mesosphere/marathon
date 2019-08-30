@@ -3,7 +3,7 @@ package core.launcher.impl
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.{Instance, Reservation}
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.util.state.FrameworkId
@@ -45,9 +45,9 @@ class TaskLabelsTest extends UnitTest {
     }
   }
   class Fixture {
-    val appId = PathId("/test")
+    val appId = AbsolutePathId("/test")
     val instanceId = Instance.Id.forRunSpec(appId)
-    val reservationId = Reservation.Id(instanceId)
+    val reservationId = Reservation.SimplifiedId(instanceId)
     val frameworkId = MarathonTestHelper.frameworkId
     val otherFrameworkId = FrameworkId("very other different framework id")
 

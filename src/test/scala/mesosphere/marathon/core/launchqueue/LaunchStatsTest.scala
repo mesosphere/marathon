@@ -6,11 +6,10 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestInstanceBuilder
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdated}
-import mesosphere.marathon.core.launcher.InstanceOp
-import mesosphere.marathon.core.launcher.OfferMatchResult
-import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics.MatchResult
+import mesosphere.marathon.core.launcher.{InstanceOp, OfferMatchResult}
 import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics
-import mesosphere.marathon.state.{PathId, RunSpec, Timestamp}
+import mesosphere.marathon.core.launchqueue.impl.OfferMatchStatistics.MatchResult
+import mesosphere.marathon.state.{AbsolutePathId, RunSpec, Timestamp}
 import mesosphere.marathon.stream.LiveFold
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.{Protos => Mesos}
@@ -22,7 +21,7 @@ class LaunchStatsTest extends AkkaUnitTest {
   import LaunchStats.LaunchingInstance
 
   class Fixture {
-    val runSpecA = MarathonTestHelper.makeBasicApp(id = PathId("/a"))
+    val runSpecA = MarathonTestHelper.makeBasicApp(id = AbsolutePathId("/a"))
     def offerFrom(agent: String, cpus: Double = 4) = MarathonTestHelper.makeBasicOffer(cpus = cpus)
       .setSlaveId(Mesos.SlaveID.newBuilder().setValue(agent)).build()
     val instanceOp = mock[InstanceOp]
@@ -42,7 +41,7 @@ class LaunchStatsTest extends AkkaUnitTest {
     val ts2 = ts1 + 1.minute
     val ts3 = ts1 + 2.minutes
 
-    val runSpecs: Map[PathId, RunSpec] = Seq(runSpecA).map { r => r.id -> r }.toMap
+    val runSpecs: Map[AbsolutePathId, RunSpec] = Seq(runSpecA).map { r => r.id -> r }.toMap
   }
 
   "launchingInstancesFold" should {

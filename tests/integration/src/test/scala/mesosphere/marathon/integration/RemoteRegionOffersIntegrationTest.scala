@@ -3,15 +3,11 @@ package integration
 
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{FaultDomain, PathId, Region, Zone}
+import mesosphere.marathon.state.{AbsolutePathId, FaultDomain, Region, Zone}
 import mesosphere.mesos.Constraints
 import org.scalatest.Inside
 
 class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
-
-  override lazy val mesosNumMasters = 1
-  override lazy val mesosNumSlaves = 3
 
   class Fixture {
     val homeRegion = Region("home_region")
@@ -24,14 +20,18 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
 
   val f = new Fixture
 
-  override def mastersFaultDomains = Seq(Some(FaultDomain(region = f.homeRegion, zone = f.homeZone)))
+  override lazy val mesosConfig = MesosConfig(
+    numAgents = 3,
+    mastersFaultDomains = Seq(
+      Some(FaultDomain(region = f.homeRegion, zone = f.homeZone))),
+    agentsFaultDomains = Seq(
+      Some(FaultDomain(region = f.remoteRegion, zone = f.remoteZone1)),
+      Some(FaultDomain(region = f.remoteRegion, zone = f.remoteZone2)),
+      Some(FaultDomain(region = f.homeRegion, zone = f.homeZone)))
 
-  override def agentsFaultDomains = Seq(
-    Some(FaultDomain(region = f.remoteRegion, zone = f.remoteZone1)),
-    Some(FaultDomain(region = f.remoteRegion, zone = f.remoteZone2)),
-    Some(FaultDomain(region = f.homeRegion, zone = f.homeZone)))
+  )
 
-  def appId(suffix: String): PathId = testBasePath / s"app-${suffix}"
+  def appId(suffix: String): AbsolutePathId = testBasePath / s"app-${suffix}"
 
   "Region Aware marathon" must {
     "Launch an instance of the app in the default region if region is not specified" in {
@@ -45,7 +45,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       result should be(Created)
 
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1)
+      waitForTasks(applicationId, 1)
       val task = marathon.tasks(applicationId).value.head
       task.region shouldBe Some(f.homeRegion.value)
     }
@@ -61,7 +61,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       Then("The app is created in the specified region")
       result should be(Created)
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1)
+      waitForTasks(applicationId, 1)
       val task = marathon.tasks(applicationId).value.head
       task.region shouldBe Some(f.remoteRegion.value)
     }
@@ -79,7 +79,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       Then("The app is created in the proper region and a proper zone")
       result should be(Created)
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1)
+      waitForTasks(applicationId, 1)
       val task = marathon.tasks(applicationId).value.head
       task.region shouldBe Some(f.remoteRegion.value)
       task.zone shouldBe Some(f.remoteZone2.value)

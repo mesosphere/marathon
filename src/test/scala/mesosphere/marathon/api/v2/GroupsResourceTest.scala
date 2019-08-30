@@ -255,8 +255,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     "Group Versions for root are transferred as simple json string array (Fix #2329)" in new Fixture {
       Given("Specific Group versions")
       val groupVersions = Seq(Timestamp.now(), Timestamp.now())
-      groupManager.versions(PathId.empty) returns Source(groupVersions)
-      groupManager.group(PathId.empty) returns Some(createGroup(PathId.empty))
+      groupManager.versions(PathId.root) returns Source(groupVersions)
+      groupManager.group(PathId.root) returns Some(createGroup(PathId.root))
 
       When("The versions are queried")
       val rootVersionsResponse = asyncRequest { r => groupsResource.group("versions", embed, auth.request, r) }
@@ -270,8 +270,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       Given("Specific group versions")
       val groupVersions = Seq(Timestamp.now(), Timestamp.now())
       groupManager.versions(any) returns Source(groupVersions)
-      groupManager.versions("/foo/bla/blub".toRootPath) returns Source(groupVersions)
-      groupManager.group("/foo/bla/blub".toRootPath) returns Some(createGroup("/foo/bla/blub".toRootPath))
+      groupManager.versions("/foo/bla/blub".toAbsolutePath) returns Source(groupVersions)
+      groupManager.group("/foo/bla/blub".toAbsolutePath) returns Some(createGroup("/foo/bla/blub".toAbsolutePath))
 
       When("The versions are queried")
       val rootVersionsResponse = asyncRequest { r => groupsResource.group("/foo/bla/blub/versions", embed, auth.request, r) }
@@ -283,8 +283,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
     "Creation of a group with same path as an existing app should be prohibited (fixes #3385)" in new FixtureWithRealGroupManager(
       initialRoot = {
-        val app = AppDefinition("/group/app".toRootPath, cmd = Some("sleep"))
-        createRootGroup(groups = Set(createGroup("/group".toRootPath, Map(app.id -> app))), validate = false)
+        val app = AppDefinition("/group/app".toAbsolutePath, cmd = Some("sleep"), role = "*")
+        createRootGroup(groups = Set(createGroup("/group".toAbsolutePath, Map(app.id -> app))), validate = false)
       }
     ) {
       Given("A real group manager with one app")
@@ -300,7 +300,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "Creation of a group with same path as an existing group should be prohibited" in
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/group".toRootPath)))) {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/group".toAbsolutePath)))) {
         When("creating a group with the same path existing app")
         val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group"))))
 
@@ -369,7 +369,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
         val response = asyncRequest { r =>
           groupsResource.createWithPath("/foo", false, body.getBytes, auth.request, r)
         }
-        response.getEntity.toString.should(include("Identifier is not child of /foo/sub."))
+        response.getEntity.toString.should(include("Identifier is not child of '/foo/sub'"))
         response.getStatus shouldBe 422
       }
     }
@@ -398,7 +398,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/foo", "/foo/sub", "/foo/sub")
-        rootGroup.app(PathId("/foo/sub/bibi")).shouldNot(be(empty))
+        rootGroup.app(AbsolutePathId("/foo/sub/bibi")).shouldNot(be(empty))
       }
     }
 
@@ -429,7 +429,170 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
         val rootGroup = groupManager.rootGroup()
         groupPaths(rootGroup) shouldBe Set("/", "/test-group", "/test-group/sleep")
-        rootGroup.app(PathId("/test-group/sleep/goodnight")).shouldNot(be(empty))
+        rootGroup.app(AbsolutePathId("/test-group/sleep/goodnight")).shouldNot(be(empty))
+      }
+    }
+
+    "Allow batch creation of a top-level group with enforce role and apps" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+        val body =
+          """
+        {
+          "groups": [
+            {
+              "apps": [
+                {
+                  "id": "goodnight",
+                  "cmd": "sleep 1",
+                  "instances": 0,
+                  "role": "prod"
+                }
+              ],
+              "id": "sleep"
+            }
+          ],
+          "id": "/prod",
+          "enforceRole": true
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("", false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 201
+
+        val rootGroup = groupManager.rootGroup()
+        groupPaths(rootGroup) shouldBe Set("/", "/prod", "/prod/sleep")
+        rootGroup.app(AbsolutePathId("/prod/sleep/goodnight")).value.role should be("prod")
+      }
+    }
+
+    "Fail a batch update when apps are modified and enforceRole is changed for an unrelated group" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(Group(id = AbsolutePathId("/dev"), enforceRole = false)))) {
+        val body =
+          """
+        {
+          "groups": [
+            {
+              "id": "unrelated",
+              "apps": [
+                {
+                  "id": "goodnight",
+                  "cmd": "sleep 1",
+                  "instances": 0
+                }
+              ]
+            },
+            {
+              "id": "/dev",
+              "enforceRole": true
+            }
+          ],
+          "id": "/"
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("", false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 422
+        response.getEntity.toString.should(include(Group.disallowEnforceRoleChangeIfServicesChanged.EnforceRoleCantBeChangedMessage))
+      }
+    }
+
+    "Fail a batch update when app role is invalid" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+        val body =
+          """
+        {
+          "groups": [
+            {
+              "apps": [
+                {
+                  "id": "goodnight",
+                  "cmd": "sleep 1",
+                  "instances": 0,
+                  "role": "invalid"
+                }
+              ],
+              "id": "sleep"
+            }
+          ],
+          "id": "/prod",
+          "enforceRole": true
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("", false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 422
+      }
+    }
+
+    "Default according to the top-level group enforce role field" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+        val body =
+          """
+        {
+          "groups": [
+            {
+              "apps": [
+                {
+                  "id": "goodnight",
+                  "cmd": "sleep 1",
+                  "instances": 0
+                }
+              ],
+              "id": "sleep"
+            }
+          ],
+          "id": "/prod",
+          "enforceRole": true
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("", false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 201
+
+        val rootGroup = groupManager.rootGroup()
+        groupPaths(rootGroup) shouldBe Set("/", "/prod", "/prod/sleep")
+        rootGroup.app(AbsolutePathId("/prod/sleep/goodnight")).value.role should be("prod")
+      }
+    }
+
+    "Default according to the top-level group when enforce role = false" in {
+      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+        val body =
+          """
+        {
+          "groups": [
+            {
+              "apps": [
+                {
+                  "id": "goodnight",
+                  "cmd": "sleep 1",
+                  "instances": 0
+                }
+              ],
+              "id": "sleep"
+            }
+          ],
+          "id": "/prod",
+          "enforceRole": false
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.createWithPath("", false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 201
+
+        val rootGroup = groupManager.rootGroup()
+        groupPaths(rootGroup) shouldBe Set("/", "/prod", "/prod/sleep")
+        rootGroup.app(AbsolutePathId("/prod/sleep/goodnight")).value.role should be(config.mesosRole())
       }
     }
   }

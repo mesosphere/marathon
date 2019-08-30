@@ -2,16 +2,15 @@ package mesosphere.marathon
 package core.instance
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, UnreachableStrategy}
-import org.scalatest.prop.TableDrivenPropertyChecks
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, UnreachableStrategy}
+import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos.Attribute
 import org.apache.mesos.Protos.Value.{Text, Type}
+import org.scalatest.prop.TableDrivenPropertyChecks
 import play.api.libs.json._
 
 class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
@@ -96,8 +95,9 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
   "say it's reserved when reservation is set" in {
     val f = new Fixture
-    val instance = f.instanceWith(Condition.Scheduled, Seq.empty)._1.copy(reservation = Some(Reservation(Seq.empty, Reservation.State.New(None))))
-    instance.hasReservation should be (true)
+    val (instance, _) = f.instanceWith(Condition.Scheduled, Seq.empty)
+    val instanceWithReservation = instance.copy(reservation = Some(Reservation(Seq.empty, Reservation.State.New(None), Reservation.SimplifiedId(instance.instanceId))))
+    instanceWithReservation.hasReservation should be (true)
   }
 
   "agentInfo serialization" should {
@@ -120,8 +120,8 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
   }
 
   class Fixture {
-    val id = "/test".toPath
-    val app = AppDefinition(id)
+    val id = AbsolutePathId("/test")
+    val app = AppDefinition(id, role = "*")
     val clock = new SettableClock()
 
     val agentInfo = Instance.AgentInfo("", None, None, None, Nil)
@@ -139,7 +139,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
       val currentTasks = tasks(conditions.map(_ => condition))
       val newTasks = tasks(conditions)
       val state = Instance.InstanceState(None, currentTasks, clock.now(), UnreachableStrategy.default(), Goal.Running)
-      val instance = Instance(Instance.Id.forRunSpec(id), Some(agentInfo), state, currentTasks, app, None)
+      val instance = Instance(Instance.Id.forRunSpec(id), Some(agentInfo), state, currentTasks, app, None, "*")
       (instance, newTasks)
     }
   }

@@ -7,7 +7,7 @@ import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.event.{MesosStatusUpdateEvent, UnhealthyInstanceKillEvent}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{PathId, TaskFailure, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, TaskFailure, Timestamp}
 import mesosphere.marathon.storage.repository.TaskFailureRepository
 import org.apache.mesos.Protos.{NetworkInfo, TaskState}
 
@@ -20,7 +20,7 @@ class HistoryActorTest extends AkkaUnitTest with ImplicitSender {
     val historyActor: TestActorRef[HistoryActor] = TestActorRef(Props(new HistoryActor(system.eventStream, failureRepo)))
   }
 
-  private val runSpecId = PathId("/test")
+  private val runSpecId = AbsolutePathId("/test")
 
   private def statusMessage(state: TaskState) = {
     val ipAddress: NetworkInfo.IPAddress =

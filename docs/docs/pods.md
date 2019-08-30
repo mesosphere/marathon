@@ -367,6 +367,7 @@ This pod, named `simple-pod` has a single container, `simpletask1`. The containe
 | Field                 | Type    | Value                                                                                                                                                                                                             |
 |-----------------------|---------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `id` (required)         | string  | Unique ID for the pod.                                                                                                                                                                                            |
+| `role`                  | string  | The resource role as which to launch the pod |
 | `containers` (required) | array   | See [Basic pod container fields](#basic-pod-container-fields).                                                                                                                                                                                     |
 | `volumes`               | array   | All volumes associated with the pod.                                                                                                                                                                              |
 | `volumes.name`                | string  | Name of shared volume.                                                                                                                                                                                            |
@@ -865,7 +866,7 @@ The following pod definition specifies an ephemeral volume called `v1`. <!-- Val
 
 ### IP-per-Pod Networking
 
-The following pod definition specifies a virtual (user) network named `dcos`. The `networks:mode:container` field creates the virtual network. The `name` field is optional. If you have installed DC/OS using [our AWS templates](https://docs.mesosphere.com/latest/installing/oss/cloud/aws/), the default virtual network name is `dcos`. <!-- Validated by suzanne 6-23-17 -->
+The following pod definition specifies a virtual (user) network named `dcos`. The `networks:mode:container` field creates the virtual network. The `name` field is optional. If you have installed DC/OS using [our AWS templates](https://docs.d2iq.com/mesosphere/dcos/latest/installing/oss/cloud/aws/), the default virtual network name is `dcos`. <!-- Validated by suzanne 6-23-17 -->
 
 ```json
 {

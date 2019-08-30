@@ -73,7 +73,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
       val newMesosStatus = MesosTaskStatusTestHelper.unreachable(f.taskId, since = f.clock.now())
 
       // Forward time to expire unreachable status
-      f.clock += unreachableInactiveAfter + 1.minute
+      f.clock.advanceBy(unreachableInactiveAfter + 1.minute)
       val operation = InstanceUpdateOperation.MesosUpdate(f.instance, newMesosStatus, f.clock.now())
       val result = InstanceUpdater.mesosUpdate(f.instance, operation)
 
@@ -206,7 +206,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
         runSpec = updatedRunSpec)
 
       // Move time forward
-      f.clock += 5.minutes
+      f.clock.advanceBy(5.minutes)
       // Update unreachableInstance with unreachable Mesos status.
       val operation = InstanceUpdateOperation.MesosUpdate(unreachableInstance, mesosTaskStatus, f.clock.now())
       val result = InstanceUpdater.mesosUpdate(unreachableInstance, operation)
@@ -233,7 +233,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
         runSpec = updatedRunSpec)
 
       // Move time forward
-      f.clock += 5.minutes
+      f.clock.advanceBy(5.minutes)
 
       // Update unreachableInstance with unreachable Mesos status.
       val operation = InstanceUpdateOperation.MesosUpdate(unreachableInactiveInstance, mesosTaskStatus, f.clock.now())
@@ -247,7 +247,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
     val f = new Fixture
 
     // Setup staged instance with a staged task
-    val app = new AppDefinition(PathId("/test"))
+    val app = new AppDefinition(AbsolutePathId("/test"), role = "*")
     val scheduledInstance = Instance.scheduled(app)
     val taskId = Task.Id(scheduledInstance.instanceId)
     val provisionedTasks = Tasks.provisioned(taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now(f.clock))
@@ -264,7 +264,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
   "An instance with 2 containers" should {
 
     val f = new Fixture
-    var instance: Instance = TestInstanceBuilder.newBuilder(PathId("/pod"))
+    var instance: Instance = TestInstanceBuilder.newBuilder(AbsolutePathId("/pod"))
       .addTaskStaged(containerName = Some(f.container1.name))
       .addTaskStaged(containerName = Some(f.container2.name))
       .getInstance()
@@ -328,7 +328,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
   "suspend reservation when resident instance is terminal" in {
     val f = new Fixture
 
-    val app = AppDefinition(PathId("/test"))
+    val app = AppDefinition(AbsolutePathId("/test"), role = "*")
     val scheduledReserved = TestInstanceBuilder.scheduledWithReservation(app)
     val provisionedTasks = Tasks.provisioned(f.taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now(f.clock))
     val provisionedInstance = scheduledReserved.provisioned(f.agentInfo, app, provisionedTasks, Timestamp(f.clock.instant()))
@@ -340,7 +340,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
 
   "when a TASK_GONE_BY_OPERATOR status update is sent" should {
     "for a single task" should {
-      val appId = PathId("/test")
+      val appId = AbsolutePathId("/test")
       val instance = TestInstanceBuilder.newBuilder(appId).withReservation(Nil).addTaskWithBuilder().taskRunning().build().instance
       val task = instance.tasksMap.values.head.task
 
@@ -372,7 +372,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
 
         And("the reserved instance gets a new reservation, but doesn't yet launch tasks")
         val withNewReservation = scheduledInstance.copy(
-          reservation = Some(Reservation(Nil, Reservation.State.New(timeout = None))),
+          reservation = Some(Reservation(Nil, Reservation.State.New(timeout = None), Reservation.SimplifiedId(scheduledInstance.instanceId))),
           agentInfo = Some(AgentInfo("new-host", Some("new-agent-id"), None, None, Nil)))
         withNewReservation.state.condition shouldBe Condition.Scheduled
 
@@ -385,7 +385,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
     }
 
     "for a pod" should {
-      val podId = PathId("/test")
+      val podId = AbsolutePathId("/test")
       val podInstance = TestInstanceBuilder.newBuilder(podId)
         .withReservation(Nil)
         .addTaskWithBuilder()
@@ -469,7 +469,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
 
     val agentInfo = AgentInfo("localhost", None, None, None, Seq.empty)
     val instanceState = InstanceState(Condition.Running, clock.now(), Some(clock.now()), None, Goal.Running)
-    val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
+    val instanceId = Instance.Id(AbsolutePathId("/my/app"), PrefixInstance, UUID.randomUUID())
     val taskId: Task.Id = Task.EphemeralTaskId(instanceId, None)
     val mesosTaskStatus = MesosTaskStatusTestHelper.runningHealthy(taskId)
     val taskStatus = Task.Status(
@@ -480,8 +480,8 @@ class InstanceUpdaterTest extends UnitTest with Inside {
       networkInfo = NetworkInfoPlaceholder()
     )
     val task = Task(taskId, runSpecVersion = clock.now(), status = taskStatus)
-    val app = AppDefinition(instanceId.runSpecId, versionInfo = VersionInfo.OnlyVersion(clock.now()))
+    val app = AppDefinition(instanceId.runSpecId, role = "*", versionInfo = VersionInfo.OnlyVersion(clock.now()))
     val instance = Instance(
-      instanceId, Some(agentInfo), instanceState, Map(taskId -> task), app, None)
+      instanceId, Some(agentInfo), instanceState, Map(taskId -> task), app, None, "*")
   }
 }

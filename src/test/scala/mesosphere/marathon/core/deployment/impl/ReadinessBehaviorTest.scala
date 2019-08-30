@@ -35,6 +35,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
       var taskIsReady = false
       val appWithReadyCheck = AppDefinition(
         f.appId,
+        role = "*",
         portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
         versionInfo = VersionInfo.OnlyVersion(f.version),
         readinessChecks = Seq(ReadinessCheck("test")))
@@ -54,6 +55,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
       var taskIsReady = false
       val appWithReadyCheck = AppDefinition(
         f.appId,
+        role = "*",
         portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
         versionInfo = VersionInfo.OnlyVersion(f.version),
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))),
@@ -75,6 +77,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
       var taskIsReady = false
       val appWithReadyCheck = AppDefinition(
         f.appId,
+        role = "*",
         portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
         versionInfo = VersionInfo.OnlyVersion(f.version),
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))))
@@ -94,6 +97,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
       var podIsReady = false
       val podWithReadyCheck = PodDefinition(
         f.appId,
+        role = "*",
         containers = Seq(
           MesosContainer(
             name = "container",
@@ -120,6 +124,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
       var taskIsReady = false
       val appWithReadyCheck = AppDefinition(
         f.appId,
+        role = "*",
         versionInfo = VersionInfo.OnlyVersion(f.version))
       val actor = f.readinessActor(appWithReadyCheck, f.checkIsReady, _ => taskIsReady = true)
 
@@ -137,6 +142,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
       var taskIsReady = false
       val appWithReadyCheck = AppDefinition(
         f.appId,
+        role = "*",
         portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
         versionInfo = VersionInfo.OnlyVersion(f.version),
         healthChecks = Set(MesosCommandHealthCheck(command = Command("true"))),
@@ -168,6 +174,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
       var taskIsReady = false
       val appWithReadyCheck = AppDefinition(
         f.appId,
+        role = "*",
         portDefinitions = Seq(PortDefinition(123, "tcp", name = Some("http-api"))),
         versionInfo = VersionInfo.OnlyVersion(f.version),
         readinessChecks = Seq(ReadinessCheck("test")))
@@ -194,8 +201,8 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
     val plan = DeploymentPlan("deploy", createRootGroup(), createRootGroup(), Seq(step), Timestamp.now())
     val deploymentStatus = DeploymentStatus(plan, step)
     val tracker = mock[InstanceTracker]
-    val appId = PathId("/test")
-    val app = AppDefinition(appId)
+    val appId = AbsolutePathId("/test")
+    val app = AppDefinition(appId, role = "*")
     val instanceId = Instance.Id.forRunSpec(appId)
     val taskId = Task.Id(instanceId)
     val hostName = "some.host"
@@ -223,7 +230,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
       val task = mockTask
       val instance = Instance(
         instanceId, Some(agentInfo), InstanceState(Running, version, Some(version), healthy = Some(true), Goal.Running),
-        Map(task.taskId -> task), app, None)
+        Map(task.taskId -> task), app, None, "*")
       tracker.instance(any) returns Future.successful(Some(instance))
       instance
     }

@@ -206,7 +206,7 @@ def test_launch_app_on_public_agent():
 @pytest.mark.skipif('marathon_version_less_than("1.3.9")')
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @pytest.mark.asyncio
-async def test_event_channel(sse_events):
+async def test_event_channel(sse_events): # NOQA F811
     """ Tests the event channel. The way events are verified is by converting
         the parsed events to an iterator and asserting the right oder of certain
         events. Unknown events are skipped.

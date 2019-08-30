@@ -42,15 +42,15 @@ class EndpointsHelperTest extends UnitTest {
           ))
           val state = Instance.InstanceState(
             condition = Condition.Running, since = Timestamp.zero, activeSince = None, healthy = None, Goal.Running)
-          instanceId -> Instance(instanceId, Some(agent), state = state, tasksMap = Map(taskId -> task), app, None)
+          instanceId -> Instance(instanceId, Some(agent), state = state, tasksMap = Map(taskId -> task), app, None, "*")
         }
     }.toMap
     )
     InstancesBySpec(Map(app.id -> instances))
   }
 
-  def fakeApp(appId: PathId = PathId("/foo"), container: => Option[Container] = None, network: => Network): AppDefinition =
-    AppDefinition(appId, cmd = Option("sleep"), container = container, networks = Seq(network))
+  def fakeApp(appId: AbsolutePathId = AbsolutePathId("/foo"), container: => Option[Container] = None, network: => Network): AppDefinition =
+    AppDefinition(appId, cmd = Option("sleep"), container = container, networks = Seq(network), role = "*")
 
   def endpointsWithoutServicePorts(app: AppDefinition): Unit = {
     "handle single instance without service ports" in {

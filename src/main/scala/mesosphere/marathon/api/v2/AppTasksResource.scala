@@ -9,8 +9,6 @@ import javax.ws.rs.core.{Context, MediaType}
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.EnrichedTask
-
-import scala.concurrent.ExecutionContext
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
@@ -21,12 +19,12 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.AnyToRaml
 import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.util.toRichFuture
 
 import scala.async.Async._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -51,7 +49,7 @@ class AppTasksResource @Inject() (
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       id match {
         case GroupTasks(gid) =>
-          val groupPath = gid.toRootPath
+          val groupPath = gid.toAbsolutePath
           val maybeGroup = groupManager.group(groupPath)
           await(withAuthorization(ViewGroup, maybeGroup, Future.successful(unknownGroup(groupPath))) { group =>
             async {
@@ -60,7 +58,7 @@ class AppTasksResource @Inject() (
             }
           })
         case _ =>
-          val appId = id.toRootPath
+          val appId = id.toAbsolutePath
           val maybeApp = groupManager.app(appId)
           val tasks = await(runningTasks(Set(appId), instancesBySpec)).toRaml
           withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
@@ -70,7 +68,7 @@ class AppTasksResource @Inject() (
     }
   }
 
-  def runningTasks(appIds: Iterable[PathId], instancesBySpec: InstancesBySpec): Future[Vector[EnrichedTask]] = {
+  def runningTasks(appIds: Iterable[AbsolutePathId], instancesBySpec: InstancesBySpec): Future[Vector[EnrichedTask]] = {
     Future.sequence(appIds.withFilter(instancesBySpec.hasSpecInstances).map { id =>
       async {
         val health = await(healthCheckManager.statuses(id))
@@ -88,7 +86,7 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val id = appId.toRootPath
+      val id = appId.toAbsolutePath
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
         ok(EndpointsHelper.appsToEndpointString(ListTasks(instancesBySpec, Seq(app))))
@@ -106,7 +104,7 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val pathId = appId.toRootPath
+      val pathId = appId.toAbsolutePath
 
       def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
         Option(host).fold(appTasks) { hostname =>
@@ -144,7 +142,7 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val pathId = appId.toRootPath
+      val pathId = appId.toAbsolutePath
 
       def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
         try {

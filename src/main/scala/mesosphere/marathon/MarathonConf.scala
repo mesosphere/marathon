@@ -2,14 +2,15 @@ package mesosphere.marathon
 
 import com.typesafe.scalalogging.StrictLogging
 import java.net.URL
+
 import mesosphere.marathon.core.appinfo.AppInfoConfig
 import mesosphere.marathon.core.deployment.DeploymentConfig
 import mesosphere.marathon.core.event.EventConf
-import mesosphere.marathon.core.flow.{LaunchTokenConfig, ReviveOffersConfig}
+import mesosphere.marathon.core.flow.LaunchTokenConfig
 import mesosphere.marathon.core.group.GroupManagerConfig
 import mesosphere.marathon.core.heartbeat.MesosHeartbeatMonitor
 import mesosphere.marathon.core.launcher.OfferProcessorConfig
-import mesosphere.marathon.core.launchqueue.LaunchQueueConfig
+import mesosphere.marathon.core.launchqueue.{LaunchQueueConfig, ReviveOffersConfig}
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
@@ -17,6 +18,7 @@ import mesosphere.marathon.core.task.termination.KillConfig
 import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.core.task.update.TaskStatusUpdateConfig
 import mesosphere.marathon.metrics.MetricsConf
+import mesosphere.marathon.state.Role
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.storage.StorageConf
 import mesosphere.mesos.MatcherConf
@@ -124,26 +126,27 @@ trait MarathonConf
 
   def executor: Executor = Executor.dispatch(defaultExecutor())
 
-  lazy val mesosRole = opt[String](
+  lazy val mesosRole = opt[Role](
     "mesos_role",
     descr = "Mesos role for this framework. " +
       "If set, Marathon receives resource offers for the specified role in addition to " +
       "resources with the role designation '*'.",
-    default = None)
+    default = Some(ResourceRole.Unreserved))
 
-  def expectedResourceRoles: Set[String] = mesosRole.toOption match {
-    case Some(role) => Set(role, ResourceRole.Unreserved)
-    case None => Set(ResourceRole.Unreserved)
-  }
+  lazy val groupRoleBehavior = opt[GroupRoleBehavior](
+    name = "new_group_enforce_role",
+    descr = "Used to control whether role enforcement is enabled for new top-level groups; 'top' means that all new" +
+      " top-level groups will have enforceRole enabled, and the contained services will be required to use the" +
+      " group-role (a role that matches the top-level group's name).",
+    default = Some(GroupRoleBehavior.Off))(groupRoleBehaviorConverter)
 
-  lazy val defaultAcceptedResourceRolesSet = defaultAcceptedResourceRoles.getOrElse(expectedResourceRoles)
-
-  lazy val defaultAcceptedResourceRoles = opt[String](
+  @deprecated("Accepted resource roles can not be set directly anymore. Use accepted_resource_roles_default_behavior.", since = "1.9")
+  private[this] lazy val defaultAcceptedResourceRoles = opt[String](
     "default_accepted_resource_roles",
     descr =
-      "Default for the defaultAcceptedResourceRoles attribute of all app definitions" +
+      "(Deprecated) Default for the defaultAcceptedResourceRoles attribute of all app definitions" +
         " as a comma-separated list of strings. " +
-        "This defaults to all roles for which this Marathon instance is configured to receive offers.",
+        "This parameter is deprecated, please use --accepted_resource_roles_default_behavior",
     default = None,
     validate = validateDefaultAcceptedResourceRoles).map(parseDefaultAcceptedResourceRoles)
 
@@ -151,7 +154,13 @@ trait MarathonConf
     str.split(',').map(_.trim).toSet
 
   private[this] def validateDefaultAcceptedResourceRoles(str: String): Boolean = {
+    def expectedResourceRoles: Set[String] = mesosRole.toOption match {
+      case Some(role) => Set(role, ResourceRole.Unreserved)
+      case None => Set(ResourceRole.Unreserved)
+    }
+
     val parsed = parseDefaultAcceptedResourceRoles(str)
+    require(BuildInfo.version.minor < 10, "This flag has been removed in Marathon 1.10.0; use --accepted_resource_roles_default_behavior, instead.")
 
     // throw exceptions for better error messages
     require(parsed.nonEmpty, "--default_accepted_resource_roles must not be empty")
@@ -162,6 +171,32 @@ trait MarathonConf
 
     true
   }
+
+  private[this] def deriveDefaultAcceptedResourceRolesDefaultBehavior: Option[AcceptedResourceRolesDefaultBehavior] = {
+    defaultAcceptedResourceRoles.toOption match {
+      case Some(set) if set == Set(ResourceRole.Unreserved) => Some(AcceptedResourceRolesDefaultBehavior.Unreserved)
+      case Some(set) if set == Set(mesosRole()) => Some(AcceptedResourceRolesDefaultBehavior.Reserved)
+      case _ => Some(AcceptedResourceRolesDefaultBehavior.Any)
+    }
+  }
+
+  def defaultAcceptedResourceRolesSet(serviceRole: Role): Set[String] = {
+    acceptedResourceRolesDefaultBehavior() match {
+      case AcceptedResourceRolesDefaultBehavior.Any => Set(serviceRole, ResourceRole.Unreserved)
+      case AcceptedResourceRolesDefaultBehavior.Unreserved => Set(ResourceRole.Unreserved)
+      case AcceptedResourceRolesDefaultBehavior.Reserved => Set(serviceRole)
+    }
+  }
+
+  lazy val acceptedResourceRolesDefaultBehavior: ScallopOption[AcceptedResourceRolesDefaultBehavior] = opt[AcceptedResourceRolesDefaultBehavior](
+    name = "accepted_resource_roles_default_behavior",
+    descr = "Default behavior for acceptedResourceRoles if not explicitly set on a service." +
+      "This defaults to 'any', which allows either unreserved or reserved resources",
+    validate = { _ =>
+      require(!(defaultAcceptedResourceRoles.isSupplied && acceptedResourceRolesDefaultBehavior.isSupplied), "You may not specify both --default_accepted_resource_roles and --accepted_resource_roles_default_behavior")
+      true
+    },
+    default = deriveDefaultAcceptedResourceRolesDefaultBehavior)(acceptedResourceRolesDefaultBehaviorConverter)
 
   lazy val gracefulShutdownTimeout = opt[Long] (
     "graceful_shutdown_timeout",
@@ -364,6 +399,38 @@ object MarathonConf extends StrictLogging {
       override def redactedConnectionString = string
     }
 
+  }
+
+  val groupRoleBehaviorConverter = new ValueConverter[GroupRoleBehavior] {
+    val argType = org.rogach.scallop.ArgType.SINGLE
+
+    override def parse(s: List[(String, List[String])]): Either[String, Option[GroupRoleBehavior]] = s match {
+      case (_, enforceGroupRole :: Nil) :: Nil =>
+        GroupRoleBehavior.fromString(enforceGroupRole) match {
+          case o @ Some(_) => Right(o)
+          case None => Left(s"Setting $enforceGroupRole is invalid. Valid settings are ${GroupRoleBehavior.all.map(_.name).mkString(", ")}")
+        }
+      case Nil =>
+        Right(None)
+      case other =>
+        Left("Expected exactly one default enforce group role")
+    }
+  }
+
+  val acceptedResourceRolesDefaultBehaviorConverter = new ValueConverter[AcceptedResourceRolesDefaultBehavior] {
+    val argType = org.rogach.scallop.ArgType.SINGLE
+
+    override def parse(s: List[(String, List[String])]): Either[String, Option[AcceptedResourceRolesDefaultBehavior]] = s match {
+      case (_, acceptedResourceRolesDefaultBehavior :: Nil) :: Nil =>
+        AcceptedResourceRolesDefaultBehavior.fromString(acceptedResourceRolesDefaultBehavior) match {
+          case o @ Some(_) => Right(o)
+          case None => Left(s"Setting $acceptedResourceRolesDefaultBehavior is invalid. Valid settings are ${AcceptedResourceRolesDefaultBehavior.all.map(_.name).mkString(", ")}")
+        }
+      case Nil =>
+        Right(None)
+      case other =>
+        Left("Expected exactly one acceptedResourceRoles default behavior")
+    }
   }
 
   val gpuSchedulingBehaviorConverter = new ValueConverter[GpuSchedulingBehavior] {

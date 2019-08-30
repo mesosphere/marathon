@@ -6,7 +6,7 @@ import akka.stream.Materializer
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore
-import mesosphere.marathon.core.storage.store.impl.zk.RichCuratorFramework
+import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkId, ZkSerialized}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.storage.migration.{Migration, ServiceDefinitionRepository}
 import mesosphere.marathon.storage.repository._
@@ -31,23 +31,23 @@ trait StorageModule {
 }
 
 object StorageModule {
-  def apply(metrics: Metrics, conf: StorageConf with NetworkConf, curatorFramework: RichCuratorFramework)(
+  def apply(metrics: Metrics, conf: MarathonConf, curatorFramework: RichCuratorFramework)(
     implicit
     mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
     val currentConfig = StorageConfig(conf, curatorFramework)
-    apply(metrics, currentConfig, conf.mesosBridgeName())
+    apply(metrics, currentConfig, conf.mesosRole())
   }
 
   def apply(
-    metrics: Metrics, config: StorageConfig, mesosBridgeName: String)(
+    metrics: Metrics, config: StorageConfig, defaultMesosRole: String)(
     implicit
     mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
 
     config match {
       case zk: CuratorZk =>
-        val store = zk.store(metrics)
+        val store: PersistenceStore[ZkId, String, ZkSerialized] = zk.store(metrics)
         val appRepository = AppRepository.zkRepository(store)
         val podRepository = PodRepository.zkRepository(store)
         val groupRepository = GroupRepository.zkRepository(store, appRepository, podRepository, zk.groupVersionsCacheSize)
@@ -67,7 +67,7 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(store)
-        val migration = new Migration(zk.availableFeatures, zk.defaultNetworkName, mesosBridgeName, store, appRepository, podRepository, groupRepository,
+        val migration = new Migration(zk.availableFeatures, defaultMesosRole, store, appRepository, podRepository, groupRepository,
           deploymentRepository, instanceRepository,
           taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.zkRepository(store), runtimeConfigurationRepository, backup, config)
 
@@ -103,7 +103,7 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(store)
-        val migration = new Migration(mem.availableFeatures, mem.defaultNetworkName, mesosBridgeName, store, appRepository, podRepository, groupRepository,
+        val migration = new Migration(mem.availableFeatures, defaultMesosRole, ???, appRepository, podRepository, groupRepository,
           deploymentRepository, instanceRepository,
           taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.inMemRepository(store), runtimeConfigurationRepository, backup, config)
 

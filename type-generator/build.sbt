@@ -16,5 +16,9 @@ lazy val root = (project in file("."))
       Tests.Argument(
         "-u", "target/test-reports", // TODO(MARATHON-8215): Remove this line
         "-o", "-eDFG",
-        "-y", "org.scalatest.WordSpec"))
+        "-y", "org.scalatest.WordSpec")),
+    scalacOptions in Compile ++= Seq(
+      "-encoding", "UTF-8",
+      "-target:jvm-1.8"
+    )
   )

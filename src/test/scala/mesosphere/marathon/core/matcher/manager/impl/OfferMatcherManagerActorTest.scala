@@ -8,13 +8,14 @@ import akka.testkit.TestActorRef
 import akka.util.Timeout
 import java.util
 import java.util.concurrent.TimeUnit
+
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.LocalVolumeId
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AbsolutePathId, PathId}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos.Offer
@@ -31,7 +32,7 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
     "The list of OfferMatchers is random without precedence" in new Fixture {
       Given("OfferMatcher with num normal matchers")
       val num = 5
-      val appId = PathId("/some/app")
+      val appId = AbsolutePathId("/some/app")
       val manager = offerMatcherManager
       val matchers = 1.to(num).map(_ => matcher())
       matchers.map { matcher => manager ? OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcher) }
@@ -47,7 +48,7 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
     "The list of OfferMatchers is sorted by precedence" in new Fixture {
       Given("OfferMatcher with num precedence and num normal matchers, registered in mixed order")
       val num = 5
-      val appId = PathId("/some/app")
+      val appId = AbsolutePathId("/some/app")
       val manager = offerMatcherManager
       1.to(num).flatMap(_ => Seq(matcher(), matcher(Some(appId)))).map { matcher =>
         manager ? OfferMatcherManagerDelegate.AddOrUpdateMatcher(matcher)
@@ -166,7 +167,7 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       When("1 offer is send, which is passed to the matcher, 2 offers are send and queued with a 10 millis gap")
       offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer1, offerMatch1)
       offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer2, offerMatch2)
-      clock += 10.millis
+      clock.advanceBy(10.millis)
       offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer3, offerMatch3)
 
       Then("offer-2 is declined, due to timeout but not offer-3")
@@ -175,7 +176,7 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       offerMatch1.isCompleted should be(false)
 
       And("After 10 millis also offer-2 is declined")
-      clock += 10.millis
+      clock.advanceBy(10.millis)
       offerMatch3.future.futureValue.opsWithSource should be('empty)
       offerMatch1.isCompleted should be(false)
     }
@@ -189,7 +190,7 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
 
       When("1 offer is send, which is passed to the matcher, but the matcher does not respond")
       offerMatcherManager ! ActorOfferMatcher.MatchOffer(offer1, offerMatch1)
-      clock += 30.millis
+      clock.advanceBy(30.millis)
 
       Then("offer-1 is declined, since the actor did not respond in time")
       offerMatch1.future.futureValue.opsWithSource should be('empty)

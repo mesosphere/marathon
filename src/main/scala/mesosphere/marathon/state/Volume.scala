@@ -323,6 +323,8 @@ object PathPatterns {
   *  <li> A volume name MUST be unique within the scope of a volume provider.
   *  <li> A fully-qualified volume name is expected to be unique across the cluster and may formed, for example,
   *       by concatenating the volume provider name with the volume name. E.g “dvdi.volume123”
+  *  <li> As there are multiple providers that allow shared access to the same volume, there is
+  *       a parameter `shared` that excludes that volume from the uniqueness check.
   *
   * `provider` is optional; if specified it indicates which storage provider will implement volume
   * lifecycle management operations for the external volume. if unspecified, “agent” is assumed.
@@ -340,12 +342,14 @@ object PathPatterns {
   * @param name identifies the volume within the context of the storage provider.
   * @param provider identifies the storage provider responsible for volume lifecycle operations.
   * @param options contains storage provider-specific configuration configuration
+  * @param shared if true, this volume is excluded from the uniqueness check
   */
 case class ExternalVolumeInfo(
     size: Option[Long] = None,
     name: String,
     provider: String,
-    options: Map[String, String] = Map.empty[String, String])
+    options: Map[String, String] = Map.empty[String, String],
+    shared: Boolean = false)
 
 object OptionLabelPatterns {
   val OptionNamespaceSeparator = "/"
@@ -364,17 +368,17 @@ object ExternalVolumeInfo {
 
   implicit val validExternalVolumeInfo = validator[ExternalVolumeInfo] { info =>
     info.size.each should be > 0L
-    info.name should matchRegex(LabelRegex)
     info.provider should matchRegex(LabelRegex)
     info.options is validOptions
   }
 
   def fromProto(evi: Protos.Volume.ExternalVolumeInfo): ExternalVolumeInfo =
     ExternalVolumeInfo(
-      if (evi.hasSize) Some(evi.getSize) else None,
-      evi.getName,
-      evi.getProvider,
-      evi.getOptionsList.map { p => p.getKey -> p.getValue }(collection.breakOut)
+      size = if (evi.hasSize) Some(evi.getSize) else None,
+      name = evi.getName,
+      provider = evi.getProvider,
+      shared = if (evi.hasShared) evi.getShared else false,
+      options = evi.getOptionsList.map { p => p.getKey -> p.getValue }(collection.breakOut)
     )
 }
 

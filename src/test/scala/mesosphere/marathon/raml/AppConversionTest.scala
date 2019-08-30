@@ -17,7 +17,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       .build()
 
     AppDefinition(
-      id = PathId("/docker-bridge-app"),
+      id = AbsolutePathId("/docker-bridge-app"),
       cmd = Some("test"),
       user = Some("user"),
       env = Map("A" -> state.EnvVarString("test"), "password" -> state.EnvVarSecretRef("secret0")),
@@ -40,11 +40,13 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       readinessChecks = Seq(core.readiness.ReadinessCheck()),
       acceptedResourceRoles = Set("*"),
       killSelection = state.KillSelection.OldestFirst,
-      secrets = Map("secret0" -> state.Secret("/path/to/secret"))
+      secrets = Map("secret0" -> state.Secret("/path/to/secret")),
+      role = "*"
     )
   }
   private lazy val hostApp = AppDefinition(
-    id = PathId("/host-app"),
+    id = AbsolutePathId("/host-app"),
+    role = "*",
     networks = Seq(HostNetwork),
     cmd = Option("whatever"),
     requirePorts = true,
@@ -52,22 +54,31 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
     unreachableStrategy = state.UnreachableDisabled
   )
   private lazy val argsOnlyApp = AppDefinition(
-    id = PathId("/args-only-app"),
+    id = AbsolutePathId("/args-only-app"),
+    role = "*",
     args = Seq("whatever", "one", "two", "three")
   )
   private lazy val simpleDockerApp = AppDefinition(
-    id = PathId("/simple-docker-app"),
+    id = AbsolutePathId("/simple-docker-app"),
+    role = "*",
     container = Some(state.Container.Docker(image = "foo/bla"))
   )
   private lazy val dockerWithArgsApp = AppDefinition(
-    id = PathId("/docker-with-args-app"),
+    id = AbsolutePathId("/docker-with-args-app"),
+    role = "*",
     args = Seq("whatever", "one", "two", "three"),
     container = Some(state.Container.Docker(image = "foo/bla"))
   )
   private lazy val mesosWithLinuxInfo = AppDefinition(
-    id = PathId("/mesos-with-linux-info"),
+    id = AbsolutePathId("/mesos-with-linux-info"),
+    role = "*",
     cmd = Option("whatever"),
-    container = Some(state.Container.Mesos(linuxInfo = Some(state.LinuxInfo(Some(state.Seccomp(Some("default"), false))))))
+
+    container = Some(state.Container.Mesos(
+      linuxInfo = Some(state.LinuxInfo(
+        seccomp = Some(state.Seccomp(Some("default"), false)),
+        ipcInfo = Some(state.IPCInfo(state.IpcMode.Private, Some(64)))
+      ))))
   )
 
   def convertToRamlAndBack(app: AppDefinition): Unit = {
@@ -80,7 +91,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val readApp: AppDefinition = withValidationClue {
         Raml.fromRaml(
           AppHelpers.appNormalization(
-            features, AppNormalization.Configuration(None, "bridge-name")).normalized(ramlApp)
+            AppNormalization.Configuration(None, "bridge-name", features, ResourceRole.Unreserved, true), Set(ResourceRole.Unreserved)).normalized(ramlApp)
         )
       }
       Then("The app is identical")
@@ -97,7 +108,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val protoRamlApp = app.toProto.toRaml[App]
 
       Then("The direct and indirect RAML conversions are identical")
-      val config = AppNormalization.Configuration(None, "bridge-name")
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved, true)
       val normalizedProtoRamlApp = AppNormalization(
         config).normalized(AppNormalization.forDeprecated(config).normalized(protoRamlApp))
       normalizedProtoRamlApp should be(ramlApp)

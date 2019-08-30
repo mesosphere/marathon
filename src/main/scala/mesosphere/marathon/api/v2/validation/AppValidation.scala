@@ -18,7 +18,7 @@ trait AppValidation {
   import ArtifactValidation._
   import EnvVarValidation._
   import NetworkValidation._
-  import PathId.{empty => _, _}
+  import PathId.{root => _, _}
   import SchedulingValidation._
   import SecretValidation._
 
@@ -77,25 +77,6 @@ trait AppValidation {
     }
   }
 
-  val mesosAppcContainerValidator: Validator[Container] = {
-    val prefix = "sha512-"
-
-    val validId: Validator[String] =
-      isTrue[String](s"id must begin with '$prefix',") { id =>
-        id.startsWith(prefix)
-      } and isTrue[String](s"id must contain non-empty digest after '$prefix'.") { id =>
-        id.length > prefix.length
-      }
-
-    val validMesosEngineSpec: Validator[AppCContainer] = validator[AppCContainer] { appc =>
-      appc.image is notEmpty
-      appc.id is optional(validId)
-    }
-    validator{ (container: Container) =>
-      container.appc is definedAnd(validMesosEngineSpec)
-    }
-  }
-
   val mesosImagelessContainerValidator: Validator[Container] =
     // placeholder, there is no additional validation to do for a non-image-based mesos container
     new NullSafeValidator[Container](_ => true, _ => Failure(Set.empty))
@@ -122,9 +103,9 @@ trait AppValidation {
       }
     }
     override def apply(container: Container): Result = {
-      (container.docker, container.appc, container.`type`) match {
-        case (Some(_), None, EngineType.Docker) => validate(container)(forDockerContainerizer)
-        case (Some(_), None, EngineType.Mesos) => validate(container)(forMesosContainerizer)
+      (container.docker, container.`type`) match {
+        case (Some(_), EngineType.Docker) => validate(container)(forDockerContainerizer)
+        case (Some(_), EngineType.Mesos) => validate(container)(forMesosContainerizer)
         case _ => Success // canonical validation picks up where we leave off
       }
     }
@@ -149,10 +130,9 @@ trait AppValidation {
 
     val mesosContainerImageValidator = new Validator[Container] {
       override def apply(container: Container): Result = {
-        (container.docker, container.appc, container.`type`) match {
-          case (Some(_), None, EngineType.Mesos) => validate(container)(mesosDockerContainerValidator(enabledFeatures, secrets))
-          case (None, Some(_), EngineType.Mesos) => validate(container)(mesosAppcContainerValidator)
-          case (None, None, EngineType.Mesos) => validate(container)(mesosImagelessContainerValidator)
+        (container.docker, container.`type`) match {
+          case (Some(_), EngineType.Mesos) => validate(container)(mesosDockerContainerValidator(enabledFeatures, secrets))
+          case (None, EngineType.Mesos) => validate(container)(mesosImagelessContainerValidator)
           case _ => Failure(Set(RuleViolation(container, "mesos containers should specify, at most, a single image type")))
         }
       }
@@ -307,8 +287,8 @@ trait AppValidation {
     }
   )
 
-  def validateCanonicalAppAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String]): Validator[App] = forAll(
-    validBasicAppDefinition(enabledFeatures),
+  def validateCanonicalAppAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String], validRoles: Set[String]): Validator[App] = forAll(
+    validBasicAppDefinition(enabledFeatures, validRoles),
     validator[App] { app =>
       PathId(app.id) as "id" is (PathId.pathIdValidator and PathId.absolutePathValidator and PathId.nonEmptyPath)
       app.dependencies.map(PathId(_)) as "dependencies" is every(valid)
@@ -346,7 +326,7 @@ trait AppValidation {
   }
 
   /** validate most canonical API fields */
-  private def validBasicAppDefinition(enabledFeatures: Set[String]): Validator[App] = validator[App] { app =>
+  private def validBasicAppDefinition(enabledFeatures: Set[String], validRoles: Set[String]): Validator[App] = validator[App] { app =>
     app.container is optional(validContainer(enabledFeatures, app.networks, app.secrets))
     app.portDefinitions is optional(portDefinitionsValidator)
     app is containsCmdArgsOrContainer
@@ -369,7 +349,13 @@ trait AppValidation {
     app must requireUnreachableDisabledForResidentTasks
     app.constraints.each must complyWithAppConstraintRules
     app.networks is ramlNetworksValidator
-  } and ExternalVolumes.validAppRaml
+    app is validWithRoleEnforcement(validRoles)
+  } and ExternalVolumes.validAppRaml()
+
+  def validWithRoleEnforcement(validRoles: Set[String]): Validator[App] = validator[App] { app =>
+    app.role is optional(in(validRoles))
+    app.acceptedResourceRoles is optional(ResourceRole.validForRole(app.role))
+  }
 
   val requireUnreachableDisabledForResidentTasks =
     conditional((app: App) => app.residency.isDefined && app.unreachableStrategy.isDefined)(
@@ -467,10 +453,10 @@ trait AppValidation {
       val cmd = app.cmd.nonEmpty
       val args = app.args.nonEmpty
       val container = app.container.exists { ct =>
-        (ct.docker, ct.appc, ct.`type`) match {
-          case (Some(_), None, EngineType.Docker) |
-            (Some(_), None, EngineType.Mesos) |
-            (None, Some(_), EngineType.Mesos) => true
+        (ct.docker, ct.`type`) match {
+          case (Some(_), EngineType.Docker) |
+            (Some(_), EngineType.Mesos) |
+            (None, EngineType.Mesos) => true
           case _ => false
         }
       }

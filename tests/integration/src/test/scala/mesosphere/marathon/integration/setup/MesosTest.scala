@@ -26,33 +26,43 @@ import scala.sys.process.ProcessBuilder
 import scala.util.Try
 
 case class MesosConfig(
+    numMasters: Int = 1,
+    numAgents: Int = 1,
+    quorumSize: Int = 1,
     launcher: String = "posix",
     containerizers: String = "mesos",
     isolation: Option[String] = None,
-    imageProviders: Option[String] = None)
+    imageProviders: Option[String] = None,
+    mastersFaultDomains: Seq[Option[FaultDomain]] = Seq.empty,
+    agentsFaultDomains: Seq[Option[FaultDomain]] = Seq.empty,
+    agentsGpus: Option[Int] = None,
+    agentSeccompConfigDir: Option[String] = None,
+    agentSeccompProfileName: Option[String] = None,
+    restrictedToRoles: Option[String] = Some("public,foo")) {
+
+  require(validQuorumSize, "Mesos quorum size should be 0 or smaller than number of agents")
+  require(validSeccompConfig, "To enable seccomp, agentSeccompConfigDir should be defined and isolation \"linux/seccomp\" used")
+  require(validFaultDomainConfig, "Fault domains should be configure for all agents or not at all")
+
+  def validQuorumSize: Boolean = quorumSize > 0 && quorumSize <= numMasters
+  def validFaultDomainConfig: Boolean = agentsFaultDomains.isEmpty || agentsFaultDomains.size == numAgents
+  def validSeccompConfig: Boolean = agentSeccompConfigDir.isEmpty || (agentSeccompConfigDir.isDefined && isolation.get.contains("linux/seccomp"))
+}
 
 case class MesosCluster(
     suiteName: String,
-    numMasters: Int,
-    numSlaves: Int,
     masterUrl: String,
-    quorumSize: Int = 1,
     autoStart: Boolean = false,
     config: MesosConfig = MesosConfig(),
-    waitForMesosTimeout: FiniteDuration = 5.minutes,
-    mastersFaultDomains: Seq[Option[FaultDomain]],
-    agentsFaultDomains: Seq[Option[FaultDomain]],
-    agentsGpus: Option[Int] = None)(implicit
+    waitForMesosTimeout: FiniteDuration = 5.minutes)(implicit
     system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
     scheduler: Scheduler) extends AutoCloseable with Eventually {
-  require(quorumSize > 0 && quorumSize <= numMasters)
-  require(agentsFaultDomains.isEmpty || agentsFaultDomains.size == numSlaves)
 
-  lazy val masters = 0.until(numMasters).map { i =>
-    val faultDomainJson = if (mastersFaultDomains.nonEmpty && mastersFaultDomains(i).nonEmpty) {
-      val faultDomain = mastersFaultDomains(i).get
+  lazy val masters = 0.until(config.numMasters).map { i =>
+    val faultDomainJson = if (config.mastersFaultDomains.nonEmpty && config.mastersFaultDomains(i).nonEmpty) {
+      val faultDomain = config.mastersFaultDomains(i).get
       val faultDomainJson = s"""
                                |{
                                |  "fault_domain":
@@ -74,18 +84,18 @@ case class MesosCluster(
     Master(extraArgs = Seq(
       "--slave_ping_timeout=1secs",
       "--max_slave_ping_timeouts=4",
-      s"--quorum=$quorumSize") ++ faultDomainJson.map(fd => s"--domain=$fd"))
+      s"--quorum=${config.quorumSize}") ++ faultDomainJson.map(fd => s"--domain=$fd"))
   }
 
-  lazy val agents = 0.until(numSlaves).map { i =>
+  lazy val agents = 0.until(config.numAgents).map { i =>
     // We can add additional resources constraints for our test clusters here.
     // IMPORTANT: we give each cluster's agent it's own port range! Otherwise every mesos will offer the same port range
     // to it's marathon, leading to multiple tasks (from different IT suits) trying to use the same port!
     // First-come-first-served task will bind successfully where the others will fail leading to a lot inconsistency and
     // flakiness in tests.
 
-    val (faultDomainAgentAttributes: Map[String, Option[String]], mesosFaultDomainAgentCmdOption) = if (agentsFaultDomains.nonEmpty && agentsFaultDomains(i).nonEmpty) {
-      val faultDomain = agentsFaultDomains(i).get
+    val (faultDomainAgentAttributes: Map[String, Option[String]], mesosFaultDomainAgentCmdOption) = if (config.agentsFaultDomains.nonEmpty && config.agentsFaultDomains(i).nonEmpty) {
+      val faultDomain = config.agentsFaultDomains(i).get
       val mesosFaultDomainCmdOption = s"""
           |{
           |  "fault_domain":
@@ -113,9 +123,12 @@ case class MesosCluster(
 
     val renderedAttributes: String = attributes.map { case (key, maybeVal) => s"$key${maybeVal.map(v => s":$v").getOrElse("")}" }.mkString(";")
 
-    Agent(resources = new Resources(ports = PortAllocator.portsRange(), gpus = agentsGpus), extraArgs = Seq(
+    Agent(resources = new Resources(ports = PortAllocator.portsRange(), gpus = config.agentsGpus), extraArgs = Seq(
       s"--attributes=$renderedAttributes"
-    ) ++ mesosFaultDomainAgentCmdOption.map(fd => s"--domain=$fd"))
+    ) ++ mesosFaultDomainAgentCmdOption.map(fd => s"--domain=$fd")
+      ++ config.agentSeccompConfigDir.map(dir => s"--seccomp_config_dir=$dir")
+      ++ config.agentSeccompProfileName.map(prf => s"--seccomp_profile_name=$prf")
+    )
   }
 
   if (autoStart) {
@@ -210,11 +223,11 @@ case class MesosCluster(
       "MESOS_LAUNCHER" -> "posix",
       "MESOS_CONTAINERIZERS" -> config.containerizers,
       "MESOS_LAUNCHER" -> config.launcher,
-      "MESOS_ROLES" -> "public,foo",
       "MESOS_ACLS" -> s"file://$aclsPath",
       "MESOS_CREDENTIALS" -> s"file://$credentialsPath",
       "MESOS_SYSTEMD_ENABLE_SUPPORT" -> "false",
       "MESOS_SWITCH_USER" -> "false") ++
+      config.restrictedToRoles.map("MESOS_ROLES" -> _).to[Seq] ++
       config.isolation.map("MESOS_ISOLATION" -> _).to[Seq] ++
       config.imageProviders.map("MESOS_IMAGE_PROVIDERS" -> _).to[Seq]
   }
@@ -283,7 +296,7 @@ case class MesosCluster(
       s"--port=$port",
       s"--zk=$masterUrl",
       s"--work_dir=${workDir.getAbsolutePath}") ++ extraArgs,
-      cwd = None, extraEnv = mesosEnv(workDir): _*)
+      cwd = None, extraEnv = Seq(("GLOG_v", "2")) ++ mesosEnv(workDir): _*)
 
     val processName: String = "Master"
   }
@@ -300,7 +313,7 @@ case class MesosCluster(
         s"--resources=${resources.resourceString()}",
         s"--master=$masterUrl",
         s"--work_dir=${workDir.getAbsolutePath}") ++ extraArgs,
-      cwd = None, extraEnv = mesosEnv(workDir): _*)
+      cwd = None, extraEnv = Seq(("GLOG_v", "2")) ++ mesosEnv(workDir): _*)
 
     override val processName = "Agent"
   }
@@ -349,21 +362,16 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   implicit val ctx: ExecutionContext
   implicit val scheduler: Scheduler
 
-  def mastersFaultDomains: Seq[Option[FaultDomain]] = Seq.empty
-
-  def agentsFaultDomains: Seq[Option[FaultDomain]] = Seq.empty
-
-  def agentsGpus: Option[Int] = None
-
   private val localMesosUrl = sys.env.get("USE_LOCAL_MESOS")
   lazy val mesosMasterUrl = s"zk://${zkServer.connectUri}/mesos"
-  lazy val mesosNumMasters = 1
-  lazy val mesosNumSlaves = 1
-  lazy val mesosQuorumSize = 1
   lazy val mesosConfig = MesosConfig()
-  lazy val mesosLeaderTimeout: FiniteDuration = patienceConfig.timeout.toMillis.milliseconds
-  lazy val mesosCluster = MesosCluster(suiteName, mesosNumMasters, mesosNumSlaves, mesosMasterUrl, mesosQuorumSize,
-    autoStart = false, config = mesosConfig, mesosLeaderTimeout, mastersFaultDomains, agentsFaultDomains, agentsGpus = agentsGpus)
+  lazy val mesosCluster = MesosCluster(
+    suiteName,
+    mesosMasterUrl,
+    autoStart = false,
+    config = mesosConfig,
+    waitForMesosTimeout = patienceConfig.timeout.toMillis.milliseconds
+  )
   lazy val mesos = new MesosFacade(localMesosUrl.getOrElse(mesosCluster.waitForLeader().futureValue))
 
   abstract override def beforeAll(): Unit = {

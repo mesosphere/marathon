@@ -4,9 +4,9 @@ package core.instance.update
 import akka.Done
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.event.MarathonEvent
-import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 
 import scala.concurrent.Future
 
@@ -23,12 +23,14 @@ trait InstanceChangeHandler {
   def process(update: InstanceChange): Future[Done]
 }
 
-case class InstancesSnapshot(instances: Seq[Instance])
+sealed trait InstanceChangeOrSnapshot
+
+case class InstancesSnapshot(instances: Seq[Instance]) extends InstanceChangeOrSnapshot
 
 /**
   * An event notifying of an [[Instance]] change.
   */
-sealed trait InstanceChange extends Product with Serializable {
+sealed trait InstanceChange extends InstanceChangeOrSnapshot with Product with Serializable {
   /** The affected [[Instance]] */
   val instance: Instance
   /** Id of the affected [[Instance]] */
@@ -38,7 +40,7 @@ sealed trait InstanceChange extends Product with Serializable {
   /** Condition of the [[Instance]] */
   val condition: Condition = instance.state.condition
   /** Id of the related [[mesosphere.marathon.state.RunSpec]] */
-  val runSpecId: PathId = id.runSpecId
+  val runSpecId: AbsolutePathId = id.runSpecId
   /** the previous state of this instance */
   def lastState: Option[InstanceState]
   /** Events that should be published for this change */

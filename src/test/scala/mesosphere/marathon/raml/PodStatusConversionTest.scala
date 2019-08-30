@@ -2,13 +2,13 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference}
-import mesosphere.marathon.core.instance.{Goal, Reservation}
+import mesosphere.marathon.core.instance.Reservation
 import mesosphere.marathon.core.pod.{ContainerNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos
 
 import scala.concurrent.duration._
@@ -16,6 +16,39 @@ import scala.concurrent.duration._
 class PodStatusConversionTest extends UnitTest {
 
   import PodStatusConversionTest._
+
+  "PodConversion" should {
+    val pod = basicOneContainerPod.copy(linuxInfo = Some(state.LinuxInfo(seccomp = None, ipcInfo = Some(state.IPCInfo(ipcMode = state.IpcMode.Private, shmSize = Some(32))))))
+
+    "keep linux info on executor" in {
+      val ramlPod = pod.toRaml
+      val ramlLinuxInfo = Some(LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(mode = IPCMode.Private, shmSize = Some(32)))))
+      ramlPod.linuxInfo should be(ramlLinuxInfo)
+    }
+
+    behave like convertToRamlAndBack(pod)
+
+  }
+
+  def convertToRamlAndBack(pod: PodDefinition): Unit = {
+    s"pod ${pod.id.toString} is written to json and can be read again via formats" in {
+      Given("An pod")
+      val ramlPod = pod.toRaml[Pod]
+
+      When("The pod is translated to json and read back from formats")
+      val readPod: PodDefinition = withValidationClue {
+        Raml.fromRaml(ramlPod)
+      }
+      Then("The pod is identical")
+      readPod should be(pod)
+    }
+  }
+
+  def withValidationClue[T](f: => T): T = scala.util.Try { f }.recover {
+    // handle RAML validation errors
+    case vfe: ValidationFailedException => fail(vfe.failure.violations.toString())
+    case th => throw th
+  }.get
 
   "PodStatusConversion" should {
     "multiple tasks with multiple container networks convert to proper network status" in {
@@ -66,7 +99,7 @@ class PodStatusConversionTest extends UnitTest {
       implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
-      clock += 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = provisionedInstance(pod)
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -96,7 +129,7 @@ class PodStatusConversionTest extends UnitTest {
       implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
-      clock += 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = stagingInstance(pod)
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -127,7 +160,7 @@ class PodStatusConversionTest extends UnitTest {
       implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
-      clock += 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = startingInstance(pod)
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -161,7 +194,7 @@ class PodStatusConversionTest extends UnitTest {
       implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
-      clock += 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = runningInstance(pod)
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -199,7 +232,7 @@ class PodStatusConversionTest extends UnitTest {
       implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
-      clock += 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = runningInstance(pod = pod, maybeHealthy = Some(false)) // task status will say unhealthy
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -237,7 +270,7 @@ class PodStatusConversionTest extends UnitTest {
       implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
 
-      clock += 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = runningInstance(pod = pod, maybeHealthy = Some(true)) // task status will say healthy
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -276,7 +309,7 @@ class PodStatusConversionTest extends UnitTest {
 
       val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now())))
 
-      clock += 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = runningInstance(pod = pod) // mesos task status health is missing
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -315,7 +348,7 @@ class PodStatusConversionTest extends UnitTest {
 
       val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now())))
 
-      clock += 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = runningInstance(pod = pod, maybeHealthy = Some(false)) // task status will say unhealthy
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -324,6 +357,7 @@ class PodStatusConversionTest extends UnitTest {
       status.agentId should be (Some("agentId1"))
       status.status should be(PodInstanceState.Degraded)
       status.resources should be(Some(pod.aggregateResources()))
+      status.role should be("test")
       status.containers should be(Seq(
         ContainerStatus(
           name = "ct1",
@@ -354,7 +388,7 @@ class PodStatusConversionTest extends UnitTest {
 
       val pod = withCommandLineHealthChecks(basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now())))
 
-      clock += 1.seconds
+      clock.advanceBy(1.seconds)
       val fixture = runningInstance(pod = pod, maybeHealthy = Some(true)) // task status will say healthy
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
@@ -390,10 +424,12 @@ class PodStatusConversionTest extends UnitTest {
 
     "a stateful pod with one container and one persistent volume" in {
       val localVolumeId = core.instance.LocalVolumeId(
-        PathId("/persistent"), "volume", "5425cbaa-8fd3-45f0-afa4-74ef4fcc594b")
+        AbsolutePathId("/persistent"), "volume", "5425cbaa-8fd3-45f0-afa4-74ef4fcc594b")
       val reservation = core.instance.Reservation(
         volumeIds = Seq(localVolumeId),
-        state = core.instance.Reservation.State.New(timeout = None))
+        state = core.instance.Reservation.State.New(timeout = None),
+        Reservation.SimplifiedId(core.instance.Instance.Id.forRunSpec(AbsolutePathId("/persistent")))
+      )
 
       implicit val clock = new SettableClock()
       val fixture = fakeInstance(
@@ -415,7 +451,8 @@ object PodStatusConversionTest {
   val containerResources = Resources(cpus = 0.01, mem = 100)
 
   val basicOneContainerPod = PodDefinition(
-    id = PathId("/foo"),
+    id = AbsolutePathId("/foo"),
+    role = "*",
     containers = Seq(
       MesosContainer(
         name = "ct1",
@@ -432,7 +469,8 @@ object PodStatusConversionTest {
   )
 
   val podWithPersistentVolume = PodDefinition(
-    id = PathId("/persistent"),
+    id = AbsolutePathId("/persistent"),
+    role = "*",
     containers = Seq(
       MesosContainer(
         name = "ct1",
@@ -526,14 +564,15 @@ object PodStatusConversionTest {
         )
       ).map(t => t.taskId -> t)(collection.breakOut),
       runSpec = pod,
-      reservation = maybeReservation
+      reservation = maybeReservation,
+      role = "test"
     )
 
     InstanceFixture(since, agentInfo, taskIds, instance)
   } // fakeInstance
 
   def fakeTask(networks: Seq[Protos.NetworkInfo]) = {
-    val instanceId = core.instance.Instance.Id.forRunSpec(PathId.empty)
+    val instanceId = core.instance.Instance.Id.forRunSpec(PathId.root)
     val taskId = core.task.Task.Id(instanceId)
     core.task.Task(
       taskId = taskId,

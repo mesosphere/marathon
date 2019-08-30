@@ -8,14 +8,15 @@ import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.ITEnrichedTask
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{App, AppUpdate}
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AbsolutePathId, PathId}
 
 import scala.collection.immutable.Seq
 
 class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  override def agentsGpus = Some(4)
+  override lazy val mesosConfig = MesosConfig(
+    agentsGpus = Some(4)
+  )
 
   override val marathonArgs: Map[String, String] = Map(
     "enable_features" -> "gpu_resources",
@@ -29,14 +30,14 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
     result
   }
 
-  def scaleToSuccessfully(appId: PathId, instances: Int): Seq[ITEnrichedTask] = {
+  def scaleToSuccessfully(appId: AbsolutePathId, instances: Int): Seq[ITEnrichedTask] = {
     val result = marathon.updateApp(appId, AppUpdate(instances = Some(instances)))
     result should be(OK)
     waitForDeployment(result)
     waitForTasks(appId, instances)
   }
 
-  def suspendSuccessfully(appId: PathId): Seq[ITEnrichedTask] = scaleToSuccessfully(appId, 0)
+  def suspendSuccessfully(appId: AbsolutePathId): Seq[ITEnrichedTask] = scaleToSuccessfully(appId, 0)
 
   def appId(suffix: Option[String] = None): PathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
 
@@ -52,7 +53,7 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
       result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1) //make sure, the app has really started
+      waitForTasks(AbsolutePathId(app.id), 1) //make sure, the app has really started
     }
 
     "not match any offers for an app without GPU requirements" in {
@@ -83,7 +84,7 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
       result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1)
+      waitForTasks(AbsolutePathId(app.id), 1)
     }
 
     "match an offer for already existing persistent volume" in {
@@ -103,12 +104,12 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
       waitForDeployment(result)
 
       When("the app is suspended")
-      suspendSuccessfully(PathId(app.id))
+      suspendSuccessfully(AbsolutePathId(app.id))
 
       And("a new task is started that checks for the previously written file")
       // deploy a new version that checks for the data written the above step
       val update = marathon.updateApp(
-        PathId(app.id),
+        AbsolutePathId(app.id),
         AppUpdate(
           instances = Some(1),
           cmd = Some(s"""test -e $containerPath/data && sleep 2""")

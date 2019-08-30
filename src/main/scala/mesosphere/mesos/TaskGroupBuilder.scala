@@ -23,11 +23,6 @@ import scala.collection.immutable.Seq
 
 object TaskGroupBuilder extends StrictLogging {
 
-  // These labels are necessary for AppC images to work.
-  // Given that Docker only works under linux with 64bit,
-  // let's (for now) set these values to reflect that.
-  protected[mesos] val LinuxAmd64 = Map("os" -> "linux", "arch" -> "amd64")
-
   private val ephemeralVolumePathPrefix = "volumes/"
 
   case class BuilderConfig(
@@ -43,7 +38,8 @@ object TaskGroupBuilder extends StrictLogging {
     config: BuilderConfig,
     runSpecTaskProcessor: RunSpecTaskProcessor,
     resourceMatch: ResourceMatcher.ResourceMatch,
-    volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch]
+    volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch],
+    enforceRole: Boolean
   ): (mesos.ExecutorInfo, mesos.TaskGroupInfo, Map[Task.Id, NetworkInfo]) = {
     val packedResources = binPackResources(podDefinition, resourceMatch.resources)
 
@@ -76,7 +72,7 @@ object TaskGroupBuilder extends StrictLogging {
           val portAssignments = computePortAssignments(podDefinition, endpoints)
 
           val task = computeTaskInfo(container, podDefinition, offer, instanceId, taskId,
-            packedResources, resourceMatch.hostPorts, config, portAssignments)
+            packedResources, resourceMatch.hostPorts, config, portAssignments, enforceRole)
             .setDiscovery(taskDiscovery(podDefinition, endpoints))
           task.build
       }.asJava
@@ -345,7 +341,8 @@ object TaskGroupBuilder extends StrictLogging {
     matchedResources: Resources,
     hostPorts: Seq[Option[Int]],
     config: BuilderConfig,
-    portAssignments: Seq[PortAssignment]): mesos.TaskInfo.Builder = {
+    portAssignments: Seq[PortAssignment],
+    enforceRole: Boolean): mesos.TaskInfo.Builder = {
 
     val endpointVars = endpointEnvVars(podDefinition, hostPorts, config)
 
@@ -372,7 +369,8 @@ object TaskGroupBuilder extends StrictLogging {
       taskId,
       container,
       offer.getHostname,
-      endpointVars)
+      endpointVars,
+      enforceRole)
 
     builder.setCommand(commandInfo)
 
@@ -417,12 +415,24 @@ object TaskGroupBuilder extends StrictLogging {
     consumer.consumeGpus(podDefinition.executorResources.gpus.toDouble).foreach(executorInfo.addResources)
     executorInfo.addAllResources(portsMatch.resources.asJava)
 
-    if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty) {
+    if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty || podDefinition.linuxInfo.nonEmpty) {
       val containerInfo = mesos.ContainerInfo.newBuilder
         .setType(mesos.ContainerInfo.Type.MESOS)
 
       mesosNetworks.foreach(containerInfo.addNetworkInfos)
       volumeMatchOption.foreach(_.persistentVolumeResources.foreach(executorInfo.addResources))
+
+      podDefinition.linuxInfo.foreach({ linuxInfo =>
+        val linuxInfoBuilder = mesos.LinuxInfo.newBuilder
+
+        linuxInfo.ipcInfo.foreach({ ipcInfo =>
+          ipcInfo.shmSize.foreach(linuxInfoBuilder.setShmSize)
+          linuxInfoBuilder.setIpcMode(ipcInfo.ipcMode.toMesos)
+        })
+
+        containerInfo.setLinuxInfo(linuxInfoBuilder)
+      })
+
       executorInfo.setContainer(containerInfo)
     }
 
@@ -437,7 +447,8 @@ object TaskGroupBuilder extends StrictLogging {
     taskId: Task.Id,
     container: MesosContainer,
     host: String,
-    portsEnvVars: Map[String, String]): mesos.CommandInfo.Builder = {
+    portsEnvVars: Map[String, String],
+    enforceRole: Boolean): mesos.CommandInfo.Builder = {
     val commandInfo = mesos.CommandInfo.newBuilder
 
     // By default 'shell' is set to true which will result in an error if the user
@@ -484,7 +495,7 @@ object TaskGroupBuilder extends StrictLogging {
 
     val hostEnvVar = Map("HOST" -> host)
 
-    val taskContextEnvVars = taskContextEnv(container, podDefinition.version, instanceId, taskId)
+    val taskContextEnvVars = taskContextEnv(container, podDefinition.version, instanceId, taskId, enforceRole)
 
     val labels = podDefinition.labels ++ container.labels
 
@@ -569,10 +580,6 @@ object TaskGroupBuilder extends StrictLogging {
             docker.setConfig(SecretSerializer.toSecretReference(pullConfig.secret))
           }
           image.setType(mesos.Image.Type.DOCKER).setDocker(docker)
-        case raml.ImageType.Appc =>
-          val appcLabels = (LinuxAmd64 ++ im.labels).toMesosLabels
-          val appc = mesos.Image.Appc.newBuilder.setName(im.id).setLabels(appcLabels)
-          image.setType(mesos.Image.Type.APPC).setAppc(appc)
       }
 
       val mesosInfo = mesos.ContainerInfo.MesosInfo.newBuilder.setImage(image)
@@ -582,17 +589,23 @@ object TaskGroupBuilder extends StrictLogging {
     // attach a tty if specified
     container.tty.filter(tty => tty).foreach(containerInfo.setTtyInfo(_))
 
+    // setup linux info
     container.linuxInfo.foreach { linuxInfo =>
       val linuxBuilder = mesos.LinuxInfo.newBuilder
       linuxInfo.seccomp.foreach { seccomp =>
         val seccompBuilder = mesos.SeccompInfo.newBuilder
 
         seccompBuilder.setUnconfined(seccomp.unconfined)
-        seccomp.profileName.foreach { profileName =>
-          seccompBuilder.setProfileName(profileName)
-        }
+        seccomp.profileName.foreach(seccompBuilder.setProfileName)
+
         linuxBuilder.setSeccomp(seccompBuilder)
       }
+
+      linuxInfo.ipcInfo.foreach { ipcInfo =>
+        ipcInfo.shmSize.foreach(linuxBuilder.setShmSize)
+        linuxBuilder.setIpcMode(ipcInfo.ipcMode.toMesos)
+      }
+
       containerInfo.setLinuxInfo(linuxBuilder.build)
     }
 
@@ -669,17 +682,20 @@ object TaskGroupBuilder extends StrictLogging {
     container: MesosContainer,
     version: Timestamp,
     instanceId: Instance.Id,
-    taskId: Task.Id): Map[String, String] = {
+    taskId: Task.Id,
+    enforceRole: Boolean): Map[String, String] = {
+    import TaskBuilderConstants._
     Map(
-      "MESOS_TASK_ID" -> Some(taskId.idString),
-      "MESOS_EXECUTOR_ID" -> Some(instanceId.executorIdString),
-      "MARATHON_APP_ID" -> Some(instanceId.runSpecId.toString),
-      "MARATHON_APP_VERSION" -> Some(version.toString),
-      "MARATHON_CONTAINER_ID" -> Some(container.name),
-      "MARATHON_CONTAINER_RESOURCE_CPUS" -> Some(container.resources.cpus.toString),
-      "MARATHON_CONTAINER_RESOURCE_MEM" -> Some(container.resources.mem.toString),
-      "MARATHON_CONTAINER_RESOURCE_DISK" -> Some(container.resources.disk.toString),
-      "MARATHON_CONTAINER_RESOURCE_GPUS" -> Some(container.resources.gpus.toString)
+      MESOS_TASK_ID -> Some(taskId.idString),
+      MESOS_EXECUTOR_ID -> Some(instanceId.executorIdString),
+      MARATHON_APP_ID -> Some(instanceId.runSpecId.toString),
+      MARATHON_APP_VERSION -> Some(version.toString),
+      MARATHON_CONTAINER_ID -> Some(container.name),
+      MARATHON_APP_ENFORCE_GROUP_ROLE -> Some(enforceRole.toString.toUpperCase()),
+      MARATHON_CONTAINER_RESOURCE_CPUS -> Some(container.resources.cpus.toString),
+      MARATHON_CONTAINER_RESOURCE_MEM -> Some(container.resources.mem.toString),
+      MARATHON_CONTAINER_RESOURCE_DISK -> Some(container.resources.disk.toString),
+      MARATHON_CONTAINER_RESOURCE_GPUS -> Some(container.resources.gpus.toString)
     ).collect {
         case (key, Some(value)) => key -> value
       }

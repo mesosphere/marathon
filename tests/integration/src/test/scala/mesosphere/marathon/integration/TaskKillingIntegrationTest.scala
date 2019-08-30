@@ -5,7 +5,7 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.AbsolutePathId
 
 class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
   override val marathonArgs: Map[String, String] = Map("enable_features" -> "task_killing")
@@ -22,10 +22,10 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       createResult should be(Created)
       extractDeploymentIds(createResult) should have size 1
       waitForDeployment(createResult)
-      waitForTasks(app.id.toPath, 1) //make sure, the app has really started
+      waitForTasks(AbsolutePathId(app.id), 1) //make sure, the app has really started
 
       When("the task is killed")
-      val killResult = marathon.killAllTasksAndScale(app.id.toPath)
+      val killResult = marathon.killAllTasksAndScale(AbsolutePathId(app.id))
       killResult should be(OK)
 
       // We used to wait for TASK_KILLING here, however in rare cases the task would start and then fail immediately e.g.
@@ -43,7 +43,7 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     "Killing an ephemeral task without wipe or scale causes a new task to be restarted with a higher incarnation count" in {
       Given("a new app")
       val app = appProxy(testBasePath / "ephemeral-app-to-kill", "v1", instances = 1, healthCheck = None)
-      val appId = app.id.toPath
+      val appId = AbsolutePathId(app.id)
 
       When("The app is deployed")
       val createResult = marathon.createAppV2(app)
@@ -72,7 +72,7 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     "Killing an ephemeral task with wipe causes a brand new instance to be created" in {
       Given("a new app")
       val app = appProxy(testBasePath / "ephemeral-app-to-wipe", "v1", instances = 1, healthCheck = None)
-      val appId = app.id.toPath
+      val appId = AbsolutePathId(app.id)
 
       When("The app is deployed")
       val createResult = marathon.createAppV2(app)

@@ -26,7 +26,8 @@ class AppDefinitionFormatsTest extends UnitTest
 
   object Fixture {
     val a1 = AppDefinition(
-      id = "app1".toRootPath,
+      id = "app1".toAbsolutePath,
+      role = "*",
       cmd = Some("sleep 10"),
       versionInfo = VersionInfo.OnlyVersion(Timestamp(1))
     )
@@ -40,8 +41,8 @@ class AppDefinitionFormatsTest extends UnitTest
     """)
   }
 
-  def normalizeAndConvert(app: raml.App): AppDefinition = {
-    val config = AppNormalization.Configuration(None, "mesos-bridge-name")
+  def normalizeAndConvert(app: raml.App, sanitizeAcceptedResourceRoles: Boolean = true): AppDefinition = {
+    val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved, sanitizeAcceptedResourceRoles)
     Raml.fromRaml(
       // this is roughly the equivalent of how the original Formats behaved, which is notable because Formats
       // (like this code) reverses the order of validation and normalization
@@ -49,7 +50,7 @@ class AppDefinitionFormatsTest extends UnitTest
         AppNormalization.apply(config)
           .normalized(Validation.validateOrThrow(
             AppNormalization.forDeprecated(config).normalized(app))(AppValidation.validateOldAppAPI)))(
-          AppValidation.validateCanonicalAppAPI(Set.empty, () => None)
+          AppValidation.validateCanonicalAppAPI(Set.empty, () => None, Set(ResourceRole.Unreserved, "production"))
         )
     )
   }
@@ -187,20 +188,20 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     """ToJSON should correctly handle missing acceptedResourceRoles""" in {
-      val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = Set.empty)
+      val appDefinition = AppDefinition(id = AbsolutePathId("/test"), acceptedResourceRoles = Set.empty, role = "*")
       val json = Json.toJson(appDefinition)
       (json \ "acceptedResourceRoles").asOpt[Set[String]] should be(None)
     }
 
     """ToJSON should correctly handle acceptedResourceRoles""" in {
-      val appDefinition = AppDefinition(id = PathId("test"), acceptedResourceRoles = Set("a"))
+      val appDefinition = AppDefinition(id = AbsolutePathId("/test"), acceptedResourceRoles = Set("a"), role = "*")
       val json = Json.toJson(appDefinition)
       (json \ "acceptedResourceRoles").as[Set[String]] should be(Set("a"))
     }
 
     """FromJSON should parse "acceptedResourceRoles": ["production", "*"] """ in {
-      val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": ["production", "*"] }""")
-      val appDef = normalizeAndConvert(json.as[raml.App])
+      val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": ["production", "*"], "role": "production" }""")
+      val appDef = normalizeAndConvert(json.as[raml.App], false)
       appDef.acceptedResourceRoles should equal(Set("production", ResourceRole.Unreserved))
     }
 
@@ -210,9 +211,10 @@ class AppDefinitionFormatsTest extends UnitTest
       appDef.acceptedResourceRoles should equal(Set(ResourceRole.Unreserved))
     }
 
-    "FromJSON should fail when 'acceptedResourceRoles' is defined but empty" in {
+    "FromJSON should is sanitized when 'acceptedResourceRoles' is defined but empty" in {
       val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": [] }""")
-      a[ValidationFailedException] shouldBe thrownBy { normalizeAndConvert(json.as[raml.App]) }
+      val appDef = normalizeAndConvert(json.as[raml.App])
+      appDef.acceptedResourceRoles should equal(Set(ResourceRole.Unreserved))
     }
 
     "FromJSON should read the default upgrade strategy" in {
@@ -243,9 +245,13 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "AppDefinition JSON includes readinessChecks" in {
-      val app = AppDefinition(id = PathId("/test"), cmd = Some("sleep 123"), readinessChecks = Seq(
-        ReadinessCheckTestHelper.alternativeHttps
-      ),
+      val app = AppDefinition(
+        id = AbsolutePathId("/test"),
+        role = "*",
+        cmd = Some("sleep 123"),
+        readinessChecks = Seq(
+          ReadinessCheckTestHelper.alternativeHttps
+        ),
         portDefinitions = Seq(
           state.PortDefinition(0, name = Some(ReadinessCheckTestHelper.alternativeHttps.portName))
         )
@@ -424,39 +430,6 @@ class AppDefinitionFormatsTest extends UnitTest
       AppValidation.validateOldAppAPI(app3) should haveViolations("/container/docker/parameters" -> "must be empty")
     }
 
-    "FromJSON should parse Mesos AppC container" in {
-      val appDef = normalizeAndConvert(Json.parse(
-        """{
-        |  "id": "test",
-        |  "ipAddress": {
-        |    "networkName": "foo"
-        |  },
-        |  "container": {
-        |    "type": "MESOS",
-        |    "appc": {
-        |      "image": "busybox",
-        |      "id": "sha512-aHashValue",
-        |      "labels": {
-        |        "version": "1.2.0",
-        |        "arch": "amd64",
-        |        "os": "linux"
-        |      }
-        |    }
-        |  }
-        |}""".stripMargin).as[raml.App])
-
-      appDef.networks should be(Seq(ContainerNetwork(name = "foo")))
-      appDef.container should be(Some(Container.MesosAppC(
-        image = "busybox",
-        id = Some("sha512-aHashValue"),
-        labels = Map(
-          "version" -> "1.2.0",
-          "arch" -> "amd64",
-          "os" -> "linux"
-        ),
-        portMappings = Seq(Container.PortMapping.defaultInstance))))
-    }
-
     "FromJSON should parse ipAddress without networkName" in {
       val app = Json.parse(
         """{
@@ -545,7 +518,7 @@ class AppDefinitionFormatsTest extends UnitTest
 
     "ToJSON should serialize unreachable instance strategy" in {
       val strategy = UnreachableEnabled(6.minutes, 12.minutes)
-      val appDef = AppDefinition(id = PathId("test"), unreachableStrategy = strategy)
+      val appDef = AppDefinition(id = AbsolutePathId("/test"), unreachableStrategy = strategy, role = "*")
 
       val json = Json.toJson(Raml.toRaml(appDef))
 
@@ -577,7 +550,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "ToJSON should serialize kill selection" in {
-      val appDef = AppDefinition(id = PathId("test"), killSelection = KillSelection.OldestFirst)
+      val appDef = AppDefinition(id = AbsolutePathId("/test"), killSelection = KillSelection.OldestFirst, role = "*")
 
       val json = Json.toJson(Raml.toRaml(appDef))
 
@@ -586,7 +559,8 @@ class AppDefinitionFormatsTest extends UnitTest
 
     "app with readinessCheck passes validation" in {
       val app = AppDefinition(
-        id = "test".toRootPath,
+        id = "test".toAbsolutePath,
+        role = "*",
         cmd = Some("sleep 1234"),
         readinessChecks = Seq(
           ReadinessCheckTestHelper.alternativeHttps
@@ -602,7 +576,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should fail for empty container (#4978)" in {
-      val config = AppNormalization.Configuration(None, "mesos-bridge-name")
+      val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved, true)
       val json = Json.parse(
         """{
           |  "id": "/docker-compose-demo",
@@ -610,7 +584,7 @@ class AppDefinitionFormatsTest extends UnitTest
           |  "container": {}
           |}""".stripMargin)
       val ramlApp = json.as[raml.App]
-      val validator = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)
+      val validator = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName, Set(ResourceRole.Unreserved))
       validator(ramlApp) should haveViolations("/container/docker" -> "not defined")
     }
 

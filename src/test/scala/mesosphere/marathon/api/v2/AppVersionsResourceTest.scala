@@ -42,7 +42,7 @@ class AppVersionsResourceTest extends UnitTest with JerseyTest {
       auth.authorized = false
       val req = auth.request
 
-      groupManager.app("appId".toRootPath) returns Some(AppDefinition("appId".toRootPath))
+      groupManager.app("appId".toAbsolutePath) returns Some(AppDefinition("appId".toAbsolutePath, role = "*"))
       When("the index is fetched")
       val index = asyncRequest { r => appsVersionsResource.index("appId", req, r) }
       Then("we receive a not authorized response")
@@ -55,7 +55,7 @@ class AppVersionsResourceTest extends UnitTest with JerseyTest {
       auth.authorized = false
       val req = auth.request
 
-      groupManager.app("appId".toRootPath) returns None
+      groupManager.app("appId".toAbsolutePath) returns None
       When("the index is fetched")
       val index = asyncRequest { r => appsVersionsResource.index("appId", req, r) }
       Then("we receive a 404")
@@ -69,7 +69,7 @@ class AppVersionsResourceTest extends UnitTest with JerseyTest {
       val req = auth.request
 
       val version = Timestamp.now()
-      service.getApp("appId".toRootPath, version) returns Some(AppDefinition("appId".toRootPath))
+      service.getApp("appId".toAbsolutePath, version) returns Some(AppDefinition("appId".toAbsolutePath, role = "*"))
       When("one app version is fetched")
       val show = asyncRequest { r => appsVersionsResource.show("appId", version.toString, req, r) }
       Then("we receive a not authorized response")
@@ -83,7 +83,7 @@ class AppVersionsResourceTest extends UnitTest with JerseyTest {
       val req = auth.request
 
       val version = Timestamp.now()
-      service.getApp("appId".toRootPath, version) returns None
+      service.getApp("appId".toAbsolutePath, version) returns None
       When("one app version is fetched")
       val show = asyncRequest { r => appsVersionsResource.show("appId", version.toString, req, r) }
       Then("we receive a not authorized response")

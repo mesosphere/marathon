@@ -6,7 +6,7 @@ import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.{Instance, TestTaskBuilder}
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos.TaskState
 
@@ -41,7 +41,7 @@ class TaskStatusUpdateTest extends UnitTest {
       val instance = mock[Instance]
       instance.hasReservation returns false
 
-      f.clock += 5.seconds
+      f.clock.advanceBy(5.seconds)
 
       val status = MesosTaskStatusTestHelper.unreachable(task.taskId, f.clock.now())
 
@@ -58,7 +58,7 @@ class TaskStatusUpdateTest extends UnitTest {
       val instance = mock[Instance]
       instance.hasReservation returns true
 
-      f.clock += 5.seconds
+      f.clock.advanceBy(5.seconds)
 
       val status = MesosTaskStatusTestHelper.unreachable(task.taskId, f.clock.now())
 
@@ -69,7 +69,7 @@ class TaskStatusUpdateTest extends UnitTest {
   }
 
   class Fixture {
-    val appId = PathId("/app")
+    val appId = AbsolutePathId("/app")
     val clock = new SettableClock()
   }
 }

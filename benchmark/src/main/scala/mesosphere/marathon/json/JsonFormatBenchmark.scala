@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.Status
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.state.{AppDefinition, EnvVarString, PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, EnvVarString, Timestamp}
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 import play.api.libs.json.Json
@@ -54,11 +54,12 @@ object JsonFormatBenchmark extends AppAndGroupFormats {
       */
     val numLabels = 11
 
-    val appId = PathId("benchmark/app/definition")
+    val appId = AbsolutePathId("/benchmark/app/definition")
 
     AppInfo(
       app = AppDefinition(
         id = appId,
+        role = "someRole",
         env = 0.to(numEnvVars).map(i => ("KEY_" * 10) + i -> EnvVarString(("VALUE_" * 10) + i)).toMap,
         labels = 0.to(numLabels).map(i => ("KEY_" * 10) + i -> (("VALUE_" * 10) + i)).toMap
       ),
@@ -90,7 +91,8 @@ object JsonFormatBenchmark extends AppAndGroupFormats {
             ),
             healthCheckResults = Seq.empty,
             servicePorts = Seq.empty,
-            reservation = None
+            reservation = None,
+            role = "someRole"
           )
         )
       )

@@ -167,6 +167,7 @@ message ServiceDefinition {
   optional mesos.TTYInfo tty = 35;
   repeated mesos.Resource executorResources = 36;
   optional CheckDefinition check = 37;
+  optional string role = 38;
 }
 
 enum KillSelection {
@@ -279,27 +280,23 @@ message ExtendedContainerInfo {
       required bool unconfined = 2;
     }
 
+    message IpcInfo {
+      // IPC configurations
+
+      enum IpcMode {
+        PRIVATE = 1;
+        SHARE_PARENT = 2;
+      }
+
+      // The ipc mode the container or executor should apply
+      required IpcMode ipcMode = 1;
+
+      // The shared memory size in MB
+      optional uint32 shmSize = 2;
+    }
+
     optional Seccomp seccomp = 1;
-  }
-
-  // AppC on the universal Mesos engine
-  message MesosAppCInfo {
-    // The name of the image.
-    required string image = 1;
-
-    // An image ID is a string of the format "hash-value", where
-    // "hash" is the hash algorithm used and "value" is the hex
-    // encoded string of the digest. Currently the only permitted
-    // hash algorithm is sha512.
-    optional string id = 2;
-
-    // Optional labels. Suggested labels: "version", "os", and "arch".
-    repeated mesos.Label labels = 3;
-
-    // With this flag set to true, the universal Mesos containerizer will
-    // pull the docker image from the registry even if the image
-    // is already downloaded on the agent.
-    optional bool force_pull_image = 4;
+    optional IpcInfo ipcInfo = 2;
   }
 
   message PortMapping {
@@ -318,7 +315,6 @@ message ExtendedContainerInfo {
 
   optional DockerInfo docker = 3;
   optional MesosDockerInfo mesosDocker = 4;
-  optional MesosAppCInfo mesosAppC = 5;
   optional LinuxInfo linuxInfo = 7;   // since 1.8
 }
 
@@ -342,6 +338,7 @@ message Volume {
     required string name = 2;
     required string provider = 3;
     repeated mesos.Label options = 4;
+    optional bool shared = 5 [default = false];
   }
 
   // Defining properties of secret volumes
@@ -409,6 +406,7 @@ message GroupDefinition {
   repeated string dependencies = 5;
   repeated AppReference apps = 6;
   repeated AppReference pods = 7;
+  optional bool enforceRole = 9;
 }
 
 message DeploymentPlanDefinition {

@@ -44,21 +44,21 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     }
 
     "not store invalid groups" in new Fixture {
-      val app1 = AppDefinition("/app1".toPath)
-      val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/app1".toPath)), validate = false)
+      val app1 = AppDefinition(AbsolutePathId("/app1"), role = "*")
+      val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/app1".toAbsolutePath)), validate = false)
 
       groupRepository.root() returns Future.successful(createRootGroup())
 
       intercept[ValidationFailedException] {
-        throw groupManager.updateRoot(PathId.empty, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
+        throw groupManager.updateRoot(PathId.root, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
       }
 
       verify(groupRepository, times(0)).storeRoot(any, any, any, any, any)
     }
 
     "return multiple apps when asked" in {
-      val app1 = AppDefinition("/app1".toPath, cmd = Some("sleep"))
-      val app2 = AppDefinition("/app2".toPath, cmd = Some("sleep"))
+      val app1 = AppDefinition(AbsolutePathId("/app1"), role = "*", cmd = Some("sleep"))
+      val app2 = AppDefinition(AbsolutePathId("/app2"), role = "*", cmd = Some("sleep"))
       val rootGroup = createRootGroup(Map(app1.id -> app1, app2.id -> app2))
       val f = new Fixture(initialRoot = Some(rootGroup))
 
@@ -66,18 +66,21 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     }
 
     "publishes GroupChangeSuccess with the appropriate GID on successful deployment" in new Fixture {
-      val app: AppDefinition = AppDefinition("/group/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
-      val group = createGroup("/group".toPath, apps = Map(app.id -> app), version = Timestamp(1))
+      val app: AppDefinition = AppDefinition(AbsolutePathId("/group/app1"), role = "*", cmd = Some("sleep 3"), portDefinitions = Seq.empty)
+      val group = createGroup("/group".toAbsolutePath, apps = Map(app.id -> app), version = Timestamp(1))
 
       groupRepository.root() returns Future.successful(createRootGroup())
       deploymentService.deploy(any, any) returns Future.successful(Done)
-      val appWithVersionInfo = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+      val appWithAdditionalInfo = app.copy(
+        versionInfo = VersionInfo.forNewConfig(Timestamp(1)),
+        role = "*"
+      )
 
       val groupWithVersionInfo = createRootGroup(
         version = Timestamp(1),
         groups = Set(
           createGroup(
-            "/group".toPath, apps = Map(appWithVersionInfo.id -> appWithVersionInfo), version = Timestamp(1))))
+            "/group".toAbsolutePath, apps = Map(appWithAdditionalInfo.id -> appWithAdditionalInfo), version = Timestamp(1))))
       groupRepository.storeRootVersion(any, any, any) returns Future.successful(Done)
       groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
       val groupChangeSuccess = Promise[GroupChangeSuccess]
@@ -88,36 +91,39 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
           ???
       }
 
-      groupManager.updateRoot(PathId.empty, _.putGroup(group, version = Timestamp(1)), version = Timestamp(1), force = false).futureValue
-      verify(groupRepository).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil, Nil, Nil)
-      verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
+      groupManager.updateRoot(PathId.root, _.putGroup(group, version = Timestamp(1)), version = Timestamp(1), force = false).futureValue
+      verify(groupRepository).storeRoot(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil, Nil, Nil)
+      verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil)
 
       groupChangeSuccess.future.
         futureValue.
-        groupId shouldBe PathId.empty
+        groupId shouldBe PathId.root
     }
 
     "store new apps with correct version infos in groupRepo and appRepo" in new Fixture {
 
-      val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
+      val app: AppDefinition = AppDefinition(AbsolutePathId("/app1"), role = "*", cmd = Some("sleep 3"), portDefinitions = Seq.empty)
       val rootGroup = createRootGroup(Map(app.id -> app), version = Timestamp(1))
       groupRepository.root() returns Future.successful(createRootGroup())
       deploymentService.deploy(any, any) returns Future.successful(Done)
-      val appWithVersionInfo = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+      val appWithAdditionalInfo = app.copy(
+        versionInfo = VersionInfo.forNewConfig(Timestamp(1)),
+        role = "*"
+      )
 
       val groupWithVersionInfo = createRootGroup(Map(
-        appWithVersionInfo.id -> appWithVersionInfo), version = Timestamp(1))
+        appWithAdditionalInfo.id -> appWithAdditionalInfo), version = Timestamp(1))
       groupRepository.storeRootVersion(any, any, any) returns Future.successful(Done)
       groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
 
-      groupManager.updateRoot(PathId.empty, _.putGroup(rootGroup, version = Timestamp(1)), version = Timestamp(1), force = false).futureValue
+      groupManager.updateRoot(PathId.root, _.putGroup(rootGroup, version = Timestamp(1)), version = Timestamp(1), force = false).futureValue
 
-      verify(groupRepository).storeRoot(groupWithVersionInfo, Seq(appWithVersionInfo), Nil, Nil, Nil)
-      verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithVersionInfo), Nil)
+      verify(groupRepository).storeRoot(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil, Nil, Nil)
+      verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil)
     }
 
     "expunge removed apps from appRepo" in new Fixture(initialRoot = Option({
-      val app: AppDefinition = AppDefinition("/app1".toPath, cmd = Some("sleep 3"), portDefinitions = Seq.empty)
+      val app: AppDefinition = AppDefinition(AbsolutePathId("/app1"), role = "*", cmd = Some("sleep 3"), portDefinitions = Seq.empty)
       createRootGroup(Map(app.id -> app), version = Timestamp(1))
     })) {
       val groupEmpty = createRootGroup(version = Timestamp(1))
@@ -126,21 +132,21 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       groupRepository.storeRootVersion(any, any, any) returns Future.successful(Done)
       groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
 
-      groupManager.updateRoot(PathId.empty, _.putGroup(groupEmpty, version = Timestamp(1)), Timestamp(1), force = false).futureValue
+      groupManager.updateRoot(PathId.root, _.putGroup(groupEmpty, version = Timestamp(1)), Timestamp(1), force = false).futureValue
       verify(groupRepository).storeRootVersion(groupEmpty, Nil, Nil)
-      verify(groupRepository).storeRoot(groupEmpty, Nil, Seq("/app1".toPath), Nil, Nil)
+      verify(groupRepository).storeRoot(groupEmpty, Nil, Seq(AbsolutePathId("/app1")), Nil, Nil)
     }
 
     "dismiss deployments when max_running_deployments limit is achieved" in new Fixture(maxRunningDeployments = 5) {
-      val app1 = AppDefinition("/app1".toPath)
-      val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/app1".toPath)), validate = false)
+      val app1 = AppDefinition(AbsolutePathId("/app1"), role = "*")
+      val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/app1".toAbsolutePath)), validate = false)
       groupRepository.root() returns Future.successful(createRootGroup())
 
       val running = (1.to(maxRunningDeployments).map(_ => mock[DeploymentStepInfo]))
       deploymentService.listRunningDeployments() returns Future.successful(running)
 
       intercept[TooManyRunningDeploymentsException] {
-        throw groupManager.updateRoot(PathId.empty, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
+        throw groupManager.updateRoot(PathId.root, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
       }
 
     }

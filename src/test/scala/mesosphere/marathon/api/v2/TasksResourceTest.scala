@@ -53,7 +53,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
     "list (txt) tasks with less ports than the current app version" in new Fixture {
       // Regression test for #234
       Given("one app with one task with less ports than required")
-      val app = AppDefinition("/foo".toRootPath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)), cmd = Some("sleep"))
+      val app = AppDefinition("/foo".toAbsolutePath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)), cmd = Some("sleep"), role = "*")
 
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
@@ -92,8 +92,8 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
 
     "killTasks" in new Fixture {
       Given("two apps and 1 task each")
-      val app1 = "/my/app-1".toRootPath
-      val app2 = "/my/app-2".toRootPath
+      val app1 = "/my/app-1".toAbsolutePath
+      val app2 = "/my/app-2".toAbsolutePath
 
       val instance1 = TestInstanceBuilder.newBuilder(app1).addTaskStaged().getInstance()
       val instance2 = TestInstanceBuilder.newBuilder(app2).addTaskStaged().getInstance()
@@ -107,8 +107,8 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       config.zkTimeoutDuration returns 5.seconds
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
-      groupManager.app(app1) returns Some(AppDefinition(app1))
-      groupManager.app(app2) returns Some(AppDefinition(app2))
+      groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))
+      groupManager.app(app2) returns Some(AppDefinition(app2, role = "*"))
 
       When("we ask to kill both tasks")
       val response = asyncRequest { r =>
@@ -131,7 +131,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
 
     "try to kill pod instances" in new Fixture {
       Given("two apps and 1 task each")
-      val pod1 = "/pod".toRootPath
+      val pod1 = "/pod".toAbsolutePath
 
       val instance = TestInstanceBuilder.newBuilder(pod1).addTaskRunning(Some("container1")).getInstance()
 
@@ -159,8 +159,8 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
 
     "killTasks with force" in new Fixture {
       Given("two apps and 1 task each")
-      val app1 = "/my/app-1".toRootPath
-      val app2 = "/my/app-2".toRootPath
+      val app1 = "/my/app-1".toAbsolutePath
+      val app2 = "/my/app-2".toAbsolutePath
 
       val instance1 = TestInstanceBuilder.newBuilder(app1).addTaskRunning().getInstance()
       val instance2 = TestInstanceBuilder.newBuilder(app2).addTaskStaged().getInstance()
@@ -174,8 +174,8 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       config.zkTimeoutDuration returns 5.seconds
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       taskKiller.killAndScale(any, any)(any) returns Future.successful(deploymentPlan)
-      groupManager.app(app1) returns Some(AppDefinition(app1))
-      groupManager.app(app2) returns Some(AppDefinition(app2))
+      groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))
+      groupManager.app(app2) returns Some(AppDefinition(app2, role = "*"))
 
       When("we ask to kill both tasks")
       val response = asyncRequest { r =>
@@ -198,7 +198,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
 
     "killTasks with scale and wipe fails" in new Fixture {
       Given("a request")
-      val app1 = "/my/app-1".toRootPath
+      val app1 = "/my/app-1".toAbsolutePath
       val instance1 = Instance.Id.forRunSpec(app1)
       val taskId1 = Task.Id(instance1).idString
       val body = s"""{"ids": ["$taskId1"]}"""
@@ -215,7 +215,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
     "killTasks with wipe delegates to taskKiller with wipe value" in new Fixture {
 
       Given("a task that shall be killed")
-      val app1 = "/my/app-1".toRootPath
+      val app1 = "/my/app-1".toAbsolutePath
       val instance1 = TestInstanceBuilder.newBuilder(app1).addTaskRunning().getInstance()
       val List(taskId1) = instance1.tasksMap.keys.toList
       val body = s"""{"ids": ["${taskId1.idString}"]}"""
@@ -225,7 +225,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
       instanceTracker.specInstances(app1) returns Future.successful(Seq(instance1))
       taskKiller.kill(Matchers.eq(app1), any, Matchers.eq(true))(any) returns Future.successful(List(instance1))
-      groupManager.app(app1) returns Some(AppDefinition(app1))
+      groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))
 
       When("we send the request")
       val response = asyncRequest { r =>
@@ -246,7 +246,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       Given("An unauthenticated request")
       auth.authenticated = false
       val req = auth.request
-      val appId = "/my/app".toRootPath
+      val appId = "/my/app".toAbsolutePath
       val instance1 = Instance.Id.forRunSpec(appId)
       val instance2 = Instance.Id.forRunSpec(appId)
       val instance3 = Instance.Id.forRunSpec(appId)
@@ -256,7 +256,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val body = s"""{"ids": ["$taskId1", "$taskId2", "$taskId3"]}""".getBytes
 
       Given("the app exists")
-      groupManager.app(appId) returns Some(AppDefinition(appId))
+      groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
 
       When("kill task is called")
       val killTasks = asyncRequest { r => taskResource.killTasks(scale = true, force = false, wipe = false, body, req, r) }
@@ -268,7 +268,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       Given("An unauthenticated request")
       auth.authenticated = false
       val req = auth.request
-      val appId = "/my/app".toRootPath
+      val appId = "/my/app".toAbsolutePath
       val instance1 = Instance.Id.forRunSpec(appId)
       val instance2 = Instance.Id.forRunSpec(appId)
       val instance3 = Instance.Id.forRunSpec(appId)
@@ -307,7 +307,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       auth.authenticated = true
       auth.authorized = false
       val req = auth.request
-      val appId = "/my/app".toRootPath
+      val appId = "/my/app".toAbsolutePath
       val instance1 = Instance.Id.forRunSpec(appId)
       val instance2 = Instance.Id.forRunSpec(appId)
       val instance3 = Instance.Id.forRunSpec(appId)
@@ -333,7 +333,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
 
       Given("the app exists")
       config.zkTimeoutDuration returns 5.seconds
-      groupManager.app(appId) returns Some(AppDefinition(appId))
+      groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("kill task is called")
@@ -344,7 +344,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
 
     "killTasks fails for invalid taskId" in new Fixture {
       Given("a valid and an invalid taskId")
-      val app1 = "/my/app-1".toRootPath
+      val app1 = "/my/app-1".toAbsolutePath
       val instance1 = Instance.Id.forRunSpec(app1)
       val taskId1 = Task.Id(instance1).idString
       val body = s"""{"ids": ["$taskId1", "invalidTaskId"]}"""

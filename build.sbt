@@ -175,13 +175,11 @@ lazy val packagingSettings = Seq(
           |apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \\
           |apt-get update -y && \\
           |apt-get upgrade -y && \\
-          |echo "deb http://ftp.debian.org/debian stretch-backports main" | tee -a /etc/apt/sources.list && \\
-          |echo "deb http://repos.mesosphere.com/debian stretch-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
-          |echo "deb http://repos.mesosphere.com/debian stretch main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
+          |${NativePackagerSettings.debianSourceCommands} && \\
           |apt-get update && \\
           |# jdk setup
           |mkdir -p /usr/share/man/man1 && \\
-          |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java=20170929~deb9u1 && \\
+          |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java && \\
           |/var/lib/dpkg/info/ca-certificates-java.postinst configure && \\
           |ln -svT "/usr/lib/jvm/java-8-openjdk-$$(dpkg --print-architecture)" /docker-java-home && \\
           |# mesos setup
@@ -189,7 +187,7 @@ lazy val packagingSettings = Seq(
           |# Workaround required due to https://github.com/mesosphere/mesos-deb-packaging/issues/102
           |# Remove after upgrading to Mesos 1.7.0
           |apt-get install -y libcurl3-nss && \\
-          |apt-get install --no-install-recommends -y mesos=${Dependency.V.MesosDebian} && \\
+          |apt-get install --no-install-recommends -y mesos=${Dependency.V.MesosDebian}.debian9 && \\
           |rm /usr/bin/systemctl && \\
           |apt-get clean && \\
           |chown nobody:nogroup /marathon""".stripMargin)) ++
@@ -277,20 +275,4 @@ lazy val benchmark = (project in file("benchmark"))
   .settings(
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
     libraryDependencies ++= Dependencies.benchmark
-  )
-
-// see also mesos-client/README.md
-lazy val `mesos-client` = (project in file("mesos-client"))
-  .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
-  .settings(testSettings : _*)
-  .settings(commonSettings: _*)
-  .settings(formatSettings: _*)
-  .dependsOn(marathon % "compile->compile; test->test")
-  .settings(
-    name := "mesos-client",
-    libraryDependencies ++= Dependencies.mesosClient,
-
-    PB.targets in Compile := Seq(
-      scalapb.gen() -> (sourceManaged in Compile).value
-    )
   )

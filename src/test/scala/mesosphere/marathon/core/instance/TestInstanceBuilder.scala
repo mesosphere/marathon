@@ -122,7 +122,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
     withReservation(Seq.empty, state)
 
   def withReservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State): TestInstanceBuilder =
-    withReservation(Reservation(volumeIds, state))
+    withReservation(Reservation(volumeIds, state, Reservation.SimplifiedId(instance.instanceId)))
 
   def withReservation(reservation: Reservation): TestInstanceBuilder =
     copy(instance = instance.copy(reservation = Some(reservation)))
@@ -148,14 +148,31 @@ object TestInstanceBuilder {
 
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
     instanceId: Instance.Id, unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default()): Instance = {
-    val runSpec = AppDefinition(instanceId.runSpecId, unreachableStrategy = unreachableStrategy, versionInfo = VersionInfo.OnlyVersion(version))
+    val runSpec = AppDefinition(instanceId.runSpecId, unreachableStrategy = unreachableStrategy, versionInfo = VersionInfo.OnlyVersion(version), role = "*")
     Instance(
       instanceId = instanceId,
       agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
       state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
       tasksMap = Map.empty,
       runSpec = runSpec,
-      None
+      reservation = None,
+      role = "*"
+    )
+  }
+
+  def emptyInstanceForRunSpec(now: Timestamp = Timestamp.now(), runSpec: RunSpec, instanceId: Instance.Id): Instance = {
+    val resolvedInstanceId = Option(instanceId).getOrElse(Instance.Id.forRunSpec(runSpec.id))
+
+    require(resolvedInstanceId.runSpecId == runSpec.id, "provided instanceId did not match runSpec")
+
+    Instance(
+      instanceId = resolvedInstanceId,
+      agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
+      state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
+      tasksMap = Map.empty,
+      runSpec = runSpec,
+      reservation = None,
+      role = runSpec.role
     )
   }
 
@@ -166,25 +183,29 @@ object TestInstanceBuilder {
     val runSpec = AppDefinition(
       task.taskId.instanceId.runSpecId,
       unreachableStrategy = unreachableStrategy,
-      versionInfo = VersionInfo.OnlyVersion(task.runSpecVersion)
+      versionInfo = VersionInfo.OnlyVersion(task.runSpecVersion),
+      role = "*"
     )
 
-    new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, runSpec, None)
+    new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, runSpec, None, "*")
   }
 
   val defaultAgentInfo = Instance.AgentInfo(
     host = AgentTestDefaults.defaultHostName,
     agentId = Some(AgentTestDefaults.defaultAgentId), region = None, zone = None, attributes = Seq.empty)
 
-  def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now(),
+  def newBuilderForRunSpec(runSpec: RunSpec, now: Timestamp = Timestamp.now(), instanceId: Instance.Id = null): TestInstanceBuilder =
+    TestInstanceBuilder(emptyInstanceForRunSpec(now, runSpec, instanceId = instanceId), now)
+
+  def newBuilder(runSpecId: AbsolutePathId, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
-    newBuilderWithInstanceId(Instance.Id.forRunSpec(runSpecId), now, version)
+    TestInstanceBuilder(emptyInstance(now, version, Instance.Id.forRunSpec(runSpecId)), now)
 
   def newBuilderWithInstanceId(instanceId: Instance.Id, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
     TestInstanceBuilder(emptyInstance(now, version, instanceId), now)
 
-  def newBuilderWithLaunchedTask(runSpecId: PathId, now: Timestamp = Timestamp.now(),
+  def newBuilderWithLaunchedTask(runSpecId: AbsolutePathId, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
     newBuilder(runSpecId, now, version)
       .addTaskLaunched()
@@ -194,5 +215,8 @@ object TestInstanceBuilder {
     def appTask[T <: Task]: T = new LegacyInstanceImprovement(instance).appTask.asInstanceOf[T]
   }
 
-  def scheduledWithReservation(runSpec: RunSpec, localVolumes: Seq[LocalVolumeId] = Seq.empty, state: Reservation.State = Reservation.State.New(None)): Instance = Instance.scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)).reserved(Reservation(localVolumes, state), AgentInfoPlaceholder())
+  def scheduledWithReservation(runSpec: RunSpec, localVolumes: Seq[LocalVolumeId] = Seq.empty, state: Reservation.State = Reservation.State.New(None)): Instance = {
+    val instanceId = Instance.Id.forRunSpec(runSpec.id)
+    Instance.scheduled(runSpec, instanceId).reserved(Reservation(localVolumes, state, Reservation.SimplifiedId(instanceId)), AgentInfoPlaceholder())
+  }
 }

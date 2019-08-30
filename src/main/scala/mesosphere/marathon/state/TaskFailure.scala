@@ -7,7 +7,7 @@ import mesosphere.mesos.protos.SlaveID
 import org.apache.mesos.{Protos => mesos}
 
 case class TaskFailure(
-    appId: PathId,
+    appId: AbsolutePathId,
     taskId: mesos.TaskID,
     state: mesos.TaskState,
     message: String = "",
@@ -45,7 +45,7 @@ object TaskFailure {
 
   def empty: TaskFailure = {
     TaskFailure(
-      PathId.empty,
+      PathId.root,
       mesos.TaskID.newBuilder().setValue("").build,
       mesos.TaskState.TASK_STAGING
     )
@@ -53,7 +53,7 @@ object TaskFailure {
 
   def apply(proto: Protos.TaskFailure): TaskFailure =
     TaskFailure(
-      appId = PathId(proto.getAppId),
+      appId = AbsolutePathId(proto.getAppId),
       taskId = proto.getTaskId,
       state = proto.getState,
       message = proto.getMessage,

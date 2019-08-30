@@ -21,7 +21,6 @@ import mesosphere.marathon.core.task.KillServiceMock
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{DeploymentRepository, FrameworkIdRepository, GroupRepository, TaskFailureRepository}
 import mesosphere.marathon.stream.Implicits._
@@ -50,7 +49,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
   "MarathonSchedulerActor" should {
     "RecoversDeploymentsAndReconcilesHealthChecksOnStart" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
+      val app = AppDefinition(id = AbsolutePathId("/test-app"), instances = 1, cmd = Some("sleep"), role = "*")
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
@@ -62,7 +61,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Reconcile orphan instance of unknown app - instance should be killed" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "/deleted-app".toPath, instances = 1)
+      val app = AppDefinition(id = AbsolutePathId("/deleted-app"), instances = 1, role = "*")
       val orphanedInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
       groupRepo.root() returns Future.successful(createRootGroup())
@@ -80,7 +79,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Terminal tasks should not be submitted in reconciliation" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
+      val app = AppDefinition(id = AbsolutePathId("/test-app"), instances = 1, cmd = Some("sleep"), role = "*")
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskUnreachable(containerName = Some("unreachable")).addTaskRunning().addTaskGone(containerName = Some("gone")).getInstance()
 
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
@@ -103,7 +102,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Terminal tasks should not be submitted in reconciliation - Instance with only terminal tasks" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
+      val app = AppDefinition(id = AbsolutePathId("/test-app"), instances = 1, cmd = Some("sleep"), role = "*")
       val instance = TestInstanceBuilder.newBuilder(app.id)
         .addTaskError(containerName = Some("error"))
         .addTaskFailed(containerName = Some("failed"))
@@ -128,7 +127,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Terminal tasks should not be submitted in reconciliation - Instance with all kind of tasks status" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
+      val app = AppDefinition(id = AbsolutePathId("/test-app"), instances = 1, cmd = Some("sleep"), role = "*")
       val instance = TestInstanceBuilder.newBuilder(app.id)
         .addTaskError(containerName = Some("error"))
         .addTaskFailed(containerName = Some("failed"))
@@ -169,7 +168,7 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Created tasks should not be submitted in reconciliation" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
+      val app = AppDefinition(id = AbsolutePathId("/test-app"), instances = 1, cmd = Some("sleep"), role = "*")
       val instance = TestInstanceBuilder.newBuilder(app.id)
         .addTaskProvisioned(containerName = Some("created"))
         .getInstance()
@@ -188,11 +187,11 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "ScaleApps" in withFixture() { f =>
       import f._
-      val app: AppDefinition = AppDefinition(id = "/test-app".toPath, instances = 1, cmd = Some("sleep"))
+      val app: AppDefinition = AppDefinition(id = AbsolutePathId("/test-app"), instances = 1, cmd = Some("sleep"), role = "*")
 
       val instances = Seq(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
 
-      instanceTracker.specInstances(M.eq("nope".toPath), M.eq(false))(M.any[ExecutionContext]) returns Future.successful(instances)
+      instanceTracker.specInstances(M.eq(AbsolutePathId("/nope")), M.eq(false))(M.any[ExecutionContext]) returns Future.successful(instances)
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
@@ -205,12 +204,12 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "ScaleApp" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = "/test-app-scale".toPath, instances = 1, cmd = Some("sleep"))
+      val app = AppDefinition(id = AbsolutePathId("/test-app-scale"), instances = 1, cmd = Some("sleep"), role = "*")
 
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
-      schedulerActor ! ScaleRunSpec("/test-app-scale".toPath)
+      schedulerActor ! ScaleRunSpec(AbsolutePathId("/test-app-scale"))
 
       eventually {
         verify(queue).add(app, 1)
@@ -222,21 +221,22 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Deployment" in withFixture() { f =>
       import f._
       val app = AppDefinition(
-        id = PathId("/foo/app1"),
+        id = AbsolutePathId("/foo/app1"),
         cmd = Some("cmd"),
         instances = 2,
         upgradeStrategy = UpgradeStrategy(0.5),
-        versionInfo = VersionInfo.forNewConfig(Timestamp(0))
+        versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
+        role = "*"
       )
       val probe = TestProbe()
-      val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
+      val origGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"), Map(app.id -> app))))
 
       val appNew = app.copy(
         cmd = Some("cmd new"),
         versionInfo = VersionInfo.forNewConfig(Timestamp(1000))
       )
 
-      val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(appNew.id -> appNew))))
+      val targetGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"), Map(appNew.id -> appNew))))
 
       val plan = DeploymentPlan("foo", origGroup, targetGroup, Nil, Timestamp.now())
 
@@ -256,16 +256,17 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Deployment resets rate limiter for affected apps" in withFixture() { f =>
       import f._
       val app = AppDefinition(
-        id = PathId("/foo/app1"),
+        id = AbsolutePathId("/foo/app1"),
         cmd = Some("cmd"),
         instances = 2,
         upgradeStrategy = UpgradeStrategy(0.5),
-        versionInfo = VersionInfo.forNewConfig(Timestamp(0))
+        versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
+        role = "*"
       )
       val probe = TestProbe()
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
-      val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
-      val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"))))
+      val origGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"), Map(app.id -> app))))
+      val targetGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"))))
 
       val plan = DeploymentPlan("d2", origGroup, targetGroup, List(DeploymentStep(List(StopApplication(app)))), Timestamp.now())
 
@@ -285,13 +286,14 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Deployment fail to acquire lock" in withFixture() { f =>
       import f._
       val app = AppDefinition(
-        id = PathId("/foo/app1"),
+        id = AbsolutePathId("/foo/app1"),
         cmd = Some("cmd"),
         instances = 2,
         upgradeStrategy = UpgradeStrategy(0.5),
-        versionInfo = VersionInfo.forNewConfig(Timestamp(0))
+        versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
+        role = "*"
       )
-      val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
+      val rootGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"), Map(app.id -> app))))
 
       val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d3"))
 
@@ -313,13 +315,14 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Restart deployments after failover" in withFixture() { f =>
       import f._
       val app = AppDefinition(
-        id = PathId("/foo/app1"),
+        id = AbsolutePathId("/foo/app1"),
         cmd = Some("cmd"),
         instances = 2,
         upgradeStrategy = UpgradeStrategy(0.5),
-        versionInfo = VersionInfo.forNewConfig(Timestamp(0))
+        versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
+        role = "*"
       )
-      val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
+      val rootGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"), Map(app.id -> app))))
 
       val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d4"))
 
@@ -339,8 +342,8 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Forced deployment" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = PathId("/foo/app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5))
-      val rootGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app.id -> app))))
+      val app = AppDefinition(id = AbsolutePathId("/foo/app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), role = "*")
+      val rootGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"), Map(app.id -> app))))
 
       val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d1"))
 

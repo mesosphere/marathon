@@ -3,13 +3,13 @@ package core.task.bus
 
 import java.util.UUID
 
-import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import org.apache.mesos.Protos.TaskStatus.Reason
-import org.apache.mesos.Protos.{TaskState, TaskStatus, TimeInfo, SlaveID}
+import org.apache.mesos.Protos.{SlaveID, TaskState, TaskStatus, TimeInfo}
 
 object MesosTaskStatusTestHelper {
   def mesosStatus(
@@ -21,11 +21,12 @@ object MesosTaskStatusTestHelper {
     maybeAgentId: Option[SlaveID] = None,
     taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)): TaskStatus = {
 
+    val agentID = maybeAgentId.getOrElse(SlaveID.newBuilder().setValue("agent").build())
     val mesosStatus = TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
       .setState(state)
       .setTimestamp(timestamp.seconds.toDouble)
-    maybeAgentId.foreach(mesosStatus.setSlaveId)
+    mesosStatus.setSlaveId(agentID)
     maybeHealthy.foreach(mesosStatus.setHealthy)
     maybeReason.foreach(mesosStatus.setReason)
     maybeMessage.foreach(mesosStatus.setMessage)
@@ -51,7 +52,7 @@ object MesosTaskStatusTestHelper {
     }
   }
 
-  private def newInstanceId() = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
+  private def newInstanceId() = Instance.Id(AbsolutePathId("/my/app"), PrefixInstance, UUID.randomUUID())
 
   def running(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_RUNNING, taskId = taskId)
   def runningHealthy(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_RUNNING, maybeHealthy = Some(true), taskId = taskId)
@@ -62,12 +63,12 @@ object MesosTaskStatusTestHelper {
   def failed(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_FAILED, taskId = taskId)
   def finished(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_FINISHED, taskId = taskId)
   def gone(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_GONE, taskId = taskId)
-  def goneByOperator(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None), agentId: Option[SlaveID] = None) =
-    mesosStatus(state = TaskState.TASK_GONE_BY_OPERATOR, taskId = taskId, maybeAgentId = agentId)
+  def goneByOperator(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None), agentId: Option[SlaveID] = None, maybeReason: Option[Reason] = None) =
+    mesosStatus(state = TaskState.TASK_GONE_BY_OPERATOR, taskId = taskId, maybeAgentId = agentId, maybeReason = maybeReason)
   def error(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_ERROR, taskId = taskId)
   def lost(reason: Reason, taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None), since: Timestamp = Timestamp.zero) =
     mesosStatus(TaskState.TASK_LOST, maybeReason = Some(reason), timestamp = since, taskId = taskId)
-  def killed(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_KILLED, taskId = taskId)
+  def killed(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None), maybeReason: Option[Reason] = None) = mesosStatus(state = TaskState.TASK_KILLED, taskId = taskId, maybeReason = maybeReason)
   def killing(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_KILLING, taskId = taskId)
   def unknown(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_UNKNOWN, taskId = taskId)
   def unreachable(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None), since: Timestamp = Timestamp.zero) = {

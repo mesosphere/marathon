@@ -13,13 +13,16 @@ import mesosphere.marathon.core.launchqueue.LaunchQueueModule
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.matcher.DummyOfferMatcherManager
 import mesosphere.marathon.core.matcher.base.util.OfferMatcherSpec
-import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.core.task.{Task, Tasks}
+import mesosphere.marathon.metrics.dummy.DummyMetrics
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.{AkkaUnitTest, WaitTestSupport}
+import org.apache.mesos.Protos.FrameworkInfo
+import org.apache.mesos.SchedulerDriver
 import org.mockito.Matchers
 
 import scala.concurrent.Future
@@ -38,7 +41,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "adding a queue item registers new offer matcher" in fixture { f =>
       import f._
       Given("An empty task tracker")
-      instanceTracker.specInstances(any[PathId], Matchers.eq(false))(any) returns Future.successful(Seq.empty)
+      instanceTracker.specInstances(any[AbsolutePathId], Matchers.eq(false))(any) returns Future.successful(Seq.empty)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Instance.scheduled(app))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
@@ -57,7 +60,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
       Given("An app in the queue")
       val scheduledInstance = Instance.scheduled(app)
-      instanceTracker.specInstances(any[PathId], Matchers.eq(false))(any) returns Future.successful(Seq.empty)
+      instanceTracker.specInstances(any[AbsolutePathId], Matchers.eq(false))(any) returns Future.successful(Seq.empty)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
@@ -81,7 +84,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     "an offer gets successfully matched against an item in the queue" in fixture { f =>
       import f._
       Given("An app in the queue")
-      instanceTracker.specInstances(any[PathId], Matchers.eq(false))(any) returns Future.successful(Seq.empty)
+      instanceTracker.specInstances(any[AbsolutePathId], Matchers.eq(false))(any) returns Future.successful(Seq.empty)
       instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(scheduledInstance)
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
@@ -104,7 +107,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
   }
 
   class Fixture extends AutoCloseable {
-    val app = MarathonTestHelper.makeBasicApp().copy(id = PathId("/app"))
+    val app = MarathonTestHelper.makeBasicApp().copy(id = AbsolutePathId("/app"))
     val scheduledInstance = Instance.scheduled(app)
     val tasks = Tasks.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now())
     val (_, task) = tasks.head
@@ -139,17 +142,30 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     lazy val config = MarathonTestHelper.defaultConfig()
     lazy val parentActor = newTestActor()
     lazy val localRegion = () => None
+    lazy val metrics = DummyMetrics
+    val driver: SchedulerDriver = mock[SchedulerDriver]
+    val driverHolder: MarathonSchedulerDriverHolder = {
+      val holder = new MarathonSchedulerDriverHolder
+      holder.driver = Some(driver)
+      holder
+    }
+
+    val initialFrameworkInfo = FrameworkInfo.newBuilder().setUser("test").setName("test").build
 
     lazy val module: LaunchQueueModule = new LaunchQueueModule(
+      metrics,
       config,
+      config,
+      system.eventStream,
+      driverHolder,
       AlwaysElectedLeadershipModule.forRefFactory(parentActor.underlying),
       clock,
       subOfferMatcherManager = offerMatcherManager,
-      maybeOfferReviver = None,
       instanceTracker,
       instanceOpFactory,
       groupManager,
-      localRegion
+      localRegion,
+      Future.successful(initialFrameworkInfo)
     )
 
     def launchQueue = module.launchQueue

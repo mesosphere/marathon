@@ -15,8 +15,6 @@ object ContainerSerializer {
       DockerSerializer.fromProto(proto)
     } else if (proto.hasMesosDocker) {
       MesosDockerSerializer.fromProto(proto)
-    } else if (proto.hasMesosAppC) {
-      MesosAppCSerializer.fromProto(proto)
     } else {
       val pms = proto.getPortMappingsList
       Container.Mesos(
@@ -47,9 +45,6 @@ object ContainerSerializer {
         md.linuxInfo.foreach { linuxInfo =>
           builder.setLinuxInfo(LinuxInfoSerializer.toProto(linuxInfo))
         }
-      case ma: Container.MesosAppC =>
-        builder.setType(mesos.Protos.ContainerInfo.Type.MESOS)
-        builder.setMesosAppC(MesosAppCSerializer.toProto(ma))
     }
 
     builder.build
@@ -88,9 +83,6 @@ object ContainerSerializer {
         md.linuxInfo.foreach { linuxInfo =>
           builder.setLinuxInfo(LinuxInfoSerializer.toMesos(linuxInfo))
         }
-      case ma: Container.MesosAppC =>
-        builder.setType(mesos.Protos.ContainerInfo.Type.MESOS)
-        builder.setMesos(MesosAppCSerializer.toMesos(ma))
     }
 
     container.volumes.foreach {
@@ -205,6 +197,7 @@ object ExternalVolumeInfoSerializer {
     val builder = Protos.Volume.ExternalVolumeInfo.newBuilder()
       .setName(info.name)
       .setProvider(info.provider)
+      .setShared(info.shared)
 
     info.size.foreach(builder.setSize)
     info.options.map{
@@ -437,12 +430,26 @@ object MesosDockerSerializer {
 
 object LinuxInfoSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo.LinuxInfo): Option[LinuxInfo] = {
-    if (proto.hasSeccomp) {
-      val seccomp = proto.getSeccomp
+    val seccomp = if (proto.hasSeccomp) {
+      val protoSeccomp = proto.getSeccomp
       //    if we define a LinuxInfo, we specify the unconfined even if not provided.  if not defined it is false
-      val unconfined = if (seccomp.hasUnconfined) seccomp.getUnconfined else false
-      val profile = if (seccomp.hasProfileName) Some(seccomp.getProfileName) else None
-      Some(LinuxInfo(Some(Seccomp(profile, unconfined))))
+      val unconfined = if (protoSeccomp.hasUnconfined) protoSeccomp.getUnconfined else false
+      val profile = if (protoSeccomp.hasProfileName) Some(protoSeccomp.getProfileName) else None
+
+      Some(Seccomp(profile, unconfined))
+    } else None
+
+    val ipcInfo = if (proto.hasIpcInfo) {
+      val protoIpcInfo = proto.getIpcInfo
+
+      val ipcMode = if (protoIpcInfo.hasIpcMode) IpcMode.fromProto(protoIpcInfo.getIpcMode) else IpcMode.Private
+      val shmSize = if (protoIpcInfo.hasShmSize) Some(protoIpcInfo.getShmSize) else None
+
+      Some(IPCInfo(ipcMode, shmSize))
+    } else None
+
+    if (seccomp.isDefined || ipcInfo.isDefined) {
+      Some(LinuxInfo(seccomp, ipcInfo))
     } else None
   }
 
@@ -450,67 +457,42 @@ object LinuxInfoSerializer {
     val builder = Protos.ExtendedContainerInfo.LinuxInfo.newBuilder
 
     linuxInfo.seccomp.foreach { seccomp =>
+
       val seccompBuilder = Protos.ExtendedContainerInfo.LinuxInfo.Seccomp.newBuilder
-        .setUnconfined(seccomp.unconfined)
-      seccomp.profileName.foreach { profileName =>
-        seccompBuilder.setProfileName(profileName)
-      }
+      seccompBuilder.setUnconfined(seccomp.unconfined)
+      seccomp.profileName.foreach(seccompBuilder.setProfileName)
+
       builder.setSeccomp(seccompBuilder)
     }
+
+    linuxInfo.ipcInfo.foreach { ipcInfo =>
+
+      val ipcInfoBuilder = Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.newBuilder
+      ipcInfoBuilder.setIpcMode(ipcInfo.ipcMode.toProto)
+      ipcInfo.shmSize.foreach(ipcInfoBuilder.setShmSize)
+
+      builder.setIpcInfo(ipcInfoBuilder)
+    }
+
     builder.build
   }
 
   def toMesos(linuxInfo: LinuxInfo): mesos.Protos.LinuxInfo = {
     val linuxBuilder = mesos.Protos.LinuxInfo.newBuilder
+
     linuxInfo.seccomp.foreach { seccomp =>
       val seccompBuilder = mesos.Protos.SeccompInfo.newBuilder
-        .setUnconfined(seccomp.unconfined)
 
-      seccomp.profileName.foreach{ profileName =>
-        seccompBuilder.setProfileName(profileName)
-      }
+      seccompBuilder.setUnconfined(seccomp.unconfined)
+      seccomp.profileName.foreach(seccompBuilder.setProfileName)
+
       linuxBuilder.setSeccomp(seccompBuilder)
     }
+    linuxInfo.ipcInfo.foreach { ipcInfo =>
+      ipcInfo.shmSize.foreach(linuxBuilder.setShmSize)
+      linuxBuilder.setIpcMode(ipcInfo.ipcMode.toMesos)
+    }
+
     linuxBuilder.build
-  }
-}
-
-object MesosAppCSerializer {
-  def fromProto(proto: Protos.ExtendedContainerInfo): Container.MesosAppC = {
-    val appc = proto.getMesosAppC
-    val pms = proto.getPortMappingsList
-    Container.MesosAppC(
-      volumes = proto.getVolumesList.map(VolumeWithMount(None, _))(collection.breakOut),
-      portMappings = pms.map(PortMappingSerializer.fromProto)(collection.breakOut),
-      image = appc.getImage,
-      id = if (appc.hasId) Some(appc.getId) else None,
-      labels = appc.getLabelsList.map { p => p.getKey -> p.getValue }(collection.breakOut),
-      forcePullImage = if (appc.hasForcePullImage) appc.getForcePullImage else false
-    )
-  }
-
-  def toProto(appc: Container.MesosAppC): Protos.ExtendedContainerInfo.MesosAppCInfo = {
-    val builder = Protos.ExtendedContainerInfo.MesosAppCInfo.newBuilder
-      .setImage(appc.image)
-      .setForcePullImage(appc.forcePullImage)
-
-    appc.id.foreach(builder.setId)
-    appc.labels.toProto.foreach(builder.addLabels)
-
-    builder.build
-  }
-
-  def toMesos(container: Container.MesosAppC): mesos.Protos.ContainerInfo.MesosInfo = {
-    val appcBuilder = mesos.Protos.Image.Appc.newBuilder
-      .setName(container.image)
-    container.id.foreach(appcBuilder.setId)
-    appcBuilder.setLabels(container.labels.toMesosLabels)
-
-    val imageBuilder = mesos.Protos.Image.newBuilder
-      .setType(mesos.Protos.Image.Type.APPC)
-      .setAppc(appcBuilder)
-      .setCached(!container.forcePullImage)
-
-    mesos.Protos.ContainerInfo.MesosInfo.newBuilder.setImage(imageBuilder).build
   }
 }

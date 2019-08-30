@@ -32,7 +32,7 @@ case class BackoffStrategy(
 // don't make sense to do generically, eg 'executor', 'cmd', 'args', etc.
 // we should try to group things up logically - pod does a decent job of this
 trait RunSpec extends plugin.RunSpec {
-  val id: PathId
+  val id: AbsolutePathId
   val env: Map[String, EnvVarValue]
   val labels: Map[String, String]
   val acceptedResourceRoles: Set[String]
@@ -64,6 +64,7 @@ trait RunSpec extends plugin.RunSpec {
   val unreachableStrategy: UnreachableStrategy
   val killSelection: KillSelection
   val networks: Seq[Network]
+  val role: Role
 
   final def ref: RunSpecRef = RunSpecRef(id, version)
   /**
@@ -72,16 +73,20 @@ trait RunSpec extends plugin.RunSpec {
   final def configRef: RunSpecConfigRef = RunSpecConfigRef(id, versionInfo.lastConfigChangeVersion)
 }
 
+object RunSpec {
+  var wipDefaultRole = "default"
+}
+
 /**
   * Points to a specific version of a runSpec
   */
 final case class RunSpecRef(
-    id: PathId,
+    id: AbsolutePathId,
     version: Timestamp)
 
 /**
   * Points to a runSpec at some config point in time
   */
 final case class RunSpecConfigRef(
-    id: PathId,
+    id: AbsolutePathId,
     configVersion: Timestamp)

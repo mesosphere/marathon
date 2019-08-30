@@ -1,17 +1,16 @@
 package mesosphere.marathon
 package core
 
-import akka.actor.Cancellable
-import akka.stream.scaladsl.Source
 import java.time.Clock
 import java.util.concurrent.Executors
 
-import javax.inject.Named
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.EventStream
 import com.google.inject.{Inject, Provider}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
+import javax.inject.Named
+import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ActorsModule, CrashStrategy, LifecycleState}
 import mesosphere.marathon.core.deployment.DeploymentModule
@@ -38,11 +37,11 @@ import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.{StorageConf, StorageConfig, StorageModule}
-import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.util.NamedExecutionContext
 import mesosphere.util.state.MesosLeaderInfo
+import org.apache.mesos.Protos.FrameworkID
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Promise}
 import scala.util.Random
 
 /**
@@ -53,6 +52,7 @@ import scala.util.Random
   */
 class CoreModuleImpl @Inject() (
     // external dependencies still wired by guice
+    httpConf: HttpConf,
     marathonConf: MarathonConf,
     eventStream: EventStream,
     @Named(ModuleNames.HOST_PORT) hostPort: String,
@@ -96,7 +96,7 @@ class CoreModuleImpl @Inject() (
   val storageExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(marathonConf.asInstanceOf[StorageConf].storageExecutionContextSize(), "storage-module")
   override lazy val instanceTrackerModule =
     new InstanceTrackerModule(metricsModule.metrics, clock, marathonConf, leadershipModule,
-      storageModule.instanceRepository, storageModule.groupRepository, instanceUpdateSteps)(actorsModule.materializer)
+      storageModule.instanceRepository, storageModule.groupRepository, instanceUpdateSteps, crashStrategy)(actorsModule.materializer)
   override lazy val taskJobsModule = new TaskJobsModule(marathonConf, leadershipModule, clock)
 
   override lazy val storageModule = StorageModule(
@@ -132,13 +132,9 @@ class CoreModuleImpl @Inject() (
 
   private[this] lazy val offerMatcherReconcilerModule =
     new OfferMatcherReconciliationModule(
-      marathonConf,
-      clock,
-      actorSystem.eventStream,
       instanceTrackerModule.instanceTracker,
-      storageModule.groupRepository,
-      leadershipModule
-    )(actorsModule.materializer)
+      storageModule.groupRepository
+    )
 
   override lazy val launcherModule = new LauncherModule(
     // infrastructure
@@ -154,22 +150,33 @@ class CoreModuleImpl @Inject() (
       offerMatcherReconcilerModule.offerMatcherReconciler,
       offerMatcherManagerModule.globalOfferMatcher
     ),
-    pluginModule.pluginManager
+    pluginModule.pluginManager,
+    groupManagerModule.groupManager
   )(clock)
 
+  private val frameworkIdPromise = Promise[FrameworkID]
+  private val initialFrameworkInfo = frameworkIdPromise.future
+    .map { frameworkId =>
+      MarathonSchedulerDriver.newFrameworkInfo(Some(frameworkId), marathonConf, httpConf)
+    }(ExecutionContexts.callerThread)
+
   override lazy val launchQueueModule = new LaunchQueueModule(
+    metricsModule.metrics,
     marathonConf,
+    marathonConf,
+    eventStream,
+    marathonSchedulerDriverHolder,
     leadershipModule, clock,
 
     // internal core dependencies
     offerMatcherManagerModule.subOfferMatcherManager,
-    maybeOfferReviver,
 
     // external guice dependencies
     instanceTrackerModule.instanceTracker,
     launcherModule.taskOpFactory,
     groupManagerModule.groupManager,
-    () => marathonScheduler.getLocalRegion
+    () => marathonScheduler.getLocalRegion,
+    initialFrameworkInfo
   )(actorsModule.materializer, ExecutionContext.global)
 
   // PLUGINS
@@ -184,24 +191,10 @@ class CoreModuleImpl @Inject() (
   flowActors.refillOfferMatcherManagerLaunchTokens(
     marathonConf, offerMatcherManagerModule.subOfferMatcherManager)
 
-  /** Combine offersWanted state from multiple sources. */
-  private[this] lazy val offersWanted: Source[Boolean, Cancellable] = {
-    offerMatcherManagerModule.globalOfferMatcherWantsOffers
-      .via(EnrichedFlow.combineLatest(offerMatcherReconcilerModule.offersWantedObservable, eagerComplete = true))
-      .map { case (managerWantsOffers, reconciliationWantsOffers) => managerWantsOffers || reconciliationWantsOffers }
-  }
-
-  lazy val maybeOfferReviver = flowActors.maybeOfferReviver(
-    metricsModule.metrics,
-    clock, marathonConf,
-    actorSystem.eventStream,
-    offersWanted,
-    marathonSchedulerDriverHolder)
-
   // EVENT
 
   override lazy val eventModule: EventModule = new EventModule(
-    metricsModule.metrics, eventStream, actorSystem, marathonConf, marathonConf.deprecatedFeatures(),
+    metricsModule.metrics, eventStream, actorSystem, marathonConf,
     electionModule.service, authModule.authenticator, authModule.authorizer)(actorsModule.materializer)
 
   // HISTORY
@@ -261,14 +254,13 @@ class CoreModuleImpl @Inject() (
     metricsModule.metrics
   )
   taskJobsModule.expungeOverdueLostTasks(instanceTrackerModule.instanceTracker)
-  maybeOfferReviver
   offerMatcherManagerModule
   launcherModule
-  offerMatcherReconcilerModule.start()
   eventModule
   historyModule
   healthModule
   podModule
+  launchQueueModule.reviveOffersActor()
 
   // The core (!) of the problem is that SchedulerActions are needed by MarathonModule::provideSchedulerActor
   // and CoreModule::deploymentModule. So until MarathonSchedulerActor is also a core component
@@ -291,7 +283,9 @@ class CoreModuleImpl @Inject() (
     eventStream,
     taskTerminationModule.taskKillService)(schedulerActionsExecutionContext, actorsModule.materializer)
 
-  override lazy val marathonScheduler: MarathonScheduler = new MarathonScheduler(eventStream, launcherModule.offerProcessor, taskStatusUpdateProcessor, storageModule.frameworkIdRepository, mesosLeaderInfo, marathonConf, crashStrategy)
+  override lazy val marathonScheduler: MarathonScheduler = new MarathonScheduler(
+    eventStream, launcherModule.offerProcessor, taskStatusUpdateProcessor, storageModule.frameworkIdRepository,
+    mesosLeaderInfo, marathonConf, crashStrategy, frameworkIdPromise)
 
   // MesosHeartbeatMonitor decorates MarathonScheduler
   override def mesosHeartbeatMonitor = new MesosHeartbeatMonitor(marathonScheduler, heartbeatActor)

@@ -8,7 +8,7 @@ import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
 import mesosphere.marathon.integration.facades.MarathonFacade.extractDeploymentIds
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{App, AppUpdate}
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.AbsolutePathId
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.{Milliseconds, Span}
 
@@ -181,7 +181,7 @@ class KeepAppsRunningDuringAbdicationIntegrationTest extends LeaderIntegrationTe
       result should be(Created)
       extractDeploymentIds(result) should have size 1 withClue "Deployment was not triggered"
       waitForDeployment(result)
-      val oldInstances = client.tasks(app.id.toPath).value
+      val oldInstances = client.tasks(AbsolutePathId(app.id)).value
       oldInstances should have size 1 withClue "Required instance was not started"
 
       When("calling DELETE /v2/leader")
@@ -206,8 +206,8 @@ class KeepAppsRunningDuringAbdicationIntegrationTest extends LeaderIntegrationTe
       val newClient = newLeadingProcess.client
 
       // we should have one survived instance
-      newClient.app(app.id.toPath).value.app.instances should be(1) withClue "Previously started app did not survive the abdication"
-      val newInstances = newClient.tasks(app.id.toPath).value
+      newClient.app(AbsolutePathId(app.id)).value.app.instances should be(1) withClue "Previously started app did not survive the abdication"
+      val newInstances = newClient.tasks(AbsolutePathId(app.id)).value
       newInstances should have size 1 withClue "Previously started one instance did not survive the abdication"
       newInstances.head.id should be (oldInstances.head.id) withClue "During abdication we started a new instance, instead keeping the old one."
     }
@@ -281,15 +281,15 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
       val client2 = leadingProcess2.client
       waitForSSEConnect()
 
-      val deleteApp1Response = client2.deleteApp(app1.id.toPath)
+      val deleteApp1Response = client2.deleteApp(AbsolutePathId(app1.id))
       deleteApp1Response should be(OK)
       waitForDeployment(deleteApp1Response)
 
-      val updateApp2Response = client2.updateApp(app2.id.toPath, AppUpdate(cmd = Some("sleep 2000")))
+      val updateApp2Response = client2.updateApp(AbsolutePathId(app2.id), AppUpdate(cmd = Some("sleep 2000")))
       updateApp2Response should be(OK)
       waitForDeployment(updateApp2Response)
 
-      val updateApp4Response = client2.updateApp(app2.id.toPath, AppUpdate(cmd = Some("sleep 1500"), instances = Some(3)))
+      val updateApp4Response = client2.updateApp(AbsolutePathId(app2.id), AppUpdate(cmd = Some("sleep 1500"), instances = Some(3)))
       updateApp4Response should be(OK)
       waitForDeployment(updateApp4Response)
 
@@ -297,7 +297,7 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
       createApp3Response should be(Created)
       waitForDeployment(createApp3Response)
 
-      val deleteApp5Response = client2.deleteApp(app3.id.toPath, force = true)
+      val deleteApp5Response = client2.deleteApp(AbsolutePathId(app3.id), force = true)
       deleteApp5Response should be(OK)
       waitForDeployment(deleteApp5Response)
 
@@ -319,24 +319,24 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
       val client3 = leadingProcess3.client
       waitForSSEConnect()
 
-      client3.app(app1.id.toPath) should be (OK) withClue "App was not restored correctly"
+      client3.app(AbsolutePathId(app1.id)) should be (OK) withClue "App was not restored correctly"
 
-      val app2Response = client3.app(app2.id.toPath)
+      val app2Response = client3.app(AbsolutePathId(app2.id))
       app2Response should be (OK) withClue "App2 was not restored correctly"
       app2Response.value.app.cmd should be (app2.cmd) withClue "App2 was not restored correctly"
 
-      val app3Response = client3.app(app3.id.toPath)
+      val app3Response = client3.app(AbsolutePathId(app3.id))
       app3Response should be (NotFound) withClue "App3 was not restored correctly"
 
-      val app4Response = client3.app(app2.id.toPath)
+      val app4Response = client3.app(AbsolutePathId(app2.id))
       app4Response should be (OK) withClue "App4 was not restored correctly"
       app4Response.value.app.cmd should be (app2.cmd) withClue "App4 was not restored correctly"
       app4Response.value.app.instances should be (app2.instances) withClue "App4 was not restored correctly"
 
-      val app5Response = client3.app(app2.id.toPath)
+      val app5Response = client3.app(AbsolutePathId(app2.id))
       app5Response should be (OK) withClue "App5 was not restored correctly"
       // this app should still be stuck in deployment
-      client3.tasks(app5.id.toPath).value.size should be (1) withClue "App5 was not restored correctly"
+      client3.tasks(AbsolutePathId(app5.id)).value.size should be (1) withClue "App5 was not restored correctly"
 
     }
   }
@@ -371,7 +371,7 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
       create should be(Created)
       extractDeploymentIds(create) should have size 1 withClue "Deployment was not triggered"
       waitForDeployment(create)
-      val oldInstances = client.tasks(app.id.toPath).value
+      val oldInstances = client.tasks(AbsolutePathId(app.id)).value
       oldInstances should have size 1 withClue "Required instance was not started"
 
       And("calling DELETE /v2/leader with backups")
@@ -400,7 +400,7 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
       waitForSSEConnect()
 
       And("delete the app")
-      val delete = client2.deleteApp(app.id.toPath)
+      val delete = client2.deleteApp(AbsolutePathId(app.id))
       delete should be(OK)
       waitForDeployment(delete)
 
@@ -430,7 +430,7 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
       waitForSSEConnect()
 
       And("app should not be available")
-      client3.app(app.id.toPath) should be(NotFound)
+      client3.app(AbsolutePathId(app.id)) should be(NotFound)
     }
   }
 }

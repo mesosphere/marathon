@@ -4,16 +4,16 @@ package core.group.impl
 import java.time.OffsetDateTime
 import java.util.concurrent.atomic.AtomicBoolean
 
-import javax.inject.Provider
 import akka.event.EventStream
 import akka.stream.scaladsl.Source
 import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.api.{Rejection, RejectionException}
+import javax.inject.Provider
 import mesosphere.marathon.api.v2.Validation
+import mesosphere.marathon.api.{Rejection, RejectionException}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.{GroupChangeFailed, GroupChangeSuccess}
-import mesosphere.marathon.core.group.{GroupManager, GroupManagerConfig}
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
@@ -31,7 +31,7 @@ import scala.util.{Failure, Success}
 
 class GroupManagerImpl(
     metrics: Metrics,
-    val config: GroupManagerConfig,
+    val config: MarathonConf,
     initialRoot: Option[RootGroup],
     groupRepository: GroupRepository,
     deploymentService: Provider[DeploymentService])(implicit eventStream: EventStream, ctx: ExecutionContext) extends GroupManager with StrictLogging {
@@ -72,47 +72,47 @@ class GroupManagerImpl(
 
   override def rootGroupOption(): Option[RootGroup] = root.get()
 
-  override def versions(id: PathId): Source[Timestamp, NotUsed] = {
+  override def versions(id: AbsolutePathId): Source[Timestamp, NotUsed] = {
     groupRepository.rootVersions().mapAsync(RepositoryConstants.maxConcurrency) { version =>
       groupRepository.rootVersion(version)
     }.collect { case Some(g) if g.group(id).isDefined => g.version }
   }
 
-  override def appVersions(id: PathId): Source[OffsetDateTime, NotUsed] = {
+  override def appVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed] = {
     groupRepository.appVersions(id)
   }
 
-  override def appVersion(id: PathId, version: OffsetDateTime): Future[Option[AppDefinition]] = {
+  override def appVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Option[AppDefinition]] = {
     groupRepository.appVersion(id, version)
   }
 
-  override def podVersions(id: PathId): Source[OffsetDateTime, NotUsed] = {
+  override def podVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed] = {
     groupRepository.podVersions(id)
   }
 
-  override def podVersion(id: PathId, version: OffsetDateTime): Future[Option[PodDefinition]] = {
+  override def podVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Option[PodDefinition]] = {
     groupRepository.podVersion(id, version)
   }
 
-  override def group(id: PathId): Option[Group] = rootGroup().group(id)
+  override def group(id: AbsolutePathId): Option[Group] = rootGroup().group(id)
 
-  override def group(id: PathId, version: Timestamp): Future[Option[Group]] = async {
+  override def group(id: AbsolutePathId, version: Timestamp): Future[Option[Group]] = async {
     val root = await(groupRepository.rootVersion(version.toOffsetDateTime))
     root.flatMap(_.group(id))
   }
 
-  override def runSpec(id: PathId): Option[RunSpec] = app(id).orElse(pod(id))
+  override def runSpec(id: AbsolutePathId): Option[RunSpec] = app(id).orElse(pod(id))
 
-  override def app(id: PathId): Option[AppDefinition] = rootGroup().app(id)
+  override def app(id: AbsolutePathId): Option[AppDefinition] = rootGroup().app(id)
 
-  override def apps(ids: Set[PathId]) = ids.map(appId => appId -> app(appId))(collection.breakOut)
+  override def apps(ids: Set[AbsolutePathId]) = ids.map(appId => appId -> app(appId))(collection.breakOut)
 
-  override def pod(id: PathId): Option[PodDefinition] = rootGroup().pod(id)
+  override def pod(id: AbsolutePathId): Option[PodDefinition] = rootGroup().pod(id)
 
   override def updateRootEither[T](
-    id: PathId,
-    change: (RootGroup) => Future[Either[T, RootGroup]],
-    version: Timestamp, force: Boolean, toKill: Map[PathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
+    id: AbsolutePathId,
+    change: RootGroup => Future[Either[T, RootGroup]],
+    version: Timestamp, force: Boolean, toKill: Map[AbsolutePathId, Seq[Instance]]): Future[Either[T, DeploymentPlan]] = try {
 
     rootGroupUpdatesMetric.increment()
 
@@ -129,13 +129,15 @@ class GroupManagerImpl(
           case Left(left) =>
             Left(left)
           case Right(changed) =>
+            // Assign service ports
             val unversioned = AssignDynamicServiceLogic.assignDynamicServicePorts(
               Range.inclusive(config.localPortMin(), config.localPortMax()),
               from,
               changed)
+
             val withVersionedApps = GroupVersioningUtil.updateVersionInfoForChangedApps(version, from, unversioned)
             val withVersionedAppsPods = GroupVersioningUtil.updateVersionInfoForChangedPods(version, from, withVersionedApps)
-            Validation.validateOrThrow(withVersionedAppsPods)(RootGroup.rootGroupValidator(config.availableFeatures))
+            Validation.validateOrThrow(withVersionedAppsPods)(RootGroup.validRootGroup(config))
             val plan = DeploymentPlan(from, withVersionedAppsPods, version, toKill)
             Validation.validateOrThrow(plan)(DeploymentPlan.deploymentPlanValidator())
             logger.info(s"Computed new deployment plan for ${plan.targetIdsString}:\n$plan")
@@ -185,7 +187,17 @@ class GroupManagerImpl(
     Done
   }
 
-  override def invalidateGroupCache(): Future[Done] = async {
+  override def patchRoot(change: RootGroup => RootGroup): Future[Done] = {
+    val from = rootGroup()
+    async {
+      val changedGroup = change(from)
+      await(groupRepository.storeRoot(changedGroup, Seq.empty, Seq.empty, Seq.empty, Seq.empty))
+      root := Option(changedGroup)
+      Done
+    }
+  }
+
+  override def invalidateAndRefreshGroupCache(): Future[Done] = async {
     root := None
 
     // propagation of reset group caches on repository is needed,
@@ -194,6 +206,15 @@ class GroupManagerImpl(
 
     // force fetching of the root group from the group repository
     rootGroup()
+    Done
+  }
+
+  override def invalidateGroupCache(): Future[Done] = async {
+    root := None
+    // propagation of reset group caches on repository is needed,
+    // because manager and repository are holding own caches
+    await(groupRepository.invalidateGroupCache())
+
     Done
   }
 

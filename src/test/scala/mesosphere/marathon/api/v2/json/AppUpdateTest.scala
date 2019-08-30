@@ -7,8 +7,7 @@ import mesosphere.marathon.api.JsonTestHelper
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
 import mesosphere.marathon.core.readiness.ReadinessCheckTestHelper
-import mesosphere.marathon.raml.{AppCContainer, AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, Raml, UpgradeStrategy}
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.raml.{AppUpdate, Artifact, Container, ContainerPortMapping, DockerContainer, EngineType, Environment, Network, NetworkMode, Raml, UpgradeStrategy}
 import mesosphere.marathon.state._
 import play.api.libs.json.Json
 
@@ -16,7 +15,7 @@ import scala.collection.immutable.Seq
 
 class AppUpdateTest extends UnitTest with ValidationTestLike {
 
-  val runSpecId = PathId("/test")
+  val runSpecId = AbsolutePathId("/test")
 
   implicit val appUpdateValidator: Validator[AppUpdate] = AppValidation.validateAppUpdateVersion
 
@@ -25,7 +24,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
     */
   private[this] def fromJsonString(json: String): AppUpdate = {
     val update: AppUpdate = Json.fromJson[AppUpdate](Json.parse(json)).get
-    AppNormalization.forDeprecatedUpdates(AppNormalization.Configuration(None, "bridge-name"))
+    AppNormalization.forDeprecatedUpdates(AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved, true))
       .normalized(update)
   }
 
@@ -33,14 +32,6 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
 
     "SerializationRoundtrip for empty definition" in {
       val update0 = AppUpdate(container = Some(Container(EngineType.Mesos)))
-      JsonTestHelper.assertSerializationRoundtripWorks(update0)
-    }
-
-    "SerializationRoundtrip for definition with simple AppC container" in {
-      val update0 = AppUpdate(container = Some(Container(EngineType.Mesos, appc = Some(AppCContainer(
-        image = "anImage",
-        labels = Map("key" -> "foo", "value" -> "bar")
-      )))))
       JsonTestHelper.assertSerializationRoundtripWorks(update0)
     }
 
@@ -163,7 +154,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
     }
 
     "acceptedResourceRoles of update is only applied when != None" in {
-      val app = AppDefinition(id = PathId("withAcceptedRoles"), acceptedResourceRoles = Set("a"))
+      val app = AppDefinition(id = AbsolutePathId("/withAcceptedRoles"), role = "*", acceptedResourceRoles = Set("a"))
 
       val unchanged = Raml.fromRaml(Raml.fromRaml((AppUpdate(), app))).copy(versionInfo = app.versionInfo)
       assert(unchanged == app)
@@ -187,7 +178,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
         id = Some("/test"),
         readinessChecks = Some(Seq(ReadinessCheckTestHelper.alternativeHttpsRaml))
       )
-      val app = AppDefinition(id = PathId("/test"))
+      val app = AppDefinition(id = AbsolutePathId("/test"), role = "*")
       val updated = Raml.fromRaml(Raml.fromRaml((update, app)))
 
       assert(update.readinessChecks.map(_.map(Raml.fromRaml(_))).contains(updated.readinessChecks))
@@ -217,7 +208,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       """
 
       val update = fromJsonString(json)
-      val strategy = AppHelpers.withoutPriorAppDefinition(update, "foo".toPath).upgradeStrategy
+      val strategy = AppHelpers.withoutPriorAppDefinition(update, AbsolutePathId("/foo")).upgradeStrategy
       assert(strategy.contains(raml.UpgradeStrategy(
         minimumHealthCapacity = 0.5,
         maximumOverCapacity = 0
@@ -244,7 +235,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       """
 
       val update = fromJsonString(json)
-      val strategy = AppHelpers.withoutPriorAppDefinition(update, "foo".toPath).unreachableStrategy
+      val strategy = AppHelpers.withoutPriorAppDefinition(update, AbsolutePathId("/foo")).unreachableStrategy
       strategy.get should be (raml.UnreachableDisabled.DefaultValue)
     }
 
@@ -260,7 +251,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       """
 
       val update = fromJsonString(json)
-      val strategy = AppHelpers.withoutPriorAppDefinition(update, "foo".toPath).unreachableStrategy
+      val strategy = AppHelpers.withoutPriorAppDefinition(update, AbsolutePathId("/foo")).unreachableStrategy
       strategy.get should be (raml.UnreachableEnabled.Default)
     }
 
@@ -288,7 +279,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       """
 
       val update = fromJsonString(json)
-      val strategy = AppHelpers.withoutPriorAppDefinition(update, "foo".toPath).upgradeStrategy
+      val strategy = AppHelpers.withoutPriorAppDefinition(update, AbsolutePathId("/foo")).upgradeStrategy
       assert(strategy.contains(raml.UpgradeStrategy(
         minimumHealthCapacity = 0.5,
         maximumOverCapacity = 0
@@ -300,6 +291,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
         """
         {
           "id": "/payload-id",
+          "role": "*",
           "args": [],
           "container": {
             "type": "DOCKER",
@@ -324,7 +316,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       """
 
       val update = fromJsonString(json)
-      val createdViaUpdate = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "/put-path-id".toPath))
+      val createdViaUpdate = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, AbsolutePathId("/put-path-id")))
       assert(update.container.isDefined)
       assert(createdViaUpdate.container.contains(state.Container.Docker(
         volumes = Seq(VolumeWithMount(
@@ -339,6 +331,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
         """
         {
           "id": "/app",
+          "role": "*",
           "args": [],
           "container": {
             "type": "DOCKER",
@@ -367,7 +360,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       """
 
       val update = fromJsonString(json)
-      val create = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "/app".toPath))
+      val create = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, AbsolutePathId("/app")))
       assert(update.upgradeStrategy.isDefined)
       assert(update.upgradeStrategy.map(Raml.fromRaml(_)).contains(create.upgradeStrategy))
     }
@@ -377,6 +370,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       val json = """
         {
           "id": "/app",
+          "role": "*",
           "args": [],
           "container": {
             "type": "DOCKER",
@@ -401,7 +395,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       """
 
       val update = fromJsonString(json)
-      Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "/app".toPath))
+      Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, AbsolutePathId("/app")))
       assert(update.residency.isDefined)
     }
 
@@ -410,6 +404,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
         """
       {
         "cmd": "sleep 1000",
+        "role": "*",
         "container": {
           "type": "MESOS",
           "volumes": [
@@ -427,12 +422,12 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
       """
 
       val update = fromJsonString(json)
-      val strategy = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, "foo".toPath)).upgradeStrategy
+      val strategy = Raml.fromRaml(AppHelpers.withoutPriorAppDefinition(update, AbsolutePathId("/foo"))).upgradeStrategy
       assert(strategy == state.UpgradeStrategy.forResidentTasks)
     }
 
     "container change in AppUpdate should be stored" in {
-      val appDef = AppDefinition(id = runSpecId, container = Some(state.Container.Docker(image = "something")))
+      val appDef = AppDefinition(id = runSpecId, role = "*", container = Some(state.Container.Docker(image = "something")))
       // add port mappings..
       val appUpdate = AppUpdate(container = Some(Container(
         EngineType.Docker,
@@ -449,7 +444,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
     }
 
     "app update changes kill selection" in {
-      val appDef = AppDefinition(id = runSpecId, killSelection = KillSelection.YoungestFirst)
+      val appDef = AppDefinition(id = runSpecId, role = "*", killSelection = KillSelection.YoungestFirst)
       val update = AppUpdate(killSelection = Some(raml.KillSelection.OldestFirst))
       val result = Raml.fromRaml(update -> appDef)
       result.killSelection should be(raml.KillSelection.OldestFirst)

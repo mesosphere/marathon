@@ -7,13 +7,13 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.{AppHealthCheck, AppHealthCheckProtocol}
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 
 import scala.concurrent.duration._
 
 class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  def appId(suffix: Option[String] = None): PathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
+  def appId(suffix: Option[String] = None): AbsolutePathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
 
   "Health checks" should {
     "kill instance with failing Marathon health checks" in {

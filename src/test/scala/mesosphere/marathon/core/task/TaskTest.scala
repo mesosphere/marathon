@@ -12,7 +12,7 @@ import mesosphere.marathon.core.pod.{ContainerNetwork, HostNetwork}
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.state.{NetworkInfo, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
-import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinition}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId, PortDefinition}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.{Protos => MesosProtos}
@@ -28,10 +28,11 @@ class TaskTest extends UnitTest with Inside {
 
     val clock = new SettableClock()
 
-    val appWithoutIpAddress = AppDefinition(id = PathId("/foo/bar"), networks = Seq(HostNetwork), portDefinitions = Seq(PortDefinition(0)))
+    val appWithoutIpAddress = AppDefinition(id = AbsolutePathId("/foo/bar"), role = "*", networks = Seq(HostNetwork), portDefinitions = Seq(PortDefinition(0)))
     val appVirtualNetworks = Seq(ContainerNetwork("whatever"))
     val appWithIpAddress = AppDefinition(
-      id = PathId("/foo/bar"),
+      id = AbsolutePathId("/foo/bar"),
+      role = "*",
       portDefinitions = Seq.empty,
       networks = appVirtualNetworks
     )
@@ -224,7 +225,7 @@ class TaskTest extends UnitTest with Inside {
     }
 
     "Task.Id as key in Map" in {
-      val instanceId = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
+      val instanceId = Instance.Id(AbsolutePathId("/my/app"), PrefixInstance, UUID.randomUUID())
       val taskId1 = Task.EphemeralTaskId(instanceId, Some("rails"))
       val taskId2 = Task.EphemeralTaskId(instanceId, Some("mysql"))
 

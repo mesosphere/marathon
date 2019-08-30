@@ -19,15 +19,14 @@ import mesosphere.marathon.core.storage.store.impl.memory.{Identity, RamId}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state
+import mesosphere.marathon.raml.RuntimeConfiguration
 import mesosphere.marathon.state._
 import mesosphere.util.state.FrameworkId
-import mesosphere.marathon.raml.RuntimeConfiguration
 
 import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 
 trait GroupRepository {
   /** Fetch the root, returns an empty root if the root doesn't yet exist */
@@ -43,29 +42,29 @@ trait GroupRepository {
     * Store the root, new/updated apps and delete apps. fails if it could not
     * update the apps or the root, but deletion errors are ignored.
     */
-  def storeRoot(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], deletedApps: Seq[PathId],
-    updatedPods: Seq[PodDefinition], deletedPods: Seq[PathId]): Future[Done]
+  def storeRoot(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], deletedApps: Seq[AbsolutePathId],
+    updatedPods: Seq[PodDefinition], deletedPods: Seq[AbsolutePathId]): Future[Done]
 
   def storeRootVersion(rootGroup: RootGroup, updatedApps: Seq[AppDefinition], updatedPods: Seq[PodDefinition]): Future[Done]
 
-  def appVersions(id: PathId): Source[OffsetDateTime, NotUsed]
+  def appVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed]
 
-  def appVersion(id: PathId, version: OffsetDateTime): Future[Option[AppDefinition]]
+  def appVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Option[AppDefinition]]
 
-  def podVersions(id: PathId): Source[OffsetDateTime, NotUsed]
+  def podVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed]
 
-  def podVersion(id: PathId, version: OffsetDateTime): Future[Option[PodDefinition]]
+  def podVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Option[PodDefinition]]
 
-  def runSpecVersion(id: PathId, version: OffsetDateTime)(implicit executionContext: ExecutionContext): Future[Option[RunSpec]] = {
+  def runSpecVersion(id: AbsolutePathId, version: OffsetDateTime)(implicit executionContext: ExecutionContext): Future[Option[RunSpec]] = {
     appVersion(id, version).flatMap {
       case Some(app) => Future.successful(Some(app))
       case None => podVersion(id, version)
     }
   }
 
-  def runSpecVersions(id: PathId): Source[OffsetDateTime, NotUsed] = appVersions(id) ++ podVersions(id)
+  def runSpecVersions(id: AbsolutePathId): Source[OffsetDateTime, NotUsed] = appVersions(id) ++ podVersions(id)
 
-  def latestRunSpec(id: PathId)(implicit materializer: Materializer, executionContext: ExecutionContext): Future[Option[RunSpec]] = {
+  def latestRunSpec(id: AbsolutePathId)(implicit materializer: Materializer, executionContext: ExecutionContext): Future[Option[RunSpec]] = {
     runSpecVersions(id).fold(Option.empty[OffsetDateTime]) {
       case (None, version) => Some(version)
       case (Some(currentMax), version) =>
@@ -102,8 +101,8 @@ object GroupRepository {
   }
 }
 
-trait ReadOnlyAppRepository extends ReadOnlyVersionedRepository[PathId, AppDefinition]
-trait AppRepository extends VersionedRepository[PathId, AppDefinition] with ReadOnlyAppRepository
+trait ReadOnlyAppRepository extends ReadOnlyVersionedRepository[AbsolutePathId, AppDefinition]
+trait AppRepository extends VersionedRepository[AbsolutePathId, AppDefinition] with ReadOnlyAppRepository
 
 object AppRepository {
   def zkRepository(
@@ -119,8 +118,8 @@ object AppRepository {
   }
 }
 
-trait ReadOnlyPodRepository extends ReadOnlyVersionedRepository[PathId, PodDefinition]
-trait PodRepository extends VersionedRepository[PathId, PodDefinition] with ReadOnlyPodRepository
+trait ReadOnlyPodRepository extends ReadOnlyVersionedRepository[AbsolutePathId, PodDefinition]
+trait PodRepository extends VersionedRepository[AbsolutePathId, PodDefinition] with ReadOnlyPodRepository
 
 object PodRepository {
   def zkRepository(
@@ -200,7 +199,7 @@ case class InstanceView(instances: InstanceRepository, groups: GroupRepository) 
             logger.warn(s"No run spec $runSpecId with version ${runSpecVersion} was found for instance ${id}. Trying latest.")
             await(groups.latestRunSpec(runSpecId)) match {
               case None =>
-                logger.warn(s"No verions found for $runSpecId at all. $id is probably orphaned."); None
+                logger.warn(s"No versions found for $runSpecId at all. $id is probably orphaned."); None
               case Some(runSpec) => Some(stateInstance.toCoreInstance(runSpec))
             }
         }
@@ -214,7 +213,7 @@ case class InstanceView(instances: InstanceRepository, groups: GroupRepository) 
 object InstanceRepository {
 
   def zkRepository(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]): InstanceRepository = {
-    import mesosphere.marathon.storage.store.ZkStoreSerialization.{instanceResolver, instanceMarshaller, instanceUnmarshaller}
+    import mesosphere.marathon.storage.store.ZkStoreSerialization.{instanceMarshaller, instanceResolver, instanceUnmarshaller}
     new InstanceRepositoryImpl(persistenceStore)
   }
 
@@ -224,7 +223,7 @@ object InstanceRepository {
   }
 }
 
-trait TaskFailureRepository extends VersionedRepository[PathId, TaskFailure]
+trait TaskFailureRepository extends VersionedRepository[AbsolutePathId, TaskFailure]
 
 object TaskFailureRepository {
 
@@ -269,17 +268,17 @@ object RuntimeConfigurationRepository {
 }
 
 class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-    ir: IdResolver[PathId, AppDefinition, C, K],
+    ir: IdResolver[AbsolutePathId, AppDefinition, C, K],
     marhaller: Marshaller[AppDefinition, S],
     unmarshaller: Unmarshaller[S, AppDefinition],
     ctx: ExecutionContext)
-  extends PersistenceStoreVersionedRepository[PathId, AppDefinition, K, C, S](
+  extends PersistenceStoreVersionedRepository[AbsolutePathId, AppDefinition, K, C, S](
     persistenceStore,
     _.id,
     _.version.toOffsetDateTime)
   with AppRepository {
 
-  private[storage] var beforeStore = Option.empty[(PathId, Option[OffsetDateTime]) => Future[Done]]
+  private[storage] var beforeStore = Option.empty[(AbsolutePathId, Option[OffsetDateTime]) => Future[Done]]
 
   override def store(v: AppDefinition): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
     beforeStore match {
@@ -299,22 +298,22 @@ class AppRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
     await(super.storeVersion(v))
   }
 
-  private[storage] def deleteVersion(id: PathId, version: OffsetDateTime): Future[Done] = {
+  private[storage] def deleteVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Done] = {
     persistenceStore.deleteVersion(id, version)
   }
 }
 
 class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(implicit
-    ir: IdResolver[PathId, PodDefinition, C, K],
+    ir: IdResolver[AbsolutePathId, PodDefinition, C, K],
     marshaller: Marshaller[PodDefinition, S],
     unmarshaller: Unmarshaller[S, PodDefinition],
     ctx: ExecutionContext)
-  extends PersistenceStoreVersionedRepository[PathId, PodDefinition, K, C, S](
+  extends PersistenceStoreVersionedRepository[AbsolutePathId, PodDefinition, K, C, S](
     persistenceStore,
     _.id,
     _.version.toOffsetDateTime
   ) with PodRepository {
-  private[storage] var beforeStore = Option.empty[(PathId, Option[OffsetDateTime]) => Future[Done]]
+  private[storage] var beforeStore = Option.empty[(AbsolutePathId, Option[OffsetDateTime]) => Future[Done]]
 
   override def store(v: PodDefinition): Future[Done] = async { // linter:ignore:UnnecessaryElseBranch
     beforeStore match {
@@ -334,7 +333,7 @@ class PodRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(im
     await(super.storeVersion(v))
   }
 
-  private[storage] def deleteVersion(id: PathId, version: OffsetDateTime): Future[Done] = {
+  private[storage] def deleteVersion(id: AbsolutePathId, version: OffsetDateTime): Future[Done] = {
     persistenceStore.deleteVersion(id, version)
   }
 }
@@ -348,10 +347,10 @@ class InstanceRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S
 
 class TaskFailureRepositoryImpl[K, C, S](persistenceStore: PersistenceStore[K, C, S])(
     implicit
-    ir: IdResolver[PathId, TaskFailure, C, K],
+    ir: IdResolver[AbsolutePathId, TaskFailure, C, K],
     marshaller: Marshaller[TaskFailure, S],
     unmarshaller: Unmarshaller[S, TaskFailure]
-) extends PersistenceStoreVersionedRepository[PathId, TaskFailure, K, C, S](
+) extends PersistenceStoreVersionedRepository[AbsolutePathId, TaskFailure, K, C, S](
   persistenceStore,
   _.appId,
   _.version.toOffsetDateTime) with TaskFailureRepository

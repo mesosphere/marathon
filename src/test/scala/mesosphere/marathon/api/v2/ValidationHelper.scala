@@ -3,6 +3,8 @@ package api.v2
 
 import com.wix.accord._
 import mesosphere.marathon.api.v2.Validation.ConstraintViolation
+import mesosphere.marathon.state.ResourceRole
+import mesosphere.marathon.util.RoleSettings
 import play.api.libs.json.{JsError, JsResult}
 
 object ValidationHelper {
@@ -23,4 +25,7 @@ object ValidationHelper {
       case _ => Set.empty
     }
   }
+
+  def roleSettings(role: String = ResourceRole.Unreserved) =
+    RoleSettings(validRoles = Set(role, ResourceRole.Unreserved), defaultRole = role)
 }

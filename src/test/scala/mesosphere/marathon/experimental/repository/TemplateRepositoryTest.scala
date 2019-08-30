@@ -11,7 +11,7 @@ import mesosphere.marathon.core.storage.zookeeper.{AsyncCuratorBuilderFactory, Z
 import mesosphere.marathon.experimental.storage.PathTrieTest
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
 import mesosphere.marathon.util.ZookeeperServerTest
 import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
@@ -41,9 +41,9 @@ class TemplateRepositoryTest
 
   val rand = new Random()
 
-  def appDef(pathId: PathId): AppDefinition = AppDefinition(id = pathId)
+  def appDef(pathId: AbsolutePathId): AppDefinition = AppDefinition(id = pathId, role = "*")
   def randomApp(): AppDefinition = appDef(randomPath())
-  def randomPath(prefix: String = "/test"): PathId = PathId(s"$prefix${rand.nextInt}")
+  def randomPath(prefix: String = "/test"): AbsolutePathId = AbsolutePathId(s"$prefix${rand.nextInt}")
 
   def prettyPrint(): Unit = PathTrieTest.prettyPrint(repo.trie)
 
@@ -82,7 +82,7 @@ class TemplateRepositoryTest
           "/eng/ui/jenkins/jobs/master"
         )
 
-        val apps: List[AppDefinition] = paths.map(p => appDef(PathId(p)))
+        val apps: List[AppDefinition] = paths.map(p => appDef(AbsolutePathId(p)))
         populate(apps).futureValue
 
         And("repository is initialized")
@@ -95,7 +95,7 @@ class TemplateRepositoryTest
 
         apps.foreach { app =>
           val read = repo.trie.getNodeData(repo.storePath(app))
-          repo.toTemplate(read, AppDefinition(id = app.id)).get shouldBe app
+          repo.toTemplate(read, AppDefinition(id = app.id, role = "*")).get shouldBe app
         }
       }
     }
@@ -163,7 +163,7 @@ class TemplateRepositoryTest
         repo.create(created).futureValue
 
         Then("it can be read and parsed successfully")
-        val dummy = AppDefinition(id = created.id)
+        val dummy = AppDefinition(id = created.id, role = "*")
         val Success(read) = repo.read(dummy, repo.version(created))
         read shouldBe created
       }

@@ -9,8 +9,7 @@ import ch.qos.logback.classic.{Level, Logger}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.base.{JvmExitsCrashStrategy, LifecycleState}
 import mesosphere.marathon.core.storage.store.impl.zk.RichCuratorFramework
-import mesosphere.marathon.metrics.MetricsConf
-import mesosphere.marathon.storage.{StorageConf, StorageConfig, StorageModule}
+import mesosphere.marathon.storage.{StorageConfig, StorageModule}
 import org.rogach.scallop.ScallopConf
 import org.slf4j.LoggerFactory
 
@@ -24,7 +23,7 @@ import scala.util.control.NonFatal
 abstract class BackupRestoreAction extends StrictLogging {
 
   class BackupConfig(args: Seq[String])
-    extends ScallopConf(args) with StorageConf with NetworkConf with MetricsConf with FeaturesConf {
+    extends ScallopConf(args) with MarathonConf {
     override def availableFeatures: Set[String] = Set.empty
     verify()
     require(backupLocation.isDefined, "--backup_location needs to be defined!")

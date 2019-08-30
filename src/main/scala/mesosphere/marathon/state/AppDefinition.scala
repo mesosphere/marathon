@@ -16,7 +16,7 @@ import mesosphere.marathon.core.pod.{HostNetwork, Network}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml.{App, Apps, ExecutorResources, Resources}
-import mesosphere.marathon.state.Container.{Docker, MesosAppC, MesosDocker}
+import mesosphere.marathon.state.Container.{Docker, MesosDocker}
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.TaskBuilder
@@ -24,12 +24,13 @@ import mesosphere.mesos.protos.{Resource, ScalarResource}
 import org.apache.mesos.{Protos => mesos}
 import mesosphere.marathon.core.health.{PortReference => HealthPortReference}
 import mesosphere.marathon.core.check.{PortReference => CheckPortReference}
+import mesosphere.marathon.util.RoleSettings
 
 import scala.concurrent.duration._
 
 case class AppDefinition(
 
-    id: PathId,
+    id: AbsolutePathId,
 
     override val cmd: Option[String] = App.DefaultCmd,
 
@@ -67,7 +68,7 @@ case class AppDefinition(
 
     taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
 
-    dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
+    dependencies: Set[AbsolutePathId] = AppDefinition.DefaultDependencies,
 
     upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
 
@@ -85,7 +86,9 @@ case class AppDefinition(
 
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
 
-    tty: Option[Boolean] = AppDefinition.DefaultTTY) extends RunSpec
+    tty: Option[Boolean] = AppDefinition.DefaultTTY,
+
+    role: Role) extends RunSpec
   with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
@@ -149,7 +152,8 @@ case class AppDefinition(
       taskId = None,
       host = None,
       hostPorts = Seq.empty,
-      envPrefix = None
+      envPrefix = None,
+      enforceRole = None
     )
     val cpusResource = ScalarResource(Resource.CPUS, resources.cpus)
     val memResource = ScalarResource(Resource.MEM, resources.mem)
@@ -186,6 +190,7 @@ case class AppDefinition(
       .addAllEnvVarReferences(env.flatMap(EnvVarRefSerializer.toProto).asJava)
       .setUnreachableStrategy(unreachableStrategy.toProto)
       .setKillSelection(killSelection.toProto)
+      .setRole(role)
 
     check.foreach { c => builder.setCheck(c.toProto) }
 
@@ -257,6 +262,8 @@ case class AppDefinition(
 
     val tty: Option[Boolean] = if (proto.hasTty) Some(proto.getTty) else AppDefinition.DefaultTTY
 
+    val role: Role = proto.getRole()
+
     // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
     // until the deprecation cycle is complete.
     val portDefinitions =
@@ -281,7 +288,7 @@ case class AppDefinition(
     }
 
     AppDefinition(
-      id = PathId(proto.getId),
+      id = AbsolutePathId(proto.getId),
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
       cmd = commandOption,
       args = argsOption,
@@ -316,12 +323,14 @@ case class AppDefinition(
       upgradeStrategy =
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
-      dependencies = proto.getDependenciesList.map(PathId(_))(collection.breakOut),
+      // TODO AN: Do we store dependencies as relative pathes????
+      dependencies = proto.getDependenciesList.map(AbsolutePathId(_))(collection.breakOut),
       networks = if (networks.isEmpty) AppDefinition.DefaultNetworks else networks,
       secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut),
       unreachableStrategy = unreachableStrategy,
       killSelection = KillSelection.fromProto(proto.getKillSelection),
-      tty = tty
+      tty = tty,
+      role = role
     )
   }
 
@@ -377,7 +386,8 @@ case class AppDefinition(
           secrets != to.secrets ||
           unreachableStrategy != to.unreachableStrategy ||
           killSelection != to.killSelection ||
-          tty != to.tty
+          tty != to.tty ||
+          role != to.role
       }
     case _ =>
       // A validation rule will ensure, this can not happen
@@ -407,13 +417,11 @@ case class AppDefinition(
 
 object AppDefinition extends GeneralPurposeCombinators {
 
-  type AppKey = PathId
-
   val RandomPortValue: Int = 0
   val RandomPortDefinition: PortDefinition = PortDefinition(RandomPortValue, "tcp", None, Map.empty[String, String])
 
   // App defaults
-  val DefaultId = PathId.empty
+  val DefaultId = PathId.root
 
   val DefaultEnv = Map.empty[String, EnvVarValue]
 
@@ -436,7 +444,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultTaskKillGracePeriod = Option.empty[FiniteDuration]
 
-  val DefaultDependencies = Set.empty[PathId]
+  val DefaultDependencies = Set.empty[AbsolutePathId]
 
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
 
@@ -465,7 +473,9 @@ object AppDefinition extends GeneralPurposeCombinators {
   val DefaultNetworks = Seq[Network](HostNetwork)
 
   def fromProto(proto: Protos.ServiceDefinition): AppDefinition =
-    AppDefinition(id = DefaultId).mergeFromProto(proto)
+    // We're setting null here, this is - as the id - always overwritten
+    // in mergeFromProto
+    AppDefinition(id = DefaultId, role = null).mergeFromProto(proto)
 
   def versionInfoFrom(proto: Protos.ServiceDefinition): VersionInfo = {
     if (proto.hasLastScalingAt)
@@ -486,12 +496,28 @@ object AppDefinition extends GeneralPurposeCombinators {
     * errors for every deployment potentially unrelated to the deployed apps.
     */
   def validAppDefinition(
-    enabledFeatures: Set[String])(implicit pluginManager: PluginManager): Validator[AppDefinition] =
+    enabledFeatures: Set[String], roleEnforcement: RoleSettings)(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     validator[AppDefinition] { app =>
       app.id is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
       app.dependencies is every(PathId.pathIdValidator)
-
+      app is validWithRoleEnforcement(roleEnforcement)
     } and validBasicAppDefinition(enabledFeatures) and pluginValidators
+
+  def validWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[AppDefinition] = validator[AppDefinition] { app =>
+    app.role is in(roleEnforcement.validRoles)
+    // DO NOT MERGE THESE TWO similar if blocks! Wix Accord macros does weird stuff otherwise.
+    if (app.isResident) {
+      app.role is isTrue(s"Resident apps cannot have the role ${ResourceRole.Unreserved}") { role: String =>
+        !role.equals(ResourceRole.Unreserved)
+      }
+    }
+    if (app.isResident) {
+      app.role is isTrue((role: Role) => RoleSettings.residentRoleChangeWarningMessage(roleEnforcement.previousRole.get, role)) { role: String =>
+        roleEnforcement.previousRole.map(_.equals(role) || roleEnforcement.forceRoleUpdate).getOrElse(true)
+      }
+    }
+    app.acceptedResourceRoles is ResourceRole.validForRole(app.role)
+  }
 
   private def pluginValidators(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     (app: AppDefinition) => {
@@ -505,7 +531,6 @@ object AppDefinition extends GeneralPurposeCombinators {
       val args = app.args.nonEmpty
       val container = app.container.exists {
         case _: MesosDocker => true
-        case _: MesosAppC => true
         case _: Container.Docker => true
         case _ => false
       }
@@ -612,7 +637,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     // constraints are validated in AppValidation
     appDef.unreachableStrategy is valid
     appDef.networks is valid(NetworkValidation.modelNetworksValidator)
-  } and ExternalVolumes.validApp and EnvVarValue.validApp
+  } and ExternalVolumes.validApp() and EnvVarValue.validApp()
 
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") {

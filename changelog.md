@@ -1,4 +1,183 @@
-## Changes to 1.8.xxx
+
+## Changes from 1.8.212 to 1.9.xxx
+
+### Multi-role support
+
+Marathon 1.9 brings support for multi-role, enabling you to launch services for different roles (against different Mesos quotas) with the same Marathon instance. This feature is described in greater detail in the [Multi-role docs](https://mesosphere.github.io/marathon/docs/multirole.html).
+
+#### Role field added to services
+
+The role field can now be optionally specified for a service. However, the value of this field may only be sent to one of two values:
+
+* The default role as specified by `--mesos_role` command line parameter
+* The name of the top-level group (this is referred to as the group-role)
+
+#### Changes in `acceptedResourceRoles` behavior
+
+`acceptedResourceRole` field defines what *reserved* resources would be used by the service. Previously, a Marathon instance started with `--mesos_role *` would accept following service definition:
+```json
+{
+   "id": "/sleep",
+   "cmd": "sleep 3600"
+   "acceptedResourceRoles": ["foo"]
+}
+``` 
+
+... but wouldn't be able to start the task since it is not subscribed for the role `foo`.
+
+This behavior has been changed with the addition of multi-role support. In Marathon 1.9, Marathon will sanitize the `acceptedResourceRoles` value, removing all invalid roles and leaving `*` (unreserved) by default. Using the example above, the service definition will be still accepted, however, `foo` will be removed and `"acceptedResourceRoles": ["*"]` will be used instead so that the task *will start*.
+
+Starting with Marathon 1.10, Marathon will reject the above service definition as invalid. However, the `sanitize_accepted_resource_roles` feature can be enabled with `--deprecated_features sanitize_accepted_resource_roles`, causing Marathon to continue to auto-sanitize this field value for one more version.
+
+In Marathon 1.11, the `sanitize_accepted_resource_roles` deprecated feature will be removed.
+
+#### Command-line flag `--default_accepted_resource_roles` has been replaced with `--accepted_resource_roles_default_behavior`
+
+The command-line flag `--default_accepted_resource_roles` does not work in a multi-role context. A new command-line parameter, `--accepted_resource_roles_default_behavior`, has been introduced, to replace it. See the [command-line-flags](https://mesosphere.github.io/marathon/docs/command-line-flags.html) docs.
+
+The command-line flag `--default_accepted_resource_roles` is deprecated and will be removed in Marathon 1.10.0.
+
+### Introduce SharedMemory/IPC configuration to Marathon Apps and Pods
+
+When running Marathon Apps or Pods it is now possible to configure the IPC separation level and shared memory size.
+Each container or executor can have their IPC mode set to either private or share the parents namespace. If set to
+private, the shared memory size can also be configured.
+See [Mesos documentation](http://mesos.apache.org/documentation/latest/isolators/namespaces-ipc/) for shared memory configuration for details.
+
+```
+{
+  "id": "/mesos-shared-memory-app",
+  "cmd": "sleep 1000",
+  "cpus": 0.1,
+  "mem": 32,
+  "container": {
+    "type": "MESOS",
+    "linuxInfo": {
+      "ipcInfo": {
+        "mode": "PRIVATE",
+        "shmSize": 16
+      }
+    }
+  }
+}
+``` 
+
+### `undefined` is an Illegal `--gpu_scheduling_behavior` Parameter
+
+As described [in an earlies note](#--gpu_scheduling_behavior-default-is-now-restricted-undefined-is-deprecated-and-will-be-removed) `undefined`
+is removed with `1.9.x`.
+
+### Marathon will auto-reset backoff delays when agents are being drained
+
+When Marathon receives a `TASK_GONE_BY_OPERATOR` or `TASK_KILLED` status update with a reason indicating that the agent is being drained, any delay for the related run spec will be deleted. This is to speed up the process of replacing tasks from drained agents.
+
+### Deprecated features
+
+#### Deprecation and eventual removal of the command line flags `--revive_offer_repetitions` and `--revive_offers_for_new_apps`
+
+The command line options `--revive_offers_port_new_apps` and `--revive_offers_repetitions` have been deprecated in Marathon 1.9. Specifying these command-line arguments no longer has any effect. These command-line options will be completely removed in Marathon 1.10, where specifying them will be considered an error.
+
+Instead of specifying `--revive_offers_port_new_apps`, one can achieve similar effects by specifying a larger `--min_revive_offers_interval`, which will reduce the burden and offer starvation in clusters with lots of frameworks.
+
+Revive offers repetitions functionality no longer optional; after the duration specified by ```min_revive_offers_interval` since the last revive for role, offers are still wanted, a revive is repeated once (and only once).
+
+For more detailed information, see the JIRA ticket [MARATHON-8663](https://jira.mesosphere.com/browse/MARATHON-8663)
+
+## Changes from 1.8.218 to 1.8.xxx
+
+### External Volume Validation changes
+
+#### Relaxed name validation
+
+As there are some external volume providers which require options in the volume name, the strict validation of the name on the external volume is now removed.
+
+As the uniqueness check is based on the volume name, this may lead to some inconsistencies, for the sake of uniqueness, the following volumes are distinct:
+
+```json
+"volumes": [
+      {
+        "external": {
+          "name": "name=volumename,option1=value",
+        },
+      }
+    ],
+```
+
+```json
+"volumes": [
+      {
+        "external": {
+          "name": "option1=value,name=volumename",
+        },
+      }
+    ],
+```
+
+#### Optional uniqueness check
+
+Previously, Marathon would validate that an external volume with the same name is only used once across all apps. This was due to the initial implementation being focused on Rexray+EBS. However, multiple external volume providers now
+allow shared access to mounted volumes, so we introduced a way to disable the uniqueness check:
+
+A new field, `container.volumes[n].external.shared` which defaults to `false`. If set to true, the same volume name can be used
+by multiple containers. The `shared` flag has to be set to `true` on all external volumes with the same name, otherwise a conflict is reported on the volume without the `shared=true` flag.
+
+```json
+  "container": {
+    "type": "MESOS",
+    "volumes": [
+      {
+        "external": {
+          "size": 5,
+          "name": "volumename",
+          "provider": "dvdi",
+          "shared": "true",
+          "options": {
+            "dvdi/driver": "pxd",
+            "dvdi/shared": "true"
+          }
+        },
+        "mode": "RW",
+        "containerPath": "/mnt/nginx"
+      }
+    ],
+  }
+```
+
+## Changes from 1.8.194 to 1.8.218
+
+### Revive and Suppress Refactoring
+
+The [revive](http://mesos.apache.org/documentation/latest/scheduler-http-api/#revive) and [suppress](http://mesos.apache.org/documentation/latest/scheduler-http-api/#suppress) logic was unified. In the past Marathon would keep reviving when
+an instance with a reservation was expunged (case 1) or it would revive when instance should be started (case 2). When
+no instance should be started Marathon would suppress offers which could conflict with case 1. With the refactoring
+only one logic decides whether to revive or suppress and thus avoids the conflict. The change also required changing
+the default `--min_revive_offers_interval` to thirty seconds. This should avoid overriding revive calls with a suppress
+too quickly. The `--[disable]_suppress_offers` flag can switch off suppress calls all together. This should be used
+when Marathon fails to clean up reservation which requires offers being sent.
+
+### Fixed issues
+
+- [DCOS-54927](https://jira.mesosphere.com/browse/DCOS-54927) - Fixed an issue where two independent deployments could interfere with each other resulting in too many tasks launched and/or possibly a stuck deployment.
+
+## Changes from 1.8.180 to 1.8.194
+
+### Fixed issues
+
+- [DCOS_OSS-5212](https://jira.mesosphere.com/browse/DCOS_OSS-5212) - Fixed an issue that prevented reserved instances created by older Marathon versions from being restarted
+
+- [MARATHON-8623](https://jira.mesosphere.com/browse/MARATHON-8623) - Fixed an issue that could cause /v2/deployments to become stale
+
+- [MARATHON-8624](https://jira.mesosphere.com/browse/MARATHON-8624) - Fixed issue where the presence of a TASK_UNKNOWN status could cause an API failure
+
+- [DCOS-51375](https://jira.mesosphere.com/browse/DCOS-51375) - Fixed an issue where deployment cancellation could leak instances.
+
+- [DCOS_OSS-5211](https://jira.mesosphere.com/browse/DCOS_OSS-5211) - The initial support for volume profiles would match disk resources with a profile, even if no profile was required. This behavior has been adjusted so that disk resources with profiles are only used when those profiles are required, and are not used if the service for which we are matching offers does not require a disk with that profile.
+
+- [MARATHON-8631](https://jira.mesosphere.com/browse/MARATHON-8631) - In order to prepare for the general availability of the [DC/OS Storage Service](https://docs.mesosphere.com/services/beta-storage/) (DSS), Marathon will now default to disk type `Mount`, if a persistent volume `profileName` is configured by the user without specifying the wanted disk `type`. Services like DSS will populate this field to allow users selecting the volumes they previously created. Mesos `Root` disks will not have a `profileName` set, so the default for persistent volumes that do not specify a `profileName` is still `Root`.
+
+- [MARATHON-8422](https://jira.mesosphere.com/browse/MARATHON-8422) - Kill unreachable tasks that came back. Marathon could get stuck waiting for terminal events but not issue a kill.
+
+## Changes from 1.7.xxx to 1.8.180
 
 ### AppC is now deprecated
 AppC is now deprecated and will be removed in Marathon 1.9
@@ -68,6 +247,8 @@ This option was deprecated since 1.5 and using that have no effect on Marathon. 
 - [MARATHON-8482](https://jira.mesosphere.com/browse/MARATHON-8482) - We fixed a possibly incorrect behavior around killing overdue tasks: `--task_launch_confirm_timeout` parameter properly controls the time the task spends in `Provisioned` stage (between being launched and receiving `TASK_STAGING` status update).
 
 - [MARATHON-8566](https://jira.mesosphere.com/browse/MARATHON-8566) - We fixed a race condition causing `v2/deployments` not containing a confirmed deployment after HTTP 200/201 response was returned.
+
+- [MARATHON-8625](https://jira.mesosphere.com/browse/MARATHON-8625) - We fixed stuck rollbacks of persistent apps.
 
 ### Closing connection on slow event consumers
 

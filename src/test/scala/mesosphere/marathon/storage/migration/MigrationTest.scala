@@ -4,21 +4,20 @@ package storage.migration
 import java.util.concurrent.atomic.AtomicInteger
 
 import akka.Done
+import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
-import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
+import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import mesosphere.marathon.state.RootGroup
-import mesosphere.marathon.storage.{InMem, StorageConfig}
+import mesosphere.marathon.storage.migration.Migration.MigrationAction
 import mesosphere.marathon.storage.migration.StorageVersions._
 import mesosphere.marathon.storage.repository._
+import mesosphere.marathon.storage.{InMem, StorageConfig}
 import mesosphere.marathon.test.{Mockito, SettableClock, SimulatedScheduler}
 import org.scalatest.GivenWhenThen
-import Migration.MigrationAction
-import akka.stream.Materializer
-import mesosphere.marathon.metrics.dummy.DummyMetrics
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
@@ -26,11 +25,7 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Eventually {
 
   class Fixture(
-      persistenceStore: PersistenceStore[_, _, _] = {
-        val store = new InMemoryPersistenceStore(DummyMetrics)
-        store.markOpen()
-        store
-      },
+      persistenceStore: PersistenceStore[ZkId, String, ZkSerialized],
       fakeMigrations: List[MigrationAction] = List.empty) {
     private val appRepository: AppRepository = mock[AppRepository]
     private val podRepository: PodRepository = mock[PodRepository]
@@ -51,7 +46,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     implicit val scheduler = new SimulatedScheduler(clock)
     val notificationCounter = new AtomicInteger(0)
     val migrationSteps = if (fakeMigrations.nonEmpty) fakeMigrations else Migration.steps
-    val migration = new Migration(Set.empty, None, "bridge-name", persistenceStore, appRepository, podRepository, groupRepository, deploymentRepository,
+    val migration = new Migration(Set.empty, "mesos-role", persistenceStore, appRepository, podRepository, groupRepository, deploymentRepository,
       instanceRepository, taskFailureRepository, frameworkIdRepository,
       serviceDefinitionRepository, configurationRepository, backup, config, migrationSteps) {
 
@@ -65,7 +60,9 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
   "Migration" should {
     "be filterable by version" in {
-      val f = new Fixture
+      val mockedStore = mock[PersistenceStore[ZkId, String, ZkSerialized]]
+
+      val f = new Fixture(mockedStore)
 
       val migrate = f.migration
       val all = migrate.steps.filter(_._1 > StorageVersions(0, 0, 0)).sortBy(_._1)
@@ -79,7 +76,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
 
     "migrate on an empty database will set the storage version" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mock[PersistenceStore[ZkId, String, ZkSerialized]]
 
       val f = new Fixture(mockedStore)
 
@@ -101,7 +98,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
 
     "migrate on a database with the same version will do nothing" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mock[PersistenceStore[ZkId, String, ZkSerialized]]
       val f = new Fixture(mockedStore)
 
       val migrate = f.migration
@@ -118,7 +115,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
 
     "migrate throws an error for early unsupported versions" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mock[PersistenceStore[ZkId, String, ZkSerialized]]
       val f = new Fixture(mockedStore)
 
       val migrate = f.migration
@@ -140,7 +137,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
 
     "migrate throws an error for versions > current" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mock[PersistenceStore[ZkId, String, ZkSerialized]]
       val f = new Fixture(mockedStore)
 
       val migrate = f.migration
@@ -161,7 +158,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
 
     "migrations are executed sequentially" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mock[PersistenceStore[ZkId, String, ZkSerialized]]
 
       mockedStore.startMigration() returns Future.successful(Done)
       mockedStore.storageVersion() returns Future.successful(Some(StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)))
@@ -189,7 +186,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
 
     "log periodic messages if migration takes more time than usual" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mock[PersistenceStore[ZkId, String, ZkSerialized]]
       val started = Promise[Done]
       val migrationDone = Promise[Done]
       val version = StorageVersions(17, 0, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)
@@ -217,7 +214,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
 
       started.future.futureValue shouldBe Done
       (1 to 3) foreach { _ =>
-        f.clock += Migration.statusLoggingInterval
+        f.clock advanceBy Migration.statusLoggingInterval
       }
       eventually {
         f.notificationCounter.get shouldBe 3
@@ -230,7 +227,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
 
     "throw an error if migration is in progress already" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mock[PersistenceStore[ZkId, String, ZkSerialized]]
       val f = new Fixture(mockedStore)
       mockedStore.startMigration() throws new StoreCommandFailedException("Migration is already in progress")
       mockedStore.storageVersion() returns Future.successful(Some(StorageVersions(1, 6, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)))
@@ -247,7 +244,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
     }
 
     "throw an error and remove a migration flag if migration gets cancelled" in {
-      val mockedStore = mock[PersistenceStore[_, _, _]]
+      val mockedStore = mock[PersistenceStore[ZkId, String, ZkSerialized]]
       val version = StorageVersions(17, 0, 0, StorageVersion.StorageFormat.PERSISTENCE_STORE)
       val failingMigration: MigrationAction = (version,
         { _: Migration =>

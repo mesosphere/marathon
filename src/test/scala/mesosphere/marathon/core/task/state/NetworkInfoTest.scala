@@ -18,7 +18,8 @@ class NetworkInfoTest extends UnitTest {
     "computing PortAssignments from PortMappings (network mode BRIDGED)" should {
 
       val app = AppDefinition(
-        id = PathId("test"),
+        id = AbsolutePathId("/test"),
+        role = "*",
         networks = Seq(BridgeNetwork()), container = Some(Docker(
           portMappings = Seq(
             PortMapping(
@@ -104,8 +105,10 @@ class NetworkInfoTest extends UnitTest {
     "computing PortAssignments from PortMappings (network mode USER)" should {
 
       val app = AppDefinition(
-        id = PathId("test"),
-        networks = Seq(ContainerNetwork("whatever")), container = Some(Docker(
+        id = AbsolutePathId("/test"),
+        role = "*",
+        networks = Seq(ContainerNetwork("whatever")),
+        container = Some(Docker(
 
           portMappings = Seq(
             PortMapping(containerPort = 0, hostPort = Some(31000), servicePort = 9000, protocol = "tcp"),
@@ -176,7 +179,8 @@ class NetworkInfoTest extends UnitTest {
     "computing PortAssignments from PortDefinitions" should {
       "compute the correct values" in {
         val app = AppDefinition(
-          id = PathId("test"),
+          id = AbsolutePathId("/test"),
+          role = "*",
           container = Some(Mesos()),
           portDefinitions = Seq(
             PortDefinition(

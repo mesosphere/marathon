@@ -11,7 +11,7 @@ import mesosphere.marathon.core.launcher.{InstanceOp, TaskLauncher}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.Implicits._
@@ -29,9 +29,9 @@ class TaskLauncherImplTest extends UnitTest {
     val taskInfo = taskInfoBuilder.build()
     val instance = TestInstanceBuilder.newBuilderWithInstanceId(instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo).build().getInstance()
     val stateOp = InstanceUpdateOperation.Provision(instanceId, instance.agentInfo.get, instance.runSpec, instance.tasksMap, Timestamp.now())
-    new InstanceOpFactoryHelper(metrics, Some("principal"), Some("role")).provision(taskInfo, stateOp)
+    new InstanceOpFactoryHelper(metrics, Some("principal")).provision(taskInfo, stateOp)
   }
-  private[this] val appId = PathId("/test")
+  private[this] val appId = AbsolutePathId("/test")
   private[this] val instanceId = Instance.Id.forRunSpec(appId)
   private[this] val launch1 = launch(MarathonTestHelper.makeOneCPUTask(Task.Id(instanceId)))
   private[this] val launch2 = launch(MarathonTestHelper.makeOneCPUTask(Task.Id(instanceId)))

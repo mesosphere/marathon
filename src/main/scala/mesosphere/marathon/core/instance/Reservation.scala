@@ -5,14 +5,14 @@ import java.util.UUID
 
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.instance.Instance.Prefix
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, PathId, Timestamp}
 import play.api.libs.json._
 
 /**
   * Represents a reservation for all resources that are needed for launching an instance
   * and associated persistent local volumes.
   */
-case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State)
+case class Reservation(volumeIds: Seq[LocalVolumeId], state: Reservation.State, id: Reservation.Id)
 
 object Reservation {
 
@@ -31,7 +31,7 @@ object Reservation {
     * @param separator The separator of run spec id and uuid.
     * @param uuid The unique id of the reservation. It is the same id of the instance.
     */
-  case class LegacyId(runSpecId: PathId, separator: String, uuid: UUID) extends Id {
+  case class LegacyId(runSpecId: AbsolutePathId, separator: String, uuid: UUID) extends Id {
     override lazy val label: String = runSpecId.safePath + separator + uuid
 
     /**
@@ -71,13 +71,6 @@ object Reservation {
       case _ => throw new MatchError(s"reservation id $label does not include a valid instance identifier")
     }
 
-    /**
-      * Construct a reservation id from an instance id.
-      *
-      * @param instanceId The instance id used for the reservation id.
-      * @return
-      */
-    def apply(instanceId: Instance.Id): Id = Reservation.SimplifiedId(instanceId)
   }
 
   /**
@@ -160,5 +153,9 @@ object Reservation {
     }
   }
 
+  implicit lazy val reservationIdFormat: Format[Reservation.Id] = Format(
+    Reads.of[String].map(Reservation.Id(_)),
+    Writes[Reservation.Id] { id => JsString(id.label) }
+  )
   implicit val reservationFormat: OFormat[Reservation] = Json.format[Reservation]
 }

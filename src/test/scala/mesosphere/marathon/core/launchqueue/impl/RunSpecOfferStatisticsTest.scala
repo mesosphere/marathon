@@ -4,7 +4,7 @@ package core.launchqueue.impl
 import mesosphere.UnitTest
 import mesosphere.marathon.core.launcher.InstanceOp
 import mesosphere.marathon.core.launcher.OfferMatchResult.{Match, NoMatch}
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.NoOfferMatchReason
 import mesosphere.mesos.NoOfferMatchReason._
@@ -74,7 +74,7 @@ class RunSpecOfferStatisticsTest extends UnitTest {
   }
 
   class Fixture {
-    val runSpec = AppDefinition(PathId("/foo"))
+    val runSpec = AppDefinition(AbsolutePathId("/foo"), role = "*")
     val offer = MarathonTestHelper.makeBasicOffer().build()
     val instanceOp = mock[InstanceOp]
     val matched = Match(runSpec, offer, instanceOp, Timestamp.now())

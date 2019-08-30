@@ -5,9 +5,6 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{JsonTestHelper, TaskKiller, TestAuthFixture}
-import mesosphere.marathon.test.JerseyTest
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
@@ -15,11 +12,12 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{PathId, _}
-import mesosphere.marathon.test.{GroupCreation, SettableClock}
+import mesosphere.marathon.state._
+import mesosphere.marathon.test.{GroupCreation, JerseyTest, SettableClock}
 import org.mockito.Matchers
 import org.mockito.Mockito._
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -75,7 +73,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
   "SpecInstancesResource" should {
     "deleteMany" in new Fixture {
-      val appId = "/my/app".toRootPath
+      val appId = AbsolutePathId("/my/app")
       val host = "host"
       val clock = new SettableClock()
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).addTaskStaged().getInstance()
@@ -84,7 +82,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
       config.zkTimeoutDuration returns 5.seconds
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
-      groupManager.runSpec(appId) returns Some(AppDefinition(appId))
+      groupManager.runSpec(appId) returns Some(AppDefinition(appId, role = "*"))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
       val response = asyncRequest { r =>
@@ -100,6 +98,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
            |    "healthCheckResults" : [ ],
            |    "host" : "host.some",
            |    "id" : "${instance1.appTask.taskId.idString}",
+           |    "role" : "*",
            |    "ipAddresses" : [ ],
            |    "ports" : [ ],
            |    "servicePorts" : [ ],
@@ -113,6 +112,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
            |    "healthCheckResults" : [ ],
            |    "host" : "host.some",
            |    "id" : "${instance2.appTask.taskId.idString}",
+           |    "role" : "*",
            |    "ipAddresses" : [ ],
            |    "ports" : [ ],
            |    "servicePorts" : [ ],
@@ -143,7 +143,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
     "deleteMany with wipe delegates to taskKiller with wipe value" in new Fixture {
       val appId = "/my/app"
       val host = "host"
-      healthCheckManager.statuses(appId.toRootPath) returns Future.successful(collection.immutable.Map.empty)
+      healthCheckManager.statuses(appId.toAbsolutePath) returns Future.successful(collection.immutable.Map.empty)
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
 
       val response = asyncRequest { r =>
@@ -155,7 +155,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
     "deleteOne" in new Fixture {
       val clock = new SettableClock()
-      val appId = PathId("/my/app")
+      val appId = AbsolutePathId("/my/app")
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val toKill = Seq(instance1)
@@ -163,7 +163,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       config.zkTimeoutDuration returns 5.seconds
       instanceTracker.specInstances(appId) returns Future.successful(Seq(instance1, instance2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
-      groupManager.app(appId) returns Some(AppDefinition(appId))
+      groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
       val response = asyncRequest { r =>
@@ -180,6 +180,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
           |    "healthCheckResults" : [ ],
           |    "host" : "host.some",
           |    "id" : "${instance1.appTask.taskId.idString}",
+          |    "role" : "*",
           |    "ipAddresses" : [ ],
           |    "ports" : [ ],
           |    "servicePorts" : [ ],
@@ -198,7 +199,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
     }
 
     "deleteOne with scale and wipe fails" in new Fixture {
-      val appId = PathId("/my/app")
+      val appId = AbsolutePathId("/my/app")
       val instanceId = Instance.Id.forRunSpec(appId)
       val id = Task.Id(instanceId)
 
@@ -214,7 +215,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
     "deleteOne with wipe delegates to taskKiller with wipe value" in new Fixture {
       val clock = new SettableClock()
-      val appId = PathId("/my/app")
+      val appId = AbsolutePathId("/my/app")
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val toKill = Seq(instance1)
@@ -222,7 +223,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       config.zkTimeoutDuration returns 5.seconds
       instanceTracker.specInstances(appId) returns Future.successful(Seq(instance1, instance2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
-      groupManager.app(appId) returns Some(AppDefinition(appId))
+      groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
       val response = asyncRequest { r =>
@@ -238,6 +239,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
            |    "healthCheckResults" : [ ],
            |    "host" : "host.some",
            |    "id" : "${instance1.appTask.taskId.idString}",
+           |    "role" : "*",
            |    "ipAddresses" : [ ],
            |    "ports" : [ ],
            |    "servicePorts" : [ ],
@@ -258,7 +260,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
     "get tasks" in new Fixture {
       val clock = new SettableClock()
 
-      val appId = PathId("/my/app")
+      val appId = AbsolutePathId("/my/app")
 
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, clock.now()).getInstance()
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, clock.now()).getInstance()
@@ -266,7 +268,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       config.zkTimeoutDuration returns 5.seconds
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
-      groupManager.app(appId) returns Some(AppDefinition(appId))
+      groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
 
       val response = asyncRequest { r => appsTaskResource.indexJson("/my/app", auth.request, r) }
       response.getStatus shouldEqual 200
@@ -279,6 +281,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
           |    "healthCheckResults" : [ ],
           |    "host" : "host.some",
           |    "id" : "${instance1.appTask.taskId.idString}",
+          |    "role" : "*",
           |    "ipAddresses" : [ ],
           |    "ports" : [ ],
           |    "servicePorts" : [ ],
@@ -292,6 +295,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
           |    "healthCheckResults" : [ ],
           |    "host" : "host.some",
           |    "id" : "${instance2.appTask.taskId.idString}",
+          |    "role" : "*",
           |    "ipAddresses" : [ ],
           |    "ports" : [ ],
           |    "servicePorts" : [ ],
@@ -348,7 +352,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
       Given("the app does not exist")
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-      groupManager.app("/app".toRootPath) returns None
+      groupManager.app("/app".toAbsolutePath) returns None
 
       When("the indexJson is fetched")
       val indexJson = asyncRequest { r => appsTaskResource.indexJson("/app", req, r) }
@@ -364,7 +368,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
       Given("the app exists")
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-      groupManager.app("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath))
+      groupManager.app("/app".toAbsolutePath) returns Some(AppDefinition("/app".toAbsolutePath, role = "*"))
 
       When("the indexJson is fetched")
       val indexJson = asyncRequest { r => appsTaskResource.indexJson("/app", req, r) }
@@ -380,7 +384,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
       Given("the group does not exist")
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-      groupManager.group("/group".toRootPath) returns None
+      groupManager.group("/group".toAbsolutePath) returns None
 
       When("the indexJson is fetched")
       val indexJson = asyncRequest { r => appsTaskResource.indexJson("/group/*", req, r) }
@@ -395,7 +399,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
 
       Given("the group exists")
-      val groupPath = "/group".toRootPath
+      val groupPath = "/group".toAbsolutePath
       groupManager.group(groupPath) returns Some(createGroup(groupPath))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
@@ -412,7 +416,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
 
       Given("The app exists")
-      groupManager.app("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath))
+      groupManager.app("/app".toAbsolutePath) returns Some(AppDefinition("/app".toAbsolutePath, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
@@ -428,7 +432,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
 
       Given("The app not exists")
-      groupManager.app("/app".toRootPath) returns None
+      groupManager.app("/app".toAbsolutePath) returns None
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
@@ -442,12 +446,12 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       auth.authenticated = true
       auth.authorized = false
       val req = auth.request
-      val appId = PathId("/app")
+      val appId = AbsolutePathId("/app")
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
 
       Given("The app exists")
-      groupManager.runSpec("/app".toRootPath) returns Some(AppDefinition(appId))
+      groupManager.runSpec("/app".toAbsolutePath) returns Some(AppDefinition(appId, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteOne is called")
@@ -463,12 +467,12 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       auth.authenticated = true
       auth.authorized = false
       val req = auth.request
-      val appId = PathId("/app")
+      val appId = AbsolutePathId("/app")
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
 
       Given("The app not exists")
-      groupManager.runSpec("/app".toRootPath) returns None
+      groupManager.runSpec("/app".toAbsolutePath) returns None
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteOne is called")
@@ -486,7 +490,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
 
       Given("The app exists")
-      groupManager.runSpec("/app".toRootPath) returns Some(AppDefinition("/app".toRootPath))
+      groupManager.runSpec("/app".toAbsolutePath) returns Some(AppDefinition("/app".toAbsolutePath, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("deleteMany is called")
@@ -504,7 +508,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val req = auth.request
 
       Given("The app not exists")
-      groupManager.runSpec("/app".toRootPath) returns None
+      groupManager.runSpec("/app".toAbsolutePath) returns None
 
       When("deleteMany is called")
       val deleteMany = asyncRequest { r =>

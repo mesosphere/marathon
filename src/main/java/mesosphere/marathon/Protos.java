@@ -10284,6 +10284,20 @@ public final class Protos {
      * <code>optional .mesosphere.marathon.CheckDefinition check = 37;</code>
      */
     mesosphere.marathon.Protos.CheckDefinitionOrBuilder getCheckOrBuilder();
+
+    /**
+     * <code>optional string role = 38;</code>
+     */
+    boolean hasRole();
+    /**
+     * <code>optional string role = 38;</code>
+     */
+    java.lang.String getRole();
+    /**
+     * <code>optional string role = 38;</code>
+     */
+    com.google.protobuf.ByteString
+        getRoleBytes();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.ServiceDefinition}
@@ -10323,6 +10337,7 @@ public final class Protos {
       killSelection_ = 1;
       networks_ = java.util.Collections.emptyList();
       executorResources_ = java.util.Collections.emptyList();
+      role_ = "";
     }
 
     @java.lang.Override
@@ -10686,6 +10701,12 @@ public final class Protos {
                 check_ = subBuilder.buildPartial();
               }
               bitField0_ |= 0x00400000;
+              break;
+            }
+            case 306: {
+              com.google.protobuf.ByteString bs = input.readBytes();
+              bitField0_ |= 0x00800000;
+              role_ = bs;
               break;
             }
           }
@@ -11776,6 +11797,48 @@ public final class Protos {
       return check_ == null ? mesosphere.marathon.Protos.CheckDefinition.getDefaultInstance() : check_;
     }
 
+    public static final int ROLE_FIELD_NUMBER = 38;
+    private volatile java.lang.Object role_;
+    /**
+     * <code>optional string role = 38;</code>
+     */
+    public boolean hasRole() {
+      return ((bitField0_ & 0x00800000) == 0x00800000);
+    }
+    /**
+     * <code>optional string role = 38;</code>
+     */
+    public java.lang.String getRole() {
+      java.lang.Object ref = role_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        if (bs.isValidUtf8()) {
+          role_ = s;
+        }
+        return s;
+      }
+    }
+    /**
+     * <code>optional string role = 38;</code>
+     */
+    public com.google.protobuf.ByteString
+        getRoleBytes() {
+      java.lang.Object ref = role_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        role_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -12006,6 +12069,9 @@ public final class Protos {
       if (((bitField0_ & 0x00400000) == 0x00400000)) {
         output.writeMessage(37, getCheck());
       }
+      if (((bitField0_ & 0x00800000) == 0x00800000)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 38, role_);
+      }
       unknownFields.writeTo(output);
     }
 
@@ -12167,6 +12233,9 @@ public final class Protos {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(37, getCheck());
       }
+      if (((bitField0_ & 0x00800000) == 0x00800000)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(38, role_);
+      }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
@@ -12325,6 +12394,11 @@ public final class Protos {
       if (hasCheck()) {
         result = result && getCheck()
             .equals(other.getCheck());
+      }
+      result = result && (hasRole() == other.hasRole());
+      if (hasRole()) {
+        result = result && getRole()
+            .equals(other.getRole());
       }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
@@ -12487,6 +12561,10 @@ public final class Protos {
       if (hasCheck()) {
         hash = (37 * hash) + CHECK_FIELD_NUMBER;
         hash = (53 * hash) + getCheck().hashCode();
+      }
+      if (hasRole()) {
+        hash = (37 * hash) + ROLE_FIELD_NUMBER;
+        hash = (53 * hash) + getRole().hashCode();
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -12789,6 +12867,8 @@ public final class Protos {
           checkBuilder_.clear();
         }
         bitField1_ = (bitField1_ & ~0x00000008);
+        role_ = "";
+        bitField1_ = (bitField1_ & ~0x00000010);
         return this;
       }
 
@@ -13051,6 +13131,10 @@ public final class Protos {
         } else {
           result.check_ = checkBuilder_.build();
         }
+        if (((from_bitField1_ & 0x00000010) == 0x00000010)) {
+          to_bitField0_ |= 0x00800000;
+        }
+        result.role_ = role_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -13459,6 +13543,11 @@ public final class Protos {
         }
         if (other.hasCheck()) {
           mergeCheck(other.getCheck());
+        }
+        if (other.hasRole()) {
+          bitField1_ |= 0x00000010;
+          role_ = other.role_;
+          onChanged();
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -18222,6 +18311,82 @@ public final class Protos {
         }
         return checkBuilder_;
       }
+
+      private java.lang.Object role_ = "";
+      /**
+       * <code>optional string role = 38;</code>
+       */
+      public boolean hasRole() {
+        return ((bitField1_ & 0x00000010) == 0x00000010);
+      }
+      /**
+       * <code>optional string role = 38;</code>
+       */
+      public java.lang.String getRole() {
+        java.lang.Object ref = role_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          if (bs.isValidUtf8()) {
+            role_ = s;
+          }
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>optional string role = 38;</code>
+       */
+      public com.google.protobuf.ByteString
+          getRoleBytes() {
+        java.lang.Object ref = role_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          role_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>optional string role = 38;</code>
+       */
+      public Builder setRole(
+          java.lang.String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField1_ |= 0x00000010;
+        role_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string role = 38;</code>
+       */
+      public Builder clearRole() {
+        bitField1_ = (bitField1_ & ~0x00000010);
+        role_ = getDefaultInstance().getRole();
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional string role = 38;</code>
+       */
+      public Builder setRoleBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField1_ |= 0x00000010;
+        role_ = value;
+        onChanged();
+        return this;
+      }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
         return super.setUnknownFields(unknownFields);
@@ -20795,19 +20960,6 @@ public final class Protos {
     mesosphere.marathon.Protos.ExtendedContainerInfo.MesosDockerInfoOrBuilder getMesosDockerOrBuilder();
 
     /**
-     * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-     */
-    boolean hasMesosAppC();
-    /**
-     * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-     */
-    mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo getMesosAppC();
-    /**
-     * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-     */
-    mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfoOrBuilder getMesosAppCOrBuilder();
-
-    /**
      * <pre>
      * since 1.8
      * </pre>
@@ -20928,19 +21080,6 @@ public final class Protos {
               bitField0_ |= 0x00000004;
               break;
             }
-            case 42: {
-              mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000008) == 0x00000008)) {
-                subBuilder = mesosAppC_.toBuilder();
-              }
-              mesosAppC_ = input.readMessage(mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.PARSER, extensionRegistry);
-              if (subBuilder != null) {
-                subBuilder.mergeFrom(mesosAppC_);
-                mesosAppC_ = subBuilder.buildPartial();
-              }
-              bitField0_ |= 0x00000008;
-              break;
-            }
             case 50: {
               if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
                 portMappings_ = new java.util.ArrayList<mesosphere.marathon.Protos.ExtendedContainerInfo.PortMapping>();
@@ -20952,7 +21091,7 @@ public final class Protos {
             }
             case 58: {
               mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.Builder subBuilder = null;
-              if (((bitField0_ & 0x00000010) == 0x00000010)) {
+              if (((bitField0_ & 0x00000008) == 0x00000008)) {
                 subBuilder = linuxInfo_.toBuilder();
               }
               linuxInfo_ = input.readMessage(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.PARSER, extensionRegistry);
@@ -20960,7 +21099,7 @@ public final class Protos {
                 subBuilder.mergeFrom(linuxInfo_);
                 linuxInfo_ = subBuilder.buildPartial();
               }
-              bitField0_ |= 0x00000010;
+              bitField0_ |= 0x00000008;
               break;
             }
           }
@@ -26623,6 +26762,19 @@ public final class Protos {
        * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.Seccomp seccomp = 1;</code>
        */
       mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.SeccompOrBuilder getSeccompOrBuilder();
+
+      /**
+       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+       */
+      boolean hasIpcInfo();
+      /**
+       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+       */
+      mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo getIpcInfo();
+      /**
+       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+       */
+      mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder getIpcInfoOrBuilder();
     }
     /**
      * <pre>
@@ -26681,6 +26833,19 @@ public final class Protos {
                   seccomp_ = subBuilder.buildPartial();
                 }
                 bitField0_ |= 0x00000001;
+                break;
+              }
+              case 18: {
+                mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder subBuilder = null;
+                if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                  subBuilder = ipcInfo_.toBuilder();
+                }
+                ipcInfo_ = input.readMessage(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.PARSER, extensionRegistry);
+                if (subBuilder != null) {
+                  subBuilder.mergeFrom(ipcInfo_);
+                  ipcInfo_ = subBuilder.buildPartial();
+                }
+                bitField0_ |= 0x00000002;
                 break;
               }
             }
@@ -27449,6 +27614,749 @@ public final class Protos {
 
       }
 
+      public interface IpcInfoOrBuilder extends
+          // @@protoc_insertion_point(interface_extends:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo)
+          com.google.protobuf.MessageOrBuilder {
+
+        /**
+         * <pre>
+         * The ipc mode the container or executor should apply
+         * </pre>
+         *
+         * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+         */
+        boolean hasIpcMode();
+        /**
+         * <pre>
+         * The ipc mode the container or executor should apply
+         * </pre>
+         *
+         * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+         */
+        mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode getIpcMode();
+
+        /**
+         * <pre>
+         * The shared memory size in MB
+         * </pre>
+         *
+         * <code>optional uint32 shmSize = 2;</code>
+         */
+        boolean hasShmSize();
+        /**
+         * <pre>
+         * The shared memory size in MB
+         * </pre>
+         *
+         * <code>optional uint32 shmSize = 2;</code>
+         */
+        int getShmSize();
+      }
+      /**
+       * <pre>
+       * IPC configurations
+       * </pre>
+       *
+       * Protobuf type {@code mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo}
+       */
+      public  static final class IpcInfo extends
+          com.google.protobuf.GeneratedMessageV3 implements
+          // @@protoc_insertion_point(message_implements:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo)
+          IpcInfoOrBuilder {
+        // Use IpcInfo.newBuilder() to construct.
+        private IpcInfo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+          super(builder);
+        }
+        private IpcInfo() {
+          ipcMode_ = 1;
+          shmSize_ = 0;
+        }
+
+        @java.lang.Override
+        public final com.google.protobuf.UnknownFieldSet
+        getUnknownFields() {
+          return this.unknownFields;
+        }
+        private IpcInfo(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          this();
+          int mutable_bitField0_ = 0;
+          com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+              com.google.protobuf.UnknownFieldSet.newBuilder();
+          try {
+            boolean done = false;
+            while (!done) {
+              int tag = input.readTag();
+              switch (tag) {
+                case 0:
+                  done = true;
+                  break;
+                default: {
+                  if (!parseUnknownField(input, unknownFields,
+                                         extensionRegistry, tag)) {
+                    done = true;
+                  }
+                  break;
+                }
+                case 8: {
+                  int rawValue = input.readEnum();
+                  mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode value = mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode.valueOf(rawValue);
+                  if (value == null) {
+                    unknownFields.mergeVarintField(1, rawValue);
+                  } else {
+                    bitField0_ |= 0x00000001;
+                    ipcMode_ = rawValue;
+                  }
+                  break;
+                }
+                case 16: {
+                  bitField0_ |= 0x00000002;
+                  shmSize_ = input.readUInt32();
+                  break;
+                }
+              }
+            }
+          } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+            throw e.setUnfinishedMessage(this);
+          } catch (java.io.IOException e) {
+            throw new com.google.protobuf.InvalidProtocolBufferException(
+                e).setUnfinishedMessage(this);
+          } finally {
+            this.unknownFields = unknownFields.build();
+            makeExtensionsImmutable();
+          }
+        }
+        public static final com.google.protobuf.Descriptors.Descriptor
+            getDescriptor() {
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_descriptor;
+        }
+
+        protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+            internalGetFieldAccessorTable() {
+          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_fieldAccessorTable
+              .ensureFieldAccessorsInitialized(
+                  mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.class, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder.class);
+        }
+
+        /**
+         * Protobuf enum {@code mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode}
+         */
+        public enum IpcMode
+            implements com.google.protobuf.ProtocolMessageEnum {
+          /**
+           * <code>PRIVATE = 1;</code>
+           */
+          PRIVATE(1),
+          /**
+           * <code>SHARE_PARENT = 2;</code>
+           */
+          SHARE_PARENT(2),
+          ;
+
+          /**
+           * <code>PRIVATE = 1;</code>
+           */
+          public static final int PRIVATE_VALUE = 1;
+          /**
+           * <code>SHARE_PARENT = 2;</code>
+           */
+          public static final int SHARE_PARENT_VALUE = 2;
+
+
+          public final int getNumber() {
+            return value;
+          }
+
+          /**
+           * @deprecated Use {@link #forNumber(int)} instead.
+           */
+          @java.lang.Deprecated
+          public static IpcMode valueOf(int value) {
+            return forNumber(value);
+          }
+
+          public static IpcMode forNumber(int value) {
+            switch (value) {
+              case 1: return PRIVATE;
+              case 2: return SHARE_PARENT;
+              default: return null;
+            }
+          }
+
+          public static com.google.protobuf.Internal.EnumLiteMap<IpcMode>
+              internalGetValueMap() {
+            return internalValueMap;
+          }
+          private static final com.google.protobuf.Internal.EnumLiteMap<
+              IpcMode> internalValueMap =
+                new com.google.protobuf.Internal.EnumLiteMap<IpcMode>() {
+                  public IpcMode findValueByNumber(int number) {
+                    return IpcMode.forNumber(number);
+                  }
+                };
+
+          public final com.google.protobuf.Descriptors.EnumValueDescriptor
+              getValueDescriptor() {
+            return getDescriptor().getValues().get(ordinal());
+          }
+          public final com.google.protobuf.Descriptors.EnumDescriptor
+              getDescriptorForType() {
+            return getDescriptor();
+          }
+          public static final com.google.protobuf.Descriptors.EnumDescriptor
+              getDescriptor() {
+            return mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDescriptor().getEnumTypes().get(0);
+          }
+
+          private static final IpcMode[] VALUES = values();
+
+          public static IpcMode valueOf(
+              com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+            if (desc.getType() != getDescriptor()) {
+              throw new java.lang.IllegalArgumentException(
+                "EnumValueDescriptor is not for this type.");
+            }
+            return VALUES[desc.getIndex()];
+          }
+
+          private final int value;
+
+          private IpcMode(int value) {
+            this.value = value;
+          }
+
+          // @@protoc_insertion_point(enum_scope:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode)
+        }
+
+        private int bitField0_;
+        public static final int IPCMODE_FIELD_NUMBER = 1;
+        private int ipcMode_;
+        /**
+         * <pre>
+         * The ipc mode the container or executor should apply
+         * </pre>
+         *
+         * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+         */
+        public boolean hasIpcMode() {
+          return ((bitField0_ & 0x00000001) == 0x00000001);
+        }
+        /**
+         * <pre>
+         * The ipc mode the container or executor should apply
+         * </pre>
+         *
+         * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+         */
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode getIpcMode() {
+          mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode result = mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode.valueOf(ipcMode_);
+          return result == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode.PRIVATE : result;
+        }
+
+        public static final int SHMSIZE_FIELD_NUMBER = 2;
+        private int shmSize_;
+        /**
+         * <pre>
+         * The shared memory size in MB
+         * </pre>
+         *
+         * <code>optional uint32 shmSize = 2;</code>
+         */
+        public boolean hasShmSize() {
+          return ((bitField0_ & 0x00000002) == 0x00000002);
+        }
+        /**
+         * <pre>
+         * The shared memory size in MB
+         * </pre>
+         *
+         * <code>optional uint32 shmSize = 2;</code>
+         */
+        public int getShmSize() {
+          return shmSize_;
+        }
+
+        private byte memoizedIsInitialized = -1;
+        public final boolean isInitialized() {
+          byte isInitialized = memoizedIsInitialized;
+          if (isInitialized == 1) return true;
+          if (isInitialized == 0) return false;
+
+          if (!hasIpcMode()) {
+            memoizedIsInitialized = 0;
+            return false;
+          }
+          memoizedIsInitialized = 1;
+          return true;
+        }
+
+        public void writeTo(com.google.protobuf.CodedOutputStream output)
+                            throws java.io.IOException {
+          if (((bitField0_ & 0x00000001) == 0x00000001)) {
+            output.writeEnum(1, ipcMode_);
+          }
+          if (((bitField0_ & 0x00000002) == 0x00000002)) {
+            output.writeUInt32(2, shmSize_);
+          }
+          unknownFields.writeTo(output);
+        }
+
+        public int getSerializedSize() {
+          int size = memoizedSize;
+          if (size != -1) return size;
+
+          size = 0;
+          if (((bitField0_ & 0x00000001) == 0x00000001)) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeEnumSize(1, ipcMode_);
+          }
+          if (((bitField0_ & 0x00000002) == 0x00000002)) {
+            size += com.google.protobuf.CodedOutputStream
+              .computeUInt32Size(2, shmSize_);
+          }
+          size += unknownFields.getSerializedSize();
+          memoizedSize = size;
+          return size;
+        }
+
+        private static final long serialVersionUID = 0L;
+        @java.lang.Override
+        public boolean equals(final java.lang.Object obj) {
+          if (obj == this) {
+           return true;
+          }
+          if (!(obj instanceof mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo)) {
+            return super.equals(obj);
+          }
+          mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo other = (mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo) obj;
+
+          boolean result = true;
+          result = result && (hasIpcMode() == other.hasIpcMode());
+          if (hasIpcMode()) {
+            result = result && ipcMode_ == other.ipcMode_;
+          }
+          result = result && (hasShmSize() == other.hasShmSize());
+          if (hasShmSize()) {
+            result = result && (getShmSize()
+                == other.getShmSize());
+          }
+          result = result && unknownFields.equals(other.unknownFields);
+          return result;
+        }
+
+        @java.lang.Override
+        public int hashCode() {
+          if (memoizedHashCode != 0) {
+            return memoizedHashCode;
+          }
+          int hash = 41;
+          hash = (19 * hash) + getDescriptor().hashCode();
+          if (hasIpcMode()) {
+            hash = (37 * hash) + IPCMODE_FIELD_NUMBER;
+            hash = (53 * hash) + ipcMode_;
+          }
+          if (hasShmSize()) {
+            hash = (37 * hash) + SHMSIZE_FIELD_NUMBER;
+            hash = (53 * hash) + getShmSize();
+          }
+          hash = (29 * hash) + unknownFields.hashCode();
+          memoizedHashCode = hash;
+          return hash;
+        }
+
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            java.nio.ByteBuffer data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return PARSER.parseFrom(data);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            java.nio.ByteBuffer data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return PARSER.parseFrom(data, extensionRegistry);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            com.google.protobuf.ByteString data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return PARSER.parseFrom(data);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            com.google.protobuf.ByteString data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return PARSER.parseFrom(data, extensionRegistry);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(byte[] data)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return PARSER.parseFrom(data);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            byte[] data,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws com.google.protobuf.InvalidProtocolBufferException {
+          return PARSER.parseFrom(data, extensionRegistry);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(java.io.InputStream input)
+            throws java.io.IOException {
+          return com.google.protobuf.GeneratedMessageV3
+              .parseWithIOException(PARSER, input);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            java.io.InputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          return com.google.protobuf.GeneratedMessageV3
+              .parseWithIOException(PARSER, input, extensionRegistry);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseDelimitedFrom(java.io.InputStream input)
+            throws java.io.IOException {
+          return com.google.protobuf.GeneratedMessageV3
+              .parseDelimitedWithIOException(PARSER, input);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseDelimitedFrom(
+            java.io.InputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          return com.google.protobuf.GeneratedMessageV3
+              .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            com.google.protobuf.CodedInputStream input)
+            throws java.io.IOException {
+          return com.google.protobuf.GeneratedMessageV3
+              .parseWithIOException(PARSER, input);
+        }
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parseFrom(
+            com.google.protobuf.CodedInputStream input,
+            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+            throws java.io.IOException {
+          return com.google.protobuf.GeneratedMessageV3
+              .parseWithIOException(PARSER, input, extensionRegistry);
+        }
+
+        public Builder newBuilderForType() { return newBuilder(); }
+        public static Builder newBuilder() {
+          return DEFAULT_INSTANCE.toBuilder();
+        }
+        public static Builder newBuilder(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo prototype) {
+          return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+        }
+        public Builder toBuilder() {
+          return this == DEFAULT_INSTANCE
+              ? new Builder() : new Builder().mergeFrom(this);
+        }
+
+        @java.lang.Override
+        protected Builder newBuilderForType(
+            com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+          Builder builder = new Builder(parent);
+          return builder;
+        }
+        /**
+         * <pre>
+         * IPC configurations
+         * </pre>
+         *
+         * Protobuf type {@code mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo}
+         */
+        public static final class Builder extends
+            com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+            // @@protoc_insertion_point(builder_implements:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo)
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder {
+          public static final com.google.protobuf.Descriptors.Descriptor
+              getDescriptor() {
+            return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_descriptor;
+          }
+
+          protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+              internalGetFieldAccessorTable() {
+            return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_fieldAccessorTable
+                .ensureFieldAccessorsInitialized(
+                    mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.class, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder.class);
+          }
+
+          // Construct using mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.newBuilder()
+          private Builder() {
+            maybeForceBuilderInitialization();
+          }
+
+          private Builder(
+              com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+            super(parent);
+            maybeForceBuilderInitialization();
+          }
+          private void maybeForceBuilderInitialization() {
+            if (com.google.protobuf.GeneratedMessageV3
+                    .alwaysUseFieldBuilders) {
+            }
+          }
+          public Builder clear() {
+            super.clear();
+            ipcMode_ = 1;
+            bitField0_ = (bitField0_ & ~0x00000001);
+            shmSize_ = 0;
+            bitField0_ = (bitField0_ & ~0x00000002);
+            return this;
+          }
+
+          public com.google.protobuf.Descriptors.Descriptor
+              getDescriptorForType() {
+            return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_descriptor;
+          }
+
+          public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo getDefaultInstanceForType() {
+            return mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance();
+          }
+
+          public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo build() {
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo result = buildPartial();
+            if (!result.isInitialized()) {
+              throw newUninitializedMessageException(result);
+            }
+            return result;
+          }
+
+          public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo buildPartial() {
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo result = new mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo(this);
+            int from_bitField0_ = bitField0_;
+            int to_bitField0_ = 0;
+            if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+              to_bitField0_ |= 0x00000001;
+            }
+            result.ipcMode_ = ipcMode_;
+            if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+              to_bitField0_ |= 0x00000002;
+            }
+            result.shmSize_ = shmSize_;
+            result.bitField0_ = to_bitField0_;
+            onBuilt();
+            return result;
+          }
+
+          public Builder clone() {
+            return (Builder) super.clone();
+          }
+          public Builder setField(
+              com.google.protobuf.Descriptors.FieldDescriptor field,
+              Object value) {
+            return (Builder) super.setField(field, value);
+          }
+          public Builder clearField(
+              com.google.protobuf.Descriptors.FieldDescriptor field) {
+            return (Builder) super.clearField(field);
+          }
+          public Builder clearOneof(
+              com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+            return (Builder) super.clearOneof(oneof);
+          }
+          public Builder setRepeatedField(
+              com.google.protobuf.Descriptors.FieldDescriptor field,
+              int index, Object value) {
+            return (Builder) super.setRepeatedField(field, index, value);
+          }
+          public Builder addRepeatedField(
+              com.google.protobuf.Descriptors.FieldDescriptor field,
+              Object value) {
+            return (Builder) super.addRepeatedField(field, value);
+          }
+          public Builder mergeFrom(com.google.protobuf.Message other) {
+            if (other instanceof mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo) {
+              return mergeFrom((mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo)other);
+            } else {
+              super.mergeFrom(other);
+              return this;
+            }
+          }
+
+          public Builder mergeFrom(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo other) {
+            if (other == mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance()) return this;
+            if (other.hasIpcMode()) {
+              setIpcMode(other.getIpcMode());
+            }
+            if (other.hasShmSize()) {
+              setShmSize(other.getShmSize());
+            }
+            this.mergeUnknownFields(other.unknownFields);
+            onChanged();
+            return this;
+          }
+
+          public final boolean isInitialized() {
+            if (!hasIpcMode()) {
+              return false;
+            }
+            return true;
+          }
+
+          public Builder mergeFrom(
+              com.google.protobuf.CodedInputStream input,
+              com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+              throws java.io.IOException {
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo parsedMessage = null;
+            try {
+              parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+            } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+              parsedMessage = (mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo) e.getUnfinishedMessage();
+              throw e.unwrapIOException();
+            } finally {
+              if (parsedMessage != null) {
+                mergeFrom(parsedMessage);
+              }
+            }
+            return this;
+          }
+          private int bitField0_;
+
+          private int ipcMode_ = 1;
+          /**
+           * <pre>
+           * The ipc mode the container or executor should apply
+           * </pre>
+           *
+           * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+           */
+          public boolean hasIpcMode() {
+            return ((bitField0_ & 0x00000001) == 0x00000001);
+          }
+          /**
+           * <pre>
+           * The ipc mode the container or executor should apply
+           * </pre>
+           *
+           * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+           */
+          public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode getIpcMode() {
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode result = mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode.valueOf(ipcMode_);
+            return result == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode.PRIVATE : result;
+          }
+          /**
+           * <pre>
+           * The ipc mode the container or executor should apply
+           * </pre>
+           *
+           * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+           */
+          public Builder setIpcMode(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode value) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            bitField0_ |= 0x00000001;
+            ipcMode_ = value.getNumber();
+            onChanged();
+            return this;
+          }
+          /**
+           * <pre>
+           * The ipc mode the container or executor should apply
+           * </pre>
+           *
+           * <code>required .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo.IpcMode ipcMode = 1;</code>
+           */
+          public Builder clearIpcMode() {
+            bitField0_ = (bitField0_ & ~0x00000001);
+            ipcMode_ = 1;
+            onChanged();
+            return this;
+          }
+
+          private int shmSize_ ;
+          /**
+           * <pre>
+           * The shared memory size in MB
+           * </pre>
+           *
+           * <code>optional uint32 shmSize = 2;</code>
+           */
+          public boolean hasShmSize() {
+            return ((bitField0_ & 0x00000002) == 0x00000002);
+          }
+          /**
+           * <pre>
+           * The shared memory size in MB
+           * </pre>
+           *
+           * <code>optional uint32 shmSize = 2;</code>
+           */
+          public int getShmSize() {
+            return shmSize_;
+          }
+          /**
+           * <pre>
+           * The shared memory size in MB
+           * </pre>
+           *
+           * <code>optional uint32 shmSize = 2;</code>
+           */
+          public Builder setShmSize(int value) {
+            bitField0_ |= 0x00000002;
+            shmSize_ = value;
+            onChanged();
+            return this;
+          }
+          /**
+           * <pre>
+           * The shared memory size in MB
+           * </pre>
+           *
+           * <code>optional uint32 shmSize = 2;</code>
+           */
+          public Builder clearShmSize() {
+            bitField0_ = (bitField0_ & ~0x00000002);
+            shmSize_ = 0;
+            onChanged();
+            return this;
+          }
+          public final Builder setUnknownFields(
+              final com.google.protobuf.UnknownFieldSet unknownFields) {
+            return super.setUnknownFields(unknownFields);
+          }
+
+          public final Builder mergeUnknownFields(
+              final com.google.protobuf.UnknownFieldSet unknownFields) {
+            return super.mergeUnknownFields(unknownFields);
+          }
+
+
+          // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo)
+        }
+
+        // @@protoc_insertion_point(class_scope:mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo)
+        private static final mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo DEFAULT_INSTANCE;
+        static {
+          DEFAULT_INSTANCE = new mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo();
+        }
+
+        public static mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo getDefaultInstance() {
+          return DEFAULT_INSTANCE;
+        }
+
+        @java.lang.Deprecated public static final com.google.protobuf.Parser<IpcInfo>
+            PARSER = new com.google.protobuf.AbstractParser<IpcInfo>() {
+          public IpcInfo parsePartialFrom(
+              com.google.protobuf.CodedInputStream input,
+              com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+              throws com.google.protobuf.InvalidProtocolBufferException {
+              return new IpcInfo(input, extensionRegistry);
+          }
+        };
+
+        public static com.google.protobuf.Parser<IpcInfo> parser() {
+          return PARSER;
+        }
+
+        @java.lang.Override
+        public com.google.protobuf.Parser<IpcInfo> getParserForType() {
+          return PARSER;
+        }
+
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo getDefaultInstanceForType() {
+          return DEFAULT_INSTANCE;
+        }
+
+      }
+
       private int bitField0_;
       public static final int SECCOMP_FIELD_NUMBER = 1;
       private mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.Seccomp seccomp_;
@@ -27471,6 +28379,27 @@ public final class Protos {
         return seccomp_ == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.Seccomp.getDefaultInstance() : seccomp_;
       }
 
+      public static final int IPCINFO_FIELD_NUMBER = 2;
+      private mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo_;
+      /**
+       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+       */
+      public boolean hasIpcInfo() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+       */
+      public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo getIpcInfo() {
+        return ipcInfo_ == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance() : ipcInfo_;
+      }
+      /**
+       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+       */
+      public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder getIpcInfoOrBuilder() {
+        return ipcInfo_ == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance() : ipcInfo_;
+      }
+
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
         byte isInitialized = memoizedIsInitialized;
@@ -27479,6 +28408,12 @@ public final class Protos {
 
         if (hasSeccomp()) {
           if (!getSeccomp().isInitialized()) {
+            memoizedIsInitialized = 0;
+            return false;
+          }
+        }
+        if (hasIpcInfo()) {
+          if (!getIpcInfo().isInitialized()) {
             memoizedIsInitialized = 0;
             return false;
           }
@@ -27492,6 +28427,9 @@ public final class Protos {
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
           output.writeMessage(1, getSeccomp());
         }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          output.writeMessage(2, getIpcInfo());
+        }
         unknownFields.writeTo(output);
       }
 
@@ -27503,6 +28441,10 @@ public final class Protos {
         if (((bitField0_ & 0x00000001) == 0x00000001)) {
           size += com.google.protobuf.CodedOutputStream
             .computeMessageSize(1, getSeccomp());
+        }
+        if (((bitField0_ & 0x00000002) == 0x00000002)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeMessageSize(2, getIpcInfo());
         }
         size += unknownFields.getSerializedSize();
         memoizedSize = size;
@@ -27526,6 +28468,11 @@ public final class Protos {
           result = result && getSeccomp()
               .equals(other.getSeccomp());
         }
+        result = result && (hasIpcInfo() == other.hasIpcInfo());
+        if (hasIpcInfo()) {
+          result = result && getIpcInfo()
+              .equals(other.getIpcInfo());
+        }
         result = result && unknownFields.equals(other.unknownFields);
         return result;
       }
@@ -27540,6 +28487,10 @@ public final class Protos {
         if (hasSeccomp()) {
           hash = (37 * hash) + SECCOMP_FIELD_NUMBER;
           hash = (53 * hash) + getSeccomp().hashCode();
+        }
+        if (hasIpcInfo()) {
+          hash = (37 * hash) + IPCINFO_FIELD_NUMBER;
+          hash = (53 * hash) + getIpcInfo().hashCode();
         }
         hash = (29 * hash) + unknownFields.hashCode();
         memoizedHashCode = hash;
@@ -27671,6 +28622,7 @@ public final class Protos {
           if (com.google.protobuf.GeneratedMessageV3
                   .alwaysUseFieldBuilders) {
             getSeccompFieldBuilder();
+            getIpcInfoFieldBuilder();
           }
         }
         public Builder clear() {
@@ -27681,6 +28633,12 @@ public final class Protos {
             seccompBuilder_.clear();
           }
           bitField0_ = (bitField0_ & ~0x00000001);
+          if (ipcInfoBuilder_ == null) {
+            ipcInfo_ = null;
+          } else {
+            ipcInfoBuilder_.clear();
+          }
+          bitField0_ = (bitField0_ & ~0x00000002);
           return this;
         }
 
@@ -27712,6 +28670,14 @@ public final class Protos {
             result.seccomp_ = seccomp_;
           } else {
             result.seccomp_ = seccompBuilder_.build();
+          }
+          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+            to_bitField0_ |= 0x00000002;
+          }
+          if (ipcInfoBuilder_ == null) {
+            result.ipcInfo_ = ipcInfo_;
+          } else {
+            result.ipcInfo_ = ipcInfoBuilder_.build();
           }
           result.bitField0_ = to_bitField0_;
           onBuilt();
@@ -27758,6 +28724,9 @@ public final class Protos {
           if (other.hasSeccomp()) {
             mergeSeccomp(other.getSeccomp());
           }
+          if (other.hasIpcInfo()) {
+            mergeIpcInfo(other.getIpcInfo());
+          }
           this.mergeUnknownFields(other.unknownFields);
           onChanged();
           return this;
@@ -27766,6 +28735,11 @@ public final class Protos {
         public final boolean isInitialized() {
           if (hasSeccomp()) {
             if (!getSeccomp().isInitialized()) {
+              return false;
+            }
+          }
+          if (hasIpcInfo()) {
+            if (!getIpcInfo().isInitialized()) {
               return false;
             }
           }
@@ -27908,6 +28882,124 @@ public final class Protos {
           }
           return seccompBuilder_;
         }
+
+        private mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo_ = null;
+        private com.google.protobuf.SingleFieldBuilderV3<
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder> ipcInfoBuilder_;
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public boolean hasIpcInfo() {
+          return ((bitField0_ & 0x00000002) == 0x00000002);
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo getIpcInfo() {
+          if (ipcInfoBuilder_ == null) {
+            return ipcInfo_ == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance() : ipcInfo_;
+          } else {
+            return ipcInfoBuilder_.getMessage();
+          }
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public Builder setIpcInfo(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo value) {
+          if (ipcInfoBuilder_ == null) {
+            if (value == null) {
+              throw new NullPointerException();
+            }
+            ipcInfo_ = value;
+            onChanged();
+          } else {
+            ipcInfoBuilder_.setMessage(value);
+          }
+          bitField0_ |= 0x00000002;
+          return this;
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public Builder setIpcInfo(
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder builderForValue) {
+          if (ipcInfoBuilder_ == null) {
+            ipcInfo_ = builderForValue.build();
+            onChanged();
+          } else {
+            ipcInfoBuilder_.setMessage(builderForValue.build());
+          }
+          bitField0_ |= 0x00000002;
+          return this;
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public Builder mergeIpcInfo(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo value) {
+          if (ipcInfoBuilder_ == null) {
+            if (((bitField0_ & 0x00000002) == 0x00000002) &&
+                ipcInfo_ != null &&
+                ipcInfo_ != mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance()) {
+              ipcInfo_ =
+                mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.newBuilder(ipcInfo_).mergeFrom(value).buildPartial();
+            } else {
+              ipcInfo_ = value;
+            }
+            onChanged();
+          } else {
+            ipcInfoBuilder_.mergeFrom(value);
+          }
+          bitField0_ |= 0x00000002;
+          return this;
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public Builder clearIpcInfo() {
+          if (ipcInfoBuilder_ == null) {
+            ipcInfo_ = null;
+            onChanged();
+          } else {
+            ipcInfoBuilder_.clear();
+          }
+          bitField0_ = (bitField0_ & ~0x00000002);
+          return this;
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder getIpcInfoBuilder() {
+          bitField0_ |= 0x00000002;
+          onChanged();
+          return getIpcInfoFieldBuilder().getBuilder();
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder getIpcInfoOrBuilder() {
+          if (ipcInfoBuilder_ != null) {
+            return ipcInfoBuilder_.getMessageOrBuilder();
+          } else {
+            return ipcInfo_ == null ?
+                mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.getDefaultInstance() : ipcInfo_;
+          }
+        }
+        /**
+         * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo.IpcInfo ipcInfo = 2;</code>
+         */
+        private com.google.protobuf.SingleFieldBuilderV3<
+            mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder> 
+            getIpcInfoFieldBuilder() {
+          if (ipcInfoBuilder_ == null) {
+            ipcInfoBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+                mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.IpcInfoOrBuilder>(
+                    getIpcInfo(),
+                    getParentForChildren(),
+                    isClean());
+            ipcInfo_ = null;
+          }
+          return ipcInfoBuilder_;
+        }
         public final Builder setUnknownFields(
             final com.google.protobuf.UnknownFieldSet unknownFields) {
           return super.setUnknownFields(unknownFields);
@@ -27952,1499 +29044,6 @@ public final class Protos {
       }
 
       public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo getDefaultInstanceForType() {
-        return DEFAULT_INSTANCE;
-      }
-
-    }
-
-    public interface MesosAppCInfoOrBuilder extends
-        // @@protoc_insertion_point(interface_extends:mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo)
-        com.google.protobuf.MessageOrBuilder {
-
-      /**
-       * <pre>
-       * The name of the image.
-       * </pre>
-       *
-       * <code>required string image = 1;</code>
-       */
-      boolean hasImage();
-      /**
-       * <pre>
-       * The name of the image.
-       * </pre>
-       *
-       * <code>required string image = 1;</code>
-       */
-      java.lang.String getImage();
-      /**
-       * <pre>
-       * The name of the image.
-       * </pre>
-       *
-       * <code>required string image = 1;</code>
-       */
-      com.google.protobuf.ByteString
-          getImageBytes();
-
-      /**
-       * <pre>
-       * An image ID is a string of the format "hash-value", where
-       * "hash" is the hash algorithm used and "value" is the hex
-       * encoded string of the digest. Currently the only permitted
-       * hash algorithm is sha512.
-       * </pre>
-       *
-       * <code>optional string id = 2;</code>
-       */
-      boolean hasId();
-      /**
-       * <pre>
-       * An image ID is a string of the format "hash-value", where
-       * "hash" is the hash algorithm used and "value" is the hex
-       * encoded string of the digest. Currently the only permitted
-       * hash algorithm is sha512.
-       * </pre>
-       *
-       * <code>optional string id = 2;</code>
-       */
-      java.lang.String getId();
-      /**
-       * <pre>
-       * An image ID is a string of the format "hash-value", where
-       * "hash" is the hash algorithm used and "value" is the hex
-       * encoded string of the digest. Currently the only permitted
-       * hash algorithm is sha512.
-       * </pre>
-       *
-       * <code>optional string id = 2;</code>
-       */
-      com.google.protobuf.ByteString
-          getIdBytes();
-
-      /**
-       * <pre>
-       * Optional labels. Suggested labels: "version", "os", and "arch".
-       * </pre>
-       *
-       * <code>repeated .mesos.Label labels = 3;</code>
-       */
-      java.util.List<org.apache.mesos.Protos.Label> 
-          getLabelsList();
-      /**
-       * <pre>
-       * Optional labels. Suggested labels: "version", "os", and "arch".
-       * </pre>
-       *
-       * <code>repeated .mesos.Label labels = 3;</code>
-       */
-      org.apache.mesos.Protos.Label getLabels(int index);
-      /**
-       * <pre>
-       * Optional labels. Suggested labels: "version", "os", and "arch".
-       * </pre>
-       *
-       * <code>repeated .mesos.Label labels = 3;</code>
-       */
-      int getLabelsCount();
-      /**
-       * <pre>
-       * Optional labels. Suggested labels: "version", "os", and "arch".
-       * </pre>
-       *
-       * <code>repeated .mesos.Label labels = 3;</code>
-       */
-      java.util.List<? extends org.apache.mesos.Protos.LabelOrBuilder> 
-          getLabelsOrBuilderList();
-      /**
-       * <pre>
-       * Optional labels. Suggested labels: "version", "os", and "arch".
-       * </pre>
-       *
-       * <code>repeated .mesos.Label labels = 3;</code>
-       */
-      org.apache.mesos.Protos.LabelOrBuilder getLabelsOrBuilder(
-          int index);
-
-      /**
-       * <pre>
-       * With this flag set to true, the universal Mesos containerizer will
-       * pull the docker image from the registry even if the image
-       * is already downloaded on the agent.
-       * </pre>
-       *
-       * <code>optional bool force_pull_image = 4;</code>
-       */
-      boolean hasForcePullImage();
-      /**
-       * <pre>
-       * With this flag set to true, the universal Mesos containerizer will
-       * pull the docker image from the registry even if the image
-       * is already downloaded on the agent.
-       * </pre>
-       *
-       * <code>optional bool force_pull_image = 4;</code>
-       */
-      boolean getForcePullImage();
-    }
-    /**
-     * <pre>
-     * AppC on the universal Mesos engine
-     * </pre>
-     *
-     * Protobuf type {@code mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo}
-     */
-    public  static final class MesosAppCInfo extends
-        com.google.protobuf.GeneratedMessageV3 implements
-        // @@protoc_insertion_point(message_implements:mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo)
-        MesosAppCInfoOrBuilder {
-      // Use MesosAppCInfo.newBuilder() to construct.
-      private MesosAppCInfo(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
-        super(builder);
-      }
-      private MesosAppCInfo() {
-        image_ = "";
-        id_ = "";
-        labels_ = java.util.Collections.emptyList();
-        forcePullImage_ = false;
-      }
-
-      @java.lang.Override
-      public final com.google.protobuf.UnknownFieldSet
-      getUnknownFields() {
-        return this.unknownFields;
-      }
-      private MesosAppCInfo(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        this();
-        int mutable_bitField0_ = 0;
-        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
-            com.google.protobuf.UnknownFieldSet.newBuilder();
-        try {
-          boolean done = false;
-          while (!done) {
-            int tag = input.readTag();
-            switch (tag) {
-              case 0:
-                done = true;
-                break;
-              default: {
-                if (!parseUnknownField(input, unknownFields,
-                                       extensionRegistry, tag)) {
-                  done = true;
-                }
-                break;
-              }
-              case 10: {
-                com.google.protobuf.ByteString bs = input.readBytes();
-                bitField0_ |= 0x00000001;
-                image_ = bs;
-                break;
-              }
-              case 18: {
-                com.google.protobuf.ByteString bs = input.readBytes();
-                bitField0_ |= 0x00000002;
-                id_ = bs;
-                break;
-              }
-              case 26: {
-                if (!((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
-                  labels_ = new java.util.ArrayList<org.apache.mesos.Protos.Label>();
-                  mutable_bitField0_ |= 0x00000004;
-                }
-                labels_.add(
-                    input.readMessage(org.apache.mesos.Protos.Label.PARSER, extensionRegistry));
-                break;
-              }
-              case 32: {
-                bitField0_ |= 0x00000004;
-                forcePullImage_ = input.readBool();
-                break;
-              }
-            }
-          }
-        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-          throw e.setUnfinishedMessage(this);
-        } catch (java.io.IOException e) {
-          throw new com.google.protobuf.InvalidProtocolBufferException(
-              e).setUnfinishedMessage(this);
-        } finally {
-          if (((mutable_bitField0_ & 0x00000004) == 0x00000004)) {
-            labels_ = java.util.Collections.unmodifiableList(labels_);
-          }
-          this.unknownFields = unknownFields.build();
-          makeExtensionsImmutable();
-        }
-      }
-      public static final com.google.protobuf.Descriptors.Descriptor
-          getDescriptor() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosAppCInfo_descriptor;
-      }
-
-      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-          internalGetFieldAccessorTable() {
-        return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosAppCInfo_fieldAccessorTable
-            .ensureFieldAccessorsInitialized(
-                mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.class, mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.Builder.class);
-      }
-
-      private int bitField0_;
-      public static final int IMAGE_FIELD_NUMBER = 1;
-      private volatile java.lang.Object image_;
-      /**
-       * <pre>
-       * The name of the image.
-       * </pre>
-       *
-       * <code>required string image = 1;</code>
-       */
-      public boolean hasImage() {
-        return ((bitField0_ & 0x00000001) == 0x00000001);
-      }
-      /**
-       * <pre>
-       * The name of the image.
-       * </pre>
-       *
-       * <code>required string image = 1;</code>
-       */
-      public java.lang.String getImage() {
-        java.lang.Object ref = image_;
-        if (ref instanceof java.lang.String) {
-          return (java.lang.String) ref;
-        } else {
-          com.google.protobuf.ByteString bs = 
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            image_ = s;
-          }
-          return s;
-        }
-      }
-      /**
-       * <pre>
-       * The name of the image.
-       * </pre>
-       *
-       * <code>required string image = 1;</code>
-       */
-      public com.google.protobuf.ByteString
-          getImageBytes() {
-        java.lang.Object ref = image_;
-        if (ref instanceof java.lang.String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          image_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-
-      public static final int ID_FIELD_NUMBER = 2;
-      private volatile java.lang.Object id_;
-      /**
-       * <pre>
-       * An image ID is a string of the format "hash-value", where
-       * "hash" is the hash algorithm used and "value" is the hex
-       * encoded string of the digest. Currently the only permitted
-       * hash algorithm is sha512.
-       * </pre>
-       *
-       * <code>optional string id = 2;</code>
-       */
-      public boolean hasId() {
-        return ((bitField0_ & 0x00000002) == 0x00000002);
-      }
-      /**
-       * <pre>
-       * An image ID is a string of the format "hash-value", where
-       * "hash" is the hash algorithm used and "value" is the hex
-       * encoded string of the digest. Currently the only permitted
-       * hash algorithm is sha512.
-       * </pre>
-       *
-       * <code>optional string id = 2;</code>
-       */
-      public java.lang.String getId() {
-        java.lang.Object ref = id_;
-        if (ref instanceof java.lang.String) {
-          return (java.lang.String) ref;
-        } else {
-          com.google.protobuf.ByteString bs = 
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          if (bs.isValidUtf8()) {
-            id_ = s;
-          }
-          return s;
-        }
-      }
-      /**
-       * <pre>
-       * An image ID is a string of the format "hash-value", where
-       * "hash" is the hash algorithm used and "value" is the hex
-       * encoded string of the digest. Currently the only permitted
-       * hash algorithm is sha512.
-       * </pre>
-       *
-       * <code>optional string id = 2;</code>
-       */
-      public com.google.protobuf.ByteString
-          getIdBytes() {
-        java.lang.Object ref = id_;
-        if (ref instanceof java.lang.String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          id_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-
-      public static final int LABELS_FIELD_NUMBER = 3;
-      private java.util.List<org.apache.mesos.Protos.Label> labels_;
-      /**
-       * <pre>
-       * Optional labels. Suggested labels: "version", "os", and "arch".
-       * </pre>
-       *
-       * <code>repeated .mesos.Label labels = 3;</code>
-       */
-      public java.util.List<org.apache.mesos.Protos.Label> getLabelsList() {
-        return labels_;
-      }
-      /**
-       * <pre>
-       * Optional labels. Suggested labels: "version", "os", and "arch".
-       * </pre>
-       *
-       * <code>repeated .mesos.Label labels = 3;</code>
-       */
-      public java.util.List<? extends org.apache.mesos.Protos.LabelOrBuilder> 
-          getLabelsOrBuilderList() {
-        return labels_;
-      }
-      /**
-       * <pre>
-       * Optional labels. Suggested labels: "version", "os", and "arch".
-       * </pre>
-       *
-       * <code>repeated .mesos.Label labels = 3;</code>
-       */
-      public int getLabelsCount() {
-        return labels_.size();
-      }
-      /**
-       * <pre>
-       * Optional labels. Suggested labels: "version", "os", and "arch".
-       * </pre>
-       *
-       * <code>repeated .mesos.Label labels = 3;</code>
-       */
-      public org.apache.mesos.Protos.Label getLabels(int index) {
-        return labels_.get(index);
-      }
-      /**
-       * <pre>
-       * Optional labels. Suggested labels: "version", "os", and "arch".
-       * </pre>
-       *
-       * <code>repeated .mesos.Label labels = 3;</code>
-       */
-      public org.apache.mesos.Protos.LabelOrBuilder getLabelsOrBuilder(
-          int index) {
-        return labels_.get(index);
-      }
-
-      public static final int FORCE_PULL_IMAGE_FIELD_NUMBER = 4;
-      private boolean forcePullImage_;
-      /**
-       * <pre>
-       * With this flag set to true, the universal Mesos containerizer will
-       * pull the docker image from the registry even if the image
-       * is already downloaded on the agent.
-       * </pre>
-       *
-       * <code>optional bool force_pull_image = 4;</code>
-       */
-      public boolean hasForcePullImage() {
-        return ((bitField0_ & 0x00000004) == 0x00000004);
-      }
-      /**
-       * <pre>
-       * With this flag set to true, the universal Mesos containerizer will
-       * pull the docker image from the registry even if the image
-       * is already downloaded on the agent.
-       * </pre>
-       *
-       * <code>optional bool force_pull_image = 4;</code>
-       */
-      public boolean getForcePullImage() {
-        return forcePullImage_;
-      }
-
-      private byte memoizedIsInitialized = -1;
-      public final boolean isInitialized() {
-        byte isInitialized = memoizedIsInitialized;
-        if (isInitialized == 1) return true;
-        if (isInitialized == 0) return false;
-
-        if (!hasImage()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-        for (int i = 0; i < getLabelsCount(); i++) {
-          if (!getLabels(i).isInitialized()) {
-            memoizedIsInitialized = 0;
-            return false;
-          }
-        }
-        memoizedIsInitialized = 1;
-        return true;
-      }
-
-      public void writeTo(com.google.protobuf.CodedOutputStream output)
-                          throws java.io.IOException {
-        if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          com.google.protobuf.GeneratedMessageV3.writeString(output, 1, image_);
-        }
-        if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          com.google.protobuf.GeneratedMessageV3.writeString(output, 2, id_);
-        }
-        for (int i = 0; i < labels_.size(); i++) {
-          output.writeMessage(3, labels_.get(i));
-        }
-        if (((bitField0_ & 0x00000004) == 0x00000004)) {
-          output.writeBool(4, forcePullImage_);
-        }
-        unknownFields.writeTo(output);
-      }
-
-      public int getSerializedSize() {
-        int size = memoizedSize;
-        if (size != -1) return size;
-
-        size = 0;
-        if (((bitField0_ & 0x00000001) == 0x00000001)) {
-          size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, image_);
-        }
-        if (((bitField0_ & 0x00000002) == 0x00000002)) {
-          size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, id_);
-        }
-        for (int i = 0; i < labels_.size(); i++) {
-          size += com.google.protobuf.CodedOutputStream
-            .computeMessageSize(3, labels_.get(i));
-        }
-        if (((bitField0_ & 0x00000004) == 0x00000004)) {
-          size += com.google.protobuf.CodedOutputStream
-            .computeBoolSize(4, forcePullImage_);
-        }
-        size += unknownFields.getSerializedSize();
-        memoizedSize = size;
-        return size;
-      }
-
-      private static final long serialVersionUID = 0L;
-      @java.lang.Override
-      public boolean equals(final java.lang.Object obj) {
-        if (obj == this) {
-         return true;
-        }
-        if (!(obj instanceof mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo)) {
-          return super.equals(obj);
-        }
-        mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo other = (mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo) obj;
-
-        boolean result = true;
-        result = result && (hasImage() == other.hasImage());
-        if (hasImage()) {
-          result = result && getImage()
-              .equals(other.getImage());
-        }
-        result = result && (hasId() == other.hasId());
-        if (hasId()) {
-          result = result && getId()
-              .equals(other.getId());
-        }
-        result = result && getLabelsList()
-            .equals(other.getLabelsList());
-        result = result && (hasForcePullImage() == other.hasForcePullImage());
-        if (hasForcePullImage()) {
-          result = result && (getForcePullImage()
-              == other.getForcePullImage());
-        }
-        result = result && unknownFields.equals(other.unknownFields);
-        return result;
-      }
-
-      @java.lang.Override
-      public int hashCode() {
-        if (memoizedHashCode != 0) {
-          return memoizedHashCode;
-        }
-        int hash = 41;
-        hash = (19 * hash) + getDescriptor().hashCode();
-        if (hasImage()) {
-          hash = (37 * hash) + IMAGE_FIELD_NUMBER;
-          hash = (53 * hash) + getImage().hashCode();
-        }
-        if (hasId()) {
-          hash = (37 * hash) + ID_FIELD_NUMBER;
-          hash = (53 * hash) + getId().hashCode();
-        }
-        if (getLabelsCount() > 0) {
-          hash = (37 * hash) + LABELS_FIELD_NUMBER;
-          hash = (53 * hash) + getLabelsList().hashCode();
-        }
-        if (hasForcePullImage()) {
-          hash = (37 * hash) + FORCE_PULL_IMAGE_FIELD_NUMBER;
-          hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
-              getForcePullImage());
-        }
-        hash = (29 * hash) + unknownFields.hashCode();
-        memoizedHashCode = hash;
-        return hash;
-      }
-
-      public static mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo parseFrom(
-          java.nio.ByteBuffer data)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return PARSER.parseFrom(data);
-      }
-      public static mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo parseFrom(
-          java.nio.ByteBuffer data,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return PARSER.parseFrom(data, extensionRegistry);
-      }
-      public static mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo parseFrom(
-          com.google.protobuf.ByteString data)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return PARSER.parseFrom(data);
-      }
-      public static mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo parseFrom(
-          com.google.protobuf.ByteString data,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return PARSER.parseFrom(data, extensionRegistry);
-      }
-      public static mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo parseFrom(byte[] data)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return PARSER.parseFrom(data);
-      }
-      public static mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo parseFrom(
-          byte[] data,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws com.google.protobuf.InvalidProtocolBufferException {
-        return PARSER.parseFrom(data, extensionRegistry);
-      }
-      public static mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo parseFrom(java.io.InputStream input)
-          throws java.io.IOException {
-        return com.google.protobuf.GeneratedMessageV3
-            .parseWithIOException(PARSER, input);
-      }
-      public static mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo parseFrom(
-          java.io.InputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        return com.google.protobuf.GeneratedMessageV3
-            .parseWithIOException(PARSER, input, extensionRegistry);
-      }
-      public static mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo parseDelimitedFrom(java.io.InputStream input)
-          throws java.io.IOException {
-        return com.google.protobuf.GeneratedMessageV3
-            .parseDelimitedWithIOException(PARSER, input);
-      }
-      public static mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo parseDelimitedFrom(
-          java.io.InputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        return com.google.protobuf.GeneratedMessageV3
-            .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
-      }
-      public static mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo parseFrom(
-          com.google.protobuf.CodedInputStream input)
-          throws java.io.IOException {
-        return com.google.protobuf.GeneratedMessageV3
-            .parseWithIOException(PARSER, input);
-      }
-      public static mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo parseFrom(
-          com.google.protobuf.CodedInputStream input,
-          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-          throws java.io.IOException {
-        return com.google.protobuf.GeneratedMessageV3
-            .parseWithIOException(PARSER, input, extensionRegistry);
-      }
-
-      public Builder newBuilderForType() { return newBuilder(); }
-      public static Builder newBuilder() {
-        return DEFAULT_INSTANCE.toBuilder();
-      }
-      public static Builder newBuilder(mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo prototype) {
-        return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
-      }
-      public Builder toBuilder() {
-        return this == DEFAULT_INSTANCE
-            ? new Builder() : new Builder().mergeFrom(this);
-      }
-
-      @java.lang.Override
-      protected Builder newBuilderForType(
-          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-        Builder builder = new Builder(parent);
-        return builder;
-      }
-      /**
-       * <pre>
-       * AppC on the universal Mesos engine
-       * </pre>
-       *
-       * Protobuf type {@code mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo}
-       */
-      public static final class Builder extends
-          com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
-          // @@protoc_insertion_point(builder_implements:mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo)
-          mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfoOrBuilder {
-        public static final com.google.protobuf.Descriptors.Descriptor
-            getDescriptor() {
-          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosAppCInfo_descriptor;
-        }
-
-        protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-            internalGetFieldAccessorTable() {
-          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosAppCInfo_fieldAccessorTable
-              .ensureFieldAccessorsInitialized(
-                  mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.class, mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.Builder.class);
-        }
-
-        // Construct using mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.newBuilder()
-        private Builder() {
-          maybeForceBuilderInitialization();
-        }
-
-        private Builder(
-            com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
-          super(parent);
-          maybeForceBuilderInitialization();
-        }
-        private void maybeForceBuilderInitialization() {
-          if (com.google.protobuf.GeneratedMessageV3
-                  .alwaysUseFieldBuilders) {
-            getLabelsFieldBuilder();
-          }
-        }
-        public Builder clear() {
-          super.clear();
-          image_ = "";
-          bitField0_ = (bitField0_ & ~0x00000001);
-          id_ = "";
-          bitField0_ = (bitField0_ & ~0x00000002);
-          if (labelsBuilder_ == null) {
-            labels_ = java.util.Collections.emptyList();
-            bitField0_ = (bitField0_ & ~0x00000004);
-          } else {
-            labelsBuilder_.clear();
-          }
-          forcePullImage_ = false;
-          bitField0_ = (bitField0_ & ~0x00000008);
-          return this;
-        }
-
-        public com.google.protobuf.Descriptors.Descriptor
-            getDescriptorForType() {
-          return mesosphere.marathon.Protos.internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosAppCInfo_descriptor;
-        }
-
-        public mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo getDefaultInstanceForType() {
-          return mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.getDefaultInstance();
-        }
-
-        public mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo build() {
-          mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo result = buildPartial();
-          if (!result.isInitialized()) {
-            throw newUninitializedMessageException(result);
-          }
-          return result;
-        }
-
-        public mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo buildPartial() {
-          mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo result = new mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo(this);
-          int from_bitField0_ = bitField0_;
-          int to_bitField0_ = 0;
-          if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
-            to_bitField0_ |= 0x00000001;
-          }
-          result.image_ = image_;
-          if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
-            to_bitField0_ |= 0x00000002;
-          }
-          result.id_ = id_;
-          if (labelsBuilder_ == null) {
-            if (((bitField0_ & 0x00000004) == 0x00000004)) {
-              labels_ = java.util.Collections.unmodifiableList(labels_);
-              bitField0_ = (bitField0_ & ~0x00000004);
-            }
-            result.labels_ = labels_;
-          } else {
-            result.labels_ = labelsBuilder_.build();
-          }
-          if (((from_bitField0_ & 0x00000008) == 0x00000008)) {
-            to_bitField0_ |= 0x00000004;
-          }
-          result.forcePullImage_ = forcePullImage_;
-          result.bitField0_ = to_bitField0_;
-          onBuilt();
-          return result;
-        }
-
-        public Builder clone() {
-          return (Builder) super.clone();
-        }
-        public Builder setField(
-            com.google.protobuf.Descriptors.FieldDescriptor field,
-            Object value) {
-          return (Builder) super.setField(field, value);
-        }
-        public Builder clearField(
-            com.google.protobuf.Descriptors.FieldDescriptor field) {
-          return (Builder) super.clearField(field);
-        }
-        public Builder clearOneof(
-            com.google.protobuf.Descriptors.OneofDescriptor oneof) {
-          return (Builder) super.clearOneof(oneof);
-        }
-        public Builder setRepeatedField(
-            com.google.protobuf.Descriptors.FieldDescriptor field,
-            int index, Object value) {
-          return (Builder) super.setRepeatedField(field, index, value);
-        }
-        public Builder addRepeatedField(
-            com.google.protobuf.Descriptors.FieldDescriptor field,
-            Object value) {
-          return (Builder) super.addRepeatedField(field, value);
-        }
-        public Builder mergeFrom(com.google.protobuf.Message other) {
-          if (other instanceof mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo) {
-            return mergeFrom((mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo)other);
-          } else {
-            super.mergeFrom(other);
-            return this;
-          }
-        }
-
-        public Builder mergeFrom(mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo other) {
-          if (other == mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.getDefaultInstance()) return this;
-          if (other.hasImage()) {
-            bitField0_ |= 0x00000001;
-            image_ = other.image_;
-            onChanged();
-          }
-          if (other.hasId()) {
-            bitField0_ |= 0x00000002;
-            id_ = other.id_;
-            onChanged();
-          }
-          if (labelsBuilder_ == null) {
-            if (!other.labels_.isEmpty()) {
-              if (labels_.isEmpty()) {
-                labels_ = other.labels_;
-                bitField0_ = (bitField0_ & ~0x00000004);
-              } else {
-                ensureLabelsIsMutable();
-                labels_.addAll(other.labels_);
-              }
-              onChanged();
-            }
-          } else {
-            if (!other.labels_.isEmpty()) {
-              if (labelsBuilder_.isEmpty()) {
-                labelsBuilder_.dispose();
-                labelsBuilder_ = null;
-                labels_ = other.labels_;
-                bitField0_ = (bitField0_ & ~0x00000004);
-                labelsBuilder_ = 
-                  com.google.protobuf.GeneratedMessageV3.alwaysUseFieldBuilders ?
-                     getLabelsFieldBuilder() : null;
-              } else {
-                labelsBuilder_.addAllMessages(other.labels_);
-              }
-            }
-          }
-          if (other.hasForcePullImage()) {
-            setForcePullImage(other.getForcePullImage());
-          }
-          this.mergeUnknownFields(other.unknownFields);
-          onChanged();
-          return this;
-        }
-
-        public final boolean isInitialized() {
-          if (!hasImage()) {
-            return false;
-          }
-          for (int i = 0; i < getLabelsCount(); i++) {
-            if (!getLabels(i).isInitialized()) {
-              return false;
-            }
-          }
-          return true;
-        }
-
-        public Builder mergeFrom(
-            com.google.protobuf.CodedInputStream input,
-            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-            throws java.io.IOException {
-          mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo parsedMessage = null;
-          try {
-            parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
-          } catch (com.google.protobuf.InvalidProtocolBufferException e) {
-            parsedMessage = (mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo) e.getUnfinishedMessage();
-            throw e.unwrapIOException();
-          } finally {
-            if (parsedMessage != null) {
-              mergeFrom(parsedMessage);
-            }
-          }
-          return this;
-        }
-        private int bitField0_;
-
-        private java.lang.Object image_ = "";
-        /**
-         * <pre>
-         * The name of the image.
-         * </pre>
-         *
-         * <code>required string image = 1;</code>
-         */
-        public boolean hasImage() {
-          return ((bitField0_ & 0x00000001) == 0x00000001);
-        }
-        /**
-         * <pre>
-         * The name of the image.
-         * </pre>
-         *
-         * <code>required string image = 1;</code>
-         */
-        public java.lang.String getImage() {
-          java.lang.Object ref = image_;
-          if (!(ref instanceof java.lang.String)) {
-            com.google.protobuf.ByteString bs =
-                (com.google.protobuf.ByteString) ref;
-            java.lang.String s = bs.toStringUtf8();
-            if (bs.isValidUtf8()) {
-              image_ = s;
-            }
-            return s;
-          } else {
-            return (java.lang.String) ref;
-          }
-        }
-        /**
-         * <pre>
-         * The name of the image.
-         * </pre>
-         *
-         * <code>required string image = 1;</code>
-         */
-        public com.google.protobuf.ByteString
-            getImageBytes() {
-          java.lang.Object ref = image_;
-          if (ref instanceof String) {
-            com.google.protobuf.ByteString b = 
-                com.google.protobuf.ByteString.copyFromUtf8(
-                    (java.lang.String) ref);
-            image_ = b;
-            return b;
-          } else {
-            return (com.google.protobuf.ByteString) ref;
-          }
-        }
-        /**
-         * <pre>
-         * The name of the image.
-         * </pre>
-         *
-         * <code>required string image = 1;</code>
-         */
-        public Builder setImage(
-            java.lang.String value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
-          image_ = value;
-          onChanged();
-          return this;
-        }
-        /**
-         * <pre>
-         * The name of the image.
-         * </pre>
-         *
-         * <code>required string image = 1;</code>
-         */
-        public Builder clearImage() {
-          bitField0_ = (bitField0_ & ~0x00000001);
-          image_ = getDefaultInstance().getImage();
-          onChanged();
-          return this;
-        }
-        /**
-         * <pre>
-         * The name of the image.
-         * </pre>
-         *
-         * <code>required string image = 1;</code>
-         */
-        public Builder setImageBytes(
-            com.google.protobuf.ByteString value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
-          image_ = value;
-          onChanged();
-          return this;
-        }
-
-        private java.lang.Object id_ = "";
-        /**
-         * <pre>
-         * An image ID is a string of the format "hash-value", where
-         * "hash" is the hash algorithm used and "value" is the hex
-         * encoded string of the digest. Currently the only permitted
-         * hash algorithm is sha512.
-         * </pre>
-         *
-         * <code>optional string id = 2;</code>
-         */
-        public boolean hasId() {
-          return ((bitField0_ & 0x00000002) == 0x00000002);
-        }
-        /**
-         * <pre>
-         * An image ID is a string of the format "hash-value", where
-         * "hash" is the hash algorithm used and "value" is the hex
-         * encoded string of the digest. Currently the only permitted
-         * hash algorithm is sha512.
-         * </pre>
-         *
-         * <code>optional string id = 2;</code>
-         */
-        public java.lang.String getId() {
-          java.lang.Object ref = id_;
-          if (!(ref instanceof java.lang.String)) {
-            com.google.protobuf.ByteString bs =
-                (com.google.protobuf.ByteString) ref;
-            java.lang.String s = bs.toStringUtf8();
-            if (bs.isValidUtf8()) {
-              id_ = s;
-            }
-            return s;
-          } else {
-            return (java.lang.String) ref;
-          }
-        }
-        /**
-         * <pre>
-         * An image ID is a string of the format "hash-value", where
-         * "hash" is the hash algorithm used and "value" is the hex
-         * encoded string of the digest. Currently the only permitted
-         * hash algorithm is sha512.
-         * </pre>
-         *
-         * <code>optional string id = 2;</code>
-         */
-        public com.google.protobuf.ByteString
-            getIdBytes() {
-          java.lang.Object ref = id_;
-          if (ref instanceof String) {
-            com.google.protobuf.ByteString b = 
-                com.google.protobuf.ByteString.copyFromUtf8(
-                    (java.lang.String) ref);
-            id_ = b;
-            return b;
-          } else {
-            return (com.google.protobuf.ByteString) ref;
-          }
-        }
-        /**
-         * <pre>
-         * An image ID is a string of the format "hash-value", where
-         * "hash" is the hash algorithm used and "value" is the hex
-         * encoded string of the digest. Currently the only permitted
-         * hash algorithm is sha512.
-         * </pre>
-         *
-         * <code>optional string id = 2;</code>
-         */
-        public Builder setId(
-            java.lang.String value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
-          id_ = value;
-          onChanged();
-          return this;
-        }
-        /**
-         * <pre>
-         * An image ID is a string of the format "hash-value", where
-         * "hash" is the hash algorithm used and "value" is the hex
-         * encoded string of the digest. Currently the only permitted
-         * hash algorithm is sha512.
-         * </pre>
-         *
-         * <code>optional string id = 2;</code>
-         */
-        public Builder clearId() {
-          bitField0_ = (bitField0_ & ~0x00000002);
-          id_ = getDefaultInstance().getId();
-          onChanged();
-          return this;
-        }
-        /**
-         * <pre>
-         * An image ID is a string of the format "hash-value", where
-         * "hash" is the hash algorithm used and "value" is the hex
-         * encoded string of the digest. Currently the only permitted
-         * hash algorithm is sha512.
-         * </pre>
-         *
-         * <code>optional string id = 2;</code>
-         */
-        public Builder setIdBytes(
-            com.google.protobuf.ByteString value) {
-          if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000002;
-          id_ = value;
-          onChanged();
-          return this;
-        }
-
-        private java.util.List<org.apache.mesos.Protos.Label> labels_ =
-          java.util.Collections.emptyList();
-        private void ensureLabelsIsMutable() {
-          if (!((bitField0_ & 0x00000004) == 0x00000004)) {
-            labels_ = new java.util.ArrayList<org.apache.mesos.Protos.Label>(labels_);
-            bitField0_ |= 0x00000004;
-           }
-        }
-
-        private com.google.protobuf.RepeatedFieldBuilderV3<
-            org.apache.mesos.Protos.Label, org.apache.mesos.Protos.Label.Builder, org.apache.mesos.Protos.LabelOrBuilder> labelsBuilder_;
-
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public java.util.List<org.apache.mesos.Protos.Label> getLabelsList() {
-          if (labelsBuilder_ == null) {
-            return java.util.Collections.unmodifiableList(labels_);
-          } else {
-            return labelsBuilder_.getMessageList();
-          }
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public int getLabelsCount() {
-          if (labelsBuilder_ == null) {
-            return labels_.size();
-          } else {
-            return labelsBuilder_.getCount();
-          }
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public org.apache.mesos.Protos.Label getLabels(int index) {
-          if (labelsBuilder_ == null) {
-            return labels_.get(index);
-          } else {
-            return labelsBuilder_.getMessage(index);
-          }
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public Builder setLabels(
-            int index, org.apache.mesos.Protos.Label value) {
-          if (labelsBuilder_ == null) {
-            if (value == null) {
-              throw new NullPointerException();
-            }
-            ensureLabelsIsMutable();
-            labels_.set(index, value);
-            onChanged();
-          } else {
-            labelsBuilder_.setMessage(index, value);
-          }
-          return this;
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public Builder setLabels(
-            int index, org.apache.mesos.Protos.Label.Builder builderForValue) {
-          if (labelsBuilder_ == null) {
-            ensureLabelsIsMutable();
-            labels_.set(index, builderForValue.build());
-            onChanged();
-          } else {
-            labelsBuilder_.setMessage(index, builderForValue.build());
-          }
-          return this;
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public Builder addLabels(org.apache.mesos.Protos.Label value) {
-          if (labelsBuilder_ == null) {
-            if (value == null) {
-              throw new NullPointerException();
-            }
-            ensureLabelsIsMutable();
-            labels_.add(value);
-            onChanged();
-          } else {
-            labelsBuilder_.addMessage(value);
-          }
-          return this;
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public Builder addLabels(
-            int index, org.apache.mesos.Protos.Label value) {
-          if (labelsBuilder_ == null) {
-            if (value == null) {
-              throw new NullPointerException();
-            }
-            ensureLabelsIsMutable();
-            labels_.add(index, value);
-            onChanged();
-          } else {
-            labelsBuilder_.addMessage(index, value);
-          }
-          return this;
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public Builder addLabels(
-            org.apache.mesos.Protos.Label.Builder builderForValue) {
-          if (labelsBuilder_ == null) {
-            ensureLabelsIsMutable();
-            labels_.add(builderForValue.build());
-            onChanged();
-          } else {
-            labelsBuilder_.addMessage(builderForValue.build());
-          }
-          return this;
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public Builder addLabels(
-            int index, org.apache.mesos.Protos.Label.Builder builderForValue) {
-          if (labelsBuilder_ == null) {
-            ensureLabelsIsMutable();
-            labels_.add(index, builderForValue.build());
-            onChanged();
-          } else {
-            labelsBuilder_.addMessage(index, builderForValue.build());
-          }
-          return this;
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public Builder addAllLabels(
-            java.lang.Iterable<? extends org.apache.mesos.Protos.Label> values) {
-          if (labelsBuilder_ == null) {
-            ensureLabelsIsMutable();
-            com.google.protobuf.AbstractMessageLite.Builder.addAll(
-                values, labels_);
-            onChanged();
-          } else {
-            labelsBuilder_.addAllMessages(values);
-          }
-          return this;
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public Builder clearLabels() {
-          if (labelsBuilder_ == null) {
-            labels_ = java.util.Collections.emptyList();
-            bitField0_ = (bitField0_ & ~0x00000004);
-            onChanged();
-          } else {
-            labelsBuilder_.clear();
-          }
-          return this;
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public Builder removeLabels(int index) {
-          if (labelsBuilder_ == null) {
-            ensureLabelsIsMutable();
-            labels_.remove(index);
-            onChanged();
-          } else {
-            labelsBuilder_.remove(index);
-          }
-          return this;
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public org.apache.mesos.Protos.Label.Builder getLabelsBuilder(
-            int index) {
-          return getLabelsFieldBuilder().getBuilder(index);
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public org.apache.mesos.Protos.LabelOrBuilder getLabelsOrBuilder(
-            int index) {
-          if (labelsBuilder_ == null) {
-            return labels_.get(index);  } else {
-            return labelsBuilder_.getMessageOrBuilder(index);
-          }
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public java.util.List<? extends org.apache.mesos.Protos.LabelOrBuilder> 
-             getLabelsOrBuilderList() {
-          if (labelsBuilder_ != null) {
-            return labelsBuilder_.getMessageOrBuilderList();
-          } else {
-            return java.util.Collections.unmodifiableList(labels_);
-          }
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public org.apache.mesos.Protos.Label.Builder addLabelsBuilder() {
-          return getLabelsFieldBuilder().addBuilder(
-              org.apache.mesos.Protos.Label.getDefaultInstance());
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public org.apache.mesos.Protos.Label.Builder addLabelsBuilder(
-            int index) {
-          return getLabelsFieldBuilder().addBuilder(
-              index, org.apache.mesos.Protos.Label.getDefaultInstance());
-        }
-        /**
-         * <pre>
-         * Optional labels. Suggested labels: "version", "os", and "arch".
-         * </pre>
-         *
-         * <code>repeated .mesos.Label labels = 3;</code>
-         */
-        public java.util.List<org.apache.mesos.Protos.Label.Builder> 
-             getLabelsBuilderList() {
-          return getLabelsFieldBuilder().getBuilderList();
-        }
-        private com.google.protobuf.RepeatedFieldBuilderV3<
-            org.apache.mesos.Protos.Label, org.apache.mesos.Protos.Label.Builder, org.apache.mesos.Protos.LabelOrBuilder> 
-            getLabelsFieldBuilder() {
-          if (labelsBuilder_ == null) {
-            labelsBuilder_ = new com.google.protobuf.RepeatedFieldBuilderV3<
-                org.apache.mesos.Protos.Label, org.apache.mesos.Protos.Label.Builder, org.apache.mesos.Protos.LabelOrBuilder>(
-                    labels_,
-                    ((bitField0_ & 0x00000004) == 0x00000004),
-                    getParentForChildren(),
-                    isClean());
-            labels_ = null;
-          }
-          return labelsBuilder_;
-        }
-
-        private boolean forcePullImage_ ;
-        /**
-         * <pre>
-         * With this flag set to true, the universal Mesos containerizer will
-         * pull the docker image from the registry even if the image
-         * is already downloaded on the agent.
-         * </pre>
-         *
-         * <code>optional bool force_pull_image = 4;</code>
-         */
-        public boolean hasForcePullImage() {
-          return ((bitField0_ & 0x00000008) == 0x00000008);
-        }
-        /**
-         * <pre>
-         * With this flag set to true, the universal Mesos containerizer will
-         * pull the docker image from the registry even if the image
-         * is already downloaded on the agent.
-         * </pre>
-         *
-         * <code>optional bool force_pull_image = 4;</code>
-         */
-        public boolean getForcePullImage() {
-          return forcePullImage_;
-        }
-        /**
-         * <pre>
-         * With this flag set to true, the universal Mesos containerizer will
-         * pull the docker image from the registry even if the image
-         * is already downloaded on the agent.
-         * </pre>
-         *
-         * <code>optional bool force_pull_image = 4;</code>
-         */
-        public Builder setForcePullImage(boolean value) {
-          bitField0_ |= 0x00000008;
-          forcePullImage_ = value;
-          onChanged();
-          return this;
-        }
-        /**
-         * <pre>
-         * With this flag set to true, the universal Mesos containerizer will
-         * pull the docker image from the registry even if the image
-         * is already downloaded on the agent.
-         * </pre>
-         *
-         * <code>optional bool force_pull_image = 4;</code>
-         */
-        public Builder clearForcePullImage() {
-          bitField0_ = (bitField0_ & ~0x00000008);
-          forcePullImage_ = false;
-          onChanged();
-          return this;
-        }
-        public final Builder setUnknownFields(
-            final com.google.protobuf.UnknownFieldSet unknownFields) {
-          return super.setUnknownFields(unknownFields);
-        }
-
-        public final Builder mergeUnknownFields(
-            final com.google.protobuf.UnknownFieldSet unknownFields) {
-          return super.mergeUnknownFields(unknownFields);
-        }
-
-
-        // @@protoc_insertion_point(builder_scope:mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo)
-      }
-
-      // @@protoc_insertion_point(class_scope:mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo)
-      private static final mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo DEFAULT_INSTANCE;
-      static {
-        DEFAULT_INSTANCE = new mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo();
-      }
-
-      public static mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo getDefaultInstance() {
-        return DEFAULT_INSTANCE;
-      }
-
-      @java.lang.Deprecated public static final com.google.protobuf.Parser<MesosAppCInfo>
-          PARSER = new com.google.protobuf.AbstractParser<MesosAppCInfo>() {
-        public MesosAppCInfo parsePartialFrom(
-            com.google.protobuf.CodedInputStream input,
-            com.google.protobuf.ExtensionRegistryLite extensionRegistry)
-            throws com.google.protobuf.InvalidProtocolBufferException {
-            return new MesosAppCInfo(input, extensionRegistry);
-        }
-      };
-
-      public static com.google.protobuf.Parser<MesosAppCInfo> parser() {
-        return PARSER;
-      }
-
-      @java.lang.Override
-      public com.google.protobuf.Parser<MesosAppCInfo> getParserForType() {
-        return PARSER;
-      }
-
-      public mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo getDefaultInstanceForType() {
         return DEFAULT_INSTANCE;
       }
 
@@ -31153,27 +30752,6 @@ public final class Protos {
       return mesosDocker_ == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.MesosDockerInfo.getDefaultInstance() : mesosDocker_;
     }
 
-    public static final int MESOSAPPC_FIELD_NUMBER = 5;
-    private mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo mesosAppC_;
-    /**
-     * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-     */
-    public boolean hasMesosAppC() {
-      return ((bitField0_ & 0x00000008) == 0x00000008);
-    }
-    /**
-     * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-     */
-    public mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo getMesosAppC() {
-      return mesosAppC_ == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.getDefaultInstance() : mesosAppC_;
-    }
-    /**
-     * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-     */
-    public mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfoOrBuilder getMesosAppCOrBuilder() {
-      return mesosAppC_ == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.getDefaultInstance() : mesosAppC_;
-    }
-
     public static final int LINUXINFO_FIELD_NUMBER = 7;
     private mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo linuxInfo_;
     /**
@@ -31184,7 +30762,7 @@ public final class Protos {
      * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo linuxInfo = 7;</code>
      */
     public boolean hasLinuxInfo() {
-      return ((bitField0_ & 0x00000010) == 0x00000010);
+      return ((bitField0_ & 0x00000008) == 0x00000008);
     }
     /**
      * <pre>
@@ -31241,12 +30819,6 @@ public final class Protos {
           return false;
         }
       }
-      if (hasMesosAppC()) {
-        if (!getMesosAppC().isInitialized()) {
-          memoizedIsInitialized = 0;
-          return false;
-        }
-      }
       if (hasLinuxInfo()) {
         if (!getLinuxInfo().isInitialized()) {
           memoizedIsInitialized = 0;
@@ -31271,13 +30843,10 @@ public final class Protos {
       if (((bitField0_ & 0x00000004) == 0x00000004)) {
         output.writeMessage(4, getMesosDocker());
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        output.writeMessage(5, getMesosAppC());
-      }
       for (int i = 0; i < portMappings_.size(); i++) {
         output.writeMessage(6, portMappings_.get(i));
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
         output.writeMessage(7, getLinuxInfo());
       }
       unknownFields.writeTo(output);
@@ -31304,15 +30873,11 @@ public final class Protos {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(4, getMesosDocker());
       }
-      if (((bitField0_ & 0x00000008) == 0x00000008)) {
-        size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(5, getMesosAppC());
-      }
       for (int i = 0; i < portMappings_.size(); i++) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(6, portMappings_.get(i));
       }
-      if (((bitField0_ & 0x00000010) == 0x00000010)) {
+      if (((bitField0_ & 0x00000008) == 0x00000008)) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(7, getLinuxInfo());
       }
@@ -31351,11 +30916,6 @@ public final class Protos {
         result = result && getMesosDocker()
             .equals(other.getMesosDocker());
       }
-      result = result && (hasMesosAppC() == other.hasMesosAppC());
-      if (hasMesosAppC()) {
-        result = result && getMesosAppC()
-            .equals(other.getMesosAppC());
-      }
       result = result && (hasLinuxInfo() == other.hasLinuxInfo());
       if (hasLinuxInfo()) {
         result = result && getLinuxInfo()
@@ -31391,10 +30951,6 @@ public final class Protos {
       if (hasMesosDocker()) {
         hash = (37 * hash) + MESOSDOCKER_FIELD_NUMBER;
         hash = (53 * hash) + getMesosDocker().hashCode();
-      }
-      if (hasMesosAppC()) {
-        hash = (37 * hash) + MESOSAPPC_FIELD_NUMBER;
-        hash = (53 * hash) + getMesosAppC().hashCode();
       }
       if (hasLinuxInfo()) {
         hash = (37 * hash) + LINUXINFO_FIELD_NUMBER;
@@ -31534,7 +31090,6 @@ public final class Protos {
           getPortMappingsFieldBuilder();
           getDockerFieldBuilder();
           getMesosDockerFieldBuilder();
-          getMesosAppCFieldBuilder();
           getLinuxInfoFieldBuilder();
         }
       }
@@ -31566,18 +31121,12 @@ public final class Protos {
           mesosDockerBuilder_.clear();
         }
         bitField0_ = (bitField0_ & ~0x00000010);
-        if (mesosAppCBuilder_ == null) {
-          mesosAppC_ = null;
-        } else {
-          mesosAppCBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000020);
         if (linuxInfoBuilder_ == null) {
           linuxInfo_ = null;
         } else {
           linuxInfoBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000040);
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
 
@@ -31642,14 +31191,6 @@ public final class Protos {
         }
         if (((from_bitField0_ & 0x00000020) == 0x00000020)) {
           to_bitField0_ |= 0x00000008;
-        }
-        if (mesosAppCBuilder_ == null) {
-          result.mesosAppC_ = mesosAppC_;
-        } else {
-          result.mesosAppC_ = mesosAppCBuilder_.build();
-        }
-        if (((from_bitField0_ & 0x00000040) == 0x00000040)) {
-          to_bitField0_ |= 0x00000010;
         }
         if (linuxInfoBuilder_ == null) {
           result.linuxInfo_ = linuxInfo_;
@@ -31759,9 +31300,6 @@ public final class Protos {
         if (other.hasMesosDocker()) {
           mergeMesosDocker(other.getMesosDocker());
         }
-        if (other.hasMesosAppC()) {
-          mergeMesosAppC(other.getMesosAppC());
-        }
         if (other.hasLinuxInfo()) {
           mergeLinuxInfo(other.getLinuxInfo());
         }
@@ -31791,11 +31329,6 @@ public final class Protos {
         }
         if (hasMesosDocker()) {
           if (!getMesosDocker().isInitialized()) {
-            return false;
-          }
-        }
-        if (hasMesosAppC()) {
-          if (!getMesosAppC().isInitialized()) {
             return false;
           }
         }
@@ -32650,124 +32183,6 @@ public final class Protos {
         return mesosDockerBuilder_;
       }
 
-      private mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo mesosAppC_ = null;
-      private com.google.protobuf.SingleFieldBuilderV3<
-          mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo, mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfoOrBuilder> mesosAppCBuilder_;
-      /**
-       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-       */
-      public boolean hasMesosAppC() {
-        return ((bitField0_ & 0x00000020) == 0x00000020);
-      }
-      /**
-       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-       */
-      public mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo getMesosAppC() {
-        if (mesosAppCBuilder_ == null) {
-          return mesosAppC_ == null ? mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.getDefaultInstance() : mesosAppC_;
-        } else {
-          return mesosAppCBuilder_.getMessage();
-        }
-      }
-      /**
-       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-       */
-      public Builder setMesosAppC(mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo value) {
-        if (mesosAppCBuilder_ == null) {
-          if (value == null) {
-            throw new NullPointerException();
-          }
-          mesosAppC_ = value;
-          onChanged();
-        } else {
-          mesosAppCBuilder_.setMessage(value);
-        }
-        bitField0_ |= 0x00000020;
-        return this;
-      }
-      /**
-       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-       */
-      public Builder setMesosAppC(
-          mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.Builder builderForValue) {
-        if (mesosAppCBuilder_ == null) {
-          mesosAppC_ = builderForValue.build();
-          onChanged();
-        } else {
-          mesosAppCBuilder_.setMessage(builderForValue.build());
-        }
-        bitField0_ |= 0x00000020;
-        return this;
-      }
-      /**
-       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-       */
-      public Builder mergeMesosAppC(mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo value) {
-        if (mesosAppCBuilder_ == null) {
-          if (((bitField0_ & 0x00000020) == 0x00000020) &&
-              mesosAppC_ != null &&
-              mesosAppC_ != mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.getDefaultInstance()) {
-            mesosAppC_ =
-              mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.newBuilder(mesosAppC_).mergeFrom(value).buildPartial();
-          } else {
-            mesosAppC_ = value;
-          }
-          onChanged();
-        } else {
-          mesosAppCBuilder_.mergeFrom(value);
-        }
-        bitField0_ |= 0x00000020;
-        return this;
-      }
-      /**
-       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-       */
-      public Builder clearMesosAppC() {
-        if (mesosAppCBuilder_ == null) {
-          mesosAppC_ = null;
-          onChanged();
-        } else {
-          mesosAppCBuilder_.clear();
-        }
-        bitField0_ = (bitField0_ & ~0x00000020);
-        return this;
-      }
-      /**
-       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-       */
-      public mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.Builder getMesosAppCBuilder() {
-        bitField0_ |= 0x00000020;
-        onChanged();
-        return getMesosAppCFieldBuilder().getBuilder();
-      }
-      /**
-       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-       */
-      public mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfoOrBuilder getMesosAppCOrBuilder() {
-        if (mesosAppCBuilder_ != null) {
-          return mesosAppCBuilder_.getMessageOrBuilder();
-        } else {
-          return mesosAppC_ == null ?
-              mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.getDefaultInstance() : mesosAppC_;
-        }
-      }
-      /**
-       * <code>optional .mesosphere.marathon.ExtendedContainerInfo.MesosAppCInfo mesosAppC = 5;</code>
-       */
-      private com.google.protobuf.SingleFieldBuilderV3<
-          mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo, mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfoOrBuilder> 
-          getMesosAppCFieldBuilder() {
-        if (mesosAppCBuilder_ == null) {
-          mesosAppCBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
-              mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo, mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfo.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.MesosAppCInfoOrBuilder>(
-                  getMesosAppC(),
-                  getParentForChildren(),
-                  isClean());
-          mesosAppC_ = null;
-        }
-        return mesosAppCBuilder_;
-      }
-
       private mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo linuxInfo_ = null;
       private com.google.protobuf.SingleFieldBuilderV3<
           mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.Builder, mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfoOrBuilder> linuxInfoBuilder_;
@@ -32779,7 +32194,7 @@ public final class Protos {
        * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo linuxInfo = 7;</code>
        */
       public boolean hasLinuxInfo() {
-        return ((bitField0_ & 0x00000040) == 0x00000040);
+        return ((bitField0_ & 0x00000020) == 0x00000020);
       }
       /**
        * <pre>
@@ -32812,7 +32227,7 @@ public final class Protos {
         } else {
           linuxInfoBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000020;
         return this;
       }
       /**
@@ -32830,7 +32245,7 @@ public final class Protos {
         } else {
           linuxInfoBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000020;
         return this;
       }
       /**
@@ -32842,7 +32257,7 @@ public final class Protos {
        */
       public Builder mergeLinuxInfo(mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo value) {
         if (linuxInfoBuilder_ == null) {
-          if (((bitField0_ & 0x00000040) == 0x00000040) &&
+          if (((bitField0_ & 0x00000020) == 0x00000020) &&
               linuxInfo_ != null &&
               linuxInfo_ != mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.getDefaultInstance()) {
             linuxInfo_ =
@@ -32854,7 +32269,7 @@ public final class Protos {
         } else {
           linuxInfoBuilder_.mergeFrom(value);
         }
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000020;
         return this;
       }
       /**
@@ -32871,7 +32286,7 @@ public final class Protos {
         } else {
           linuxInfoBuilder_.clear();
         }
-        bitField0_ = (bitField0_ & ~0x00000040);
+        bitField0_ = (bitField0_ & ~0x00000020);
         return this;
       }
       /**
@@ -32882,7 +32297,7 @@ public final class Protos {
        * <code>optional .mesosphere.marathon.ExtendedContainerInfo.LinuxInfo linuxInfo = 7;</code>
        */
       public mesosphere.marathon.Protos.ExtendedContainerInfo.LinuxInfo.Builder getLinuxInfoBuilder() {
-        bitField0_ |= 0x00000040;
+        bitField0_ |= 0x00000020;
         onChanged();
         return getLinuxInfoFieldBuilder().getBuilder();
       }
@@ -34585,6 +34000,15 @@ public final class Protos {
        */
       org.apache.mesos.Protos.LabelOrBuilder getOptionsOrBuilder(
           int index);
+
+      /**
+       * <code>optional bool shared = 5 [default = false];</code>
+       */
+      boolean hasShared();
+      /**
+       * <code>optional bool shared = 5 [default = false];</code>
+       */
+      boolean getShared();
     }
     /**
      * <pre>
@@ -34606,6 +34030,7 @@ public final class Protos {
         name_ = "";
         provider_ = "";
         options_ = java.util.Collections.emptyList();
+        shared_ = false;
       }
 
       @java.lang.Override
@@ -34660,6 +34085,11 @@ public final class Protos {
                 }
                 options_.add(
                     input.readMessage(org.apache.mesos.Protos.Label.PARSER, extensionRegistry));
+                break;
+              }
+              case 40: {
+                bitField0_ |= 0x00000008;
+                shared_ = input.readBool();
                 break;
               }
             }
@@ -34824,6 +34254,21 @@ public final class Protos {
         return options_.get(index);
       }
 
+      public static final int SHARED_FIELD_NUMBER = 5;
+      private boolean shared_;
+      /**
+       * <code>optional bool shared = 5 [default = false];</code>
+       */
+      public boolean hasShared() {
+        return ((bitField0_ & 0x00000008) == 0x00000008);
+      }
+      /**
+       * <code>optional bool shared = 5 [default = false];</code>
+       */
+      public boolean getShared() {
+        return shared_;
+      }
+
       private byte memoizedIsInitialized = -1;
       public final boolean isInitialized() {
         byte isInitialized = memoizedIsInitialized;
@@ -34862,6 +34307,9 @@ public final class Protos {
         for (int i = 0; i < options_.size(); i++) {
           output.writeMessage(4, options_.get(i));
         }
+        if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          output.writeBool(5, shared_);
+        }
         unknownFields.writeTo(output);
       }
 
@@ -34883,6 +34331,10 @@ public final class Protos {
         for (int i = 0; i < options_.size(); i++) {
           size += com.google.protobuf.CodedOutputStream
             .computeMessageSize(4, options_.get(i));
+        }
+        if (((bitField0_ & 0x00000008) == 0x00000008)) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeBoolSize(5, shared_);
         }
         size += unknownFields.getSerializedSize();
         memoizedSize = size;
@@ -34918,6 +34370,11 @@ public final class Protos {
         }
         result = result && getOptionsList()
             .equals(other.getOptionsList());
+        result = result && (hasShared() == other.hasShared());
+        if (hasShared()) {
+          result = result && (getShared()
+              == other.getShared());
+        }
         result = result && unknownFields.equals(other.unknownFields);
         return result;
       }
@@ -34945,6 +34402,11 @@ public final class Protos {
         if (getOptionsCount() > 0) {
           hash = (37 * hash) + OPTIONS_FIELD_NUMBER;
           hash = (53 * hash) + getOptionsList().hashCode();
+        }
+        if (hasShared()) {
+          hash = (37 * hash) + SHARED_FIELD_NUMBER;
+          hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+              getShared());
         }
         hash = (29 * hash) + unknownFields.hashCode();
         memoizedHashCode = hash;
@@ -35092,6 +34554,8 @@ public final class Protos {
           } else {
             optionsBuilder_.clear();
           }
+          shared_ = false;
+          bitField0_ = (bitField0_ & ~0x00000010);
           return this;
         }
 
@@ -35137,6 +34601,10 @@ public final class Protos {
           } else {
             result.options_ = optionsBuilder_.build();
           }
+          if (((from_bitField0_ & 0x00000010) == 0x00000010)) {
+            to_bitField0_ |= 0x00000008;
+          }
+          result.shared_ = shared_;
           result.bitField0_ = to_bitField0_;
           onBuilt();
           return result;
@@ -35217,6 +34685,9 @@ public final class Protos {
                 optionsBuilder_.addAllMessages(other.options_);
               }
             }
+          }
+          if (other.hasShared()) {
+            setShared(other.getShared());
           }
           this.mergeUnknownFields(other.unknownFields);
           onChanged();
@@ -35679,6 +35150,38 @@ public final class Protos {
             options_ = null;
           }
           return optionsBuilder_;
+        }
+
+        private boolean shared_ ;
+        /**
+         * <code>optional bool shared = 5 [default = false];</code>
+         */
+        public boolean hasShared() {
+          return ((bitField0_ & 0x00000010) == 0x00000010);
+        }
+        /**
+         * <code>optional bool shared = 5 [default = false];</code>
+         */
+        public boolean getShared() {
+          return shared_;
+        }
+        /**
+         * <code>optional bool shared = 5 [default = false];</code>
+         */
+        public Builder setShared(boolean value) {
+          bitField0_ |= 0x00000010;
+          shared_ = value;
+          onChanged();
+          return this;
+        }
+        /**
+         * <code>optional bool shared = 5 [default = false];</code>
+         */
+        public Builder clearShared() {
+          bitField0_ = (bitField0_ & ~0x00000010);
+          shared_ = false;
+          onChanged();
+          return this;
         }
         public final Builder setUnknownFields(
             final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -39709,6 +39212,15 @@ public final class Protos {
      */
     mesosphere.marathon.Protos.GroupDefinition.AppReferenceOrBuilder getPodsOrBuilder(
         int index);
+
+    /**
+     * <code>optional bool enforceRole = 9;</code>
+     */
+    boolean hasEnforceRole();
+    /**
+     * <code>optional bool enforceRole = 9;</code>
+     */
+    boolean getEnforceRole();
   }
   /**
    * Protobuf type {@code mesosphere.marathon.GroupDefinition}
@@ -39730,6 +39242,7 @@ public final class Protos {
       dependencies_ = com.google.protobuf.LazyStringArrayList.EMPTY;
       apps_ = java.util.Collections.emptyList();
       pods_ = java.util.Collections.emptyList();
+      enforceRole_ = false;
     }
 
     @java.lang.Override
@@ -39824,6 +39337,11 @@ public final class Protos {
               }
               deprecatedPods_.add(
                   input.readMessage(mesosphere.marathon.Protos.Json.PARSER, extensionRegistry));
+              break;
+            }
+            case 72: {
+              bitField0_ |= 0x00000004;
+              enforceRole_ = input.readBool();
               break;
             }
           }
@@ -40911,6 +40429,21 @@ public final class Protos {
       return pods_.get(index);
     }
 
+    public static final int ENFORCEROLE_FIELD_NUMBER = 9;
+    private boolean enforceRole_;
+    /**
+     * <code>optional bool enforceRole = 9;</code>
+     */
+    public boolean hasEnforceRole() {
+      return ((bitField0_ & 0x00000004) == 0x00000004);
+    }
+    /**
+     * <code>optional bool enforceRole = 9;</code>
+     */
+    public boolean getEnforceRole() {
+      return enforceRole_;
+    }
+
     private byte memoizedIsInitialized = -1;
     public final boolean isInitialized() {
       byte isInitialized = memoizedIsInitialized;
@@ -40985,6 +40518,9 @@ public final class Protos {
       for (int i = 0; i < deprecatedPods_.size(); i++) {
         output.writeMessage(8, deprecatedPods_.get(i));
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        output.writeBool(9, enforceRole_);
+      }
       unknownFields.writeTo(output);
     }
 
@@ -41027,6 +40563,10 @@ public final class Protos {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(8, deprecatedPods_.get(i));
       }
+      if (((bitField0_ & 0x00000004) == 0x00000004)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(9, enforceRole_);
+      }
       size += unknownFields.getSerializedSize();
       memoizedSize = size;
       return size;
@@ -41066,6 +40606,11 @@ public final class Protos {
           .equals(other.getAppsList());
       result = result && getPodsList()
           .equals(other.getPodsList());
+      result = result && (hasEnforceRole() == other.hasEnforceRole());
+      if (hasEnforceRole()) {
+        result = result && (getEnforceRole()
+            == other.getEnforceRole());
+      }
       result = result && unknownFields.equals(other.unknownFields);
       return result;
     }
@@ -41108,6 +40653,11 @@ public final class Protos {
       if (getPodsCount() > 0) {
         hash = (37 * hash) + PODS_FIELD_NUMBER;
         hash = (53 * hash) + getPodsList().hashCode();
+      }
+      if (hasEnforceRole()) {
+        hash = (37 * hash) + ENFORCEROLE_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+            getEnforceRole());
       }
       hash = (29 * hash) + unknownFields.hashCode();
       memoizedHashCode = hash;
@@ -41279,6 +40829,8 @@ public final class Protos {
         } else {
           podsBuilder_.clear();
         }
+        enforceRole_ = false;
+        bitField0_ = (bitField0_ & ~0x00000100);
         return this;
       }
 
@@ -41361,6 +40913,10 @@ public final class Protos {
         } else {
           result.pods_ = podsBuilder_.build();
         }
+        if (((from_bitField0_ & 0x00000100) == 0x00000100)) {
+          to_bitField0_ |= 0x00000004;
+        }
+        result.enforceRole_ = enforceRole_;
         result.bitField0_ = to_bitField0_;
         onBuilt();
         return result;
@@ -41552,6 +41108,9 @@ public final class Protos {
               podsBuilder_.addAllMessages(other.pods_);
             }
           }
+        }
+        if (other.hasEnforceRole()) {
+          setEnforceRole(other.getEnforceRole());
         }
         this.mergeUnknownFields(other.unknownFields);
         onChanged();
@@ -43127,6 +42686,38 @@ public final class Protos {
           pods_ = null;
         }
         return podsBuilder_;
+      }
+
+      private boolean enforceRole_ ;
+      /**
+       * <code>optional bool enforceRole = 9;</code>
+       */
+      public boolean hasEnforceRole() {
+        return ((bitField0_ & 0x00000100) == 0x00000100);
+      }
+      /**
+       * <code>optional bool enforceRole = 9;</code>
+       */
+      public boolean getEnforceRole() {
+        return enforceRole_;
+      }
+      /**
+       * <code>optional bool enforceRole = 9;</code>
+       */
+      public Builder setEnforceRole(boolean value) {
+        bitField0_ |= 0x00000100;
+        enforceRole_ = value;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>optional bool enforceRole = 9;</code>
+       */
+      public Builder clearEnforceRole() {
+        bitField0_ = (bitField0_ & ~0x00000100);
+        enforceRole_ = false;
+        onChanged();
+        return this;
       }
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -50469,10 +50060,10 @@ public final class Protos {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_Seccomp_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
-    internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosAppCInfo_descriptor;
+    internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
-      internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosAppCInfo_fieldAccessorTable;
+      internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_descriptor;
   private static final 
@@ -50607,7 +50198,7 @@ public final class Protos {
       "mode\030\001 \001(\0162+.mesosphere.marathon.Network" +
       "Definition.Mode\022\014\n\004name\030\002 \001(\t\022\034\n\006labels\030" +
       "\003 \003(\0132\014.mesos.Label\"8\n\004Mode\022\013\n\007UNKNOWN\020\000" +
-      "\022\010\n\004HOST\020\001\022\r\n\tCONTAINER\020\002\022\n\n\006BRIDGE\020\003\"\243\014" +
+      "\022\010\n\004HOST\020\001\022\r\n\tCONTAINER\020\002\022\n\n\006BRIDGE\020\003\"\261\014" +
       "\n\021ServiceDefinition\022\n\n\002id\030\001 \002(\t\022\037\n\003cmd\030\002" +
       " \002(\0132\022.mesos.CommandInfo\022\021\n\tinstances\030\003 " +
       "\002(\r\022\"\n\tresources\030\004 \003(\0132\017.mesos.Resource\022" +
@@ -50647,116 +50238,119 @@ public final class Protos {
       "ition\022\033\n\003tty\030# \001(\0132\016.mesos.TTYInfo\022*\n\021ex" +
       "ecutorResources\030$ \003(\0132\017.mesos.Resource\0223" +
       "\n\005check\030% \001(\0132$.mesosphere.marathon.Chec" +
-      "kDefinition\"]\n\023UnreachableStrategy\022!\n\024in" +
-      "activeAfterSeconds\030\001 \001(\004:\003900\022#\n\023expunge" +
-      "AfterSeconds\030\002 \001(\004:\006604800\"\024\n\004Json\022\014\n\004js" +
-      "on\030\001 \002(\t\"\035\n\rResourceRoles\022\014\n\004role\030\001 \003(\t\"" +
-      "1\n\rContainerInfo\022\017\n\005image\030\001 \002(\014:\000\022\017\n\007opt",
-      "ions\030\002 \003(\014\"\310\r\n\025ExtendedContainerInfo\022\'\n\004" +
-      "type\030\001 \002(\0162\031.mesos.ContainerInfo.Type\022,\n" +
-      "\007volumes\030\002 \003(\0132\033.mesosphere.marathon.Vol" +
-      "ume\022M\n\rport_mappings\030\006 \003(\01326.mesosphere." +
-      "marathon.ExtendedContainerInfo.PortMappi" +
-      "ng\022E\n\006docker\030\003 \001(\01325.mesosphere.marathon" +
-      ".ExtendedContainerInfo.DockerInfo\022O\n\013mes" +
-      "osDocker\030\004 \001(\0132:.mesosphere.marathon.Ext" +
-      "endedContainerInfo.MesosDockerInfo\022K\n\tme" +
-      "sosAppC\030\005 \001(\01328.mesosphere.marathon.Exte",
-      "ndedContainerInfo.MesosAppCInfo\022G\n\tlinux" +
-      "Info\030\007 \001(\01324.mesosphere.marathon.Extende" +
-      "dContainerInfo.LinuxInfo\032\361\004\n\nDockerInfo\022" +
-      "\r\n\005image\030\001 \002(\t\022G\n\020OBSOLETE_network\030\002 \001(\016" +
-      "2\'.mesos.ContainerInfo.DockerInfo.Networ" +
-      "k:\004HOST\022o\n\026OBSOLETE_port_mappings\030\003 \003(\0132" +
-      "O.mesosphere.marathon.ExtendedContainerI" +
-      "nfo.DockerInfo.ObsoleteDockerPortMapping" +
-      "\022\031\n\nprivileged\030\004 \001(\010:\005false\022$\n\nparameter" +
-      "s\030\005 \003(\0132\020.mesos.Parameter\022\030\n\020force_pull_",
-      "image\030\006 \001(\010\032\236\001\n\017ImagePullConfig\022X\n\004type\030" +
-      "\001 \002(\0162J.mesosphere.marathon.ExtendedCont" +
-      "ainerInfo.DockerInfo.ImagePullConfig.Typ" +
-      "e\022\035\n\006secret\030\002 \001(\0132\r.mesos.Secret\"\022\n\004Type" +
-      "\022\n\n\006SECRET\020\001\032\235\001\n\031ObsoleteDockerPortMappi" +
-      "ng\022\021\n\thost_port\030\001 \001(\r\022\026\n\016container_port\030" +
-      "\002 \002(\r\022\020\n\010protocol\030\003 \001(\t\022\014\n\004name\030\004 \001(\t\022\034\n" +
-      "\006labels\030\005 \003(\0132\014.mesos.Label\022\027\n\014service_p" +
-      "ort\030d \001(\r:\0010\032\310\001\n\017MesosDockerInfo\022\r\n\005imag" +
-      "e\030\001 \002(\t\0220\n\025deprecated_credential\030\002 \001(\0132\021",
-      ".mesos.Credential\022\030\n\020force_pull_image\030\003 " +
-      "\001(\010\022Z\n\013pull_config\030\004 \001(\0132E.mesosphere.ma" +
-      "rathon.ExtendedContainerInfo.DockerInfo." +
-      "ImagePullConfig\032\216\001\n\tLinuxInfo\022M\n\007seccomp" +
-      "\030\001 \001(\0132<.mesosphere.marathon.ExtendedCon" +
-      "tainerInfo.LinuxInfo.Seccomp\0322\n\007Seccomp\022" +
-      "\023\n\013profileName\030\001 \001(\t\022\022\n\nunconfined\030\002 \002(\010" +
-      "\032b\n\rMesosAppCInfo\022\r\n\005image\030\001 \002(\t\022\n\n\002id\030\002" +
-      " \001(\t\022\034\n\006labels\030\003 \003(\0132\014.mesos.Label\022\030\n\020fo" +
-      "rce_pull_image\030\004 \001(\010\032\246\001\n\013PortMapping\022\021\n\t",
-      "host_port\030\001 \001(\r\022\026\n\016container_port\030\002 \002(\r\022" +
-      "\020\n\010protocol\030\003 \001(\t\022\014\n\004name\030\004 \001(\t\022\034\n\006label" +
-      "s\030\005 \003(\0132\014.mesos.Label\022\027\n\014service_port\030\006 " +
-      "\001(\r:\0010\022\025\n\rnetwork_names\030\007 \003(\t\"\366\004\n\006Volume" +
-      "\022 \n\004mode\030\003 \002(\0162\022.mesos.Volume.Mode\022\026\n\016co" +
-      "ntainer_path\030\001 \002(\t\022\021\n\thost_path\030\002 \001(\t\022\033\n" +
-      "\005image\030\004 \001(\0132\014.mesos.Image\022D\n\npersistent" +
-      "\030\005 \001(\01320.mesosphere.marathon.Volume.Pers" +
-      "istentVolumeInfo\022@\n\010external\030\006 \001(\0132..mes" +
-      "osphere.marathon.Volume.ExternalVolumeIn",
-      "fo\022<\n\006secret\030\007 \001(\0132,.mesosphere.marathon" +
-      ".Volume.SecretVolumeInfo\032\264\001\n\024PersistentV" +
-      "olumeInfo\022\014\n\004size\030\001 \002(\004\0222\n\004type\030\002 \001(\0162$." +
-      "mesos.Resource.DiskInfo.Source.Type\0224\n\013c" +
-      "onstraints\030\003 \003(\0132\037.mesosphere.marathon.C" +
-      "onstraint\022\017\n\007maxSize\030\004 \001(\004\022\023\n\013profileNam" +
-      "e\030\005 \001(\t\032a\n\022ExternalVolumeInfo\022\014\n\004size\030\001 " +
-      "\001(\004\022\014\n\004name\030\002 \002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007o" +
-      "ptions\030\004 \003(\0132\014.mesos.Label\032\"\n\020SecretVolu" +
-      "meInfo\022\016\n\006secret\030\001 \002(\t\"\274\001\n\016StorageVersio",
-      "n\022\r\n\005major\030\001 \002(\r\022\r\n\005minor\030\002 \002(\r\022\r\n\005patch" +
-      "\030\003 \002(\r\022I\n\006format\030\004 \001(\01621.mesosphere.mara" +
-      "thon.StorageVersion.StorageFormat:\006LEGAC" +
-      "Y\"2\n\rStorageFormat\022\n\n\006LEGACY\020\000\022\025\n\021PERSIS" +
-      "TENCE_STORE\020\001\"Z\n\031UpgradeStrategyDefiniti" +
-      "on\022\035\n\025minimumHealthCapacity\030\001 \002(\001\022\036\n\023max" +
-      "imumOverCapacity\030\002 \001(\001:\0011\"\236\003\n\017GroupDefin" +
-      "ition\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t\022?\n\017de" +
-      "precated_apps\030\003 \003(\0132&.mesosphere.maratho" +
-      "n.ServiceDefinition\0222\n\017deprecated_pods\030\010",
-      " \003(\0132\031.mesosphere.marathon.Json\0224\n\006group" +
-      "s\030\004 \003(\0132$.mesosphere.marathon.GroupDefin" +
-      "ition\022\024\n\014dependencies\030\005 \003(\t\022?\n\004apps\030\006 \003(" +
-      "\01321.mesosphere.marathon.GroupDefinition." +
-      "AppReference\022?\n\004pods\030\007 \003(\01321.mesosphere." +
-      "marathon.GroupDefinition.AppReference\032+\n" +
-      "\014AppReference\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002" +
-      "(\t\"\371\001\n\030DeploymentPlanDefinition\022\n\n\002id\030\001 " +
-      "\002(\t\022\021\n\ttimestamp\030\002 \001(\t\022A\n\023deprecated_ori" +
-      "ginal\030\004 \001(\0132$.mesosphere.marathon.GroupD",
-      "efinition\022?\n\021deprecated_target\030\005 \001(\0132$.m" +
-      "esosphere.marathon.GroupDefinition\022\035\n\025or" +
-      "iginal_root_version\030\006 \001(\t\022\033\n\023target_root" +
-      "_version\030\007 \001(\t\"\306\001\n\013TaskFailure\022\016\n\006app_id" +
-      "\030\001 \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037" +
-      "\n\005state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007messa" +
-      "ge\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 " +
-      "\002(\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132" +
-      "\016.mesos.SlaveID\"T\n\014ZKStoreEntry\022\014\n\004name\030" +
-      "\001 \002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\nco",
-      "mpressed\030\004 \001(\010:\005false\"\326\001\n\023ResidencyDefin" +
-      "ition\022(\n relaunchEscalationTimeoutSecond" +
-      "s\030\001 \001(\003\022S\n\020taskLostBehavior\030\002 \001(\01629.meso" +
-      "sphere.marathon.ResidencyDefinition.Task" +
-      "LostBehavior\"@\n\020TaskLostBehavior\022\032\n\026RELA" +
-      "UNCH_AFTER_TIMEOUT\020\000\022\020\n\014WAIT_FOREVER\020\001\"$" +
-      "\n\006Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006source\030\002 \002(\t\"\262\001\n" +
-      "\017EnvVarReference\0227\n\004type\030\001 \002(\0162).mesosph" +
-      "ere.marathon.EnvVarReference.Type\022\014\n\004nam" +
-      "e\030\002 \002(\t\0227\n\tsecretRef\030\003 \001(\0132$.mesosphere.",
-      "marathon.EnvVarSecretRef\"\037\n\004Type\022\013\n\007UNKN" +
-      "OWN\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvVarSecretRef\022\020\n\010" +
-      "secretId\030\001 \002(\t*3\n\rKillSelection\022\021\n\rYoung" +
-      "estFirst\020\001\022\017\n\013OldestFirst\020\002B\035\n\023mesospher" +
-      "e.marathonB\006Protos"
+      "kDefinition\022\014\n\004role\030& \001(\t\"]\n\023Unreachable" +
+      "Strategy\022!\n\024inactiveAfterSeconds\030\001 \001(\004:\003" +
+      "900\022#\n\023expungeAfterSeconds\030\002 \001(\004:\006604800" +
+      "\"\024\n\004Json\022\014\n\004json\030\001 \002(\t\"\035\n\rResourceRoles\022" +
+      "\014\n\004role\030\001 \003(\t\"1\n\rContainerInfo\022\017\n\005image\030",
+      "\001 \002(\014:\000\022\017\n\007options\030\002 \003(\014\"\204\016\n\025ExtendedCon" +
+      "tainerInfo\022\'\n\004type\030\001 \002(\0162\031.mesos.Contain" +
+      "erInfo.Type\022,\n\007volumes\030\002 \003(\0132\033.mesospher" +
+      "e.marathon.Volume\022M\n\rport_mappings\030\006 \003(\013" +
+      "26.mesosphere.marathon.ExtendedContainer" +
+      "Info.PortMapping\022E\n\006docker\030\003 \001(\01325.mesos" +
+      "phere.marathon.ExtendedContainerInfo.Doc" +
+      "kerInfo\022O\n\013mesosDocker\030\004 \001(\0132:.mesospher" +
+      "e.marathon.ExtendedContainerInfo.MesosDo" +
+      "ckerInfo\022G\n\tlinuxInfo\030\007 \001(\01324.mesosphere",
+      ".marathon.ExtendedContainerInfo.LinuxInf" +
+      "o\032\361\004\n\nDockerInfo\022\r\n\005image\030\001 \002(\t\022G\n\020OBSOL" +
+      "ETE_network\030\002 \001(\0162\'.mesos.ContainerInfo." +
+      "DockerInfo.Network:\004HOST\022o\n\026OBSOLETE_por" +
+      "t_mappings\030\003 \003(\0132O.mesosphere.marathon.E" +
+      "xtendedContainerInfo.DockerInfo.Obsolete" +
+      "DockerPortMapping\022\031\n\nprivileged\030\004 \001(\010:\005f" +
+      "alse\022$\n\nparameters\030\005 \003(\0132\020.mesos.Paramet" +
+      "er\022\030\n\020force_pull_image\030\006 \001(\010\032\236\001\n\017ImagePu" +
+      "llConfig\022X\n\004type\030\001 \002(\0162J.mesosphere.mara",
+      "thon.ExtendedContainerInfo.DockerInfo.Im" +
+      "agePullConfig.Type\022\035\n\006secret\030\002 \001(\0132\r.mes" +
+      "os.Secret\"\022\n\004Type\022\n\n\006SECRET\020\001\032\235\001\n\031Obsole" +
+      "teDockerPortMapping\022\021\n\thost_port\030\001 \001(\r\022\026" +
+      "\n\016container_port\030\002 \002(\r\022\020\n\010protocol\030\003 \001(\t" +
+      "\022\014\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 \003(\0132\014.mesos.L" +
+      "abel\022\027\n\014service_port\030d \001(\r:\0010\032\310\001\n\017MesosD" +
+      "ockerInfo\022\r\n\005image\030\001 \002(\t\0220\n\025deprecated_c" +
+      "redential\030\002 \001(\0132\021.mesos.Credential\022\030\n\020fo" +
+      "rce_pull_image\030\003 \001(\010\022Z\n\013pull_config\030\004 \001(",
+      "\0132E.mesosphere.marathon.ExtendedContaine" +
+      "rInfo.DockerInfo.ImagePullConfig\032\373\002\n\tLin" +
+      "uxInfo\022M\n\007seccomp\030\001 \001(\0132<.mesosphere.mar" +
+      "athon.ExtendedContainerInfo.LinuxInfo.Se" +
+      "ccomp\022M\n\007ipcInfo\030\002 \001(\0132<.mesosphere.mara" +
+      "thon.ExtendedContainerInfo.LinuxInfo.Ipc" +
+      "Info\0322\n\007Seccomp\022\023\n\013profileName\030\001 \001(\t\022\022\n\n" +
+      "unconfined\030\002 \002(\010\032\233\001\n\007IpcInfo\022U\n\007ipcMode\030" +
+      "\001 \002(\0162D.mesosphere.marathon.ExtendedCont" +
+      "ainerInfo.LinuxInfo.IpcInfo.IpcMode\022\017\n\007s",
+      "hmSize\030\002 \001(\r\"(\n\007IpcMode\022\013\n\007PRIVATE\020\001\022\020\n\014" +
+      "SHARE_PARENT\020\002\032\246\001\n\013PortMapping\022\021\n\thost_p" +
+      "ort\030\001 \001(\r\022\026\n\016container_port\030\002 \002(\r\022\020\n\010pro" +
+      "tocol\030\003 \001(\t\022\014\n\004name\030\004 \001(\t\022\034\n\006labels\030\005 \003(" +
+      "\0132\014.mesos.Label\022\027\n\014service_port\030\006 \001(\r:\0010" +
+      "\022\025\n\rnetwork_names\030\007 \003(\t\"\215\005\n\006Volume\022 \n\004mo" +
+      "de\030\003 \002(\0162\022.mesos.Volume.Mode\022\026\n\016containe" +
+      "r_path\030\001 \002(\t\022\021\n\thost_path\030\002 \001(\t\022\033\n\005image" +
+      "\030\004 \001(\0132\014.mesos.Image\022D\n\npersistent\030\005 \001(\013" +
+      "20.mesosphere.marathon.Volume.Persistent",
+      "VolumeInfo\022@\n\010external\030\006 \001(\0132..mesospher" +
+      "e.marathon.Volume.ExternalVolumeInfo\022<\n\006" +
+      "secret\030\007 \001(\0132,.mesosphere.marathon.Volum" +
+      "e.SecretVolumeInfo\032\264\001\n\024PersistentVolumeI" +
+      "nfo\022\014\n\004size\030\001 \002(\004\0222\n\004type\030\002 \001(\0162$.mesos." +
+      "Resource.DiskInfo.Source.Type\0224\n\013constra" +
+      "ints\030\003 \003(\0132\037.mesosphere.marathon.Constra" +
+      "int\022\017\n\007maxSize\030\004 \001(\004\022\023\n\013profileName\030\005 \001(" +
+      "\t\032x\n\022ExternalVolumeInfo\022\014\n\004size\030\001 \001(\004\022\014\n" +
+      "\004name\030\002 \002(\t\022\020\n\010provider\030\003 \002(\t\022\035\n\007options",
+      "\030\004 \003(\0132\014.mesos.Label\022\025\n\006shared\030\005 \001(\010:\005fa" +
+      "lse\032\"\n\020SecretVolumeInfo\022\016\n\006secret\030\001 \002(\t\"" +
+      "\274\001\n\016StorageVersion\022\r\n\005major\030\001 \002(\r\022\r\n\005min" +
+      "or\030\002 \002(\r\022\r\n\005patch\030\003 \002(\r\022I\n\006format\030\004 \001(\0162" +
+      "1.mesosphere.marathon.StorageVersion.Sto" +
+      "rageFormat:\006LEGACY\"2\n\rStorageFormat\022\n\n\006L" +
+      "EGACY\020\000\022\025\n\021PERSISTENCE_STORE\020\001\"Z\n\031Upgrad" +
+      "eStrategyDefinition\022\035\n\025minimumHealthCapa" +
+      "city\030\001 \002(\001\022\036\n\023maximumOverCapacity\030\002 \001(\001:" +
+      "\0011\"\263\003\n\017GroupDefinition\022\n\n\002id\030\001 \002(\t\022\017\n\007ve",
+      "rsion\030\002 \002(\t\022?\n\017deprecated_apps\030\003 \003(\0132&.m" +
+      "esosphere.marathon.ServiceDefinition\0222\n\017" +
+      "deprecated_pods\030\010 \003(\0132\031.mesosphere.marat" +
+      "hon.Json\0224\n\006groups\030\004 \003(\0132$.mesosphere.ma" +
+      "rathon.GroupDefinition\022\024\n\014dependencies\030\005" +
+      " \003(\t\022?\n\004apps\030\006 \003(\01321.mesosphere.marathon" +
+      ".GroupDefinition.AppReference\022?\n\004pods\030\007 " +
+      "\003(\01321.mesosphere.marathon.GroupDefinitio" +
+      "n.AppReference\022\023\n\013enforceRole\030\t \001(\010\032+\n\014A" +
+      "ppReference\022\n\n\002id\030\001 \002(\t\022\017\n\007version\030\002 \002(\t",
+      "\"\371\001\n\030DeploymentPlanDefinition\022\n\n\002id\030\001 \002(" +
+      "\t\022\021\n\ttimestamp\030\002 \001(\t\022A\n\023deprecated_origi" +
+      "nal\030\004 \001(\0132$.mesosphere.marathon.GroupDef" +
+      "inition\022?\n\021deprecated_target\030\005 \001(\0132$.mes" +
+      "osphere.marathon.GroupDefinition\022\035\n\025orig" +
+      "inal_root_version\030\006 \001(\t\022\033\n\023target_root_v" +
+      "ersion\030\007 \001(\t\"\306\001\n\013TaskFailure\022\016\n\006app_id\030\001" +
+      " \002(\t\022\036\n\007task_id\030\002 \002(\0132\r.mesos.TaskID\022\037\n\005" +
+      "state\030\003 \002(\0162\020.mesos.TaskState\022\021\n\007message" +
+      "\030\004 \001(\t:\000\022\016\n\004host\030\005 \001(\t:\000\022\017\n\007version\030\006 \002(",
+      "\t\022\021\n\ttimestamp\030\007 \002(\t\022\037\n\007slaveId\030\010 \001(\0132\016." +
+      "mesos.SlaveID\"T\n\014ZKStoreEntry\022\014\n\004name\030\001 " +
+      "\002(\t\022\014\n\004uuid\030\002 \002(\014\022\r\n\005value\030\003 \002(\014\022\031\n\ncomp" +
+      "ressed\030\004 \001(\010:\005false\"\326\001\n\023ResidencyDefinit" +
+      "ion\022(\n relaunchEscalationTimeoutSeconds\030" +
+      "\001 \001(\003\022S\n\020taskLostBehavior\030\002 \001(\01629.mesosp" +
+      "here.marathon.ResidencyDefinition.TaskLo" +
+      "stBehavior\"@\n\020TaskLostBehavior\022\032\n\026RELAUN" +
+      "CH_AFTER_TIMEOUT\020\000\022\020\n\014WAIT_FOREVER\020\001\"$\n\006" +
+      "Secret\022\n\n\002id\030\001 \002(\t\022\016\n\006source\030\002 \002(\t\"\262\001\n\017E",
+      "nvVarReference\0227\n\004type\030\001 \002(\0162).mesospher" +
+      "e.marathon.EnvVarReference.Type\022\014\n\004name\030" +
+      "\002 \002(\t\0227\n\tsecretRef\030\003 \001(\0132$.mesosphere.ma" +
+      "rathon.EnvVarSecretRef\"\037\n\004Type\022\013\n\007UNKNOW" +
+      "N\020\000\022\n\n\006SECRET\020\001\"#\n\017EnvVarSecretRef\022\020\n\010se" +
+      "cretId\030\001 \002(\t*3\n\rKillSelection\022\021\n\rYounges" +
+      "tFirst\020\001\022\017\n\013OldestFirst\020\002B\035\n\023mesosphere." +
+      "marathonB\006Protos"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -50818,7 +50412,7 @@ public final class Protos {
     internal_static_mesosphere_marathon_ServiceDefinition_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_mesosphere_marathon_ServiceDefinition_descriptor,
-        new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", "Container", "Labels", "MaxLaunchDelay", "AcceptedResourceRoles", "LastScalingAt", "LastConfigChangeAt", "OBSOLETEIpAddress", "Residency", "PortDefinitions", "ReadinessCheckDefinition", "Secrets", "EnvVarReferences", "TaskKillGracePeriod", "UnreachableStrategy", "KillSelection", "Networks", "Tty", "ExecutorResources", "Check", });
+        new java.lang.String[] { "Id", "Cmd", "Instances", "Resources", "Description", "Ports", "Constraints", "Executor", "OBSOLETEContainer", "Version", "HealthChecks", "Backoff", "BackoffFactor", "UpgradeStrategy", "Dependencies", "StoreUrls", "RequirePorts", "Container", "Labels", "MaxLaunchDelay", "AcceptedResourceRoles", "LastScalingAt", "LastConfigChangeAt", "OBSOLETEIpAddress", "Residency", "PortDefinitions", "ReadinessCheckDefinition", "Secrets", "EnvVarReferences", "TaskKillGracePeriod", "UnreachableStrategy", "KillSelection", "Networks", "Tty", "ExecutorResources", "Check", "Role", });
     internal_static_mesosphere_marathon_UnreachableStrategy_descriptor =
       getDescriptor().getMessageTypes().get(8);
     internal_static_mesosphere_marathon_UnreachableStrategy_fieldAccessorTable = new
@@ -50848,7 +50442,7 @@ public final class Protos {
     internal_static_mesosphere_marathon_ExtendedContainerInfo_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_mesosphere_marathon_ExtendedContainerInfo_descriptor,
-        new java.lang.String[] { "Type", "Volumes", "PortMappings", "Docker", "MesosDocker", "MesosAppC", "LinuxInfo", });
+        new java.lang.String[] { "Type", "Volumes", "PortMappings", "Docker", "MesosDocker", "LinuxInfo", });
     internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_descriptor =
       internal_static_mesosphere_marathon_ExtendedContainerInfo_descriptor.getNestedTypes().get(0);
     internal_static_mesosphere_marathon_ExtendedContainerInfo_DockerInfo_fieldAccessorTable = new
@@ -50878,21 +50472,21 @@ public final class Protos {
     internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_descriptor,
-        new java.lang.String[] { "Seccomp", });
+        new java.lang.String[] { "Seccomp", "IpcInfo", });
     internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_Seccomp_descriptor =
       internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_descriptor.getNestedTypes().get(0);
     internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_Seccomp_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_Seccomp_descriptor,
         new java.lang.String[] { "ProfileName", "Unconfined", });
-    internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosAppCInfo_descriptor =
-      internal_static_mesosphere_marathon_ExtendedContainerInfo_descriptor.getNestedTypes().get(3);
-    internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosAppCInfo_fieldAccessorTable = new
+    internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_descriptor =
+      internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_descriptor.getNestedTypes().get(1);
+    internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
-        internal_static_mesosphere_marathon_ExtendedContainerInfo_MesosAppCInfo_descriptor,
-        new java.lang.String[] { "Image", "Id", "Labels", "ForcePullImage", });
+        internal_static_mesosphere_marathon_ExtendedContainerInfo_LinuxInfo_IpcInfo_descriptor,
+        new java.lang.String[] { "IpcMode", "ShmSize", });
     internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_descriptor =
-      internal_static_mesosphere_marathon_ExtendedContainerInfo_descriptor.getNestedTypes().get(4);
+      internal_static_mesosphere_marathon_ExtendedContainerInfo_descriptor.getNestedTypes().get(3);
     internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_mesosphere_marathon_ExtendedContainerInfo_PortMapping_descriptor,
@@ -50914,7 +50508,7 @@ public final class Protos {
     internal_static_mesosphere_marathon_Volume_ExternalVolumeInfo_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_mesosphere_marathon_Volume_ExternalVolumeInfo_descriptor,
-        new java.lang.String[] { "Size", "Name", "Provider", "Options", });
+        new java.lang.String[] { "Size", "Name", "Provider", "Options", "Shared", });
     internal_static_mesosphere_marathon_Volume_SecretVolumeInfo_descriptor =
       internal_static_mesosphere_marathon_Volume_descriptor.getNestedTypes().get(2);
     internal_static_mesosphere_marathon_Volume_SecretVolumeInfo_fieldAccessorTable = new
@@ -50938,7 +50532,7 @@ public final class Protos {
     internal_static_mesosphere_marathon_GroupDefinition_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_mesosphere_marathon_GroupDefinition_descriptor,
-        new java.lang.String[] { "Id", "Version", "DeprecatedApps", "DeprecatedPods", "Groups", "Dependencies", "Apps", "Pods", });
+        new java.lang.String[] { "Id", "Version", "DeprecatedApps", "DeprecatedPods", "Groups", "Dependencies", "Apps", "Pods", "EnforceRole", });
     internal_static_mesosphere_marathon_GroupDefinition_AppReference_descriptor =
       internal_static_mesosphere_marathon_GroupDefinition_descriptor.getNestedTypes().get(0);
     internal_static_mesosphere_marathon_GroupDefinition_AppReference_fieldAccessorTable = new

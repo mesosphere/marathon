@@ -11,7 +11,7 @@ import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.{Task, TaskCondition}
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp, VersionInfo}
 import mesosphere.marathon.test.SettableClock
 import org.apache.mesos
 import org.scalatest.Inside
@@ -235,7 +235,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
     "expunge a Scheduled instance after it was decommissioned" in new Fixture {
       Given("a scheduled instance (no tasks)")
-      val runSpec = AppDefinition(id = appId)
+      val runSpec = AppDefinition(id = appId, role = "*")
       val scheduled = Instance.scheduled(runSpec)
 
       When("it is decommissioned")
@@ -308,7 +308,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
     "move instance to scheduled state when previously reserved" in new Fixture {
       val version = Timestamp(clock.instant())
-      val runSpec = AppDefinition(id = PathId("foo"), versionInfo = VersionInfo.OnlyVersion(version))
+      val runSpec = AppDefinition(id = AbsolutePathId("/foo"), role = "*", versionInfo = VersionInfo.OnlyVersion(version))
       val stateChange = updateOpResolver.resolve(Some(reservedInstance), RescheduleReserved(reservedInstance.instanceId, runSpec))
 
       inside(stateChange) {
@@ -324,12 +324,12 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     val clock = SettableClock.ofNow()
     val updateOpResolver = new InstanceUpdateOpResolver(clock)
 
-    lazy val appId = PathId("/app")
+    lazy val appId = AbsolutePathId("/app")
     lazy val existingInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
     val existingDecommissionedInstance = existingInstance.copy(state = existingInstance.state.copy(goal = Goal.Decommissioned))
     lazy val existingTask: Task = existingInstance.appTask
 
-    lazy val reservedInstance = TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId)).copy(state = InstanceState(Condition.Killed, Timestamp.now(), None, healthy = None, Goal.Running))
+    lazy val reservedInstance = TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId, role = "*")).copy(state = InstanceState(Condition.Killed, Timestamp.now(), None, healthy = None, Goal.Running))
     lazy val existingReservedTask: Task = reservedInstance.appTask
 
     lazy val reservedLaunchedInstance: Instance = TestInstanceBuilder.
