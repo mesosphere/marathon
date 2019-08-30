@@ -55,7 +55,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       Then("The group is updated")
       val result = marathon.group("test2".toRootTestPath)
       result should be(OK)
-      result.value.dependencies should be(dependencies)
+      result.value.dependencies.value should be(dependencies)
     }
 
     "deleting an existing group gives a 200 http response" in {
@@ -435,7 +435,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       logger.info("GroupInfo: " + groupInfo)
 
-      groupInfo.groups.value.find(_.id.value == (gid / "frontend").toString).value.dependencies should be(Set((gid / "service").toString))
+      groupInfo.groups.value.find(_.id.value == (gid / "frontend").toString).value.dependencies.value should be(Set((gid / "service").toString))
       groupInfo.groups.value.find(_.id.value == (gid / "service").toString).value.apps.value.find(_.id.endsWith("service1")).value.dependencies should be(Set((gid / "db" / "db1").toString))
     }
   }
