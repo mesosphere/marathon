@@ -59,10 +59,10 @@ object Stracer extends StrictLogging {
     * background and prevent JVM from exiting. If necessary it can be terminated calling the [[Process.destroy()]]
     * method and [[Process.exitValue()]] to wait for it to exit.
     */
-  def stracePid(pid: Int, outputFileName: Option[String] = None): Process = {
-    val out = outputFileName.getOrElse(s"$pid-strace.log")
-    logger.info(s"sudo strace -p $pid -f -bexecve -o $out")
-    Process(s"sudo strace -p $pid -f -bexecve -o $out").run()
+  def stracePid(pid: Int, output: Option[String] = None): Process = {
+    val out = output.getOrElse(s"$pid-strace")
+    logger.info(s"sudo strace -p $pid -f -bexecve")
+    Process(s"sudo strace -p $pid -f -bexecve -o $out").run(ProcessOutputToLogStream(out))
   }
 
   def main(args: Array[String]): Unit = {
