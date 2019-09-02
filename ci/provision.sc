@@ -114,3 +114,12 @@ def installDcosCli(): Unit = {
     %("chmod", "+x", "/usr/local/bin/dcos")
   }
 }
+
+/**
+  * Sometimes we need to install extra utils that are not (yet) part of the AMI. Ideally, all utils from this method
+  * end up in the AMI eventually.
+  */
+def installUtils(): Unit = {
+  // Install strace, used to debug mysterious task/executor deaths
+  %%('sudo, "apt-get", "install", "strace")
+}

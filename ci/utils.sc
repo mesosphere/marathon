@@ -206,5 +206,4 @@ object SemVer {
       case _ =>
         throw new IllegalArgumentException(s"Could not parse version $version.")
     }
-
 }

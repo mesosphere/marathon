@@ -29,6 +29,7 @@ ansiColor('xterm') {
         junit(allowEmptyResults: true, testResults: 'tests/integration/target/test-reports/*.xml')
         archive includes: "*sandboxes.tar.gz"
         archive includes: "*log.tar.gz"
+        archive includes: "**strace.log"
       }
     }
   }
