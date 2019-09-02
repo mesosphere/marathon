@@ -311,9 +311,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       val app16549ExecutorPid = Stracer.mesosExecutorPid("sleep 13371337") // Have to be unique so that only one process is found
       if (app16549ExecutorPid.isEmpty) {
         logger.info(s">>> FAILED to find ${residentApp_16549.id} executor PID")
+      } else {
+        val stracer = Stracer.stracePid(app16549ExecutorPid.head)
+        stracerProcess = Some(stracer)
       }
-      val stracer = Stracer.stracePid(app16549ExecutorPid.head)
-      stracerProcess = Some(stracer)
       // =================== END ==================
 
       // Pass upgrade to current
