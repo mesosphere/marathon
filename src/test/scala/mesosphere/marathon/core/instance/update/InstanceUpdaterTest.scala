@@ -335,7 +335,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
     val killedOperation = InstanceUpdateOperation.MesosUpdate(provisionedInstance, Condition.Killed, MesosTaskStatusTestHelper.killed(f.taskId), Timestamp(f.clock.instant()))
     val updated = InstanceUpdater.mesosUpdate(provisionedInstance, killedOperation).asInstanceOf[Update]
 
-    updated.instance.reservation.get.state should be(Suspended(None))
+    updated.instance.reservation.get.state should be(Suspended)
   }
 
   "when a TASK_GONE_BY_OPERATOR status update is sent" should {
