@@ -71,7 +71,7 @@ object Stracer extends StrictLogging {
   def stracePid(pid: Int, output: Option[String] = None): Process = {
     val out = output.getOrElse(s"strace-$pid")
     logger.info(s"sudo strace -p $pid -f -bexecve")
-    Process(s"sudo strace -p $pid -f -bexecve -o $out").run(ProcessOutputToLogStream(out))
+    Process(s"sudo strace -p $pid -f -bexecve").run(ProcessOutputToLogStream(out))
   }
 
   def main(args: Array[String]): Unit = {
