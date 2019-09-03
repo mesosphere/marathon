@@ -8,8 +8,9 @@ import sys.process._
 
 /**
   * A useful set of methods around `strace` utility, used to debug sudden task/executor deaths. Usually, it is hard
-  * to find out Mesos task PID since neither Mesos nor Marathon expose it though their APIs. However, give an unique
-  * command launch string (e.g. `sleep %random_big_number`) one can grep `ps` output for it.
+  * to find out Mesos task PID since neither Mesos nor Marathon expose it in their APIs. However, given an unique
+  * command launch string (e.g. `sleep %random_big_number`) one can grep `ps` output for it and attach `strace` to
+  * the process. `strace` output is logged with the rest of the test logs.
   */
 object Stracer extends StrictLogging {
 
@@ -22,7 +23,15 @@ object Stracer extends StrictLogging {
       logger.warn(s"Found too many(not enough) processes: $taskPID for search string $taskCmd")
       return None
     }
-    parentPid(taskPID.head)
+
+    System.getProperty("os.name") match {
+      // On Linux, executor is the grand-parent of the actual process PID
+      case "Linux" =>
+        parentPid(taskPID.head).flatMap(parentPid(_))
+      // On OS X, executor is the direct parent of the actual process PID
+      case _ =>
+        parentPid(taskPID.head)
+    }
   }
 
   /**
@@ -55,12 +64,12 @@ object Stracer extends StrictLogging {
   }
 
   /**
-    * Run an `strace` on the given PID. Output file name can be provided. Process will continue to run in the
+    * Run an `strace` on the given PID. Logger line prefix can be provided. Process will continue to run in the
     * background and prevent JVM from exiting. If necessary it can be terminated calling the [[Process.destroy()]]
     * method and [[Process.exitValue()]] to wait for it to exit.
     */
   def stracePid(pid: Int, output: Option[String] = None): Process = {
-    val out = output.getOrElse(s"$pid-strace")
+    val out = output.getOrElse(s"strace-$pid")
     logger.info(s"sudo strace -p $pid -f -bexecve")
     Process(s"sudo strace -p $pid -f -bexecve -o $out").run(ProcessOutputToLogStream(out))
   }
