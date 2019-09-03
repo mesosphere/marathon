@@ -65,8 +65,13 @@ lazy val integrationTestSettings = Seq(
   concurrentRestrictions in Test := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2)))
 )
 
+// Build Settings for Protobuf (https://github.com/sbt/sbt-protobuf)
+//
+// version => The version of the protobuf library to be used. An sbt dependency is added for the project
+// includeFilter => Specify which files to compile. We need this to exclude the mesos/mesos.proto to be compiled directly
+// protobufRunProtoc => Use ProtocJar to use a bundled protoc version, so we don't rely on a preinstalled version. "-v330" defines the protoc version
 val pbSettings = ProtobufPlugin.projectSettings ++ Seq(
-  (version in ProtobufConfig) := "3.5.0",
+  (version in ProtobufConfig) := "3.3.0",
   (includeFilter in ProtobufConfig) := "marathon.proto",
   (protobufRunProtoc in ProtobufConfig) := (args => com.github.os72.protocjar.Protoc.runProtoc("-v330" +: args.toArray))
 )
