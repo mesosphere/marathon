@@ -27,5 +27,6 @@ case class Health(
       lastFailureCause = Some(cause),
       consecutiveFailures = consecutiveFailures + 1
     )
+    case _: Ignored => this
   }
 }

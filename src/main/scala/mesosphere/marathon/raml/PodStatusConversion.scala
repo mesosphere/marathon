@@ -251,14 +251,15 @@ trait PodStatusConversion {
     instance: core.instance.Instance,
     containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) = {
 
-    if (instance.isScheduled ||
-      instance.isProvisioned) {
+    // isScheduled and isProvisioned have a little more meaning than just the condition check,
+    // therefore they're checked manually before the match. They show up later again, to have
+    // an exhaustive match over the condition
+    if (instance.isScheduled || instance.isProvisioned) {
       PodInstanceState.Pending -> None
     } else {
       instance.state.condition match {
         case condition.Condition.Staging |
-          condition.Condition.Starting =>
-          PodInstanceState.Staging -> None
+          condition.Condition.Starting => PodInstanceState.Staging -> None
         case condition.Condition.Error |
           condition.Condition.Failed |
           condition.Condition.Finished |
@@ -266,11 +267,9 @@ trait PodStatusConversion {
           condition.Condition.Gone |
           condition.Condition.Dropped |
           condition.Condition.Unknown |
-          condition.Condition.Killing =>
-          PodInstanceState.Terminal -> None
+          condition.Condition.Killing => PodInstanceState.Terminal -> None
         case condition.Condition.Unreachable |
-          condition.Condition.UnreachableInactive =>
-          PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)
+          condition.Condition.UnreachableInactive => PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)
         case condition.Condition.Running =>
           if (containerStatus.exists(_.conditions.exists { cond =>
             cond.name == STATUS_CONDITION_HEALTHY && cond.value == "false"
@@ -278,6 +277,8 @@ trait PodStatusConversion {
             PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNHEALTHY_CONTAINERS)
           else
             PodInstanceState.Stable -> None
+        case condition.Condition.Provisioned |
+          condition.Condition.Scheduled => PodInstanceState.Pending -> None
       }
     }
   }

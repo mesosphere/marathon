@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package api.v2
 
+import com.typesafe.scalalogging.StrictLogging
 import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
@@ -36,7 +37,7 @@ class AppTasksResource @Inject() (
     val config: MarathonConf,
     groupManager: GroupManager,
     val authorizer: Authorizer,
-    val authenticator: Authenticator)(implicit val executionContext: ExecutionContext) extends AuthResource {
+    val authenticator: Authenticator)(implicit val executionContext: ExecutionContext) extends AuthResource with StrictLogging {
 
   val GroupTasks = """^((?:.+/)|)\*$""".r
 
@@ -48,26 +49,28 @@ class AppTasksResource @Inject() (
       implicit val identity: Identity = await(authenticatedAsync(req))
       val instancesBySpec: InstancesBySpec = await(instanceTracker.instancesBySpec)
       getTasksForId(id, instancesBySpec)
-    }
+    }.flatten
   }
 
-  private[this] def getTasksForId(id: String, instancesBySpec: InstancesBySpec)(implicit identity: Identity): Response = {
+  private[this] def getTasksForId(id: String, instancesBySpec: InstancesBySpec)(implicit identity: Identity): Future[Response] = {
     id match {
       case GroupTasks(gid) =>
         val groupPath = gid.toAbsolutePath
         val maybeGroup = groupManager.group(groupPath)
-        await(withAuthorization(ViewGroup, maybeGroup, Future.successful(unknownGroup(groupPath))) { group =>
+        withAuthorization(ViewGroup, maybeGroup, Future.successful(unknownGroup(groupPath))) { group =>
           async {
             val tasks = await(runningTasks(group.transitiveAppIds, instancesBySpec)).toRaml
             ok(jsonObjString("tasks" -> tasks))
           }
-        })
+        }
       case _ =>
         val appId = id.toAbsolutePath
         val maybeApp = groupManager.app(appId)
-        val tasks = await(runningTasks(Set(appId), instancesBySpec)).toRaml
-        withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
-          ok(jsonObjString("tasks" -> tasks))
+        withAuthorization(ViewRunSpec, maybeApp, Future.successful(unknownApp(appId))) { _ =>
+          async {
+            val tasks = await(runningTasks(Set(appId), instancesBySpec)).toRaml
+            ok(jsonObjString("tasks" -> tasks))
+          }
         }
     }
   }
@@ -130,6 +133,10 @@ class AppTasksResource @Inject() (
             }
             ok(jsonObjString("tasks" -> enrichedTasks.toRaml))
           case Failure(PathNotFoundException(appId, version)) => unknownApp(appId, version)
+          case Failure(exception) => {
+            logger.error("Failed to execute TaskKiller.kill", exception)
+            status(Response.Status.INTERNAL_SERVER_ERROR)
+          }
         }
       }
     }
@@ -176,6 +183,10 @@ class AppTasksResource @Inject() (
                 ok(jsonObjString("task" -> enrichedTask.toRaml))
             }
           case Failure(PathNotFoundException(appId, version)) => unknownApp(appId, version)
+          case Failure(exception) => {
+            logger.error("Failed to execute TaskKiller.kill", exception)
+            status(Response.Status.INTERNAL_SERVER_ERROR)
+          }
         }
       }
     }

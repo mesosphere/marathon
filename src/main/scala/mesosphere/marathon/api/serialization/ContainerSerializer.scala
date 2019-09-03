@@ -412,7 +412,9 @@ object MesosDockerSerializer {
     val dockerBuilder = mesos.Protos.Image.Docker.newBuilder
       .setName(container.image)
 
+    // TODO: Fix deprecated use of mesos API
     container.credential.foreach { credential =>
+      //noinspection ScalaDeprecation
       dockerBuilder.setCredential(CredentialSerializer.toMesos(credential))
     }
     container.pullConfig.foreach { pullConfig =>

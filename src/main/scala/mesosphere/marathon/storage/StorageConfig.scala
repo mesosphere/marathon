@@ -160,14 +160,11 @@ object StorageConfig {
   val DefaultVersionCacheConfig = Option(VersionCacheConfig.Default)
 
   def apply(conf: StorageConf, curatorFramework: RichCuratorFramework): StorageConfig = {
-    conf.internalStoreBackend() match {
-      case InMem.StoreName => InMem(conf)
-      case CuratorZk.StoreName => CuratorZk(conf, curatorFramework)
-    }
+    CuratorZk(conf, curatorFramework)
   }
 
   /**
-    * Return an optional curator framework instance, depending on the underlying storage type. For [[InMem]] storage None
+    * Return an optional curator framework instance, depending on the underlying storage type. For InMem storage None
     * is returned. For [[CuratorZk]] [[RichCuratorFramework]] instance is initialized and connection to Zookeeper is established.
     *
     * @param conf

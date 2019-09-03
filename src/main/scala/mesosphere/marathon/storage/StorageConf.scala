@@ -5,13 +5,6 @@ import mesosphere.marathon.core.storage.backup.BackupConf
 import org.rogach.scallop.ScallopOption
 
 trait StorageConf extends ZookeeperConf with BackupConf {
-  lazy val internalStoreBackend = opt[String](
-    "internal_store_backend",
-    descr = s"The backend storage system to use. One of ${InMem.StoreName}, ${CuratorZk.StoreName}",
-    hidden = true,
-    validate = Set(InMem.StoreName, CuratorZk.StoreName).contains,
-    default = Some(CuratorZk.StoreName)
-  )
 
   lazy val storeCache = toggle(
     "store_cache",

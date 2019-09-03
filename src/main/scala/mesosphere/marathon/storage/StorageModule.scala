@@ -46,6 +46,7 @@ object StorageModule {
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
 
     config match {
+      case _: InMem => throw new IllegalArgumentException("InMem Storage Module is not supported")
       case zk: CuratorZk =>
         val store: PersistenceStore[ZkId, String, ZkSerialized] = zk.store(metrics)
         val appRepository = AppRepository.zkRepository(store)
@@ -70,42 +71,6 @@ object StorageModule {
         val migration = new Migration(zk.availableFeatures, defaultMesosRole, store, appRepository, podRepository, groupRepository,
           deploymentRepository, instanceRepository,
           taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.zkRepository(store), runtimeConfigurationRepository, backup, config)
-
-        StorageModuleImpl(
-          store,
-          instanceRepository,
-          deploymentRepository,
-          taskFailureRepository,
-          groupRepository,
-          frameworkIdRepository,
-          runtimeConfigurationRepository,
-          migration,
-          leadershipInitializers,
-          backup
-        )
-      case mem: InMem =>
-        val store = mem.store(metrics)
-        val appRepository = AppRepository.inMemRepository(store)
-        val podRepository = PodRepository.inMemRepository(store)
-        val instanceRepository = InstanceRepository.inMemRepository(store)
-        val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository, mem.groupVersionsCacheSize)
-        val deploymentRepository = DeploymentRepository.inMemRepository(metrics, store, groupRepository,
-          appRepository, podRepository, mem.maxVersions, mem.storageCompactionScanBatchSize)
-        val taskFailureRepository = TaskFailureRepository.inMemRepository(store)
-        val frameworkIdRepository = FrameworkIdRepository.inMemRepository(store)
-        val runtimeConfigurationRepository = RuntimeConfigurationRepository.inMemRepository(store)
-
-        val leadershipInitializers = store match {
-          case s: LoadTimeCachingPersistenceStore[_, _, _] =>
-            Seq(s)
-          case _ =>
-            Nil
-        }
-
-        val backup = PersistentStoreBackup(store)
-        val migration = new Migration(mem.availableFeatures, defaultMesosRole, ???, appRepository, podRepository, groupRepository,
-          deploymentRepository, instanceRepository,
-          taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.inMemRepository(store), runtimeConfigurationRepository, backup, config)
 
         StorageModuleImpl(
           store,

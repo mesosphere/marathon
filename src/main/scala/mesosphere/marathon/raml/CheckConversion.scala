@@ -14,10 +14,12 @@ trait CheckConversion {
 
   implicit val commandCheckWrites: Writes[state.Executable, CommandCheck] = Writes {
     case state.Command(value) => CommandCheck(ShellCommand(value))
+    case state.ArgvList(_) => throw new IllegalStateException("ArgvCommandCheck is not supported")
   }
 
   implicit val httpCheckSchemeRamlReader: Reads[HttpScheme, CheckDefinition.Protocol] = Reads {
     case HttpScheme.Http => CheckDefinition.Protocol.HTTP
+    case HttpScheme.Https => throw new IllegalArgumentException("Https is not supported for check")
   }
 
   implicit val httpCheckSchemeRamlWriter: Writes[CheckDefinition.Protocol, HttpScheme] = Writes {
