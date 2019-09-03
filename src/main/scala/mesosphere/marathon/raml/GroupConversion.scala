@@ -81,7 +81,6 @@ object UpdateGroupStructureOp {
     require(groupUpdate.version.isEmpty, "For a structural update, no version should be given.")
     assert(groupUpdate.enforceRole.isDefined, s"BUG! The group normalization should have set enforceRole for ${groupUpdate.id}.")
 
-    implicit val pathNormalization: Normalization[PathId] = Normalization(_.canonicalPath(current.id))
     implicit val appNormalization: Normalization[AppDefinition] = normalizeAppDefinition(timestamp)
 
     val effectiveGroups: Map[AbsolutePathId, CoreGroup] = groupUpdate.groups.fold(current.groupsById) { updates =>

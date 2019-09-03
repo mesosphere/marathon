@@ -2,18 +2,17 @@ package mesosphere.marathon
 package api.v2
 
 import akka.actor.Scheduler
-import javax.servlet.http.HttpServletRequest
-import javax.ws.rs.core.{Context, MediaType}
-import javax.ws.rs._
 import com.google.inject.Inject
-import mesosphere.marathon.HttpConf
+import javax.servlet.http.HttpServletRequest
+import javax.ws.rs._
+import javax.ws.rs.container.{AsyncResponse, Suspended}
+import javax.ws.rs.core.{Context, MediaType}
+import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.{AuthResource, RestResource}
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
 import mesosphere.marathon.raml.RuntimeConfiguration
-import Validation._
-import javax.ws.rs.container.{AsyncResponse, Suspended}
+import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
 import mesosphere.marathon.stream.UriIO
 
 import scala.async.Async.{async, await}
@@ -62,7 +61,7 @@ class LeaderResource @Inject() (
       if (electionService.isLeader) {
         val backup = validateOrThrow(Option(backupNullable))(optional(UriIO.valid))
         val restore = validateOrThrow(Option(restoreNullable))(optional(UriIO.valid))
-        await(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
+        val _ = await(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
 
         scheduler.scheduleOnce(LeaderResource.abdicationDelay) {
           electionService.abdicateLeadership()

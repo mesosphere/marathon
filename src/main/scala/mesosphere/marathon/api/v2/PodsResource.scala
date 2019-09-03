@@ -78,7 +78,7 @@ class PodsResource @Inject() (
   @HEAD
   def capability(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
-      implicit val identity = await(authenticatedAsync(req))
+      await(authenticatedAsync(req))
       ok()
     }
   }

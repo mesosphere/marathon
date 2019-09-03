@@ -20,7 +20,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{AppDefinition, Timestamp}
 import mesosphere.util.ThreadPoolContext
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
@@ -30,8 +30,7 @@ object HealthCheckWorker extends StrictLogging {
   def run(app: AppDefinition, instance: Instance, healthCheck: MarathonHealthCheck)(implicit mat: ActorMaterializer): Future[HealthResult] = {
     logger.debug("Dispatching health check job for {}", instance.instanceId)
 
-    implicit val system = mat.system
-    implicit val ex = mat.executionContext
+    implicit val executor: ExecutionContextExecutor = mat.executionContext
 
     check(app, instance, healthCheck)
       .transform {

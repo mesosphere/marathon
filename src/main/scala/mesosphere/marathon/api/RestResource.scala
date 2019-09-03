@@ -32,7 +32,7 @@ trait RestResource extends JaxResource {
     * @param asyncResponse The AsyncResponse instance for the request to a controller method
     * @param body The response-generating code.
     */
-  def sendResponse(asyncResponse: AsyncResponse)(body: => Future[Response]) = try {
+  def sendResponse(asyncResponse: AsyncResponse)(body: => Future[Response]): Unit = try {
     body.onComplete {
       case Success(r) =>
         asyncResponse.resume(r: Object)

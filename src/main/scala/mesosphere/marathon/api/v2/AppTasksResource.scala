@@ -5,7 +5,7 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
-import javax.ws.rs.core.{Context, MediaType}
+import javax.ws.rs.core.{Context, MediaType, Response}
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.EnrichedTask
@@ -45,30 +45,34 @@ class AppTasksResource @Inject() (
     @PathParam("appId") id: String,
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
-      implicit val identity = await(authenticatedAsync(req))
-      val instancesBySpec = await(instanceTracker.instancesBySpec)
-      id match {
-        case GroupTasks(gid) =>
-          val groupPath = gid.toAbsolutePath
-          val maybeGroup = groupManager.group(groupPath)
-          await(withAuthorization(ViewGroup, maybeGroup, Future.successful(unknownGroup(groupPath))) { group =>
-            async {
-              val tasks = await(runningTasks(group.transitiveAppIds, instancesBySpec)).toRaml
-              ok(jsonObjString("tasks" -> tasks))
-            }
-          })
-        case _ =>
-          val appId = id.toAbsolutePath
-          val maybeApp = groupManager.app(appId)
-          val tasks = await(runningTasks(Set(appId), instancesBySpec)).toRaml
-          withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
-            ok(jsonObjString("tasks" -> tasks))
-          }
-      }
+      implicit val identity: Identity = await(authenticatedAsync(req))
+      val instancesBySpec: InstancesBySpec = await(instanceTracker.instancesBySpec)
+      getTasksForId(id, instancesBySpec)
     }
   }
 
-  def runningTasks(appIds: Iterable[AbsolutePathId], instancesBySpec: InstancesBySpec): Future[Vector[EnrichedTask]] = {
+  private[this] def getTasksForId(id: String, instancesBySpec: InstancesBySpec)(implicit identity: Identity): Response = {
+    id match {
+      case GroupTasks(gid) =>
+        val groupPath = gid.toAbsolutePath
+        val maybeGroup = groupManager.group(groupPath)
+        await(withAuthorization(ViewGroup, maybeGroup, Future.successful(unknownGroup(groupPath))) { group =>
+          async {
+            val tasks = await(runningTasks(group.transitiveAppIds, instancesBySpec)).toRaml
+            ok(jsonObjString("tasks" -> tasks))
+          }
+        })
+      case _ =>
+        val appId = id.toAbsolutePath
+        val maybeApp = groupManager.app(appId)
+        val tasks = await(runningTasks(Set(appId), instancesBySpec)).toRaml
+        withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
+          ok(jsonObjString("tasks" -> tasks))
+        }
+    }
+  }
+
+  private[this] def runningTasks(appIds: Iterable[AbsolutePathId], instancesBySpec: InstancesBySpec): Future[Vector[EnrichedTask]] = {
     Future.sequence(appIds.withFilter(instancesBySpec.hasSpecInstances).map { id =>
       async {
         val health = await(healthCheckManager.statuses(id))

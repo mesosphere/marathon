@@ -213,7 +213,7 @@ class GroupsResource @Inject() (
           }
         }
 
-        await(groupManager.patchRoot(_.updateGroup(groupId, updateGroup)))
+        val _ = await(groupManager.patchRoot(_.updateGroup(groupId, updateGroup)))
         ok()
       }
     }

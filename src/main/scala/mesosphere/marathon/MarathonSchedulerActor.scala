@@ -408,7 +408,8 @@ class SchedulerActions(
       await(Future.sequence(changeGoalsFuture))
       await(instancesAreTerminal)
 
-      Done
+      // Done would be discarded here and trigger a warning
+      ()
     }
 
     val toStart = instancesToStart

@@ -89,17 +89,16 @@ lazy val commonSettings = Seq(
     "-unchecked",
     "-Xfuture",
     "-Xlint",
-    //FIXME: CORE-977 and MESOS-7368 are filed and need to be resolved to re-enable this
-    // "-Xfatal-warnings",
+    "-Xfatal-warnings",
     "-Yno-adapted-args",
     "-Ywarn-numeric-widen",
-    //"-Ywarn-dead-code", We should turn this one on soon
+    "-Ywarn-dead-code", //We should turn this one on soon
     "-Ywarn-inaccessible",
     "-Ywarn-infer-any",
     "-Ywarn-nullary-override",
     "-Ywarn-nullary-unit",
-    //"-Ywarn-unused", We should turn this one on soon
-    "-Ywarn-unused:-locals,imports",
+//    "-Ywarn-unused", // We should turn this one on soon
+    "-Ywarn-unused:-locals",
     //"-Ywarn-value-discard", We should turn this one on soon.
   ),
   // Don't need any linting, etc for docs, so gain a small amount of build time there.
