@@ -103,8 +103,7 @@ lazy val commonSettings = Seq(
   ),
   scalacOptions in Test --= Seq(
     "-Ywarn-dead-code", // We have some cases of mockito, these lead to "dead" code at the moment
-    "-deprecation",     // May use deprecated code for tests
-//    "-Xfatal-warnings"
+    "-Xfatal-warnings"
   ),
   // Don't need any linting, etc for docs, so gain a small amount of build time there.
   scalacOptions in (Compile, doc) := Seq("-encoding", "UTF-8", "-deprecation", "-feature", "-Xfuture"),
