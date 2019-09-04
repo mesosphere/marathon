@@ -35,7 +35,7 @@ ansiColor('xterm') {
     }
 
     stage('Release unstable MoM EE Docker Image') {
-      if (env.BRANCH_NAME == 'master' || env.BRANCH_NAME == 'karsten/trigger-correct-ee') {
+      if (env.BRANCH_NAME == 'master') {
         build(
              job: '/marathon-dcos-plugins/release-mom-ee-docker-image/master',
              parameters: [string(name: 'from_image_tag', value: 'unstable'), string(name: 'target_tag', value: 'unstable')],
