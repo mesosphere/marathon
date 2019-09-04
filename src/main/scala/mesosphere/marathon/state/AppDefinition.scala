@@ -25,6 +25,7 @@ import org.apache.mesos.{Protos => mesos}
 import mesosphere.marathon.core.health.{PortReference => HealthPortReference}
 import mesosphere.marathon.core.check.{PortReference => CheckPortReference}
 import mesosphere.marathon.util.RoleSettings
+import org.apache.mesos.Protos.TTYInfo
 
 import scala.concurrent.duration._
 
@@ -200,7 +201,9 @@ case class AppDefinition(
       builder.addExecutorResources(ScalarResource(Resource.DISK, r.disk))
     })
 
-    tty.filter(tty => tty).foreach(builder.setTty(_))
+    if (tty.getOrElse(false)) {
+      builder.setTty(TTYInfo.newBuilder().build())
+    }
     networks.foreach { network => builder.addNetworks(Network.toProto(network)) }
     container.foreach { c => builder.setContainer(ContainerSerializer.toProto(c)) }
     readinessChecks.foreach { r => builder.addReadinessCheckDefinition(ReadinessCheckSerializer.toProto(r)) }
@@ -260,7 +263,7 @@ case class AppDefinition(
 
     val networks: Seq[Network] = proto.getNetworksList.flatMap(Network.fromProto)(collection.breakOut)
 
-    val tty: Option[Boolean] = if (proto.hasTty) Some(proto.getTty) else AppDefinition.DefaultTTY
+    val tty: Option[Boolean] = if (proto.hasTty) Some(true) else AppDefinition.DefaultTTY
 
     val role: Role = proto.getRole()
 

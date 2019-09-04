@@ -16,7 +16,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.protos.Implicits._
-import org.apache.mesos.Protos.{DurationInfo, KillPolicy}
+import org.apache.mesos.Protos.{DurationInfo, KillPolicy, TTYInfo}
 import org.apache.mesos.{Protos => mesos}
 
 import scala.collection.immutable.Seq
@@ -587,7 +587,9 @@ object TaskGroupBuilder extends StrictLogging {
     }
 
     // attach a tty if specified
-    container.tty.filter(tty => tty).foreach(containerInfo.setTtyInfo(_))
+    if (container.tty.getOrElse(false)) {
+      containerInfo.setTtyInfo(TTYInfo.newBuilder().build())
+    }
 
     // setup linux info
     container.linuxInfo.foreach { linuxInfo =>
