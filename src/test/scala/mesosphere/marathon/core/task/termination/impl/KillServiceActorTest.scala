@@ -353,7 +353,7 @@ class KillServiceActorTest extends AkkaUnitTest with StrictLogging with Eventual
     }
   }
 
-  def withActor(killConfig: KillConfig)(testCode: (Fixture, TestActorRef[KillServiceActor]) => Any): Unit = {
+  private def withActor(killConfig: KillConfig)(testCode: (Fixture, TestActorRef[KillServiceActor]) => Any): Unit = {
     val f = new Fixture(killConfig)
     val actor: TestActorRef[KillServiceActor] = TestActorRef(KillServiceActor.props(f.driverHolder, f.instanceTracker, killConfig, f.metrics, f.clock), s"KillService-${UUID.randomUUID()}")
 

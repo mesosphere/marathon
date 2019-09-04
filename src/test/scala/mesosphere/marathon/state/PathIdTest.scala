@@ -228,6 +228,7 @@ class PathIdTest extends UnitTest with ValidationTestLike {
           val path = AbsolutePathId(s"/$keyword/foo")
           val path1 = AbsolutePathId(s"/foo/$keyword/bar")
           pathIdValidator(path) shouldBe aSuccess
+          pathIdValidator(path1) shouldBe aSuccess
         }
       }
     }

@@ -92,7 +92,7 @@ lazy val commonSettings = Seq(
     "-Xfatal-warnings",
     "-Yno-adapted-args",
     "-Ywarn-numeric-widen",
-    "-Ywarn-dead-code", //We should turn this one on soon
+    "-Ywarn-dead-code",
     "-Ywarn-inaccessible",
     "-Ywarn-infer-any",
     "-Ywarn-nullary-override",
@@ -101,9 +101,11 @@ lazy val commonSettings = Seq(
     "-Ywarn-unused:-locals",
     //"-Ywarn-value-discard", We should turn this one on soon.
   ),
-
-  // We have some cases of mockito, these lead to "dead" code at the moment
-  scalacOptions in Test -= "-Ywarn-dead-code",
+  scalacOptions in Test --= Seq(
+    "-Ywarn-dead-code", // We have some cases of mockito, these lead to "dead" code at the moment
+    "-deprecation",     // May use deprecated code for tests
+//    "-Xfatal-warnings"
+  ),
   // Don't need any linting, etc for docs, so gain a small amount of build time there.
   scalacOptions in (Compile, doc) := Seq("-encoding", "UTF-8", "-deprecation", "-feature", "-Xfuture"),
   javacOptions in Compile ++= Seq(

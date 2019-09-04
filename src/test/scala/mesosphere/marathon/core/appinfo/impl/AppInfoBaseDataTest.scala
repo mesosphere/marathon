@@ -459,7 +459,6 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       }
 
       And("instance referring to an app instead of pod doesn't have any status")
-      val v3 = VersionInfo.OnlyVersion(f.clock.now())
       val appInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
       val maybeStatus3 = f.baseData.podInstanceStatus(appInstance)
 

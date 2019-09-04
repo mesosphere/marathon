@@ -116,7 +116,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       val healthCheck = MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true"))
 
       val instance = setupTrackerWithRunningInstance(appId, Timestamp.zero, instanceTracker).futureValue
-      val (instanceId, taskId) = (instance.instanceId, instance.tasksMap.head._2)
+      val (instanceId, _) = (instance.instanceId, instance.tasksMap.head._2)
       val taskStatus = TestTaskBuilder.Helper.unhealthyTask(instanceId).status.mesosStatus.get
 
       instanceTracker.updateStatus(instance, taskStatus, clock.now()).futureValue
@@ -213,15 +213,6 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     }
 
     "reconcile" in new Fixture {
-      def taskStatus(instance: Instance, state: mesos.TaskState = mesos.TaskState.TASK_RUNNING) =
-        mesos.TaskStatus.newBuilder
-          .setTaskId(mesos.TaskID.newBuilder()
-            .setValue(instance.tasksMap.keys.head.idString)
-            .build)
-          .setState(state)
-          .setHealthy(true)
-          .build
-
       val healthChecks = List(0, 1, 2).map { i =>
         (0 until i).map { j =>
           val check: HealthCheck = MesosCommandHealthCheck(gracePeriod = (i * 3 + j).seconds, command = Command("true"))
@@ -231,7 +222,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       val versions = List(0L, 1L, 2L).map {
         Timestamp(_)
       }.toArray
-      var instances = new ListBuffer[Instance]()
+      val instances = new ListBuffer[Instance]()
       var currentApp: AppDefinition = _
 
       def startInstance(appId: AbsolutePathId, version: Timestamp, healthChecks: Set[HealthCheck]): (Instance, AppDefinition) = {
@@ -253,7 +244,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       // one other task of another app
       val otherAppId = "other".toAbsolutePath
       val otherHealthChecks = Set[HealthCheck](MesosCommandHealthCheck(gracePeriod = 0.seconds, command = Command("true")))
-      val (otherInstance, otherApp) = startInstance(otherAppId, Timestamp(42), otherHealthChecks)
+      val (_, otherApp) = startInstance(otherAppId, Timestamp(42), otherHealthChecks)
 
       hcManager.addAllFor(otherApp, Seq.empty)
       assert(hcManager.list(otherAppId) == otherHealthChecks) // linter:ignore:UnlikelyEquality

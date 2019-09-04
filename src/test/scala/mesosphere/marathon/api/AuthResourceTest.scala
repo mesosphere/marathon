@@ -58,7 +58,7 @@ class AuthResourceTest extends UnitTest with JerseyTest {
       val executionContext = scala.concurrent.ExecutionContext.global
       def foo(request: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
         async {
-          implicit val identity = await(authenticatedAsync(request))
+          val _ = await(authenticatedAsync(request))
           Response.ok("foo").build()
         }
       }

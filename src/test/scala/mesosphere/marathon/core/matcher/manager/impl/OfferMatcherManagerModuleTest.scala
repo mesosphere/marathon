@@ -77,7 +77,6 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     override def matchOffer(offer: Offer): Future[MatchedInstanceOps] = {
       val opsWithSources = matchTasks(offer).map { taskInfo =>
         val instance = TestInstanceBuilder.newBuilderWithInstanceId(F.instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
-        val task: Task = instance.appTask
         val stateOp = InstanceUpdateOperation.Provision(instance.instanceId, instance.agentInfo.get, instance.runSpec, instance.tasksMap, Timestamp.now())
         val launch = F.launch(taskInfo, stateOp)
         InstanceOpWithSource(Source, launch)

@@ -179,9 +179,12 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       lazy val delegate = new InstanceTrackerDelegate(f.metrics, f.clock, config, f.instanceTrackerProbe.ref)
 
       And("three queued queries")
-      delegate.specInstances(appId, readAfterWrite = true) // On way to instance tracker
-      delegate.specInstances(appId, readAfterWrite = true) // In mapAsync
-      delegate.specInstances(appId, readAfterWrite = true) // In queue buffer
+      // 1 => On way to instance tracker
+      // 2 => In mapAsync
+      // 3 => In queue buffer
+      1 to 3 foreach { _ =>
+        delegate.specInstances(appId, readAfterWrite = true)
+      }
 
       When("we query a fourth time")
       val result = delegate.specInstances(appId, readAfterWrite = true)

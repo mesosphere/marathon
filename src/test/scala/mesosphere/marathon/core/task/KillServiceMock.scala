@@ -25,7 +25,7 @@ class KillServiceMock(system: ActorSystem) extends KillService with Mockito {
   val eventsGenerator = InstanceChangedEventsGenerator
   val clock = new SettableClock()
 
-  private def killInstance(instance: Instance, reason: KillReason): Future[Done] = synchronized {
+  private def killInstance(instance: Instance): Future[Done] = synchronized {
     val id = instance.instanceId
     val updatedInstance = instance.copy(state = instance.state.copy(condition = Condition.Killed, goal = Goal.Decommissioned))
     val events = customStatusUpdates.getOrElse(id, eventsGenerator.events(updatedInstance, task = None, now = clock.now(), previousState = Some(instance.state)))
@@ -38,12 +38,12 @@ class KillServiceMock(system: ActorSystem) extends KillService with Mockito {
   override def killUnknownTask(taskId: Id, reason: KillReason): Unit = {
     val instance = mock[Instance]
     instance.instanceId returns taskId.instanceId
-    killInstance(instance, reason)
+    killInstance(instance)
   }
 
   override def killInstancesAndForget(instances: Seq[Instance], reason: KillReason): Unit = {
     instances.foreach { instance =>
-      killInstance(instance, reason)
+      killInstance(instance)
     }
   }
 }

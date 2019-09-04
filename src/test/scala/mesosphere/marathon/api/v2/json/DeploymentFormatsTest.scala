@@ -69,7 +69,7 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
 
     "DeploymentPlan can be serialized" in {
       val plan = DeploymentPlan(
-        genId.toString,
+        genId,
         genRootGroup(),
         genRootGroup(Set(genGroup(), genGroup())),
         Seq(genStep),

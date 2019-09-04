@@ -180,9 +180,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         "/fetch(1)/uri" -> "URI has invalid syntax.")
 
       app = correct.copy(
-        unreachableStrategy = UnreachableDisabled)
-
-      app = correct.copy(
         fetch = Seq(FetchUri(uri = "http://example.com/valid"), FetchUri(uri = "/root/file")))
 
       validator(app) shouldNot haveViolations("/fetch(1)" -> "URI has invalid syntax.")
