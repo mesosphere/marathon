@@ -328,7 +328,7 @@ def jenkins(): Unit = {
     case Some(Release(version)) => buildReleaseBranch(version)
     case _ =>
       println(s"Unknown job type $jobName - must be master build, release branch or PR build.")
-      sys.exit(1)
+      //sys.exit(1)
   }
 }
 
