@@ -7,6 +7,32 @@ import scala.util.Try
 import sys.process._
 
 /**
+  * A class simplifying using `stracer` in test methods. See Stracer.withStrace fixture method.
+  */
+class Stracer extends StrictLogging {
+
+  var straced = List.empty[Process]
+
+  def straceExecutor(cmd: String): Unit = {
+    val epid = Stracer.mesosExecutorPid(cmd) // Have to be unique so that only one process is found
+    if (epid.isEmpty) {
+      logger.info(s"FAILED to find executor PID for a task with cmd = $cmd")
+    } else {
+      val proc = Stracer.stracePid(epid.head)
+      straced = straced :+ proc
+    }
+  }
+
+  def cleanup(): Unit = {
+    straced.foreach{ p =>
+      p.destroy()
+      p.exitValue()
+    }
+    straced = List.empty[Process]
+  }
+}
+
+/**
   * A useful set of methods around `strace` utility, used to debug sudden task/executor deaths. Usually, it is hard
   * to find out Mesos task PID since neither Mesos nor Marathon expose it in their APIs. However, given an unique
   * command launch string (e.g. `sleep %random_big_number`) one can grep `ps` output for it and attach `strace` to
@@ -72,6 +98,12 @@ object Stracer extends StrictLogging {
     val out = output.getOrElse(s"strace-$pid")
     logger.info(s"sudo strace -p $pid -f -bexecve")
     Process(s"sudo strace -p $pid -f -bexecve").run(ProcessOutputToLogStream(out))
+  }
+
+  def withStracer(fn: Stracer => Any): Unit = {
+    val stracer = new Stracer
+    try fn(stracer)
+    finally stracer.cleanup()
   }
 
   def main(args: Array[String]): Unit = {
