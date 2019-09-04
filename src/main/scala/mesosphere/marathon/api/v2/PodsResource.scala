@@ -95,7 +95,7 @@ class PodsResource @Inject() (
 
       val roleSettings = RoleSettings.forService(config, PathId(podRaml.id).canonicalPath(PathId.root), groupManager.rootGroup(), false)
       implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
-      implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
+      implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion())
       implicit val podDefValidator: Validator[PodDefinition] = PodsValidation.podDefValidator(pluginManager, roleSettings)
 
       validateOrThrow(podRaml)
@@ -129,7 +129,7 @@ class PodsResource @Inject() (
 
       val roleSettings = RoleSettings.forService(config, podId, groupManager.rootGroup(), force)
       implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
-      implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
+      implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion())
       implicit val podDefValidator: Validator[PodDefinition] = PodsValidation.podDefValidator(pluginManager, roleSettings)
 
       validateOrThrow(podRaml)

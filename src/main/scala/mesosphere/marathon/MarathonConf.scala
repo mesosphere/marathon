@@ -172,7 +172,7 @@ trait MarathonConf
     true
   }
 
-  //noinspection ScalaDeprecation
+  @silent("deprecated")
   private[this] def deriveDefaultAcceptedResourceRolesDefaultBehavior: Option[AcceptedResourceRolesDefaultBehavior] = {
     defaultAcceptedResourceRoles.toOption match {
       case Some(set) if set == Set(ResourceRole.Unreserved) => Some(AcceptedResourceRolesDefaultBehavior.Unreserved)
@@ -189,7 +189,7 @@ trait MarathonConf
     }
   }
 
-  //noinspection ScalaDeprecation
+  @silent("deprecated")
   lazy val acceptedResourceRolesDefaultBehavior: ScallopOption[AcceptedResourceRolesDefaultBehavior] = opt[AcceptedResourceRolesDefaultBehavior](
     name = "accepted_resource_roles_default_behavior",
     descr = "Default behavior for acceptedResourceRoles if not explicitly set on a service." +

@@ -70,7 +70,7 @@ trait MetricsConf extends ScallopConf {
     name = "metrics_statsd_host",
     descr = "A remote hostname for the StatsD reporter.",
     argName = "host",
-    validate = _.nonEmpty,
+    validate = s => s.nonEmpty,
     noshort = true
   )
 

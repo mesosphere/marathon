@@ -14,9 +14,9 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 
-val silencerVersion = "1.1"
-addCompilerPlugin("com.github.ghik" %% "silencer-plugin" % silencerVersion)
-libraryDependencies += "com.github.ghik" %% "silencer-lib" % silencerVersion % Provided
+val silencerVersion = "1.4.3"
+addCompilerPlugin("com.github.ghik" %% "silencer-plugin" % silencerVersion cross CrossVersion.full)
+libraryDependencies += "com.github.ghik" %% "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
 
 lazy val formatSettings = Seq(
   ScalariformKeys.preferences := FormattingPreferences()
@@ -79,7 +79,7 @@ val pbSettings = ProtobufPlugin.projectSettings ++ Seq(
 lazy val commonSettings = Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
-  scalaVersion := "2.12.7",
+  scalaVersion := "2.12.8",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
     "-encoding", "UTF-8",
@@ -249,7 +249,7 @@ lazy val ammonite = (project in file("./tools/repl-server"))
   .settings(formatSettings: _*)
   .settings(
     mainClass in Compile := Some("ammoniterepl.Main"),
-    libraryDependencies += "com.lihaoyi" % "ammonite-sshd" % "1.5.0" cross CrossVersion.full
+    libraryDependencies += "com.lihaoyi" % "ammonite-sshd" % "1.6.9" cross CrossVersion.full
   )
   .dependsOn(marathon)
 
