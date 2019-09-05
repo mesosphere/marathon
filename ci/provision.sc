@@ -115,3 +115,4 @@ def installDcosCli(): Unit = {
     %("chmod", "+x", "/usr/local/bin/dcos")
   }
 }
+
