@@ -87,12 +87,11 @@ object Stracer extends StrictLogging {
     logger.info("ps auxww")
     Seq("ps", "auxww").!!.trim
       .split("\n")
-      .map{ s => logger.info(s); s }
+      .map { s => logger.info(s); s }
       .map(_.trim)
       .filter(_.contains(searchStr))
       .map(s => s.split(" +")(1))
-      .map(p => Try(p.toInt).toOption)
-      .flatten
+      .flatMap(p => Try(p.toInt).toOption)
       .to[Seq]
   }
 
