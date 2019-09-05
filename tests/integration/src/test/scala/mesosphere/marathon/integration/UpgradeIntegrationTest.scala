@@ -18,7 +18,6 @@ import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.{HavePropertyMatchResult, HavePropertyMatcher}
-import Stracer.withStracer
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -107,7 +106,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   }
 
   "Ephemeral and persistent apps and pods" should {
-    "survive an upgrade cycle" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in withStracer { st =>
+    "survive an upgrade cycle" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
 
       val zkUrl = s"$zkURLBase-upgrade-cycle"
 
@@ -127,9 +126,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       patienceConfig
       eventually { marathon149 should have (runningTasksFor(app_149.id.toPath, 1)) }
       eventually { marathon149 should have (runningTasksFor(app_149_fail.id.toPath, 1)) }
-
-      // ==== TODO(ad): REMOVE ME =====
-      st.straceExecutor(app_149.id) // App id is part of the cmd
 
       val originalApp149Tasks = marathon149.client.tasks(app_149.id.toPath).value
       val originalApp149FailedTasks = marathon149.client.tasks(app_149_fail.id.toPath).value
@@ -156,9 +152,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       Then("All apps from 1.5.15 are running")
       eventually { marathon1515 should have (runningTasksFor(app_1515.id.toPath, 1)) }
       eventually { marathon1515 should have (runningTasksFor(app_1515_fail.id.toPath, 1)) }
-
-      // ==== TODO(ad): REMOVE ME =====
-      st.straceExecutor(app_1515.id) // App id is part of the cmd
 
       val originalApp1515Tasks = marathon1515.client.tasks(app_1515.id.toPath).value
       val originalApp1515FailedTasks = marathon1515.client.tasks(app_1515_fail.id.toPath).value
@@ -239,7 +232,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  "upgrade from 1.6.549 to the latest" in withStracer { st =>
+  "upgrade from 1.6.549 to the latest" in {
     val zkUrl = s"$zkURLBase-to-latest"
     val marathon16549 = Marathon16549(marathon16549Artifact.marathonPackage, suiteName = s"$suiteName-1-6-549", mesosMasterUrl, zkUrl)
 
@@ -258,9 +251,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     patienceConfig
     eventually { marathon16549 should have (runningTasksFor(app_16549.id.toPath, 1)) }
     eventually { marathon16549 should have (runningTasksFor(app_16549_fail.id.toPath, 1)) }
-
-    // ==== TODO(ad): REMOVE ME =====
-    st.straceExecutor(app_16549.id) // App id is part of the cmd
 
     val originalApp16549Tasks = marathon16549.client.tasks(app_16549.id.toPath).value
     val originalApp16549FailedTasks = marathon16549.client.tasks(app_16549_fail.id.toPath).value
@@ -285,7 +275,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     marathonCurrent.close()
   }
 
-  "resident app can be restarted after upgrade from 1.6.549" in withStracer { st =>
+  "resident app can be restarted after upgrade from 1.6.549" in {
     val zkUrl = s"$zkURLBase-resident-apps"
     val marathon16549 = Marathon16549(marathon16549Artifact.marathonPackage, suiteName = s"$suiteName-1-6-549", mesosMasterUrl, zkUrl)
 
@@ -299,7 +289,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     val residentApp_16549 = residentApp(
       id = testBasePath / "resident-app-16549",
       containerPath = containerPath,
-      cmd = s"""echo $$MESOS_TASK_ID >> $containerPath/data && sleep 13371337""")
+      cmd = s"""echo $$MESOS_TASK_ID >> $containerPath/data && sleep 1000""")
     marathon16549.client.createAppV2(residentApp_16549) should be(Created)
 
     patienceConfig
@@ -314,9 +304,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathon16549.client.tasks(residentApp_16549.id.toPath).value should not contain theSameElementsAs(originalApp16549Tasks)
       marathon16549 should have (runningTasksFor(residentApp_16549.id.toPath, 1))
     }
-
-    // ==== TODO(ad): REMOVE ME =====
-    st.straceExecutor("sleep 13371337") // Unique cmd string of the residentApp_16549
 
     // Pass upgrade to current
     When("Marathon is upgraded to the current version")

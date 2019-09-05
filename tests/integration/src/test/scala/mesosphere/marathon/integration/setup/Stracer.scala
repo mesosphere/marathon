@@ -7,22 +7,29 @@ import scala.util.Try
 import sys.process._
 
 /**
-  * A class simplifying using `stracer` in test methods. See Stracer.withStrace fixture method.
+  * A class simplifying using `strace` in test methods. See [[Stracer.withStracer()]] fixture method.
   */
 class Stracer extends StrictLogging {
 
   var straced = List.empty[Process]
 
-  def straceExecutor(cmd: String): Unit = {
-    val epid = Stracer.mesosExecutorPid(cmd) // Have to be unique so that only one process is found
+  /**
+    * Runs `strace` for the executor of the task with the passed `taskCmd`. The later has to be unique so that only
+    * one process is found.
+    */
+  def straceExecutor(taskCmd: String): Unit = {
+    val epid = Stracer.mesosExecutorPid(taskCmd)
     if (epid.isEmpty) {
-      logger.info(s"FAILED to find executor PID for a task with cmd = $cmd")
+      logger.info(s"FAILED to find executor PID for a task with cmd = $taskCmd")
     } else {
       val proc = Stracer.stracePid(epid.head)
       straced = straced :+ proc
     }
   }
 
+  /**
+    * Destroys all running `strace` processes. Called automatically when using [[Stracer.withStracer()]] test fixture.
+    */
   def cleanup(): Unit = {
     straced.foreach{ p =>
       p.destroy()
@@ -100,12 +107,20 @@ object Stracer extends StrictLogging {
     Process(s"sudo strace -p $pid -f -bexecve").run(ProcessOutputToLogStream(out))
   }
 
+  /**
+    * A fixture method, providing an instance [[Stracer]] class to the test. Use it like:
+    * ```
+    * "some process should not die" in withStracer { st =>
+    *    st.straceExecutor(taskCmd = "sleep 1337")
+    *    ...
+    * }
+    * ```
+    *
+    * `strace` processes will be cleaned up after the test.
+    */
   def withStracer(fn: Stracer => Any): Unit = {
     val stracer = new Stracer
     try fn(stracer)
     finally stracer.cleanup()
-  }
-
-  def main(args: Array[String]): Unit = {
   }
 }

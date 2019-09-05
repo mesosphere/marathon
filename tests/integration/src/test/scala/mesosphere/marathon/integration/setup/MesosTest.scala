@@ -312,6 +312,7 @@ case class MesosCluster(
         s"--resources=${resources.resourceString()}",
         s"--master=$masterUrl",
         s"--work_dir=${workDir.getAbsolutePath}",
+        s"--cgroups_root=mesos$port", // See MESOS-9960 for more info
         s"""--executor_environment_variables={"GLOG_v": "2"}""") ++ extraArgs,
       cwd = None, extraEnv = Seq(("GLOG_v", "2")) ++ mesosEnv(workDir): _*)
 
