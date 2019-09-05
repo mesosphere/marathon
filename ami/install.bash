@@ -102,5 +102,8 @@ git clone https://github.com/mesosphere/marathon.git /home/admin/marathon
 cd /home/admin/marathon
 sbt update
 
+echo -e "\n=== Install Utils ==="
+apt-get install strace
+
 # This throws an error without a parameter, but still fetches all required dependencies
 ci/pipeline || true
