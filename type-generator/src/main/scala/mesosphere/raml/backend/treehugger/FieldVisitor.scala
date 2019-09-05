@@ -1,6 +1,6 @@
 package mesosphere.raml.backend.treehugger
 
-import mesosphere.raml.backend.{PlayPath, PlayReads, camelify, scalaFieldName, underscoreToCamel}
+import mesosphere.raml.backend.{PlayPath, camelify, scalaFieldName, underscoreToCamel}
 import mesosphere.raml.ir.{ConstraintT, FieldT}
 import treehugger.forest._
 import definitions._
@@ -10,9 +10,15 @@ import scala.annotation.tailrec
 
 object FieldVisitor {
 
-  def visit(params: Seq[FieldT]): Seq[ValDef] = {
+  def visit(params: Seq[FieldT], flags: Seq[Long] = Seq()): Seq[ValDef] = {
     params.map { param =>
-      param.paramTypeValue.fold { PARAM(param.name, param.`type`).tree } { case (pType, pValue) => PARAM(param.name, pType) := pValue }
+      param.paramTypeValue.fold { VAL(param.name, param.`type`).withFlags(flags:_*).tree } { case (pType, pValue) => VAL(param.name, pType).withFlags(flags:_*) := pValue }
+    }
+  }
+
+  def visitForDef(params: Seq[FieldT]): Seq[DefDef] = {
+    params.map { param =>
+      param.paramTypeValue.fold { DEF(param.name, param.`type` ).tree } { case (pType, pValue) => DEF(param.name, pType) := pValue }
     }
   }
 

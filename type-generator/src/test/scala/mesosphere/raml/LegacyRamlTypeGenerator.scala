@@ -345,7 +345,7 @@ object LegacyRamlTypeGenerator {
     }
 
     lazy val param: treehugger.forest.ValDef =
-      paramTypeValue.fold { PARAM(name, `type`).tree } { case (pType, pValue) => PARAM(name, pType) := pValue }
+      paramTypeValue.fold { VAL(name, `type`).tree } { case (pType, pValue) => VAL(name, pType) := pValue }
 
     lazy val comment: String = if (comments.nonEmpty) {
       val lines = comments.flatMap(_.lines)
