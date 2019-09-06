@@ -4,11 +4,14 @@ PREFIX := usr
 FPM_VERSION := 1.10.2
 FPM := FPM_VERSION=$(FPM_VERSION) bin/fpm-docker
 
-PKG_VER ?= $(shell cd ../../ && ./version)
+REF ?= HEAD
+
 PKG_REL ?= 0.1.$(shell date -u +'%Y%m%d%H%M%S')
-PKG_COMMIT ?= $(shell cd ../../ && ./version commit)
+PKG_COMMIT = $(shell cd ../../ && ./version commit --ref $(REF))
+PKG_VER = $(shell cd ../../ && ./version --ref $(PKG_COMMIT))
 
 FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
+	-p target/ \
 	--architecture all \
 	--url "https://github.com/mesosphere/marathon" \
 	--license Apache-2.0 \
@@ -64,11 +67,9 @@ ubuntu: ubuntu-trusty-1404 ubuntu-xenial-1604 ubuntu-bionic-1804
 debian: debian-stretch-9
 
 .PHONY: el6
-el6: toor/el6/etc/init.d/marathon
-el6: toor/el6/$(PREFIX)/share/marathon
-el6: toor/el6/etc/default/marathon
-el6: fpm-docker/.provisioned
-	$(FPM) -C toor/el6 \
+el6: target/marathon-$(PKG_VER)-$(PKG_REL).el6.noarch.rpm
+target/marathon-$(PKG_VER)-$(PKG_REL).el6.noarch.rpm: target/toor/el6/etc/init.d/marathon target/toor/el6/$(PREFIX)/share/marathon target/toor/el6/etc/default/marathon target/fpm-docker/.provisioned
+	$(FPM) -C target/toor/el6 \
 	        --config-files etc/default/marathon \
 		--iteration $(PKG_REL).el6 \
 	        --before-install scripts/adduser \
@@ -77,11 +78,9 @@ el6: fpm-docker/.provisioned
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: el7
-el7: toor/el7/usr/lib/systemd/system/marathon.service
-el7: toor/el7/$(PREFIX)/share/marathon
-el7: toor/el7/etc/default/marathon
-el7: fpm-docker/.provisioned
-	$(FPM) -C toor/el7 \
+el7: target/marathon-$(PKG_VER)-$(PKG_REL).el7.noarch.rpm
+target/marathon-$(PKG_VER)-$(PKG_REL).el7.noarch.rpm: target/toor/el7/usr/lib/systemd/system/marathon.service target/toor/el7/$(PREFIX)/share/marathon target/toor/el7/etc/default/marathon target/fpm-docker/.provisioned
+	$(FPM) -C target/toor/el7 \
 		--iteration $(PKG_REL).el7 \
 		--config-files usr/lib/systemd/system/marathon.service \
                 --config-files etc/default/marathon \
@@ -92,11 +91,9 @@ el7: fpm-docker/.provisioned
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
 
 .PHONY: ubuntu-trusty-1404
-ubuntu-trusty-1404: toor/ubuntu-trusty/etc/init.d/marathon
-ubuntu-trusty-1404: toor/ubuntu-trusty/$(PREFIX)/share/marathon
-ubuntu-trusty-1404: toor/ubuntu-trusty/etc/default/marathon
-ubuntu-trusty-1404: fpm-docker/.provisioned
-	$(FPM) -C toor/ubuntu-trusty \
+ubuntu-trusty-1404: target/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1404_all.deb
+target/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1404_all.deb: target/toor/ubuntu-trusty/etc/init.d/marathon target/toor/ubuntu-trusty/$(PREFIX)/share/marathon target/toor/ubuntu-trusty/etc/default/marathon target/fpm-docker/.provisioned
+	$(FPM) -C target/toor/ubuntu-trusty \
 	        --config-files etc/default/marathon \
 		--iteration $(PKG_REL).ubuntu1404 \
 	        --before-install scripts/adduser \
@@ -105,70 +102,75 @@ ubuntu-trusty-1404: fpm-docker/.provisioned
 		$(FPM_OPTS_DEB) $(FPM_OPTS) .
 
 .PHONY: ubuntu-xenial-1604
-ubuntu-xenial-1604: toor/ubuntu-xenial/lib/systemd/system/marathon.service
-ubuntu-xenial-1604: toor/ubuntu-xenial/$(PREFIX)/share/marathon
-ubuntu-xenial-1604: toor/ubuntu-xenial/etc/default/marathon
-ubuntu-xenial-1604: fpm-docker/.provisioned
-	$(FPM) -C toor/ubuntu-xenial \
+ubuntu-xenial-1604: target/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1604_all.deb
+target/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1604_all.deb: target/toor/ubuntu-xenial/lib/systemd/system/marathon.service target/toor/ubuntu-xenial/$(PREFIX)/share/marathon target/toor/ubuntu-xenial/etc/default/marathon target/fpm-docker/.provisioned
+	$(FPM) -C target/toor/ubuntu-xenial \
 		--iteration $(PKG_REL).ubuntu1604 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
 .PHONY: ubuntu-bionic-1804
-ubuntu-bionic-1804: toor/ubuntu-bionic/lib/systemd/system/marathon.service
-ubuntu-bionic-1804: toor/ubuntu-bionic/$(PREFIX)/share/marathon
-ubuntu-bionic-1804: toor/ubuntu-bionic/etc/default/marathon
-ubuntu-bionic-1804: fpm-docker/.provisioned
-	$(FPM) -C toor/ubuntu-xenial \
+ubuntu-bionic-1804: target/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1804_all.deb
+target/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1804_all.deb: target/toor/ubuntu-bionic/lib/systemd/system/marathon.service target/toor/ubuntu-bionic/$(PREFIX)/share/marathon target/toor/ubuntu-bionic/etc/default/marathon target/fpm-docker/.provisioned
+	$(FPM) -C target/toor/ubuntu-xenial \
 		--iteration $(PKG_REL).ubuntu1804 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
 .PHONY: debian-stretch-9
-debian-stretch-9: toor/debian-stretch-9/lib/systemd/system/marathon.service
-debian-stretch-9: toor/debian-stretch-9/$(PREFIX)/share/marathon
-debian-stretch-9: toor/debian-stretch-9/etc/default/marathon
-debian-stretch-9: fpm-docker/.provisioned
-	$(FPM) -C toor/debian-stretch-9 \
+debian-stretch-9: marathon_$(PKG_VER)-$(PKG_REL).debian9_all.deb
+target/marathon_$(PKG_VER)-$(PKG_REL).debian9_all.deb: target/toor/debian-stretch-9/lib/systemd/system/marathon.service target/toor/debian-stretch-9/$(PREFIX)/share/marathon target/toor/debian-stretch-9/etc/default/marathon target/fpm-docker/.provisioned
+	$(FPM) -C target/toor/debian-stretch-9 \
 		--iteration $(PKG_REL).debian9 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
-toor/%/etc/default/marathon:
+target/toor/%/etc/default/marathon:
 	mkdir -p "$(dir $@)"
 	cp marathon.defaults $@
 
-toor/el6/etc/init.d/marathon: scripts/el6.init
+target/toor/el6/etc/init.d/marathon: scripts/el6.init
 	mkdir -p "$(dir $@)"
 	cp scripts/el6.init "$@"
 	chmod 0755 "$@"
 
-toor/ubuntu-trusty/etc/init.d/marathon: scripts/ubuntu1404.init
+target/toor/ubuntu-trusty/etc/init.d/marathon: scripts/ubuntu1404.init
 	mkdir -p "$(dir $@)"
 	cp scripts/ubuntu1404.init "$@"
 	chmod 0755 "$@"
 
-toor/%/usr/lib/systemd/system/marathon.service: scripts/marathon.systemd.service
+target/toor/%/usr/lib/systemd/system/marathon.service: scripts/marathon.systemd.service
 	mkdir -p "$(dir $@)"
 	cp scripts/marathon.systemd.service "$@"
 
-toor/%/lib/systemd/system/marathon.service: scripts/marathon.systemd.service
+target/toor/%/lib/systemd/system/marathon.service: scripts/marathon.systemd.service
 	mkdir -p "$(dir $@)"
 	cp scripts/marathon.systemd.service "$@"
 
-toor/%/share/marathon: ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
+target/toor/%/share/marathon: target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
 	rm -rf "$(dir $@)"
 	mkdir -p "$(dir $@)"
-	tar xzf ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz -C "$(dir $@)"
+	tar xzf target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz -C "$(dir $@)"
 	mv $@-$(PKG_VER)-$(PKG_COMMIT) $@
 	touch $@
 
-../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz:
+ifeq ($(REF), HEAD)
+target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz:
+	mkdir -p target/toor
 	cd ../../ && sbt universal:packageZipTarball
+	cp ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz $@
+else
+target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz:
+	mkdir -p target/toor
+	curl -f -o $@ https://downloads.mesosphere.io/marathon/builds/$(PKG_VER)-$(PKG_COMMIT)/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
+endif
 
-fpm-docker/.provisioned:
+download: | target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
+
+target/fpm-docker/.provisioned:
 	cd fpm-docker && docker build . --build-arg FPM_VERSION=$(FPM_VERSION) -t fpm:$(FPM_VERSION)
+	mkdir -p target/fpm-docker
 	touch $@
 
 clean:
-	rm -rf marathon*.deb marathon*.rpm marathon*.pkg toor fpm-docker/.provisioned
+	rm -rf marathon*.deb marathon*.rpm marathon*.pkg target
 
 purge: | clean
 	# We could also use 'sbt clean' but it takes forever and is not as thorough.
