@@ -211,7 +211,6 @@ trait AppValidation {
         option.keys.each should matchRegex(OptionKeyRegex)
       }
       val validExternalInfo: Validator[ExternalVolumeInfo] = validator[ExternalVolumeInfo] { info =>
-        info.name is definedAnd(matchRegex(LabelRegex))
         info.provider is definedAnd(matchRegex(LabelRegex))
         info.options is validOptions
       }
