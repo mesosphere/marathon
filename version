@@ -7,6 +7,7 @@
 MAJOR=1
 MINOR=9
 BRANCH_POINT=8228cea
+PREVIOUS_BRANCH=origin/releases/1.$(($MINOR - 1))
 REF=HEAD
 
 declare -a OTHERARGS
@@ -46,8 +47,16 @@ done
 
 # Infer version
 # Number of commits since branch point
+IS_DIRECT_CHILD=$( git log origin/master..8228cea)
 COMMIT_NUMBER="$(git rev-list --count --first-parent $BRANCH_POINT..$REF)"
 COMMIT_HASH=$(git rev-parse --short $REF)
+
+# Detect if the commit in question belongs to another minor version
+if !(git merge-base --is-ancestor $BRANCH_POINT $REF) || (git merge-base --is-ancestor $REF $PREVIOUS_BRANCH) &&
+      [ $(git rev-parse --verify $REF) != $(git rev-parse --verify $BRANCH_POINT) ]; then
+  echo "$REF is not a ${MAJOR}.${MINOR}.x version"
+  exit 1
+fi
 
 case ${OTHERARGS[0]} in
   commit)
