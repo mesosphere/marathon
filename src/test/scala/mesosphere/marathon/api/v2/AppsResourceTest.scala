@@ -1272,7 +1272,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getEntity.toString should include("is unknown provider")
     }
 
-    "Creating an app with an external volume with no name orprovider name specified should FAIL provider validation" in new Fixture {
+    "Creating an app with an external volume with no name or provider name specified should FAIL provider validation" in new Fixture {
       Given("An app with an unnamed volume provider")
       val response =
         createAppWithVolumes(
