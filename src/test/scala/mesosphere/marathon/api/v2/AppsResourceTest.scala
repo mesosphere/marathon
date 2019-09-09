@@ -1120,7 +1120,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getEntity.toString should include("is unknown provider")
     }
 
-    "Creating an app with an external volume with no name orprovider name specified should FAIL provider validation" in new Fixture {
+    "Creating an app with an external volume with no name or provider name specified should FAIL provider validation" in new Fixture {
       Given("An app with an unnamed volume provider")
       val response =
         createAppWithVolumes(
@@ -1840,6 +1840,85 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       updateResponse.getStatus should be(200)
       updateResponse.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
+    }
+
+
+    "ExternalVolume names with options are considered valid" in new Fixture() {
+      Given("an app with external volume whose name serializes options")
+      val volumeName = "name=teamvolumename,repl=1,secure=true,secret_key=volume-secret-key-team"
+      val appWithExtVol: String =
+        s"""
+          |{
+          |  "id": "nginx-ucr",
+          |  "container": {
+          |    "type": "MESOS",
+          |    "volumes": [
+          |      {
+          |        "external": {
+          |          "size": 5,
+          |          "name": "$volumeName",
+          |          "provider": "dvdi",
+          |          "options": {
+          |            "dvdi/driver": "pxd",
+          |            "dvdi/secure": "true",
+          |            "dvdi/secret_key": "volume-secret-key-team",
+          |            "dvdi/repl": "1",
+          |            "dvdi/shared": "true"
+          |          }
+          |        },
+          |        "mode": "RW",
+          |        "containerPath": "/mnt/nginx"
+          |      }
+          |    ],
+          |    "docker": {
+          |      "image": "nginx",
+          |      "forcePullImage": false,
+          |      "parameters": []
+          |    },
+          |    "portMappings": [
+          |      {
+          |        "containerPort": 80,
+          |        "hostPort": 0,
+          |        "protocol": "tcp",
+          |        "name": "web"
+          |      }
+          |    ]
+          |  },
+          |  "cpus": 0.1,
+          |  "disk": 0,
+          |  "instances": 1,
+          |  "mem": 128,
+          |  "gpus": 0,
+          |  "networks": [
+          |    {
+          |      "mode": "container/bridge"
+          |    }
+          |  ],
+          |  "requirePorts": false,
+          |  "healthChecks": [],
+          |  "fetch": [],
+          |  "constraints": []
+          |}
+        """.stripMargin
+      val appJs = Json.parse(appWithExtVol)
+      val app = appJs.as[raml.App]
+
+      val (body, _) = prepareApp(app, groupManager, validate = false)
+
+      When("The create request is made")
+      clock += (5.seconds)
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        Then("The return code indicates success")
+        response.getStatus should be(201)
+      }
+
+      And("the resulting app has the given volume name")
+      val appJson = Json.parse(response.getEntity.asInstanceOf[String])
+      (appJson \ "container" \ "volumes" \ 0 \ "external" \ "name") should be (JsDefined(JsString(volumeName)))
     }
   }
 }

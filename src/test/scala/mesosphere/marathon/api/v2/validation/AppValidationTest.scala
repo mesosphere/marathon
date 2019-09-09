@@ -14,6 +14,7 @@ class AppValidationTest extends UnitTest with ValidationTestLike with TableDrive
   val basicValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)
   val withSecretsValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set("secrets"), () => config.defaultNetworkName)
   val withDefaultNetworkNameValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => configWithDefaultNetworkName.defaultNetworkName)
+  val withExternalVolValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(enabledFeatures = Set(Features.EXTERNAL_VOLUMES), defaultNetworkName = () => config.defaultNetworkName)
 
   "File based secrets validation" when {
     "file based secret is used when secret feature is not enabled" should {
@@ -163,6 +164,32 @@ class AppValidationTest extends UnitTest with ValidationTestLike with TableDrive
             hostPort = Option(0),
             networkNames = List("1"))), networkCount = 2)
         basicValidator(app) should be(aSuccess)
+      }
+    }
+
+    "external volume" should {
+
+      "consider an external volume with a complex name as valid" in {
+        val app = App(
+          id = "/foo",
+          cmd = Some("bar"),
+          container = Some(Container(
+            `type` = EngineType.Mesos,
+            docker = Some(DockerContainer(
+              image = "xyz")),
+            volumes = Seq(AppExternalVolume(
+              containerPath = "/some/path",
+              external = ExternalVolumeInfo(
+                provider = Some("dvdi"),
+                size = Some(1024),
+                name = Some("name=teamvolumename,secret_key=volume-secret-key-team,secure=true,size=5,repl=1,shared=true"),
+                options = Map("dvdi/driver" -> "pxd")
+              ),
+              mode = ReadMode.Rw
+            )))
+          ))
+
+        withExternalVolValidator(app) should be(aSuccess)
       }
     }
 
