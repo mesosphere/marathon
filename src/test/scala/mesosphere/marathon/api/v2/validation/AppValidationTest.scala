@@ -14,7 +14,7 @@ class AppValidationTest extends UnitTest with ValidationTestLike with TableDrive
   val basicValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)
   val withSecretsValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set("secrets"), () => config.defaultNetworkName)
   val withDefaultNetworkNameValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => configWithDefaultNetworkName.defaultNetworkName)
-  val withExternalVolValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(enabledFeatures = Set(Features.EXTERNAL_VOLUMES), defaultNetworkName = () => config.defaultNetworkName, validRoles = Set.empty[String])
+  val withExternalVolValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(enabledFeatures = Set(Features.EXTERNAL_VOLUMES), defaultNetworkName = () => config.defaultNetworkName)
 
   "File based secrets validation" when {
     "file based secret is used when secret feature is not enabled" should {
