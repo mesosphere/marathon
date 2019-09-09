@@ -129,6 +129,29 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
       )
     }
 
+    "a volume with parameters in the name and result in no error" in {
+      val f = new Fixture
+      Given("a root group with two apps and conflicting volumes")
+      val app1 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app1"), volumeName = "name=teamvolumename,secret_key=volume-secret-key-team,secure=true,size=5,repl=1,shared=true")
+      val rootGroup = createRootGroup(
+        groups = Set(
+          createGroup(
+            id = AbsolutePathId("/nested"),
+            apps = Map(
+              app1.id -> app1
+            ),
+            validate = false
+          )
+        ),
+        validate = false
+      )
+
+      f.checkResult(
+        rootGroup,
+        expectedViolations = Set.empty
+      )
+    }
+
     class Fixture {
       def appWithDVDIVolume(appId: PathId, volumeName: String, provider: String = DVDIProvider.name, shared: Boolean = false): AppDefinition = {
         AppDefinition(
