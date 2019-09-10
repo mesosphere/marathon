@@ -26,6 +26,4 @@ case class GeneratedFile(objects: Seq[GeneratedObject]) {
 
 }
 
-case class GeneratedObject(name: String, trees: Seq[Tree], jacksonSerializer: Option[Symbol] = Option.empty) {
-
-}
+case class GeneratedObject(name: String, trees: Seq[Tree], jacksonSerializer: Option[Symbol] = Option.empty)

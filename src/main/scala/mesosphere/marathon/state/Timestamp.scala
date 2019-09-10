@@ -49,11 +49,9 @@ abstract case class Timestamp private (private val instant: Instant) extends Ord
 
   def +(duration: FiniteDuration): Timestamp = Timestamp(instant.plusMillis(duration.toMillis))
   def -(duration: FiniteDuration): Timestamp = Timestamp(instant.minusMillis(duration.toMillis))
-
 }
 
 object Timestamp {
-
   def apply(offsetDateTime: OffsetDateTime): Timestamp =
     apply(offsetDateTime.toInstant)
 
@@ -108,5 +106,4 @@ object Timestamp {
    * .toString in java.time is truncating zeros in millis part, so we use custom formatter to keep them
    */
   val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
-
 }

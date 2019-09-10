@@ -60,7 +60,6 @@ object EnumVisitor {
 
     val jacksonSerializerSym = RootClass.newClass(name + "Serializer")
 
-
     val jacksonSerializer = OBJECTDEF(jacksonSerializerSym).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
       DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
         PARAM("value", name),

@@ -12,7 +12,6 @@ sealed trait VersionInfo {
   def withConfigChange(newVersion: Timestamp): VersionInfo = {
     VersionInfo.forNewConfig(newVersion)
   }
-
 }
 
 object VersionInfo {
@@ -58,5 +57,4 @@ object VersionInfo {
     lastScalingAt = newVersion,
     lastConfigChangeAt = newVersion
   )
-
 }

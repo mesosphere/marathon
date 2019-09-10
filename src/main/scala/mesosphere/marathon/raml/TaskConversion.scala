@@ -63,8 +63,4 @@ object TaskConversion extends HealthConversion with DefaultConversions {
       role = enrichedTask.role
     )
   }
-
-  implicit val taskCountsWrite: Writes[core.appinfo.TaskCounts, raml.TaskCounts] = Writes { taskCounts =>
-    raml.TaskCounts(taskCounts.tasksStaged, taskCounts.tasksRunning, taskCounts.tasksHealthy, taskCounts.tasksUnhealthy)
-  }
 }

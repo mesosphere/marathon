@@ -37,7 +37,6 @@ case class TaskFailure(
     slaveId.foreach(taskFailureBuilder.setSlaveId)
     taskFailureBuilder.build
   }
-
 }
 
 object TaskFailure {

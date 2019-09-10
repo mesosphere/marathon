@@ -8,7 +8,7 @@ object Visitor {
   def visit(generated: Seq[GeneratedClass]): GeneratedFile = {
       generated
         .map(visit)
-        .foldLeft(GeneratedFile(Seq.empty)) { (acc, next) => GeneratedFile(acc.objects ++ next.objects)}
+        .foldLeft(GeneratedFile(Seq.empty)) { (acc, next) => GeneratedFile(acc.objects ++ next.objects) }
   }
 
   def visit(generated: GeneratedClass): GeneratedFile = {
