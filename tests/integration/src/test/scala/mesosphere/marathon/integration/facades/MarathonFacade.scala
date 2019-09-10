@@ -23,13 +23,13 @@ import mesosphere.marathon
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.raml18.PodStatus18
 import mesosphere.marathon.integration.setup.{AkkaHttpResponse, RestResult}
-import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
+import mesosphere.marathon.raml.{App, AppUpdate, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.Retry
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
-import mesosphere.marathon.state.PathId._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
@@ -47,7 +47,11 @@ case class ITAppVersions(versions: Seq[Timestamp])
 case class ITListTasks(tasks: Seq[ITEnrichedTask])
 case class ITDeploymentPlan(version: String, deploymentId: String)
 case class ITHealthCheckResult(firstSuccess: Option[String], lastSuccess: Option[String], lastFailure: Option[String], consecutiveFailures: Int, alive: Boolean)
+case class ITCheckResult(http: Option[ITHttpCheckStatus] = None, tcp: Option[ITTCPCheckStatus] = None, command: Option[ITCommandCheckStatus] = None)
 case class ITDeploymentResult(version: Timestamp, deploymentId: String)
+case class ITHttpCheckStatus(statusCode: Int)
+case class ITTCPCheckStatus(succeeded: Boolean)
+case class ITCommandCheckStatus(exitCode: Int)
 case class ITEnrichedTask(
     appId: String,
     id: String,
@@ -60,6 +64,7 @@ case class ITEnrichedTask(
     version: Option[String],
     region: Option[String],
     zone: Option[String],
+    check: Option[ITCheckResult],
     role: Option[String],
     healthCheckResults: Seq[ITHealthCheckResult]) {
 
@@ -98,13 +103,14 @@ class MarathonFacade(
   extends PodConversion with StrictLogging {
   implicit val scheduler = system.scheduler
   import AkkaHttpResponse._
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   require(baseGroup.absolute)
 
+  import PlayJsonSupport.marshaller
   import mesosphere.marathon.api.v2.json.Formats._
   import play.api.libs.json._
-  import PlayJsonSupport.marshaller
 
   implicit lazy val itAppDefinitionFormat = Json.format[ITAppDefinition]
   implicit lazy val itListAppsResultFormat = Json.format[ITListAppsResult]
@@ -120,6 +126,15 @@ class MarathonFacade(
   implicit lazy val itQueueItemFormat = Json.format[ITQueueItem]
   implicit lazy val itLaunchQueueFormat = Json.format[ITLaunchQueue]
 
+  implicit lazy val itHttpCheckStatus = Json.format[ITHttpCheckStatus]
+  implicit lazy val itTCPCheckStatus = Json.format[ITTCPCheckStatus]
+  implicit lazy val itCommandCheckStatus = Json.format[ITCommandCheckStatus]
+  implicit lazy val itCheckResultFormat: Format[ITCheckResult] = (
+    (__ \ "http").formatNullable[ITHttpCheckStatus] ~
+    (__ \ "tcp").formatNullable[ITTCPCheckStatus] ~
+    (__ \ "command").formatNullable[ITCommandCheckStatus]
+  )(ITCheckResult(_, _, _), unlift(ITCheckResult.unapply))
+
   implicit lazy val itEnrichedTaskFormat: Format[ITEnrichedTask] = (
     (__ \ "appId").format[String] ~
     (__ \ "id").format[String] ~
@@ -132,6 +147,7 @@ class MarathonFacade(
     (__ \ "version").formatNullable[String] ~
     (__ \ "region").formatNullable[String] ~
     (__ \ "zone").formatNullable[String] ~
+    (__ \ "checkResult").formatNullable[ITCheckResult] ~
     (__ \ "role").formatNullable[String] ~
     (__ \ "healthCheckResults").formatWithDefault[Seq[ITHealthCheckResult]](Nil)
   )(ITEnrichedTask, unlift(ITEnrichedTask.unapply))
@@ -275,7 +291,7 @@ class MarathonFacade(
 
   def updatePod(id: AbsolutePathId, pod: PodDefinition, force: Boolean = false): RestResult[PodDefinition] = {
     requireInBaseGroup(id)
-    val res = result(requestFor[Pod](Put(s"$url/v2/pods$id?force=$force", pod)), waitTime)
+    val res = result(requestFor[Pod](Put(s"$url/v2/pods$id?force=$force", Raml.toRaml(pod))), waitTime)
     res.map(Raml.fromRaml(_))
   }
 
@@ -341,10 +357,12 @@ class MarathonFacade(
 
   //group resource -------------------------------------------
 
-  def listGroupsInBaseGroup: RestResult[Set[GroupInfo]] = {
-    import PathId._
-    val root = result(requestFor[GroupInfo](Get(s"$url/v2/groups")), waitTime)
-    root.map(_.groups.filter(group => isInBaseGroup(group.id.toPath)))
+  def listGroupIdsInBaseGroup: RestResult[Set[String]] = {
+    // This actually returns GroupInfo, not GroupUpdate, but it maps mostly the same and we don't have a
+    // deserializer for GroupInfo at the moment
+    val root = result(requestFor[raml.GroupUpdate](Get(s"$url/v2/groups")), waitTime)
+
+    root.map(_.groups.getOrElse(Set.empty).filter(subGroup => isInBaseGroup(PathId(subGroup.id.get))).map(_.id.get))
   }
 
   def listGroupVersions(id: AbsolutePathId): RestResult[List[String]] = {
@@ -352,9 +370,13 @@ class MarathonFacade(
     result(requestFor[List[String]](Get(s"$url/v2/groups$id/versions")), waitTime)
   }
 
-  def group(id: AbsolutePathId): RestResult[GroupInfo] = {
+  /**
+    * This should actually return a raml.GroupInfo, but we dont' have deserialization for that. GroupUpdate is only missing the
+    * pods, sooo, close enough
+    */
+  def group(id: AbsolutePathId): RestResult[raml.GroupUpdate] = {
     requireInBaseGroup(id)
-    result(requestFor[GroupInfo](Get(s"$url/v2/groups$id")), waitTime)
+    result(requestFor[raml.GroupUpdate](Get(s"$url/v2/groups$id")), waitTime)
   }
 
   def createGroup(group: GroupUpdate): RestResult[ITDeploymentResult] = {

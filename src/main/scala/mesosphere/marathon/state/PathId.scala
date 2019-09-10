@@ -204,6 +204,8 @@ object PathId {
 
   def root: AbsolutePathId = AbsolutePathId(Nil)
 
+  def relativeEmpty: RelativePathId = RelativePathId(Nil)
+
   implicit class StringPathId(val stringPath: String) extends AnyVal {
     def toPath: PathId = PathId(stringPath)
     def toAbsolutePath: AbsolutePathId = PathId(stringPath).canonicalPath()

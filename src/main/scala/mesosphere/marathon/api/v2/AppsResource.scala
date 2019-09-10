@@ -12,7 +12,6 @@ import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.{Context, MediaType, Response}
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{AuthResource, PATCH, RestResource}
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.event.ApiPostEvent
@@ -113,14 +112,17 @@ class AppsResource @Inject() (
         .getOrElse(app)
 
       val plan = await(groupManager.updateApp(app.id, createOrThrow, app.version, force))
-      val appWithDeployments = AppInfo(
-        app,
-        maybeCounts = Some(TaskCounts.zero),
-        maybeTasks = Some(Seq.empty),
-        maybeDeployments = Some(Seq(Identifiable(plan.id)))
+      val appWithDeployments = raml.AppInfo.fromParent(
+        parent = Raml.toRaml(app),
+        tasksStaged = Some(0),
+        tasksRunning = Some(0),
+        tasksHealthy = Some(0),
+        tasksUnhealthy = Some(0),
+        tasks = Seq.empty,
+        deployments = Seq(raml.Identifiable(plan.id))
       )
 
-      maybePostEvent(req, appWithDeployments.app)
+      maybePostEvent(req, app)
 
       // servletRequest.getAsyncContext
       Response
@@ -158,11 +160,15 @@ class AppsResource @Inject() (
           }
         case _ =>
           val appId = id.toAbsolutePath
-          await(appInfoService.selectApp(appId, authzSelector, resolvedEmbed)) match {
-            case Some(appInfo) =>
-              checkAuthorization(ViewRunSpec, appInfo.app)
-              ok(jsonObjString("app" -> appInfo))
-            case None => unknownApp(appId)
+
+          val appInfo = await(appInfoService.selectApp(appId, authzSelector, resolvedEmbed))
+          val appDef = groupManager.app(appId)
+
+          (appInfo, appDef) match {
+            case (Some(info), Some(app)) =>
+              checkAuthorization(ViewRunSpec, app)
+              ok(jsonObjString("app" -> info))
+            case _ => unknownApp(appId)
           }
       }
     }

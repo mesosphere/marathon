@@ -15,7 +15,30 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
-import mesosphere.marathon.raml.{App, AppPersistentVolume, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarSecret, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, LinuxInfo, Network, NetworkMode, Raml, ReadMode, Seccomp, SecretDef, Container => RamlContainer}
+import mesosphere.marathon.raml.{
+  App,
+  AppPersistentVolume,
+  AppSecretVolume,
+  AppUpdate,
+  ContainerPortMapping,
+  DockerContainer,
+  DockerNetwork,
+  DockerPullConfig,
+  EngineType,
+  EnvVarSecret,
+  EnvVarValueOrSecret,
+  IpAddress,
+  IpDiscovery,
+  IpDiscoveryPort,
+  LinuxInfo,
+  Network,
+  NetworkMode,
+  Raml,
+  ReadMode,
+  Seccomp,
+  SecretDef,
+  Container => RamlContainer
+}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -23,7 +46,6 @@ import mesosphere.marathon.test.{GroupCreation, JerseyTest, SettableClock}
 import org.mockito.Matchers
 import play.api.libs.json._
 
-import scala.collection.immutable
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -67,11 +89,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     def normalize(app: App): App = {
       val migrated = AppNormalization.forDeprecated(normalizationConfig).normalized(app)
       AppNormalization(normalizationConfig).normalized(migrated)
-    }
-
-    def normalizeAndConvert(app: App): AppDefinition = {
-      val normalized = normalize(app)
-      Raml.fromRaml(normalized)
     }
 
     def prepareApp(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
@@ -210,12 +227,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
         And("the JSON is as expected, including a newly generated version")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val expected = AppInfo(
-          normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+        val expected = raml.AppInfo.fromParent(
+          // TODO: The raml conversion sets the upgrade startegy to 1, 1. This should probably happen during the normalization
+          parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some("*"), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+          tasks = Seq.empty,
+          tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+          deployments = Seq(raml.Identifiable(plan.id))
         )
         JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
       }
@@ -601,12 +618,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
-      val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        tasks = Seq.empty,
+        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        deployments = Seq(raml.Identifiable(plan.id))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -617,7 +633,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         id = "/app",
         cmd = Some("cmd"),
         networks = Seq(Network(mode = NetworkMode.Container, name = Some("foo"))),
-
         container = Some(raml.Container(`type` = EngineType.Mesos))
       )
       val (body, plan) = prepareApp(app, groupManager)
@@ -633,12 +648,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
-      val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        tasks = Seq.empty,
+        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        deployments = Seq(raml.Identifiable(plan.id))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -709,12 +723,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
-      val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        tasks = Seq.empty,
+        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        deployments = Seq(raml.Identifiable(plan.id))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -739,16 +752,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
-      val expected = AppInfo(
-        normalizeAndConvert(app).copy(
-          versionInfo = VersionInfo.OnlyVersion(clock.now()),
-          role = ResourceRole.Unreserved,
-          networks = Seq(ContainerNetwork(name = "bar"))
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(
+          version = Some(clock.now().toOffsetDateTime),
+          role = Some(ResourceRole.Unreserved),
+          networks = Seq(raml.Network(name = Some("bar"))),
+          upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))
         ),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+        tasks = Seq.empty,
+        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        deployments = Seq(raml.Identifiable(plan.id))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -774,12 +787,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
-      val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        tasks = Seq.empty,
+        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        deployments = Seq(raml.Identifiable(plan.id))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -814,12 +826,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
-      val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        tasks = Seq.empty,
+        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        deployments = Seq(raml.Identifiable(plan.id))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -841,7 +852,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         portDefinitions = None
       )
 
-      val appDef = normalizeAndConvert(app)
+      val appDef = Raml.fromRaml(normalize(app))
       val rootGroup = createRootGroup(Map(appDef.id -> appDef))
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(app).as[JsObject]).getBytes("UTF-8")
@@ -860,20 +871,19 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
       val containerDef = appDef.container
-      val expected = AppInfo(
-        appDef.copy(
+      val expected = raml.AppInfo.fromParent(
+        parent = Raml.toRaml(appDef.copy(
           versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved,
           container = containerDef.map(_.copyWith(
             portMappings = Seq(
               Container.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
             )
           ))
-        ),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+        )),
+        tasks = Seq.empty,
+        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        deployments = Seq(raml.Identifiable(plan.id))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -961,12 +971,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
-      val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        tasks = Seq.empty,
+        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        deployments = Seq(raml.Identifiable(plan.id))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -1011,12 +1020,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
-      val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        tasks = Seq.empty,
+        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        deployments = Seq(raml.Identifiable(plan.id))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -1128,12 +1136,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}")
 
       And("the JSON is as expected, including a newly generated version")
-      import mesosphere.marathon.api.v2.json.Formats._
-      val expected = AppInfo(
-        normalizeAndConvert(app).copy(versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved),
-        maybeTasks = Some(immutable.Seq.empty),
-        maybeCounts = Some(TaskCounts.zero),
-        maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+      val expected = raml.AppInfo.fromParent(
+        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        tasks = Seq.empty,
+        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        deployments = Seq(raml.Identifiable(plan.id))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -1272,7 +1279,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getEntity.toString should include("is unknown provider")
     }
 
-    "Creating an app with an external volume with no name orprovider name specified should FAIL provider validation" in new Fixture {
+    "Creating an app with an external volume with no name or provider name specified should FAIL provider validation" in new Fixture {
       Given("An app with an unnamed volume provider")
       val response =
         createAppWithVolumes(
@@ -1648,9 +1655,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     "Index has counts and deployments by default (regression for #2171)" in new Fixture {
       Given("An app and group")
-      val app = AppDefinition(id = AbsolutePathId("/app"), cmd = Some("foo"), role = "*")
+      val app = raml.App(id = "/app", cmd = Some("foo"), role = Some("*"))
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments)
-      val appInfo = AppInfo(app, maybeDeployments = Some(Seq(Identifiable("deployment-123"))), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
+      val appInfo = raml.AppInfo.fromParent(parent = app, deployments = Seq(raml.Identifiable("deployment-123")),
+        tasksStaged = Some(1), tasksRunning = Some(2), tasksHealthy = Some(3), tasksUnhealthy = Some(4))
       appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
 
       When("The the index is fetched without any filters")
@@ -1664,10 +1672,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     "Index passes with embed LastTaskFailure (regression for #4765)" in new Fixture {
       Given("An app and group")
-      val app = AppDefinition(id = AbsolutePathId("/app"), cmd = Some("foo"), role = "*")
+      val app = raml.App(id = "/app", cmd = Some("foo"), role = Some("*"))
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments, Embed.LastTaskFailure)
-      val taskFailure = TaskFailure.empty
-      val appInfo = AppInfo(app, maybeLastTaskFailure = Some(taskFailure), maybeCounts = Some(TaskCounts(1, 2, 3, 4)))
+      val appInfo = raml.AppInfo.fromParent(
+        parent = app,
+        lastTaskFailure = Some(raml.TaskFailure("/", "", "", "TASK_STAGING", "", Timestamp.now().toOffsetDateTime, Timestamp.now().toOffsetDateTime)),
+        tasksStaged = Some(1), tasksRunning = Some(2), tasksHealthy = Some(3), tasksUnhealthy = Some(4))
       appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
 
       When("The the index is fetched with last  task failure")
@@ -1927,6 +1937,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Then("The response has no error and it is valid")
       response.getStatus should be(201)
       val appJson = Json.parse(response.getEntity.asInstanceOf[String])
+      // TODO: are we violating appInfo here?
       (appJson \ "fetch" \ 0 \ "uri" get) should be (JsString("file:///bin/bash"))
       (appJson \ "fetch" \ 0 \ "extract" get) should be(JsBoolean(false))
       (appJson \ "fetch" \ 0 \ "executable" get) should be(JsBoolean(true))
@@ -2011,12 +2022,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         response.getStatus should be(201)
 
         And("the JSON is as expected, including a defined role")
-        import mesosphere.marathon.api.v2.json.Formats._
-        val expected = AppInfo(
-          normalizeAndConvert(app).copy(role = ResourceRole.Unreserved, versionInfo = VersionInfo.OnlyVersion(clock.now())),
-          maybeTasks = Some(immutable.Seq.empty),
-          maybeCounts = Some(TaskCounts.zero),
-          maybeDeployments = Some(immutable.Seq(Identifiable(plan.id)))
+        val expected = raml.AppInfo.fromParent(
+          parent = normalize(app).copy(role = Some(ResourceRole.Unreserved), version = Some(clock.now().toOffsetDateTime), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+          tasks = Seq.empty,
+          tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+          deployments = Seq(raml.Identifiable(plan.id))
         )
         JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
       }
@@ -2347,5 +2357,82 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
     }
 
+    "ExternalVolume names with options are considered valid" in new Fixture() {
+      Given("an app with external volume whose name serializes options")
+      val volumeName = "name=teamvolumename,repl=1,secure=true,secret_key=volume-secret-key-team"
+      val appWithExtVol: String =
+        s"""
+          |{
+          |  "id": "nginx-ucr",
+          |  "container": {
+          |    "type": "MESOS",
+          |    "volumes": [
+          |      {
+          |        "external": {
+          |          "size": 5,
+          |          "name": "$volumeName",
+          |          "provider": "dvdi",
+          |          "options": {
+          |            "dvdi/driver": "pxd",
+          |            "dvdi/secure": "true",
+          |            "dvdi/secret_key": "volume-secret-key-team",
+          |            "dvdi/repl": "1",
+          |            "dvdi/shared": "true"
+          |          }
+          |        },
+          |        "mode": "RW",
+          |        "containerPath": "/mnt/nginx"
+          |      }
+          |    ],
+          |    "docker": {
+          |      "image": "nginx",
+          |      "forcePullImage": false,
+          |      "parameters": []
+          |    },
+          |    "portMappings": [
+          |      {
+          |        "containerPort": 80,
+          |        "hostPort": 0,
+          |        "protocol": "tcp",
+          |        "name": "web"
+          |      }
+          |    ]
+          |  },
+          |  "cpus": 0.1,
+          |  "disk": 0,
+          |  "instances": 1,
+          |  "mem": 128,
+          |  "gpus": 0,
+          |  "networks": [
+          |    {
+          |      "mode": "container/bridge"
+          |    }
+          |  ],
+          |  "requirePorts": false,
+          |  "healthChecks": [],
+          |  "fetch": [],
+          |  "constraints": []
+          |}
+        """.stripMargin
+      val appJs = Json.parse(appWithExtVol)
+      val app = appJs.as[raml.App]
+
+      val (body, _) = prepareApp(app, groupManager, validate = false)
+
+      When("The create request is made")
+      clock.advanceBy(5.seconds)
+      val response = asyncRequest { r =>
+        appsResource.create(body, force = false, auth.request, r)
+      }
+
+      withClue(response.getEntity.toString) {
+        Then("The return code indicates success")
+        response.getStatus should be(201)
+      }
+
+      And("the resulting app has the given volume name")
+      val appJson = Json.parse(response.getEntity.asInstanceOf[String])
+      (appJson \ "container" \ "volumes" \ 0 \ "external" \ "name") should be (JsDefined(JsString(volumeName)))
+    }
   }
 }

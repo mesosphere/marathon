@@ -23,7 +23,7 @@ import com.typesafe.scalalogging.{Logger, StrictLogging}
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{App, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
+import mesosphere.marathon.raml.{App, AppCheck, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
 import mesosphere.marathon.state.{AbsolutePathId, PathId, PersistentVolume, VolumeMount}
 import mesosphere.marathon.util.{Lock, Retry, Timeout, ZookeeperServerTest}
 import mesosphere.util.PortAllocator
@@ -389,7 +389,8 @@ trait MarathonAppFixtures {
 
   def appProxy(appId: PathId, versionId: String, instances: Int,
     healthCheck: Option[raml.AppHealthCheck] = Some(appProxyHealthCheck()),
-    dependencies: Set[PathId] = Set.empty, gpus: Int = 0, role: Option[String] = None): App = {
+    dependencies: Set[PathId] = Set.empty, gpus: Int = 0, role: Option[String] = None,
+    check: Option[AppCheck] = None): App = {
 
     val cmd = appMockCmd(appId, versionId)
 
@@ -401,7 +402,8 @@ trait MarathonAppFixtures {
       cpus = 0.01, mem = 32.0, gpus = gpus,
       healthChecks = healthCheck.toSet,
       dependencies = dependencies.map(_.toString),
-      role = role
+      role = role,
+      check = check
     )
   }
 
@@ -593,7 +595,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
     val pods = marathon.listPodsInBaseGroup
     require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
-    val groups = marathon.listGroupsInBaseGroup
+    val groups = marathon.listGroupIdsInBaseGroup
     require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
     events.clear()
     healthChecks(_.clear())

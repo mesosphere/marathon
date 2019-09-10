@@ -125,7 +125,7 @@ object Dependency {
     val Logstash = "4.9"
     val MarathonApiConsole = "3.0.8-accept"
     val MarathonUI = "1.3.2"
-    val Mesos = "1.9.0-SNAPSHOT"
+    val Mesos = "1.9.0"
     val Mustache = "0.9.0"
     val PlayJson = "2.6.7"
     val Raven = "8.0.3"
@@ -138,7 +138,8 @@ object Dependency {
     val WixAccord = "0.7.1"
 
     // Version of Mesos to use in Dockerfile.
-    val MesosDebian = "1.9.0-0.1.972.pre.20190722gitb485f1883"
+    val MesosDebian = "1.9.0-2.0.1"
+
 
     // test deps versions
     val JMH = "1.19"

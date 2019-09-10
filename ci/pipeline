@@ -194,15 +194,19 @@ def build(runTests: Boolean = true, buildName: String = "run"): SemVer = {
 
 /**
   * Builds docker and linux native packages, then runs the tests in tests/package/test.sc
+  *
+  * @return Tag of Docker image
   */
 @main
-def buildDockerAndLinuxPackages(): Unit = {
+def buildDockerAndLinuxPackages(): String = {
   utils.stage("Package Docker Image, Debian and RedHat Packages") {
     %('sbt, "docker:publishLocal")
 
     val toolPath = pwd/'tools/'packager
     %('make, "clean")(toolPath)
     %('make, "all", "-j")(toolPath)
+
+    %%("./version", "docker").out.string.trim
   }
 }
 
@@ -246,7 +250,7 @@ def buildMaster(): Unit = {
 
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"master-$buildNumber")
-  buildDockerAndLinuxPackages()
+  val dockerTag = buildDockerAndLinuxPackages()
   testDockerAndLinuxPackages()
   // dcos.buildRegistry(version) The packaging is broken on master https://jira.mesosphere.com/browse/MARATHON-8442.
 
@@ -255,6 +259,10 @@ def buildMaster(): Unit = {
   maybeArtifact.foreach { artifact =>
     updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
   }
+
+  // Publish Docker image as `unstable`
+  %('docker, "tag", s"mesosphere/marathon:${dockerTag}", "mesosphere/marathon:unstable")
+  %('docker, "push", "mesosphere/marathon:unstable")
 }
 
 /**

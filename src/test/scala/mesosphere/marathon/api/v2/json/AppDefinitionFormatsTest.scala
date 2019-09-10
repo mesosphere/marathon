@@ -17,7 +17,6 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class AppDefinitionFormatsTest extends UnitTest
-  with AppAndGroupFormats
   with HealthCheckFormats
   with Matchers
   with ValidationTestLike {
@@ -61,7 +60,7 @@ class AppDefinitionFormatsTest extends UnitTest
       import Fixture._
       import mesosphere.marathon.raml._
 
-      val r1 = Json.toJson(a1)
+      val r1 = Json.toJson(Raml.toRaml(a1))
       // check supplied values
       (r1 \ "id").get should equal (JsString("/app1"))
       (r1 \ "cmd").get should equal (JsString("sleep 10"))
@@ -97,11 +96,11 @@ class AppDefinitionFormatsTest extends UnitTest
     "ToJson should serialize full version info" in {
       import Fixture._
 
-      val r1 = Json.toJson(a1.copy(versionInfo = VersionInfo.FullVersionInfo(
+      val r1 = Json.toJson(Raml.toRaml(a1.copy(versionInfo = VersionInfo.FullVersionInfo(
         version = Timestamp(3),
         lastScalingAt = Timestamp(2),
         lastConfigChangeAt = Timestamp(1)
-      )))
+      ))))
       (r1 \ "version").as[String] should equal("1970-01-01T00:00:00.003Z")
       (r1 \ "versionInfo" \ "lastScalingAt").as[String] should equal("1970-01-01T00:00:00.002Z")
       (r1 \ "versionInfo" \ "lastConfigChangeAt").as[String] should equal("1970-01-01T00:00:00.001Z")
@@ -189,13 +188,13 @@ class AppDefinitionFormatsTest extends UnitTest
 
     """ToJSON should correctly handle missing acceptedResourceRoles""" in {
       val appDefinition = AppDefinition(id = AbsolutePathId("/test"), acceptedResourceRoles = Set.empty, role = "*")
-      val json = Json.toJson(appDefinition)
+      val json = Json.toJson(Raml.toRaml(appDefinition))
       (json \ "acceptedResourceRoles").asOpt[Set[String]] should be(None)
     }
 
     """ToJSON should correctly handle acceptedResourceRoles""" in {
       val appDefinition = AppDefinition(id = AbsolutePathId("/test"), acceptedResourceRoles = Set("a"), role = "*")
-      val json = Json.toJson(appDefinition)
+      val json = Json.toJson(Raml.toRaml(appDefinition))
       (json \ "acceptedResourceRoles").as[Set[String]] should be(Set("a"))
     }
 
@@ -256,7 +255,7 @@ class AppDefinitionFormatsTest extends UnitTest
           state.PortDefinition(0, name = Some(ReadinessCheckTestHelper.alternativeHttps.portName))
         )
       )
-      val appJson = Json.toJson(app)
+      val appJson = Json.toJson(Raml.toRaml(app))
       val rereadApp = appJson.as[raml.App]
       rereadApp.readinessChecks should have size 1
       withValidationClue {
@@ -481,11 +480,11 @@ class AppDefinitionFormatsTest extends UnitTest
     "ToJSON should serialize secrets" in {
       import Fixture._
 
-      val json = Json.toJson(a1.copy(secrets = Map(
+      val json = Json.toJson(Raml.toRaml(a1.copy(secrets = Map(
         "secret1" -> Secret("/foo"),
         "secret2" -> Secret("/foo"),
         "secret3" -> Secret("/foo2")
-      )))
+      ))))
       (json \ "secrets" \ "secret1" \ "source").as[String] should equal("/foo")
       (json \ "secrets" \ "secret2" \ "source").as[String] should equal("/foo")
       (json \ "secrets" \ "secret3" \ "source").as[String] should equal("/foo2")

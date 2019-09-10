@@ -8,7 +8,6 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.databind.{SerializationFeature, SerializerProvider}
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.datatype.jsr310.ser.OffsetDateTimeSerializer
-import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.deployment.{DeploymentAction, DeploymentPlan, DeploymentStep, DeploymentStepInfo}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
@@ -17,13 +16,12 @@ import mesosphere.marathon.core.plugin.{PluginDefinition, PluginDefinitions}
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.Task._
-import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.raml.{Raml, RamlSerializer}
 import mesosphere.marathon.state._
 import org.apache.mesos.{Protos => mesos}
+import play.api.libs.json.JsonValidationError
 import play.api.libs.functional.syntax._
-import play.api.libs.json.{JsonValidationError, _}
+import play.api.libs.json._
 
 import scala.concurrent.duration._
 import scala.reflect.runtime._
@@ -67,25 +65,11 @@ object Formats extends Formats {
 }
 
 trait Formats
-  extends AppAndGroupFormats
-  with HealthCheckFormats
+  extends HealthCheckFormats
   with ReadinessCheckFormats
   with DeploymentFormats
   with EventFormats
   with PluginFormats {
-
-  implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
-    Json.obj(
-      "appId" -> failure.appId,
-      "host" -> failure.host,
-      "message" -> failure.message,
-      "state" -> failure.state.name(),
-      "taskId" -> failure.taskId.getValue,
-      "timestamp" -> failure.timestamp,
-      "version" -> failure.version,
-      "slaveId" -> failure.slaveId.fold[JsValue](JsNull){ slaveId => JsString(slaveId.getValue) }
-    )
-  }
 
   implicit lazy val networkInfoProtocolWrites = Writes[mesos.NetworkInfo.Protocol] { protocol =>
     JsString(protocol.name)
@@ -240,7 +224,7 @@ trait EventFormats {
     Json.obj(
       "clientIp" -> event.clientIp,
       "uri" -> event.uri,
-      "appDefinition" -> event.appDefinition,
+      "appDefinition" -> Raml.toRaml(event.appDefinition),
       "eventType" -> event.eventType,
       "timestamp" -> event.timestamp
     )
@@ -384,110 +368,6 @@ trait HealthCheckFormats {
 trait ReadinessCheckFormats {
   implicit lazy val ReadinessCheckHttpResponseFormat: Format[HttpResponse] = Json.format[HttpResponse]
   implicit lazy val ReadinessCheckResultFormat: Format[ReadinessCheckResult] = Json.format[ReadinessCheckResult]
-}
-
-trait AppAndGroupFormats {
-
-  import Formats._
-
-  implicit lazy val IdentifiableWrites = Json.writes[Identifiable]
-
-  implicit lazy val RunSpecWrites: Writes[RunSpec] = {
-    Writes[RunSpec] {
-      case app: AppDefinition => Json.toJson(Raml.toRaml(app))
-      case pod: PodDefinition => Json.toJson(Raml.toRaml(pod))
-    }
-  }
-
-  implicit lazy val TaskCountsWrites: Writes[TaskCounts] =
-    Writes { counts =>
-      Json.obj(
-        "tasksStaged" -> counts.tasksStaged,
-        "tasksRunning" -> counts.tasksRunning,
-        "tasksHealthy" -> counts.tasksHealthy,
-        "tasksUnhealthy" -> counts.tasksUnhealthy
-      )
-    }
-
-  lazy val TaskCountsWritesWithoutPrefix: Writes[TaskCounts] =
-    Writes { counts =>
-      Json.obj(
-        "staged" -> counts.tasksStaged,
-        "running" -> counts.tasksRunning,
-        "healthy" -> counts.tasksHealthy,
-        "unhealthy" -> counts.tasksUnhealthy
-      )
-    }
-
-  implicit lazy val TaskLifeTimeWrites: Writes[TaskLifeTime] =
-    Writes { lifeTime =>
-      Json.obj(
-        "averageSeconds" -> lifeTime.averageSeconds,
-        "medianSeconds" -> lifeTime.medianSeconds
-      )
-    }
-
-  implicit lazy val TaskStatsWrites: Writes[TaskStats] =
-    Writes { stats =>
-      val statsJson = Json.obj("counts" -> TaskCountsWritesWithoutPrefix.writes(stats.counts))
-      Json.obj(
-        "stats" -> stats.maybeLifeTime.fold(ifEmpty = statsJson)(lifeTime =>
-          statsJson ++ Json.obj("lifeTime" -> lifeTime)
-        )
-      )
-    }
-
-  implicit lazy val TaskStatsByVersionWrites: Writes[TaskStatsByVersion] =
-    Writes { byVersion =>
-      val maybeJsons = Map[String, Option[TaskStats]](
-        "startedAfterLastScaling" -> byVersion.maybeStartedAfterLastScaling,
-        "withLatestConfig" -> byVersion.maybeWithLatestConfig,
-        "withOutdatedConfig" -> byVersion.maybeWithOutdatedConfig,
-        "totalSummary" -> byVersion.maybeTotalSummary
-      )
-      Json.toJson(
-        maybeJsons.flatMap {
-          case (k, v) => v.map(k -> TaskStatsWrites.writes(_))
-        }
-      )
-    }
-
-  implicit lazy val ExtendedAppInfoWrites: Writes[AppInfo] =
-    Writes { info =>
-      val appJson = RunSpecWrites.writes(info.app).as[JsObject]
-
-      val maybeJson = Seq[Option[JsObject]](
-        info.maybeCounts.map(TaskCountsWrites.writes(_).as[JsObject]),
-        info.maybeDeployments.map(deployments => Json.obj("deployments" -> deployments)),
-        info.maybeReadinessCheckResults.map(readiness => Json.obj("readinessCheckResults" -> readiness)),
-        info.maybeTasks.map(tasks => Json.obj("tasks" -> Raml.toRaml(tasks))),
-        info.maybeLastTaskFailure.map(lastFailure => Json.obj("lastTaskFailure" -> lastFailure)),
-        info.maybeTaskStats.map(taskStats => Json.obj("taskStats" -> taskStats))
-      ).flatten
-
-      maybeJson.foldLeft(appJson)((result, obj) => result ++ obj)
-    }
-
-  // TODO: migrate to GroupConversion
-  implicit lazy val GroupInfoWrites: Writes[GroupInfo] =
-    Writes { info =>
-
-      val maybeJson = Seq[Option[JsObject]](
-        info.maybeApps.map(apps => Json.obj("apps" -> apps)),
-        info.maybeGroups.map(groups => Json.obj("groups" -> groups)),
-        info.maybePods.map(pods => Json.obj("pods" -> pods))
-      ).flatten
-
-      val groupJson = Json.obj (
-        "id" -> info.group.id,
-        "dependencies" -> info.group.dependencies,
-        "version" -> info.group.version,
-        "enforceRole" -> info.group.enforceRole
-      )
-
-      maybeJson.foldLeft(groupJson)((result, obj) => result ++ obj)
-    }
-
 }
 
 trait PluginFormats {
