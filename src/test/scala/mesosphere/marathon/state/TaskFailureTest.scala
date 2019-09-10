@@ -2,13 +2,13 @@ package mesosphere.marathon
 package state
 
 import mesosphere.UnitTest
+import mesosphere.marathon.raml.{Raml, TaskConversion}
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import play.api.libs.json.Json
 
 class TaskFailureTest extends UnitTest {
-  import TaskFailureTestHelper.taskFailure
-  import TaskFailureTestHelper.taskFailureId
+  import TaskFailureTestHelper.{taskFailure, taskFailureId}
 
   "TaskFailure" should {
     "ToProto" in {
@@ -56,9 +56,7 @@ class TaskFailureTest extends UnitTest {
     }
 
     "Json serialization" in {
-      import mesosphere.marathon.api.v2.json.Formats._
-
-      val json = Json.toJson(taskFailure.copy(slaveId = Some(slaveIDToProto(SlaveID("slave id")))))
+      val json = Json.toJson(Raml.toRaml(taskFailure.copy(slaveId = Some(slaveIDToProto(SlaveID("slave id")))))(TaskConversion.taskFailureRamlWrite))
       val expectedJson = Json.parse(
         s"""
         |{

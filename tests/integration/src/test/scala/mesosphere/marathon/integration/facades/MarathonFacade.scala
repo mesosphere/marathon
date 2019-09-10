@@ -23,7 +23,7 @@ import mesosphere.marathon
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.raml18.PodStatus18
 import mesosphere.marathon.integration.setup.{AkkaHttpResponse, RestResult}
-import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
+import mesosphere.marathon.raml.{App, AppUpdate, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -291,7 +291,7 @@ class MarathonFacade(
 
   def updatePod(id: AbsolutePathId, pod: PodDefinition, force: Boolean = false): RestResult[PodDefinition] = {
     requireInBaseGroup(id)
-    val res = result(requestFor[Pod](Put(s"$url/v2/pods$id?force=$force", pod)), waitTime)
+    val res = result(requestFor[Pod](Put(s"$url/v2/pods$id?force=$force", Raml.toRaml(pod))), waitTime)
     res.map(Raml.fromRaml(_))
   }
 
@@ -357,10 +357,12 @@ class MarathonFacade(
 
   //group resource -------------------------------------------
 
-  def listGroupsInBaseGroup: RestResult[Set[GroupInfo]] = {
-    import PathId._
-    val root = result(requestFor[GroupInfo](Get(s"$url/v2/groups")), waitTime)
-    root.map(_.groups.filter(group => isInBaseGroup(group.id.toPath)))
+  def listGroupIdsInBaseGroup: RestResult[Set[String]] = {
+    // This actually returns GroupInfo, not GroupUpdate, but it maps mostly the same and we don't have a
+    // deserializer for GroupInfo at the moment
+    val root = result(requestFor[raml.GroupUpdate](Get(s"$url/v2/groups")), waitTime)
+
+    root.map(_.groups.getOrElse(Set.empty).filter(subGroup => isInBaseGroup(PathId(subGroup.id.get))).map(_.id.get))
   }
 
   def listGroupVersions(id: AbsolutePathId): RestResult[List[String]] = {
@@ -368,9 +370,13 @@ class MarathonFacade(
     result(requestFor[List[String]](Get(s"$url/v2/groups$id/versions")), waitTime)
   }
 
-  def group(id: AbsolutePathId): RestResult[GroupInfo] = {
+  /**
+    * This should actually return a raml.GroupInfo, but we dont' have deserialization for that. GroupUpdate is only missing the
+    * pods, sooo, close enough
+    */
+  def group(id: AbsolutePathId): RestResult[raml.GroupUpdate] = {
     requireInBaseGroup(id)
-    result(requestFor[GroupInfo](Get(s"$url/v2/groups$id")), waitTime)
+    result(requestFor[raml.GroupUpdate](Get(s"$url/v2/groups$id")), waitTime)
   }
 
   def createGroup(group: GroupUpdate): RestResult[ITDeploymentResult] = {

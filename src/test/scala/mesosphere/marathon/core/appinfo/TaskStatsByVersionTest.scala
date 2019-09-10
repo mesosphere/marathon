@@ -4,6 +4,7 @@ package core.appinfo
 import java.time.{OffsetDateTime, ZoneOffset}
 
 import mesosphere.UnitTest
+import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
 import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder, TestTaskBuilder}
@@ -13,6 +14,10 @@ import play.api.libs.json.Json
 import scala.concurrent.duration._
 
 class TaskStatsByVersionTest extends UnitTest {
+
+  private[this] def taskStatsForSomeTasks(now: Timestamp, instances: Seq[Instance], statuses: Map[Instance.Id, Seq[Health]]): Option[raml.TaskStats] = {
+    TaskStats.forSomeTasks(TaskForStatistics.forInstances(now, instances, statuses))
+  }
 
   "TaskStatsByVersion" should {
     "no tasks" in {
@@ -26,11 +31,11 @@ class TaskStatsByVersionTest extends UnitTest {
       )
       Then("we get none")
       stats should be(
-        TaskStatsByVersion(
-          maybeStartedAfterLastScaling = None,
-          maybeWithLatestConfig = None,
-          maybeWithOutdatedConfig = None,
-          maybeTotalSummary = None
+        raml.TaskStatsByVersion(
+          startedAfterLastScaling = None,
+          withLatestConfig = None,
+          withOutdatedConfig = None,
+          totalSummary = None
         )
       )
     }
@@ -61,24 +66,18 @@ class TaskStatsByVersionTest extends UnitTest {
         statuses = statuses
       )
       Then("we get the correct stats")
-      import mesosphere.marathon.api.v2.json.Formats._
-      withClue(Json.prettyPrint(Json.obj("stats" -> stats, "tasks" -> instances.map(state.Instance.fromCoreInstance)))) {
-        stats.maybeWithOutdatedConfig should not be empty
-        stats.maybeWithLatestConfig should not be empty
-        stats.maybeStartedAfterLastScaling should not be empty
-        stats.maybeTotalSummary should not be empty
-
-        stats.maybeWithOutdatedConfig should be(TaskStats.forSomeTasks(now, outdatedInstances, statuses))
-        stats.maybeWithLatestConfig should be(TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses))
-        stats.maybeStartedAfterLastScaling should be(TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses))
-        stats.maybeTotalSummary should be(TaskStats.forSomeTasks(now, instances, statuses))
+      withClue(Json.prettyPrint(Json.obj("stats" -> stats.toString, "tasks" -> instances.map(state.Instance.fromCoreInstance)))) {
+        stats.withOutdatedConfig.value.stats should be(taskStatsForSomeTasks(now, outdatedInstances, statuses).value)
+        stats.withLatestConfig.value.stats should be(taskStatsForSomeTasks(now, afterLastConfigChangeTasks, statuses).value)
+        stats.startedAfterLastScaling.value.stats should be(taskStatsForSomeTasks(now, afterLastScalingTasks, statuses).value)
+        stats.totalSummary.value.stats should be(taskStatsForSomeTasks(now, instances, statuses).value)
 
         stats should be(
-          TaskStatsByVersion(
-            maybeStartedAfterLastScaling = TaskStats.forSomeTasks(now, afterLastScalingTasks, statuses),
-            maybeWithLatestConfig = TaskStats.forSomeTasks(now, afterLastConfigChangeTasks, statuses),
-            maybeWithOutdatedConfig = TaskStats.forSomeTasks(now, outdatedInstances, statuses),
-            maybeTotalSummary = TaskStats.forSomeTasks(now, instances, statuses)
+          raml.TaskStatsByVersion(
+            startedAfterLastScaling = taskStatsForSomeTasks(now, afterLastScalingTasks, statuses).map(raml.Stats(_)),
+            withLatestConfig = taskStatsForSomeTasks(now, afterLastConfigChangeTasks, statuses).map(raml.Stats(_)),
+            withOutdatedConfig = taskStatsForSomeTasks(now, outdatedInstances, statuses).map(raml.Stats(_)),
+            totalSummary = taskStatsForSomeTasks(now, instances, statuses).map(raml.Stats(_))
           )
         )
       }

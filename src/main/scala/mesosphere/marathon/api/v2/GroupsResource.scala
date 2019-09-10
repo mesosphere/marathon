@@ -14,7 +14,7 @@ import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{AuthResource, GroupApiService}
-import mesosphere.marathon.core.appinfo.{GroupInfo, GroupInfoService, Selector}
+import mesosphere.marathon.core.appinfo.{GroupInfoService, Selector}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
@@ -90,7 +90,7 @@ class GroupsResource @Inject() (
       def groupResponse(id: AbsolutePathId) =
         infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {
           case Some(info) => ok(info)
-          case None if id.isRoot => ok(GroupInfo.empty)
+          case None if id.isRoot => ok(raml.GroupInfo(RootGroup.empty.id.toString))
           case None => unknownGroup(id)
         }
 

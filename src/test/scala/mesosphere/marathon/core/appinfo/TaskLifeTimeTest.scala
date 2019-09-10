@@ -4,6 +4,7 @@ package core.appinfo
 import java.time.{OffsetDateTime, ZoneOffset}
 
 import mesosphere.UnitTest
+import mesosphere.marathon.core.appinfo.impl.TaskForStatistics
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.state.{AbsolutePathId, Timestamp, UnreachableStrategy}
@@ -26,11 +27,15 @@ class TaskLifeTimeTest extends UnitTest {
     )
   }
 
+  private[this] def taskLifeTimeforSomeTasks(now: Timestamp, instances: Seq[Instance]): Option[raml.TaskLifeTime] = {
+    TaskLifeTime.forSomeTasks(TaskForStatistics.forInstances(now, instances, Map.empty))
+  }
+
   "TaskLifetime" should {
     "life time for no tasks" in {
       Given("no tasks")
       When("calculating life times")
-      val lifeTimes = TaskLifeTime.forSomeTasks(now, Seq.empty)
+      val lifeTimes = taskLifeTimeforSomeTasks(now, Seq.empty)
       Then("we get none")
       lifeTimes should be(None)
     }
@@ -39,7 +44,7 @@ class TaskLifeTimeTest extends UnitTest {
       Given("not yet running instances")
       val instances = (1 to 3).map(_ => stagedInstance())
       When("calculating life times")
-      val lifeTimes = TaskLifeTime.forSomeTasks(now, instances)
+      val lifeTimes = taskLifeTimeforSomeTasks(now, instances)
       Then("we get none")
       lifeTimes should be(None)
     }
@@ -48,11 +53,11 @@ class TaskLifeTimeTest extends UnitTest {
       Given("three instances with the life times 2s, 4s, 9s")
       val instances = Seq(2.0, 4.0, 9.0).map(runningInstanceWithLifeTime)
       When("calculating life times")
-      val lifeTimes = TaskLifeTime.forSomeTasks(now, instances)
+      val lifeTimes = taskLifeTimeforSomeTasks(now, instances)
       Then("we get the correct stats")
       lifeTimes should be(
         Some(
-          TaskLifeTime(
+          raml.TaskLifeTime(
             averageSeconds = 5.0,
             medianSeconds = 4.0
           )
@@ -64,11 +69,11 @@ class TaskLifeTimeTest extends UnitTest {
       Given("three instances with the life times 2s, 4s, 9s")
       val instances = Seq(2.0, 4.0, 9.0).map(runningInstanceWithLifeTime) ++ Seq(stagedInstance())
       When("calculating life times")
-      val lifeTimes = TaskLifeTime.forSomeTasks(now, instances)
+      val lifeTimes = taskLifeTimeforSomeTasks(now, instances)
       Then("we get the correct stats")
       lifeTimes should be(
         Some(
-          TaskLifeTime(
+          raml.TaskLifeTime(
             averageSeconds = 5.0,
             medianSeconds = 4.0
           )

@@ -595,7 +595,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
     val pods = marathon.listPodsInBaseGroup
     require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
-    val groups = marathon.listGroupsInBaseGroup
+    val groups = marathon.listGroupIdsInBaseGroup
     require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
     events.clear()
     healthChecks(_.clear())

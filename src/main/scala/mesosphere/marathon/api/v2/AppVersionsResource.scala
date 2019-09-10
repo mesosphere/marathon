@@ -9,10 +9,11 @@ import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.AuthResource
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, ViewRunSpec}
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.Timestamp
 
-import scala.async.Async.{await, async}
+import scala.async.Async.{async, await}
 import scala.concurrent.ExecutionContext
 
 @Produces(Array(MediaType.APPLICATION_JSON))
@@ -50,7 +51,7 @@ class AppVersionsResource(
       val id = appId.toAbsolutePath
       val timestamp = Timestamp(version)
       withAuthorization(ViewRunSpec, service.getApp(id, timestamp), unknownApp(id, Some(timestamp))) { app =>
-        ok(jsonString(app))
+        ok(jsonString(Raml.toRaml(app)))
       }
     }
   }
