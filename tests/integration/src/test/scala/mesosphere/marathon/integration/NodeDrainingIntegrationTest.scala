@@ -15,8 +15,13 @@ class NodeDrainingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
   "Draining a node" should {
     "reset any backoff delay" in {
       Given("an app with high backoff setting")
-      val app = appProxy(pathId, "v1", instances = 1, healthCheck = None,
-        constraints = Set(Seq("hostname", "UNIQUE")),
+      // we want two instances clustered on the same agent
+      // so that one task can be bounced, resulting in a delay
+      // then the agent will be drained, which will kill the second task
+      // and send an update to Marathon indicating the agent is drained
+      // this will reset the delay and relaunch two tasks on the other agent
+      val app = appProxy(pathId, "v1", instances = 2, healthCheck = None,
+        constraints = Set(Seq("hostname", "CLUSTER")),
         backoffSeconds = 3600, backoffFactor = 10, maxLaunchDelaySeconds = 86400)
 
       When("the app is deployed")
@@ -26,16 +31,16 @@ class NodeDrainingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val firstTask = eventually {
         val tasksResult: RestResult[List[ITEnrichedTask]] = marathon.tasks(pathId)
         tasksResult should be(OK)
-        tasksResult.value.size shouldBe 1
+        tasksResult.value.size shouldBe 2
         tasksResult.value.forall(_.launched) shouldBe true
         tasksResult.value.head
       }
 
-      When("the first task fails")
+      When("the first task finished")
+      logger.info(s"first task: ${firstTask.id}")
       AppMockFacade(firstTask).suicide()
 
-      Then("the task fail will result in a huge backoff")
-      waitForStatusUpdates("TASK_FAILED")
+      Then("the TASK_FINISHED will result in a huge backoff")
       eventually {
         val queue = marathon.launchQueueForAppId(pathId).value
         queue should have size 1
@@ -54,23 +59,20 @@ class NodeDrainingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       Then("the delay is reset")
       eventually {
         val queue = marathon.launchQueueForAppId(pathId).value
-        queue should have size 1
+        queue should have size 2
         val queueItem = queue.head
         queueItem.delay.overdue shouldBe false
         logger.info(s"delay.timeLeftSeconds is at ${queueItem.delay.timeLeftSeconds}")
         queueItem.delay.timeLeftSeconds should be <= 0
       }
 
-      And("a new task is launched on the other agent")
-      val secondTask = eventually {
+      And("both tasks are launched on the other agent")
+      eventually {
         val tasksResult: RestResult[List[ITEnrichedTask]] = marathon.tasks(pathId)
         tasksResult should be(OK)
-        tasksResult.value.size shouldBe 1
+        tasksResult.value.size shouldBe 2
         tasksResult.value.forall(_.launched) shouldBe true
-        tasksResult.value.head
       }
-
-      secondTask.slaveId should not equal firstTask.slaveId
     }
   }
 }
