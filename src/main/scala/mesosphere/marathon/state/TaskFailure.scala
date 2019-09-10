@@ -1,9 +1,6 @@
 package mesosphere.marathon
 package state
 
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.SerializerProvider
-import mesosphere.marathon.api.v2.json.JacksonSerializable
 import mesosphere.marathon.core.event.UnhealthyInstanceKillEvent
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
@@ -43,7 +40,7 @@ case class TaskFailure(
 
 }
 
-object TaskFailure extends JacksonSerializable[TaskFailure] {
+object TaskFailure {
 
   import mesosphere.marathon.core.event.MesosStatusUpdateEvent
 
@@ -124,30 +121,5 @@ object TaskFailure extends JacksonSerializable[TaskFailure] {
         TASK_LOST | TASK_DROPPED | TASK_GONE | TASK_GONE_BY_OPERATOR | TASK_UNKNOWN => true
       case _ => false
     }
-  }
-
-  override def serializeWithJackson(value: TaskFailure, gen: JsonGenerator, provider: SerializerProvider): Unit = {
-    println("Serialize TaskFAilure: " + value)
-    gen.writeStartObject()
-    gen.writeObjectField("appId", value.appId)
-    gen.writeObjectField("host", value.host)
-    gen.writeObjectField("message", value.message)
-    gen.writeObjectField("state", value.state.name())
-    gen.writeObjectField("taskId", value.taskId.getValue)
-    gen.writeObjectField("timestamp", value.timestamp)
-    gen.writeObjectField("version", value.version)
-    gen.writeObjectField("slaveId", value.slaveId.map(_.getValue).orNull)
-    gen.writeEndObject()
-
-    //    Json.obj(
-    //      "appId" -> failure.appId,
-    //      "host" -> failure.host,
-    //      "message" -> failure.message,
-    //      "state" -> failure.state.name(),
-    //      "taskId" -> failure.taskId.getValue,
-    //      "timestamp" -> failure.timestamp,
-    //      "version" -> failure.version,
-    //      "slaveId" -> failure.slaveId.fold[JsValue](JsNull){ slaveId => JsString(slaveId.getValue) }
-    //    )
   }
 }

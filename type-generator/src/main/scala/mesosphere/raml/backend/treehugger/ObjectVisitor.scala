@@ -250,7 +250,7 @@ object ObjectVisitor {
 
           if (field.isOptionType) {
             writerWithEmptyCheck
-          } else if (field.isContainerType) {
+          } else if (field.omitEmpty && field.isContainerType) {
             writerWithEmptyCheck
           } else if (field.repeated) {
             if (field.omitEmpty) {

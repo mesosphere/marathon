@@ -113,13 +113,6 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
   override val hashCode: Int = scala.util.hashing.MurmurHash3.productHash(this)
 }
 
-//object PathId extends JacksonSerializable[PathId] {
-//
-//  override def serializeWithJackson(value: PathId, gen: JsonGenerator, provider: SerializerProvider): Unit = {
-//    gen.writeString(value.toString)
-//  }
-//}
-
 case class AbsolutePathId(path: Seq[String]) extends PathId {
   override val absolute: Boolean = true
 
