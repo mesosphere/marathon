@@ -3,9 +3,7 @@ package api.v2.json
 
 import java.time.OffsetDateTime
 
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.fasterxml.jackson.databind.{SerializationFeature, SerializerProvider}
+import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.datatype.jsr310.ser.OffsetDateTimeSerializer
 import mesosphere.marathon.core.deployment.{DeploymentAction, DeploymentPlan, DeploymentStep, DeploymentStepInfo}
@@ -24,8 +22,6 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent.duration._
-import scala.reflect.runtime._
-import scala.reflect.runtime.universe._
 
 // TODO: We should replace this entire thing with the auto-generated formats from the RAML.
 // See https://mesosphere.atlassian.net/browse/MARATHON-1291
@@ -382,39 +378,3 @@ trait PluginFormats {
 
   implicit lazy val pluginDefinitionsFormat: Writes[PluginDefinitions] = Json.writes[PluginDefinitions]
 }
-
-/**
-  * Self registering trait that allows a class to be serialized with jackson object mapper.
-  *
-  * Creates a new StdSerializer and registers it the the RamlSerializer objectMapper
-  *
-  * @tparam T The type to be serialized, must be the class extending the trait
-  */
-trait JacksonSerializable[T] {
-
-  // Reflection magic to find the concrete value of the generic T
-  // We can't simply use a classTag here, as we can't pass any implicit to a trait
-  val traitClassSym = symbolOf[JacksonSerializable[_]].asClass
-  val thisClassSym = currentMirror.reflect(this).symbol
-  val thisParentTraitType = thisClassSym.baseClasses.find(s => s.asClass == traitClassSym).get.asType
-  val actualTypeOfT = thisParentTraitType.typeParams.head.asType.toTypeIn(thisClassSym.toType)
-
-  val classTypeOfT = currentMirror.runtimeClass(actualTypeOfT).asInstanceOf[Class[T]]
-
-  println("Register Serializer for " + classTypeOfT)
-
-  RamlSerializer.addSerializer(classTypeOfT, createSerializer(classTypeOfT))
-
-  private def createSerializer(clazz: Class[T]): StdSerializer[T] = {
-    class Serializer extends StdSerializer[T](clazz) {
-      override def serialize(value: T, gen: JsonGenerator, provider: SerializerProvider): Unit = {
-        serializeWithJackson(value, gen, provider)
-      }
-    }
-    new Serializer()
-  }
-
-  def serializeWithJackson(value: T, gen: JsonGenerator, provider: SerializerProvider): Unit
-
-}
-

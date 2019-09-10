@@ -1,13 +1,10 @@
 package mesosphere.marathon
 package state
 
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.SerializerProvider
 import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation.isTrue
-import mesosphere.marathon.api.v2.json.JacksonSerializable
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
@@ -139,7 +136,7 @@ case class AbsolutePathId(path: Seq[String]) extends PathId {
   override def /(id: String): AbsolutePathId = append(id)
 }
 
-object AbsolutePathId extends JacksonSerializable[AbsolutePathId] {
+object AbsolutePathId {
   /**
     * Parse the string as a path, but interpret it as relative to root, if it is relative.
     *
@@ -149,11 +146,6 @@ object AbsolutePathId extends JacksonSerializable[AbsolutePathId] {
   def apply(path: String): AbsolutePathId = {
     PathId(path).canonicalPath(PathId.root)
   }
-
-  override def serializeWithJackson(value: AbsolutePathId, gen: JsonGenerator, provider: SerializerProvider): Unit = {
-    gen.writeString(value.toString)
-  }
-
 }
 
 case class RelativePathId(path: Seq[String]) extends PathId with StrictLogging {

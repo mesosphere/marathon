@@ -5,9 +5,6 @@ import java.time.format.{DateTimeFormatter, DateTimeParseException}
 import java.time.{Duration, Instant, OffsetDateTime, ZoneOffset}
 import java.util.concurrent.TimeUnit
 
-import com.fasterxml.jackson.core.JsonGenerator
-import com.fasterxml.jackson.databind.SerializerProvider
-import mesosphere.marathon.api.v2.json.JacksonSerializable
 import org.apache.mesos
 
 import scala.concurrent.duration.FiniteDuration
@@ -55,11 +52,7 @@ abstract case class Timestamp private (private val instant: Instant) extends Ord
 
 }
 
-object Timestamp extends JacksonSerializable[Timestamp] {
-
-  override def serializeWithJackson(value: Timestamp, gen: JsonGenerator, provider: SerializerProvider): Unit = {
-    gen.writeObject(value.toOffsetDateTime)
-  }
+object Timestamp {
 
   def apply(offsetDateTime: OffsetDateTime): Timestamp =
     apply(offsetDateTime.toInstant)
