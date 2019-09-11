@@ -121,7 +121,7 @@ $(UBUNTU_1604_PKG_PATH): target/toor/ubuntu-xenial/lib/systemd/system/marathon.s
 .PHONY: ubuntu-bionic-1804
 ubuntu-bionic-1804: $(UBUNTU_1804_PKG_PATH)
 $(UBUNTU_1804_PKG_PATH): target/toor/ubuntu-bionic/lib/systemd/system/marathon.service target/toor/ubuntu-bionic/$(PREFIX)/share/marathon target/toor/ubuntu-bionic/etc/default/marathon target/fpm-docker/.provisioned
-	$(FPM) -C target/toor/ubuntu-xenial \
+	$(FPM) -C target/toor/ubuntu-bionic \
 		--iteration $(PKG_REL).ubuntu1804 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
@@ -186,7 +186,7 @@ endif
 
 define upload_target
 $(1).uploaded: $(1)
-	./bin/upload-package $(1) 2>&1 | tee $(1).uploaded.tmp
+	set -o pipefail && ./bin/upload-package $(1) 2>&1 | tee $(1).uploaded.tmp
 	mv $(1).uploaded.tmp $(1).uploaded
 endef
 
