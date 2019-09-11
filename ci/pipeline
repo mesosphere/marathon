@@ -207,7 +207,7 @@ def buildDockerAndLinuxPackages(): String = {
 
     val toolPath = pwd/'tools/'packager
     %('make, "clean")(toolPath)
-    %('make, s"all", "-j")(toolPath)
+    %('make, "all", "-j")(toolPath)
 
     %%("./version", "docker").out.string.trim
   }
