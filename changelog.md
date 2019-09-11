@@ -83,7 +83,7 @@ Revive offers repetitions functionality no longer optional; after the duration s
 
 For more detailed information, see the JIRA ticket [MARATHON-8663](https://jira.mesosphere.com/browse/MARATHON-8663)
 
-## Changes from 1.8.218 to 1.8.212
+## Changes from 1.8.218 to 1.8.222
 
 ### External Volume Validation changes
 
