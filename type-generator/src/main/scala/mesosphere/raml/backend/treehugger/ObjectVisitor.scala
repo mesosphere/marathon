@@ -232,8 +232,28 @@ object ObjectVisitor {
       OBJECTDEF(name) := BLOCK(defaultFields ++ defaultInstance)
     }
 
+    /**
+      *
+      * Generates a jackson serializer object with two methods: One to serialize only the contents of the object, i.e. the fields, and another
+      * method that generates a full json object.
+      *
+      * object ContainerSerializer extends com.fasterxml.jackson.databind.ser.std.StdSerializer[Container](classOf[Container]) {
+      *   def serializeFields(value: Container, gen: com.fasterxml.jackson.core.JsonGenerator, provider: com.fasterxml.jackson.databind.SerializerProvider): Unit = {
+      *     gen.writeObjectField("type", value.`type`)
+      *     if (value.docker.nonEmpty) gen.writeObjectField("docker", value.docker)
+      *     if (value.linuxInfo.nonEmpty) gen.writeObjectField("linuxInfo", value.linuxInfo)
+      *     gen.writeObjectField("volumes", value.volumes)
+      *     if (value.portMappings.nonEmpty) gen.writeObjectField("portMappings", value.portMappings)
+      *   }
+      *   override def serialize(value: Container, gen: com.fasterxml.jackson.core.JsonGenerator, provider: com.fasterxml.jackson.databind.SerializerProvider): Unit = {
+      *     gen.writeStartObject()
+      *     this.serializeFields(value, gen, provider)
+      *     gen.writeEndObject()
+      *   }
+      * }
+      *
+      */
     val jacksonSerializerSym = RootClass.newClass(name + "Serializer")
-
     val jacksonSerializer = OBJECTDEF(jacksonSerializerSym).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
       DEF( "serializeFields", UnitClass) withParams (
         PARAM("value", name),

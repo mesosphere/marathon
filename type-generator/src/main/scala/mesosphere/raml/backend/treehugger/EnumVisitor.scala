@@ -58,8 +58,17 @@ object EnumVisitor {
       }
     )
 
+    /**
+      * Generates a simple jackson serializer for an enum type.
+      *
+      * Example:
+      * object ReadModeSerializer extends com.fasterxml.jackson.databind.ser.std.StdSerializer[ReadMode](classOf[ReadMode]) {
+      *   override def serialize(value: ReadMode, gen: com.fasterxml.jackson.core.JsonGenerator, provider: com.fasterxml.jackson.databind.SerializerProvider): Unit = {
+      *       gen.writeString(value.value)
+      *   }
+      * }
+      */
     val jacksonSerializerSym = RootClass.newClass(name + "Serializer")
-
     val jacksonSerializer = OBJECTDEF(jacksonSerializerSym).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
       DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
         PARAM("value", name),

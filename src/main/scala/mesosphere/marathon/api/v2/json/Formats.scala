@@ -52,6 +52,8 @@ object Formats extends Formats {
     * Register Jackson serializer for RAML models.
     */
   def configureJacksonSerializer(): Unit = {
+
+    // We want to serialize OffsetDateTime with our own format
     val s = new OffsetDateTimeSerializer(OffsetDateTimeSerializer.INSTANCE, false, Timestamp.formatter) {}
 
     val jtm = new JavaTimeModule()
