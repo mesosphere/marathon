@@ -373,7 +373,6 @@ object RamlTypeGenerator {
   private[this] def generateRamlSerializer(pkg: String, generatedFiles: Map[GeneratedClass, GeneratedFile]): PackageDef = {
     BLOCK(
       IMPORT("com.fasterxml.jackson.databind.ObjectMapper"),
-      IMPORT("com.fasterxml.jackson.databind.SerializationFeature"),
       IMPORT("com.fasterxml.jackson.databind.module.SimpleModule"),
       IMPORT("com.fasterxml.jackson.module.scala.DefaultScalaModule"),
       IMPORT("com.fasterxml.jackson.databind.ser.std.StdSerializer"),
@@ -404,8 +403,6 @@ object RamlTypeGenerator {
 
             Seq(REF("mapper") DOT "registerModule" APPLY REF("module")) ++
             Seq(REF("mapper") DOT "registerModule" APPLY REF("DefaultScalaModule"))
-//            ++
-//            Seq(REF("mapper") DOT "disable" APPLY( REF("SerializationFeature.WRITE_DATES_AS_TIMESTAMPS")))
 
         ).withComment("ObjectMapper is thread safe, we have a single shared instance here")
       )
