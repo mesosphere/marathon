@@ -1,0 +1,50 @@
+#!/bin/bash
+
+set -e
+
+if [ -z "$PKG_SSH_USER" ]; then
+  echo "PKG_SSH_USER environment variable must be set"
+  exit 1
+fi
+
+if [ -z "$PKG_SSH_HOST" ]; then
+  echo "PKG_SSH_HOST environment variable must be set"
+  exit 1
+fi
+
+
+: ${PKG_TYPE=} # maybe testing?
+
+# identify package type and map to appropriate folder
+
+FILE=$1
+
+case $FILE in
+  *.el6.noarch.rpm)
+    DISTPATH=el${PKG_TYPE}/6
+    ;;
+  *.el7.noarch.rpm)
+    DISTPATH=el${PKG_TYPE}/7
+    ;;
+  *.ubuntu1404_all.deb)
+    DISTPATH=ubuntu/trusty${PKG_TYPE}
+    ;;
+  *.ubuntu1604_all.deb)
+    DISTPATH=ubuntu/xenial${PKG_TYPE}
+    ;;
+  *.ubuntu1804_all.deb)
+    DISTPATH=ubuntu/bionic${PKG_TYPE}
+    ;;
+  *.debian9_all.deb)
+    DISTPATH=debian/stretch${PKG_TYPE}
+    ;;
+  *)
+    echo "I don't know what kind of package $FILE is"
+    exit 1
+    ;;
+esac
+
+BASENAME=$(basename "$FILE")
+
+scp $FILE ${PKG_SSH_USER}@${PKG_SSH_HOST}:repo/incoming/$BASENAME
+ssh ${PKG_SSH_USER}@${PKG_SSH_HOST} "mv repo/incoming/$BASENAME repo/incoming/$DISTPATH/"
