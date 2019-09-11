@@ -41,12 +41,11 @@ FPM_OPTS_RPM := -t rpm \
 
 EL6_PKG_PATH=target/marathon-$(PKG_VER)-$(PKG_REL).el6.noarch.rpm
 EL7_PKG_PATH=target/marathon-$(PKG_VER)-$(PKG_REL).el7.noarch.rpm
-UBUNTU_1404_PKG_PATH=target/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1404_all.deb
 UBUNTU_1604_PKG_PATH=target/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1604_all.deb
 UBUNTU_1804_PKG_PATH=target/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1804_all.deb
 DEBIAN_9_PKG_PATH=target/marathon_$(PKG_VER)-$(PKG_REL).debian9_all.deb
 
-ALL_PKGS=$(EL6_PKG_PATH) $(EL7_PKG_PATH) $(DEBIAN_9_PKG_PATH) $(UBUNTU_1804_PKG_PATH) $(UBUNTU_1604_PKG_PATH) $(UBUNTU_1404_PKG_PATH)
+ALL_PKGS=$(EL6_PKG_PATH) $(EL7_PKG_PATH) $(DEBIAN_9_PKG_PATH) $(UBUNTU_1804_PKG_PATH) $(UBUNTU_1604_PKG_PATH)
 
 .PHONY: help
 help:
@@ -71,7 +70,7 @@ rpm: el
 el: el6 el7
 
 .PHONY: ubuntu
-ubuntu: ubuntu-trusty-1404 ubuntu-xenial-1604 ubuntu-bionic-1804
+ubuntu: ubuntu-xenial-1604 ubuntu-bionic-1804
 
 .PHONY: debian
 debian: debian-stretch-9
@@ -99,17 +98,6 @@ $(EL7_PKG_PATH): target/toor/el7/usr/lib/systemd/system/marathon.service target/
 		--after-remove scripts/rmuser \
 		--before-remove scripts/systemd.disable \
 		$(FPM_OPTS_RPM) $(FPM_OPTS) .
-
-.PHONY: ubuntu-trusty-1404
-ubuntu-trusty-1404: $(UBUNTU_1404_PKG_PATH)
-$(UBUNTU_1404_PKG_PATH): target/toor/ubuntu-trusty/etc/init.d/marathon target/toor/ubuntu-trusty/$(PREFIX)/share/marathon target/toor/ubuntu-trusty/etc/default/marathon target/fpm-docker/.provisioned
-	$(FPM) -C target/toor/ubuntu-trusty \
-	        --config-files etc/default/marathon \
-		--iteration $(PKG_REL).ubuntu1404 \
-	        --before-install scripts/adduser \
-	        --after-install scripts/ubuntu1404.enable \
-	        --deb-init scripts/ubuntu1404.init \
-		$(FPM_OPTS_DEB) $(FPM_OPTS) .
 
 .PHONY: ubuntu-xenial-1604
 ubuntu-xenial-1604: $(UBUNTU_1604_PKG_PATH)
@@ -139,11 +127,6 @@ target/toor/%/etc/default/marathon:
 target/toor/el6/etc/init.d/marathon: scripts/el6.init
 	mkdir -p "$(dir $@)"
 	cp scripts/el6.init "$@"
-	chmod 0755 "$@"
-
-target/toor/ubuntu-trusty/etc/init.d/marathon: scripts/ubuntu1404.init
-	mkdir -p "$(dir $@)"
-	cp scripts/ubuntu1404.init "$@"
 	chmod 0755 "$@"
 
 target/toor/%/usr/lib/systemd/system/marathon.service: scripts/marathon.systemd.service
