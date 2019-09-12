@@ -18,6 +18,19 @@ implicit val SemVerRead: scopt.Read[SemVer] =
 
 val timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
+private def findMarathonRoot(path: Path): Path = {
+  val utilsPath = path / "ci" / "utils.sc"
+  if (utilsPath == root)
+    throw new RuntimeException("Cannot find Marathon root path; pwd should be the Marathon checkout root, or a sub-folder")
+  if (utilsPath.toIO.exists)
+    path
+  else
+    findMarathonRoot(path / up)
+}
+
+val marathonRoot = findMarathonRoot(pwd)
+
+
 def ciLogFile(name: String): File = {
   val log = new File(name)
   if (!log.exists())
