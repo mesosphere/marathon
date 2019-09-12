@@ -9,7 +9,7 @@ import treehuggerDSL._
 object ObjectVisitor {
   import mesosphere.raml.backend._
 
-  def visit(o: ObjectT): Seq[Tree] = {
+  def visit(o: ObjectT): GeneratedFile = {
     val ObjectT(name, fields, parentType, comments, originalChildTypes, discriminator, discriminatorValue, serializeOnly, parentObject) = o
 
     val createBaseTrait = originalChildTypes.nonEmpty && discriminator.isEmpty
@@ -232,7 +232,75 @@ object ObjectVisitor {
       OBJECTDEF(name) := BLOCK(defaultFields ++ defaultInstance)
     }
 
+    /**
+      *
+      * Generates a jackson serializer object with two methods: One to serialize only the contents of the object, i.e. the fields, and another
+      * method that generates a full json object.
+      *
+      * object ContainerSerializer extends com.fasterxml.jackson.databind.ser.std.StdSerializer[Container](classOf[Container]) {
+      *   def serializeFields(value: Container, gen: com.fasterxml.jackson.core.JsonGenerator, provider: com.fasterxml.jackson.databind.SerializerProvider): Unit = {
+      *     gen.writeObjectField("type", value.`type`)
+      *     if (value.docker.nonEmpty) gen.writeObjectField("docker", value.docker)
+      *     if (value.linuxInfo.nonEmpty) gen.writeObjectField("linuxInfo", value.linuxInfo)
+      *     gen.writeObjectField("volumes", value.volumes)
+      *     if (value.portMappings.nonEmpty) gen.writeObjectField("portMappings", value.portMappings)
+      *   }
+      *   override def serialize(value: Container, gen: com.fasterxml.jackson.core.JsonGenerator, provider: com.fasterxml.jackson.databind.SerializerProvider): Unit = {
+      *     gen.writeStartObject()
+      *     this.serializeFields(value, gen, provider)
+      *     gen.writeEndObject()
+      *   }
+      * }
+      *
+      */
+    val jacksonSerializerSym = RootClass.newClass(name + "Serializer")
+    val jacksonSerializer = OBJECTDEF(jacksonSerializerSym).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
+      DEF( "serializeFields", UnitClass) withParams (
+        PARAM("value", name),
+        PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator"),
+        PARAM("provider", "com.fasterxml.jackson.databind.SerializerProvider")) := BLOCK(
+        actualFields.withFilter(_.name != AdditionalProperties).map { field =>
+          val writerSimple =
+            REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
+
+          val writerWithEmptyCheck =
+            IF(REF("value") DOT field.name DOT "nonEmpty") THEN (
+              REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
+              ) ENDIF
+
+          if (field.isOptionType) {
+            writerWithEmptyCheck
+          } else if (field.omitEmpty && field.isContainerType) {
+            writerWithEmptyCheck
+          } else if (field.repeated) {
+            if (field.omitEmpty) {
+              writerWithEmptyCheck
+            } else {
+              writerSimple
+            }
+          } else {
+            writerSimple
+          }
+        }
+      ),
+      DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
+        PARAM("value", name),
+        PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator"),
+        PARAM("provider", "com.fasterxml.jackson.databind.SerializerProvider")) := BLOCK(
+
+        (REF("gen") DOT "writeStartObject")(),
+        (THIS DOT "serializeFields") APPLY( REF("value"), REF("gen"), REF("provider")),
+        (REF("gen") DOT "writeEndObject")()
+      )
+    )
+
     val commentBlock = comments ++ actualFields.map(_.comment)(collection.breakOut)
-    baseTrait ++ Seq(klass.withDoc(commentBlock)) ++ childTypes.flatMap(Visitor.visit(_)) ++ Seq(obj)
+    val children = Visitor.visit(childTypes)
+
+    GeneratedFile(
+      children.objects
+      ++
+      Seq(GeneratedObject(name, baseTrait ++ Seq(klass.withDoc(commentBlock)) ++ Seq(obj) ++ Seq(jacksonSerializer), Some(jacksonSerializerSym)))
+    )
   }
 }

@@ -1,9 +1,7 @@
 package mesosphere.raml.ir
 
-import mesosphere.raml.backend.{camelify, underscoreToCamel, PlayPath, PlayReads, scalaFieldName}
-
+import mesosphere.raml.backend.{PlayReads, camelify, scalaFieldName, underscoreToCamel}
 import treehugger.forest._
-import definitions._
 import treehuggerDSL._
 
 case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constraints: Seq[ConstraintT[_]], required: Boolean,
@@ -11,6 +9,45 @@ case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constrai
 
   val name = scalaFieldName(rawName)
   override def toString: String = s"$name: ${`type`}"
+
+  /**
+    * Determine if this field should be wrapped in an Option or not
+    */
+  lazy val isOptionType:Boolean = {
+    if ((required || default.isDefined) && !forceOptional) {
+      false
+    } else {
+      if (repeated && !forceOptional) {
+        false
+      } else {
+        true
+      }
+    }
+  }
+
+  /**
+    * Determine if this field is a container type, i.e. a set or a map
+    */
+  lazy val isContainerType:Boolean = {
+    if ((required || default.isDefined) && !forceOptional) {
+      false
+    } else {
+      if (repeated && !forceOptional) {
+        val typeName = `type`.toString()
+        if (typeName.startsWith("Map")) {
+          true
+        } else {
+          if (typeName.startsWith("Set")) {
+            true
+          } else {
+            false
+          }
+        }
+      } else {
+        false
+      }
+    }
+  }
 
   lazy val paramTypeValue: Option[(Type, Tree)] = {
     if ((required || default.isDefined) && !forceOptional) {

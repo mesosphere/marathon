@@ -1,6 +1,11 @@
 package mesosphere.marathon
 package api.v2.json
 
+import java.time.OffsetDateTime
+
+import com.fasterxml.jackson.databind.SerializationFeature
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
+import com.fasterxml.jackson.datatype.jsr310.ser.OffsetDateTimeSerializer
 import mesosphere.marathon.core.deployment.{DeploymentAction, DeploymentPlan, DeploymentStep, DeploymentStepInfo}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
@@ -9,7 +14,7 @@ import mesosphere.marathon.core.plugin.{PluginDefinition, PluginDefinitions}
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.state.NetworkInfo
-import mesosphere.marathon.raml.Raml
+import mesosphere.marathon.raml.{Raml, RamlSerializer}
 import mesosphere.marathon.state._
 import org.apache.mesos.{Protos => mesos}
 import play.api.libs.json.JsonValidationError
@@ -42,6 +47,22 @@ object Formats extends Formats {
         _.toSeconds
       )
   }
+
+  /**
+    * Register Jackson serializer for RAML models.
+    */
+  def configureJacksonSerializer(): Unit = {
+
+    // We want to serialize OffsetDateTime with our own format
+    val s = new OffsetDateTimeSerializer(OffsetDateTimeSerializer.INSTANCE, false, Timestamp.formatter) {}
+
+    val jtm = new JavaTimeModule()
+    jtm.addSerializer(classOf[OffsetDateTime], s)
+
+    RamlSerializer.serializer.registerModule(jtm)
+    RamlSerializer.serializer.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+  }
+
 }
 
 trait Formats
