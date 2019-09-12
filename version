@@ -47,7 +47,7 @@ done
 
 # Infer version
 # Number of commits since branch point
-IS_DIRECT_CHILD=$( git log origin/master..8228cea)
+IS_DIRECT_CHILD=$( git log origin/master..$BRANCH_POINT)
 COMMIT_NUMBER="$(git rev-list --count --first-parent $BRANCH_POINT..$REF)"
 COMMIT_HASH=$(git rev-parse --short $REF)
 
