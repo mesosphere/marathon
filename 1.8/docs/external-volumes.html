@@ -354,11 +354,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.9/docs">Version 1.9.x</a></li>
+            
             <li><a href="/marathon/1.8/docs">Version 1.8.x</a></li>
             
             <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
-            
-            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
         </ul>
     </div>
@@ -492,6 +492,31 @@
 <h4 id="implicit-volumes">Implicit Volumes</h4>
 
 <p>The default implicit volume size is 16 GB. If you are using the original Mesos containerizer or the UCR, you can modify this default for a particular volume by setting <code class="highlighter-rouge">volumes[x].external.size</code>. For the Mesos and Docker containerizers, you can modify the default size for all implicit volumes by <a href="https://github.com/emccode/rexray/blob/master/.docs/user-guide/config.md">modifying the REX-Ray configuration</a>.</p>
+
+<h4 id="shared-volumes">Shared Volumes</h4>
+
+<p>By default, external volumes can not share the same name. As there are providers that allow this, there is a flag that prevents the uniqueness check on the volume name. <code class="highlighter-rouge">volumes[x].external.shared</code> can be set to true. In this case, this volume is not included when checking if the volume name already exists. It still verifies that no other external volumes with <code class="highlighter-rouge">volumes[x].external.shared=false</code> exist, so all volumes with the same name must have this flag set.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  "container": {
+    "type": "MESOS",
+    "volumes": [
+      {
+        "external": {
+          "size": 5,
+          "name": "volumename",
+          "provider": "dvdi",
+          "shared": "true",
+          "options": {
+            "dvdi/driver": "pxd",
+            "dvdi/shared": "true"
+          }
+        },
+        "mode": "RW",
+        "containerPath": "/mnt/nginx"
+      }
+    ],
+  }
+</code></pre></div></div>
 
 <h3 id="potential-pitfalls">Potential Pitfalls</h3>
 

@@ -354,11 +354,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.9/docs">Version 1.9.x</a></li>
+            
             <li><a href="/marathon/1.8/docs">Version 1.8.x</a></li>
             
             <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
-            
-            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
         </ul>
     </div>
@@ -388,7 +388,7 @@
 
 <p>All Marathon operators are supported when the field name is an attribute.</p>
 
-<p>Marathon supports text, scalar, range, and set attribute values. For scalars, ranges, and sets Marathon will perform a string comparison on the formatted values. The format matches that of the Mesos attribute formatting. For ranges and sets, the format is <code class="highlighter-rouge">[begin-end,...]</code> and <code class="highlighter-rouge">{item,...}</code> respectively. For example, you might have a range formatted as <code class="highlighter-rouge">[100-200]</code> and a set formatted as <code class="highlighter-rouge">{a,b,c}</code>.</p>
+<p>Marathon supports text, scalar, range, and set attribute values, however it will only perform a string comparison on the formatted values of scalars, ranges, and sets. The format matches that of the Mesos attribute formatting. For ranges and sets, the format is <code class="highlighter-rouge">[begin-end,...]</code> and <code class="highlighter-rouge">{item,...}</code> respectively. For example, you might have a range formatted as <code class="highlighter-rouge">[100-200]</code> and a set formatted as <code class="highlighter-rouge">{a,b,c}</code>.</p>
 
 <p>Regex is allowed for LIKE and UNLIKE operators; to match ANY value, use the string <code class="highlighter-rouge">.*</code>.</p>
 

@@ -242,6 +242,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/seccomp.html">
+                    Seccomp
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/native-docker-private-registry.html">
                     Using a Private Docker Registry
                 </a>
@@ -354,11 +359,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.9/docs">Version 1.9.x</a></li>
+            
             <li><a href="/marathon/1.8/docs">Version 1.8.x</a></li>
             
             <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
-            
-            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
         </ul>
     </div>
@@ -387,7 +392,7 @@
   <li><code class="highlighter-rouge">name</code> (Optional. Default: <code class="highlighter-rouge">"readinessCheck"</code>): The name used to identify this readiness check.</li>
   <li><code class="highlighter-rouge">protocol</code> (Optional. Default: <code class="highlighter-rouge">"HTTP"</code>): Protocol of the requests to be performed. Either HTTP or HTTPS.</li>
   <li><code class="highlighter-rouge">path</code> (Optional. Default: <code class="highlighter-rouge">"/"</code>): Path to the endpoint the task exposes to provide readiness status. Example: <code class="highlighter-rouge">/path/to/readiness</code>.</li>
-  <li><code class="highlighter-rouge">portName</code> Default: <code class="highlighter-rouge">"http-api"</code>: Name of the port in the portDefinitions section. This port will be used to check readiness. Example: <code class="highlighter-rouge">http-api</code>.</li>
+  <li><code class="highlighter-rouge">portName</code> Default: <code class="highlighter-rouge">"http-api"</code>: Name of the port in the portDefinitions or portMappings section. This port will be used to check readiness. Example: <code class="highlighter-rouge">http-api</code>.</li>
   <li><code class="highlighter-rouge">intervalSeconds</code> (Optional. Default: <code class="highlighter-rouge">30 seconds</code>): Number of seconds to wait between readiness checks.</li>
   <li><code class="highlighter-rouge">timeoutSeconds</code> (Optional. Default: <code class="highlighter-rouge">10 seconds</code>): Number of seconds after which a readiness check times out, regardless of the response. This value must be smaller than <code class="highlighter-rouge">intervalSeconds</code>.</li>
   <li><code class="highlighter-rouge">httpStatusCodesForReady</code> (Optional. Default: <code class="highlighter-rouge">[200]</code>): The HTTP/HTTPS status code to treat as <em>ready</em>.</li>

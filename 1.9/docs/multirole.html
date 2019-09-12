@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Introduction</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/1.9/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/1.9/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li class="active">
+                    <a href="/marathon/1.9/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/1.9/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/1.9/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+    <div class="col-sm-3">
+
+        <h5>Getting Started</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.9/docs/">
+                    Install Marathon
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/setup.html">
+                    Setup Recommendations
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/high-availability.html">
+                    High Availability Mode
+                </a>
+            </li>
+        </ul>
+
+        <h5>Using Marathon</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.9/docs/application-basics.html">
+                    Application Basics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/deployments.html">
+                    Application Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/application-groups.html">
+                    Application Groups
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/auth-access-ctrl.html">
+                    Authorization and Access Control
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/blue-green-deploy.html">
+                    Blue-Green Deployment
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/constraints.html">
+                    Constraints
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/event-bus.html">
+                    Event Bus
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/health-checks.html">
+                    Health Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/marathon-ui.html">
+                    Marathon Web Interface
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/networking.html">
+                    Networking
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/pods.html">
+                    Pods
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/recipes.html">
+                    Recipes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/native-docker.html">
+                    Provisioning Containers
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/persistent-volumes.html">
+                    Stateful Applications Using Local Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/external-volumes.html">
+                    Stateful Applications Using External Persistent Volumes
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/task-environment-vars.html">
+                    Task Environment Variables
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/task-handling.html">
+                    Task Handling
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/configure-task-handling.html">
+                    Task Handling Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/secrets.html">
+                    Secret Configuration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/unreachable.html">
+                    Unreachable Strategy
+                </a>
+            </li>
+        </ul>
+
+        <h5>Administration</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.9/docs/command-line-flags.html">
+                    Command Line Flags
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/backup-restore.html">
+                    Backup and Restore
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/data-migration.html">
+                    Data Migration
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/framework-authentication.html">
+                    Framework Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/high-availability.html">
+                    High Availability
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/metrics.html">
+                    Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/deprecated-metrics.html">
+                    Deprecated Metrics
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/readiness-checks.html">
+                    Readiness Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/checks.html">
+                    Checks
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/service-discovery-load-balancing.html">
+                    Service Discovery and Load Balancing
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/ssl-basic-access-authentication.html">
+                    SSL and Basic Authentication
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/seccomp.html">
+                    Seccomp
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/native-docker-private-registry.html">
+                    Using a Private Docker Registry
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/maintenance-mode.html">
+                    Maintenance mode
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/mesos-compatibility.html">
+                    Compatibility with Mesos
+                </a>
+            </li>
+        </ul>
+
+        <h5>Upgrading</h5>
+        <ul class="list-unstyled">
+          <li>
+              <a href="/marathon/1.9/docs/upgrade/index.html">
+                  Upgrading to a new Version
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.9/docs/upgrade/network-api-for-apps.html">
+                  Migrating Apps to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.9/docs/upgrade/network-api-migration.html">
+                  Migrating Tools to the 1.5 Networking API
+              </a>
+          </li>
+          <li>
+              <a href="/marathon/1.9/docs/upgrade/versioning.html">
+                  Versioning
+              </a>
+          </li>
+        </ul>
+
+        <h5>Troubleshooting</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.9/docs/waiting.html">
+                   Stuck App or Pod Deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/backoff.html">
+                    No new instances are starting
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/host-port.html">
+                    An App Requires a Specific Host Port
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/local-cert.html">
+                    Error Using HTTPS with local CA Certificate
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/auth-secret.html">
+                    Error Reading Authentication Secret
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/cfs.html">
+                    Slow Docker apps and deployments
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/exit-codes.html">
+                   Exit Codes
+                </a>
+            </li>
+        </ul>
+
+        <h5>Development</h5>
+        <ul class="list-unstyled">
+            <li>
+                <a href="/marathon/1.9/docs/contributing.html">
+                    Contributor Guidelines
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/core-architecture.html">
+                    Current Marathon Development
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/plugin.html">
+                    Extend Marathon with Plugins
+                </a>
+            </li>
+            <li>
+                <a href="/marathon/1.9/docs/developing-vm.html">
+                    Run a Local Version of Marathon
+                </a>
+            </li>
+        </ul>
+
+        <h5>API Reference</h5>
+        <ul class="list-unstyled">
+        <li>
+            <a href="/marathon/1.9/api-console/index.html">REST API Reference</a>
+        </li>
+        </ul>
+        <h5>Docs for Previous Versions</h5>
+        <ul class="list-unstyled">
+            
+            <li><a href="/marathon/1.9/docs">Version 1.9.x</a></li>
+            
+            <li><a href="/marathon/1.8/docs">Version 1.8.x</a></li>
+            
+            <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
+            
+        </ul>
+    </div>
+
+    <div class="col-sm-9">
+        <h1 id="introduction">Introduction</h1>
+
+<p>Marathon 1.9 brings support for multi-role, allowing a single Marathon instance to launch services for more than one role. The <code class="highlighter-rouge">role</code> field is added to pods and services, with the possible values restricted to either the default Mesos role (<code class="highlighter-rouge">--mesos_role</code>) or the associated group role. A group-role convention is introduced to enforce a relationship between Marathon groups and the corresponding roles for services within them. In order to assist users that wish to migrate their Marathon instance to use multi-role, an incremental pathway is defined and explained in this document.</p>
+
+<p>Multi-role functionality itself is enabled by default; no command-line parameter is required to enable it. However, there are run-time configuration options (group <code class="highlighter-rouge">enforceRole</code> setting and service <code class="highlighter-rouge">role</code> field) to control it, along with the command-line parameter <code class="highlighter-rouge">--new_group_enforce_role</code> to affect default behavior.</p>
+
+<p>While it is possible to partially use multi-role in Marathon, it is recommended that Marathon be fully “upgraded” to multi-role. This is to say:</p>
+
+<ul>
+  <li>All top-level services (those not in groups) are moved to a group.</li>
+  <li>All services are updated to use the group-role</li>
+  <li><code class="highlighter-rouge">enforceRole</code> is enabled for all top-level groups</li>
+  <li>The <code class="highlighter-rouge">--new_group_enforce_role</code> command-line parameter is set to <code class="highlighter-rouge">top</code>.</li>
+</ul>
+
+<h1 id="service-role-field">Service Role Field</h1>
+
+<p>Each Marathon service now contains a <code class="highlighter-rouge">role</code> field, which defaults to the role specified by the command line parameter <code class="highlighter-rouge">--mesos_role</code>, which defaults to <code class="highlighter-rouge">*</code>. For example, if the command line parameter <code class="highlighter-rouge">--mesos_role</code> is <code class="highlighter-rouge">slave_public</code> (as is the default in DC/OS), and the following service is posted to Marathon <code class="highlighter-rouge">/v2/apps</code>:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/dev/bigbusiness"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"sleep 3600"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.05</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>… then, the resulting Marathon service will receive the default role <code class="highlighter-rouge">slave_public</code>, as follows:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="s2">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/dev/bigbusiness"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"cmd"</span><span class="p">:</span><span class="w"> </span><span class="s2">"set; sleep 3600"</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"instances"</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"cpus"</span><span class="p">:</span><span class="w"> </span><span class="mf">0.05</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"mem"</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w">
+  </span><span class="s2">"role"</span><span class="p">:</span><span class="w"> </span><span class="s2">"slave_public"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Marathon will then revive offers for the role <code class="highlighter-rouge">slave_public</code> and match offers allocated to the role <code class="highlighter-rouge">slave_public</code> in order to launch this service.</p>
+
+<h1 id="group-role">Group Role</h1>
+
+<p>The group role is the name of the top-level group, as illustrated by the following table:</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Full service id</th>
+      <th>Marathon group</th>
+      <th>Group-role</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>/dev/bigbusiness</td>
+      <td>/dev</td>
+      <td>“dev”</td>
+    </tr>
+    <tr>
+      <td>/bigbusiness</td>
+      <td>/</td>
+      <td>N/A</td>
+    </tr>
+    <tr>
+      <td>/dev/team1/bigbusiness</td>
+      <td>/dev/team1</td>
+      <td>“dev”</td>
+    </tr>
+    <tr>
+      <td>/frontend/ui</td>
+      <td>/frontend</td>
+      <td>“frontend”</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>A service may only be assigned one of two possible roles: the default role (that which is specified by <code class="highlighter-rouge">--mesos_role</code>), or, the group role. Note that services placed directly in the root group do not have a group-role.</p>
+
+<h1 id="migrating-existing-services">Migrating Existing Services</h1>
+
+<p>Migrating a service to multi-role means modifying an existing service role from using the default Mesos role to using the group role.</p>
+
+<p>Migrating ephemeral services is straightforward: update the role, and Marathon relaunches the service, accepting and using resources from offers for the new role. However, there is a caveat when migrating services with reservations.</p>
+
+<h2 id="ephemeral-service-multi-role-migration">Ephemeral service multi-role migration</h2>
+
+<p>In order to migrate the <code class="highlighter-rouge">bigbusiness</code> app described earlier in this document from using the default Mesos role to the group role, you can simply post the following:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>echo '{"role": "dev"} | curl -X PATCH http://local:8080/v2/apps/dev/bigbusiness -H "Content-Type: application/json" --data "@-"
+</code></pre></div></div>
+
+<p>This will trigger a deployment where all of the old <code class="highlighter-rouge">bigbusiness</code> instances running as the role <code class="highlighter-rouge">slave_public</code> are killed, and replaced by new instances running as the role <code class="highlighter-rouge">dev</code>. Further, Marathon will update its <code class="highlighter-rouge">FrameworkInfo</code> information with Mesos to also include the role <code class="highlighter-rouge">dev</code>, so that it can begin receiving offers allocated to the role. This may require the Mesos <code class="highlighter-rouge">create role</code> permission if the role does not already exist. See the section below on Mesos permission caveats.</p>
+
+<h2 id="resident-service-multi-role-migration">Resident service multi-role migration</h2>
+
+<p>Migrating resident services is a bit different, since changing the role for reserved resources would result in the reservations being destroyed (and subsequently the volume data), and this is often not desired. Instead of wiping old reserved instances, Marathon allows a resident service role to be changed for newly created instances, continuing to leave the existing instances running with the old role.</p>
+
+<p>For example, say that you have deployed the following resident service:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ cat &lt;&lt;EOF | curl -v -X POST http://localhost:8080/v2/pods -H "Content-Type: application/json" --data "@-"
+{
+  "id": "/dev/bigbusiness",
+  "containers": [
+    {
+      "name": "sleep1",
+      "exec": { "command": { "shell": "pwd; ls -la; date &gt;&gt; data/launches.txt; sleep 1000" } },
+      "resources": { "cpus": 0.1, "mem": 32 },
+      "volumeMounts": [{
+        "name": "data",
+        "mountPath": "data"
+      }]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "data",
+      "persistent": {"size": 16, "type": "root"}
+    }
+  ]
+}
+EOF
+</code></pre></div></div>
+
+<p>When you check the roles for the running instances, you will see that the instances were launched with the role <code class="highlighter-rouge">slave_public</code>:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ curl http://localhost:8080/v2/pods/dev/bigbusiness::status | jq '{specRole: .spec.role, instanceRoles: [.instances[].role]}'
+
+{
+  "specRole": "slave_public",
+  "instanceRoles": [
+    "slave_public"
+  ]
+}
+</code></pre></div></div>
+
+<p>When you attempt to PUT the update with the role <code class="highlighter-rouge">dev</code> to the pods endpoint, as follows:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ cat &lt;&lt;EOF | curl -v -X PUT http://localhost:8080/v2/pods/dev/bigbusiness -H "Content-Type: application/json" --data "@-"
+{
+  "id": "/dev/bigbusiness",
+  "containers": [
+    {
+      "name": "sleep1",
+      "exec": { "command": { "shell": "pwd; ls -la; date &gt;&gt; le-data/launches.txt; sleep 1000" } },
+      "resources": { "cpus": 0.1, "mem": 32 },
+      "volumeMounts": [{
+        "name": "data",
+        "mountPath": "le-data"
+      }]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "data",
+      "persistent": {"size": 16, "type": "root"}
+    }
+  ],
+  "role": "dev"
+}
+EOF
+</code></pre></div></div>
+
+<p>… the API request will fail, indicating that resident services cannot change the role for existing instances. In case you would like to proceed, so that new instances are allocated to the new role, then you can do so by appending the parameter “?force=true”:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cat &lt;&lt;EOF | curl -v -X PUT http://localhost:8080/v2/pods/dev/bigbusiness?force=true -H "Content-Type: application/json" --data "@-"
+{
+  "id": "/dev/bigbusiness",
+  "containers": [
+    {
+      "name": "sleep1",
+      "exec": { "command": { "shell": "pwd; ls -la; date &gt;&gt; le-data/launches.txt; sleep 1000" } },
+      "resources": { "cpus": 0.1, "mem": 32 },
+      "volumeMounts": [{
+        "name": "data",
+        "mountPath": "le-data"
+      }]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "data",
+      "persistent": {"size": 16, "type": "root"}
+    }
+  ],
+  "role": "dev"
+}
+EOF
+</code></pre></div></div>
+
+<p>The deployment may take a little bit of time to succeed. Check your pod spec role versus the instance role:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ curl http://localhost:8080/v2/pods/dev/bigbusiness::status | jq '{specRole: .spec.role, instanceRoles: [.instances[].role]}'
+
+{
+  "specRole": "dev",
+  "instanceRoles": [
+    "slave_public"
+  ]
+}
+</code></pre></div></div>
+
+<p>You can see your spec’s role was updated, but the instance you launched prior to the update continues to use the role <code class="highlighter-rouge">slave_public</code>. This means your reservation was preserved.</p>
+
+<p>Let’s scale up the pod!</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>cat &lt;&lt;EOF | curl -v -X PUT http://localhost:8080/v2/pods/dev/bigbusiness?force=true -H "Content-Type: application/json" --data "@-"
+{
+  "id": "/dev/bigbusiness",
+  "scaling": {"instances": 2, "kind": "fixed"},
+  "containers": [
+    {
+      "name": "sleep1",
+      "exec": { "command": { "shell": "pwd; ls -la; date &gt;&gt; le-data/launches.txt; sleep 1000" } },
+      "resources": { "cpus": 0.1, "mem": 32 },
+      "volumeMounts": [{
+        "name": "data",
+        "mountPath": "le-data"
+      }]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "data",
+      "persistent": {"size": 16, "type": "root"}
+    }
+  ],
+  "role": "dev"
+}
+EOF
+</code></pre></div></div>
+
+<p>Then, check the role of your instances now that you have a freshly added instance after the role change:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl http://localhost:8080/v2/pods/dev/bigbusiness::status | jq '{role: .spec.role, instanceRoles: [.instances[].role]}'
+
+{
+  "role": "dev",
+  "instanceRoles": [
+    "slave_public",
+    "dev"
+  ]
+}
+</code></pre></div></div>
+
+<p>You can see that the new pod instance has the new role, <code class="highlighter-rouge">dev</code>, while the old pod instance continues to have the old role, <code class="highlighter-rouge">slave_public</code>. Moving forward, all new instances of the bigbusiness pod will be launched with the new role, <code class="highlighter-rouge">dev</code>.</p>
+
+<h1 id="group-role-enforcement">Group Role Enforcement</h1>
+
+<p>Marathon allows the mixed role usage in order to support a reasonable, incremental upgrade pathway for users wishing to migrate their existing Marathon instances to use multi-role. However, as stated in the introduction, this isn’t the ideal. Ideally, Marathon is configured to enforce services to use the group role. This is why the <code class="highlighter-rouge">enforceRole</code> property exists on groups.</p>
+
+<h2 id="using-enforcerole">Using <code class="highlighter-rouge">enforceRole</code></h2>
+
+<p>The group <code class="highlighter-rouge">enforceRole</code> property is settable only for top-level groups; when enabled, it forces all <strong>new</strong> services in that group (or in subgroups) to use the group role, and receive the group role as a default. Existing services still must be migrated to multi-role, by modifying the respective <code class="highlighter-rouge">role</code> field for each of the existing services.</p>
+
+<p>As an example, say you have deployed the following bigbusiness app, using the default role:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>{
+  "id": "/dev/bigbusiness",
+  "cmd": "set; sleep 3600",
+  "instances": 10,
+  "cpus": 0.05,
+  "mem": 128,
+  "role": "slave_public"
+}
+</code></pre></div></div>
+
+<p>Now, use the PATCH method to enable role enforcement for a group:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ echo '{"enforceRole": true}' | curl -f -X PATCH http://localhost:8080/v2/groups/dev -H "Content-Type: application/json" --data "@-"
+</code></pre></div></div>
+
+<p>Note: the API will simply respond with an empty entity, with a 200 status if the operation is successful. You can check the value for the <code class="highlighter-rouge">enforceRole</code> field:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ curl http://localhost:8080/v2/groups/dev | jq .enforceRole
+
+true
+</code></pre></div></div>
+
+<p>Now that <code class="highlighter-rouge">enforceRole</code> is enabled for the top-level group <code class="highlighter-rouge">/dev</code>, you can see that deploying a new app will receive the group role, <code class="highlighter-rouge">dev</code>, by default:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ cat &lt;&lt;EOF | curl -f -X POST http://localhost:8080/v2/apps -H "Content-Type: application/json" --data "@-"
+{
+  "id": "/dev/bigbusiness-role-enforced",
+  "cmd": "set; sleep 3600",
+  "instances": 10,
+  "cpus": 0.05,
+  "mem": 128
+}
+EOF
+
+{
+  "id":"/dev/bigbusiness-role-enforced",
+  ...
+  "role":"dev"
+}
+</code></pre></div></div>
+
+<p>From this point on, if you try to update any service in the top-level group <code class="highlighter-rouge">/dev</code> from the role <code class="highlighter-rouge">dev</code> back to <code class="highlighter-rouge">slave_public</code> then you will get a validation rejection.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ echo '{"role": "slave_public"}' | curl -v  -X PATCH http://localhost:8080/v2/apps/dev/bigbusiness-role-enforced -H "Content-Type: application/json" --data "@-"
+
+...
+{"message":"Object is not valid","details":[{"path":"/role","errors":["got slave_public, expected one of: [dev]"]}]}
+</code></pre></div></div>
+
+<p>You are allowed to modify services in <code class="highlighter-rouge">/dev</code> use the old role <code class="highlighter-rouge">slave_public</code> but, after you migrated, it is rejected:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ echo '{"instances": 2, "role": "slave_public"}' | curl -v  -X PATCH http://localhost:8080/v2/apps/dev/bigbusiness -H "Content-Type: application/json" --data "@-"
+
+...
+{"version":"2019-08-18T21:11:33.328Z","deploymentId":"d1f5654c-95f9-45ca-9fdd-0a08eceba7fb"}
+
+$ echo '{"role": "dev"}' | curl -v  -X PATCH http://localhost:8080/v2/apps/dev/bigbusiness -H "Content-Type: application/json" --data "@-"
+
+...
+{"version":"2019-08-18T21:12:34.259Z","deploymentId":"ac0930bf-8141-4452-967e-9f4b66229cef"}
+
+$ echo '{"role": "slave_public"}' | curl -v  -X PATCH http://localhost:8080/v2/apps/dev/bigbusiness -H "Content-Type: application/json" --data "@-"
+
+...
+{"message":"Object is not valid","details":[{"path":"/role","errors":["got slave_public, expected one of: [dev]"]}]}
+$
+</code></pre></div></div>
+
+<h2 id="enabling-enforcerole-for-all-new-groups-by-default">Enabling <code class="highlighter-rouge">enforceRole</code> for all new groups, by default</h2>
+
+<p>When you begin migrating Marathon to use multi-role, it is recommended to turn on role enforcement for all new groups, by default. This is controlled by specifying the command line parameter open <code class="highlighter-rouge">--new_group_enforce_role top</code>.</p>
+
+<p>Note, providing this command-line parameter does not affect existing services or existing groups. You must enable <code class="highlighter-rouge">enforceRole</code> for existing groups manually using the PATCH /v2/groups method, as seen above.</p>
+
+<h1 id="allocation-vs-reservation-acceptedresourceroles">Allocation vs Reservation (acceptedResourceRoles)</h1>
+
+<p>With the introduction of the <code class="highlighter-rouge">role</code> field, the field <code class="highlighter-rouge">acceptedResourceRoles</code> is easily misunderstood. It is very important to recognize there are <a href="http://mesos.apache.org/documentation/latest/reservation/#offer-operation-reserve-without-reservation_refinement">two separate concepts</a> with regards to roles in Mesos:</p>
+
+<ul>
+  <li><strong>Allocation role</strong> - the role for which some resource is currently allocated. For example, unreserved resources and resources reserved for <code class="highlighter-rouge">dev</code> can be <strong>allocated</strong> for the role <code class="highlighter-rouge">dev</code>.</li>
+  <li><strong>Reservation role</strong> - the role for which some resource is currently <strong>reserved</strong>.</li>
+</ul>
+
+<p>With this in mind, given a service with the role <code class="highlighter-rouge">dev</code>, only the following <code class="highlighter-rouge">acceptedResourceRoles</code> field values are valid, and have the following interpretation:</p>
+
+<ul>
+  <li><code class="highlighter-rouge">["*"]</code> - only unreserved resources will be considered; resources already reserved for the role <code class="highlighter-rouge">dev</code> will be declined.</li>
+  <li><code class="highlighter-rouge">["*", "dev"]</code> - both unreserved resources and resources already reserved for the role <code class="highlighter-rouge">dev</code> will be considered for offer matching.</li>
+  <li><code class="highlighter-rouge">["dev"]</code> - only resources already reserved for <code class="highlighter-rouge">dev</code> will be considered for offer matching. Unreserved resources will be declined.</li>
+</ul>
+
+<p>It is invalid to specify a role other than the service role or <code class="highlighter-rouge">"*"</code> in <code class="highlighter-rouge">acceptedResourceRoles</code>. In Marathon 1.9, invalid roles in <code class="highlighter-rouge">acceptedResourceRoles</code> will be automatically removed, and <code class="highlighter-rouge">acceptedResourceRoles</code> will default to <code class="highlighter-rouge">["*"]</code> if all specified roles are removed. In Marathon 1.10 and later, invalid resource roles will be rejected with a validation error.</p>
+
+<h1 id="mesos-permissions-caveats">Mesos Permissions Caveats</h1>
+
+<p>It is vitally important that Marathon has access to use the roles that are specified in services.</p>
+
+<p>Marathon blindly assumes it has the permissions to <strong>both</strong> create and use the new roles specified. If Marathon attempts to subscribe to a role to which it does not have permission, then this results in a non-functional Marathon, as Mesos reacts to unauthorized role subscriptions by dropping the connection.</p>
+
+<p>See the <a href="Authorization">http://mesos.apache.org/documentation/latest/authorization/</a> section in Mesos for documentation on the respective permissions. In DC/OS, the appropriate permissions are granted for the root Marathon out-of-the-box.</p>
+
+    </div>
+</div>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>

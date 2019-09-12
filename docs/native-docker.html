@@ -242,6 +242,11 @@
                 </a>
             </li>
             <li>
+                <a href="/marathon/docs/seccomp.html">
+                    Seccomp
+                </a>
+            </li>
+            <li>
                 <a href="/marathon/docs/native-docker-private-registry.html">
                     Using a Private Docker Registry
                 </a>
@@ -354,11 +359,11 @@
         <h5>Docs for Previous Versions</h5>
         <ul class="list-unstyled">
             
+            <li><a href="/marathon/1.9/docs">Version 1.9.x</a></li>
+            
             <li><a href="/marathon/1.8/docs">Version 1.8.x</a></li>
             
             <li><a href="/marathon/1.7/docs">Version 1.7.x</a></li>
-            
-            <li><a href="/marathon/1.6/docs">Version 1.6.x</a></li>
             
         </ul>
     </div>
@@ -379,7 +384,7 @@
 
 <h1 id="universal-container-runtime">Universal Container Runtime</h1>
 
-<p>The <a href="http://mesos.apache.org/documentation/latest/container-image">Universal Container Runtime</a> (UCR) extends the Mesos containerizer to support provisioning <a href="https://docker.com/">Docker</a> container images (<a href="https://github.com/appc/spec">AppC</a> which is deprecated in v1.8). This means that you can use both the Mesos containerizer and other container image types. You can still use the Docker container runtime directly (<a href="#docker-containerizer">instructions are below</a>), but the Universal Container Runtime supports running Docker images without depending on the Docker Engine, which allows for better integration with Mesos.</p>
+<p>The <a href="http://mesos.apache.org/documentation/latest/container-image">Universal Container Runtime</a> (UCR) extends the Mesos containerizer to support provisioning <a href="https://docker.com/">Docker</a> container images. This means that you can use both the Mesos containerizer and other container image types. You can still use the Docker container runtime directly (<a href="#docker-containerizer">instructions are below</a>), but the Universal Container Runtime supports running Docker images without depending on the Docker Engine, which allows for better integration with Mesos.</p>
 
 <p>The following Marathon features <em>only</em> work with the UCR:</p>
 

@@ -1,0 +1,143 @@
+#%RAML 1.0 Library
+types:
+  Counter:
+    type: object
+    properties:
+      count:
+        type: integer
+        format: int64
+  Gauge:
+    type: object
+    properties:
+      value:
+        type: number
+        format: double
+  Histogram:
+    type: object
+    properties:
+      count:
+        type: integer
+        format: int64
+      min:
+        type: number
+        format: double
+      mean:
+        type: number
+        format: double
+      max:
+        type: number
+        format: double
+      p50:
+        type: number
+        format: double
+      p75:
+        type: number
+        format: double
+      p95:
+        type: number
+        format: double
+      p98:
+        type: number
+        format: double
+      p99:
+        type: number
+        format: double
+      p999:
+        type: number
+        format: double
+      stddev:
+        type: number
+        format: double
+  Meter:
+    type: object
+    properties:
+      count:
+        type: integer
+        format: int64
+      m1_rate:
+        type: number
+        format: double
+      m5_rate:
+        type: number
+        format: double
+      m15_rate:
+        type: number
+        format: double
+      mean_rate:
+        type: number
+        format: double
+      units: string
+  Timer:
+    type: object
+    properties:
+      count:
+        type: integer
+        format: int64
+      min:
+        type: number
+        format: double
+      mean:
+        type: number
+        format: double
+      max:
+        type: number
+        format: double
+      p50:
+        type: number
+        format: double
+      p75:
+        type: number
+        format: double
+      p95:
+        type: number
+        format: double
+      p98:
+        type: number
+        format: double
+      p99:
+        type: number
+        format: double
+      p999:
+        type: number
+        format: double
+      stddev:
+        type: number
+        format: double
+      m1_rate:
+        type: number
+        format: double
+      m5_rate:
+        type: number
+        format: double
+      m15_rate:
+        type: number
+        format: double
+      mean_rate:
+        type: number
+        format: double
+      duration_units: string
+      rate_units: string
+  NewMetrics:
+    type: object
+    properties:
+      version: string
+      counters:
+        type: object
+        properties:
+          /.*/: Counter
+      gauges:
+        type: object
+        properties:
+          /.*/: Gauge
+      histograms:
+        type: object
+        properties:
+          /.*/: Histogram
+      meters:
+        type: object
+        properties:
+          /.*/: Meter
+      timers:
+        type: object
+        properties:
+          /.*/: Timer

@@ -25,9 +25,15 @@ types:
         type: label.KVLabels
         (pragma.omitEmpty):
         description: Provider specific volume configuration options
+      shared?:
+        type: boolean
+        default: false
+        description: If true, excludes this volume from the global unique volume name check
   PersistentVolumeType:
     type: string
-    description: The type of mesos disk resource to use; defaults to root
+    description: |
+      The type of mesos disk resource to use; defaults to root if no profile name is specified.
+      When specififying a profileName, this will default to mount.
     enum: [ root, path, mount ]
   PersistentVolumeInfo:
     type: object

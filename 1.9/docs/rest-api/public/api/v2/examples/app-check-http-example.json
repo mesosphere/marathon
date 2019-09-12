@@ -1,0 +1,25 @@
+{
+  "id": "http-index-test",
+  "cmd": "python3 -m http.server $PORT0",
+  "cpus": 1,
+  "mem": 128,
+  "disk": 0,
+  "instances": 1,
+  "portDefinitions": [
+    {
+        "port": 0,
+        "protocol": "tcp",
+        "name": "http"
+    }],
+  "requirePorts" : false,
+  "env": {},
+  "labels": {},
+  "check": {
+     "http" : {
+        "portIndex": 0,
+        "path": "/"
+      },
+      "intervalSeconds": 60,
+      "timeoutSeconds": 20
+   }
+}

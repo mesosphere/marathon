@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Marathon: Instances</title>
+    <link rel="icon" type="image/x-icon" href="/marathon/img/marathon-favicon.ico">
+    <link href="//cdn.jsdelivr.net/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/marathon/css/style.css" rel="stylesheet">
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-45222428-4', 'auto');
+      ga('send', 'pageview');
+
+    </script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col-sm-10 col-sm-offset-1">
+          <div class="navbar navbar-default navbar-inverse" role="navigation">
+            <div class="container-fluid">
+              <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
+                  <span class="sr-only">Toggle navigation</span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                  <span class="icon-bar"></span>
+                </button>
+                <a class="navbar-brand" href="/marathon">Marathon</a>
+              </div>
+              <div class="collapse navbar-collapse" id="navbar-collapse">
+                <ul class="nav navbar-nav">
+                  <li >
+                    <a href="/marathon/docs/">Docs</a>
+                  </li>
+                  <li >
+                    <a href="/marathon/support.html">Support</a>
+                  </li>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                  <li><a href="https://github.com/mesosphere/marathon">GitHub</a></li>
+                </ul>
+                <div class="grid" id="searchBar">
+                  <div id="search">
+                    <form role="search" method="get" action="/marathon/search/">
+                      <input id="searchString" name="searchString"
+                             placeholder="Search Marathon Docs" type="text">
+                      <input id="searchButton" name="googleSearchName" type="submit" value="Search">
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <h1 id="instances">Instances</h1>
+
+<h2 id="what-is-an-instance">What is an Instance?</h2>
+<p>Instances are the Marathon representation of <a href="/marathon/articles/tasks.html">Tasks</a> or <a href="/marathon/articles/task-groups.html">Task Groups</a> in Mesos. An instance can exist even if there is no current Task associated. We introduced this abstraction in order to support Mesos TaskGroups (called <a href="/marathon/articles/pods.html">Pods</a> in Marathon), where an instance can contain more than one Task. Beyond support for Pods, this abstraction also allows us to represent scheduled instances, which do not yet have Mesos Tasks associated with them.</p>
+
+<h3 id="instance-goals">Instance Goals</h3>
+<p>Depending on the goal of a given instance, Marathon will take actions to reach that goal: it might match offers in order to launch a Task or TaskGroup. In this case, these Tasks will eventually be associated with the instance. If an instance needs to be stopped, Marathon will send kill requests to Mesos and eventually expunge the instance from its state.</p>
+
+<p>Currently, instance goals are only used internally, but are reflected in the API. Supported <a href="https://github.com/mesosphere/marathon/blob/master/src/main/scala/mesosphere/marathon/core/instance/Goal.scala">Goals</a> are</p>
+<ul>
+  <li><code class="highlighter-rouge">Running</code> means the goal is to have a Mesos Task or TaskGroup associated with this instance, which should be running in the <code class="highlighter-rouge">TASK_RUNNING</code> state.</li>
+  <li><code class="highlighter-rouge">Stopped</code> means, all Mesos Tasks or TaskGroups associated with this instance shall be stopped. The instance and all its metadata will be retained. It is possible to change the goal to <code class="highlighter-rouge">Running</code> again.</li>
+  <li><code class="highlighter-rouge">Decommissioned</code> means the Mesos Task or TaskGroup associated with this instance will be killed, and reservations and volumes will be destroyed. The instance cannot be revived, and once a terminal state is reported by Mesos, the instance will be expunged from Marathon’s state.</li>
+</ul>
+
+<p>See <a href="/marathon/articles/instance-lifecycle.html">Instance Life Cycle</a> for more information on instance life cycle and goals.</p>
+
+<h3 id="instances-in-the-api">Instances in the API</h3>
+<p>The <code class="highlighter-rouge">v2/apps</code> and <code class="highlighter-rouge">v2/tasks</code> API endpoints do not provide any means of direct interaction with instances. For historical reasons, these endpoints list apps or tasks respectively, and only allow interactions with them (not instances). The <code class="highlighter-rouge">v2/pods</code> endpoint on the other hand was build with instances as an abstraction for Mesos tasks, and thus only allows direct interaction with instances, not with tasks.</p>
+
+<h3 id="instance-ids">Instance Ids</h3>
+<p>The relation between instances and their Tasks is reflected in their names. An <em>app</em> with name <code class="highlighter-rouge">/my-service</code> will result in instances named <code class="highlighter-rouge">my-service.&lt;UUID&gt;</code>. The first Task associated with this instance will be named <code class="highlighter-rouge">my-service.instance-a41beca1-fa49-11e8-93c4-269daf75ef3f._app.1</code> where <code class="highlighter-rouge">_app</code> designates the container as an anonymous container. The <code class="highlighter-rouge">.1</code> reveals the Task is the first task incarnation of this instance. Accordingly, <code class="highlighter-rouge">my-service.instance-&lt;UUID&gt;._app.42</code> will tell you that this is task incarnation number 42. This means 41 previous tasks for this instance became terminal, either because they exited normally or abnormally, or were killed by Marathon during a scale or upgrade operation.</p>
+
+<p>A <em>pod</em> instance will have named containers that inherit the names from the respective PodDefinition, e.g. <code class="highlighter-rouge">my-service.instance-395c02eb-25c5-4a3b-8a42-3d2635264058.rails.1</code> and <code class="highlighter-rouge">my-service.instance-395c02eb-25c5-4a3b-8a42-3d2635264058.sidecar.1</code>.</p>
+
+<h2 id="how-can-i-use-instances">How can I use Instances?</h2>
+<p>Instances are created based on <a href="/marathon/articles/services.html">Service</a> specifications which can be either an <a href="/marathon/articles/applications.html">AppDefinition</a> or a <a href="/marathon/articles/pods.html">PodDefinition</a>. Instances are implicitly created according to their App or Pod definition, which contains an <code class="highlighter-rouge">instances</code> property that designates the required amount of instances.</p>
+
+<h2 id="which-related-concepts-should-i-understand">Which related concepts should I understand?</h2>
+<p>When upgrading a Service during a <a href="/marathon/articles/deployments.html">Deployment</a> from one version to another, Marathon can create more instances than specified in either Service definition. It will do so if allowed via the <a href="/marathon/articles/upgrade-strategy.html">upgradeStrategy</a> configuration.
+When an instance is running on an agent which has disconnected from the cluster, it will eventually be reported as unreachable. According to the Service’s <a href="/marathon/articles/unreachable-strategy.html">unreachableStrategy</a>, Marathon might schedule a replacement, even though the unreachable instance might still be running. When an unreachable instance becomes reachable again, Marathon will scale down accordingly to the required amount of instances. It will decide which instance shall be killed based on the <a href="/marathon/articles/kill-selection.html">killSelection</a>.</p>
+
+<h2 id="links">Links</h2>
+<ul>
+  <li><a href="/marathon/articles/tutorials/apps-scaling.html">Scaling Applications</a></li>
+  <li><a href="/marathon/articles/tutorials/pods-scaling.html">Scaling Pods</a></li>
+  <li><a href="/marathon/articles/tutorials/instance-operations.html#delete-instances">Killing Instances</a></li>
+</ul>
+
+<h2 id="examples">Examples</h2>
+<ul>
+  <li><a href="/marathon/articles/examples/requests/app-simple.json">Simple Application</a> definition configuring a service with 3 instances</li>
+  <li><a href="/marathon/articles/examples/responses/app-representation.json">JSON Representation</a> of an instance via v2/tasks</li>
+</ul>
+
+          <footer>
+            <p class="text-muted">
+              &copy; 2018 <a class="text-muted" href="http://mesosphere.com">Mesosphere, Inc.</a>
+            </p>
+          </footer>
+        </div>
+      </div>
+    </div>
+    <script src="//cdn.jsdelivr.net/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdn.jsdelivr.net/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="//cdn.jsdelivr.net/anchorjs/3.2.2/anchor.min.js"></script>
+    <script>
+        (function () {
+            'use strict';
+            anchors.options.placement = 'right';
+            anchors.add('h2, h3, h4, h5, h6');
+        })();
+    </script>
+  </body>
+</html>
