@@ -29,7 +29,7 @@ trait FailureWatcher extends Suite {
 }
 
 trait MesosTest extends UnitTest with BeforeAndAfterAll with FailureWatcher {
-  val packagePath = pwd / up / up / 'tools / 'packager
+  val packagePath = pwd / up / up / 'tools / 'packager / 'target
   val PackageFile = s"^marathon[_-]${MarathonVersion}-.+\\.([a-z0-9]+)_all.(rpm|deb)$$".r
 
   def assertPackagesCleanlyBuilt(): Unit = {
