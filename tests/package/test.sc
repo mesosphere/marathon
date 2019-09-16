@@ -244,39 +244,6 @@ class Ubuntu1804Test extends SystemdSpec with Ubuntu1604Container with MesosTest
   "Marathon Ubuntu 18.04 package" should behave like systemdUnit(systemd, mesos)
 }
 
-class Ubuntu1404Test extends SystemvSpec with MesosTest {
-
-  var mesos: Container = _
-  var ubuntu: Container = _
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    mesos = startMesos()
-    ubuntu = runContainer("--name", "ubuntu1404", "-v", s"${packagePath}:/var/packages", "marathon-package-test:ubuntu1404")
-
-    System.err.println(s"Installing package...")
-    // install the package
-    execBashWithoutCapture(ubuntu.containerId, """
-      apt-get update
-      echo
-      echo "We expect this to fail, due to dependencies missing:"
-      echo
-      dpkg -i /var/packages/marathon_*.ubuntu1404_all.deb
-      apt-get install -f -y
-    """)
-    execBash(ubuntu.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")
-
-    System.err.println(s"Configuring")
-    execBashWithoutCapture(ubuntu.containerId, s"""
-      echo "MARATHON_MASTER=zk://${mesos.ipAddress}:2181/mesos" >> /etc/default/marathon
-      echo "MARATHON_ZK=zk://${mesos.ipAddress}:2181/marathon" >> /etc/default/marathon
-      service marathon restart
-    """)
-  }
-
-  "Marathon Ubuntu 14.04 package" should behave like systemvService(ubuntu, mesos)
-}
-
 class Centos7Test extends SystemdSpec with MesosTest {
 
   var mesos: Container = _
@@ -436,7 +403,6 @@ def main(args: String*): Unit = {
     new Debian9Test,
     new Centos7Test,
     new Centos6Test,
-    new Ubuntu1404Test,
     new Ubuntu1604Test,
     new Ubuntu1804Test,
     new DockerImageTest
