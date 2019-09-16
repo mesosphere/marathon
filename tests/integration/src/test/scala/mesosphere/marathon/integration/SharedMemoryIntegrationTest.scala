@@ -9,7 +9,6 @@ import mesosphere.marathon.raml.{Pod, Raml}
 import mesosphere.marathon.state.{HostVolume, VolumeMount}
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import org.scalatest.Inside
-import org.scalatest.time.{Seconds, Span}
 
 import scala.collection.immutable.Seq
 
@@ -22,8 +21,6 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
     isolation = Some("filesystem/linux,docker/runtime,namespaces/ipc"),
     imageProviders = Some("docker")
   )
-
-  override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(30, Seconds), interval = Span(1, Seconds))
 
   "get correct shm size from pod" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
     Given("a pod with a single task and a volume")
