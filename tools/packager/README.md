@@ -4,14 +4,12 @@ packager
 Packaging utilities for Marathon.
 
 
-Set Up
-------
+## Set Up
 * Install Docker
 
 * Install [SBT](http://www.scala-sbt.org/release/tutorial/Installing-sbt-on-Linux.html) and an appropriate JDK to build Marathon.
 
-Building Packages
------------------
+## Building Packages
 
 ```bash
 make clean
@@ -25,8 +23,21 @@ make all                                ## Build all packages
 make deb                                ## For all Debian/Ubuntu DEB packages
 make rpm                                ## For all EL/Fedora RPM packages
 make el                                 ## For all Enterprise Linux (EL) packages
-make fedora                             ## For all Fedora (FC) packages
 make debian                             ## For all Debian packages
 make ubuntu                             ## For all Ubuntu packages
-make osx                                ## For Apple Macintosh
+make upload                             ## Upload all debian packages
+```
+
+## Uploading Packages
+
+The Makefile is used to upload packages to the pkgmaintainer repository. The following pre-requisites are required:
+
+* You must have an ssh-agent running
+* The ssh-agent must have the pkgmaintainer key
+
+For example, to build and upload the packages for v1.9.71, the following command can be invoked
+
+```
+ssh-add ~/.ssh/pkgmaintainer.pem
+PKG_SSH_USER=... PKG_SSH_HOST=... make REF=v1.9.71 upload
 ```
