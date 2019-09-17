@@ -118,8 +118,8 @@ class AppsResource @Inject() (
         tasksRunning = Some(0),
         tasksHealthy = Some(0),
         tasksUnhealthy = Some(0),
-        tasks = Seq.empty,
-        deployments = Seq(raml.Identifiable(plan.id))
+        tasks = None,
+        deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
 
       maybePostEvent(req, app)

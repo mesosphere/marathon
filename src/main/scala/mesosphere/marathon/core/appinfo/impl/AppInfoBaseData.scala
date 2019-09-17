@@ -93,13 +93,13 @@ class AppInfoBaseData(
 
     val appInfo = raml.AppInfo.fromParent(
       parent = Raml.toRaml(app),
-      readinessCheckResults = readinessChecksByAppOpt.map(convertReadinessCheckResults).getOrElse(Nil),
-      tasks = enrichedTasksOpt.getOrElse(Seq.empty).map(Raml.toRaml(_)(raml.TaskConversion.enrichedTaskRamlWrite)),
+      readinessCheckResults = if (embeds.contains(AppInfo.Embed.Readiness)) Some(readinessChecksByAppOpt.map(convertReadinessCheckResults).getOrElse(Seq.empty)) else None,
+      tasks = if (embeds.contains(AppInfo.Embed.Tasks)) Some(enrichedTasksOpt.getOrElse(Seq.empty).map(Raml.toRaml(_)(raml.TaskConversion.enrichedTaskRamlWrite))) else None,
       tasksStaged = taskCountsOpt.map(_.tasksStaged),
       tasksRunning = taskCountsOpt.map(_.tasksRunning),
       tasksHealthy = taskCountsOpt.map(_.tasksHealthy),
       tasksUnhealthy = taskCountsOpt.map(_.tasksUnhealthy),
-      deployments = runningDeploymentsByAppOpt.fold(Seq.empty[raml.Identifiable])(_.apply(app.id).map{ i => raml.Identifiable(i.id) }),
+      deployments = if (embeds.contains(AppInfo.Embed.Deployments)) Some(runningDeploymentsByAppOpt.fold(Seq.empty[raml.Identifiable])(_.apply(app.id).map{ i => raml.Identifiable(i.id) })) else None,
       lastTaskFailure = lastTaskFailureOpt.map(Raml.toRaml(_)(raml.TaskConversion.taskFailureRamlWrite)),
       tasksStats = taskStatsOpt
     )

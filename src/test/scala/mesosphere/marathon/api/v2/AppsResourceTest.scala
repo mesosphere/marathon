@@ -230,9 +230,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         val expected = raml.AppInfo.fromParent(
           // TODO: The raml conversion sets the upgrade startegy to 1, 1. This should probably happen during the normalization
           parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some("*"), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
-          tasks = Seq.empty,
+          tasks = None,
           tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
-          deployments = Seq(raml.Identifiable(plan.id))
+          deployments = Some(Seq(raml.Identifiable(plan.id)))
         )
         JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
       }
@@ -620,9 +620,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
         parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
-        tasks = Seq.empty,
+        tasks = None,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
-        deployments = Seq(raml.Identifiable(plan.id))
+        deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -650,9 +650,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
         parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
-        tasks = Seq.empty,
+        tasks = None,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
-        deployments = Seq(raml.Identifiable(plan.id))
+        deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -725,9 +725,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
         parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
-        tasks = Seq.empty,
+        tasks = None,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
-        deployments = Seq(raml.Identifiable(plan.id))
+        deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -759,9 +759,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           networks = Seq(raml.Network(name = Some("bar"))),
           upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))
         ),
-        tasks = Seq.empty,
+        tasks = None,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
-        deployments = Seq(raml.Identifiable(plan.id))
+        deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -789,9 +789,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
         parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
-        tasks = Seq.empty,
+        tasks = None,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
-        deployments = Seq(raml.Identifiable(plan.id))
+        deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -828,9 +828,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
         parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
-        tasks = Seq.empty,
+        tasks = None,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
-        deployments = Seq(raml.Identifiable(plan.id))
+        deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -881,9 +881,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
             )
           ))
         )),
-        tasks = Seq.empty,
+        tasks = None,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
-        deployments = Seq(raml.Identifiable(plan.id))
+        deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -973,9 +973,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
         parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
-        tasks = Seq.empty,
+        tasks = None,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
-        deployments = Seq(raml.Identifiable(plan.id))
+        deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -1022,9 +1022,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
         parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
-        tasks = Seq.empty,
+        tasks = None,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
-        deployments = Seq(raml.Identifiable(plan.id))
+        deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -1138,9 +1138,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
         parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
-        tasks = Seq.empty,
+        tasks = None,
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
-        deployments = Seq(raml.Identifiable(plan.id))
+        deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
     }
@@ -1657,7 +1657,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("An app and group")
       val app = raml.App(id = "/app", cmd = Some("foo"), role = Some("*"))
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments)
-      val appInfo = raml.AppInfo.fromParent(parent = app, deployments = Seq(raml.Identifiable("deployment-123")),
+      val appInfo = raml.AppInfo.fromParent(parent = app, deployments = Some(Seq(raml.Identifiable("deployment-123"))),
         tasksStaged = Some(1), tasksRunning = Some(2), tasksHealthy = Some(3), tasksUnhealthy = Some(4))
       appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
 
@@ -2024,9 +2024,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         And("the JSON is as expected, including a defined role")
         val expected = raml.AppInfo.fromParent(
           parent = normalize(app).copy(role = Some(ResourceRole.Unreserved), version = Some(clock.now().toOffsetDateTime), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
-          tasks = Seq.empty,
+          tasks = None,
           tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
-          deployments = Seq(raml.Identifiable(plan.id))
+          deployments = Some(Seq(raml.Identifiable(plan.id)))
         )
         JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[String]).correspondsToJsonOf(expected)
       }

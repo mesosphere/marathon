@@ -9,7 +9,7 @@ import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state._
 import org.apache.mesos.{Protos => mesos}
-import play.api.libs.json.{JsObject, Json}
+import play.api.libs.json.{JsArray, JsObject, Json}
 
 import scala.collection.immutable.Seq
 
@@ -54,7 +54,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
     "app with deployments" in {
       Given("an app with deployments")
-      val extended = raml.AppInfo.fromParent(parent = app, deployments = deployments)
+      val extended = raml.AppInfo.fromParent(parent = app, deployments = Some(deployments))
 
       Then("the result contains all fields of the app plus the deployments")
       val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
@@ -64,9 +64,33 @@ class AppDefinitionAppInfoTest extends UnitTest {
       JsonTestHelper.assertThatJacksonJsonOf(extended).correspondsToJsonOf(expectedJson)
     }
 
+    "app with empty deployments list " in {
+      Given("an app with empty deployments list")
+      val extended = raml.AppInfo.fromParent(parent = app, deployments = Some(Seq.empty))
+
+      Then("the result contains all fields of the app plus the deployments")
+      val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
+        "deployments" -> JsArray()
+      )
+      JsonTestHelper.assertThatJsonOf(extended).correspondsToJsonOf(expectedJson)
+      JsonTestHelper.assertThatJacksonJsonOf(extended).correspondsToJsonOf(expectedJson)
+    }
+
+    "app with empty task list " in {
+      Given("an app with empty task list")
+      val extended = raml.AppInfo.fromParent(parent = app, tasks = Some(Seq.empty))
+
+      Then("the result contains all fields of the app plus the tasks")
+      val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
+        "tasks" -> JsArray()
+      )
+      JsonTestHelper.assertThatJsonOf(extended).correspondsToJsonOf(expectedJson)
+      JsonTestHelper.assertThatJacksonJsonOf(extended).correspondsToJsonOf(expectedJson)
+    }
+
     "app with readiness results" in {
       Given("an app with deployments")
-      val extended = raml.AppInfo.fromParent(app, readinessCheckResults = readinessCheckResults)
+      val extended = raml.AppInfo.fromParent(app, readinessCheckResults = Some(readinessCheckResults))
 
       Then("the result contains all fields of the app plus the deployments")
       val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
@@ -87,7 +111,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
     "app with taskCounts + deployments (show that combinations work)" in {
       Given("an app with counts")
-      val extended = raml.AppInfo.fromParent(parent = app, tasksStaged = Some(3), tasksRunning = Some(5), tasksHealthy = Some(4), tasksUnhealthy = Some(1), deployments = deployments)
+      val extended = raml.AppInfo.fromParent(parent = app, tasksStaged = Some(3), tasksRunning = Some(5), tasksHealthy = Some(4), tasksUnhealthy = Some(1), deployments = Some(deployments))
 
       Then("the result contains all fields of the app plus the counts")
       val expectedJson =
