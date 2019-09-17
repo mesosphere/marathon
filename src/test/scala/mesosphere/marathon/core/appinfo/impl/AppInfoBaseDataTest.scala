@@ -196,6 +196,23 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       f.verifyNoMoreInteractions()
     }
 
+    "requesting tasks returns an empty array instead of null" in {
+      val f = new Fixture
+      Given("no tasks in the task tracker")
+
+      import scala.concurrent.ExecutionContext.Implicits.global
+      f.instanceTracker.instancesBySpec() returns
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances())
+
+      f.healthCheckManager.statuses(app.id) returns Future.successful(Map())
+
+      When("requesting AppInfos with tasks")
+      val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Tasks)).futureValue
+
+      Then("we get a tasks object in the appInfo")
+      appInfo.tasks should have size 0
+    }
+
     "requesting task counts only retrieves tasks from taskTracker and health stats" in {
       val f = new Fixture
       Given("one staged and two running tasks in the taskTracker")
