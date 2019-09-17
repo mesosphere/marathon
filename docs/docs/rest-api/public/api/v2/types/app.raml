@@ -361,10 +361,13 @@ types:
         format: int32
       deployments?:
         type: strings.Identifiable[]
+        (pragma.forceOptional):
       readinessCheckResults?:
         type: readiness.TaskReadinessCheckResult[]
+        (pragma.forceOptional):
       tasks?:
         type: task.Task[]
+        (pragma.forceOptional):
       lastTaskFailure?: task.TaskFailure
       tasksStats?: task.TaskStatsByVersion
 
