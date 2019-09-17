@@ -56,7 +56,7 @@ object JsonFormatBenchmark {
       role = Some("someRole"),
       env = 0.to(numEnvVars).map(i => ("KEY_" * 10) + i -> EnvVarValue(("VALUE_" * 10) + i)).toMap,
       labels = 0.to(numLabels).map(i => ("KEY_" * 10) + i -> (("VALUE_" * 10) + i)).toMap,
-      tasks = Seq(
+      tasks = Some(Seq(
         raml.Task(
           appId.toString,
           healthCheckResults = Seq.empty,
@@ -75,7 +75,7 @@ object JsonFormatBenchmark {
           region = None,
           role = "someRole"
         )
-      )
+      ))
     )
   }
 }
