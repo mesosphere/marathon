@@ -10,7 +10,6 @@ purge: | clean
 	docker rmi -f marathon-package-test:debian8 || echo "Couldn't remove debian8"
 	docker rmi -f marathon-package-test:centos6 || echo "Couldn't remove centos6"
 	docker rmi -f marathon-package-test:centos7 || echo "Couldn't remove centos7"
-	docker rmi -f marathon-package-test:ubuntu1404 || echo "Couldn't remove ubuntu1404"
 	docker rmi -f marathon-package-test:ubuntu1604 || echo "Couldn't remove ubuntu1604"
 	docker rmi -f marathon-package-test:mesos || echo "Couldn't remove mesos"
 
@@ -25,11 +24,6 @@ target/mesos-version: ../../project/Dependencies.scala
 
 target/debian8.built: debian8/Dockerfile debian8/mesos-version
 	cd debian8 && docker build . -t marathon-package-test:debian8
-	mkdir -p target
-	touch $@
-
-target/ubuntu1404.built: ubuntu1404/Dockerfile ubuntu1404/mesos-version
-	cd ubuntu1404 && docker build . -t marathon-package-test:ubuntu1404
 	mkdir -p target
 	touch $@
 
@@ -53,4 +47,4 @@ target/mesos.built: target/debian8.built mesos/Dockerfile
 test: | all
 	amm test.sc all
 
-all: target/mesos.built target/debian8.built target/centos7.built target/centos6.built target/ubuntu1404.built target/ubuntu1604.built
+all: target/mesos.built target/debian8.built target/centos7.built target/centos6.built target/ubuntu1604.built
