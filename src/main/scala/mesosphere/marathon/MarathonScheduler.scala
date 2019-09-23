@@ -72,7 +72,16 @@ class MarathonScheduler(
     logger.info(s"Received status update for task ${status.getTaskId.getValue}: " +
       s"${status.getState} (${status.getMessage}, healthy: ${status.getHealthy})")
 
-    taskStatusProcessor.publish(status).failed.foreach {
+    // Mesos may produce a status update with really long messages on some cases. We need to restrict
+    // the message length to something we can actually store in a ZK node
+    val newStatus = if (status.hasMessage && status.getMessage.length > MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH) {
+      logger.warn(s"Status update had length of ${status.getMessage.length}, longer than allowed ${MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH} characters. Using only substring")
+      status.toBuilder.setMessage(status.getMessage.substring(0, MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH)).build()
+    } else {
+      status
+    }
+
+    taskStatusProcessor.publish(newStatus).failed.foreach {
       case NonFatal(e) =>
         logger.error(s"while processing task status update $status", e)
     }
@@ -161,4 +170,8 @@ class MarathonScheduler(
     * @return region if it's available, None otherwise
     */
   def getLocalRegion: Option[Region] = localFaultDomain.map(_.region)
+}
+
+object MarathonScheduler {
+  val MAX_STATUS_MESSAGE_LENGTH = 10000
 }
