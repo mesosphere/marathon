@@ -72,9 +72,8 @@ class AppsResource @Inject() (
   case class AppInfos(apps: Seq[raml.AppInfo])
   class AppInfoStream(apps: Seq[raml.AppInfo]) extends StreamingOutput {
     override def write(output: OutputStream): Unit = {
-      val writer = new BufferedWriter(new OutputStreamWriter(output))
-      RamlSerializer.serializer.writeValue(writer, AppInfos(apps))
-      writer.flush()
+      RamlSerializer.serializer.writeValue(output, AppInfos(apps))
+      output.flush()
     }
   }
 
@@ -94,10 +93,8 @@ class AppsResource @Inject() (
         AppInfo.Embed.Counts + AppInfo.Embed.Deployments
       val mapped = await(appInfoService.selectAppsBy(selector, resolvedEmbed))
 
-      println("+++ Send apps")
       val stream = new AppInfoStream(mapped)
       Response.ok(stream).build()
-      //      Response.ok(RamlSerializer.serializer.writeValueAsString(AppInfos(mapped))).build()
 
       //      Response.ok(jsonObjString("apps" -> mapped)).build()
     }
