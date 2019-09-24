@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package api.v2
 
-import java.io.{BufferedWriter, OutputStream, OutputStreamWriter}
+import java.io.{BufferedOutputStream, OutputStream}
 import java.net.URI
 import java.time.Clock
 
@@ -72,8 +72,9 @@ class AppsResource @Inject() (
   case class AppInfos(apps: Seq[raml.AppInfo])
   class AppInfoStream(apps: Seq[raml.AppInfo]) extends StreamingOutput {
     override def write(output: OutputStream): Unit = {
-      RamlSerializer.serializer.writeValue(output, AppInfos(apps))
-      output.flush()
+      val writer = new BufferedOutputStream(output)
+      RamlSerializer.serializer.writeValue(writer, AppInfos(apps))
+      writer.flush()
     }
   }
 

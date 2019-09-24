@@ -242,8 +242,8 @@ lazy val marathon = (project in file("."))
       Package.ManifestAttributes("Implementation-Version" -> version.value ),
       Package.ManifestAttributes("Scala-Version" -> scalaVersion.value ),
       Package.ManifestAttributes("Git-Commit" -> git.gitHeadCommit.value.getOrElse("unknown") )
-    )//,
-    //javaOptions ++= Seq("-XX:+UnlockCommercialFeatures", "-XX:+FlightRecorder", "-XX:StartFlightRecording=duration=60s,filename=myrecording.jfr")
+    ),
+    javaOptions ++= Seq("-XX:+UnlockCommercialFeatures", "-XX:+FlightRecorder", "-XX:StartFlightRecording=delay=30s,duration=300s,filename=jackson_buffered.jfr")
   )
 
 lazy val ammonite = (project in file("./tools/repl-server"))
