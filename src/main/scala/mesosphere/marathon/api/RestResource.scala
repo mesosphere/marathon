@@ -15,7 +15,6 @@ import mesosphere.marathon.raml.RamlSerializer
 import mesosphere.marathon.state.{PathId, Timestamp}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import play.api.libs.json.JsonValidationError
-import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
 
 import scala.concurrent.{ExecutionContext, Future}
