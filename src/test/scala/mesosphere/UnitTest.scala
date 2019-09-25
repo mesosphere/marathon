@@ -9,7 +9,6 @@ import akka.testkit.{TestActor, TestActorRef, TestKitBase}
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.test.Mockito
 import org.scalactic.source.Position
 import org.scalatest._
