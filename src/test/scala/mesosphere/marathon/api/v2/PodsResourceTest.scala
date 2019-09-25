@@ -8,6 +8,7 @@ import akka.event.EventStream
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.api.RestResource.RestStreamingBody
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.api.{JsonTestHelper, RestResource, TaskKiller, TestAuthFixture}
@@ -666,7 +667,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
-        val body = Option(response.getEntity.asInstanceOf[String])
+        val body = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
         body should not be None
         body.foreach(_ should include("mypod does not exist"))
       }
@@ -1832,7 +1833,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           val response = asyncRequest { r => f.podsResource.version("/id", "2008-01-01T12:00:00.000Z", f.auth.request, r) }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
-            response.getEntity.toString should be ("{\"message\":\"Pod '/id' does not exist\"}")
+            response.getEntity.asInstanceOf[RestStreamingBody[_]].toString should be ("""{"message":"Pod '/id' does not exist","details":[]}""")
           }
         }
       }
@@ -1939,7 +1940,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
-            val killed: Seq[raml.Instance] = Json.fromJson[Seq[raml.Instance]](Json.parse(response.getEntity.asInstanceOf[String])).get
+            val killed: Seq[raml.Instance] = Json.fromJson[Seq[raml.Instance]](Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)).get
             killed.map(_.instanceId) should contain theSameElementsAs instances.map(_.instanceId.idString)
           }
         }

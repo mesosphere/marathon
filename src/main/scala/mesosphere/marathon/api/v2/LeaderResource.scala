@@ -68,7 +68,7 @@ class LeaderResource @Inject() (
           electionService.abdicateLeadership()
         }
 
-        ok(jsonObjString("message" -> "Leadership abdicated"))
+        ok(raml.Error(message = "Leadership abdicated"))
       } else {
         notFound("There is no leader")
       }

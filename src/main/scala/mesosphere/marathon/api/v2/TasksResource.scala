@@ -83,9 +83,7 @@ class TasksResource @Inject() (
       }
 
       val enrichedTasks: Iterable[EnrichedTask] = await(futureEnrichedTasks)
-      ok(jsonObjString(
-        "tasks" -> enrichedTasks.toIndexedSeq.toRaml
-      ))
+      ok(raml.TaskList(enrichedTasks.toIndexedSeq.toRaml))
     }
   }
 
@@ -145,7 +143,7 @@ class TasksResource @Inject() (
             case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
           })).flatten
         val killedTasks = killedInstances.flatMap { i => EnrichedTask.fromInstance(i).map(_.toRaml) }
-        ok(jsonObjString("tasks" -> killedTasks))
+        ok(raml.TaskList(killedTasks.to[Seq]))
       }
 
       val maybeInstances: Iterable[Option[Instance]] = await(Future.sequence(tasksIdToAppId.view

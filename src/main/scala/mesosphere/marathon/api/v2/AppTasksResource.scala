@@ -17,7 +17,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.AnyToRaml
-import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.state.PathId._
@@ -54,7 +53,7 @@ class AppTasksResource @Inject() (
           await(withAuthorization(ViewGroup, maybeGroup, Future.successful(unknownGroup(groupPath))) { group =>
             async {
               val tasks = await(runningTasks(group.transitiveAppIds, instancesBySpec)).toRaml
-              ok(jsonObjString("tasks" -> tasks))
+              ok(raml.TaskList(tasks))
             }
           })
         case _ =>
@@ -62,7 +61,7 @@ class AppTasksResource @Inject() (
           val maybeApp = groupManager.app(appId)
           val tasks = await(runningTasks(Set(appId), instancesBySpec)).toRaml
           withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
-            ok(jsonObjString("tasks" -> tasks))
+            ok(raml.TaskList(tasks))
           }
       }
     }
@@ -124,7 +123,7 @@ class AppTasksResource @Inject() (
             val enrichedTasks: Seq[EnrichedTask] = instances.flatMap { i =>
               EnrichedTask.singleFromInstance(i, healthCheckResults = healthStatuses.getOrElse(i.instanceId, Nil))
             }
-            ok(jsonObjString("tasks" -> enrichedTasks.toRaml))
+            ok(raml.TaskList(enrichedTasks.toRaml))
           case Failure(PathNotFoundException(appId, version)) => unknownApp(appId, version)
         }
       }
@@ -169,7 +168,7 @@ class AppTasksResource @Inject() (
               case Some(i) =>
                 val killedTask = EnrichedTask.singleFromInstance(i).get
                 val enrichedTask = killedTask.copy(healthCheckResults = healthStatuses.getOrElse(i.instanceId, Nil))
-                ok(jsonObjString("task" -> enrichedTask.toRaml))
+                ok(raml.TaskSingle(enrichedTask.toRaml))
             }
           case Failure(PathNotFoundException(appId, version)) => unknownApp(appId, version)
         }

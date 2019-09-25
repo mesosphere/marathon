@@ -349,7 +349,7 @@ class PodsResource @Inject() (
         instances.filter(instance => instancesDesired.contains(instance.instanceId))
       }
       val instances = await(taskKiller.kill(id, toKill, wipe)).map { instance => Raml.toRaml(instance) }
-      ok(Json.toJson(instances))
+      ok(instances)
     }
   }
 

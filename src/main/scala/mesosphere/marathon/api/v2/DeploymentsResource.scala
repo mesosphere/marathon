@@ -36,7 +36,7 @@ class DeploymentsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       val infos = await(service.listRunningDeployments())
         .filter(_.plan.affectedRunSpecs.exists(isAuthorized(ViewRunSpec, _)))
-      ok(infos)
+      ok(jsonString(infos))
     }
   }
 

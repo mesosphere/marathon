@@ -333,10 +333,6 @@ types:
         description: |
           The role to use. If not specified, uses the role of the enclosing group, or the default role.
           At the moment, only the default role or the group role are allowed
-  AppList:
-    type: object
-    properties:
-      apps: App[]
 
   VersionList:
     type: object
@@ -371,3 +367,8 @@ types:
       lastTaskFailure?: task.TaskFailure
       tasksStats?: task.TaskStatsByVersion
 
+  AppList:
+    type: object
+    (pragma.serializeOnly): # Used only for serialization
+    properties:
+      apps: AppInfo[]

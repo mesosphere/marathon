@@ -1,17 +1,19 @@
 package mesosphere.marathon
 package api
 
+import java.io.{BufferedOutputStream, OutputStream}
 import java.net.URI
 
 import javax.ws.rs.container.AsyncResponse
-import javax.ws.rs.core.{MediaType, Response}
+import javax.ws.rs.core.{MediaType, Response, StreamingOutput}
 import javax.ws.rs.core.Response.{ResponseBuilder, Status}
 import akka.http.scaladsl.model.StatusCodes
 import com.wix.accord.{Validator, Failure => ValidationFailure, Success => ValidationSuccess}
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.deployment.DeploymentPlan
+import mesosphere.marathon.raml.RamlSerializer
 import mesosphere.marathon.state.{PathId, Timestamp}
+import org.apache.commons.io.output.ByteArrayOutputStream
 import play.api.libs.json.JsonValidationError
 import play.api.libs.json.Json.JsValueWrapper
 import play.api.libs.json._
@@ -20,6 +22,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 trait RestResource extends JaxResource {
+  import RestResource.RestStreamingBody
   implicit val executionContext: ExecutionContext
   protected val config: MarathonConf
   case class FailureResponse(response: Response) extends Throwable
@@ -60,27 +63,28 @@ trait RestResource extends JaxResource {
   }
 
   protected def notFound(message: String): Response = {
-    Response.status(Status.NOT_FOUND).entity(jsonObjString("message" -> message)).build()
+    Response.status(Status.NOT_FOUND).entity(new RestStreamingBody(raml.Error(message))).build()
   }
 
   protected def deploymentResult(d: DeploymentPlan, response: ResponseBuilder = Response.ok()) = {
-    response.entity(jsonObjString("version" -> d.version, "deploymentId" -> d.id))
+    response.entity(new RestStreamingBody(raml.DeploymentResult(version = d.version.toOffsetDateTime, deploymentId = d.id)))
       .header(RestResource.DeploymentHeader, d.id)
       .build()
   }
 
   protected def status(code: Status) = Response.status(code).build()
-  protected def status(code: Status, entity: AnyRef) = Response.status(code).entity(entity).build()
   protected def ok(): Response = Response.ok().build()
   protected def ok(entity: String): Response = Response.ok(entity).build()
   protected def ok(entity: String, mediaType: MediaType): Response = Response.ok(entity).`type`(mediaType).build()
-  protected def ok[T](obj: T)(implicit writes: Writes[T]): Response = ok(jsonString(obj))
+  protected def ok[T <: raml.RamlGenerated](obj: Seq[T]): Response = Response.ok(new RestStreamingBody(obj)).build()
+  protected def ok[T <: raml.RamlGenerated](obj: T): Response = Response.ok(new RestStreamingBody(obj)).build()
+  protected def ok[T <: raml.RamlGenerated](obj: T, mediaType: MediaType): Response = Response.ok(new RestStreamingBody(obj)).`type`(mediaType).build()
   protected def created(uri: String): Response = Response.created(new URI(uri)).build()
   protected def noContent: Response = Response.noContent().build()
 
+  // TODO: Remove when all APi models are in RAML.
   protected def jsonString[T](obj: T)(implicit writes: Writes[T]): String = Json.stringify(Json.toJson(obj))
   protected def jsonObjString(fields: (String, JsValueWrapper)*): String = Json.stringify(Json.obj(fields: _*))
-  protected def jsonArrString(fields: JsValueWrapper*): String = Json.stringify(Json.arr(fields: _*))
 
   /**
     * Checks if the implicit validator yields a valid result.
@@ -132,5 +136,19 @@ object RestResource {
       "message" -> "Invalid JSON",
       "details" -> errors
     )
+  }
+
+  class RestStreamingBody[T](body: T) extends StreamingOutput {
+    override def write(output: OutputStream): Unit = {
+      val writer = new BufferedOutputStream(output)
+      RamlSerializer.serializer.writeValue(writer, body)
+      writer.flush()
+    }
+
+    override def toString: String = {
+      val out = new ByteArrayOutputStream()
+      write(out)
+      out.toString("UTF-8")
+    }
   }
 }

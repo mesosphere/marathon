@@ -1,7 +1,6 @@
 package mesosphere.marathon
 package api.v2
 
-import java.io.{BufferedOutputStream, OutputStream}
 import java.net.URI
 import java.time.Clock
 
@@ -11,7 +10,7 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
-import javax.ws.rs.core.{Context, MediaType, Response, StreamingOutput}
+import javax.ws.rs.core.{Context, MediaType, Response}
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.{AuthResource, PATCH, RestResource}
 import mesosphere.marathon.core.appinfo._
@@ -19,7 +18,7 @@ import mesosphere.marathon.core.event.ApiPostEvent
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.plugin.auth._
-import mesosphere.marathon.raml.{Raml, RamlSerializer}
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -69,15 +68,6 @@ class AppsResource @Inject() (
     (normalizer, validator)
   }
 
-  case class AppInfos(apps: Seq[raml.AppInfo])
-  class AppInfoStream(apps: Seq[raml.AppInfo]) extends StreamingOutput {
-    override def write(output: OutputStream): Unit = {
-      val writer = new BufferedOutputStream(output)
-      RamlSerializer.serializer.writeValue(writer, AppInfos(apps))
-      writer.flush()
-    }
-  }
-
   @GET
   def index(
     @QueryParam("cmd") cmd: String,
@@ -93,11 +83,7 @@ class AppsResource @Inject() (
       val resolvedEmbed = InfoEmbedResolver.resolveApp(embed) +
         AppInfo.Embed.Counts + AppInfo.Embed.Deployments
       val mapped = await(appInfoService.selectAppsBy(selector, resolvedEmbed))
-
-      val stream = new AppInfoStream(mapped)
-      Response.ok(stream).build()
-
-      //      Response.ok(jsonObjString("apps" -> mapped)).build()
+      ok(raml.AppList(mapped))
     }
   }
 
@@ -142,7 +128,7 @@ class AppsResource @Inject() (
       Response
         .created(new URI(app.id.toString))
         .header(RestResource.DeploymentHeader, plan.id)
-        .entity(jsonString(appWithDeployments))
+        .entity(new RestResource.RestStreamingBody(appWithDeployments))
         .build()
     }
   }

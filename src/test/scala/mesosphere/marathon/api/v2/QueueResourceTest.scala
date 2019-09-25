@@ -2,6 +2,7 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.UnitTest
+import mesosphere.marathon.api.RestResource.RestStreamingBody
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
@@ -17,6 +18,7 @@ import mesosphere.marathon.test.{JerseyTest, MarathonTestHelper, SettableClock}
 import mesosphere.mesos.NoOfferMatchReason
 import org.mockito.Matchers
 import play.api.libs.json._
+
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -77,7 +79,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
 
       //then
       response.getStatus should be(200)
-      val json = Json.parse(response.getEntity.asInstanceOf[String])
+      val json = Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
       val queuedApps = (json \ "queue").as[Seq[JsObject]]
       val jsonApp1 = queuedApps.find { apps => (apps \ "app" \ "id").as[String] == "/app" }.get
 
@@ -115,7 +117,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
 
       //then
       response.getStatus should be(200)
-      val json = Json.parse(response.getEntity.asInstanceOf[String])
+      val json = Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
       val queuedApps = (json \ "queue").as[Seq[JsObject]]
       val jsonApp1 = queuedApps.find { apps => (apps \ "app" \ "id").get == JsString("/app") }.get
 

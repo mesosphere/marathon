@@ -6,6 +6,7 @@ import java.util.Collections
 
 import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.api.RestResource.RestStreamingBody
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{GroupApiService, TestAuthFixture, TestGroupManagerFixture}
 import mesosphere.marathon.core.appinfo._
@@ -264,7 +265,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
       Then("The versions are send as simple json array")
       rootVersionsResponse.getStatus should be (200)
-      rootVersionsResponse.getEntity should be(Json.toJson(groupVersions).toString())
+      rootVersionsResponse.getEntity.toString should be(Json.toJson(groupVersions).toString())
     }
 
     "Group Versions for path are transferred as simple json string array (Fix #2329)" in new Fixture {
@@ -279,7 +280,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
       Then("The versions are send as simple json array")
       rootVersionsResponse.getStatus should be (200)
-      rootVersionsResponse.getEntity should be(Json.toJson(groupVersions).toString())
+      rootVersionsResponse.getEntity.asInstanceOf[RestStreamingBody[_]].toString should be(Json.toJson(groupVersions).toString())
     }
 
     "Creation of a group with same path as an existing app should be prohibited (fixes #3385)" in new FixtureWithRealGroupManager(
