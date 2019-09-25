@@ -84,7 +84,6 @@ trait RestResource extends JaxResource {
 
   // TODO: Remove when all APi models are in RAML.
   protected def jsonString[T](obj: T)(implicit writes: Writes[T]): String = Json.stringify(Json.toJson(obj))
-  protected def jsonObjString(fields: (String, JsValueWrapper)*): String = Json.stringify(Json.obj(fields: _*))
 
   /**
     * Checks if the implicit validator yields a valid result.
