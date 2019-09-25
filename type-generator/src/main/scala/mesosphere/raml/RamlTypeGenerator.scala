@@ -374,6 +374,7 @@ object RamlTypeGenerator {
     BLOCK(
       IMPORT("com.fasterxml.jackson.databind.ObjectMapper"),
       IMPORT("com.fasterxml.jackson.databind.module.SimpleModule"),
+      IMPORT("com.fasterxml.jackson.module.afterburner.AfterburnerModule"),
       IMPORT("com.fasterxml.jackson.module.scala.DefaultScalaModule"),
       IMPORT("com.fasterxml.jackson.databind.ser.std.StdSerializer"),
 
@@ -402,7 +403,8 @@ object RamlTypeGenerator {
             } ++
 
             Seq(REF("mapper") DOT "registerModule" APPLY REF("module")) ++
-            Seq(REF("mapper") DOT "registerModule" APPLY REF("DefaultScalaModule"))
+            Seq(REF("mapper") DOT "registerModule" APPLY REF("DefaultScalaModule")) ++
+            Seq(REF("mapper") DOT "registerModule" APPLY NEW("AfterburnerModule"))
 
         ).withComment("ObjectMapper is thread safe, we have a single shared instance here")
       )

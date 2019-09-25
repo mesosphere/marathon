@@ -20,7 +20,6 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer, UpdateRunSpec, ViewRunSpec}
 import mesosphere.marathon.raml.AnyToRaml
-import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state.{AbsolutePathId, PathId}
 import mesosphere.marathon.stream.Implicits._
@@ -83,9 +82,7 @@ class TasksResource @Inject() (
       }
 
       val enrichedTasks: Iterable[EnrichedTask] = await(futureEnrichedTasks)
-      ok(jsonObjString(
-        "tasks" -> enrichedTasks.toIndexedSeq.toRaml
-      ))
+      ok(raml.TaskList(enrichedTasks.toIndexedSeq.toRaml))
     }
   }
 
@@ -145,7 +142,7 @@ class TasksResource @Inject() (
             case (appId, instances) => taskKiller.kill(appId, _ => instances, wipe)
           })).flatten
         val killedTasks = killedInstances.flatMap { i => EnrichedTask.fromInstance(i).map(_.toRaml) }
-        ok(jsonObjString("tasks" -> killedTasks))
+        ok(raml.TaskList(killedTasks.to[Seq]))
       }
 
       val maybeInstances: Iterable[Option[Instance]] = await(Future.sequence(tasksIdToAppId.view

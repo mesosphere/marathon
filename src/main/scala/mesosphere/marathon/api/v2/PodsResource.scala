@@ -15,6 +15,7 @@ import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{Context, MediaType, Response}
 import mesosphere.marathon.Normalization._
+import mesosphere.marathon.api.RestResource.RestStreamingBody
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.{AuthResource, RestResource, TaskKiller}
@@ -57,10 +58,6 @@ class PodsResource @Inject() (
   // If we can normalize using the internal model, do that instead.
   // The version of the pod is changed here to make sure, the user has not send a version.
   private def normalize(pod: PodDefinition): PodDefinition = pod.copy(versionInfo = VersionInfo.OnlyVersion(clock.now()))
-
-  private def marshal(pod: Pod): String = Json.stringify(Json.toJson(pod))
-
-  private def marshal(pod: PodDefinition): String = marshal(Raml.toRaml(pod))
 
   private def unmarshal(bytes: Array[Byte]): Pod = {
     // no normalization or validation here, that happens elsewhere and in a precise order
@@ -108,7 +105,7 @@ class PodsResource @Inject() (
 
       Response.created(new URI(podDef.id.toString))
         .header(RestResource.DeploymentHeader, deployment.id)
-        .entity(marshal(podDef))
+        .entity(new RestStreamingBody[raml.Pod](Raml.toRaml(podDef)))
         .build()
     }
   }
@@ -149,7 +146,7 @@ class PodsResource @Inject() (
 
         val builder = Response
           .ok(new URI(podDef.id.toString))
-          .entity(marshal(podDef))
+          .entity(new RestStreamingBody(Raml.toRaml(podDef)))
           .header(RestResource.DeploymentHeader, deployment.id)
         builder.build()
       }
@@ -161,7 +158,7 @@ class PodsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
       val pods = podSystem.findAll(isAuthorized(ViewRunSpec, _))
-      ok(Json.stringify(Json.toJson(pods.map(Raml.toRaml(_)))))
+      ok(pods.map(Raml.toRaml(_)))
     }
   }
 
@@ -178,7 +175,7 @@ class PodsResource @Inject() (
       withValid(id.toAbsolutePath) { id =>
         podSystem.find(id).fold(notFound(s"""{"message": "pod with $id does not exist"}""")) { pod =>
           withAuthorization(ViewRunSpec, pod) {
-            ok(marshal(pod))
+            ok(Raml.toRaml(pod))
           }
         }
       }
@@ -270,7 +267,7 @@ class PodsResource @Inject() (
         async {
           await(podSystem.version(id, version)).fold(notFound(id)) { pod =>
             withAuthorization(ViewRunSpec, pod) {
-              ok(marshal(pod))
+              ok(Raml.toRaml(pod))
             }
           }
         }
@@ -349,7 +346,7 @@ class PodsResource @Inject() (
         instances.filter(instance => instancesDesired.contains(instance.instanceId))
       }
       val instances = await(taskKiller.kill(id, toKill, wipe)).map { instance => Raml.toRaml(instance) }
-      ok(Json.toJson(instances))
+      ok(instances)
     }
   }
 

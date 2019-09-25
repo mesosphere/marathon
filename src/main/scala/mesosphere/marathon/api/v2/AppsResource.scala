@@ -11,6 +11,7 @@ import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.{Context, MediaType, Response}
+import mesosphere.marathon.api.RestResource.RestStreamingBody
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.{AuthResource, PATCH, RestResource}
 import mesosphere.marathon.core.appinfo._
@@ -83,7 +84,7 @@ class AppsResource @Inject() (
       val resolvedEmbed = InfoEmbedResolver.resolveApp(embed) +
         AppInfo.Embed.Counts + AppInfo.Embed.Deployments
       val mapped = await(appInfoService.selectAppsBy(selector, resolvedEmbed))
-      Response.ok(jsonObjString("apps" -> mapped)).build()
+      ok(raml.AppList(mapped))
     }
   }
 
@@ -128,7 +129,7 @@ class AppsResource @Inject() (
       Response
         .created(new URI(app.id.toString))
         .header(RestResource.DeploymentHeader, plan.id)
-        .entity(jsonString(appWithDeployments))
+        .entity(new RestResource.RestStreamingBody(appWithDeployments))
         .build()
     }
   }
@@ -154,7 +155,7 @@ class AppsResource @Inject() (
             case Some(group) =>
               checkAuthorization(ViewGroup, group)
               val appsWithTasks = await(appInfoService.selectAppsInGroup(groupId, authzSelector, resolvedEmbed))
-              ok(jsonObjString("*" -> appsWithTasks))
+              Response.ok(new RestStreamingBody(Map("*" -> appsWithTasks))).build()
             case None =>
               unknownGroup(groupId)
           }
@@ -167,7 +168,7 @@ class AppsResource @Inject() (
           (appInfo, appDef) match {
             case (Some(info), Some(app)) =>
               checkAuthorization(ViewRunSpec, app)
-              ok(jsonObjString("app" -> info))
+              Response.ok(new RestStreamingBody(Map("app" -> info))).build()
             case _ => unknownApp(appId)
           }
       }

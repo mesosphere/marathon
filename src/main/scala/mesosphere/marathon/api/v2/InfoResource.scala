@@ -97,17 +97,16 @@ class InfoResource @Inject() (
       val frameworkId = await(frameworkIdRepository.get()).map(_.id)
       withAuthorization(ViewResource, AuthorizedResource.SystemConfig) {
         val mesosLeaderUiUrl = Json.obj("mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl)
-        Response.ok(
-          jsonObjString(
-            "name" -> BuildInfo.name,
-            "version" -> BuildInfo.version.toString(),
-            "buildref" -> BuildInfo.buildref,
-            "elected" -> electionService.isLeader,
-            "leader" -> electionService.leaderHostPort,
-            "frameworkId" -> frameworkId,
-            "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
-            "zookeeper_config" -> zookeeperConfigValues,
-            "http_config" -> httpConfigValues)).build()
+        Response.ok(Json.stringify(Json.obj(
+          "name" -> BuildInfo.name,
+          "version" -> BuildInfo.version.toString(),
+          "buildref" -> BuildInfo.buildref,
+          "elected" -> electionService.isLeader,
+          "leader" -> electionService.leaderHostPort,
+          "frameworkId" -> frameworkId,
+          "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
+          "zookeeper_config" -> zookeeperConfigValues,
+          "http_config" -> httpConfigValues))).build()
       }
     }
   }

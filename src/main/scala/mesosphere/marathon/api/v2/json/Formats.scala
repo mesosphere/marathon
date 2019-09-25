@@ -61,6 +61,7 @@ object Formats extends Formats {
 
     RamlSerializer.serializer.registerModule(jtm)
     RamlSerializer.serializer.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+    RamlSerializer.serializer.disable(SerializationFeature.FLUSH_AFTER_WRITE_VALUE)
   }
 
 }

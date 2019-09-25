@@ -335,8 +335,9 @@ types:
           At the moment, only the default role or the group role are allowed
   AppList:
     type: object
+    (pragma.serializeOnly): # Used only for serialization
     properties:
-      apps: App[]
+      apps: AppInfo[]
 
   VersionList:
     type: object

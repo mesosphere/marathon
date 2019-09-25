@@ -4,6 +4,7 @@ package api.v2
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
+import mesosphere.marathon.api.RestResource.RestStreamingBody
 import mesosphere.marathon.api.{JsonTestHelper, TaskKiller, TestAuthFixture}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -125,7 +126,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
            |}
         """.stripMargin
       JsonTestHelper
-        .assertThatJsonString(response.getEntity.asInstanceOf[String])
+        .assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
         .correspondsToJsonString(expected)
     }
 
@@ -192,7 +193,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
           |  }
           |}""".stripMargin
       JsonTestHelper
-        .assertThatJsonString(response.getEntity.asInstanceOf[String])
+        .assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
         .correspondsToJsonString(expected)
       verify(taskKiller).kill(equalTo(appId), any, any)(any)
       verifyNoMoreInteractions(taskKiller)
@@ -251,7 +252,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
            |  }
            |}""".stripMargin
       JsonTestHelper
-        .assertThatJsonString(response.getEntity.asInstanceOf[String])
+        .assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
         .correspondsToJsonString(expected)
       verify(taskKiller).kill(equalTo(appId), any, org.mockito.Matchers.eq(true))(any)
       verifyNoMoreInteractions(taskKiller)
@@ -309,7 +310,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
         """.stripMargin
 
       JsonTestHelper
-        .assertThatJsonString(response.getEntity.asInstanceOf[String])
+        .assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
         .correspondsToJsonString(expected)
     }
 

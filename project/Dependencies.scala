@@ -70,6 +70,7 @@ object Dependencies {
     jerseyCore % "compile",
     jerseyServer % "compile",
     jerseyServlet % "compile",
+    jacksonAfterBurner % "compile",
     jacksonScala % "compile",
     jacksonJaxrs % "compile",
 
@@ -169,6 +170,7 @@ object Dependency {
   val guice = "com.google.inject" % "guice" % V.Guice
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
   val jacksonJaxrs = "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % V.Jackson
+  val jacksonAfterBurner = "com.fasterxml.jackson.module" % "jackson-module-afterburner" % V.Jackson
   val jacksonScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % V.Jackson
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
 
