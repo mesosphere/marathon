@@ -42,8 +42,7 @@ class LeaderResource @Inject() (
       withAuthorization(ViewResource, AuthorizedResource.Leader) {
         electionService.leaderHostPort match {
           case None => notFound("There is no leader")
-          case Some(leader) =>
-            ok(jsonObjString("leader" -> leader))
+          case Some(leader) => ok(raml.LeaderInfo(leader))
         }
       }
     }

@@ -281,6 +281,9 @@ object ObjectVisitor {
           } else {
             writerSimple
           }
+        } ++ discriminator.toSeq.map { discriminatorName =>
+          // If the object has a discriminator field such as "kind" it is added.
+          REF("gen") DOT "writeObjectField" APPLY( LIT(discriminatorName), LIT(discriminatorValue.getOrElse(discriminatorName)) )
         }
       ),
       DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
