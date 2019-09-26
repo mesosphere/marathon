@@ -13,10 +13,11 @@ import mesosphere.marathon.storage.repository.{AppRepository, FrameworkIdReposit
 import mesosphere.marathon.test.{MarathonTestHelper, TestCrashStrategy}
 import mesosphere.mesos.LibMesos
 import mesosphere.util.state.{FrameworkId, MutableMesosLeaderInfo}
+import org.apache.mesos.Protos.DomainInfo.FaultDomain
 import org.apache.mesos.Protos.DomainInfo.FaultDomain.{RegionInfo, ZoneInfo}
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
-import org.apache.mesos.Protos.DomainInfo.FaultDomain
+import org.mockito.ArgumentCaptor
 
 import scala.concurrent.Future
 
@@ -147,6 +148,52 @@ class MarathonSchedulerTest extends AkkaUnitTest {
 
       Then("Marathon crashes")
       crashStrategy.crashed shouldBe true
+    }
+
+    "Restrict status update message length" in new Fixture {
+      Given(s"A status update larger than ${MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH} characters")
+      val driver = mock[SchedulerDriver]
+      val message = "X" * (MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH + 100)
+
+      val status = TaskStatus
+        .newBuilder()
+        .setTaskId(TaskID.newBuilder().setValue("taskId"))
+        .setState(TaskState.TASK_FAILED)
+        .setMessage(message)
+        .build()
+
+      val captor = ArgumentCaptor.forClass(classOf[TaskStatus])
+
+      taskStatusProcessor.publish(captor.capture()) returns Future.successful(())
+
+      When("The TaskStatus is delivered")
+      marathonScheduler.statusUpdate(driver, status)
+
+      Then("The forwarded status should have a restricted message size")
+      captor.getValue.getMessage should have length (MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH)
+    }
+
+    "Not restrict status update message length if it's under the limit" in new Fixture {
+      Given(s"A status update smaller than ${MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH} characters")
+      val driver = mock[SchedulerDriver]
+      val message = "X" * 200
+
+      val status = TaskStatus
+        .newBuilder()
+        .setTaskId(TaskID.newBuilder().setValue("taskId"))
+        .setState(TaskState.TASK_FAILED)
+        .setMessage(message)
+        .build()
+
+      val captor = ArgumentCaptor.forClass(classOf[TaskStatus])
+
+      taskStatusProcessor.publish(captor.capture()) returns Future.successful(())
+
+      When("The TaskStatus is delivered")
+      marathonScheduler.statusUpdate(driver, status)
+
+      Then("The forwarded status should have the original message size")
+      captor.getValue.getMessage should have length (message.length)
     }
 
     "Store default region when registered" in new Fixture {
