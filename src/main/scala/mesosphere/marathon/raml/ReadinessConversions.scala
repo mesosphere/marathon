@@ -25,6 +25,15 @@ trait ReadinessConversions {
     )
   }
 
+  implicit val readinessCheckResultWrites: Writes[core.readiness.ReadinessCheckResult, raml.TaskReadinessCheckResult] = Writes { result =>
+    raml.TaskReadinessCheckResult(
+      name = result.name,
+      taskId = result.taskId.idString,
+      ready = result.ready,
+      lastResponse = result.lastResponse.map(response => raml.ReadinessCheckHttpResponse(response.status, response.contentType, response.body))
+    )
+  }
+
   implicit val readinessProtocolReads: Reads[HttpScheme, core.readiness.ReadinessCheck.Protocol] = Reads {
     case HttpScheme.Http => core.readiness.ReadinessCheck.Protocol.HTTP
     case HttpScheme.Https => core.readiness.ReadinessCheck.Protocol.HTTPS
