@@ -12,7 +12,6 @@ import javax.ws.rs.core.{Context, MediaType, Response}
 import akka.stream.Materializer
 import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{AuthResource, GroupApiService, RestResource}
 import mesosphere.marathon.core.appinfo.{GroupInfoService, Selector}
 import mesosphere.marathon.core.deployment.DeploymentPlan

@@ -35,17 +35,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     Raml.fromRaml(appNormalization(raw))
   }
 
-  private[this] def toJsonWithPlay(app: AppDefinition): String = {
-    val raml: App = Raml.toRaml(app)
-    val value: JsValue = Json.toJson(raml)
-    value.toString()
-  }
-
-  private[this] def toJsonWithJackson(app: AppDefinition): String = {
-    val raml: App = Raml.toRaml(app)
-    RamlSerializer.serializer.writeValueAsString(raml)
-  }
-
   "AppDefinition" should {
     "Validation" in {
       var app = AppDefinition(id = "a b".toAbsolutePath, role = "*")

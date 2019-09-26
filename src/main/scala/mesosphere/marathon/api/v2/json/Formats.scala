@@ -61,7 +61,6 @@ object Formats extends Formats {
     RamlSerializer.serializer.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
     RamlSerializer.serializer.disable(SerializationFeature.FLUSH_AFTER_WRITE_VALUE)
   }
-
 }
 
 trait Formats
@@ -153,7 +152,6 @@ trait Formats
 }
 
 trait DeploymentFormats {
-  import Formats._
 
   implicit lazy val ByteArrayFormat: Format[Array[Byte]] =
     Format(
