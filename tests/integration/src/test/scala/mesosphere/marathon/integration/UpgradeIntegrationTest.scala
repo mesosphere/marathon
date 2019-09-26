@@ -123,7 +123,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       And(s"Marathon is upgraded to n-2 (${marathonMinus2Artifact.version})")
       val marathonMinus2 = PackagedMarathon(marathonMinus2Artifact.marathonBaseFolder, s"$suiteName-n-minus-2", mesosMasterUrl, zkUrl)
       marathonMinus2.start().futureValue
-      (marathonMinus2.client.info.entityJson \ "version").as[String] should be(marathonMinus2Artifact.version)
+      (marathonMinus2.client.info.entityJson \ "version").as[String] should be(marathonMinus2Artifact.version.copy(commit = None).toString())
 
       And("new apps in Marathon n-2 are added")
       val app_nm2 = appProxy(testBasePath / "app-nm2", "v1", instances = 1, healthCheck = None)
@@ -151,7 +151,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       And(s"Marathon is upgraded to n-1")
       val marathonMinus1 = PackagedMarathon(marathonMinus1Artifact.marathonBaseFolder, s"$suiteName-n-minus-1", mesosMasterUrl, zkUrl)
       marathonMinus1.start().futureValue
-      (marathonMinus1.client.info.entityJson \ "version").as[String] should be(marathonMinus1Artifact.version)
+      (marathonMinus1.client.info.entityJson \ "version").as[String] should be(marathonMinus1Artifact.version.copy(commit = None).toString())
 
       And(s"new pods in Marathon n-1 are added (${marathonMinus1Artifact.version})")
       val resident_pod_nm1 = PodDefinition(
