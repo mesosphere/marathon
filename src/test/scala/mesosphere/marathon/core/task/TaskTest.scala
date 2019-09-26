@@ -4,7 +4,6 @@ package core.task
 import java.util.UUID
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
 import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestTaskBuilder}
@@ -14,7 +13,7 @@ import mesosphere.marathon.core.task.state.{NetworkInfo, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId, PortDefinition}
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.MarathonTestHelper
+import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.apache.mesos.{Protos => MesosProtos}
 import org.scalatest.Inside
 import play.api.libs.json._
@@ -95,12 +94,12 @@ class TaskTest extends UnitTest with Inside {
 
     "effectiveIpAddress returns the first container ip for for MarathonTask instances with multiple NetworkInfos (if the app requests an IP)" in {
       val f = new Fixture
-      f.taskWithMultipleNetworksAndOneIp.status.networkInfo.effectiveIpAddress(f.appWithIpAddress).value should equal (f.ipString1)
+      f.taskWithMultipleNetworksAndOneIp.status.networkInfo.effectiveIpAddress(f.appWithIpAddress).value should equal(f.ipString1)
     }
 
     "effectiveIpAddress returns None if there is no ip" in {
       val f = new Fixture
-      f.taskWithMultipleNetworkAndNoIp.status.networkInfo.effectiveIpAddress(f.appWithIpAddress) should be (None)
+      f.taskWithMultipleNetworkAndNoIp.status.networkInfo.effectiveIpAddress(f.appWithIpAddress) should be(None)
     }
 
     "effectiveIpAddress returns the agent ip for MarathonTask instances with one NetworkInfo (if the app does NOT request an IP)" in {
@@ -110,12 +109,12 @@ class TaskTest extends UnitTest with Inside {
 
     "ipAddresses returns None for MarathonTask instances with no IPs" in {
       val f = new Fixture
-      f.taskWithoutIp.status.networkInfo.ipAddresses should be (Nil)
+      f.taskWithoutIp.status.networkInfo.ipAddresses should be(Nil)
     }
 
     "ipAddresses returns an empty list for MarathonTask instances with no IPs and multiple NetworkInfos" in {
       val f = new Fixture
-      f.taskWithMultipleNetworkAndNoIp.status.networkInfo.ipAddresses should be (empty)
+      f.taskWithMultipleNetworkAndNoIp.status.networkInfo.ipAddresses should be(empty)
     }
 
     "ipAddresses returns all IPs for MarathonTask instances with multiple IPs" in {
@@ -142,7 +141,7 @@ class TaskTest extends UnitTest with Inside {
       val volumeIdString = "registry.domain#storage#8e1f0af7-3fdd-11e6-a2ab-2687a99fcff1"
       val volumeId = LocalVolumeId.unapply(volumeIdString)
       volumeId should not be None
-      volumeId should be (Some(LocalVolumeId(PathId.fromSafePath("registry.domain"), "storage", "8e1f0af7-3fdd-11e6-a2ab-2687a99fcff1")))
+      volumeId should be(Some(LocalVolumeId(PathId.fromSafePath("registry.domain"), "storage", "8e1f0af7-3fdd-11e6-a2ab-2687a99fcff1")))
     }
 
     "isUnreachableExpired returns if task is inactive" in {
@@ -247,4 +246,68 @@ class TaskTest extends UnitTest with Inside {
     }
   }
 
+  val marathon_1_4_9_ephemeral_app_id = "sleeper.7dcb9c7f-e01d-11e9-80dd-2ae4d7ed9076"
+  val marathon_1_4_9_ephemeral_pod_id = "dev_sleeper.instance-71471cee-e01d-11e9-80dd-2ae4d7ed9076.sleep1"
+  val marathon_1_4_9_resident_app_id = "dev_resident-sleep.d15865ae-e01f-11e9-8fd4-2ae4d7ed9076.2"
+  "task ID parsing" should {
+    "parse Marathon 1.4.9 ephemeral app task IDs from " in {
+      inside(Task.Id.parse(marathon_1_4_9_ephemeral_app_id)) {
+        case Task.LegacyId(runSpec, separator, uuid) =>
+          runSpec shouldBe PathId("/sleeper")
+          separator shouldBe "."
+          uuid.toString shouldBe "7dcb9c7f-e01d-11e9-80dd-2ae4d7ed9076"
+      }
+    }
+    "parse Marathon 1.4.9 ephemeral pod taskIDs" in {
+      inside(Task.Id.parse(marathon_1_4_9_ephemeral_pod_id)) {
+        case Task.EphemeralTaskId(taskId, Some(containerName)) =>
+          containerName shouldBe "sleep1"
+          taskId.runSpecId shouldBe PathId("/dev/sleeper")
+          taskId.uuid.toString shouldBe "71471cee-e01d-11e9-80dd-2ae4d7ed9076"
+      }
+    }
+    "parse Marathon 1.4.9 resident task id" in {
+      inside(Task.Id.parse(marathon_1_4_9_resident_app_id)) {
+        case Task.LegacyResidentId(runSpec, separator, uuid, attempt) =>
+          runSpec shouldBe PathId("/dev/resident-sleep")
+          separator shouldBe "."
+          uuid.toString shouldBe "d15865ae-e01f-11e9-8fd4-2ae4d7ed9076"
+          attempt shouldBe 2L
+      }
+    }
+
+    // Note - resident pods were implemented in 1.6.322, and used the new taskId format from the beginning.
+  }
+
+  "nextIncarnation for" should {
+    "return the next incarnation for a 1.4.9 ephemeral app" in {
+      inside(Task.Id.nextIncarnationFor(Task.Id.parse(marathon_1_4_9_ephemeral_app_id))) {
+        case Task.LegacyResidentId(runSpecId, separator, uuid, incarnation) =>
+          runSpecId shouldBe PathId("/sleeper")
+          uuid.toString shouldBe "7dcb9c7f-e01d-11e9-80dd-2ae4d7ed9076"
+          separator shouldBe "."
+          incarnation shouldBe 1L
+      }
+    }
+
+    "return the next incarnation for a 1.4.9 ephemeral pod" in {
+      inside(Task.Id.nextIncarnationFor(Task.Id.parse(marathon_1_4_9_ephemeral_pod_id))) {
+        case Task.TaskIdWithIncarnation(taskId, containerName, incarnation) =>
+          taskId.runSpecId shouldBe PathId("/dev/sleeper")
+          taskId.uuid.toString shouldBe "71471cee-e01d-11e9-80dd-2ae4d7ed9076"
+          containerName shouldBe Some("sleep1")
+          incarnation shouldBe 1L
+      }
+    }
+
+    "return the next incarnation for a 1.4.9 resident app" in {
+      inside(Task.Id.nextIncarnationFor(Task.Id.parse(marathon_1_4_9_resident_app_id))) {
+        case Task.LegacyResidentId(runSpecId, separator, uuid, incarnation) =>
+          runSpecId shouldBe PathId("/dev/resident-sleep")
+          separator shouldBe "."
+          uuid.toString shouldBe "d15865ae-e01f-11e9-8fd4-2ae4d7ed9076"
+          incarnation shouldBe 3L
+      }
+    }
+  }
 }
