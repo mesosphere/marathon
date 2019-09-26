@@ -4,7 +4,15 @@ package raml
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.AppDefinition
 
-trait DeploymentStepInfoConversion extends ReadinessConversions {
+trait DeploymentPlanConversion extends ReadinessConversions {
+
+  implicit val deploymentPlanWrites: Writes[core.deployment.DeploymentPlan, raml.DeploymentPlan] = Writes{ plan =>
+    raml.DeploymentPlan(
+      id = plan.id,
+      steps = plan.steps.toRaml,
+      version = plan.version.toOffsetDateTime
+    )
+  }
 
   implicit val deploymentActionWrites: Writes[core.deployment.DeploymentAction, raml.DeploymentAction] = Writes { action =>
     val (app, pod) = action.runSpec match {

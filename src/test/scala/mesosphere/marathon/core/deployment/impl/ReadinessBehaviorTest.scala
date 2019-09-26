@@ -19,7 +19,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.raml.{Raml, Resources}
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 import mesosphere.marathon.util.CancellableOnce
@@ -199,7 +199,7 @@ class ReadinessBehaviorTest extends AkkaUnitTest with Eventually with GroupCreat
     val deploymentManagerProbe = TestProbe()
     val step = DeploymentStep(Seq.empty)
     val plan = DeploymentPlan("deploy", createRootGroup(), createRootGroup(), Seq(step), Timestamp.now())
-    val deploymentStatus = DeploymentStatus(plan, step)
+    val deploymentStatus = DeploymentStatus(Raml.toRaml(plan), Raml.toRaml(step))
     val tracker = mock[InstanceTracker]
     val appId = AbsolutePathId("/test")
     val app = AppDefinition(appId, role = "*")

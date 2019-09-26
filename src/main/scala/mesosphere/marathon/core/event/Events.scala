@@ -176,32 +176,32 @@ case class GroupChangeFailed(
 
 case class DeploymentSuccess(
     id: String,
-    plan: DeploymentPlan,
+    plan: raml.DeploymentPlan,
     eventType: String = "deployment_success",
     timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentFailed(
     id: String,
-    plan: DeploymentPlan,
+    plan: raml.DeploymentPlan,
     eventType: String = "deployment_failed",
     timestamp: String = Timestamp.now().toString,
     reason: Option[String] = None) extends UpgradeEvent
 
 case class DeploymentStatus(
-    plan: DeploymentPlan,
-    currentStep: DeploymentStep,
+    plan: raml.DeploymentPlan,
+    currentStep: raml.DeploymentStep,
     eventType: String = "deployment_info",
     timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentStepSuccess(
-    plan: DeploymentPlan,
-    currentStep: DeploymentStep,
+    plan: raml.DeploymentPlan,
+    currentStep: raml.DeploymentStep,
     eventType: String = "deployment_step_success",
     timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentStepFailure(
-    plan: DeploymentPlan,
-    currentStep: DeploymentStep,
+    plan: raml.DeploymentPlan,
+    currentStep: raml.DeploymentStep,
     eventType: String = "deployment_step_failure",
     timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
