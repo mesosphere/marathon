@@ -88,6 +88,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
+  def versionWithoutCommit(version: SemVer): String =
+    version.copy(commit = None).toString
+
   "Ephemeral and persistent apps and pods" should {
     "survive an upgrade cycle" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
 
@@ -97,7 +100,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       Given(s"A Marathon n-3 is running (${marathonMinus3Artifact.version})")
       val marathonMinus3 = PackagedMarathon(marathonMinus3Artifact.marathonBaseFolder, suiteName = s"$suiteName-n-minus-3", mesosMasterUrl, zkUrl)
       marathonMinus3.start().futureValue
-      (marathonMinus3.client.info.entityJson \ "version").as[String] should be(marathonMinus3Artifact.version)
+      (marathonMinus3.client.info.entityJson \ "version").as[String] should be(versionWithoutCommit(marathonMinus3Artifact.version))
 
       And(s"new running apps in Marathon n-3 (${marathonMinus3Artifact.version})")
       val app_nm3_fail = appProxy(testBasePath / "app-nm3-fail", "v1", instances = 1, healthCheck = None)
@@ -123,7 +126,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       And(s"Marathon is upgraded to n-2 (${marathonMinus2Artifact.version})")
       val marathonMinus2 = PackagedMarathon(marathonMinus2Artifact.marathonBaseFolder, s"$suiteName-n-minus-2", mesosMasterUrl, zkUrl)
       marathonMinus2.start().futureValue
-      (marathonMinus2.client.info.entityJson \ "version").as[String] should be(marathonMinus2Artifact.version.copy(commit = None).toString())
+      (marathonMinus2.client.info.entityJson \ "version").as[String] should be(versionWithoutCommit(marathonMinus2Artifact.version))
 
       And("new apps in Marathon n-2 are added")
       val app_nm2 = appProxy(testBasePath / "app-nm2", "v1", instances = 1, healthCheck = None)
@@ -151,7 +154,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       And(s"Marathon is upgraded to n-1")
       val marathonMinus1 = PackagedMarathon(marathonMinus1Artifact.marathonBaseFolder, s"$suiteName-n-minus-1", mesosMasterUrl, zkUrl)
       marathonMinus1.start().futureValue
-      (marathonMinus1.client.info.entityJson \ "version").as[String] should be(marathonMinus1Artifact.version.copy(commit = None).toString())
+      (marathonMinus1.client.info.entityJson \ "version").as[String] should be(versionWithoutCommit(marathonMinus1Artifact.version))
 
       And(s"new pods in Marathon n-1 are added (${marathonMinus1Artifact.version})")
       val resident_pod_nm1 = PodDefinition(
