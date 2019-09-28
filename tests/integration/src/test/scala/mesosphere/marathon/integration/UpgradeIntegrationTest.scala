@@ -227,7 +227,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     // Start apps in n-3
     Given(s"A Marathon n-3 is running (${marathonMinus3Artifact.version})")
     marathonNm3.start().futureValue
-    (marathonNm3.client.info.entityJson \ "version").as[String] should be("1.6.549")
+    (marathonNm3.client.info.entityJson \ "version").as[String] should be(versionWithoutCommit(marathonMinus3Artifact.version))
 
     And("new running apps in Marathon n-3")
     val app_nm3_fail = appProxy(testBasePath / "app-nm3-fail", "v1", instances = 1, healthCheck = None)
@@ -298,7 +298,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     marathonnm1.stop().futureValue
     val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
     marathonCurrent.start().futureValue
-    (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
+    (marathonCurrent.client.info.entityJson \ "version").as[String] should be(versionWithoutCommit(BuildInfo.version))
 
     Then(s"All apps from n-1 are still running (${marathonMinus1Artifact.version}")
     marathonCurrent should have (runningTasksFor(AbsolutePathId(residentApp_nm1.id), 1))
