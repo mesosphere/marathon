@@ -270,7 +270,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
     Given(s"A Marathon n-1 is running (${marathonMinus1Artifact.version})")
     marathonnm1.start().futureValue
-    (marathonnm1.client.info.entityJson \ "version").as[String] should be(marathonMinus1Artifact.version)
+    (marathonnm1.client.info.entityJson \ "version").as[String] should be(versionWithoutCommit(marathonMinus1Artifact.version))
 
     And("new running apps in Marathon n-1")
     val containerPath = "persistent-volume"
