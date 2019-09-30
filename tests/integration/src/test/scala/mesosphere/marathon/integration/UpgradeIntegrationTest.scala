@@ -298,7 +298,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     marathonnm1.stop().futureValue
     val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
     marathonCurrent.start().futureValue
-    (marathonCurrent.client.info.entityJson \ "version").as[String] should be(versionWithoutCommit(BuildInfo.version))
+    (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
     Then(s"All apps from n-1 are still running (${marathonMinus1Artifact.version}")
     marathonCurrent should have (runningTasksFor(AbsolutePathId(residentApp_nm1.id), 1))
