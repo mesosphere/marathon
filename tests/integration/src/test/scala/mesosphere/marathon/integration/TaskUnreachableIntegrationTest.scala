@@ -173,7 +173,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       waitForDeployment(update)
 
       // Poll only every 500ms inside eventually
-      implicit val patienceConfig: PatienceConfig = PatienceConfig(interval = 500 milliseconds, timeout = 300 seconds)
+      implicit val patienceConfig: PatienceConfig = PatienceConfig(interval = 500.milliseconds, timeout = 300.seconds)
 
       And("The unreachable task is expunged")
       eventually(inside(marathon.tasks(AbsolutePathId(app.id)).value) {
