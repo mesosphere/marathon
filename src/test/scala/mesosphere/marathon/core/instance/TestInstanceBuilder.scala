@@ -3,7 +3,7 @@ package core.instance
 
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState, LegacyInstanceImprovement}
-import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, InstanceUpdater}
+import mesosphere.marathon.core.instance.update.{DefaultInstanceExpungeStrategy, InstanceUpdateOperation, InstanceUpdater}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults}
@@ -14,6 +14,8 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.now()) {
+
+  private val instanceUpdater = new InstanceUpdater(expungeStrategy = DefaultInstanceExpungeStrategy)
 
   def addTaskLaunched(container: Option[MesosContainer] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskLaunched(container).build()
@@ -81,7 +83,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 
   private[instance] def addTask(task: Task): TestInstanceBuilder = {
-    this.copy(instance = InstanceUpdater.applyTaskUpdate(instance, task, now + 1.second))
+    this.copy(instance = instanceUpdater.applyTaskUpdate(instance, task, now + 1.second))
   }
 
   def getInstance(): Instance = instance

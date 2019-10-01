@@ -6,7 +6,7 @@ import akka.actor.{Status, Terminated}
 import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.update.{InstanceUpdateOpResolver, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.update.{DefaultInstanceExpungeStrategy, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdater}
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
@@ -327,7 +327,9 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
     class Fixture {
       val clock = SettableClock.ofNow()
 
-      val updateResolver = new InstanceUpdateOpResolver(clock)
+      val instanceUpdater = new InstanceUpdater(expungeStrategy = DefaultInstanceExpungeStrategy)
+
+      val updateResolver = new InstanceUpdateOpResolver(updater = instanceUpdater, clock)
       lazy val instancesLoader = mock[InstancesLoader]
       lazy val stepProcessor = mock[InstanceTrackerUpdateStepProcessor]
       lazy val metrics = metricsModule.metrics

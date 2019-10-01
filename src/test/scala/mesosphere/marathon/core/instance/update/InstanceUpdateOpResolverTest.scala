@@ -322,7 +322,8 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
   class Fixture {
     val eventsGenerator = InstanceChangedEventsGenerator
     val clock = SettableClock.ofNow()
-    val updateOpResolver = new InstanceUpdateOpResolver(clock)
+    val instanceUpdater = new InstanceUpdater(expungeStrategy = DefaultInstanceExpungeStrategy)
+    val updateOpResolver = new InstanceUpdateOpResolver(instanceUpdater, clock)
 
     lazy val appId = AbsolutePathId("/app")
     lazy val existingInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()

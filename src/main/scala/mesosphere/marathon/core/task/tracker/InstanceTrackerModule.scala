@@ -5,7 +5,7 @@ import java.time.Clock
 
 import akka.stream.Materializer
 import mesosphere.marathon.core.base.CrashStrategy
-import mesosphere.marathon.core.instance.update.{InstanceChangeHandler, InstanceUpdateOpResolver}
+import mesosphere.marathon.core.instance.update.{DefaultInstanceExpungeStrategy, InstanceChangeHandler, InstanceExpungeStrategy, InstanceUpdateOpResolver, InstanceUpdater}
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.task.tracker.impl._
 import mesosphere.marathon.metrics.Metrics
@@ -22,13 +22,16 @@ class InstanceTrackerModule(
     instanceRepository: InstanceRepository,
     groupRepository: GroupRepository,
     updateSteps: Seq[InstanceChangeHandler],
-    crashStrategy: CrashStrategy)(implicit mat: Materializer) {
+    crashStrategy: CrashStrategy,
+    expungeStrategy: InstanceExpungeStrategy = DefaultInstanceExpungeStrategy)(implicit mat: Materializer) {
+
   lazy val instanceTracker: InstanceTracker =
     new InstanceTrackerDelegate(metrics, clock, config, instanceTrackerActorRef)
   lazy val instanceTrackerUpdateStepProcessor: InstanceTrackerUpdateStepProcessor =
     new InstanceTrackerUpdateStepProcessorImpl(metrics, updateSteps)
 
-  private[this] lazy val updateOpResolver: InstanceUpdateOpResolver = new InstanceUpdateOpResolver(clock)
+  private[this] lazy val instanceUpdater: InstanceUpdater = new InstanceUpdater(expungeStrategy)
+  private[this] lazy val updateOpResolver: InstanceUpdateOpResolver = new InstanceUpdateOpResolver(instanceUpdater, clock)
   private[this] lazy val instancesLoader = new InstancesLoaderImpl(InstanceView(instanceRepository, groupRepository), config)
   private[this] lazy val instanceTrackerMetrics = new InstanceTrackerActor.ActorMetrics(metrics)
   private[this] lazy val instanceTrackerActorProps = InstanceTrackerActor.props(

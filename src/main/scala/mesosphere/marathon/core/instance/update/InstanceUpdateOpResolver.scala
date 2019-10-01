@@ -12,9 +12,7 @@ import mesosphere.marathon.core.instance.update.InstanceUpdateOperation._
 /**
   * Maps a [[InstanceUpdateOperation]] to the appropriate [[InstanceUpdateEffect]].
   */
-private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLogging {
-
-  private[this] val updater = InstanceUpdater
+private[marathon] class InstanceUpdateOpResolver(updater: InstanceUpdater, clock: Clock) extends StrictLogging {
 
   /**
     * Depending on the type of [[InstanceUpdateOperation]], this will verify that the instance

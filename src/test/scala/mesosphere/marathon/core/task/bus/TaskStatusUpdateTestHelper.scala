@@ -44,6 +44,8 @@ class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val eff
 }
 
 object TaskStatusUpdateTestHelper {
+  val instanceUpdater = new InstanceUpdater(expungeStrategy = DefaultInstanceExpungeStrategy)
+
   def apply(operation: InstanceUpdateOperation, effect: InstanceUpdateEffect): TaskStatusUpdateTestHelper =
     new TaskStatusUpdateTestHelper(operation, effect)
 
@@ -63,13 +65,13 @@ object TaskStatusUpdateTestHelper {
 
   def taskUpdateFor(instance: Instance, taskCondition: Condition, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
     val operation = InstanceUpdateOperation.MesosUpdate(instance, taskCondition, mesosStatus, timestamp)
-    val effect = InstanceUpdater.mesosUpdate(instance, operation)
+    val effect = instanceUpdater.mesosUpdate(instance, operation)
     TaskStatusUpdateTestHelper(operation, effect)
   }
 
   def taskExpungeFor(instance: Instance, taskCondition: Condition, mesosStatus: TaskStatus, timestamp: Timestamp = defaultTimestamp) = {
     val operation = InstanceUpdateOperation.MesosUpdate(instance, taskCondition, mesosStatus, timestamp)
-    val effect = InstanceUpdater.mesosUpdate(instance, operation)
+    val effect = instanceUpdater.mesosUpdate(instance, operation)
     if (!effect.isInstanceOf[InstanceUpdateEffect.Expunge]) {
       throw new RuntimeException(s"Applying a MesosUpdate with status $taskCondition did not result in an Expunge effect but in a $effect")
     }

@@ -10,10 +10,37 @@ import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.state.{Timestamp, UnreachableEnabled}
 import org.apache.mesos.{Protos => MesosProtos}
 
+trait InstanceExpungeStrategy {
+  def shouldBeExpunged(instance: Instance): Boolean
+
+  def shouldAbandonReservation(instance: Instance): Boolean
+}
+
+case object DefaultInstanceExpungeStrategy extends InstanceExpungeStrategy {
+
+  def shouldBeExpunged(instance: Instance): Boolean =
+    instance.tasksMap.values.forall(t => t.isTerminal) && instance.state.goal == Goal.Decommissioned && instance.reservation.isEmpty
+
+  def shouldAbandonReservation(instance: Instance): Boolean = {
+
+    def allAreTerminal = instance.tasksMap.values.iterator.forall { task =>
+      task.status.condition.isTerminal
+    }
+
+    def anyAreGoneByOperator = instance.tasksMap.values.iterator
+      .flatMap(_.status.mesosStatus)
+      .exists { status =>
+        status.getState == MesosProtos.TaskState.TASK_GONE_BY_OPERATOR
+      }
+
+    instance.reservation.nonEmpty && anyAreGoneByOperator && allAreTerminal
+  }
+}
+
 /**
   * Provides methods that apply a given [[InstanceUpdateOperation]]
   */
-object InstanceUpdater extends StrictLogging {
+class InstanceUpdater(expungeStrategy: InstanceExpungeStrategy) extends StrictLogging {
   private[this] val eventsGenerator = InstanceChangedEventsGenerator
 
   /**
@@ -56,24 +83,6 @@ object InstanceUpdater extends StrictLogging {
     InstanceUpdateEffect.Expunge(instance, events)
   }
 
-  private def shouldBeExpunged(instance: Instance): Boolean =
-    instance.tasksMap.values.forall(t => t.isTerminal) && instance.state.goal == Goal.Decommissioned && instance.reservation.isEmpty
-
-  private def shouldAbandonReservation(instance: Instance): Boolean = {
-
-    def allAreTerminal = instance.tasksMap.values.iterator.forall { task =>
-      task.status.condition.isTerminal
-    }
-
-    def anyAreGoneByOperator = instance.tasksMap.values.iterator
-      .flatMap(_.status.mesosStatus)
-      .exists { status =>
-        status.getState == MesosProtos.TaskState.TASK_GONE_BY_OPERATOR
-      }
-
-    instance.reservation.nonEmpty && anyAreGoneByOperator && allAreTerminal
-  }
-
   private[marathon] def mesosUpdate(instance: Instance, op: MesosUpdate): InstanceUpdateEffect = {
     val now = op.now
     val taskId = Task.Id.parse(op.mesosStatus.getTaskId)
@@ -83,10 +92,10 @@ object InstanceUpdater extends StrictLogging {
         case TaskUpdateEffect.Update(updatedTask) =>
           val updated: Instance = applyTaskUpdate(instance, updatedTask, now)
           val events = eventsGenerator.events(updated, Some(updatedTask), now, previousState = Some(instance.state))
-          if (shouldBeExpunged(updated)) {
+          if (expungeStrategy.shouldBeExpunged(updated)) {
             logger.info("Requesting to expunge {}, all tasks are terminal, instance has no reservation and is not Stopped", updated.instanceId)
             InstanceUpdateEffect.Expunge(updated, events)
-          } else if (shouldAbandonReservation(updated)) {
+          } else if (expungeStrategy.shouldAbandonReservation(updated)) {
             val withoutReservation = updated.copy(agentInfo = None, reservation = None, state = updated.state.copy(condition = Condition.Scheduled))
             InstanceUpdateEffect.Update(withoutReservation, oldState = Some(instance), events)
           } else {
@@ -161,7 +170,7 @@ object InstanceUpdater extends StrictLogging {
     val updatedInstance = instance.copy(state = instance.state.copy(goal = op.goal))
     val events = eventsGenerator.events(updatedInstance, task = None, now, previousState = Some(instance.state))
 
-    if (InstanceUpdater.shouldBeExpunged(updatedInstance)) {
+    if (expungeStrategy.shouldBeExpunged(updatedInstance)) {
       logger.info(s"Instance ${instance.instanceId} with current condition ${instance.state.condition} has it's goal updated from ${instance.state.goal} to ${op.goal}. Because of that instance should be expunged now.")
       InstanceUpdateEffect.Expunge(updatedInstance, events = events)
     } else {
