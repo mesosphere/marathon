@@ -168,6 +168,9 @@ def provisionHost(): Unit = utils.stage("Provision") {
   // Set port range for random port 0 allocation.
   %('sudo, "ci/set_port_range.sh")
 
+  // Make sure Docker daemon is running.
+  %('sudo, "docker", "--version")
+
   provision.killStaleTestProcesses()
   provision.installMesos()
   provision.installDcosCli()
