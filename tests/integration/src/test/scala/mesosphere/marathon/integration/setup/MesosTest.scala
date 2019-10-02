@@ -9,6 +9,7 @@ import akka.Done
 import akka.actor.{ActorSystem, Scheduler}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.integration.facades.MesosFacade
@@ -149,10 +150,11 @@ case class MesosCluster(
     logger.info(s"Waiting for Mesos leader at $firstMaster")
     val result = Retry("wait for leader", maxAttempts = Int.MaxValue, maxDuration = waitForMesosTimeout) {
       Http().singleRequest(Get(firstMaster + "/redirect")).map { result =>
-        result.discardEntityBytes() // forget about the body
         if (result.status.isFailure()) {
-          throw new Exception(s"Couldn't determine leader: $result")
+          val body = Unmarshal(result.entity).to[String]
+          throw new Exception(s"Couldn't determine leader: $body")
         }
+        result.discardEntityBytes() // forget about the body
         result
       }
     }
