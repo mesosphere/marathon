@@ -9,7 +9,9 @@ import akka.Done
 import akka.actor.{ActorSystem, Scheduler}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
+import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
+import com.typesafe.scalalogging.StrictLogging
 import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.marathon.integration.facades.MesosFacade
 import mesosphere.marathon.state.FaultDomain
@@ -59,7 +61,7 @@ case class MesosCluster(
     system: ActorSystem,
     mat: Materializer,
     ctx: ExecutionContext,
-    scheduler: Scheduler) extends AutoCloseable with Eventually {
+    scheduler: Scheduler) extends AutoCloseable with Eventually with StrictLogging {
 
   lazy val masters = 0.until(config.numMasters).map { i =>
     val faultDomainJson = if (config.mastersFaultDomains.nonEmpty && config.mastersFaultDomains(i).nonEmpty) {
@@ -146,12 +148,14 @@ case class MesosCluster(
 
   def waitForLeader(): Future[String] = async {
     val firstMaster = s"http://${masters.head.ip}:${masters.head.port}"
+    logger.info(s"Waiting for Mesos leader at $firstMaster")
     val result = Retry("wait for leader", maxAttempts = Int.MaxValue, maxDuration = waitForMesosTimeout) {
       Http().singleRequest(Get(firstMaster + "/redirect")).map { result =>
-        result.discardEntityBytes() // forget about the body
         if (result.status.isFailure()) {
-          throw new Exception(s"Couldn't determine leader: $result")
+          val body = Unmarshal(result.entity).to[String]
+          throw new Exception(s"Couldn't determine leader: $body")
         }
+        result.discardEntityBytes() // forget about the body
         result
       }
     }
@@ -170,6 +174,7 @@ case class MesosCluster(
   }
 
   def waitForAgents(masterUri: String): Future[Done] = {
+    logger.info(s"Waiting for all ${agents.size} Mesos agents to come online for $masterUri")
     val mesosFacade = new MesosFacade(masterUri)
     Retry.blocking("wait for agents", maxAttempts = Int.MaxValue, maxDuration = waitForMesosTimeout) {
       val numAgents = mesosFacade.state.value.agents.size
@@ -373,7 +378,7 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
     mesosMasterUrl,
     autoStart = false,
     config = mesosConfig,
-    waitForMesosTimeout = patienceConfig.timeout.toMillis.milliseconds
+    waitForMesosTimeout = patienceConfig.timeout.toMillis.milliseconds - 10.seconds
   )
   lazy val mesos = new MesosFacade(localMesosUrl.getOrElse(mesosCluster.waitForLeader().futureValue))
 
