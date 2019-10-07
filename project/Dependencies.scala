@@ -87,7 +87,8 @@ object Dependencies {
     Test.akkaTestKit % "test",
     Test.akkaHttpTestKit % "test",
     Test.junit % "test",
-    Test.scalacheck % "test"
+    Test.scalacheck % "test",
+    Test.usiTestUtils % "test"
   ) ++ Curator.all
     ++ DropwizardMetrics.all
     ++ Java9Compatibility.all
@@ -149,6 +150,7 @@ object Dependency {
     val Mockito = "1.10.19"
     val ScalaCheck = "1.13.5"
     val ScalaTest = "3.0.4"
+    val UsiTestUtil = "0.1.4"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
@@ -259,5 +261,6 @@ object Dependency {
     val diffson = "org.gnieh" %% "diffson-play-json" % V.Diffson
     val junit = "junit" % "junit" % V.JUnit
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
+    val usiTestUtils = "com.mesosphere.usi" % "test-utils" % V.UsiTestUtil
   }
 }

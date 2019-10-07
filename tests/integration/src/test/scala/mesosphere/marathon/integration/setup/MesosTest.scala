@@ -10,9 +10,10 @@ import akka.actor.{ActorSystem, Scheduler}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.marathon.integration.facades.MesosFacade
 import mesosphere.marathon.state.FaultDomain
-import mesosphere.marathon.util.{Retry, ZookeeperServerTest}
+import mesosphere.marathon.util.Retry
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
 import org.scalatest.Suite
@@ -365,7 +366,7 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   implicit val scheduler: Scheduler
 
   private val localMesosUrl = sys.env.get("USE_LOCAL_MESOS")
-  lazy val mesosMasterUrl = s"zk://${zkServer.connectUri}/mesos"
+  lazy val mesosMasterUrl = s"zk://${zkserver.connectUrl}/mesos"
   lazy val mesosConfig = MesosConfig()
   lazy val mesosCluster = MesosCluster(
     suiteName,

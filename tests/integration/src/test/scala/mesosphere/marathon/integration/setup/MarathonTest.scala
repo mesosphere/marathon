@@ -19,13 +19,14 @@ import akka.stream.scaladsl.Sink
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import com.typesafe.scalalogging.{Logger, StrictLogging}
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades._
 import mesosphere.marathon.raml.{App, AppCheck, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
 import mesosphere.marathon.state.{AbsolutePathId, PathId, PersistentVolume, VolumeMount}
-import mesosphere.marathon.util.{Lock, Retry, Timeout, ZookeeperServerTest}
+import mesosphere.marathon.util.{Lock, Retry, Timeout}
 import mesosphere.util.PortAllocator
 import mesosphere.{AkkaUnitTestLike, WaitTestSupport}
 import org.apache.commons.io.FileUtils
@@ -906,7 +907,7 @@ trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with Zookee
   protected def logger: Logger
   def withMarathon[T](suiteName: String, marathonArgs: Map[String, String] = Map.empty)(f: (LocalMarathon, MarathonTest) => T): T = {
     val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterUrl,
-      zkUrl = s"zk://${zkServer.connectUri}/marathon-$suiteName", conf = marathonArgs)
+      zkUrl = s"zk://${zkserver.connectUrl}/marathon-$suiteName", conf = marathonArgs)
     marathonServer.start().futureValue
 
     val marathonTest = new MarathonTest {
@@ -958,7 +959,7 @@ trait LocalMarathonTest extends MarathonTest with ScalaFutures
   def marathonArgs: Map[String, String] = Map.empty
 
   lazy val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterUrl,
-    zkUrl = s"zk://${zkServer.connectUri}/marathon",
+    zkUrl = s"zk://${zkserver.connectUrl}/marathon",
     conf = marathonArgs)
   lazy val marathonUrl = s"http://localhost:${marathonServer.httpPort}"
 
@@ -1012,7 +1013,7 @@ trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerT
   val numAdditionalMarathons = 2
   lazy val additionalMarathons = 0.until(numAdditionalMarathons).map { _ =>
     LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterUrl,
-      zkUrl = s"zk://${zkServer.connectUri}/marathon",
+      zkUrl = s"zk://${zkserver.connectUrl}/marathon",
       conf = marathonArgs)
   }
   lazy val marathonFacades = marathon +: additionalMarathons.map(_.client)

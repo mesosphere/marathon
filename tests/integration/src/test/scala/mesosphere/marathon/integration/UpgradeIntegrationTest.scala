@@ -7,13 +7,13 @@ import java.net.URL
 import akka.actor.{ActorSystem, Scheduler}
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.raml.PodState
 import mesosphere.marathon.state.{AbsolutePathId, PersistentVolume, PersistentVolumeInfo, VolumeMount}
-import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.Eventually
@@ -29,7 +29,7 @@ import scala.sys.process.Process
   */
 class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonAppFixtures with Eventually {
 
-  val zkURLBase = s"zk://${zkServer.connectUri}/marathon-$suiteName"
+  val zkURLBase = s"zk://${zkserver.connectUrl}/marathon-$suiteName"
 
   val marathonMinus3Artifact = MarathonArtifact(SemVer(1, 6, 567, Some("2d8b3e438")))
   val marathonMinus2Artifact = MarathonArtifact(SemVer(1, 7, 216, Some("9e2a9b579")))

@@ -3,7 +3,7 @@ package integration
 
 import java.io.File
 
-import mesosphere.marathon.util.ZookeeperServerTest
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
 import mesosphere.marathon.integration.facades.MarathonFacade.extractDeploymentIds
 import mesosphere.marathon.integration.setup._
