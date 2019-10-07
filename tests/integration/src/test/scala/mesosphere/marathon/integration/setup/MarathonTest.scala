@@ -19,6 +19,8 @@ import akka.stream.scaladsl.Sink
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.mesosphere.utils.http.RestResult
+import com.mesosphere.utils.mesos.MesosFacade
 import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import com.typesafe.scalalogging.{Logger, StrictLogging}
 import mesosphere.marathon.Protos.Constraint
@@ -533,6 +535,8 @@ trait MarathonAppFixtures {
   * Base trait for tests that need a marathon
   */
 trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with ScalaFutures with Eventually {
+  import MarathonFacade._
+
   protected def logger: Logger
   def marathonUrl: String
   def marathon: MarathonFacade
@@ -611,7 +615,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
       val mesosState = mesos.state.value
       val occupiedAgents = mesosState.agents.filter { agent => agent.usedResources.nonEmpty || agent.reservedResourcesByRole.nonEmpty }
       occupiedAgents.foreach { agent =>
-        import mesosphere.marathon.integration.facades.MesosFormats._
+        import com.mesosphere.utils.mesos.MesosFormats._
         val usedResources: String = Json.prettyPrint(Json.toJson(agent.usedResources))
         val reservedResources: String = Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
         logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")

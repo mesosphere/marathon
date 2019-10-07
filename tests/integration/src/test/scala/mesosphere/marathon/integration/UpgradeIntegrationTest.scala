@@ -7,6 +7,7 @@ import java.net.URL
 import akka.actor.{ActorSystem, Scheduler}
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
+import com.mesosphere.utils.http.AkkaHttpResponse
 import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}

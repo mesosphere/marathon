@@ -2,6 +2,7 @@ package mesosphere.marathon
 package integration.setup
 
 import java.io.File
+import java.net.URL
 import java.nio.charset.Charset
 import java.nio.file.{Files, Paths}
 
@@ -12,8 +13,8 @@ import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
+import com.mesosphere.utils.mesos.MesosFacade
 import com.mesosphere.utils.zookeeper.ZookeeperServerTest
-import mesosphere.marathon.integration.facades.MesosFacade
 import mesosphere.marathon.state.FaultDomain
 import mesosphere.marathon.util.Retry
 import mesosphere.util.PortAllocator
@@ -173,7 +174,9 @@ case class MesosCluster(
     maybeFixURI(location)
   }
 
-  def waitForAgents(masterUri: String): Future[Done] = {
+  def waitForAgents(masterUri: String): Future[Done] = waitForAgents(new URL(masterUri))
+
+  def waitForAgents(masterUri: URL): Future[Done] = {
     logger.info(s"Waiting for all ${agents.size} Mesos agents to come online for $masterUri")
     val mesosFacade = new MesosFacade(masterUri)
     Retry.blocking("wait for agents", maxAttempts = Int.MaxValue, maxDuration = waitForMesosTimeout) {
@@ -327,10 +330,10 @@ case class MesosCluster(
   }
   // format: ON
 
-  def state = new MesosFacade(Await.result(waitForLeader(), waitForMesosTimeout)).state
+  def state = new MesosFacade(new URL(Await.result(waitForLeader(), waitForMesosTimeout))).state
 
   def teardown(): Unit = {
-    val facade = new MesosFacade(Await.result(waitForLeader(), waitForMesosTimeout))
+    val facade = new MesosFacade(new URL(Await.result(waitForLeader(), waitForMesosTimeout)))
     val frameworkIds = facade.frameworkIds().value
 
     // Call mesos/teardown for all framework Ids in the cluster and wait for the teardown to complete
@@ -380,7 +383,7 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
     config = mesosConfig,
     waitForMesosTimeout = patienceConfig.timeout.toMillis.milliseconds - 10.seconds
   )
-  lazy val mesos = new MesosFacade(localMesosUrl.getOrElse(mesosCluster.waitForLeader().futureValue))
+  lazy val mesos = new MesosFacade(new URL(localMesosUrl.getOrElse(mesosCluster.waitForLeader().futureValue)))
 
   abstract override def beforeAll(): Unit = {
     super.beforeAll()
