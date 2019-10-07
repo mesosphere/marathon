@@ -261,7 +261,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       status.value.instances should have size 1
       mesosCluster.agents(1).start()
       eventually {
-        mesos.state.value.agents.size shouldEqual 2
+        mesosFacade.state.value.agents.size shouldEqual 2
       }
 
       When("An instance is unreachable")

@@ -542,7 +542,6 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
   def marathon: MarathonFacade
   def leadingMarathon: Future[BaseMarathon]
   def mesosFacade: MesosFacade
-  def mesos: MesosFacade = mesosFacade
   def suiteName: String
 
   implicit val system: ActorSystem
@@ -613,7 +612,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     val cleanUpPatienceConfig = WaitTestSupport.PatienceConfig(timeout = Span(50, Seconds), interval = Span(1, Seconds))
 
     WaitTestSupport.waitUntil("clean slate in Mesos") {
-      val mesosState = mesos.state.value
+      val mesosState = mesosFacade.state.value
       val occupiedAgents = mesosState.agents.filter { agent => agent.usedResources.nonEmpty || agent.reservedResourcesByRole.nonEmpty }
       occupiedAgents.foreach { agent =>
         import com.mesosphere.utils.mesos.MesosFormats._
@@ -821,8 +820,8 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     Try {
       val frameworkId = marathon.info.entityJson.as[JsObject].value("frameworkId").as[String]
 
-      mesos.teardown(frameworkId)
-      eventually(timeout(1.minutes), interval(2.seconds)) { assert(mesos.completedFrameworkIds().value.contains(frameworkId)) }
+      mesosFacade.teardown(frameworkId)
+      eventually(timeout(1.minutes), interval(2.seconds)) { assert(mesosFacade.completedFrameworkIds().value.contains(frameworkId)) }
     }
     Try(healthEndpoint.unbind().futureValue)
   }
