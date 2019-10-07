@@ -100,7 +100,7 @@ class MarathonFacade(
     val url: String, baseGroup: AbsolutePathId, implicit val waitTime: FiniteDuration = 30.seconds)(
     implicit
     val system: ActorSystem, mat: Materializer)
-  extends PodConversion with StrictLogging {
+  extends PodConversion with StrictLogging with EventStreamUnmarshalling {
   implicit val scheduler = system.scheduler
   import AkkaHttpResponse._
 
@@ -161,10 +161,8 @@ class MarathonFacade(
   }
 
   // we don't want to lose any events and the default maxEventSize is too small (8K)
-  object EventUnmarshalling extends EventStreamUnmarshalling {
-    override protected def maxEventSize: Int = Int.MaxValue
-    override protected def maxLineSize: Int = Int.MaxValue
-  }
+  override protected def maxEventSize: Int = Int.MaxValue
+  override protected def maxLineSize: Int = Int.MaxValue
 
   /**
     * Connects to the Marathon SSE endpoint. Future completes when the http connection is established. Events are
@@ -172,7 +170,6 @@ class MarathonFacade(
     */
   def events(eventsType: Seq[String] = Seq.empty): Future[Source[ITEvent, NotUsed]] = {
 
-    import EventUnmarshalling.fromEventStream
     val mapper = new ObjectMapper() with ScalaObjectMapper
     mapper.registerModule(DefaultScalaModule)
 
