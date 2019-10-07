@@ -19,8 +19,9 @@ import akka.stream.scaladsl.Sink
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.mesosphere.utils.ProcessOutputToLogStream
 import com.mesosphere.utils.http.RestResult
-import com.mesosphere.utils.mesos.MesosFacade
+import com.mesosphere.utils.mesos.{MesosClusterTest, MesosFacade, MesosTest}
 import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import com.typesafe.scalalogging.{Logger, StrictLogging}
 import mesosphere.marathon.Protos.Constraint
