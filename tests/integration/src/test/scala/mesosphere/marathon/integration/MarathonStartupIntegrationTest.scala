@@ -2,10 +2,11 @@ package mesosphere.marathon
 package integration
 
 import akka.stream.scaladsl.{Sink, Source, Tcp}
+import com.mesosphere.utils.PortAllocator
+import com.mesosphere.utils.mesos.MesosClusterTest
 import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
-import mesosphere.util.PortAllocator
 import org.scalatest.concurrent.Eventually
 
 class MarathonStartupIntegrationTest extends AkkaIntegrationTest
@@ -34,7 +35,7 @@ class MarathonStartupIntegrationTest extends AkkaIntegrationTest
 
       val conflictingMarathon = LocalMarathon(
         s"$suiteName-conflict",
-        mesosMasterUrl,
+        mesosMasterZkUrl,
         s"zk://${zkserver.connectUrl}/marathon-$suiteName",
         Map(
           "http_port" -> port.toString,

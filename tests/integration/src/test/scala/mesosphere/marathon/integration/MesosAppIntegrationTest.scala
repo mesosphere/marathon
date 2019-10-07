@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.MesosConfig
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator.UNIQUE
 import mesosphere.marathon.api.RestResource
@@ -9,7 +10,7 @@ import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.facades.AppMockFacade
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
+import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType}
 import mesosphere.marathon.state.{AbsolutePathId, HostVolume, PersistentVolume, VolumeMount}
 import mesosphere.mesos.Constraints.hostnameField

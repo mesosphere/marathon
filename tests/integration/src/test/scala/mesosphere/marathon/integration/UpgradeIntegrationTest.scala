@@ -8,7 +8,7 @@ import akka.actor.{ActorSystem, Scheduler}
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
 import com.mesosphere.utils.http.AkkaHttpResponse
-import com.mesosphere.utils.mesos.MesosClusterTest
+import com.mesosphere.utils.mesos.{MesosAgentConfig, MesosClusterTest}
 import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
@@ -38,7 +38,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   val marathonMinus1Artifact = MarathonArtifact(SemVer(1, 8, 222, Some("86475ddac")))
 
   //   Configure Mesos to provide the Mesos containerizer with Docker image support.
-  override lazy val mesosConfig = MesosConfig(
+  override lazy val agentConfig = MesosAgentConfig(
     launcher = "linux",
     isolation = Some("filesystem/linux,docker/runtime"),
     imageProviders = Some("docker"))

@@ -1,11 +1,12 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.MesosClusterTest
 import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.core.base.JvmExitsCrashStrategy
 import mesosphere.marathon.core.storage.store.impl.zk.RichCuratorFramework
-import mesosphere.marathon.integration.setup.{LocalMarathon, MesosClusterTest}
+import mesosphere.marathon.integration.setup.LocalMarathon
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.Await
@@ -30,7 +31,7 @@ class MigrationInterruptedIntegrationTest
       }
 
       When("Marathon starts up and becomes a leader")
-      val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterUrl,
+      val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterZkUrl,
         zkUrl = s"zk://${zkserver.connectUrl}/$namespace")
       marathonServer.create()
 

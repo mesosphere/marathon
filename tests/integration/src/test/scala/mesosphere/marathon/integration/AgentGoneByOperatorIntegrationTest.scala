@@ -2,11 +2,12 @@ package mesosphere.marathon
 package integration
 
 import com.mesosphere.utils.http.RestResult
+import com.mesosphere.utils.mesos.MesosConfig
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.TaskIdWithIncarnation
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
+import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.AbsolutePathId
 import org.scalatest.Inside

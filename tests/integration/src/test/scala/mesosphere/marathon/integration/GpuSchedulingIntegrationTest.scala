@@ -3,6 +3,7 @@ package integration
 
 import java.util.UUID
 
+import com.mesosphere.utils.mesos.MesosConfig
 import com.mesosphere.utils.http.RestResult
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.facades.MarathonFacade._

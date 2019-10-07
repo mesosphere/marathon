@@ -3,6 +3,7 @@ package integration
 
 import java.io.File
 
+import com.mesosphere.utils.mesos.MesosClusterTest
 import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
 import mesosphere.marathon.integration.facades.MarathonFacade.extractDeploymentIds

@@ -1,10 +1,11 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.MesosConfig
 import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.AppMockFacade
-import mesosphere.marathon.integration.setup.{BaseMarathon, EmbeddedMarathonTest, MesosConfig}
+import mesosphere.marathon.integration.setup.{BaseMarathon, EmbeddedMarathonTest}
 import mesosphere.marathon.raml.{Pod, Raml}
 import mesosphere.marathon.state.{HostVolume, VolumeMount}
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}

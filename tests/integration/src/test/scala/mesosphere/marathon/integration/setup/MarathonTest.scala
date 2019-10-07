@@ -19,7 +19,7 @@ import akka.stream.scaladsl.Sink
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import com.mesosphere.utils.ProcessOutputToLogStream
+import com.mesosphere.utils.{PortAllocator, ProcessOutputToLogStream}
 import com.mesosphere.utils.http.RestResult
 import com.mesosphere.utils.mesos.{MesosClusterTest, MesosFacade, MesosTest}
 import com.mesosphere.utils.zookeeper.ZookeeperServerTest
@@ -30,7 +30,6 @@ import mesosphere.marathon.integration.facades._
 import mesosphere.marathon.raml.{App, AppCheck, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
 import mesosphere.marathon.state.{AbsolutePathId, PathId, PersistentVolume, VolumeMount}
 import mesosphere.marathon.util.{Lock, Retry, Timeout}
-import mesosphere.util.PortAllocator
 import mesosphere.{AkkaUnitTestLike, WaitTestSupport}
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
@@ -542,7 +541,8 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
   def marathonUrl: String
   def marathon: MarathonFacade
   def leadingMarathon: Future[BaseMarathon]
-  def mesos: MesosFacade
+  def mesosFacade: MesosFacade
+  def mesos: MesosFacade = mesosFacade
   def suiteName: String
 
   implicit val system: ActorSystem
@@ -911,7 +911,7 @@ object MarathonTest extends StrictLogging {
 trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with ZookeeperServerTest {
   protected def logger: Logger
   def withMarathon[T](suiteName: String, marathonArgs: Map[String, String] = Map.empty)(f: (LocalMarathon, MarathonTest) => T): T = {
-    val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterUrl,
+    val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterZkUrl,
       zkUrl = s"zk://${zkserver.connectUrl}/marathon-$suiteName", conf = marathonArgs)
     marathonServer.start().futureValue
 
@@ -919,7 +919,7 @@ trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with Zookee
       override protected val logger: Logger = MarathonFixture.this.logger
       override def marathonUrl: String = s"http://localhost:${marathonServer.httpPort}"
       override def marathon: MarathonFacade = marathonServer.client
-      override def mesos: MesosFacade = MarathonFixture.this.mesos
+      override def mesosFacade: MesosFacade = MarathonFixture.this.mesosFacade
       override val testBasePath: AbsolutePathId = AbsolutePathId("/")
       override implicit val system: ActorSystem = MarathonFixture.this.system
       override implicit val mat: Materializer = MarathonFixture.this.mat
@@ -963,7 +963,7 @@ trait LocalMarathonTest extends MarathonTest with ScalaFutures
 
   def marathonArgs: Map[String, String] = Map.empty
 
-  lazy val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterUrl,
+  lazy val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterZkUrl,
     zkUrl = s"zk://${zkserver.connectUrl}/marathon",
     conf = marathonArgs)
   lazy val marathonUrl = s"http://localhost:${marathonServer.httpPort}"
@@ -1017,7 +1017,7 @@ trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServer
 trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest {
   val numAdditionalMarathons = 2
   lazy val additionalMarathons = 0.until(numAdditionalMarathons).map { _ =>
-    LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterUrl,
+    LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterZkUrl,
       zkUrl = s"zk://${zkserver.connectUrl}/marathon",
       conf = marathonArgs)
   }

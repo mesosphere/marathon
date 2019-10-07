@@ -1,8 +1,9 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.MesosConfig
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
-import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
+import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType, LinuxInfo, Seccomp}
 import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}

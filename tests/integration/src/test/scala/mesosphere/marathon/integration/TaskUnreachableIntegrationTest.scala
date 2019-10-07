@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.MesosConfig
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.Task
 import mesosphere.AkkaIntegrationTest
@@ -35,7 +36,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
     // Every test below expects 1 running and 1 stopped agent
     mesosCluster.agents.head.start()
     mesosCluster.agents(1).stop()
-    mesosCluster.waitForLeader().futureValue
+    mesosCluster.waitForLeader()
     cleanUp()
   }
 
@@ -43,7 +44,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
     // We need to start all the agents for the teardown to be able to kill all the (UNREACHABLE) executors/tasks
     mesosCluster.agents.foreach(_.start())
     eventually {
-      val state = mesosCluster.state.value
+      val state = mesosFacade.state.value
       state.agents.size shouldBe mesosCluster.agents.size
       forAll(state.frameworks) { _.unreachable_tasks should be('empty) }
     }
@@ -141,7 +142,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
       waitForDeployment(marathon.createAppV2(app))
       val enrichedTasks = waitForTasks(AbsolutePathId(app.id), num = 2)
-      val clusterState = mesosCluster.state.value
+      val clusterState = mesosFacade.state.value
       val slaveId = clusterState.agents.find(_.attributes.attributes("node").toString.toDouble.toInt == 0).getOrElse(
         throw new RuntimeException(s"failed to find agent1: attributes by agent=${clusterState.agents.map(_.attributes.attributes)}")
       )
