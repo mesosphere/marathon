@@ -245,6 +245,8 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
 
       val tmpBackupFile = File.createTempFile("marathon", "BackupRestoreIntegrationTest")
 
+      waitForSSEConnect()
+
       val createApp5Response = client1.createAppV2(app5)
       createApp5Response should be(Created)
 
