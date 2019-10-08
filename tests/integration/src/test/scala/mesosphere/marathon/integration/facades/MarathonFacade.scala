@@ -101,7 +101,7 @@ class MarathonFacade(
     val url: String, baseGroup: AbsolutePathId, implicit val waitTime: FiniteDuration = 30.seconds)(
     implicit
     val system: ActorSystem, mat: Materializer)
-  extends PodConversion with StrictLogging with EventStreamUnmarshalling {
+  extends PodConversion with StrictLogging {
   implicit val scheduler = system.scheduler
   import com.mesosphere.utils.http.AkkaHttpResponse._
 
@@ -162,15 +162,17 @@ class MarathonFacade(
   }
 
   // we don't want to lose any events and the default maxEventSize is too small (8K)
-  override protected def maxEventSize: Int = Int.MaxValue
-  override protected def maxLineSize: Int = Int.MaxValue
+  object EventUnmarshalling extends EventStreamUnmarshalling {
+    override protected def maxEventSize: Int = Int.MaxValue
+    override protected def maxLineSize: Int = Int.MaxValue
+  }
 
   /**
     * Connects to the Marathon SSE endpoint. Future completes when the http connection is established. Events are
     * streamed via the materializable-once Source.
     */
   def events(eventsType: Seq[String] = Seq.empty): Future[Source[ITEvent, NotUsed]] = {
-
+    implicit val unmarshaller = EventUnmarshalling.fromEventsStream
     val mapper = new ObjectMapper() with ScalaObjectMapper
     mapper.registerModule(DefaultScalaModule)
 
