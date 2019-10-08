@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package integration
 
-import com.mesosphere.utils.mesos.MesosConfig
+import com.mesosphere.utils.mesos.MesosAgentConfig
 import mesosphere.marathon.core.health.{MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.AppMockFacade
@@ -16,7 +16,7 @@ import scala.collection.immutable.Seq
 class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
   val projectDir: String = sys.props.getOrElse("user.dir", ".")
-  override lazy val mesosConfig = MesosConfig(
+  override lazy val agentConfig = MesosAgentConfig(
     launcher = "linux",
     containerizers = "docker,mesos",
     isolation = Some("filesystem/linux,docker/runtime,namespaces/ipc"),

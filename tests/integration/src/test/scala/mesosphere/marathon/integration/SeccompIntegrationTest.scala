@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package integration
 
-import com.mesosphere.utils.mesos.MesosConfig
+import com.mesosphere.utils.mesos.{MesosAgentConfig, MesosConfig}
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType, LinuxInfo, Seccomp}
@@ -12,12 +12,14 @@ class SeccompIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
 
   val projectDir: String = sys.props.getOrElse("user.dir", ".")
   override lazy val mesosConfig = MesosConfig(
+    agentSeccompConfigDir = Some(s"$projectDir/src/test/resources/mesos/seccomp"),
+    agentSeccompProfileName = Some("default.json")
+  )
+  override lazy val agentConfig = MesosAgentConfig(
     launcher = "linux",
     containerizers = "docker,mesos",
     isolation = Some("filesystem/linux,docker/runtime,linux/seccomp"),
-    imageProviders = Some("docker"),
-    agentSeccompConfigDir = Some(s"$projectDir/src/test/resources/mesos/seccomp"),
-    agentSeccompProfileName = Some("default.json")
+    imageProviders = Some("docker")
   )
 
   logger.info(s"Using --seccomp_config_dir = ${mesosConfig.agentSeccompConfigDir.get}")
