@@ -551,6 +551,14 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
 
   lazy val healthCheckPort = healthEndpoint.localAddress.getPort
 
+  /* There is a small window between Jetty hanging up the event stream, and Jetty not accepting and
+   * responding to new requests. In the tests, under heavy load, retrying within 15 milliseconds is enough
+   * to hit this window.
+   *
+   * 10 times the interval would probably suffice. To be on the safe side we are making it 30 seconds.
+   */
+  val sseStreamReconnectionInterval = 30.seconds
+
   case class CallbackEvent(eventType: String, info: Map[String, Any])
   object CallbackEvent {
     def apply(event: ITEvent): CallbackEvent = CallbackEvent(event.eventType, event.info)
@@ -876,14 +884,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
             if (!cancelled) {
               logger.info(s"SSEStream: Leader event stream was closed reason: ${result}")
               logger.info("Reconnecting")
-              /* There is a small window between Jetty hanging up the event stream, and Jetty not accepting and
-               * responding to new requests. In the tests, under heavy load, retrying within 15 milliseconds is enough
-               * to hit this window.
-               *
-               * 10 times the interval would probably suffice. Timeout is way more time then we need. Half timeout seems
-               * like an okay compromise.
-               */
-              scheduler.scheduleOnce(patienceConfig.timeout / 2) { iter() }
+              scheduler.scheduleOnce(sseStreamReconnectionInterval) { iter() }
             }
         }
     }
