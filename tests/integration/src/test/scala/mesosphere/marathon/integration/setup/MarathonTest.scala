@@ -867,7 +867,6 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
           }
         }
         .flatMapConcat { stream =>
-          logger.info("Prepending connected event")
           // We prepend the ITConnected event here in order to avoid emitting an ITConnected event on failed connections
           stream.prepend(Source.single(ITConnected))
         }
@@ -885,7 +884,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
             if (!cancelled) {
               logger.info(s"SSEStream: Leader event stream was closed reason: ${result}")
               logger.info("Reconnecting")
-              events.clear()
+              //              events.clear()
               scheduler.scheduleOnce(sseStreamReconnectionInterval) { iter() }
             }
         }
