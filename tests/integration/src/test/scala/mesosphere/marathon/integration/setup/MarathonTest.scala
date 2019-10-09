@@ -884,7 +884,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
             if (!cancelled) {
               logger.info(s"SSEStream: Leader event stream was closed reason: ${result}")
               logger.info("Reconnecting")
-              //              events.clear()
+              events.clear()
               scheduler.scheduleOnce(sseStreamReconnectionInterval) { iter() }
             }
         }
