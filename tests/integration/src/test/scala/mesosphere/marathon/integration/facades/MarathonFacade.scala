@@ -172,6 +172,7 @@ class MarathonFacade(
     * streamed via the materializable-once Source.
     */
   def events(eventsType: Seq[String] = Seq.empty): Future[Source[ITEvent, NotUsed]] = {
+    logger.info(s"Subscribing to events from $url")
     import EventUnmarshalling._
     val mapper = new ObjectMapper() with ScalaObjectMapper
     mapper.registerModule(DefaultScalaModule)

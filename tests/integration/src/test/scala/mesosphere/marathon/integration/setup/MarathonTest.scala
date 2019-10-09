@@ -859,14 +859,17 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
             val leaderAfterConnection = await(leadingMarathon)
             logger.info(s"SSEStream: ${leader.url} is the leader")
             if (leader != leaderAfterConnection) {
+              val e = new RuntimeException("Leader status changed since first connecting to stream")
+              logger.warn("Leader changed", e)
               stream.runWith(Sink.cancelled)
-              throw new RuntimeException("Leader status changed since first connecting to stream")
+              throw e
             } else {
               stream
             }
           }
         }
         .flatMapConcat { stream =>
+          logger.info("Prepending connected event")
           // We prepend the ITConnected event here in order to avoid emitting an ITConnected event on failed connections
           stream.prepend(Source.single(ITConnected))
         }
