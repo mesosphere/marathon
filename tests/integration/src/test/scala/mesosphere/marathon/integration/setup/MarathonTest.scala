@@ -555,9 +555,9 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
    * responding to new requests. In the tests, under heavy load, retrying within 15 milliseconds is enough
    * to hit this window.
    *
-   * 10 times the interval would probably suffice. To be on the safe side we are making it 30 seconds.
+   * 10 times the interval would probably suffice. To be on the safe side we are making it 5 seconds.
    */
-  val sseStreamReconnectionInterval = 30.seconds
+  val sseStreamReconnectionInterval = 5.seconds
 
   case class CallbackEvent(eventType: String, info: Map[String, Any])
   object CallbackEvent {
