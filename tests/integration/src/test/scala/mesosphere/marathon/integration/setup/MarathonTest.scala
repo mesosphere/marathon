@@ -859,10 +859,8 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
             val leaderAfterConnection = await(leadingMarathon)
             logger.info(s"SSEStream: ${leader.url} is the leader")
             if (leader != leaderAfterConnection) {
-              val e = new RuntimeException("Leader status changed since first connecting to stream")
-              logger.warn("Leader changed", e)
               stream.runWith(Sink.cancelled)
-              throw e
+              throw new RuntimeException("Leader status changed since first connecting to stream")
             } else {
               stream
             }
@@ -887,6 +885,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
             if (!cancelled) {
               logger.info(s"SSEStream: Leader event stream was closed reason: ${result}")
               logger.info("Reconnecting")
+              events.clear()
               scheduler.scheduleOnce(sseStreamReconnectionInterval) { iter() }
             }
         }

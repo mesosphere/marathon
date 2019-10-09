@@ -182,11 +182,14 @@ class MarathonFacade(
     Http().singleRequest(Get(akka.http.scaladsl.model.Uri(s"$url/v2/events").withQuery(eventsFilter))
       .withHeaders(Accept(MediaType.text("event-stream"))))
       .flatMap { response =>
+        logger.info(s"Unmarshall SSE response from $url")
         AkkaUnmarshal(response).to[Source[ServerSentEvent, NotUsed]]
       }
       .map { stream =>
+        logger.info(s"Mapping SSE stream from $url")
         stream
           .map { event =>
+            logger.info(s"Parsing JSON from $url")
             val json = mapper.readValue[Map[String, Any]](event.data) // linter:ignore
             ITEvent(event.eventType.getOrElse("unknown"), json)
           }
