@@ -166,13 +166,13 @@ class MarathonFacade(
     override protected def maxEventSize: Int = Int.MaxValue
     override protected def maxLineSize: Int = Int.MaxValue
   }
-  implicit val unmarshaller = EventUnmarshalling.fromEventsStream
 
   /**
     * Connects to the Marathon SSE endpoint. Future completes when the http connection is established. Events are
     * streamed via the materializable-once Source.
     */
   def events(eventsType: Seq[String] = Seq.empty): Future[Source[ITEvent, NotUsed]] = {
+    import EventUnmarshalling._
     val mapper = new ObjectMapper() with ScalaObjectMapper
     mapper.registerModule(DefaultScalaModule)
 
