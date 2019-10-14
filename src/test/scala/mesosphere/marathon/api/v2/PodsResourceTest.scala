@@ -35,8 +35,6 @@ import scala.concurrent.duration._
 
 class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
-  Formats.configureJacksonSerializer()
-
   // TODO(jdef) incorporate checks for firing pod events on C, U, D operations
 
   val podSpecJson = """
