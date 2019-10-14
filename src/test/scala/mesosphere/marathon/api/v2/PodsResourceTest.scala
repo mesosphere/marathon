@@ -3,12 +3,11 @@ package api.v2
 
 import java.time.OffsetDateTime
 
-import javax.servlet.http.HttpServletResponse
 import akka.event.EventStream
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import javax.servlet.http.HttpServletResponse
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.api.{JsonTestHelper, RestResource, TaskKiller, TestAuthFixture}
@@ -16,8 +15,8 @@ import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition, PodManager}
