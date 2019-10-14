@@ -197,8 +197,8 @@ object Group extends StrictLogging {
     new Group(id, apps, pods, groupsById, dependencies, version, enforceRole)
   }
 
-  def empty(id: AbsolutePathId): Group =
-    Group(id = id, version = Timestamp(0))
+  def empty(id: AbsolutePathId, enforceRole: Boolean = false): Group =
+    Group(id = id, version = Timestamp(0), enforceRole = enforceRole)
 
   val defaultApps = Map.empty[AbsolutePathId, AppDefinition]
   val defaultPods = Map.empty[AbsolutePathId, PodDefinition]

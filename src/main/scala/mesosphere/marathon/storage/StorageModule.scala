@@ -3,11 +3,13 @@ package storage
 
 import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.Materializer
+import mesosphere.marathon
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkId, ZkSerialized}
 import mesosphere.marathon.metrics.Metrics
+import mesosphere.marathon.state.RootGroup
 import mesosphere.marathon.storage.migration.{Migration, ServiceDefinitionRepository}
 import mesosphere.marathon.storage.repository._
 
@@ -36,11 +38,11 @@ object StorageModule {
     mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
     val currentConfig = StorageConfig(conf, curatorFramework)
-    apply(metrics, currentConfig, conf.mesosRole())
+    apply(metrics, currentConfig, RootGroup.NewGroupStrategy.fromConfig(conf.newGroupEnforceRole()), conf.mesosRole())
   }
 
   def apply(
-    metrics: Metrics, config: StorageConfig, defaultMesosRole: String)(
+    metrics: Metrics, config: StorageConfig, newGroupStrategy: RootGroup.NewGroupStrategy, defaultMesosRole: String)(
     implicit
     mat: Materializer, ctx: ExecutionContext,
     scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
@@ -50,7 +52,7 @@ object StorageModule {
         val store: PersistenceStore[ZkId, String, ZkSerialized] = zk.store(metrics)
         val appRepository = AppRepository.zkRepository(store)
         val podRepository = PodRepository.zkRepository(store)
-        val groupRepository = GroupRepository.zkRepository(store, appRepository, podRepository, zk.groupVersionsCacheSize)
+        val groupRepository = GroupRepository.zkRepository(store, appRepository, podRepository, zk.groupVersionsCacheSize, newGroupStrategy)
 
         val instanceRepository = InstanceRepository.zkRepository(store)
         val deploymentRepository = DeploymentRepository.zkRepository(metrics, store, groupRepository,
@@ -88,7 +90,7 @@ object StorageModule {
         val appRepository = AppRepository.inMemRepository(store)
         val podRepository = PodRepository.inMemRepository(store)
         val instanceRepository = InstanceRepository.inMemRepository(store)
-        val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository, mem.groupVersionsCacheSize)
+        val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository, mem.groupVersionsCacheSize, newGroupStrategy)
         val deploymentRepository = DeploymentRepository.inMemRepository(metrics, store, groupRepository,
           appRepository, podRepository, mem.maxVersions, mem.storageCompactionScanBatchSize)
         val taskFailureRepository = TaskFailureRepository.inMemRepository(store)

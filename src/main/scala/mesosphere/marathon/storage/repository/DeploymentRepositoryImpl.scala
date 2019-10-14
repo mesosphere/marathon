@@ -35,7 +35,7 @@ case class StoredPlan(
       val (original, target) = (await(originalFuture), await(targetFuture))
       (original, target) match {
         case (Some(o), Some(t)) =>
-          Some(DeploymentPlan(RootGroup.fromGroup(o), RootGroup.fromGroup(t), version = Timestamp(version), id = Some(id)))
+          Some(DeploymentPlan(RootGroup.fromGroup(o, o.newGroupStrategy), RootGroup.fromGroup(t, t.newGroupStrategy), version = Timestamp(version), id = Some(id)))
         case (_, None) | (None, _) =>
           logger.error(s"While retrieving $id, either original ($original)"
             + s" or target ($target) were no longer available")

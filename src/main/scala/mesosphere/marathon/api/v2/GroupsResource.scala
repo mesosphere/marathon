@@ -90,7 +90,7 @@ class GroupsResource @Inject() (
       def groupResponse(id: AbsolutePathId) =
         infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {
           case Some(info) => ok(info)
-          case None if id.isRoot => ok(raml.GroupInfo(RootGroup.empty.id.toString))
+          case None if id.isRoot => ok(raml.GroupInfo(RootGroup.empty().id.toString))
           case None => unknownGroup(id)
         }
 
