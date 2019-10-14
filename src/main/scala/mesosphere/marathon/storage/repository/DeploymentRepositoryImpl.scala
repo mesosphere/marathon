@@ -16,7 +16,7 @@ import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.repository.impl.PersistenceStoreRepository
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.state.{RootGroup, Timestamp}
+import mesosphere.marathon.state.Timestamp
 import mesosphere.marathon.storage.repository.GcActor.{StoreApp, StorePlan, StorePod, StoreRoot}
 
 import scala.async.Async.{async, await}
@@ -35,7 +35,7 @@ case class StoredPlan(
       val (original, target) = (await(originalFuture), await(targetFuture))
       (original, target) match {
         case (Some(o), Some(t)) =>
-          Some(DeploymentPlan(RootGroup.fromGroup(o, o.newGroupStrategy), RootGroup.fromGroup(t, t.newGroupStrategy), version = Timestamp(version), id = Some(id)))
+          Some(DeploymentPlan(o, t, version = Timestamp(version), id = Some(id)))
         case (_, None) | (None, _) =>
           logger.error(s"While retrieving $id, either original ($original)"
             + s" or target ($target) were no longer available")

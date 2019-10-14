@@ -121,7 +121,7 @@ class RootGroup(
       }
     }
 
-    RootGroup.fromGroup(updateVersion(rebuildTree(newGroup.id.allParents, newGroup), version), newGroupStrategy)
+    updatedWith(updateVersion(rebuildTree(newGroup.id.allParents, newGroup), version))
   }
 
   /**
@@ -426,7 +426,11 @@ class RootGroup(
         enforceRole = group.enforceRole)
     }
 
-    RootGroup.fromGroup(in(this), newGroupStrategy)
+    updatedWith(in(this))
+  }
+
+  def updatedWith(group: Group): RootGroup = {
+    RootGroup.fromGroup(group, newGroupStrategy)
   }
 }
 

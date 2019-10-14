@@ -39,7 +39,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
   }
 
   case class FixtureWithRealGroupManager(
-      initialRoot: RootGroup = RootGroup.empty,
+      initialRoot: RootGroup = RootGroup.empty(),
       groupInfo: GroupInfoService = mock[GroupInfoService],
       auth: TestAuthFixture = new TestAuthFixture) {
     val f = new TestGroupManagerFixture(initialRoot)

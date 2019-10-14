@@ -144,7 +144,7 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
       val original = createRootGroup(groups = Set(unrelatedGroup))
 
       When("we add an unrelated app and try to revert that without concurrent changes")
-      val target = RootGroup.fromGroup(original.updateApp("test".toAbsolutePath, _ => AppDefinition("test".toAbsolutePath, role = "*"), Timestamp.now()))
+      val target = original.updatedWith(original.updateApp("test".toAbsolutePath, _ => AppDefinition("test".toAbsolutePath, role = "*"), Timestamp.now()))
       val plan = DeploymentPlan(original, target)
       val revertToOriginal = plan.revert(target)
 

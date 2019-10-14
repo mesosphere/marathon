@@ -22,7 +22,7 @@ class GroupNormalizationTest extends UnitTest {
         )))
       )
 
-      val normalized = GroupNormalization(config, RootGroup.empty).updateNormalization(AbsolutePathId("/prod")).normalized(invalidUpdate)
+      val normalized = GroupNormalization(config, RootGroup.empty()).updateNormalization(AbsolutePathId("/prod")).normalized(invalidUpdate)
       normalized.groups.value.head.enforceRole should be(Some(true))
     }
   }

@@ -3,7 +3,6 @@ package storage
 
 import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.Materializer
-import mesosphere.marathon
 import mesosphere.marathon.core.storage.backup.PersistentStoreBackup
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.cache.LoadTimeCachingPersistenceStore

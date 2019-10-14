@@ -267,7 +267,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
     val config: MarathonConf = MTH.defaultConfig(mesosRole = Some("test"))
     implicit val clock = new SettableClock()
     val metrics: Metrics = DummyMetrics
-    var rootGroup = RootGroup.empty
+    var rootGroup = RootGroup.empty()
     val rootGroupRetriever: GroupManager.CurrentRootGroupRetriever = new GroupManager.CurrentRootGroupRetriever {
       override def rootGroup(): RootGroup = Fixture.this.rootGroup
     }

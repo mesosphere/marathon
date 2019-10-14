@@ -162,7 +162,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
   }
 
   case class FixtureWithRealGroupManager(
-      initialRoot: RootGroup = RootGroup.empty,
+      initialRoot: RootGroup = RootGroup.empty(),
       clock: SettableClock = new SettableClock(),
       auth: TestAuthFixture = new TestAuthFixture,
       appTaskResource: AppTasksResource = mock[AppTasksResource],

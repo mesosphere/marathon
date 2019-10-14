@@ -17,7 +17,7 @@ import mesosphere.marathon.test.Mockito
 import scala.concurrent.{ExecutionContext, Future}
 
 class TestGroupManagerFixture(
-    initialRoot: RootGroup = RootGroup.empty,
+    initialRoot: RootGroup = RootGroup.empty(),
     authenticated: Boolean = true,
     authorized: Boolean = true,
     authFn: Any => Boolean = _ => true)(implicit as: ActorSystem, ec: ExecutionContext) extends Mockito {
@@ -31,7 +31,7 @@ class TestGroupManagerFixture(
 
   val appRepository = AppRepository.inMemRepository(store)
   val podRepository = PodRepository.inMemRepository(store)
-  val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository, maxVersionsCacheSize)
+  val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository, maxVersionsCacheSize, initialRoot.newGroupStrategy)
   groupRepository.storeRoot(initialRoot, Nil, Nil, Nil, Nil)
   val eventBus = mock[EventStream]
 
