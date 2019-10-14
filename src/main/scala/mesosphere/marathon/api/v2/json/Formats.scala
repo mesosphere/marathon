@@ -6,12 +6,10 @@ import java.time.OffsetDateTime
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.datatype.jsr310.ser.OffsetDateTimeSerializer
-import mesosphere.marathon.core.deployment.{DeploymentAction, DeploymentPlan, DeploymentStep, DeploymentStepInfo}
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.plugin.{PluginDefinition, PluginDefinitions}
-import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.{Raml, RamlSerializer}
@@ -63,7 +61,6 @@ object Formats extends Formats {
     RamlSerializer.serializer.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
     RamlSerializer.serializer.disable(SerializationFeature.FLUSH_AFTER_WRITE_VALUE)
   }
-
 }
 
 trait Formats
@@ -155,7 +152,6 @@ trait Formats
 }
 
 trait DeploymentFormats {
-  import Formats._
 
   implicit lazy val ByteArrayFormat: Format[Array[Byte]] =
     Format(
@@ -174,38 +170,6 @@ trait DeploymentFormats {
       Json.toJson(m)
     }
   )
-
-  def actionInstanceOn(runSpec: RunSpec): String = runSpec match {
-    case _: AppDefinition => "app"
-    case _: PodDefinition => "pod"
-  }
-
-  implicit lazy val DeploymentActionWrites: Writes[DeploymentAction] = Writes { action =>
-    Json.obj(
-      "action" -> DeploymentAction.actionName(action),
-      actionInstanceOn(action.runSpec) -> action.runSpec.id
-    )
-  }
-
-  implicit lazy val DeploymentStepWrites: Writes[DeploymentStep] = Json.writes[DeploymentStep]
-
-  implicit lazy val DeploymentStepInfoWrites: Writes[DeploymentStepInfo] = Writes { info =>
-    def currentAction(action: DeploymentAction): JsObject = Json.obj (
-      "action" -> DeploymentAction.actionName(action),
-      actionInstanceOn(action.runSpec) -> action.runSpec.id,
-      "readinessCheckResults" -> info.readinessChecksByApp(action.runSpec.id)
-    )
-    Json.obj(
-      "id" -> info.plan.id,
-      "version" -> info.plan.version,
-      "affectedApps" -> info.plan.affectedAppIds,
-      "affectedPods" -> info.plan.affectedPodIds,
-      "steps" -> info.plan.steps,
-      "currentActions" -> info.step.actions.map(currentAction),
-      "currentStep" -> info.stepIndex,
-      "totalSteps" -> info.plan.steps.size
-    )
-  }
 }
 
 trait EventFormats {
@@ -264,13 +228,6 @@ trait EventFormats {
   implicit lazy val GroupChangeSuccessWrites: Writes[GroupChangeSuccess] = Json.writes[GroupChangeSuccess]
   implicit lazy val GroupChangeFailedWrites: Writes[GroupChangeFailed] = Json.writes[GroupChangeFailed]
 
-  implicit lazy val DeploymentPlanWrites: Writes[DeploymentPlan] = Writes { plan =>
-    Json.obj(
-      "id" -> plan.id,
-      "steps" -> plan.steps,
-      "version" -> plan.version
-    )
-  }
   implicit lazy val DeploymentSuccessWrites: Writes[DeploymentSuccess] = Json.writes[DeploymentSuccess]
   implicit lazy val DeploymentFailedWrites: Writes[DeploymentFailed] = Json.writes[DeploymentFailed]
   implicit lazy val DeploymentStatusWrites: Writes[DeploymentStatus] = Json.writes[DeploymentStatus]

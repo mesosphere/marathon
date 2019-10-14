@@ -32,7 +32,7 @@
         "app": "/foo",
         "readinessCheckResults": [
           {
-            "taskId": "foo.c9de6033",
+            "taskId": "foo.instance-c9de6033",
             "lastResponse": {
               "body": "{}",
               "contentType": "application/json",

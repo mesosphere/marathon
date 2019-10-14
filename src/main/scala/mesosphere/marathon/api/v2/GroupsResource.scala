@@ -12,12 +12,12 @@ import javax.ws.rs.core.{Context, MediaType, Response}
 import akka.stream.Materializer
 import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{AuthResource, GroupApiService, RestResource}
 import mesosphere.marathon.core.appinfo.{GroupInfoService, Selector}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -252,11 +252,7 @@ class GroupsResource @Inject() (
         val newVersion = Timestamp.now()
         val updatedGroup = await(groupsService.updateGroup(originalRootGroup, effectivePath, groupUpdate, newVersion))
 
-        ok(
-          Json.obj(
-            "steps".->(DeploymentPlan(originalRootGroup, updatedGroup).steps)
-          ).toString()
-        )
+        ok(raml.DeploymentSteps(steps = Raml.toRaml(DeploymentPlan(originalRootGroup, updatedGroup).steps)))
       } else {
         val (deployment, _) = await(updateOrCreate(rootPath, groupUpdate, force))
         deploymentResult(deployment)

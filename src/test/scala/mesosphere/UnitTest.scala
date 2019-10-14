@@ -9,6 +9,7 @@ import akka.testkit.{TestActor, TestActorRef, TestKitBase}
 import akka.util.Timeout
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.test.Mockito
 import org.scalactic.source.Position
 import org.scalatest._
@@ -95,7 +96,9 @@ trait UnitTestLike extends WordSpecLike
   override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(5, Seconds))
 }
 
-abstract class UnitTest extends WordSpec with UnitTestLike
+abstract class UnitTest extends WordSpec with UnitTestLike {
+  Formats.configureJacksonSerializer()
+}
 
 trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
   protected lazy val akkaConfig: Config = ConfigFactory.parseString(

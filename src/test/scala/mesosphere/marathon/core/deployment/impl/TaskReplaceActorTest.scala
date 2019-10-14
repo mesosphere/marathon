@@ -18,6 +18,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.readiness.{ReadinessCheck, ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state._
 import mesosphere.marathon.util.CancellableOnce
 import org.mockito.Mockito._
@@ -709,7 +710,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
   }
   class Fixture {
     val deploymentsManager: TestActorRef[Actor] = TestActorRef[Actor](Props.empty)
-    val deploymentStatus = DeploymentStatus(DeploymentPlan.empty, DeploymentStep(Seq.empty))
+    val deploymentStatus = DeploymentStatus(Raml.toRaml(DeploymentPlan.empty), Raml.toRaml(DeploymentStep(Seq.empty)))
     val queue: LaunchQueue = mock[LaunchQueue]
     val tracker: InstanceTracker = mock[InstanceTracker]
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]

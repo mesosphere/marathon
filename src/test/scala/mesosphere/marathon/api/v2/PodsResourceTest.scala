@@ -3,13 +3,11 @@ package api.v2
 
 import java.time.OffsetDateTime
 
-import javax.servlet.http.HttpServletResponse
 import akka.event.EventStream
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import javax.servlet.http.HttpServletResponse
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.api.RestResource.RestStreamingBody
-import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.api.{JsonTestHelper, RestResource, TaskKiller, TestAuthFixture}
@@ -17,8 +15,8 @@ import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition, PodManager}
@@ -35,8 +33,6 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
-
-  Formats.configureJacksonSerializer()
 
   // TODO(jdef) incorporate checks for firing pod events on C, U, D operations
 
@@ -139,7 +135,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
 
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should be (defined)
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
@@ -166,7 +162,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
 
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should be (defined)
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
@@ -240,7 +236,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(201)
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should be (defined)
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
@@ -261,7 +257,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(201)
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should be (defined)
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
@@ -283,7 +279,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
 
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should be (defined)
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
@@ -323,7 +319,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
 
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should be (defined)
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
@@ -358,7 +354,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
 
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should not be None
         parsedResponse.map(_.as[Pod]) should not be None // validate that we DID get back a pod definition
 
@@ -386,7 +382,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
 
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should not be None
         val podOption = parsedResponse.map(_.as[Pod])
         podOption should not be None // validate that we DID get back a pod definition
@@ -427,7 +423,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
 
-        val jsonResponse = Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
+        val jsonResponse = Json.parse(response.getEntity.toString)
         val pod = jsonResponse.as[Pod]
         val volumeInfo = PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Root), size = 10)
         val volume = PodPersistentVolume(name = "pst", persistent = volumeInfo)
@@ -670,7 +666,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
-        val body = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
+        val body = Option(response.getEntity.toString)
         body should not be None
         body.foreach(_ should include("mypod does not exist"))
       }
@@ -1836,7 +1832,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           val response = asyncRequest { r => f.podsResource.version("/id", "2008-01-01T12:00:00.000Z", f.auth.request, r) }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
-            response.getEntity.asInstanceOf[RestStreamingBody[_]].toString should be ("""{"message":"Pod '/id' does not exist","details":[]}""")
+            response.getEntity.toString should be ("""{"message":"Pod '/id' does not exist","details":[]}""")
           }
         }
       }
@@ -1871,7 +1867,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           val response = asyncRequest { r => f.podsResource.version("/id", pod1.version.toString, f.auth.request, r) }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
-            val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)).get)
+            val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.toString)).get)
             pod should equal(pod1)
           }
         }
@@ -1943,7 +1939,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
-            val killed: Seq[raml.Instance] = Json.fromJson[Seq[raml.Instance]](Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)).get
+            val killed: Seq[raml.Instance] = Json.fromJson[Seq[raml.Instance]](Json.parse(response.getEntity.toString)).get
             killed.map(_.instanceId) should contain theSameElementsAs instances.map(_.instanceId.idString)
           }
         }

@@ -4,7 +4,6 @@ package core.event
 import com.fasterxml.jackson.annotation.JsonIgnore
 import mesosphere.marathon.api.v2.json.Formats.eventToJson
 import mesosphere.marathon.core.condition.Condition
-import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceChange
@@ -176,32 +175,32 @@ case class GroupChangeFailed(
 
 case class DeploymentSuccess(
     id: String,
-    plan: DeploymentPlan,
+    plan: raml.DeploymentPlan,
     eventType: String = "deployment_success",
     timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentFailed(
     id: String,
-    plan: DeploymentPlan,
+    plan: raml.DeploymentPlan,
     eventType: String = "deployment_failed",
     timestamp: String = Timestamp.now().toString,
     reason: Option[String] = None) extends UpgradeEvent
 
 case class DeploymentStatus(
-    plan: DeploymentPlan,
-    currentStep: DeploymentStep,
+    plan: raml.DeploymentPlan,
+    currentStep: raml.DeploymentStep,
     eventType: String = "deployment_info",
     timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentStepSuccess(
-    plan: DeploymentPlan,
-    currentStep: DeploymentStep,
+    plan: raml.DeploymentPlan,
+    currentStep: raml.DeploymentStep,
     eventType: String = "deployment_step_success",
     timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentStepFailure(
-    plan: DeploymentPlan,
-    currentStep: DeploymentStep,
+    plan: raml.DeploymentPlan,
+    currentStep: raml.DeploymentStep,
     eventType: String = "deployment_step_failure",
     timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 

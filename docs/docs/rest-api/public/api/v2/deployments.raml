@@ -32,6 +32,7 @@ get:
       description: "The list of all running deployments."
       body:
         application/json:
+          type: deploymentInfo.DeploymentStepInfo[]
           example: !include examples/deployments.json
 
 
