@@ -440,10 +440,10 @@ object RootGroup {
     pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
     groupsById: Map[AbsolutePathId, Group] = Group.defaultGroups,
     dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
-    autoCreateStrategy: NewGroupStrategy = NewGroupStrategy.Fail,
-    version: Timestamp = Group.defaultVersion): RootGroup = new RootGroup(apps, pods, groupsById, dependencies, autoCreateStrategy, version)
+    newGroupStrategy: NewGroupStrategy = NewGroupStrategy.Fail,
+    version: Timestamp = Group.defaultVersion): RootGroup = new RootGroup(apps, pods, groupsById, dependencies, newGroupStrategy, version)
 
-  def empty(newGroupStrategy: NewGroupStrategy = NewGroupStrategy.Fail) = RootGroup(autoCreateStrategy = newGroupStrategy, version = Timestamp(0))
+  def empty(newGroupStrategy: NewGroupStrategy = NewGroupStrategy.Fail) = RootGroup(newGroupStrategy = newGroupStrategy, version = Timestamp(0))
 
   def fromGroup(group: Group, newGroupStrategy: NewGroupStrategy): RootGroup = {
     require(group.id.isRoot)
