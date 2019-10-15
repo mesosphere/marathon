@@ -229,6 +229,8 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
   "Abdicating a leader" should {
     "keep all running apps alive" in {
 
+      logger.info(" ====> BackupRestoreIntegrationTest: Timeout: " + patienceConfig)
+
       Given("a leader")
       WaitTestSupport.waitUntil("a leader has been elected") { firstRunningProcess.client.leader().code == 200 }
 
