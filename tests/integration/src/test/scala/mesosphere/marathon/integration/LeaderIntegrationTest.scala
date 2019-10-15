@@ -96,7 +96,7 @@ class DeathUponAbdicationLeaderIntegrationTest extends AkkaIntegrationTest with 
       (result.entityJson \ "message").as[String] should be("Leadership abdicated")
 
       And("the leader must have died")
-      eventually(timeout(Span(oldLeaderDieTimeout.toMillis, Milliseconds))) {
+      eventually(timeout(Span(60.seconds.toMillis, Milliseconds))) {
         server.activePids should be('empty)
       }
     }
