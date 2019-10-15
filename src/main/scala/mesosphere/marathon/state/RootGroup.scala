@@ -491,7 +491,7 @@ object RootGroup {
           case NewGroupEnforceRoleBehavior.Off =>
             Group.empty(id, enforceRole = false)
           case NewGroupEnforceRoleBehavior.Top =>
-            Group.empty(id, enforceRole = true)
+            Group.empty(id, enforceRole = id.isTopLevel)
         }
       }
     }

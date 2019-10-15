@@ -2201,12 +2201,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       Given("Empty Marathon with --new_group_enforce_role=top setting")
 
-      When("I post a sleeper app definition to /dev/sleeper")
+      When("I post a sleeper app definition to /dev/apps/sleeper")
       val response = asyncRequest { r =>
         val body =
           """
             |{
-            |  "id": "/dev/sleeper",
+            |  "id": "/dev/apps/sleeper",
             |  "cmd": "sleep 3600",
             |  "instances": 1,
             |  "cpus": 0.05,
@@ -2219,12 +2219,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getStatus should be(201)
 
       Then("the app has the role 'dev' automatically set")
-      val Some(app) = groupManager.rootGroup().app(AbsolutePathId("/dev/sleeper"))
+      val Some(app) = groupManager.rootGroup().app(AbsolutePathId("/dev/apps/sleeper"))
 
       app.role shouldBe "dev"
-      And("the auto-created group has enforceRole enabled")
+      And("the auto-created top-level group has enforceRole enabled")
       val Some(group) = groupManager.group("/dev".toAbsolutePath)
       group.enforceRole shouldBe true
+
+      And("the auto-created mid-level group has enforceRole disabled")
+      val Some(midGroup) = groupManager.group("/dev/apps".toAbsolutePath)
+      midGroup.enforceRole shouldBe false
     }
 
     "Create a new app inside a top-group with enforceRole applies the proper group-role default" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/dev".toAbsolutePath, enforceRole = true)))) {
