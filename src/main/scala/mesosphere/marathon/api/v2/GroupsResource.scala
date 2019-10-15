@@ -271,7 +271,7 @@ class GroupsResource @Inject() (
 
       def clearRootGroup(rootGroup: RootGroup): RootGroup = {
         checkAuthorization(DeleteGroup, rootGroup)
-        RootGroup(version = version)
+        groupManager.rootGroup().updatedWith(Group.empty("/".toAbsolutePath, version = version))
       }
 
       val deployment = await(groupManager.updateRoot(PathId.root, clearRootGroup, version, force))

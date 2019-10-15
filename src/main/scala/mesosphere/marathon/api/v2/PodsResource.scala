@@ -38,19 +38,20 @@ import scala.concurrent.ExecutionContext
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MediaType.APPLICATION_JSON))
 class PodsResource @Inject() (
-    val config: MarathonConf)(
-    implicit
-    val authenticator: Authenticator,
-    val authorizer: Authorizer,
+    val config: MarathonConf,
+    clock: Clock,
     taskKiller: TaskKiller,
     podSystem: PodManager,
     podStatusService: PodStatusService,
+    groupManager: GroupManager,
+    scheduler: MarathonScheduler,
+    pluginManager: PluginManager
+)(
+    implicit
+    val authenticator: Authenticator,
+    val authorizer: Authorizer,
     eventBus: EventStream,
     mat: Materializer,
-    clock: Clock,
-    scheduler: MarathonScheduler,
-    groupManager: GroupManager,
-    pluginManager: PluginManager,
     val executionContext: ExecutionContext) extends RestResource with AuthResource {
 
   import PodsResource._
@@ -110,7 +111,8 @@ class PodsResource @Inject() (
     }
   }
 
-  @PUT @Path("""{id:.+}""")
+  @PUT
+  @Path("""{id:.+}""")
   def update(
     @PathParam("id") id: String,
     body: Array[Byte],
@@ -133,7 +135,7 @@ class PodsResource @Inject() (
       if (podId != podRaml.id.toAbsolutePath) {
         Response.status(Status.BAD_REQUEST).entity(
           s"""
-            |{"message": "'$podId' does not match definition's id ('${podRaml.id}')" }
+             |{"message": "'$podId' does not match definition's id ('${podRaml.id}')" }
           """.stripMargin
         ).build()
       } else {
@@ -162,7 +164,8 @@ class PodsResource @Inject() (
     }
   }
 
-  @GET @Path("""{id:.+}""")
+  @GET
+  @Path("""{id:.+}""")
   def find(
     @PathParam("id") id: String,
     @Context req: HttpServletRequest,
@@ -182,7 +185,8 @@ class PodsResource @Inject() (
     }
   }
 
-  @DELETE @Path("""{id:.+}""")
+  @DELETE
+  @Path("""{id:.+}""")
   def remove(
     @PathParam("id") idOrig: String,
     @DefaultValue("false")@QueryParam("force") force: Boolean,
@@ -342,9 +346,11 @@ class PodsResource @Inject() (
       val instancesToKill = Json.parse(body).as[Set[String]]
       validateOrThrow(instancesToKill)
       val instancesDesired = instancesToKill.map(Instance.Id.fromIdString(_))
+
       def toKill(instances: Seq[Instance]): Seq[Instance] = {
         instances.filter(instance => instancesDesired.contains(instance.instanceId))
       }
+
       val instances = await(taskKiller.kill(id, toKill, wipe)).map { instance => Raml.toRaml(instance) }
       ok(instances)
     }
