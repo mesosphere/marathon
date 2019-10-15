@@ -55,6 +55,7 @@ class InfoResource @Inject() (
     "mesos_leader_ui_url" -> config.mesosLeaderUiUrl.toOption,
     "mesos_role" -> config.mesosRole.toOption,
     "mesos_user" -> config.mesosUser.toOption,
+    "new_group_enforce_role" -> config.newGroupEnforceRole().toString,
     "min_revive_offers_interval" -> config.minReviveOffersInterval.toOption,
     "offer_matching_timeout" -> config.offerMatchingTimeout.toOption.map(_.toMillis),
     "on_elected_prepare_timeout" -> config.onElectedPrepareTimeout.toOption,

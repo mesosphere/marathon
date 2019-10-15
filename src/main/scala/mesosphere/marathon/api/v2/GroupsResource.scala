@@ -90,7 +90,7 @@ class GroupsResource @Inject() (
       def groupResponse(id: AbsolutePathId) =
         infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {
           case Some(info) => ok(info)
-          case None if id.isRoot => ok(raml.GroupInfo(RootGroup.empty.id.toString))
+          case None if id.isRoot => ok(raml.GroupInfo(RootGroup.empty().id.toString))
           case None => unknownGroup(id)
         }
 
@@ -271,7 +271,7 @@ class GroupsResource @Inject() (
 
       def clearRootGroup(rootGroup: RootGroup): RootGroup = {
         checkAuthorization(DeleteGroup, rootGroup)
-        RootGroup(version = version)
+        groupManager.rootGroup().updatedWith(Group.empty("/".toAbsolutePath, version = version))
       }
 
       val deployment = await(groupManager.updateRoot(PathId.root, clearRootGroup, version, force))

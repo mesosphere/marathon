@@ -133,12 +133,12 @@ trait MarathonConf
       "resources with the role designation '*'.",
     default = Some(ResourceRole.Unreserved))
 
-  lazy val groupRoleBehavior = opt[GroupRoleBehavior](
+  lazy val newGroupEnforceRole = opt[NewGroupEnforceRoleBehavior](
     name = "new_group_enforce_role",
     descr = "Used to control whether role enforcement is enabled for new top-level groups; 'top' means that all new" +
       " top-level groups will have enforceRole enabled, and the contained services will be required to use the" +
       " group-role (a role that matches the top-level group's name).",
-    default = Some(GroupRoleBehavior.Off))(groupRoleBehaviorConverter)
+    default = Some(NewGroupEnforceRoleBehavior.Off))(groupRoleBehaviorConverter)
 
   @deprecated("Accepted resource roles can not be set directly anymore. Use accepted_resource_roles_default_behavior.", since = "1.9")
   private[this] lazy val defaultAcceptedResourceRoles = opt[String](
@@ -401,14 +401,14 @@ object MarathonConf extends StrictLogging {
 
   }
 
-  val groupRoleBehaviorConverter = new ValueConverter[GroupRoleBehavior] {
+  val groupRoleBehaviorConverter = new ValueConverter[NewGroupEnforceRoleBehavior] {
     val argType = org.rogach.scallop.ArgType.SINGLE
 
-    override def parse(s: List[(String, List[String])]): Either[String, Option[GroupRoleBehavior]] = s match {
+    override def parse(s: List[(String, List[String])]): Either[String, Option[NewGroupEnforceRoleBehavior]] = s match {
       case (_, enforceGroupRole :: Nil) :: Nil =>
-        GroupRoleBehavior.fromString(enforceGroupRole) match {
+        NewGroupEnforceRoleBehavior.fromString(enforceGroupRole) match {
           case o @ Some(_) => Right(o)
-          case None => Left(s"Setting $enforceGroupRole is invalid. Valid settings are ${GroupRoleBehavior.all.map(_.name).mkString(", ")}")
+          case None => Left(s"Setting $enforceGroupRole is invalid. Valid settings are ${NewGroupEnforceRoleBehavior.all.map(_.name).mkString(", ")}")
         }
       case Nil =>
         Right(None)

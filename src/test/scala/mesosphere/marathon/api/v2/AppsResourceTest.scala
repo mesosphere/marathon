@@ -71,7 +71,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     def prepareApp(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
-      val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures)
+      val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures, newGroupEnforceRole = config.newGroupEnforceRole())
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(normed)).getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -162,18 +162,20 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
   }
 
   case class FixtureWithRealGroupManager(
-      initialRoot: RootGroup = RootGroup.empty,
+      initialRoot: Group = Group.empty("/".toAbsolutePath, enforceRole = false),
       clock: SettableClock = new SettableClock(),
       auth: TestAuthFixture = new TestAuthFixture,
       appTaskResource: AppTasksResource = mock[AppTasksResource],
       appInfoService: AppInfoService = mock[AppInfoService],
       configArgs: Seq[String] = Seq("--enable_features", "external_volumes")) {
-    val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(initialRoot = initialRoot)
+
+    val config: AllConf = AllConf.withTestConfig(configArgs: _*)
+    val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(
+      initialRoot = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.fromConfig(config.newGroupEnforceRole())))
     val groupManager: GroupManager = groupManagerFixture.groupManager
     val groupRepository: GroupRepository = groupManagerFixture.groupRepository
     val service = groupManagerFixture.service
 
-    val config: AllConf = AllConf.withTestConfig(configArgs: _*)
     val appsResource: AppsResource = new AppsResource(
       clock,
       system.eventStream,
@@ -2192,6 +2194,37 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         Then("The return code indicates success")
         response.getStatus should be(201)
       }
+    }
+
+    "causes auto-created groups to respect the --new_group_enforce_role=top setting" in new FixtureWithRealGroupManager(configArgs = Seq("--new_group_enforce_role", "top")) {
+      service.deploy(any, any) returns Future.successful(Done)
+
+      Given("Empty Marathon with --new_group_enforce_role=top setting")
+
+      When("I post a sleeper app definition to /dev/sleeper")
+      val response = asyncRequest { r =>
+        val body =
+          """
+            |{
+            |  "id": "/dev/sleeper",
+            |  "cmd": "sleep 3600",
+            |  "instances": 1,
+            |  "cpus": 0.05,
+            |  "mem": 128
+            |}
+          """.stripMargin
+        appsResource.create(body.getBytes, force = false, auth.request, r)
+      }
+
+      response.getStatus should be(201)
+
+      Then("the app has the role 'dev' automatically set")
+      val Some(app) = groupManager.rootGroup().app(AbsolutePathId("/dev/sleeper"))
+
+      app.role shouldBe "dev"
+      And("the auto-created group has enforceRole enabled")
+      val Some(group) = groupManager.group("/dev".toAbsolutePath)
+      group.enforceRole shouldBe true
     }
 
     "Create a new app inside a top-group with enforceRole applies the proper group-role default" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/dev".toAbsolutePath, enforceRole = true)))) {
