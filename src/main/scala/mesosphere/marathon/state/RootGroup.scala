@@ -335,7 +335,7 @@ class RootGroup(
     * @param version the new version of the root group.
     */
   def updateVersion(version: Timestamp = Group.defaultVersion): RootGroup = {
-    RootGroup.fromGroup(updateVersion(this, version), newGroupStrategy)
+    updatedWith(updateVersion(this, version))
   }
 
   /**
