@@ -12,6 +12,7 @@ import mesosphere.marathon.test.GroupCreation
 
 class RootGroupTest extends UnitTest with GroupCreation {
   val emptyConfig = AllConf.withTestConfig()
+  val emptyRootGroup = RootGroup.empty(newGroupStrategy = RootGroup.NewGroupStrategy.fromConfig(NewGroupEnforceRoleBehavior.Off))
 
   "A Group" should {
 
@@ -580,7 +581,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
             apps = Map(appPath -> app))))
 
       val newVersion = Timestamp.now()
-      val updated = RootGroup.empty().putGroup(groupUpdate, newVersion)
+      val updated = emptyRootGroup.putGroup(groupUpdate, newVersion)
       updated.transitiveAppIds should contain(appPath)
     }
 
@@ -598,7 +599,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
               apps = Map(appPath -> app))))))
 
       val newVersion = Timestamp.now()
-      val updated = RootGroup.empty().putGroup(groupUpdate, newVersion)
+      val updated = emptyRootGroup.putGroup(groupUpdate, newVersion)
       updated.transitiveAppIds should contain(appPath)
     }
 
@@ -611,7 +612,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
         apps = Map(appPath -> app))
 
       val newVersion = Timestamp.now()
-      val updated = RootGroup.empty().putGroup(groupUpdate, newVersion)
+      val updated = emptyRootGroup.putGroup(groupUpdate, newVersion)
       updated.transitiveAppIds should contain(appPath)
     }
 

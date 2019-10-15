@@ -71,7 +71,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     def prepareApp(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
-      val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures)
+      val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures, newGroupEnforceRole = config.newGroupEnforceRole())
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(normed)).getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -162,18 +162,20 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
   }
 
   case class FixtureWithRealGroupManager(
-      initialRoot: RootGroup = RootGroup.empty(),
+      initialRoot: Group = Group.empty("/".toAbsolutePath, enforceRole = false),
       clock: SettableClock = new SettableClock(),
       auth: TestAuthFixture = new TestAuthFixture,
       appTaskResource: AppTasksResource = mock[AppTasksResource],
       appInfoService: AppInfoService = mock[AppInfoService],
       configArgs: Seq[String] = Seq("--enable_features", "external_volumes")) {
-    val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(initialRoot = initialRoot)
+
+    val config: AllConf = AllConf.withTestConfig(configArgs: _*)
+    val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(
+      initialRoot = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.fromConfig(config.newGroupEnforceRole())))
     val groupManager: GroupManager = groupManagerFixture.groupManager
     val groupRepository: GroupRepository = groupManagerFixture.groupRepository
     val service = groupManagerFixture.service
 
-    val config: AllConf = AllConf.withTestConfig(configArgs: _*)
     val appsResource: AppsResource = new AppsResource(
       clock,
       system.eventStream,
