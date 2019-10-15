@@ -274,8 +274,9 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
       leadingProcess1.stop().futureValue // already stopped, but still need to clear old state
 
       And("the leader must have changed")
-      WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
+      WaitTestSupport.waitUntil("the leader changes", 120.seconds) {
         val result = firstRunningProcess.client.leader()
+        logger.info("Test if leader has changed: " + result.code + " ==> " + result.value + " // " + leader1 )
         result.code == 200 && result.value != leader1
       }
 
