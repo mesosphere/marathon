@@ -229,8 +229,6 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
   "Abdicating a leader" should {
     "keep all running apps alive" in {
 
-      logger.info(" ====> BackupRestoreIntegrationTest: Timeout: " + patienceConfig)
-
       Given("a leader")
       WaitTestSupport.waitUntil("a leader has been elected") { firstRunningProcess.client.leader().code == 200 }
 
@@ -274,9 +272,8 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
       leadingProcess1.stop().futureValue // already stopped, but still need to clear old state
 
       And("the leader must have changed")
-      WaitTestSupport.waitUntil("the leader changes", 120.seconds) {
+      WaitTestSupport.waitUntil("the leader changes", 60.seconds) {
         val result = firstRunningProcess.client.leader()
-        logger.info("Test if leader has changed: " + result.code + " ==> " + result.value + " // " + leader1 )
         result.code == 200 && result.value != leader1
       }
 
