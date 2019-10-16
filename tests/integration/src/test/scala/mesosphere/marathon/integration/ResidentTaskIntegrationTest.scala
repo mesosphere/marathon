@@ -1,12 +1,13 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.http.RestResult
+import com.mesosphere.utils.mesos.MesosFacade.{ITMesosState, ITResources}
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.facades.MesosFacade.{ITMesosState, ITResources}
 import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
-import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, RestResult}
+import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.{App, AppUpdate, Network, NetworkMode, PortDefinition}
 import mesosphere.marathon.state.AbsolutePathId
 
@@ -152,7 +153,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       createSuccessfully(app)
 
       Then("used and reserved resources correspond to the app")
-      val state: RestResult[ITMesosState] = mesos.state
+      val state: RestResult[ITMesosState] = mesosFacade.state
 
       withClue("used_resources") {
         state.value.agents.head.usedResources should equal(itMesosResources)
@@ -165,7 +166,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       suspendSuccessfully(AbsolutePathId(app.id))
 
       Then("there are no used resources anymore but there are the same reserved resources")
-      val state2: RestResult[ITMesosState] = mesos.state
+      val state2: RestResult[ITMesosState] = mesosFacade.state
 
       withClue("used_resources") {
         state2.value.agents.head.usedResources should be(empty)

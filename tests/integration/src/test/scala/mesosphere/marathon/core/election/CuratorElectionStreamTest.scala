@@ -5,6 +5,7 @@ import akka.stream.scaladsl.{Keep, Sink, SinkQueue, Source}
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.Executors
 
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.LifecycleState
 import mesosphere.marathon.core.storage.store.impl.zk.NoRetryPolicy
@@ -12,7 +13,7 @@ import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.storage.StorageConfig
 import mesosphere.marathon.stream.EnrichedFlow
 import mesosphere.marathon.test.ThrowExceptionAndDontCrashStrategy
-import mesosphere.marathon.util.{LifeCycledCloseable, ZookeeperServerTest}
+import mesosphere.marathon.util.LifeCycledCloseable
 import org.apache.curator.framework.CuratorFrameworkFactory
 import org.apache.curator.framework.recipes.leader.LeaderLatch
 import org.rogach.scallop.ScallopConf
@@ -29,7 +30,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
     val metrics = DummyMetrics
     val leaderPath = s"/curator-${prefixId.getAndIncrement}"
     def newClient() = {
-      val c = CuratorFrameworkFactory.newClient(zkServer.connectUri, NoRetryPolicy)
+      val c = CuratorFrameworkFactory.newClient(zkserver.connectUrl, NoRetryPolicy)
       c.start()
       c.blockUntilConnected()
       c
@@ -184,7 +185,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
     nextKnownState(leader) shouldBe Some(LeadershipState.ElectedAsLeader)
 
     When("we stop the Zookeeper server")
-    zkServer.stop()
+    zkserver.stop()
     val serverStopped = System.currentTimeMillis()
 
     Then("The stream should emit uncertainty about leadership within 5 seconds")
@@ -193,7 +194,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
     (uncertaintyDetermined - serverStopped).millis should be < 5.seconds
 
     When("we start the Zookeeper server again")
-    zkServer.start()
+    zkserver.start()
 
     Then("The stream should emit the current leadership state again")
     nextKnownState(leader) shouldBe Some(LeadershipState.ElectedAsLeader)

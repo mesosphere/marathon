@@ -7,13 +7,15 @@ import java.net.URL
 import akka.actor.{ActorSystem, Scheduler}
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
+import com.mesosphere.utils.http.AkkaHttpResponse
+import com.mesosphere.utils.mesos.{MesosAgentConfig, MesosClusterTest}
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades.{AppMockFacade, ITEnrichedTask}
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.raml.PodState
 import mesosphere.marathon.state.{AbsolutePathId, PersistentVolume, PersistentVolumeInfo, VolumeMount}
-import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.Eventually
@@ -29,14 +31,14 @@ import scala.sys.process.Process
   */
 class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonAppFixtures with Eventually {
 
-  val zkURLBase = s"zk://${zkServer.connectUri}/marathon-$suiteName"
+  val zkURLBase = s"zk://${zkserver.connectUrl}/marathon-$suiteName"
 
   val marathonMinus3Artifact = MarathonArtifact(SemVer(1, 6, 567, Some("2d8b3e438")))
   val marathonMinus2Artifact = MarathonArtifact(SemVer(1, 7, 216, Some("9e2a9b579")))
   val marathonMinus1Artifact = MarathonArtifact(SemVer(1, 8, 222, Some("86475ddac")))
 
   //   Configure Mesos to provide the Mesos containerizer with Docker image support.
-  override lazy val mesosConfig = MesosConfig(
+  override lazy val agentConfig = MesosAgentConfig(
     launcher = "linux",
     isolation = Some("filesystem/linux,docker/runtime"),
     imageProviders = Some("docker"))
@@ -98,7 +100,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       // Start apps in initial version
       Given(s"A Marathon n-3 is running (${marathonMinus3Artifact.version})")
-      val marathonMinus3 = PackagedMarathon(marathonMinus3Artifact.marathonBaseFolder, suiteName = s"$suiteName-n-minus-3", mesosMasterUrl, zkUrl)
+      val marathonMinus3 = PackagedMarathon(marathonMinus3Artifact.marathonBaseFolder, suiteName = s"$suiteName-n-minus-3", mesosMasterZkUrl, zkUrl)
       marathonMinus3.start().futureValue
       (marathonMinus3.client.info.entityJson \ "version").as[String] should be(versionWithoutCommit(marathonMinus3Artifact.version))
 
@@ -124,7 +126,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       // Pass upgrade to n-2
       And(s"Marathon is upgraded to n-2 (${marathonMinus2Artifact.version})")
-      val marathonMinus2 = PackagedMarathon(marathonMinus2Artifact.marathonBaseFolder, s"$suiteName-n-minus-2", mesosMasterUrl, zkUrl)
+      val marathonMinus2 = PackagedMarathon(marathonMinus2Artifact.marathonBaseFolder, s"$suiteName-n-minus-2", mesosMasterZkUrl, zkUrl)
       marathonMinus2.start().futureValue
       (marathonMinus2.client.info.entityJson \ "version").as[String] should be(versionWithoutCommit(marathonMinus2Artifact.version))
 
@@ -152,7 +154,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       AppMockFacade.suicideAll(originalAppNm2FailedTasks)
 
       And(s"Marathon is upgraded to n-1")
-      val marathonMinus1 = PackagedMarathon(marathonMinus1Artifact.marathonBaseFolder, s"$suiteName-n-minus-1", mesosMasterUrl, zkUrl)
+      val marathonMinus1 = PackagedMarathon(marathonMinus1Artifact.marathonBaseFolder, s"$suiteName-n-minus-1", mesosMasterZkUrl, zkUrl)
       marathonMinus1.start().futureValue
       (marathonMinus1.client.info.entityJson \ "version").as[String] should be(versionWithoutCommit(marathonMinus1Artifact.version))
 
@@ -195,7 +197,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       // Pass upgrade to current
       When("Marathon is upgraded to the current version")
       marathonMinus1.stop().futureValue
-      val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
+      val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterZkUrl, zkUrl = zkUrl)
       marathonCurrent.start().futureValue
       (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
@@ -222,7 +224,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
   "upgrade from n-3 directly to the latest" in {
     val zkUrl = s"$zkURLBase-to-latest"
-    val marathonNm3 = PackagedMarathon(marathonMinus3Artifact.marathonBaseFolder, suiteName = s"$suiteName-n-minus-3", mesosMasterUrl, zkUrl)
+    val marathonNm3 = PackagedMarathon(marathonMinus3Artifact.marathonBaseFolder, suiteName = s"$suiteName-n-minus-3", mesosMasterZkUrl, zkUrl)
 
     // Start apps in n-3
     Given(s"A Marathon n-3 is running (${marathonMinus3Artifact.version})")
@@ -250,7 +252,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
     // Pass upgrade to current
     When("Marathon is upgraded to the current version")
-    val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
+    val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterZkUrl, zkUrl = zkUrl)
     marathonCurrent.start().futureValue
     (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
@@ -266,7 +268,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
   "resident app can be restarted after upgrade from n-1" in {
     val zkUrl = s"$zkURLBase-resident-apps"
-    val marathonnm1 = PackagedMarathon(marathonMinus1Artifact.marathonBaseFolder, suiteName = s"$suiteName-n-minus-1", mesosMasterUrl, zkUrl)
+    val marathonnm1 = PackagedMarathon(marathonMinus1Artifact.marathonBaseFolder, suiteName = s"$suiteName-n-minus-1", mesosMasterZkUrl, zkUrl)
 
     Given(s"A Marathon n-1 is running (${marathonMinus1Artifact.version})")
     marathonnm1.start().futureValue
@@ -296,7 +298,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     // Pass upgrade to current
     When("Marathon is upgraded to the current version")
     marathonnm1.stop().futureValue
-    val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterUrl, zkUrl = zkUrl)
+    val marathonCurrent = LocalMarathon(suiteName = s"$suiteName-current", masterUrl = mesosMasterZkUrl, zkUrl = zkUrl)
     marathonCurrent.start().futureValue
     (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 

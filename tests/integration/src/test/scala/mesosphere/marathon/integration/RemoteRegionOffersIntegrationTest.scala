@@ -1,9 +1,10 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.{FaultDomain, Zone, MesosConfig, Region}
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.{AbsolutePathId, FaultDomain, Region, Zone}
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.mesos.Constraints
 import org.scalatest.Inside
 

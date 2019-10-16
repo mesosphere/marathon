@@ -9,15 +9,14 @@ import javax.ws.rs.{GET, POST, Path, Produces}
 import akka.Done
 import akka.actor.ActorSystem
 import com.google.common.util.concurrent.Service
+import com.mesosphere.utils.PortAllocator
 import com.typesafe.scalalogging.StrictLogging
-
 import mesosphere.marathon.api.forwarder.AsyncUrlConnectionRequestForwarder
 import mesosphere.marathon.api.{HttpModule, RootApplication}
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.election.{ElectionCandidate, ElectionService}
 import mesosphere.marathon.io.SSLContextUtil
 import mesosphere.marathon.metrics.dummy.DummyMetricsModule
-import mesosphere.util.PortAllocator
 import org.eclipse.jetty.servlet.{FilterHolder, ServletHolder}
 import org.glassfish.jersey.server.ResourceConfig
 import org.glassfish.jersey.servlet.ServletContainer

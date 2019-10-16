@@ -1,10 +1,11 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.MesosClusterTest
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.AbsolutePathId
-import mesosphere.marathon.util.ZookeeperServerTest
 import org.scalatest.Inspectors
 import org.scalatest.concurrent.Eventually
 

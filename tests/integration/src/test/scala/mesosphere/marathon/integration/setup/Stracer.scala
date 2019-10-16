@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration.setup
 
+import com.mesosphere.utils.ProcessOutputToLogStream
 import com.typesafe.scalalogging.StrictLogging
 
 import scala.util.Try

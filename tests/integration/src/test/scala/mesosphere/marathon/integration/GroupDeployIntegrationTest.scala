@@ -370,7 +370,6 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val app1V1 = appProxy(appId, "v1", 2, healthCheck = None)
       waitForDeployment(marathon.createGroup(GroupUpdate(Some(gid.toString), Some(Set(app1V1)))))
       waitForTasks(AbsolutePathId(app1V1.id), app1V1.instances)
-      val tasks = marathon.tasks(appId)
 
       When("The group is updated to change the enforce role setting")
       val result = marathon.updateGroup(gid, GroupUpdate(id = Some(gid.toString), apps = Some(Set(app1V1)), enforceRole = Some(true)))

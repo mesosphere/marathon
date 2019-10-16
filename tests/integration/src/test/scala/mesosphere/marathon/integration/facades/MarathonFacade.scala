@@ -17,12 +17,13 @@ import akka.util.ByteString
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.mesosphere.utils.http.RestResult
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon
+import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.raml18.PodStatus18
-import mesosphere.marathon.integration.setup.{AkkaHttpResponse, RestResult}
 import mesosphere.marathon.raml.{App, AppUpdate, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
@@ -102,7 +103,7 @@ class MarathonFacade(
     val system: ActorSystem, mat: Materializer)
   extends PodConversion with StrictLogging {
   implicit val scheduler = system.scheduler
-  import AkkaHttpResponse._
+  import com.mesosphere.utils.http.AkkaHttpResponse._
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -171,8 +172,7 @@ class MarathonFacade(
     * streamed via the materializable-once Source.
     */
   def events(eventsType: Seq[String] = Seq.empty): Future[Source[ITEvent, NotUsed]] = {
-
-    import EventUnmarshalling.fromEventStream
+    import EventUnmarshalling._
     val mapper = new ObjectMapper() with ScalaObjectMapper
     mapper.registerModule(DefaultScalaModule)
 
@@ -181,11 +181,14 @@ class MarathonFacade(
     Http().singleRequest(Get(akka.http.scaladsl.model.Uri(s"$url/v2/events").withQuery(eventsFilter))
       .withHeaders(Accept(MediaType.text("event-stream"))))
       .flatMap { response =>
+        logger.info(s"Unmarshall SSE response from $url")
         AkkaUnmarshal(response).to[Source[ServerSentEvent, NotUsed]]
       }
       .map { stream =>
+        logger.info(s"Mapping SSE stream from $url")
         stream
           .map { event =>
+            logger.info(s"Parsing JSON from $url")
             val json = mapper.readValue[Map[String, Any]](event.data) // linter:ignore
             ITEvent(event.eventType.getOrElse("unknown"), json)
           }
@@ -501,4 +504,16 @@ object MarathonFacade {
         throw new RuntimeException(s"while parsing:\n${app.entityPrettyJsonString}", e)
     }
   }.to[marathon.IndexedSeq]
+
+  /**
+    * Enables easy access to a deployment ID in the header of an [[HttpResponse]] in a [[RestResult]].
+    * @param response The result of an HTTP request.
+    */
+  implicit class DeploymentId(response: RestResult[_]) {
+    /**
+      * @return Deployment ID from headers, if any
+      */
+    def deploymentId: Option[String] =
+      response.originalResponse.headers.collectFirst { case header if header.name == RestResource.DeploymentHeader => header.value }
+  }
 }
