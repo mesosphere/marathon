@@ -4,13 +4,14 @@ package storage.repository
 import java.util.UUID
 
 import akka.Done
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.base.JvmExitsCrashStrategy
 import mesosphere.marathon.core.storage.repository.SingletonRepository
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
+import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkPersistenceStore}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.util.state.FrameworkId
 
 class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
@@ -56,7 +57,7 @@ class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
   }
 
   def createZKRepo(): FrameworkIdRepository = {
-    val store = new ZkPersistenceStore(metrics, zkClient())
+    val store = new ZkPersistenceStore(metrics, RichCuratorFramework(zkClient(), JvmExitsCrashStrategy))
     store.markOpen()
     FrameworkIdRepository.zkRepository(store)
   }

@@ -3,7 +3,8 @@ package integration
 
 import java.io.File
 
-import mesosphere.marathon.util.ZookeeperServerTest
+import com.mesosphere.utils.mesos.MesosClusterTest
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
 import mesosphere.marathon.integration.facades.MarathonFacade.extractDeploymentIds
 import mesosphere.marathon.integration.setup._
@@ -18,6 +19,9 @@ import scala.concurrent.duration._
   * Do not add tests to this class. See the notes in [[NonDestructiveLeaderIntegrationTest]].
   */
 abstract class LeaderIntegrationTest extends AkkaIntegrationTest with MarathonClusterTest {
+
+  val leaderChangeTimeout = 60.seconds
+  val oldLeaderDieTimeout = 60.seconds
 
   protected def leadingServerProcess(leader: String): LocalMarathon =
     (additionalMarathons :+ marathonServer).find(_.client.url.contains(leader)).getOrElse(
@@ -92,7 +96,7 @@ class DeathUponAbdicationLeaderIntegrationTest extends AkkaIntegrationTest with 
       (result.entityJson \ "message").as[String] should be("Leadership abdicated")
 
       And("the leader must have died")
-      eventually(timeout(Span(30.seconds.toMillis, Milliseconds))) {
+      eventually(timeout(Span(60.seconds.toMillis, Milliseconds))) {
         server.activePids should be('empty)
       }
     }
@@ -129,11 +133,11 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
         (result.entityJson \ "message").as[String] should be ("Leadership abdicated")
 
         And("the leader must have died")
-        WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess.isRunning() }
+        WaitTestSupport.waitUntil("the former leading marathon process dies", oldLeaderDieTimeout) { !leadingProcess.isRunning() }
         leadingProcess.stop().futureValue // already stopped, but still need to clear old state
 
         And("the leader must have changed")
-        WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
+        WaitTestSupport.waitUntil("the leader changes", leaderChangeTimeout) {
           val result = firstRunningProcess.client.leader()
           result.code == 200 && result.value != leader
         }
@@ -192,11 +196,11 @@ class KeepAppsRunningDuringAbdicationIntegrationTest extends LeaderIntegrationTe
       (abdicateResult.entityJson \ "message").as[String] should be ("Leadership abdicated")
 
       And("the leader must have died")
-      WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess.isRunning() }
+      WaitTestSupport.waitUntil("the former leading marathon process dies", oldLeaderDieTimeout) { !leadingProcess.isRunning() }
       leadingProcess.stop().futureValue // already stopped, but still need to clear old state
 
       And("the leader must have changed")
-      WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
+      WaitTestSupport.waitUntil("the leader changes", leaderChangeTimeout) {
         val result = firstRunningProcess.client.leader()
         result.code == 200 && result.value != leader
       }
@@ -267,11 +271,11 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
       (abdicateResult.entityJson \ "message").as[String] should be ("Leadership abdicated")
 
       And("the leader must have died")
-      WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess1.isRunning() }
+      WaitTestSupport.waitUntil("the former leading marathon process dies", oldLeaderDieTimeout) { !leadingProcess1.isRunning() }
       leadingProcess1.stop().futureValue // already stopped, but still need to clear old state
 
       And("the leader must have changed")
-      WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
+      WaitTestSupport.waitUntil("the leader changes", leaderChangeTimeout) {
         val result = firstRunningProcess.client.leader()
         result.code == 200 && result.value != leader1
       }
@@ -309,7 +313,7 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
       (abdicateResult.entityJson \ "message").as[String] should be ("Leadership abdicated")
 
       And("the leader must have changed")
-      WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
+      WaitTestSupport.waitUntil("the leader changes", leaderChangeTimeout) {
         val result = firstRunningProcess.client.leader()
         result.code == 200 && result.value != leader2
       }
@@ -384,11 +388,11 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
       (abdicateResult.entityJson \ "message").as[String] should be ("Leadership abdicated")
 
       And("the leader must have died")
-      WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess.isRunning() }
+      WaitTestSupport.waitUntil("the former leading marathon process dies", oldLeaderDieTimeout) { !leadingProcess.isRunning() }
       leadingProcess.stop().futureValue // already stopped, but still need to clear old state
 
       And("the leader must have changed")
-      WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
+      WaitTestSupport.waitUntil("the leader changes", leaderChangeTimeout) {
         val result = firstRunningProcess.client.leader()
         result.code == 200 && result.value != leader
       }
@@ -414,11 +418,11 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
       (abdicateResult2.entityJson \ "message").as[String] should be("Leadership abdicated")
 
       And("the leader must have died")
-      WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess2.isRunning() }
+      WaitTestSupport.waitUntil("the former leading marathon process dies", oldLeaderDieTimeout) { !leadingProcess2.isRunning() }
       leadingProcess2.stop().futureValue // already stopped, but still need to clear old state
 
       And("the leader must have changed")
-      WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
+      WaitTestSupport.waitUntil("the leader changes", leaderChangeTimeout) {
         val result = firstRunningProcess.client.leader()
         result.code == 200 && result.value != leader2
       }

@@ -4,12 +4,12 @@ package integration
 import java.net.URL
 
 import akka.http.scaladsl.client.RequestBuilding
+import com.mesosphere.utils.PortAllocator
 import mesosphere.marathon.api.forwarder.RequestForwarder
 import org.apache.commons.io.IOUtils
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.api.LeaderProxyFilter
 import mesosphere.marathon.integration.setup._
-import mesosphere.util.PortAllocator
 import org.scalatest.concurrent.PatienceConfiguration
 import org.scalatest.prop.TableDrivenPropertyChecks
 import org.scalatest.time.{Milliseconds, Seconds, Span}

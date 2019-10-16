@@ -1,8 +1,9 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.MesosConfig
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.integration.setup.{BaseMarathon, EmbeddedMarathonTest, MesosConfig}
+import mesosphere.marathon.integration.setup.{BaseMarathon, EmbeddedMarathonTest}
 import mesosphere.marathon.raml.AppUpdate
 import mesosphere.marathon.state.AbsolutePathId
 import org.scalatest.time.{Seconds, Span}

@@ -7,13 +7,14 @@ import akka.Done
 import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.scaladsl.Sink
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.base.JvmExitsCrashStrategy
 import mesosphere.marathon.core.storage.store.impl.InMemoryTestClass1Serialization
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.storage.store.impl.zk.{ZkPersistenceStore, ZkTestClass1Serialization}
+import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkPersistenceStore, ZkTestClass1Serialization}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStoreTest, TestClass1}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.marathon.storage.store.InMemoryStoreSerialization
 import mesosphere.marathon.test.SettableClock
 
@@ -39,7 +40,7 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
 
   private def cachedZk = {
     val root = UUID.randomUUID().toString
-    val client = zkClient(namespace = Some(root))
+    val client = RichCuratorFramework(zkClient(namespace = Some(root)), JvmExitsCrashStrategy)
     val store = LazyCachingPersistenceStore(
       metrics,
       new ZkPersistenceStore(metrics, client))

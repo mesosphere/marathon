@@ -111,7 +111,8 @@ lazy val commonSettings = Seq(
     Resolver.JCenterRepository,
     "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",
     "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
-    "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
+    "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven",
+    "Mesosphere Snapshot Repo" at "https://downloads.mesosphere.com/maven-snapshot"
   ),
   cancelable in Global := true,
   publishTo := Some(s3resolver.value(

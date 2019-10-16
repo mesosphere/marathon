@@ -5,14 +5,15 @@ import java.util.UUID
 
 import akka.Done
 import akka.stream.scaladsl.Sink
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.base.JvmExitsCrashStrategy
 import mesosphere.marathon.core.storage.repository.{Repository, RepositoryConstants, VersionedRepository}
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
+import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkPersistenceStore}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.stream.EnrichedSink
 import org.scalatest.GivenWhenThen
@@ -166,7 +167,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
 
   def createZKRepo(): AppRepository = {
     val root = UUID.randomUUID().toString
-    val rootClient = zkClient(namespace = Some(root))
+    val rootClient = RichCuratorFramework(zkClient(namespace = Some(root)), JvmExitsCrashStrategy)
     val store = new ZkPersistenceStore(metrics, rootClient)
     store.markOpen()
     AppRepository.zkRepository(store)

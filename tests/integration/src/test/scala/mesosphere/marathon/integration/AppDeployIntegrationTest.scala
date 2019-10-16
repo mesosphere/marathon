@@ -4,6 +4,7 @@ package integration
 import java.util.UUID
 
 import akka.util.ByteString
+import com.mesosphere.utils.http.RestResult
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{ITDeployment, ITEnrichedTask, ITQueueItem}
 import mesosphere.marathon.integration.setup._

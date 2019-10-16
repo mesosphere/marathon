@@ -4,8 +4,9 @@ package core.storage.store.impl.zk
 import java.util.UUID
 
 import akka.util.ByteString
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.UnitTest
-import mesosphere.marathon.util.ZookeeperServerTest
+import mesosphere.marathon.core.base.JvmExitsCrashStrategy
 import mesosphere.marathon.stream.Implicits._
 import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.ZooDefs.Perms
@@ -20,7 +21,7 @@ class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
   val user = new Id("digest", DigestAuthenticationProvider.generateDigest("super:secret"))
 
   lazy val richClient: RichCuratorFramework = {
-    zkClient(namespace = Some(root))
+    RichCuratorFramework(zkClient(namespace = Some(root)), JvmExitsCrashStrategy)
   }
 
   lazy val client: CuratorFramework = richClient.client
