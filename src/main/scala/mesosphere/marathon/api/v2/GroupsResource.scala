@@ -12,12 +12,12 @@ import javax.ws.rs.core.{Context, MediaType, Response}
 import akka.stream.Materializer
 import mesosphere.marathon.api.v2.InfoEmbedResolver._
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{AuthResource, GroupApiService, RestResource}
 import mesosphere.marathon.core.appinfo.{GroupInfoService, Selector}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -90,7 +90,7 @@ class GroupsResource @Inject() (
       def groupResponse(id: AbsolutePathId) =
         infoService.selectGroup(id, authorizationSelectors, appEmbed, groupEmbed).map {
           case Some(info) => ok(info)
-          case None if id.isRoot => ok(raml.GroupInfo(RootGroup.empty.id.toString))
+          case None if id.isRoot => ok(raml.GroupInfo(RootGroup.empty().id.toString))
           case None => unknownGroup(id)
         }
 
@@ -252,11 +252,7 @@ class GroupsResource @Inject() (
         val newVersion = Timestamp.now()
         val updatedGroup = await(groupsService.updateGroup(originalRootGroup, effectivePath, groupUpdate, newVersion))
 
-        ok(
-          Json.obj(
-            "steps".->(DeploymentPlan(originalRootGroup, updatedGroup).steps)
-          ).toString()
-        )
+        ok(raml.DeploymentSteps(steps = Raml.toRaml(DeploymentPlan(originalRootGroup, updatedGroup).steps)))
       } else {
         val (deployment, _) = await(updateOrCreate(rootPath, groupUpdate, force))
         deploymentResult(deployment)
@@ -275,7 +271,7 @@ class GroupsResource @Inject() (
 
       def clearRootGroup(rootGroup: RootGroup): RootGroup = {
         checkAuthorization(DeleteGroup, rootGroup)
-        RootGroup(version = version)
+        groupManager.rootGroup().updatedWith(Group.empty("/".toAbsolutePath, version = version))
       }
 
       val deployment = await(groupManager.updateRoot(PathId.root, clearRootGroup, version, force))

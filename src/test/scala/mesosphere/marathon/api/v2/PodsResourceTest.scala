@@ -3,22 +3,21 @@ package api.v2
 
 import java.time.OffsetDateTime
 
-import javax.servlet.http.HttpServletResponse
+import akka.Done
 import akka.event.EventStream
 import akka.stream.Materializer
 import akka.stream.scaladsl.Source
+import javax.servlet.http.HttpServletResponse
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.api.RestResource.RestStreamingBody
-import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
-import mesosphere.marathon.api.{JsonTestHelper, RestResource, TaskKiller, TestAuthFixture}
+import mesosphere.marathon.api.{JsonTestHelper, RestResource, TaskKiller, TestAuthFixture, TestGroupManagerFixture}
 import mesosphere.marathon.core.appinfo.PodStatusService
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.instance.Instance.InstanceState
+import mesosphere.marathon.core.instance.{Goal, Instance}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.impl.PodManagerImpl
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition, PodManager}
@@ -35,8 +34,6 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
-
-  Formats.configureJacksonSerializer()
 
   // TODO(jdef) incorporate checks for firing pod events on C, U, D operations
 
@@ -127,8 +124,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "be able to create a simple single-container pod from docker image w/ shell command" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+      val podSystem = f.podSystem
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -139,7 +136,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
 
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should be (defined)
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
@@ -154,8 +151,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "be able to create a simple single-container pod with bridge network" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+      val podSystem = f.podSystem
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -166,7 +163,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
 
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should be (defined)
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
@@ -181,8 +178,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "The secrets feature is NOT enabled and create pod (that uses file base secrets) fails" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+      val podSystem = f.podSystem
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -197,8 +194,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "The secrets feature is NOT enabled and create pod (that uses env secret refs) fails" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+      val podSystem = f.podSystem
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -213,8 +210,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "The secrets feature is NOT enabled and create pod (that uses env secret refs on container level) fails" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // should not be injected into host network spec
+      val podSystem = f.podSystem
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -229,8 +226,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "The secrets feature is enabled and create pod (that uses env secret refs on container level) succeeds" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--default_network_name", "blah", "--enable_features", Features.SECRETS)) // should not be injected into host network spec
+      val podSystem = f.podSystem
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -240,7 +237,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(201)
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should be (defined)
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
@@ -250,8 +247,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "The secrets feature is enabled and create pod (that uses file based secrets) succeeds" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--default_network_name", "blah", "--enable_features", Features.SECRETS)) // should not be injected into host network spec
+      val podSystem = f.podSystem
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -261,7 +258,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(201)
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should be (defined)
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
@@ -271,8 +268,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "create a pod w/ container networking" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--default_network_name", "blah")) // required since network name is missing from JSON
+      val podSystem = f.podSystem
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -283,7 +280,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
 
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should be (defined)
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
@@ -298,8 +295,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "create a pod w/ container networking w/o default network name" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
+      val podSystem = f.podSystem
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -311,8 +308,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "create a pod with custom executor resource declaration" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
+      val podSystem = f.podSystem
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -323,7 +320,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_CREATED)
 
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should be (defined)
         val maybePod = parsedResponse.map(_.as[Pod])
         maybePod should be (defined) // validate that we DID get back a pod definition
@@ -339,8 +336,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "update a simple single-container pod from docker image w/ shell command" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
+      val podSystem = f.podSystem
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -358,7 +355,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
 
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should not be None
         parsedResponse.map(_.as[Pod]) should not be None // validate that we DID get back a pod definition
 
@@ -367,8 +364,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "save pod with more than one instance" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
+      val podSystem = f.podSystem
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -386,7 +383,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
 
-        val parsedResponse = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).map(Json.parse)
+        val parsedResponse = Option(response.getEntity.toString).map(Json.parse)
         parsedResponse should not be None
         val podOption = parsedResponse.map(_.as[Pod])
         podOption should not be None // validate that we DID get back a pod definition
@@ -399,8 +396,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "create a pod with a persistent volume" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+      val podSystem = f.podSystem
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -427,7 +424,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_OK)
 
-        val jsonResponse = Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
+        val jsonResponse = Json.parse(response.getEntity.toString)
         val pod = jsonResponse.as[Pod]
         val volumeInfo = PersistentVolumeInfo(`type` = Some(PersistentVolumeType.Root), size = 10)
         val volume = PodPersistentVolume(name = "pst", persistent = volumeInfo)
@@ -438,8 +435,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "fail to create a pod with a persistent volume if role is set to *" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+      val podSystem = f.podSystem
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -470,8 +467,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "fail to update a pod with a persistent volume without force parameter" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+      val podSystem = f.podSystem
 
       val pathId = "/foo/mypod".toAbsolutePath
       val existingPod = PodDefinition(id = pathId, role = "*")
@@ -507,8 +504,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "update a pod with a persistent volume with force parameter" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+      val podSystem = f.podSystem
 
       val pathId = "/foo/mypod".toAbsolutePath
       val existingPod = PodDefinition(id = pathId, role = "*")
@@ -543,8 +540,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "fail to create a pod with a persistent volume if unreachable strategy is enabled" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+      val podSystem = f.podSystem
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -575,8 +572,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "fail to create a pod with a persistent volume if upgrade.maximumOverCapacity != 0" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--mesos_role", "foo"))
+      val podSystem = f.podSystem
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -608,8 +605,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "fail to create a pod with a persistent volume if acceptedResourceRoles != *" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
+      val podSystem = f.podSystem
 
       podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -642,8 +639,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "delete a pod" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
+      val podSystem = f.podSystem
 
       podSystem.find(any).returns(Some(PodDefinition(role = "*")))
       podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
@@ -662,23 +659,23 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "lookup a specific pod, and that pod does not exist" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
+      val podSystem = f.podSystem
 
       podSystem.find(any).returns(Option.empty[PodDefinition])
       val response = asyncRequest { r => f.podsResource.find("/mypod", f.auth.request, r) }
 
       withClue(s"response body: ${response.getEntity}") {
         response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
-        val body = Option(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
+        val body = Option(response.getEntity.toString)
         body should not be None
         body.foreach(_ should include("mypod does not exist"))
       }
     }
 
     "find all pods" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
+      val podSystem = f.podSystem
 
       podSystem.findAll(any).returns(List(PodDefinition(role = "*"), PodDefinition(role = "*")))
       val response = asyncRequest { r => f.podsResource.findAll(f.auth.request, r) }
@@ -692,8 +689,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "get pod status" in {
-      implicit val podStatusService = mock[PodStatusService]
       val f = Fixture()
+      val podStatusService = f.podStatusService
 
       podStatusService.selectPodStatus(any, any).returns(Future(Some(PodStatus("/mypod", Pod("/mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
 
@@ -708,9 +705,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "get all pod statuses" in {
-      implicit val podStatusService = mock[PodStatusService]
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
+      val podSystem = f.podSystem
+      val podStatusService = f.podStatusService
 
       podSystem.ids().returns(Set(AbsolutePathId("/mypod")))
       podStatusService.selectPodStatuses(any, any).returns(Future(Seq(PodStatus("/mypod", Pod("/mypod", containers = Seq.empty), PodState.Stable, statusSince = OffsetDateTime.now(), lastUpdated = OffsetDateTime.now(), lastChanged = OffsetDateTime.now()))))
@@ -726,8 +723,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "Create a new pod with w/ Docker image and config.json" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--enable_features", "secrets"))
+      val podSystem = f.podSystem
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -787,8 +784,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "Creating a new pod with w/ Docker image and non-existing secret should fail" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture(configArgs = Seq("--enable_features", "secrets"))
+      val podSystem = f.podSystem
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -834,8 +831,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     "Create a new pod with w/ Docker image and config.json, but with secrets disabled" in {
-      implicit val podSystem = mock[PodManager]
       val f = Fixture()
+      val podSystem = f.podSystem
 
       podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -880,8 +877,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     "Support multi-roles" when {
 
       "A pod definition with no role defined should be success and have default role set" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -916,8 +913,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "A pod definition with no role defined should be success and have mesos_role role set" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture(configArgs = Seq("--mesos_role", "customMesosRole"))
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -952,8 +949,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "A pod definition with role defined the same as mesos_role should be success" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture(configArgs = Seq("--mesos_role", "customMesosRole"))
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -989,8 +986,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "A pod definition with not default role defined should fail" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1025,8 +1022,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "A pod definition in a top-level group with no role defined should have the default role" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1063,8 +1060,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "A pod definition in a top-level group with the group role defined should be success" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1100,8 +1097,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "A pod definition in a top-level group with the group role defined should be success, even if group does not exist" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         f.prepareRootGroup()
 
@@ -1137,8 +1134,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "A pod update with a custom role should fail if the existing pod has a different custom role" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1176,8 +1173,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "A pod update with a custom role should be success if the existing pod has the same role" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.update(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1218,8 +1215,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     "Support seccomp" when {
 
       "Accept a pod definition with seccomp profile defined and unconfined = false" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1262,8 +1259,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "Accept a pod definition WITHOUT seccomp profile and unconfined = true" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1305,8 +1302,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "Decline a pod definition with seccomp profiled defined and unconfined = true" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1350,8 +1347,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "Decline a pod definition WITHOUT seccomp profiled defined and unconfined = false" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1394,8 +1391,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "Decline a pod definition with ANY seccomp configuration on executor level" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1440,8 +1437,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     "Support shared memory" when {
 
       "Accept a pod definition with private IPC and shm size defined" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1489,8 +1486,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "Accept a pod definition with private IPC and shm size NOT defined" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1537,8 +1534,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "Decline a pod definition with shared parent IPC and shm size defined" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1587,8 +1584,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "Accept a pod definition with shared Parent IPC and shm size NOT defined" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1635,8 +1632,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "Accept a pod definition with container that has private IPC and shm size defined" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1679,8 +1676,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "Accept a pod definition with container that has private IPC and shm size NOT defined" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1722,8 +1719,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "Decline a pod definition with container that has shared parent IPC and shm size defined" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1767,8 +1764,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
 
       "Accept a pod definition with container that has shared parent IPC and shm size NOT defined" in {
-        implicit val podSystem = mock[PodManager]
         val f = Fixture()
+        val podSystem = f.podSystem
 
         podSystem.create(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
 
@@ -1810,6 +1807,46 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       }
     }
 
+    "causes auto-created groups to respect the --new_group_enforce_role=top setting" in {
+      val f = Fixture.withRealGroupManager(configArgs = Seq("--new_group_enforce_role", "top"))
+      f.service.deploy(any, any) returns Future.successful(Done)
+
+      Given("Empty Marathon with --new_group_enforce_role=top setting")
+
+      When("I post a sleeper app definition to /dev/sleeper")
+      val response = asyncRequest { r =>
+        val podJson =
+          """
+            |{
+            |    "id": "/dev/sleeper",
+            |    "containers": [{
+            |        "name": "container0",
+            |        "resources": {
+            |            "cpus": 0.1,
+            |            "mem": 32
+            |        },
+            |        "image": { "kind": "DOCKER", "id": "private/image" },
+            |        "exec": { "command": { "shell": "sleep 1" } }
+            |    }]
+            |}
+          """.stripMargin
+
+        f.podsResource.create(podJson.getBytes, force = false, f.auth.request, r)
+      }
+
+      withClue(s"response body: ${response.getEntity}") {
+        response.getStatus should be(201)
+      }
+
+      Then("the pod has the role 'dev' automatically set")
+      val Some(pod) = f.groupManager.rootGroup().pod(AbsolutePathId("/dev/sleeper"))
+
+      pod.role shouldBe "dev"
+      And("the auto-created group has enforceRole enabled")
+      val Some(group) = f.groupManager.group("/dev".toAbsolutePath)
+      group.enforceRole shouldBe true
+    }
+
     "support versions" when {
 
       "there are no versions" when {
@@ -1817,8 +1854,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           val groupManager = mock[GroupManager]
           groupManager.pod(any).returns(None)
           groupManager.podVersions(any).returns(Source.empty)
-          implicit val podManager = PodManagerImpl(groupManager)
-          val f = Fixture()
+          val podManager = PodManagerImpl(groupManager)
+          val f = Fixture(groupManager = groupManager, podManager = podManager)
 
           val response = asyncRequest { r => f.podsResource.versions("/id", f.auth.request, r) }
           withClue(s"response body: ${response.getEntity}") {
@@ -1830,13 +1867,13 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           groupManager.pod(any).returns(None)
           groupManager.podVersions(any).returns(Source.empty)
           groupManager.podVersion(any, any).returns(Future.successful(None))
-          implicit val podManager = PodManagerImpl(groupManager)
-          val f = Fixture()
+          val podManager = PodManagerImpl(groupManager)
+          val f = Fixture(groupManager = groupManager, podManager = podManager)
 
           val response = asyncRequest { r => f.podsResource.version("/id", "2008-01-01T12:00:00.000Z", f.auth.request, r) }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_NOT_FOUND)
-            response.getEntity.asInstanceOf[RestStreamingBody[_]].toString should be ("""{"message":"Pod '/id' does not exist","details":[]}""")
+            response.getEntity.toString should be ("""{"message":"Pod '/id' does not exist","details":[]}""")
           }
         }
       }
@@ -1849,8 +1886,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           groupManager.pod(any).returns(Some(pod2))
           groupManager.podVersions(pod1.id).returns(Source(Seq(pod1.version.toOffsetDateTime, pod2.version.toOffsetDateTime)))
 
-          implicit val podManager = PodManagerImpl(groupManager)
-          val f = Fixture()
+          val podManager = PodManagerImpl(groupManager)
+          val f = Fixture(groupManager = groupManager, podManager = podManager)
 
           val response = asyncRequest { r => f.podsResource.versions("/id", f.auth.request, r) }
           withClue(s"response body: ${response.getEntity}") {
@@ -1865,21 +1902,21 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           groupManager.podVersions(pod1.id).returns(Source(Seq(pod1.version.toOffsetDateTime, pod2.version.toOffsetDateTime)))
           groupManager.podVersion(pod1.id, pod1.version.toOffsetDateTime).returns(Future.successful(Some(pod1)))
           groupManager.podVersion(pod1.id, pod2.version.toOffsetDateTime).returns(Future.successful(Some(pod2)))
-          implicit val podManager = PodManagerImpl(groupManager)
-          val f = Fixture()
+          val podManager = PodManagerImpl(groupManager)
+          val f = Fixture(groupManager = groupManager, podManager = podManager)
 
           val response = asyncRequest { r => f.podsResource.version("/id", pod1.version.toString, f.auth.request, r) }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
-            val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)).get)
+            val pod = Raml.fromRaml(Json.fromJson[Pod](Json.parse(response.getEntity.toString)).get)
             pod should equal(pod1)
           }
         }
       }
       "killing" when {
         "attempting to kill a single instance" in {
-          implicit val killer = mock[TaskKiller]
-          val f = Fixture()
+          val killer = mock[TaskKiller]
+          val f = Fixture(killService = killer)
           val runSpec = AppDefinition(id = "/id1".toAbsolutePath, versionInfo = VersionInfo.OnlyVersion(f.clock.now()), role = "*")
           val instanceId = Instance.Id.fromIdString("id1.instance-a905036a-f6ed-11e8-9688-2a978491fd64")
           val instance = Instance(
@@ -1919,7 +1956,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           }
         }
         "attempting to kill multiple instances" in {
-          implicit val killer = mock[TaskKiller]
+          val killer = mock[TaskKiller]
           val runSpec = AppDefinition(id = "/id1".toAbsolutePath, unreachableStrategy = UnreachableStrategy.default(), role = "*")
           val instances = Seq(
             Instance(Instance.Id.forRunSpec(runSpec.id), Some(Instance.AgentInfo("", None, None, None, Nil)),
@@ -1934,7 +1971,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
               None,
               role = "*"))
 
-          val f = Fixture()
+          val f = Fixture(killService = killer)
 
           killer.kill(any, any, any)(any) returns Future.successful(instances)
           val response = asyncRequest { r =>
@@ -1943,7 +1980,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
           }
           withClue(s"response body: ${response.getEntity}") {
             response.getStatus should be(HttpServletResponse.SC_OK)
-            val killed: Seq[raml.Instance] = Json.fromJson[Seq[raml.Instance]](Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)).get
+            val killed: Seq[raml.Instance] = Json.fromJson[Seq[raml.Instance]](Json.parse(response.getEntity.toString)).get
             killed.map(_.instanceId) should contain theSameElementsAs instances.map(_.instanceId.idString)
           }
         }
@@ -1953,8 +1990,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     "authentication and authorization is handled correctly" when {
       "delete fails if not authorized" when {
         "delete a pod without auth access" in {
-          implicit val podSystem = mock[PodManager]
           val f = Fixture()
+          val podSystem = f.podSystem
           podSystem.find(any).returns(Some(PodDefinition(role = "*")))
           podSystem.delete(any, eq(false)).returns(Future.successful(DeploymentPlan.empty))
           f.auth.authorized = false
@@ -1970,8 +2007,8 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     "access without authentication is denied" when {
 
       class UnAuthorizedFixture(authorized: Boolean, authenticated: Boolean) {
-        implicit val podSystem = mock[PodManager]
         val fixture = Fixture()
+        val podSystem = fixture.podSystem
         podSystem.findAll(any).returns(Seq.empty)
         podSystem.find(any).returns(Some(PodDefinition(role = "*")))
         podSystem.delete(any, any).returns(Future.successful(DeploymentPlan.empty))
@@ -2074,7 +2111,9 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       auth: TestAuthFixture,
       podSystem: PodManager,
       clock: SettableClock,
-      groupManager: GroupManager
+      groupManager: GroupManager,
+      podStatusService: PodStatusService,
+      service: MarathonSchedulerService
   ) extends GroupCreation {
 
     def prepareGroup(groupId: String, pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods): Unit = {
@@ -2097,31 +2136,71 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
   object Fixture {
     def apply(
       configArgs: Seq[String] = Seq.empty[String],
-      auth: TestAuthFixture = new TestAuthFixture()
-    )(implicit
-      podSystem: PodManager = mock[PodManager],
+      auth: TestAuthFixture = new TestAuthFixture(),
+      scheduler: MarathonScheduler = mock[MarathonScheduler],
+      podManager: PodManager = mock[PodManager],
       podStatusService: PodStatusService = mock[PodStatusService],
       killService: TaskKiller = mock[TaskKiller],
+      groupManager: GroupManager = mock[GroupManager],
+      service: MarathonSchedulerService = mock[MarathonSchedulerService]
+    )(implicit
       eventBus: EventStream = mock[EventStream],
-      mat: Materializer = mock[Materializer],
-      scheduler: MarathonScheduler = mock[MarathonScheduler]): Fixture = {
-      val config = AllConf.withTestConfig(configArgs: _*)
+      mat: Materializer = mock[Materializer]): Fixture = {
+
       implicit val authz: Authorizer = auth.auth
       implicit val authn: Authenticator = auth.auth
-      implicit val clock = new SettableClock()
-      implicit val pluginManager: PluginManager = PluginManager.None
-      implicit val groupManager: GroupManager = mock[GroupManager]
+      val config = AllConf.withTestConfig(configArgs: _*)
+      val clock = new SettableClock()
+      val pluginManager: PluginManager = PluginManager.None
 
       scheduler.mesosMasterVersion() returns Some(SemanticVersion(0, 0, 0))
 
       new Fixture(
-        new PodsResource(config),
+        new PodsResource(
+          config, clock = clock, pluginManager = pluginManager, groupManager = groupManager, taskKiller = killService,
+          podSystem = podManager, podStatusService = podStatusService, scheduler = scheduler),
         auth,
-        podSystem,
+        podManager,
         clock,
-        groupManager
+        groupManager,
+        podStatusService,
+        service
       )
     }
 
+    def withRealGroupManager(
+      initialRoot: Group = Group.empty("/".toAbsolutePath, enforceRole = false),
+      configArgs: Seq[String] = Seq.empty[String],
+      auth: TestAuthFixture = new TestAuthFixture()): Fixture = {
+
+      val config = AllConf.withTestConfig(configArgs: _*)
+      val pluginManager: PluginManager = PluginManager.None
+      val clock = new SettableClock()
+      val podStatusService = mock[PodStatusService]
+
+      val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(
+        initialRoot = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.fromConfig(config.newGroupEnforceRole())))
+      val killService: TaskKiller = mock[TaskKiller]
+      val podManager = new PodManagerImpl(groupManagerFixture.groupManager)
+      val scheduler: MarathonScheduler = mock[MarathonScheduler]
+
+      implicit val authz: Authorizer = auth.auth
+      implicit val authn: Authenticator = auth.auth
+      implicit val es: EventStream = system.eventStream
+      scheduler.mesosMasterVersion() returns Some(SemanticVersion(0, 0, 0))
+
+      val podsResource = new PodsResource(
+        config, clock = clock, pluginManager = pluginManager, groupManager = groupManagerFixture.groupManager, taskKiller = killService,
+        podSystem = podManager, podStatusService = podStatusService, scheduler = scheduler)
+      new Fixture(
+        podsResource,
+        auth,
+        podManager,
+        clock,
+        groupManagerFixture.groupManager,
+        podStatusService,
+        groupManagerFixture.service
+      )
+    }
   }
 }

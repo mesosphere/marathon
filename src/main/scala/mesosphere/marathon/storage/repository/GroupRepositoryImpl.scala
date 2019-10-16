@@ -195,7 +195,8 @@ class StoredGroupRepositoryImpl[K, C, S](
     persistenceStore: PersistenceStore[K, C, S],
     appRepository: AppRepository,
     podRepository: PodRepository,
-    versionCacheMaxSize: Int)(
+    versionCacheMaxSize: Int,
+    newGroupStrategy: RootGroup.NewGroupStrategy)(
     implicit
     ir: IdResolver[AbsolutePathId, StoredGroup, C, K],
     marshaller: Marshaller[StoredGroup, S],
@@ -244,8 +245,8 @@ class StoredGroupRepositoryImpl[K, C, S](
     val root = await(storedRepo.get(RootId))
     val resolved = root.map(_.resolve(appRepository, podRepository))
     resolved match {
-      case Some(x) => RootGroup.fromGroup(await(x))
-      case None => RootGroup.empty
+      case Some(x) => RootGroup.fromGroup(await(x), newGroupStrategy = newGroupStrategy)
+      case None => RootGroup.empty(newGroupStrategy = newGroupStrategy)
     }
   }
 
@@ -260,11 +261,11 @@ class StoredGroupRepositoryImpl[K, C, S](
           val unresolved = await(storedRepo.get(RootId))
           val newRoot = unresolved.map(_.resolve(appRepository, podRepository)) match {
             case Some(group) =>
-              RootGroup.fromGroup(await(group))
+              RootGroup.fromGroup(await(group), newGroupStrategy)
             case None =>
               // In case there is no root group yet a new (Empty) group is returned after it is persisted
               // to the repository. Otherwise attempts to read this group later would fail.
-              val root = RootGroup.empty
+              val root = RootGroup.empty(newGroupStrategy = newGroupStrategy)
               await(storeRoot(root, Nil, Nil, Nil, Nil))
               root
           }
@@ -289,14 +290,14 @@ class StoredGroupRepositoryImpl[K, C, S](
     async {
       versionCache.get(version) match {
         case Some(group) =>
-          Some(RootGroup.fromGroup(group))
+          Some(RootGroup.fromGroup(group, newGroupStrategy))
         case None =>
           val unresolved = await(storedRepo.getVersion(RootId, version))
           unresolved.map(_.resolve(appRepository, podRepository)) match {
             case Some(group) =>
               val resolved = await(group)
               addToVersionCache(Some(version), resolved)
-              Some(RootGroup.fromGroup(resolved))
+              Some(RootGroup.fromGroup(resolved, newGroupStrategy))
             case None =>
               logger.warn(s"Failed to load root group with version=$version")
               None

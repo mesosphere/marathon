@@ -17,10 +17,11 @@ import mesosphere.marathon.test.Mockito
 import scala.concurrent.{ExecutionContext, Future}
 
 class TestGroupManagerFixture(
-    initialRoot: RootGroup = RootGroup.empty,
+    initialRoot: RootGroup = RootGroup.empty(),
     authenticated: Boolean = true,
     authorized: Boolean = true,
-    authFn: Any => Boolean = _ => true)(implicit as: ActorSystem, ec: ExecutionContext) extends Mockito {
+    authFn: Any => Boolean = _ => true,
+    val config: AllConf = AllConf.withTestConfig("--zk_timeout", "3000"))(implicit as: ActorSystem, ec: ExecutionContext) extends Mockito {
   implicit val mat = ActorMaterializer()
   val service = mock[MarathonSchedulerService]
   val metrics = DummyMetrics
@@ -31,7 +32,7 @@ class TestGroupManagerFixture(
 
   val appRepository = AppRepository.inMemRepository(store)
   val podRepository = PodRepository.inMemRepository(store)
-  val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository, maxVersionsCacheSize)
+  val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository, maxVersionsCacheSize, initialRoot.newGroupStrategy)
   groupRepository.storeRoot(initialRoot, Nil, Nil, Nil, Nil)
   val eventBus = mock[EventStream]
 
@@ -41,8 +42,6 @@ class TestGroupManagerFixture(
   authFixture.authFn = authFn
 
   implicit val authenticator = authFixture.auth
-
-  val config = AllConf.withTestConfig("--zk_timeout", "3000")
 
   val actorId = new AtomicInteger(0)
 

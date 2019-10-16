@@ -6,7 +6,6 @@ import java.util.Collections
 import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
-import mesosphere.marathon.api.RestResource.RestStreamingBody
 import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
 import mesosphere.marathon.test.JerseyTest
 
@@ -120,7 +119,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       response.getStatus shouldEqual 200
 
       And("The response is the list of killed tasks")
-      response.getEntity.asInstanceOf[RestStreamingBody[_]].toString shouldEqual """{"tasks":[]}"""
+      response.getEntity.toString shouldEqual """{"tasks":[]}"""
 
       And("Both tasks should be requested to be killed")
       verify(taskKiller).kill(Matchers.eq(app1), any, any)(any)
@@ -188,7 +187,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("Should create a deployment")
-      response.getEntity.asInstanceOf[RestStreamingBody[_]].toString shouldEqual """{"deploymentId":"plan","version":"1970-01-01T00:00:00.000Z"}"""
+      response.getEntity.toString shouldEqual """{"deploymentId":"plan","version":"1970-01-01T00:00:00.000Z"}"""
 
       And("app1 and app2 is killed with force")
       verify(taskKiller).killAndScale(Matchers.eq(Map(app1 -> Seq(instance1), app2 -> Seq(instance2))), Matchers.eq(true))(any)

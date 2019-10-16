@@ -13,7 +13,7 @@ import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
-import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId, Timestamp, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId, RootGroup, Timestamp, VersionInfo}
 import mesosphere.marathon.test.{GroupCreation, Mockito}
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.metrics.dummy.DummyMetrics
@@ -62,7 +62,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
     store.markOpen()
     val appRepo = AppRepository.inMemRepository(store)
     val podRepo = PodRepository.inMemRepository(store)
-    val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo, maxVersionsCacheSize)
+    val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo, maxVersionsCacheSize, RootGroup.NewGroupStrategy.Fail)
     val deployRepo = DeploymentRepository.inMemRepository(metrics, store, groupRepo, appRepo, podRepo, maxVersions, 32)
     val actor = TestFSMRef(new GcActor(metrics, deployRepo, groupRepo, appRepo, podRepo, maxVersions, 32, 0.seconds)(mat, ExecutionContexts.callerThread) {
       override def scan(): Future[ScanDone] = {
@@ -437,7 +437,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         store.markOpen()
         val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
         val podRepo = PodRepository.inMemRepository(store)
-        val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo, maxVersionsCacheSize)
+        val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo, maxVersionsCacheSize, RootGroup.NewGroupStrategy.Fail)
         val deployRepo = DeploymentRepository.inMemRepository(metrics, store, groupRepo, appRepo, podRepo, 2, 32)
         val actor = TestFSMRef(new GcActor(metrics, deployRepo, groupRepo, appRepo, podRepo, 2, 32, 0.seconds))
         val root1 = createRootGroup()
@@ -453,7 +453,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         store.markOpen()
         val appRepo = AppRepository.inMemRepository(store)
         val podRepo = mock[PodRepositoryImpl[RamId, String, Identity]]
-        val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo, maxVersionsCacheSize)
+        val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo, maxVersionsCacheSize, RootGroup.NewGroupStrategy.Fail)
         val deployRepo = DeploymentRepository.inMemRepository(metrics, store, groupRepo, appRepo, podRepo, 2, 32)
         val actor = TestFSMRef(new GcActor(metrics, deployRepo, groupRepo, appRepo, podRepo, 2, 32, 0.seconds))
         val root1 = createRootGroup()
@@ -469,7 +469,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         store.markOpen()
         val appRepo = mock[AppRepositoryImpl[RamId, String, Identity]]
         val podRepo = PodRepository.inMemRepository(store)
-        val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo, maxVersionsCacheSize)
+        val groupRepo = GroupRepository.inMemRepository(store, appRepo, podRepo, maxVersionsCacheSize, RootGroup.NewGroupStrategy.Fail)
         val deployRepo = DeploymentRepository.inMemRepository(metrics, store, groupRepo, appRepo, podRepo, 2, 32)
         val actor = TestFSMRef(new GcActor(metrics, deployRepo, groupRepo, appRepo, podRepo, 2, 32, 0.seconds))
         actor.setState(Scanning, UpdatedEntities())

@@ -8,14 +8,13 @@ import javax.ws.rs.core.Response.Status._
 import javax.ws.rs.core.{Context, MediaType}
 import com.typesafe.scalalogging.StrictLogging
 import javax.ws.rs.container.{AsyncResponse, Suspended}
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.AuthResource
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.plugin.auth._
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId
-import mesosphere.marathon.{MarathonConf, MarathonSchedulerService}
 
-import scala.async.Async.{await, async}
+import scala.async.Async.{async, await}
 import scala.concurrent.ExecutionContext
 
 @Path("v2/deployments")
@@ -36,7 +35,7 @@ class DeploymentsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       val infos = await(service.listRunningDeployments())
         .filter(_.plan.affectedRunSpecs.exists(isAuthorized(ViewRunSpec, _)))
-      ok(jsonString(infos))
+      ok(Raml.toRaml(infos))
     }
   }
 

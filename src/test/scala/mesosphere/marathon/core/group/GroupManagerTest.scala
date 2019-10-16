@@ -19,7 +19,7 @@ import scala.concurrent.{ExecutionContext, Future, Promise}
 class GroupManagerTest extends AkkaUnitTest with GroupCreation {
   class Fixture(
       val servicePortsRange: Range = 1000.to(20000),
-      val initialRoot: Option[RootGroup] = Some(RootGroup.empty),
+      val initialRoot: Option[RootGroup] = Some(RootGroup.empty()),
       val maxRunningDeployments: Int = 100) {
     val config = AllConf.withTestConfig(
       "--local_port_min", servicePortsRange.min.toString,
