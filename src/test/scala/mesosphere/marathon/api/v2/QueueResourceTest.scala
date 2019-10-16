@@ -2,7 +2,6 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.UnitTest
-import mesosphere.marathon.api.RestResource.RestStreamingBody
 import mesosphere.marathon.api.TestAuthFixture
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.instance.Instance
@@ -79,7 +78,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
 
       //then
       response.getStatus should be(200)
-      val json = Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
+      val json = Json.parse(response.getEntity.toString)
       val queuedApps = (json \ "queue").as[Seq[JsObject]]
       val jsonApp1 = queuedApps.find { apps => (apps \ "app" \ "id").as[String] == "/app" }.get
 
@@ -117,7 +116,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
 
       //then
       response.getStatus should be(200)
-      val json = Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
+      val json = Json.parse(response.getEntity.toString)
       val queuedApps = (json \ "queue").as[Seq[JsObject]]
       val jsonApp1 = queuedApps.find { apps => (apps \ "app" \ "id").get == JsString("/app") }.get
 

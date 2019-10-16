@@ -6,7 +6,6 @@ import java.util
 import javax.ws.rs.core.Response
 import akka.Done
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.api.RestResource.RestStreamingBody
 import mesosphere.marathon.api._
 import mesosphere.marathon.api.v2.validation.NetworkValidationMessages
 import mesosphere.marathon.core.appinfo.AppInfo.Embed
@@ -72,7 +71,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     def prepareApp(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
-      val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures)
+      val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures, newGroupEnforceRole = config.newGroupEnforceRole())
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(normed)).getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -163,18 +162,20 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
   }
 
   case class FixtureWithRealGroupManager(
-      initialRoot: RootGroup = RootGroup.empty,
+      initialRoot: Group = Group.empty("/".toAbsolutePath, enforceRole = false),
       clock: SettableClock = new SettableClock(),
       auth: TestAuthFixture = new TestAuthFixture,
       appTaskResource: AppTasksResource = mock[AppTasksResource],
       appInfoService: AppInfoService = mock[AppInfoService],
       configArgs: Seq[String] = Seq("--enable_features", "external_volumes")) {
-    val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(initialRoot = initialRoot)
+
+    val config: AllConf = AllConf.withTestConfig(configArgs: _*)
+    val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(
+      initialRoot = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.fromConfig(config.newGroupEnforceRole())))
     val groupManager: GroupManager = groupManagerFixture.groupManager
     val groupRepository: GroupRepository = groupManagerFixture.groupRepository
     val service = groupManagerFixture.service
 
-    val config: AllConf = AllConf.withTestConfig(configArgs: _*)
     val appsResource: AppsResource = new AppsResource(
       clock,
       system.eventStream,
@@ -212,7 +213,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
           deployments = Some(Seq(raml.Identifiable(plan.id)))
         )
-        JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).correspondsToJsonOf(expected)
+        JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
       }
       if (!result.isSuccess) {
         result.failed.foreach {
@@ -244,7 +245,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Try(prepareApp(app, groupManager))
 
       Then("It is successful")
-      assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[RestStreamingBody[_]].toString}")
+      assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.toString}")
     }
 
     "Creating a new app with w/ Docker containerizer and a Docker config.json should fail" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
@@ -592,7 +593,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       Then("It is successful")
-      assert(response.getStatus == 201, s"body = ${new String(body)}, response = ${response.getEntity.asInstanceOf[RestStreamingBody[_]].toString}")
+      assert(response.getStatus == 201, s"body = ${new String(body)}, response = ${response.getEntity.toString}")
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
@@ -602,7 +603,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
-      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).correspondsToJsonOf(expected)
+      JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
     }
 
     "Create a new app with IP/CT on virtual network foo w/ MESOS container spec" in new Fixture {
@@ -632,7 +633,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
-      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).correspondsToJsonOf(expected)
+      JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
     }
 
     "Create a new app with IP/CT on virtual network foo, then update it to bar" in new Fixture {
@@ -697,7 +698,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       Then("It is successful")
-      assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[RestStreamingBody[_]].toString}")
+      assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.toString}")
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
 
       And("the JSON is as expected, including a newly generated version")
@@ -707,7 +708,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
-      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).correspondsToJsonOf(expected)
+      JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
     }
 
     "Create a new app with IP/CT when default virtual network is bar, Alice did not specify network name" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
@@ -741,7 +742,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
-      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).correspondsToJsonOf(expected)
+      JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
     }
 
     "Create a new app with IP/CT when default virtual network is bar, but Alice specified foo" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
@@ -771,7 +772,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
-      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).correspondsToJsonOf(expected)
+      JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
     }
 
     "Create a new app with IP/CT with virtual network foo w/ Docker" in new Fixture {
@@ -810,7 +811,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
-      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).correspondsToJsonOf(expected)
+      JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
     }
 
     "Create a new app in BRIDGE mode w/ Docker" in new Fixture {
@@ -863,7 +864,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
-      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).correspondsToJsonOf(expected)
+      JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
     }
 
     "Create a new app in USER mode w/ ipAddress.discoveryInfo w/ Docker" in new Fixture {
@@ -955,7 +956,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
-      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).correspondsToJsonOf(expected)
+      JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
     }
 
     "Create a new app (that uses undefined secret ref) and fails" in new Fixture(configArgs = Seq("--enable_features", Features.SECRETS)) {
@@ -1004,7 +1005,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
-      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).correspondsToJsonOf(expected)
+      JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
     }
 
     "The secrets feature is NOT enabled and create app (that uses secret refs) fails" in new Fixture(configArgs = Seq()) {
@@ -1111,7 +1112,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       Then("It is successful")
-      assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[RestStreamingBody[_]].toString}")
+      assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.toString}")
 
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
@@ -1120,7 +1121,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
-      JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).correspondsToJsonOf(expected)
+      JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
     }
 
     "Create a new app fails with Validation errors" in new Fixture {
@@ -1368,7 +1369,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       )
 
       Then("The return code indicates create success")
-      assert(response.getStatus == 201, s"response=${response.getEntity.asInstanceOf[RestStreamingBody[_]].toString}")
+      assert(response.getStatus == 201, s"response=${response.getEntity.toString}")
       response.getMetadata.containsKey(RestResource.DeploymentHeader) should be(true)
     }
 
@@ -1643,7 +1644,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val response = asyncRequest { r => appsResource.index(null, null, null, new java.util.HashSet(), auth.request, r) }
 
       Then("The response holds counts and deployments")
-      val appJson = Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
+      val appJson = Json.parse(response.getEntity.toString)
       (appJson \ "apps" \\ "deployments" head) should be(Json.arr(Json.obj("id" -> "deployment-123")))
       (appJson \ "apps" \\ "tasksStaged" head) should be(JsNumber(1))
     }
@@ -1664,7 +1665,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val response = asyncRequest { r => appsResource.index(null, null, null, embeds, auth.request, r) }
 
       Then("The response holds counts and task failure")
-      val appJson = Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
+      val appJson = Json.parse(response.getEntity.toString)
       ((appJson \ "apps" \\ "lastTaskFailure" head) \ "state") should be(JsDefined(JsString("TASK_STAGING")))
       (appJson \ "apps" \\ "tasksStaged" head) should be(JsNumber(1))
     }
@@ -1914,7 +1915,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       Then("The response has no error and it is valid")
       response.getStatus should be(201)
-      val appJson = Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
+      val appJson = Json.parse(response.getEntity.toString)
       // TODO: are we violating appInfo here?
       (appJson \ "fetch" \ 0 \ "uri" get) should be (JsString("file:///bin/bash"))
       (appJson \ "fetch" \ 0 \ "extract" get) should be(JsBoolean(false))
@@ -1941,7 +1942,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       Then("It is successful")
-      assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[RestStreamingBody[_]].toString}")
+      assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.toString}")
     }
 
     "Allow editing a env configuration without sending secrets" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
@@ -2006,7 +2007,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
           deployments = Some(Seq(raml.Identifiable(plan.id)))
         )
-        JsonTestHelper.assertThatJsonString(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString).correspondsToJsonOf(expected)
+        JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
       }
       if (!result.isSuccess) {
         result.failed.foreach {
@@ -2195,6 +2196,41 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
     }
 
+    "causes auto-created groups to respect the --new_group_enforce_role=top setting" in new FixtureWithRealGroupManager(configArgs = Seq("--new_group_enforce_role", "top")) {
+      service.deploy(any, any) returns Future.successful(Done)
+
+      Given("Empty Marathon with --new_group_enforce_role=top setting")
+
+      When("I post a sleeper app definition to /dev/apps/sleeper")
+      val response = asyncRequest { r =>
+        val body =
+          """
+            |{
+            |  "id": "/dev/apps/sleeper",
+            |  "cmd": "sleep 3600",
+            |  "instances": 1,
+            |  "cpus": 0.05,
+            |  "mem": 128
+            |}
+          """.stripMargin
+        appsResource.create(body.getBytes, force = false, auth.request, r)
+      }
+
+      response.getStatus should be(201)
+
+      Then("the app has the role 'dev' automatically set")
+      val Some(app) = groupManager.rootGroup().app(AbsolutePathId("/dev/apps/sleeper"))
+
+      app.role shouldBe "dev"
+      And("the auto-created top-level group has enforceRole enabled")
+      val Some(group) = groupManager.group("/dev".toAbsolutePath)
+      group.enforceRole shouldBe true
+
+      And("the auto-created mid-level group has enforceRole disabled")
+      val Some(midGroup) = groupManager.group("/dev/apps".toAbsolutePath)
+      midGroup.enforceRole shouldBe false
+    }
+
     "Create a new app inside a top-group with enforceRole applies the proper group-role default" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/dev".toAbsolutePath, enforceRole = true)))) {
       service.deploy(any, any) returns Future.successful(Done)
 
@@ -2267,7 +2303,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       And("resulting app has acceptedResourceRoles sanitized (equals default one)")
-      val appJson = Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[raml.AppInfo]].toString)
+      val appJson = Json.parse(response.getEntity.toString)
       (appJson \ "acceptedResourceRoles" \ 0) should be (JsDefined(JsString(ResourceRole.Unreserved)))
     }
 
@@ -2409,7 +2445,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       And("the resulting app has the given volume name")
-      val appJson = Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
+      val appJson = Json.parse(response.getEntity.toString)
       (appJson \ "container" \ "volumes" \ 0 \ "external" \ "name") should be (JsDefined(JsString(volumeName)))
     }
   }

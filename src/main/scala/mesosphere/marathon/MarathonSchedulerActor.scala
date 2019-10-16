@@ -17,6 +17,7 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.termination.impl.KillStreamWatcher
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.{AbsolutePathId, RunSpec}
 import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
 import mesosphere.marathon.stream.Implicits._
@@ -254,12 +255,12 @@ class MarathonSchedulerActor private (
 
   def deploymentSuccess(plan: DeploymentPlan): Unit = {
     logger.info(s"Deployment ${plan.id}:${plan.version} of ${plan.targetIdsString} finished")
-    eventBus.publish(DeploymentSuccess(plan.id, plan))
+    eventBus.publish(DeploymentSuccess(plan.id, Raml.toRaml(plan)))
   }
 
   def deploymentFailed(plan: DeploymentPlan, reason: Throwable): Unit = {
     logger.error(s"Deployment ${plan.id}:${plan.version} of ${plan.targetIdsString} failed", reason)
-    eventBus.publish(core.event.DeploymentFailed(plan.id, plan, reason = Some(reason.getMessage())))
+    eventBus.publish(core.event.DeploymentFailed(plan.id, Raml.toRaml(plan), reason = Some(reason.getMessage())))
   }
 }
 

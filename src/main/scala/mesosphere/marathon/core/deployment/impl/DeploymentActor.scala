@@ -20,6 +20,7 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.termination.impl.KillStreamWatcher
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.{AppDefinition, RunSpec}
 import mesosphere.mesos.Constraints
 
@@ -109,7 +110,7 @@ private class DeploymentActor(
     if (step.actions.isEmpty) {
       Future.successful(Done)
     } else {
-      val status = DeploymentStatus(plan, step)
+      val status = DeploymentStatus(Raml.toRaml(plan), Raml.toRaml(step))
       eventBus.publish(status)
 
       val futures = step.actions.map { action =>
@@ -128,10 +129,10 @@ private class DeploymentActor(
       Future.sequence(futures).map(_ => Done).andThen {
         case Success(_) =>
           logger.debug(s"Deployment step successful: step=$step plandId=${plan.id}")
-          eventBus.publish(DeploymentStepSuccess(plan, step))
+          eventBus.publish(DeploymentStepSuccess(Raml.toRaml(plan), Raml.toRaml(step)))
         case Failure(e) =>
           logger.debug(s"Deployment step failed: step=$step plandId=${plan.id}", e)
-          eventBus.publish(DeploymentStepFailure(plan, step))
+          eventBus.publish(DeploymentStepFailure(Raml.toRaml(plan), Raml.toRaml(step)))
       }
     }
   }

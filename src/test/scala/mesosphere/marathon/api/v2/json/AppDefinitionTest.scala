@@ -7,14 +7,14 @@ import mesosphere.marathon.core.check.MesosCommandCheck
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
-import mesosphere.marathon.raml.{App, Raml, RamlSerializer, Resources, SecretDef}
+import mesosphere.marathon.raml.{Raml, Resources, SecretDef}
 import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state.EnvVarValue._
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.util.RoleSettings
 import mesosphere.{UnitTest, ValidationTestLike}
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.Json
 
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
@@ -33,17 +33,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
   private[this] def fromJson(json: String): AppDefinition = {
     val raw: raml.App = Json.parse(json).as[raml.App]
     Raml.fromRaml(appNormalization(raw))
-  }
-
-  private[this] def toJsonWithPlay(app: AppDefinition): String = {
-    val raml: App = Raml.toRaml(app)
-    val value: JsValue = Json.toJson(raml)
-    value.toString()
-  }
-
-  private[this] def toJsonWithJackson(app: AppDefinition): String = {
-    val raml: App = Raml.toRaml(app)
-    RamlSerializer.serializer.writeValueAsString(raml)
   }
 
   "AppDefinition" should {

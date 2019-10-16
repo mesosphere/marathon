@@ -79,21 +79,9 @@ class AppInfoBaseData(
     val enrichedTasksOpt: Option[Seq[EnrichedTask]] = if (embeds.contains(AppInfo.Embed.Tasks)) Some(await(appData.enrichedTasksFuture)) else None
     val taskStatsOpt: Option[raml.TaskStatsByVersion] = if (embeds.contains(AppInfo.Embed.TaskStats)) Some(await(appData.taskStatsFuture)) else None
 
-    // Screw RamlConversions.
-    def convertReadinessCheckResults(readinessCheckResults: Seq[ReadinessCheckResult]): Seq[raml.TaskReadinessCheckResult] = {
-      readinessCheckResults.map { result =>
-        raml.TaskReadinessCheckResult(
-          name = result.name,
-          taskId = result.taskId.idString,
-          ready = result.ready,
-          lastResponse = result.lastResponse.map(response => raml.ReadinessCheckHttpResponse(response.status, response.contentType, response.body))
-        )
-      }
-    }
-
     val appInfo = raml.AppInfo.fromParent(
       parent = Raml.toRaml(app),
-      readinessCheckResults = if (embeds.contains(AppInfo.Embed.Readiness)) Some(readinessChecksByAppOpt.map(convertReadinessCheckResults).getOrElse(Seq.empty)) else None,
+      readinessCheckResults = if (embeds.contains(AppInfo.Embed.Readiness)) Some(readinessChecksByAppOpt.map(Raml.toRaml(_)).getOrElse(Seq.empty)) else None,
       tasks = if (embeds.contains(AppInfo.Embed.Tasks)) Some(enrichedTasksOpt.getOrElse(Seq.empty).map(Raml.toRaml(_)(raml.TaskConversion.enrichedTaskRamlWrite))) else None,
       tasksStaged = taskCountsOpt.map(_.tasksStaged),
       tasksRunning = taskCountsOpt.map(_.tasksRunning),

@@ -5,7 +5,7 @@ import java.util.UUID
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment._
-import mesosphere.marathon.raml.{App, GroupUpdate}
+import mesosphere.marathon.raml.{App, GroupUpdate, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Group, Timestamp}
 import mesosphere.marathon.test.GroupCreation
@@ -69,13 +69,13 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
 
     "DeploymentPlan can be serialized" in {
       val plan = DeploymentPlan(
-        genId.toString,
+        genId,
         genRootGroup(),
         genRootGroup(Set(genGroup(), genGroup())),
         Seq(genStep),
         Timestamp.now()
       )
-      val json = Json.toJson(plan).as[JsObject]
+      val json = Json.toJson(Raml.toRaml(plan)).as[JsObject]
       val fieldMap = json.fields.toMap
       // Expect the following fields ONLY from serialized DeploymentPlan
       fieldMap.keySet should be(Set("id", "steps", "version"))

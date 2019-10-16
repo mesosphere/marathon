@@ -18,7 +18,7 @@ case class GroupNormalization(conf: MarathonConf, originalRootGroup: RootGroup) 
     // Visit children.
     val children = groupUpdate.groups.map(_.map { childGroup =>
       val absoluteChildGroupPath = PathId(childGroup.id.get).canonicalPath(PathId.root)
-      visitTopLevelGroup(conf, childGroup, absoluteChildGroupPath, conf.groupRoleBehavior(), conf.mesosRole())
+      visitTopLevelGroup(conf, childGroup, absoluteChildGroupPath, conf.newGroupEnforceRole(), conf.mesosRole())
     })
 
     // Visit apps.
@@ -39,7 +39,7 @@ case class GroupNormalization(conf: MarathonConf, originalRootGroup: RootGroup) 
     * @param mesosRole The default Mesos role define via [[MarathonConf]].
     * @return a normalized group update.
     */
-  def visitTopLevelGroup(conf: MarathonConf, groupUpdate: raml.GroupUpdate, groupPath: AbsolutePathId, groupRoleBehavior: GroupRoleBehavior, mesosRole: Role): raml.GroupUpdate = {
+  def visitTopLevelGroup(conf: MarathonConf, groupUpdate: raml.GroupUpdate, groupPath: AbsolutePathId, groupRoleBehavior: NewGroupEnforceRoleBehavior, mesosRole: Role): raml.GroupUpdate = {
     // Infer enforce role field and default role for all apps.
     val enforceRole = effectiveEnforceRole(groupRoleBehavior, groupUpdate.enforceRole)
     val defaultRole = if (enforceRole) groupUpdate.id.map(PathId(_)).getOrElse(PathId.relativeEmpty).canonicalPath(groupPath).root else mesosRole
@@ -114,7 +114,7 @@ case class GroupNormalization(conf: MarathonConf, originalRootGroup: RootGroup) 
     // Only update if this is not a scale or rollback
     if (update.version.isEmpty && update.scaleBy.isEmpty) {
       if (groupPath.isRoot) visitRootGroup(conf, update)
-      else if (groupPath.isTopLevel) visitTopLevelGroup(conf, update, groupPath, conf.groupRoleBehavior(), conf.mesosRole())
+      else if (groupPath.isTopLevel) visitTopLevelGroup(conf, update, groupPath, conf.newGroupEnforceRole(), conf.mesosRole())
       else {
         val (defaultRole, enforceRole) = inferDefaultRole(conf, groupPath, originalRootGroup)
         visitChildGroup(conf, update, groupPath, defaultRole, enforceRole)
@@ -123,21 +123,21 @@ case class GroupNormalization(conf: MarathonConf, originalRootGroup: RootGroup) 
   }
 
   def partialUpdateNormalization(): Normalization[raml.GroupPartialUpdate] = Normalization { update =>
-    update.copy(enforceRole = Some(effectiveEnforceRole(conf.groupRoleBehavior(), update.enforceRole)))
+    update.copy(enforceRole = Some(effectiveEnforceRole(conf.newGroupEnforceRole(), update.enforceRole)))
   }
 
   /**
     * Infers the enforce role field for a top-level group based on the update value and the default behavior.
     *
-    * @param groupRoleBehavior The Marathon configured [[GroupRoleBehavior]]
+    * @param groupRoleBehavior The Marathon configured [[NewGroupEnforceRoleBehavior]]
     * @param maybeEnforceRole The role defined by the update.
     * @return Whether or not to enforce the role.
     */
-  private def effectiveEnforceRole(groupRoleBehavior: GroupRoleBehavior, maybeEnforceRole: Option[Boolean]): Boolean = {
+  private def effectiveEnforceRole(groupRoleBehavior: NewGroupEnforceRoleBehavior, maybeEnforceRole: Option[Boolean]): Boolean = {
     maybeEnforceRole.getOrElse {
       groupRoleBehavior match {
-        case GroupRoleBehavior.Off => false
-        case GroupRoleBehavior.Top => true
+        case NewGroupEnforceRoleBehavior.Off => false
+        case NewGroupEnforceRoleBehavior.Top => true
       }
     }
   }
@@ -156,7 +156,7 @@ case class GroupNormalization(conf: MarathonConf, originalRootGroup: RootGroup) 
       case None =>
         // If the top-level does not exist it is created during the update. Thus the enforced role is defined
         // by the configured behavior.
-        (conf.mesosRole(), effectiveEnforceRole(conf.groupRoleBehavior(), None))
+        (conf.mesosRole(), effectiveEnforceRole(conf.newGroupEnforceRole(), None))
       case Some(topLevelGroup) =>
         val defaultRole = if (topLevelGroup.enforceRole) groupId.root else conf.mesosRole()
         (defaultRole, topLevelGroup.enforceRole)
