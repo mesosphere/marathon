@@ -31,10 +31,10 @@ private[launchqueue] object LaunchQueueActor {
   def props(
     config: LaunchQueueConfig,
     instanceTracker: InstanceTracker,
-    groupManager: GroupManager,
+    runSpecProvider: GroupManager.RunSpecProvider,
     runSpecActorProps: RunSpec => Props,
     delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]): Props = {
-    Props(new LaunchQueueActor(config, instanceTracker, groupManager, runSpecActorProps, delayUpdates))
+    Props(new LaunchQueueActor(config, instanceTracker, runSpecProvider, runSpecActorProps, delayUpdates))
   }
 
   case class FullCount(appId: PathId)
@@ -50,7 +50,7 @@ private[launchqueue] object LaunchQueueActor {
 private[impl] class LaunchQueueActor(
     launchQueueConfig: LaunchQueueConfig,
     instanceTracker: InstanceTracker,
-    groupManager: GroupManager,
+    runSpecProvider: GroupManager.RunSpecProvider,
     runSpecActorProps: RunSpec => Props,
     delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]
 ) extends Actor with Stash with StrictLogging {
@@ -96,7 +96,7 @@ private[impl] class LaunchQueueActor(
 
       instances.instancesMap.collect {
         case (id, specInstances) if specInstances.instances.exists(_.isScheduled) =>
-          groupManager.runSpec(id)
+          runSpecProvider.runSpec(id)
       }
         .flatten
         .foreach { scheduledRunSpec =>
@@ -130,7 +130,7 @@ private[impl] class LaunchQueueActor(
     launchers.get(instance.runSpecId).orElse {
       if (instance.isScheduled) {
         logger.info(s"No active taskLauncherActor for scheduled ${instance.instanceId}, will create one.")
-        groupManager.runSpec(instance.runSpecId).map(createAppTaskLauncher)
+        runSpecProvider.runSpec(instance.runSpecId).map(createAppTaskLauncher)
       } else None
     }
   }

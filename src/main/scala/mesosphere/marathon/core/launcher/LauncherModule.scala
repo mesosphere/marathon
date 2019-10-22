@@ -21,7 +21,7 @@ class LauncherModule(
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     offerMatcher: OfferMatcher,
     pluginManager: PluginManager,
-    rootGroupRetriever: GroupManager.CurrentRootGroupRetriever)(implicit clock: Clock) {
+    enforceRoleSettingProvider: GroupManager.EnforceRoleSettingProvider)(implicit clock: Clock) {
 
   lazy val offerProcessor: OfferProcessor =
     new OfferProcessorImpl(
@@ -33,5 +33,5 @@ class LauncherModule(
     metrics,
     marathonSchedulerDriverHolder)
 
-  lazy val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(metrics, conf, pluginManager, rootGroupRetriever)
+  lazy val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(metrics, conf, pluginManager, enforceRoleSettingProvider)
 }

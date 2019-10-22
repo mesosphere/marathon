@@ -20,7 +20,14 @@ import scala.concurrent.Future
   *
   * Only 1 update to the root will be processed at a time.
   */
-trait GroupManager extends GroupManager.CurrentRootGroupRetriever {
+trait GroupManager extends GroupManager.EnforceRoleSettingProvider with GroupManager.RunSpecProvider {
+
+  /**
+    * Get a root group, fetching it from a persistence store if necessary.
+    *
+    * @return a root group
+    */
+  def rootGroup(): RootGroup
 
   /**
     * Get a root group.
@@ -205,16 +212,30 @@ trait GroupManager extends GroupManager.CurrentRootGroupRetriever {
     */
   def invalidateGroupCache(): Future[Done]
 
+  override def enforceRoleSetting(id: AbsolutePathId): Boolean = {
+    rootGroup().group(id).map(_.enforceRole).getOrElse(false)
+  }
 }
 
 object GroupManager {
-  trait CurrentRootGroupRetriever {
+
+  trait RunSpecProvider {
     /**
-      * Get a root group, fetching it from a persistence store if necessary.
-      *
-      * @return a root group
+      * Get a specific run spec by its Id
+      * @param id The id of the runSpec
+      * @return The run spec if it is found, otherwise None.
       */
-    def rootGroup(): RootGroup
+    def runSpec(id: AbsolutePathId): Option[RunSpec]
+  }
+
+  trait EnforceRoleSettingProvider {
+    /**
+      * Return the enforceRole setting for the given group, or false if no such group exists
+      *
+      * @param id The id of a group
+      * @return the enforceRole setting of the group with the given id, or false if no such role exists
+      */
+    def enforceRoleSetting(id: AbsolutePathId): Boolean
   }
 
 }

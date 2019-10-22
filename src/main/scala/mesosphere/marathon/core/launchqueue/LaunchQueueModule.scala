@@ -37,7 +37,7 @@ class LaunchQueueModule(
     subOfferMatcherManager: OfferMatcherManager,
     instanceTracker: InstanceTracker,
     taskOpFactory: InstanceOpFactory,
-    groupManager: GroupManager,
+    runSpecProvider: GroupManager.RunSpecProvider,
     localRegion: () => Option[Region],
     initialFrameworkInfo: Future[FrameworkInfo])(implicit materializer: Materializer, ec: ExecutionContext) {
 
@@ -74,14 +74,14 @@ class LaunchQueueModule(
         rateLimiterActor,
         offerMatchStatisticsInput,
         localRegion)(runSpec.id)
-    val props = LaunchQueueActor.props(config, instanceTracker, groupManager, runSpecActorProps, rateLimiterUpdates)
+    val props = LaunchQueueActor.props(config, instanceTracker, runSpecProvider, runSpecActorProps, rateLimiterUpdates)
     leadershipModule.startWhenLeader(props, "launchQueue")
   }
 
   val launchQueue: LaunchQueue = new LaunchQueueDelegate(config, launchQueueActor, rateLimiterActor)
 
   val launchStats = LaunchStats(
-    groupManager,
+    runSpecProvider,
     clock,
     instanceTracker.instanceUpdates,
     rateLimiterUpdates,

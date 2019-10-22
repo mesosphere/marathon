@@ -268,10 +268,11 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
     implicit val clock = new SettableClock()
     val metrics: Metrics = DummyMetrics
     var rootGroup = RootGroup.empty()
-    val rootGroupRetriever: GroupManager.CurrentRootGroupRetriever = new GroupManager.CurrentRootGroupRetriever {
-      override def rootGroup(): RootGroup = Fixture.this.rootGroup
+    val enforceRoleSettingProvider: GroupManager.EnforceRoleSettingProvider = new GroupManager.EnforceRoleSettingProvider {
+      override def enforceRoleSetting(id: AbsolutePathId): Boolean = rootGroup.group(id).exists(_.enforceRole)
     }
-    val instanceOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(metrics, config, rootGroupRetriever = rootGroupRetriever)
+
+    val instanceOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(metrics, config, enforceRoleProvider = enforceRoleSettingProvider)
     val defaultHostName = AgentTestDefaults.defaultHostName
     val defaultAgentId = AgentTestDefaults.defaultAgentId
 
