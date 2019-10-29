@@ -41,7 +41,7 @@ class QueueResource @Inject() (
   }
 
   @DELETE
-  @Path("""{appId:.+}/delay""")
+  @Path("""{runSpecId:.+}/delay""")
   def resetDelay(
     @PathParam("runSpecId") id: String,
     @Context req: HttpServletRequest,
