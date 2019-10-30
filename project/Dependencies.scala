@@ -215,6 +215,8 @@ object Dependency {
     )
   }
 
+  val excludeZk35 = ExclusionRule(organization = "org.apache.zookeeper", name = "zookeeper")
+
   object Curator {
     /**
       * According to Curator's Zookeeper Compatibility Docs [http://curator.apache.org/zk-compatibility.html], 4.0.0
@@ -224,8 +226,6 @@ object Dependency {
     val Version = "4.0.1"
 
     val TestVersion = "2.13.0"
-
-    val excludeZk35 = ExclusionRule(organization = "org.apache.zookeeper", name = "zookeeper")
 
     val curator = Seq(
       "org.apache.curator" % "curator-recipes" % Version % "compile",
@@ -261,6 +261,6 @@ object Dependency {
     val diffson = "org.gnieh" %% "diffson-play-json" % V.Diffson
     val junit = "junit" % "junit" % V.JUnit
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
-    val usiTestUtils = "com.mesosphere.usi" % "test-utils" % V.UsiTestUtil
+    val usiTestUtils = ("com.mesosphere.usi" % "test-utils" % V.UsiTestUtil).excludeAll(excludeZk35)
   }
 }
