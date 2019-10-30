@@ -83,6 +83,9 @@ Revive offers repetitions functionality no longer optional; after the duration s
 
 For more detailed information, see the JIRA ticket [MARATHON-8663](https://jira.mesosphere.com/browse/MARATHON-8663)
 
+### Fixed issues
+- [MARATHON-8711](https://jira.mesosphere.com/browse/MARATHON-8711) - Fixed a rare issue where Marathon would fail to render a status for a resident scheduled pod instance with a goal `Stopped` 
+
 ## Changes from 1.8.218 to 1.8.222
 
 ### External Volume Validation changes
