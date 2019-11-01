@@ -92,6 +92,17 @@ class PodStatusConversionTest extends UnitTest {
       ))
     }
 
+    "resident pod instance scheduled and Stopped before it could be launched" in {
+      implicit val clock = new SettableClock()
+      val pod = podWithPersistentVolume.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
+      var scheduled = core.instance.Instance.scheduled(pod)
+      scheduled = scheduled.copy(state = scheduled.state.copy(goal = core.instance.Goal.Stopped))
+
+      val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, scheduled))
+      status.id shouldBe scheduled.instanceId.idString
+      status.status shouldBe PodInstanceState.Terminal
+    }
+
     "ephemeral pod launched, received STAGING status from Mesos" in {
       implicit val clock = new SettableClock()
       val pod = basicOneContainerPod.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))

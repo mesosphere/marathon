@@ -255,6 +255,12 @@ trait PodStatusConversion {
       PodInstanceState.Pending -> None
     } else {
       instance.state.condition match {
+        // In this rare case, an instance never ran (e.g. not enough resources) and was
+        // stopped (e.g. due to a scale down) but still exists because this is a resident
+        // app/pod with a state.condition == Scheduled/Provisioned
+        case condition.Condition.Scheduled |
+          condition.Condition.Provisioned =>
+          PodInstanceState.Terminal -> None
         case condition.Condition.Staging |
           condition.Condition.Starting =>
           PodInstanceState.Staging -> None
