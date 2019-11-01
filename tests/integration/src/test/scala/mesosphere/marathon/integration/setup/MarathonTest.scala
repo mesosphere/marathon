@@ -115,7 +115,7 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
 
   def create(): Process = {
     marathonProcess.getOrElse {
-      val process = processBuilder.run(ProcessOutputToLogStream(s"$suiteName-LocalMarathon-$httpPort"))
+      val process = processBuilder.run(ProcessOutputToLogStream(s"mesosphere.marathon.integration.process.$suiteName-LocalMarathon-$httpPort"))
       marathonProcess = Some(process)
       process
     }
