@@ -207,8 +207,6 @@ def build(runTests: Boolean = true, buildName: String = "run"): SemVer = {
 @main
 def buildDockerAndLinuxPackages(): String = {
   utils.stage("Package Docker Image, Debian and RedHat Packages") {
-    %('sbt, "docker:publishLocal")
-
     val toolPath = pwd/'tools/'packager
     %('make, "clean")(toolPath)
     %('make, "all", "-j")(toolPath)

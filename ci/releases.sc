@@ -93,5 +93,5 @@ def copyTarballBuildsToReleases(version: SemVer): Unit = {
  */
 def uploadLinuxPackagesToRepos(packageVersion: String): Unit = {
   val toolPath = pwd/'tools/'packager
-  %('make, "upload")(toolPath)
+  %('make, "upload-packages")(toolPath)
 }

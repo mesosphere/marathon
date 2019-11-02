@@ -1,5 +1,5 @@
 # Note that the prefix affects the init scripts as well.
-PREFIX := usr
+PREFIX := usr tag-docker all clean help push-docker
 
 FPM_VERSION := 1.10.2
 FPM := FPM_VERSION=$(FPM_VERSION) bin/fpm-docker
@@ -9,6 +9,8 @@ REF ?= HEAD
 PKG_REL ?= 1
 PKG_COMMIT := $(shell cd ../../ && ./version commit --ref $(REF))
 PKG_VER := $(shell cd ../../ && ./version --ref $(PKG_COMMIT))
+
+MESOS_PKG_VERSION := $(shell cat ../../project/Dependencies.scala | grep MesosDebian | cut -f 2 -d '"')
 
 FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
 	-p target/ \
@@ -51,14 +53,14 @@ ALL_PKGS=$(EL6_PKG_PATH) $(EL7_PKG_PATH) $(DEBIAN_9_PKG_PATH) $(UBUNTU_1804_PKG_
 help:
 	@echo "Please choose one of the following targets:"
 	@echo "  all, deb, rpm, ubuntu, debian or el"
-	@echo "For release builds:"
-	@echo "  make PKG_REL=1.0 deb"
-	@echo "To override package release version:"
-	@echo "  make PKG_REL=0.2.20141228050159 rpm"
+	@echo "For build packages for the current checked-out version of Marathon:"
+	@echo "  make all"
+	@echo "To build packages for a different artifact version of Marathon:"
+	@echo "  make REF=v1.9.100 all"
 	@exit 0
 
 .PHONY: all
-all: $(foreach pkg,$(ALL_PKGS),$(pkg))
+all: $(foreach pkg,$(ALL_PKGS),$(pkg)) target/docker.tagged
 
 .PHONY: deb
 deb: ubuntu debian
@@ -137,7 +139,7 @@ target/toor/%/lib/systemd/system/marathon.service: scripts/marathon.systemd.serv
 	mkdir -p "$(dir $@)"
 	cp scripts/marathon.systemd.service "$@"
 
-target/toor/%/share/marathon: target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
+target/%/marathon: target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
 	rm -rf "$(dir $@)"
 	mkdir -p "$(dir $@)"
 	tar xzf target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz -C "$(dir $@)"
@@ -166,14 +168,33 @@ endef
 
 $(foreach target,$(ALL_PKGS),$(eval $(call upload_target,$(target))))
 
-upload: $(foreach target,$(ALL_PKGS),$(target).uploaded)
+upload-packages: $(foreach target,$(ALL_PKGS),$(target).uploaded)
 
-download: | target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
+download-marathon: | target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
 
 target/fpm-docker/.provisioned:
 	cd fpm-docker && docker build . --build-arg FPM_VERSION=$(FPM_VERSION) -t fpm:$(FPM_VERSION)
 	mkdir -p target/fpm-docker
 	touch $@
+
+### DOCKER BUILD section
+
+target/docker/Dockerfile: docker/Dockerfile
+	mkdir -p "$(dir $@)"
+	cp $< $@
+
+target/docker.tagged: target/docker/Dockerfile target/docker/marathon
+	cd target/docker && docker build --build-arg MESOS_PKG_VERSION=$(MESOS_PKG_VERSION) --tag mesosphere/marathon:v$(PKG_VER) . 2>&1 | tee ../../$@.work
+	mv $@.work $@
+
+target/docker.pushed: target/docker.tagged
+	docker push mesosphere/marathon:v$(PKG_VER) 2>&1 | tee $@.work
+
+tag-docker: target/docker.tagged
+push-docker: target/docker.pushed
+
+### END DOCKER
+
 
 clean:
 	rm -rf marathon*.deb marathon*.rpm marathon*.pkg target
