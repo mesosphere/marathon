@@ -253,46 +253,51 @@ object ObjectVisitor {
       * }
       *
       */
-    val jacksonSerializerSym = RootClass.newClass(name + "Serializer")
-    val jacksonSerializer = OBJECTDEF(jacksonSerializerSym).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
-      DEF( "serializeFields", UnitClass) withParams (
-        PARAM("value", name),
-        PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator")) := BLOCK(
-        actualFields.withFilter(_.name != AdditionalProperties).map { field =>
-          val writerSimple =
-            REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
-
-          val writerWithEmptyCheck =
-            IF(REF("value") DOT field.name DOT "nonEmpty") THEN (
+    val jacksonSerializerSym = if (discriminator.nonEmpty && discriminatorValue.isEmpty) None else Some(RootClass.newClass(name + "Serializer"))
+    val jacksonSerializer = if (discriminator.nonEmpty && discriminatorValue.isEmpty) None else
+      Some(OBJECTDEF(jacksonSerializerSym.get).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
+        DEF( "serializeFields", UnitClass) withParams (
+          PARAM("value", name),
+          PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator")) := BLOCK(
+          actualFields.withFilter(_.name != AdditionalProperties).map { field =>
+            val writerSimple =
               REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
-              ) ENDIF
 
-          if (field.isOptionType) {
-            writerWithEmptyCheck
-          } else if (field.omitEmpty && field.isContainerType) {
-            writerWithEmptyCheck
-          } else if (field.repeated) {
-            if (field.omitEmpty) {
+            val writerWithEmptyCheck =
+              IF(REF("value") DOT field.name DOT "nonEmpty") THEN (
+                REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
+                ) ENDIF
+
+            if (field.isOptionType) {
               writerWithEmptyCheck
+            } else if (field.omitEmpty && field.isContainerType) {
+              writerWithEmptyCheck
+            } else if (field.repeated) {
+              if (field.omitEmpty) {
+                writerWithEmptyCheck
+              } else {
+                writerSimple
+              }
             } else {
               writerSimple
             }
-          } else {
-            writerSimple
+          } ++ { (discriminator, discriminatorValue) match {
+              case (Some(name), Some(value)) =>
+                // If the object has a discriminator field such as "kind" it is added.
+                Seq(REF("gen") DOT "writeObjectField" APPLY( LIT(name), LIT(value) ))
+              case _ => Seq.empty
+            }
           }
-        } ++ discriminator.toSeq.map { discriminatorName =>
-          // If the object has a discriminator field such as "kind" it is added.
-          REF("gen") DOT "writeObjectField" APPLY( LIT(discriminatorName), LIT(discriminatorValue.getOrElse(discriminatorName)) )
-        }
-      ),
-      DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
-        PARAM("value", name),
-        PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator"),
-        PARAM("provider", "com.fasterxml.jackson.databind.SerializerProvider")) := BLOCK(
+        ),
+        DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
+          PARAM("value", name),
+          PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator"),
+          PARAM("provider", "com.fasterxml.jackson.databind.SerializerProvider")) := BLOCK(
 
-        (REF("gen") DOT "writeStartObject")(),
-        (THIS DOT "serializeFields") APPLY( REF("value"), REF("gen")),
-        (REF("gen") DOT "writeEndObject")()
+          (REF("gen") DOT "writeStartObject")(),
+          (THIS DOT "serializeFields") APPLY( REF("value"), REF("gen")),
+          (REF("gen") DOT "writeEndObject")()
+        )
       )
     )
 
@@ -302,7 +307,7 @@ object ObjectVisitor {
     GeneratedFile(
       children.objects
       ++
-      Seq(GeneratedObject(name, baseTrait ++ Seq(klass.withDoc(commentBlock)) ++ Seq(obj) ++ Seq(jacksonSerializer), Some(jacksonSerializerSym)))
+      Seq(GeneratedObject(name, baseTrait ++ Seq(klass.withDoc(commentBlock)) ++ Some(obj) ++ jacksonSerializer, jacksonSerializerSym))
     )
   }
 }
