@@ -117,7 +117,7 @@ object LaunchStats extends StrictLogging {
     * Given a source of instance updates, delay updates, and offer match statistics updates, materialize the streams and
     * aggregate the resulting data to produce the data returned by /v2/queue
     *
-    * @param groupManager
+    * @param runSpecProvider
     * @param clock
     * @param instanceUpdates InstanceTracker state subscription stream.
     * @param delayUpdates RateLimiter state subscription stream.
@@ -126,7 +126,7 @@ object LaunchStats extends StrictLogging {
     * @return LaunchStats instance used to query the current aggregate match state
     */
   def apply(
-    groupManager: GroupManager,
+    runSpecProvider: GroupManager.RunSpecProvider,
     clock: Clock,
     instanceUpdates: Source[(InstancesSnapshot, Source[InstanceChange, NotUsed]), NotUsed],
     delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
@@ -147,7 +147,7 @@ object LaunchStats extends StrictLogging {
         .alsoToMat(OfferMatchStatistics.runSpecStatisticsSink)(Keep.right)
         .toMat(OfferMatchStatistics.noMatchStatisticsSink)(Keep.both)
         .run
-    new LaunchStats(groupManager.runSpec, delays, launchingInstances, runSpecStatistics, noMatchStatistics)
+    new LaunchStats(runSpecProvider.runSpec, delays, launchingInstances, runSpecStatistics, noMatchStatistics)
   }
 
   /**

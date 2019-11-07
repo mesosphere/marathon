@@ -2,13 +2,13 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.UnitTest
+import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.instance.Reservation
 import mesosphere.marathon.core.pod.{ContainerNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.{AbsolutePathId, PathId, Timestamp}
 import mesosphere.marathon.stream.Implicits._
-import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos
 
 import scala.concurrent.duration._
@@ -123,6 +123,17 @@ class PodStatusConversionTest extends UnitTest {
           lastChanged = fixture.since.toOffsetDateTime
         )
       ))
+    }
+
+    "resident pod instance scheduled and Stopped before it could be launched" in {
+      implicit val clock = new SettableClock()
+      val pod = podWithPersistentVolume.copy(versionInfo = state.VersionInfo.OnlyVersion(clock.now()))
+      var scheduled = core.instance.Instance.scheduled(pod)
+      scheduled = scheduled.copy(state = scheduled.state.copy(goal = core.instance.Goal.Stopped))
+
+      val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, scheduled))
+      status.id shouldBe scheduled.instanceId.idString
+      status.status shouldBe PodInstanceState.Terminal
     }
 
     "ephemeral pod launched, received STAGING status from Mesos" in {

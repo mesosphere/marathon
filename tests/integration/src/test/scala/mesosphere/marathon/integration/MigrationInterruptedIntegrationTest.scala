@@ -1,9 +1,12 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.MesosClusterTest
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaIntegrationTest
-import mesosphere.marathon.integration.setup.{LocalMarathon, MesosClusterTest}
-import mesosphere.marathon.util.ZookeeperServerTest
+import mesosphere.marathon.core.base.JvmExitsCrashStrategy
+import mesosphere.marathon.core.storage.store.impl.zk.RichCuratorFramework
+import mesosphere.marathon.integration.setup.LocalMarathon
 import org.scalatest.concurrent.Eventually
 
 import scala.concurrent.Await
@@ -19,7 +22,7 @@ class MigrationInterruptedIntegrationTest
       Given("there is a migration flag in ZooKeeper")
       val namespace = s"marathon-$suiteName"
       val path = s"/$namespace/state/migration-in-progress"
-      val client = zkClient()
+      val client = RichCuratorFramework(zkClient(), JvmExitsCrashStrategy)
       try {
         val returnedPath = Await.result(client.create(path, creatingParentsIfNeeded = true), patienceConfig.timeout)
         returnedPath should equal (path)
@@ -28,8 +31,8 @@ class MigrationInterruptedIntegrationTest
       }
 
       When("Marathon starts up and becomes a leader")
-      val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterUrl,
-        zkUrl = s"zk://${zkServer.connectUri}/$namespace")
+      val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterZkUrl,
+        zkUrl = s"zk://${zkserver.connectUrl}/$namespace")
       marathonServer.create()
 
       Then("it fails to start")

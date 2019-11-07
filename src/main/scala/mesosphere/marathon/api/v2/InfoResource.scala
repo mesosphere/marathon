@@ -55,6 +55,7 @@ class InfoResource @Inject() (
     "mesos_leader_ui_url" -> config.mesosLeaderUiUrl.toOption,
     "mesos_role" -> config.mesosRole.toOption,
     "mesos_user" -> config.mesosUser.toOption,
+    "new_group_enforce_role" -> config.newGroupEnforceRole().toString,
     "min_revive_offers_interval" -> config.minReviveOffersInterval.toOption,
     "offer_matching_timeout" -> config.offerMatchingTimeout.toOption.map(_.toMillis),
     "on_elected_prepare_timeout" -> config.onElectedPrepareTimeout.toOption,
@@ -97,17 +98,16 @@ class InfoResource @Inject() (
       val frameworkId = await(frameworkIdRepository.get()).map(_.id)
       withAuthorization(ViewResource, AuthorizedResource.SystemConfig) {
         val mesosLeaderUiUrl = Json.obj("mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl)
-        Response.ok(
-          jsonObjString(
-            "name" -> BuildInfo.name,
-            "version" -> BuildInfo.version.toString(),
-            "buildref" -> BuildInfo.buildref,
-            "elected" -> electionService.isLeader,
-            "leader" -> electionService.leaderHostPort,
-            "frameworkId" -> frameworkId,
-            "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
-            "zookeeper_config" -> zookeeperConfigValues,
-            "http_config" -> httpConfigValues)).build()
+        Response.ok(Json.stringify(Json.obj(
+          "name" -> BuildInfo.name,
+          "version" -> BuildInfo.version.toString(),
+          "buildref" -> BuildInfo.buildref,
+          "elected" -> electionService.isLeader,
+          "leader" -> electionService.leaderHostPort,
+          "frameworkId" -> frameworkId,
+          "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
+          "zookeeper_config" -> zookeeperConfigValues,
+          "http_config" -> httpConfigValues))).build()
       }
     }
   }

@@ -18,7 +18,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.AnyToRaml
-import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.state.PathId._
@@ -45,33 +44,27 @@ class AppTasksResource @Inject() (
   def indexJson(
     @PathParam("appId") id: String,
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
-    async {
-      implicit val identity: Identity = await(authenticatedAsync(req))
-      val instancesBySpec: InstancesBySpec = await(instanceTracker.instancesBySpec)
-      getTasksForId(id, instancesBySpec)
-    }.flatten
-  }
-
-  private[this] def getTasksForId(id: String, instancesBySpec: InstancesBySpec)(implicit identity: Identity): Future[Response] = {
-    id match {
-      case GroupTasks(gid) =>
-        val groupPath = gid.toAbsolutePath
-        val maybeGroup = groupManager.group(groupPath)
-        withAuthorization(ViewGroup, maybeGroup, Future.successful(unknownGroup(groupPath))) { group =>
-          async {
-            val tasks = await(runningTasks(group.transitiveAppIds, instancesBySpec)).toRaml
-            ok(jsonObjString("tasks" -> tasks))
+    async { // linter:ignore AssigningOptionToNull
+      implicit val identity = await(authenticatedAsync(req))
+      val instancesBySpec = await(instanceTracker.instancesBySpec)
+      id match {
+        case GroupTasks(gid) =>
+          val groupPath = gid.toAbsolutePath
+          val maybeGroup = groupManager.group(groupPath)
+          await(withAuthorization(ViewGroup, maybeGroup, Future.successful(unknownGroup(groupPath))) { group =>
+            async {
+              val tasks = await(runningTasks(group.transitiveAppIds, instancesBySpec)).toRaml
+              ok(raml.TaskList(tasks))
+            }
+          })
+        case _ =>
+          val appId = id.toAbsolutePath
+          val maybeApp = groupManager.app(appId)
+          val tasks = await(runningTasks(Set(appId), instancesBySpec)).toRaml
+          withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
+            ok(raml.TaskList(tasks))
           }
-        }
-      case _ =>
-        val appId = id.toAbsolutePath
-        val maybeApp = groupManager.app(appId)
-        withAuthorization(ViewRunSpec, maybeApp, Future.successful(unknownApp(appId))) { _ =>
-          async {
-            val tasks = await(runningTasks(Set(appId), instancesBySpec)).toRaml
-            ok(jsonObjString("tasks" -> tasks))
-          }
-        }
+      }
     }
   }
 
@@ -131,7 +124,7 @@ class AppTasksResource @Inject() (
             val enrichedTasks: Seq[EnrichedTask] = instances.flatMap { i =>
               EnrichedTask.singleFromInstance(i, healthCheckResults = healthStatuses.getOrElse(i.instanceId, Nil))
             }
-            ok(jsonObjString("tasks" -> enrichedTasks.toRaml))
+            ok(raml.TaskList(enrichedTasks.toRaml))
           case Failure(PathNotFoundException(appId, version)) => unknownApp(appId, version)
           case Failure(exception) => {
             logger.error("Failed to execute TaskKiller.kill", exception)
@@ -180,7 +173,7 @@ class AppTasksResource @Inject() (
               case Some(i) =>
                 val killedTask = EnrichedTask.singleFromInstance(i).get
                 val enrichedTask = killedTask.copy(healthCheckResults = healthStatuses.getOrElse(i.instanceId, Nil))
-                ok(jsonObjString("task" -> enrichedTask.toRaml))
+                ok(raml.TaskSingle(enrichedTask.toRaml))
             }
           case Failure(PathNotFoundException(appId, version)) => unknownApp(appId, version)
           case Failure(exception) => {

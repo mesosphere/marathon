@@ -33,6 +33,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
     "SerializationRoundtrip for empty definition" in {
       val update0 = AppUpdate(container = Some(Container(EngineType.Mesos)))
       JsonTestHelper.assertSerializationRoundtripWorks(update0)
+      JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(update0)
     }
 
     "SerializationRoundtrip for extended definition" in {
@@ -80,6 +81,7 @@ class AppUpdateTest extends UnitTest with ValidationTestLike {
         unreachableStrategy = Some(raml.UnreachableEnabled(998, 999))
       )
       JsonTestHelper.assertSerializationRoundtripWorks(update1)
+      JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(update1)
     }
 
     "Serialization result of empty container" in {

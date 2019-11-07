@@ -9,12 +9,27 @@ import treehuggerDSL._
 object ObjectVisitor {
   import mesosphere.raml.backend._
 
-  def visit(o: ObjectT): Seq[Tree] = {
-    val ObjectT(name, fields, parentType, comments, childTypes, discriminator, discriminatorValue, serializeOnly) = o
+  def visit(o: ObjectT): GeneratedFile = {
+    val ObjectT(name, fields, parentType, comments, originalChildTypes, discriminator, discriminatorValue, serializeOnly, parentObject) = o
+
+    val createBaseTrait = originalChildTypes.nonEmpty && discriminator.isEmpty
+    val baseTraitName = s"${name}Base"
+    val childTypes = if (createBaseTrait) {
+      originalChildTypes.map(_.copy(parentType = Some(baseTraitName), parentObject = Some(o)))
+    } else {
+      originalChildTypes
+    }
 
     val actualFields = fields.filter(_.rawName != discriminator.getOrElse(""))
-    val params = FieldVisitor.visit(actualFields)
-    val klass = if (childTypes.nonEmpty) {
+
+    val params = parentObject.map( parent => {
+      val parentFieldNames = parent.fields.map(_.name)
+      val parentFields = fields.filter( f => parentFieldNames.contains(f.name))
+      val additionalFields = fields.filterNot( f => parentFieldNames.contains(f.name))
+      FieldVisitor.visit(parentFields, Seq(Flags.OVERRIDE)) ++ FieldVisitor.visit(additionalFields)
+    }).getOrElse(FieldVisitor.visit(actualFields))
+
+    val klass = if (childTypes.nonEmpty && !createBaseTrait) {
       if (params.nonEmpty) {
         parentType.fold(TRAITDEF(name) withParents("RamlGenerated", "Product", "Serializable") := BLOCK(params))(parent =>
           TRAITDEF(name) withParents(parent, "Product", "Serializable") := BLOCK(params)
@@ -25,10 +40,23 @@ object ObjectVisitor {
         )
       }
     } else {
-      parentType.fold(CASECLASSDEF(name) withParents("RamlGenerated") withParams params)(parent =>
-        CASECLASSDEF(name) withParams params withParents parent
-      ).tree
+      if (createBaseTrait) {
+        val paramsWithOverride = FieldVisitor.visit(actualFields, Seq(Flags.OVERRIDE))
+        parentType.fold(CASECLASSDEF(name) withParents("RamlGenerated", s"${name}Base") withParams paramsWithOverride)(parent =>
+          CASECLASSDEF(name) withParams paramsWithOverride withParents parent
+        ).tree
+      } else {
+        parentType.fold(CASECLASSDEF(name) withParents("RamlGenerated") withParams params)(parent =>
+          CASECLASSDEF(name) withParams params withParents parent
+        ).tree
+      }
     }
+
+    val baseTrait = if (createBaseTrait) {
+      Some(parentType.fold(TRAITDEF(s"${name}Base") withParents("RamlGenerated", "Product", "Serializable") := BLOCK(params))(parent =>
+        TRAITDEF(name) withParents(parent, "Product", "Serializable") := BLOCK(params)
+      ))
+    } else None
 
     val playFormat = if (discriminator.isDefined) {
       Seq(
@@ -76,11 +104,12 @@ object ObjectVisitor {
       )
     } else if (actualFields.size > 22 || actualFields.exists(f => f.repeated || f.omitEmpty || f.constraints.nonEmpty) ||
       actualFields.map(_.toString).exists(t => t.toString.startsWith(name) || t.toString.contains(s"[$name]"))) {
-      actualFields.map(_.constraints).requiredImports ++ Seq(
+      val imports = if (serializeOnly) Seq() else actualFields.map(_.constraints).requiredImports
+      imports ++ Seq(
         OBJECTDEF("playJsonFormat") withParents (if (serializeOnly) PLAY_JSON_WRITES(name) else PLAY_JSON_FORMAT(name)) withFlags Flags.IMPLICIT := BLOCK(
-          if (serializeOnly) {
+          (if (serializeOnly) {
             Seq()
-          } else  Seq(DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
+          } else Seq(DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
             BLOCK(
               actualFields.map { field =>
                 VAL(field.name) := FieldVisitor.playValidator(field)
@@ -96,7 +125,7 @@ object ObjectVisitor {
                     }))
               )
             )
-          }) ++ Seq(
+          })) ++ Seq(
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
               actualFields.withFilter(_.name != AdditionalProperties).map { field =>
                 val serialized = REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
@@ -150,9 +179,28 @@ object ObjectVisitor {
         Seq(VAL("Default") withType (name) := REF(name) APPLY())
       } else Nil
 
-    val obj = if (childTypes.isEmpty || serializeOnly) {
+    val applyMethodForParent = parentObject.map(parent => {
+      val parentFieldNames = parent.fields.map(_.name)
+      val additionalFields = fields.filterNot( f => parentFieldNames.contains(f.name))
+
+      val applyParams = Seq( PARAM("parent", parent.name).empty ) ++ FieldVisitor.visit(additionalFields)
+      Seq(DEF("fromParent", TYPE_REF(name)) withParams applyParams := BLOCK(
+          REF(name) APPLY
+            parent.fields.map( f => {
+              REF(f.name) := (REF("parent") DOT f.name)
+            }) ++
+            additionalFields.map( f => {
+              REF(f.name) := REF(f.name)
+            })
+        )
+      )
+    }).getOrElse(Seq())
+
+    val allChildrenAreSerializeOnly = childTypes.forall(_.serializeOnly)
+
+    val obj = if (childTypes.isEmpty || serializeOnly || allChildrenAreSerializeOnly) {
       (OBJECTDEF(name)) := BLOCK(
-        playFormat ++ defaultFields ++ defaultInstance ++ fields.flatMap { f =>
+        playFormat ++ applyMethodForParent ++ defaultFields ++ defaultInstance ++ fields.flatMap { f =>
           f.constraints.flatMap { constraint => FieldVisitor.limitField(constraint, f) }
         }
       )
@@ -184,7 +232,77 @@ object ObjectVisitor {
       OBJECTDEF(name) := BLOCK(defaultFields ++ defaultInstance)
     }
 
+    /**
+      *
+      * Generates a jackson serializer object with two methods: One to serialize only the contents of the object, i.e. the fields, and another
+      * method that generates a full json object.
+      *
+      * object ContainerSerializer extends com.fasterxml.jackson.databind.ser.std.StdSerializer[Container](classOf[Container]) {
+      *   def serializeFields(value: Container, gen: com.fasterxml.jackson.core.JsonGenerator, provider: com.fasterxml.jackson.databind.SerializerProvider): Unit = {
+      *     gen.writeObjectField("type", value.`type`)
+      *     if (value.docker.nonEmpty) gen.writeObjectField("docker", value.docker)
+      *     if (value.linuxInfo.nonEmpty) gen.writeObjectField("linuxInfo", value.linuxInfo)
+      *     gen.writeObjectField("volumes", value.volumes)
+      *     if (value.portMappings.nonEmpty) gen.writeObjectField("portMappings", value.portMappings)
+      *   }
+      *   override def serialize(value: Container, gen: com.fasterxml.jackson.core.JsonGenerator, provider: com.fasterxml.jackson.databind.SerializerProvider): Unit = {
+      *     gen.writeStartObject()
+      *     this.serializeFields(value, gen, provider)
+      *     gen.writeEndObject()
+      *   }
+      * }
+      *
+      */
+    val jacksonSerializerSym = RootClass.newClass(name + "Serializer")
+    val jacksonSerializer = OBJECTDEF(jacksonSerializerSym).withParents("com.fasterxml.jackson.databind.ser.std.StdSerializer[" + name + "](classOf[" + name + "])") := BLOCK(
+      DEF( "serializeFields", UnitClass) withParams (
+        PARAM("value", name),
+        PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator")) := BLOCK(
+        actualFields.withFilter(_.name != AdditionalProperties).map { field =>
+          val writerSimple =
+            REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
+
+          val writerWithEmptyCheck =
+            IF(REF("value") DOT field.name DOT "nonEmpty") THEN (
+              REF("gen") DOT "writeObjectField" APPLY( LIT(field.name), REF("value" ) DOT field.name )
+              ) ENDIF
+
+          if (field.isOptionType) {
+            writerWithEmptyCheck
+          } else if (field.omitEmpty && field.isContainerType) {
+            writerWithEmptyCheck
+          } else if (field.repeated) {
+            if (field.omitEmpty) {
+              writerWithEmptyCheck
+            } else {
+              writerSimple
+            }
+          } else {
+            writerSimple
+          }
+        } ++ discriminator.toSeq.map { discriminatorName =>
+          // If the object has a discriminator field such as "kind" it is added.
+          REF("gen") DOT "writeObjectField" APPLY( LIT(discriminatorName), LIT(discriminatorValue.getOrElse(discriminatorName)) )
+        }
+      ),
+      DEF("serialize", UnitClass) withFlags Flags.OVERRIDE withParams(
+        PARAM("value", name),
+        PARAM("gen", "com.fasterxml.jackson.core.JsonGenerator"),
+        PARAM("provider", "com.fasterxml.jackson.databind.SerializerProvider")) := BLOCK(
+
+        (REF("gen") DOT "writeStartObject")(),
+        (THIS DOT "serializeFields") APPLY( REF("value"), REF("gen")),
+        (REF("gen") DOT "writeEndObject")()
+      )
+    )
+
     val commentBlock = comments ++ actualFields.map(_.comment)(collection.breakOut)
-    Seq(klass.withDoc(commentBlock)) ++ childTypes.flatMap(Visitor.visit(_)) ++ Seq(obj)
+    val children = Visitor.visit(childTypes)
+
+    GeneratedFile(
+      children.objects
+      ++
+      Seq(GeneratedObject(name, baseTrait ++ Seq(klass.withDoc(commentBlock)) ++ Seq(obj) ++ Seq(jacksonSerializer), Some(jacksonSerializerSym)))
+    )
   }
 }

@@ -39,11 +39,12 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
   }
 
   case class FixtureWithRealGroupManager(
-      initialRoot: RootGroup = RootGroup.empty,
+      initialRoot: Group = Group.empty("/".toAbsolutePath),
       groupInfo: GroupInfoService = mock[GroupInfoService],
       auth: TestAuthFixture = new TestAuthFixture) {
-    val f = new TestGroupManagerFixture(initialRoot)
-    val config: AllConf = f.config
+    val config = AllConf.withTestConfig("--zk_timeout", "3000")
+    val initialRootGroup = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.fromConfig(config.newGroupEnforceRole()))
+    val f = new TestGroupManagerFixture(config = config, initialRoot = initialRootGroup)
     val groupRepository: GroupRepository = f.groupRepository
     val groupManager: GroupManager = f.groupManager
 
@@ -264,7 +265,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
       Then("The versions are send as simple json array")
       rootVersionsResponse.getStatus should be (200)
-      rootVersionsResponse.getEntity should be(Json.toJson(groupVersions).toString())
+      rootVersionsResponse.getEntity.toString should be(Json.toJson(groupVersions).toString())
     }
 
     "Group Versions for path are transferred as simple json string array (Fix #2329)" in new Fixture {
@@ -279,7 +280,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
       Then("The versions are send as simple json array")
       rootVersionsResponse.getStatus should be (200)
-      rootVersionsResponse.getEntity should be(Json.toJson(groupVersions).toString())
+      rootVersionsResponse.getEntity.toString should be(Json.toJson(groupVersions).toString())
     }
 
     "Creation of a group with same path as an existing app should be prohibited (fixes #3385)" in new FixtureWithRealGroupManager(

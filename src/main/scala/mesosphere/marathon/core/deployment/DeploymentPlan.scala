@@ -205,7 +205,7 @@ case class DeploymentPlan(
 object DeploymentPlan {
 
   def empty: DeploymentPlan =
-    DeploymentPlan(UUID.randomUUID().toString, RootGroup.empty, RootGroup.empty, Nil, Timestamp.now())
+    DeploymentPlan(UUID.randomUUID().toString, RootGroup.empty(), RootGroup.empty(), Nil, Timestamp.now())
 
   /**
     * Perform a "layered" topological sort of all of the run specs that are going to be deployed.

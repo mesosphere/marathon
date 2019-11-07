@@ -2,11 +2,13 @@ package mesosphere.marathon
 package core.event.impl.stream
 
 import java.util.Collections
+
 import javax.servlet.http.HttpServletRequest
 import mesosphere.UnitTest
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.event.{DeploymentSuccess, Subscribe, Unsubscribe}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.stream.Implicits._
@@ -92,7 +94,7 @@ class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
   val plan = DeploymentPlan(oldGroup, newGroup)
   val deployed: DeploymentSuccess = DeploymentSuccess(
     id = "test-deployment",
-    plan,
+    Raml.toRaml(plan),
     timestamp = "2018-01-01T00:00:00.000Z")
 
   val subscribed = Subscribe("client IP", "callback URL")

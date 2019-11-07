@@ -11,11 +11,12 @@ import akka.http.scaladsl.marshalling.Marshaller
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.scaladsl.Sink
 import akka.util.ByteString
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.base.JvmExitsCrashStrategy
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStoreTest, TestClass1}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.Timestamp
-import mesosphere.marathon.util.ZookeeperServerTest
 
 trait ZkTestClass1Serialization {
   implicit object ZkTestClass1Resolver extends IdResolver[String, TestClass1, String, ZkId] {
@@ -64,7 +65,7 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
 
   def defaultStore: ZkPersistenceStore = {
     val root = UUID.randomUUID().toString
-    val client = zkClient(namespace = Some(root))
+    val client = RichCuratorFramework(zkClient(namespace = Some(root)), JvmExitsCrashStrategy)
     val store = new ZkPersistenceStore(metrics, client)
     store.markOpen()
     store

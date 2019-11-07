@@ -19,14 +19,17 @@ import akka.stream.scaladsl.Sink
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.mesosphere.utils.{PortAllocator, ProcessOutputToLogStream}
+import com.mesosphere.utils.http.RestResult
+import com.mesosphere.utils.mesos.{MesosClusterTest, MesosFacade, MesosTest}
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import com.typesafe.scalalogging.{Logger, StrictLogging}
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades._
 import mesosphere.marathon.raml.{App, AppCheck, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
 import mesosphere.marathon.state.{AbsolutePathId, PathId, PersistentVolume, VolumeMount}
-import mesosphere.marathon.util.{Lock, Retry, Timeout, ZookeeperServerTest}
-import mesosphere.util.PortAllocator
+import mesosphere.marathon.util.{Lock, Retry, Timeout}
 import mesosphere.{AkkaUnitTestLike, WaitTestSupport}
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.{Eventually, ScalaFutures}
@@ -112,7 +115,7 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
 
   def create(): Process = {
     marathonProcess.getOrElse {
-      val process = processBuilder.run(ProcessOutputToLogStream(s"$suiteName-LocalMarathon-$httpPort"))
+      val process = processBuilder.run(ProcessOutputToLogStream(s"mesosphere.marathon.integration.process.$suiteName-LocalMarathon-$httpPort"))
       marathonProcess = Some(process)
       process
     }
@@ -532,11 +535,13 @@ trait MarathonAppFixtures {
   * Base trait for tests that need a marathon
   */
 trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with ScalaFutures with Eventually {
+  import MarathonFacade._
+
   protected def logger: Logger
   def marathonUrl: String
   def marathon: MarathonFacade
   def leadingMarathon: Future[BaseMarathon]
-  def mesos: MesosFacade
+  def mesosFacade: MesosFacade
   def suiteName: String
 
   implicit val system: ActorSystem
@@ -545,6 +550,14 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
   implicit val scheduler: Scheduler
 
   lazy val healthCheckPort = healthEndpoint.localAddress.getPort
+
+  /* There is a small window between Jetty hanging up the event stream, and Jetty not accepting and
+   * responding to new requests. In the tests, under heavy load, retrying within 15 milliseconds is enough
+   * to hit this window.
+   *
+   * 10 times the interval would probably suffice. To be on the safe side we are making it 5 seconds.
+   */
+  val sseStreamReconnectionInterval = 5.seconds
 
   case class CallbackEvent(eventType: String, info: Map[String, Any])
   object CallbackEvent {
@@ -595,7 +608,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     require(apps.value.isEmpty, s"apps weren't empty: ${apps.entityPrettyJsonString}")
     val pods = marathon.listPodsInBaseGroup
     require(pods.value.isEmpty, s"pods weren't empty: ${pods.entityPrettyJsonString}")
-    val groups = marathon.listGroupsInBaseGroup
+    val groups = marathon.listGroupIdsInBaseGroup
     require(groups.value.isEmpty, s"groups weren't empty: ${groups.entityPrettyJsonString}")
     events.clear()
     healthChecks(_.clear())
@@ -607,10 +620,10 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     val cleanUpPatienceConfig = WaitTestSupport.PatienceConfig(timeout = Span(50, Seconds), interval = Span(1, Seconds))
 
     WaitTestSupport.waitUntil("clean slate in Mesos") {
-      val mesosState = mesos.state.value
+      val mesosState = mesosFacade.state.value
       val occupiedAgents = mesosState.agents.filter { agent => agent.usedResources.nonEmpty || agent.reservedResourcesByRole.nonEmpty }
       occupiedAgents.foreach { agent =>
-        import mesosphere.marathon.integration.facades.MesosFormats._
+        import com.mesosphere.utils.mesos.MesosFormats._
         val usedResources: String = Json.prettyPrint(Json.toJson(agent.usedResources))
         val reservedResources: String = Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
         logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")
@@ -815,8 +828,8 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     Try {
       val frameworkId = marathon.info.entityJson.as[JsObject].value("frameworkId").as[String]
 
-      mesos.teardown(frameworkId)
-      eventually(timeout(1.minutes), interval(2.seconds)) { assert(mesos.completedFrameworkIds().value.contains(frameworkId)) }
+      mesosFacade.teardown(frameworkId)
+      eventually(timeout(1.minutes), interval(2.seconds)) { assert(mesosFacade.completedFrameworkIds().value.contains(frameworkId)) }
     }
     Try(healthEndpoint.unbind().futureValue)
   }
@@ -871,14 +884,8 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
             if (!cancelled) {
               logger.info(s"SSEStream: Leader event stream was closed reason: ${result}")
               logger.info("Reconnecting")
-              /* There is a small window between Jetty hanging up the event stream, and Jetty not accepting and
-               * responding to new requests. In the tests, under heavy load, retrying within 15 milliseconds is enough
-               * to hit this window.
-               *
-               * 10 times the interval would probably suffice. Timeout is way more time then we need. Half timeout seems
-               * like an okay compromise.
-               */
-              scheduler.scheduleOnce(patienceConfig.timeout / 2) { iter() }
+              events.clear()
+              scheduler.scheduleOnce(sseStreamReconnectionInterval) { iter() }
             }
         }
     }
@@ -905,15 +912,15 @@ object MarathonTest extends StrictLogging {
 trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with ZookeeperServerTest {
   protected def logger: Logger
   def withMarathon[T](suiteName: String, marathonArgs: Map[String, String] = Map.empty)(f: (LocalMarathon, MarathonTest) => T): T = {
-    val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterUrl,
-      zkUrl = s"zk://${zkServer.connectUri}/marathon-$suiteName", conf = marathonArgs)
+    val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterZkUrl,
+      zkUrl = s"zk://${zkserver.connectUrl}/marathon-$suiteName", conf = marathonArgs)
     marathonServer.start().futureValue
 
     val marathonTest = new MarathonTest {
       override protected val logger: Logger = MarathonFixture.this.logger
       override def marathonUrl: String = s"http://localhost:${marathonServer.httpPort}"
       override def marathon: MarathonFacade = marathonServer.client
-      override def mesos: MesosFacade = MarathonFixture.this.mesos
+      override def mesosFacade: MesosFacade = MarathonFixture.this.mesosFacade
       override val testBasePath: AbsolutePathId = AbsolutePathId("/")
       override implicit val system: ActorSystem = MarathonFixture.this.system
       override implicit val mat: Materializer = MarathonFixture.this.mat
@@ -957,8 +964,8 @@ trait LocalMarathonTest extends MarathonTest with ScalaFutures
 
   def marathonArgs: Map[String, String] = Map.empty
 
-  lazy val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterUrl,
-    zkUrl = s"zk://${zkServer.connectUri}/marathon",
+  lazy val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterZkUrl,
+    zkUrl = s"zk://${zkserver.connectUrl}/marathon",
     conf = marathonArgs)
   lazy val marathonUrl = s"http://localhost:${marathonServer.httpPort}"
 
@@ -1011,8 +1018,8 @@ trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServer
 trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest {
   val numAdditionalMarathons = 2
   lazy val additionalMarathons = 0.until(numAdditionalMarathons).map { _ =>
-    LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterUrl,
-      zkUrl = s"zk://${zkServer.connectUri}/marathon",
+    LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterZkUrl,
+      zkUrl = s"zk://${zkserver.connectUrl}/marathon",
       conf = marathonArgs)
   }
   lazy val marathonFacades = marathon +: additionalMarathons.map(_.client)

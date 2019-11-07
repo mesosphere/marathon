@@ -12,6 +12,7 @@ import org.eclipse.jetty.servlets.EventSourceServlet
 import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.api.HttpModule
 import mesosphere.marathon.api.MarathonRestModule
+import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.{CrashStrategy, toRichRuntime}
 import mesosphere.marathon.stream.Implicits._
@@ -66,6 +67,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   def start(): Unit = if (!running) {
     running = true
     setConcurrentContextDefaults()
+    Formats.configureJacksonSerializer()
 
     logger.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref} with ${args.mkString(" ")}")
 

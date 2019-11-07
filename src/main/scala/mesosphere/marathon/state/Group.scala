@@ -10,7 +10,6 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.plugin.{Group => IGroup}
 import mesosphere.marathon.state.Group.{defaultApps, defaultDependencies, defaultGroups, defaultPods, defaultVersion}
 import mesosphere.marathon.state.PathId.{StringPathId, validPathWithBase}
 import mesosphere.util.summarize
@@ -22,7 +21,7 @@ class Group(
     val groupsById: Map[AbsolutePathId, Group] = defaultGroups,
     val dependencies: Set[AbsolutePathId] = defaultDependencies,
     val version: Timestamp = defaultVersion,
-    val enforceRole: Boolean = false) extends IGroup {
+    val enforceRole: Boolean = false) extends mesosphere.marathon.plugin.Group {
 
   require((!id.parent.isRoot && !enforceRole) || id.parent.isRoot, "Only top-level groups can enforce roles.")
 
@@ -197,8 +196,8 @@ object Group extends StrictLogging {
     new Group(id, apps, pods, groupsById, dependencies, version, enforceRole)
   }
 
-  def empty(id: AbsolutePathId): Group =
-    Group(id = id, version = Timestamp(0))
+  def empty(id: AbsolutePathId, enforceRole: Boolean = false, version: Timestamp = Timestamp(0)): Group =
+    Group(id = id, version = version, enforceRole = enforceRole)
 
   val defaultApps = Map.empty[AbsolutePathId, AppDefinition]
   val defaultPods = Map.empty[AbsolutePathId, PodDefinition]

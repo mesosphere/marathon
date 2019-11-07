@@ -70,6 +70,7 @@ object Dependencies {
     jerseyCore % "compile",
     jerseyServer % "compile",
     jerseyServlet % "compile",
+    jacksonAfterBurner % "compile",
     jacksonScala % "compile",
     jacksonJaxrs % "compile",
 
@@ -86,7 +87,8 @@ object Dependencies {
     Test.akkaTestKit % "test",
     Test.akkaHttpTestKit % "test",
     Test.junit % "test",
-    Test.scalacheck % "test"
+    Test.scalacheck % "test",
+    Test.usiTestUtils % "test"
   ) ++ Curator.all
     ++ DropwizardMetrics.all
     ++ Java9Compatibility.all
@@ -125,7 +127,7 @@ object Dependency {
     val Logstash = "4.9"
     val MarathonApiConsole = "3.0.8-accept"
     val MarathonUI = "1.3.2"
-    val Mesos = "1.9.0-SNAPSHOT"
+    val Mesos = "1.9.0"
     val Mustache = "0.9.0"
     val PlayJson = "2.6.7"
     val Raven = "8.0.3"
@@ -138,7 +140,8 @@ object Dependency {
     val WixAccord = "0.7.1"
 
     // Version of Mesos to use in Dockerfile.
-    val MesosDebian = "1.9.0-0.1.972.pre.20190722gitb485f1883"
+    val MesosDebian = "1.9.0-2.0.1"
+
 
     // test deps versions
     val JMH = "1.19"
@@ -147,6 +150,7 @@ object Dependency {
     val Mockito = "1.10.19"
     val ScalaCheck = "1.13.5"
     val ScalaTest = "3.0.4"
+    val UsiTestUtil = "0.1.12"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
@@ -168,6 +172,7 @@ object Dependency {
   val guice = "com.google.inject" % "guice" % V.Guice
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
   val jacksonJaxrs = "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % V.Jackson
+  val jacksonAfterBurner = "com.fasterxml.jackson.module" % "jackson-module-afterburner" % V.Jackson
   val jacksonScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % V.Jackson
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
 
@@ -210,6 +215,8 @@ object Dependency {
     )
   }
 
+  val excludeZk35 = ExclusionRule(organization = "org.apache.zookeeper", name = "zookeeper")
+
   object Curator {
     /**
       * According to Curator's Zookeeper Compatibility Docs [http://curator.apache.org/zk-compatibility.html], 4.0.0
@@ -218,9 +225,7 @@ object Dependency {
       */
     val Version = "4.0.1"
 
-    val TestVersion = "2.12.0"
-
-    val excludeZk35 = ExclusionRule(organization = "org.apache.zookeeper", name = "zookeeper")
+    val TestVersion = "2.13.0"
 
     val curator = Seq(
       "org.apache.curator" % "curator-recipes" % Version % "compile",
@@ -256,5 +261,6 @@ object Dependency {
     val diffson = "org.gnieh" %% "diffson-play-json" % V.Diffson
     val junit = "junit" % "junit" % V.JUnit
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
+    val usiTestUtils = ("com.mesosphere.usi" % "test-utils" % V.UsiTestUtil).excludeAll(excludeZk35)
   }
 }

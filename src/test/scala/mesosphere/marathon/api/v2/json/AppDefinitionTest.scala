@@ -245,6 +245,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       val app1 = raml.App(id = "/test", cmd = Some("foo"))
       assert(app1.args.isEmpty)
       JsonTestHelper.assertSerializationRoundtripWorks(app1, appNormalization)
+      JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(app1, appNormalization)
     }
 
     "Reading app definition with command health check" in {
@@ -324,6 +325,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       )
       withValidationClue {
         JsonTestHelper.assertSerializationRoundtripWorks(app3, appNormalization)
+        JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(app3, appNormalization)
       }
     }
 
@@ -335,10 +337,10 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         healthChecks = Set(raml.AppHealthCheck(protocol = raml.AppHealthCheckProtocol.Http, portIndex = Some(1)))
       )
       JsonTestHelper.assertSerializationRoundtripWorks(app3, appNormalization)
+      JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(app3, appNormalization)
     }
 
     "Reading AppDefinition adds portIndex to a Marathon HTTP health check if the app has ports" in {
-      import Formats._
 
       val app = AppDefinition(
         id = AbsolutePathId("/prod/product/frontend/my-app"),
@@ -348,14 +350,13 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         healthChecks = Set(MarathonHttpHealthCheck())
       )
 
-      val json = Json.toJson(app).toString()
+      val json = Json.toJson(Raml.toRaml(app)).toString()
       val reread = fromJson(json)
 
       assert(reread.healthChecks.headOption.contains(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))), json)
     }
 
     "Reading AppDefinition does not add portIndex to a Marathon HTTP health check if the app doesn't have ports" in {
-      import Formats._
 
       val app = AppDefinition(
         id = AbsolutePathId("/prod/product/frontend/my-app"),
@@ -365,7 +366,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         healthChecks = Set(MarathonHttpHealthCheck())
       )
 
-      val json = Json.toJson(app).toString()
+      val json = Json.toJson(Raml.toRaml(app)).toString()
       val ex = intercept[ValidationFailedException] {
         fromJson(json)
       }
@@ -373,7 +374,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     }
 
     "Reading AppDefinition adds portIndex to a Marathon HTTP health check if it has at least one portMapping" in {
-      import Formats._
 
       val app = AppDefinition(
         id = AbsolutePathId("/prod/product/frontend/my-app"),
@@ -389,13 +389,12 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         healthChecks = Set(MarathonHttpHealthCheck())
       )
 
-      val json = Json.toJson(app)
+      val json = Json.toJson(Raml.toRaml(app))
       val reread = fromJson(json.toString)
       reread.healthChecks.headOption should be(Some(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))))
     }
 
     "Reading AppDefinition does not add portIndex to a Marathon HTTP health check if it has no ports nor portMappings" in {
-      import Formats._
 
       val app = AppDefinition(
         id = AbsolutePathId("/prod/product/frontend/my-app"),
@@ -406,7 +405,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         healthChecks = Set(MarathonHttpHealthCheck())
       )
 
-      val json = Json.toJson(app)
+      val json = Json.toJson(Raml.toRaml(app))
       val ex = intercept[ValidationFailedException] {
         fromJson(json.toString) withClue (json)
       }
@@ -414,7 +413,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     }
 
     "Reading AppDefinition does not add portIndex to a Mesos HTTP health check if the app doesn't have ports" in {
-      import Formats._
 
       val app = AppDefinition(
         id = AbsolutePathId("/prod/product/frontend/my-app"),
@@ -424,14 +422,13 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         healthChecks = Set(MesosHttpHealthCheck())
       )
 
-      val json = Json.toJson(app)
+      val json = Json.toJson(Raml.toRaml(app))
       val reread = fromJson(json.toString)
 
       reread.healthChecks.headOption should be(Some(MesosHttpHealthCheck(portIndex = None)))
     }
 
     "Reading AppDefinition adds portIndex to a Mesos HTTP health check if it has at least one portMapping" in {
-      import Formats._
 
       val app = AppDefinition(
         id = AbsolutePathId("/prod/product/frontend/my-app"),
@@ -448,7 +445,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       )
 
       withValidationClue {
-        val json = Json.toJson(app)
+        val json = Json.toJson(Raml.toRaml(app))
         val reread = fromJson(json.toString)
 
         reread.healthChecks.headOption should be(Some(MesosHttpHealthCheck(portIndex = Some(PortReference(0)))))
@@ -456,7 +453,6 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     }
 
     "Reading AppDefinition does not add portIndex to a Mesos HTTP health check if it has no ports nor portMappings" in {
-      import Formats._
 
       val app = AppDefinition(
         id = AbsolutePathId("/prod/product/frontend/my-app"),
@@ -467,7 +463,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         healthChecks = Set(MesosHttpHealthCheck())
       )
 
-      val json = Json.toJson(app)
+      val json = Json.toJson(Raml.toRaml(app))
       val reread = fromJson(json.toString)
 
       reread.healthChecks.headOption should be(Some(MesosHttpHealthCheck(portIndex = None)))
@@ -771,6 +767,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         secrets = Map("james" -> SecretDef("somesource"))
       )
       JsonTestHelper.assertSerializationRoundtripWorks(app3, appNormalization)
+      JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(app3, appNormalization)
     }
 
     "environment variables with secrets should parse" in {

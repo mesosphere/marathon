@@ -9,6 +9,8 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 import scala.util.Try
+import java.time.format.DateTimeFormatter
+import java.time.LocalDateTime
 
 import $file.awsClient
 import $file.dataDogClient
@@ -28,6 +30,7 @@ import utils.BranchType._
 
 val PACKAGE_DIR: Path = pwd / 'target / 'universal
 val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
+
 
 /**
  * Compile Marathon and run unit, integration tests.
@@ -165,6 +168,10 @@ def provisionHost(): Unit = utils.stage("Provision") {
   // Set port range for random port 0 allocation.
   %('sudo, "ci/set_port_range.sh")
 
+  // First call to `docker --version` can take up to 30s. This sometimes leads to Mesos agent
+  // failing to start when checking for the docker version. So we do it here (successive calls will be faster).
+  %('sudo, "docker", "--version")
+
   provision.killStaleTestProcesses()
   provision.installMesos()
   provision.installDcosCli()
@@ -194,15 +201,19 @@ def build(runTests: Boolean = true, buildName: String = "run"): SemVer = {
 
 /**
   * Builds docker and linux native packages, then runs the tests in tests/package/test.sc
+  *
+  * @return Tag of Docker image
   */
 @main
-def buildDockerAndLinuxPackages(): Unit = {
+def buildDockerAndLinuxPackages(): String = {
   utils.stage("Package Docker Image, Debian and RedHat Packages") {
     %('sbt, "docker:publishLocal")
 
     val toolPath = pwd/'tools/'packager
     %('make, "clean")(toolPath)
     %('make, "all", "-j")(toolPath)
+
+    %%("./version", "docker").out.string.trim
   }
 }
 
@@ -246,7 +257,7 @@ def buildMaster(): Unit = {
 
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"master-$buildNumber")
-  buildDockerAndLinuxPackages()
+  val dockerTag = buildDockerAndLinuxPackages()
   testDockerAndLinuxPackages()
   // dcos.buildRegistry(version) The packaging is broken on master https://jira.mesosphere.com/browse/MARATHON-8442.
 
@@ -255,6 +266,10 @@ def buildMaster(): Unit = {
   maybeArtifact.foreach { artifact =>
     updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
   }
+
+  // Publish Docker image as `unstable`
+  %('docker, "tag", s"mesosphere/marathon:${dockerTag}", "mesosphere/marathon:unstable")
+  %('docker, "push", "mesosphere/marathon:unstable")
 }
 
 /**

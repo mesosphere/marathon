@@ -3,7 +3,8 @@ package json
 
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.raml.{GroupConversion, Raml}
+import com.fasterxml.jackson.databind.ObjectMapper
+import mesosphere.marathon.raml.{GroupConversion, Raml, RamlSerializer}
 import mesosphere.marathon.state.{AppDefinition, Group, RootGroup, Timestamp}
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
@@ -44,6 +45,8 @@ class JsonSerializeDeserializeState {
 
     GroupConversion(groupUpdate, group, Timestamp.zero).apply(appConversionFunc)
   }
+
+  val jacksonSerializer: ObjectMapper = RamlSerializer.serializer
 
 }
 

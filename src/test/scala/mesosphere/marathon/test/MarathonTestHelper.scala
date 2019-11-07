@@ -381,7 +381,7 @@ object MarathonTestHelper {
       val maxVersionsCacheSize = 1000
       val appRepo = AppRepository.inMemRepository(store)
       val podRepo = PodRepository.inMemRepository(store)
-      GroupRepository.inMemRepository(store, appRepo, podRepo, maxVersionsCacheSize)
+      GroupRepository.inMemRepository(store, appRepo, podRepo, maxVersionsCacheSize, RootGroup.NewGroupStrategy.Fail)
     }
     val updateSteps = Seq.empty[InstanceChangeHandler]
 

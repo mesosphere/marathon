@@ -177,7 +177,7 @@ class MigrationTest extends AkkaUnitTest with Mockito with GivenWhenThen with Ev
       val migrate = f.migration
       migrate.appRepository.all() returns Source.empty
       migrate.groupRepository.rootVersions() returns Source.empty
-      migrate.groupRepository.root() returns Future.successful(RootGroup.empty)
+      migrate.groupRepository.root() returns Future.successful(RootGroup.empty())
       migrate.groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
       migrate.serviceDefinitionRepo.getVersions(any) returns Source.empty
       val result = migrate.migrate()

@@ -39,7 +39,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val normalized = GroupNormalization(noEnabledFeatures, rootGroup).updateNormalization(PathId.root).normalized(update)
       val result: Group = GroupConversion(normalized, rootGroup, timestamp).apply(appConversionFunc)
 
-      validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
+      validate(rootGroup.updatedWith(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
       Then("The update is applied correctly")
       result.id should be(PathId.root)
@@ -58,7 +58,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
     "A group update can be applied to existing entries" in {
       Given("A group with updates of existing nodes")
       val blaApp = AppDefinition(AbsolutePathId("/test/bla"), Some("foo"), role = "*")
-      val actual = createRootGroup(groups = Set(
+      val initialRootGroup = createRootGroup(groups = Set(
         createGroup("/test".toAbsolutePath, apps = Map(blaApp.id -> blaApp)),
         createGroup("/apps".toAbsolutePath, groups = Set(createGroup("/apps/foo".toAbsolutePath)))
       ))
@@ -81,8 +81,8 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val timestamp = Timestamp.now()
 
       When("The update is performed")
-      val normalized = GroupNormalization(noEnabledFeatures, actual).updateNormalization(PathId.root).normalized(update)
-      val result: RootGroup = RootGroup.fromGroup(GroupConversion(normalized, actual, timestamp).apply(appConversionFunc))
+      val normalized = GroupNormalization(noEnabledFeatures, initialRootGroup).updateNormalization(PathId.root).normalized(update)
+      val result: RootGroup = initialRootGroup.updatedWith(GroupConversion(normalized, initialRootGroup, timestamp).apply(appConversionFunc))
 
       validate(result)(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
@@ -179,9 +179,10 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
 
       When("The update is performed")
       val normalized = GroupNormalization(noEnabledFeatures, createRootGroup()).updateNormalization(PathId.root).normalized(update)
-      val result = GroupConversion(normalized, createRootGroup(), Timestamp.now()).apply(appConversionFunc)
+      val initialRootGroup = createRootGroup()
+      val result = GroupConversion(normalized, initialRootGroup, Timestamp.now()).apply(appConversionFunc)
 
-      validate(RootGroup.fromGroup(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
+      validate(initialRootGroup.updatedWith(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
       Then("The update is applied correctly")
       val group = result.group("test-group".toAbsolutePath)

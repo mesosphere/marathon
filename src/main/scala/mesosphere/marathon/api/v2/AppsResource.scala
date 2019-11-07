@@ -11,8 +11,8 @@ import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.{Context, MediaType, Response}
+import mesosphere.marathon.api.RestResource.RestStreamingBody
 import mesosphere.marathon.api.v2.Validation._
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api.{AuthResource, PATCH, RestResource}
 import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.event.ApiPostEvent
@@ -84,7 +84,7 @@ class AppsResource @Inject() (
       val resolvedEmbed = InfoEmbedResolver.resolveApp(embed) +
         AppInfo.Embed.Counts + AppInfo.Embed.Deployments
       val mapped = await(appInfoService.selectAppsBy(selector, resolvedEmbed))
-      Response.ok(jsonObjString("apps" -> mapped)).build()
+      ok(raml.AppList(mapped))
     }
   }
 
@@ -113,20 +113,23 @@ class AppsResource @Inject() (
         .getOrElse(app)
 
       val plan = await(groupManager.updateApp(app.id, createOrThrow, app.version, force))
-      val appWithDeployments = AppInfo(
-        app,
-        maybeCounts = Some(TaskCounts.zero),
-        maybeTasks = Some(Seq.empty),
-        maybeDeployments = Some(Seq(Identifiable(plan.id)))
+      val appWithDeployments = raml.AppInfo.fromParent(
+        parent = Raml.toRaml(app),
+        tasksStaged = Some(0),
+        tasksRunning = Some(0),
+        tasksHealthy = Some(0),
+        tasksUnhealthy = Some(0),
+        tasks = None,
+        deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
 
-      maybePostEvent(req, appWithDeployments.app)
+      maybePostEvent(req, app)
 
       // servletRequest.getAsyncContext
       Response
         .created(new URI(app.id.toString))
         .header(RestResource.DeploymentHeader, plan.id)
-        .entity(jsonString(appWithDeployments))
+        .entity(new RestResource.RestStreamingBody(appWithDeployments))
         .build()
     }
   }
@@ -152,17 +155,21 @@ class AppsResource @Inject() (
             case Some(group) =>
               checkAuthorization(ViewGroup, group)
               val appsWithTasks = await(appInfoService.selectAppsInGroup(groupId, authzSelector, resolvedEmbed))
-              ok(jsonObjString("*" -> appsWithTasks))
+              Response.ok(new RestStreamingBody(Map("*" -> appsWithTasks))).build()
             case None =>
               unknownGroup(groupId)
           }
         case _ =>
           val appId = id.toAbsolutePath
-          await(appInfoService.selectApp(appId, authzSelector, resolvedEmbed)) match {
-            case Some(appInfo) =>
-              checkAuthorization(ViewRunSpec, appInfo.app)
-              ok(jsonObjString("app" -> appInfo))
-            case None => unknownApp(appId)
+
+          val appInfo = await(appInfoService.selectApp(appId, authzSelector, resolvedEmbed))
+          val appDef = groupManager.app(appId)
+
+          (appInfo, appDef) match {
+            case (Some(info), Some(app)) =>
+              checkAuthorization(ViewRunSpec, app)
+              Response.ok(new RestStreamingBody(Map("app" -> info))).build()
+            case _ => unknownApp(appId)
           }
       }
     }

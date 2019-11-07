@@ -3,7 +3,7 @@ package mesosphere.raml
 import treehugger.forest._
 import definitions._
 import mesosphere.raml.backend._
-import mesosphere.raml.backend.treehugger.Visitor
+import mesosphere.raml.backend.treehugger.{GeneratedFile, GeneratedObject, Visitor}
 import mesosphere.raml.ir.{ConstraintT, EnumT, FieldT, GeneratedClass, ObjectT, StringT, UnionT}
 import org.raml.v2.api.RamlModelResult
 import org.raml.v2.api.model.v10.api.Library
@@ -213,7 +213,7 @@ object RamlTypeGenerator {
             // reducing with TYPE_OF doesn't work, you'd expect Seq[Seq[X]] but only get Seq[X]
             // https://github.com/eed3si9n/treehugger/issues/38
             val finalType = typeList.reduce((a, b) => s"$b[$a]")
-            FieldT(a.name(), finalType, comments, buildConstraints(field, finalType), required, defaultValue, true, forceOptional, omitEmpty = omitEmpty)
+            FieldT(a.name(), finalType, comments, buildConstraints(field, finalType), required, defaultValue, repeated = true, forceOptional = forceOptional, omitEmpty = omitEmpty)
           case n: NumberTypeDeclaration =>
             val fieldType = typeTable(Option(n.format()).getOrElse("double"))
             FieldT(n.name(), fieldType, comments, buildConstraints(field, fieldType), required, defaultValue, forceOptional = forceOptional, omitEmpty = omitEmpty)
@@ -225,7 +225,7 @@ object RamlTypeGenerator {
                 TYPE_MAP(StringClass, typeTable(t.`type`()))
             }
             val constraints = buildConstraints(o, fieldType)
-            FieldT(o.name(), fieldType, comments, constraints, false, defaultValue, true, forceOptional = forceOptional, omitEmpty = omitEmpty)
+            FieldT(o.name(), fieldType, comments, constraints, required = false, defaultValue, repeated = true, forceOptional = forceOptional, omitEmpty = omitEmpty)
           case t: TypeDeclaration =>
             val (name, fieldType) = if (t.`type`() != "object") {
               t.name() -> typeTable(t.`type`())
@@ -320,43 +320,116 @@ object RamlTypeGenerator {
     }
   }
 
-  def generateBuiltInTypes(pkg: String): Map[String, Tree] = {
-    val baseType = TRAITDEF("RamlGenerated").tree.withDoc("Marker trait indicating generated code.")
+  /**
+    * Generate a marker trait indicating generated code
+    */
+  private[this] def generateBaseType(pkg: String): PackageDef = {
+    TRAITDEF("RamlGenerated").tree.withDoc("Marker trait indicating generated code.")
       .inPackage(pkg)
-    val ramlConstraints = BLOCK(
+  }
+
+  /**
+    * Generates a validation helper for generated RAML code
+    */
+  private[this] def generateRamlConstraints(pkg: String): PackageDef = {
+    BLOCK(
       (TRAITDEF("RamlConstraints") := BLOCK(
         DEF("keyPattern")
           withTypeParams(TYPEVAR(RootClass.newAliasType("T")))
           withParams(
-            PARAM("regex", "=> scala.util.matching.Regex"),
-            PARAM("error", StringClass) := LIT("error.pattern")
-          )
+          PARAM("regex", "=> scala.util.matching.Regex"),
+          PARAM("error", StringClass) := LIT("error.pattern")
+        )
           withParams(
-            PARAM("reads", PLAY_JSON_READS("Map[String,T]"))
+          PARAM("reads", PLAY_JSON_READS("Map[String,T]"))
           ).withFlags(Flags.IMPLICIT) := PLAY_JSON_READS("Map[String,T]").APPLY(LAMBDA(PARAM("js")) ==> BLOCK(
-              ((REF("reads") DOT "reads") APPLY(REF("js")) DOT "flatMap").APPLY(LAMBDA(PARAM("m")) ==> BLOCK(
-                VAL("errors") := (REF("m") DOT "map" APPLY (BLOCK(
-                  CASE(TUPLE(REF("o"), WILDCARD)) ==>
-                    (((REF("regex") DOT "unapplySeq") APPLY REF("o")) DOT "map" APPLY(
-                      LAMBDA(PARAM(WILDCARD)) ==> (PlayJsSuccess APPLY REF("o"))
-                    )) DOT "getOrElse" APPLY (PlayJsError APPLY(PlayPath DOT "\\" APPLY(REF("o")), PlayValidationError APPLY(REF("error"), REF("regex") DOT "regex")))
-                ))) DOT "collect" APPLY(BLOCK(
-                  CASE(ID("err") withType(PlayJsError)) ==> REF("err")
-                )),
-                IF(REF("errors") DOT "isEmpty") THEN(PlayJsSuccess APPLY(REF("m")))
-                  ELSE(REF("errors") DOT "fold" APPLY(PlayJsError APPLY(REF("Nil"))) APPLY(WILDCARD DOT "++" APPLY WILDCARD))
-              ))
-            ))
-        )).withDoc("Validation helpers for generated RAML code."),
+          ((REF("reads") DOT "reads") APPLY(REF("js")) DOT "flatMap").APPLY(LAMBDA(PARAM("m")) ==> BLOCK(
+            VAL("errors") := (REF("m") DOT "map" APPLY (BLOCK(
+              CASE(TUPLE(REF("o"), WILDCARD)) ==>
+                (((REF("regex") DOT "unapplySeq") APPLY REF("o")) DOT "map" APPLY(
+                  LAMBDA(PARAM(WILDCARD)) ==> (PlayJsSuccess APPLY REF("o"))
+                  )) DOT "getOrElse" APPLY (PlayJsError APPLY(PlayPath DOT "\\" APPLY(REF("o")), PlayValidationError APPLY(REF("error"), REF("regex") DOT "regex")))
+            ))) DOT "collect" APPLY(BLOCK(
+              CASE(ID("err") withType(PlayJsError)) ==> REF("err")
+            )),
+            IF(REF("errors") DOT "isEmpty") THEN(PlayJsSuccess APPLY(REF("m")))
+              ELSE(REF("errors") DOT "fold" APPLY(PlayJsError APPLY(REF("Nil"))) APPLY(WILDCARD DOT "++" APPLY WILDCARD))
+          ))
+        ))
+      )).withDoc("Validation helpers for generated RAML code."),
       CASEOBJECTDEF("RamlConstraints").withParents("RamlConstraints").tree
     ).inPackage(pkg)
+  }
+
+  /**
+    * Generate the global Raml Serializer for Jackson. Creates a new Jackson Object Serializer and registers the
+    * generated serializers from each type, sets custom options.
+    *
+    * @param pkg The root package for generated code
+    * @param generatedFiles A map of generated files, used to find all generated jackson serializers
+    *
+    * @return The generated treehugger model for the serializer
+    */
+  private[this] def generateRamlSerializer(pkg: String, generatedFiles: Map[GeneratedClass, GeneratedFile]): PackageDef = {
+    BLOCK(
+      IMPORT("com.fasterxml.jackson.databind.ObjectMapper"),
+      IMPORT("com.fasterxml.jackson.databind.module.SimpleModule"),
+      IMPORT("com.fasterxml.jackson.module.afterburner.AfterburnerModule"),
+      IMPORT("com.fasterxml.jackson.module.scala.DefaultScalaModule"),
+      IMPORT("com.fasterxml.jackson.databind.ser.std.StdSerializer"),
+
+      OBJECTDEF("RamlSerializer") := BLOCK(
+
+        DEF("addSerializer", "Unit")
+          .withTypeParams(TYPEVAR("T"))
+          .withParams(
+            VAL("s", TYPE_REF("StdSerializer[T]"))
+          ) := BLOCK(
+          REF("module") DOT "addSerializer" APPLY (REF("s"))
+        ),
+
+        // TODO: Make this private[this]
+        VAL("module") := NEW("SimpleModule").APPLY(),
+
+        VAL("serializer", "ObjectMapper") := BLOCK(
+          Seq(VAL("mapper") := NEW("ObjectMapper").APPLY()) ++
+
+            generatedFiles.values.flatMap( gf => gf.objects ).collect {
+              case GeneratedObject(name, _, Some(serializer)) =>
+                val serializerRef = REF(serializer)
+                REF("module") DOT "addSerializer" APPLY(serializerRef)
+            } ++
+
+            Seq(REF("mapper") DOT "registerModule" APPLY REF("module")) ++
+            Seq(REF("mapper") DOT "registerModule" APPLY REF("DefaultScalaModule")) ++
+            Seq(REF("mapper") DOT "registerModule" APPLY NEW("AfterburnerModule"))
+
+        ).withComment("ObjectMapper is thread safe, we have a single shared instance here")
+      )
+    ).inPackage(pkg)
+  }
+
+  /**
+    * Generates common files, i.e. everything where we generate a single global file
+    *
+    * @param pkg The root package of the generated code
+    * @param generatedFiles The files that were generated already, can be used to reference generated types
+    *
+    * @return A map of file base name (without extension) -> generated code as string
+    */
+  def generateBuiltInTypes(pkg: String, generatedFiles: Map[GeneratedClass, GeneratedFile]): Map[String, String] = {
+    val baseType = generateBaseType(pkg)
+    val ramlConstraints = generateRamlConstraints(pkg)
+    val ramlSerializer = generateRamlSerializer(pkg, generatedFiles)
+
     Map(
-      "RamlGenerated" -> baseType,
-      "RamlConstraints" -> ramlConstraints
+      "RamlGenerated" -> treeToString(baseType),
+      "RamlConstraints" -> treeToString(ramlConstraints),
+      "RamlSerializer" -> treeToString(ramlSerializer)
     )
   }
 
-  def apply(models: Seq[RamlModelResult], pkg: String): Map[String, Tree] = {
+  def apply(models: Seq[RamlModelResult], pkg: String): Map[String, String] = {
     // Front end: Parsed type declarations.
     val typeDeclarations = allTypes(models)
 
@@ -364,16 +437,11 @@ object RamlTypeGenerator {
     val typeTable = buildTypeTable(typeDeclarations)
     val types = buildTypes(typeTable, typeDeclarations)
 
-    // Back end: Code generation with Treehugger.
-    generateBuiltInTypes(pkg) ++ types.map { tpe =>
-      val tree = Visitor.visit(tpe)
-      if (tree.nonEmpty) {
-        tpe.name -> BLOCK(tree).inPackage(pkg)
-          .withComment(NoScalaFormat)
-      } else {
-        tpe.name -> BLOCK().withComment(s"Unsupported: $tpe").inPackage(pkg)
-          .withComment(NoScalaFormat)
-      }
-    }(collection.breakOut)
+    // Back end: Code generation
+    val files: Map[GeneratedClass, GeneratedFile] = types.map { gc => gc -> Visitor.visit(gc)} toMap
+
+    val fileStrings: Map[String, String] = files.map { case (gc, gf) => (gc.name, gf.generateFile(pkg)) }
+
+    fileStrings ++ generateBuiltInTypes(pkg, files)
   }
 }

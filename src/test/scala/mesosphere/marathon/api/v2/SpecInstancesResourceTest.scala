@@ -125,7 +125,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
            |}
         """.stripMargin
       JsonTestHelper
-        .assertThatJsonString(response.getEntity.asInstanceOf[String])
+        .assertThatJsonString(response.getEntity.toString)
         .correspondsToJsonString(expected)
     }
 
@@ -192,7 +192,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
           |  }
           |}""".stripMargin
       JsonTestHelper
-        .assertThatJsonString(response.getEntity.asInstanceOf[String])
+        .assertThatJsonString(response.getEntity.toString)
         .correspondsToJsonString(expected)
       verify(taskKiller).kill(equalTo(appId), any, any)(any)
       verifyNoMoreInteractions(taskKiller)
@@ -251,7 +251,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
            |  }
            |}""".stripMargin
       JsonTestHelper
-        .assertThatJsonString(response.getEntity.asInstanceOf[String])
+        .assertThatJsonString(response.getEntity.toString)
         .correspondsToJsonString(expected)
       verify(taskKiller).kill(equalTo(appId), any, org.mockito.Matchers.eq(true))(any)
       verifyNoMoreInteractions(taskKiller)
@@ -309,7 +309,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
         """.stripMargin
 
       JsonTestHelper
-        .assertThatJsonString(response.getEntity.asInstanceOf[String])
+        .assertThatJsonString(response.getEntity.toString)
         .correspondsToJsonString(expected)
     }
 

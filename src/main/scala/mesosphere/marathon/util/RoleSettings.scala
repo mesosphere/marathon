@@ -46,7 +46,10 @@ object RoleSettings extends StrictLogging {
 
       val oldServiceRole = rootGroup.runSpec(servicePathId).map(_.role)
 
-      val defaultForEnforceFromConfig: Boolean = false // TODO: Use value from config instead
+      val defaultForEnforceFromConfig: Boolean = config.newGroupEnforceRole() match {
+        case NewGroupEnforceRoleBehavior.Top => true
+        case NewGroupEnforceRoleBehavior.Off => false
+      }
       val enforceRole = topLevelGroup.fold(defaultForEnforceFromConfig)(_.enforceRole)
 
       if (topLevelGroup.isEmpty) {

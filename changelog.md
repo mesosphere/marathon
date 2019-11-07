@@ -1,5 +1,17 @@
+## Changes from 1.9.73 to 1.9.xxx
 
-## Changes from 1.8.212 to 1.9.xxx
+### Faster serialization
+
+The serialization speed in Marathon has been dramatically improved by switching to a more efficient serialization library for Marathon's auto-generated code. Marathon can generate JSON 50% faster; further, GC allocation cycles are reduced by 50%. This will help to alleviate performance issues resulting from many services frequently querying the API of a large Marathon instance.
+
+[MARATHON-8567](https://jira.mesosphere.com/browse/MARATHON-8706)
+
+### Fixed issues
+
+- [MARATHON-8706](https://jira.mesosphere.com/browse/MARATHON-8706) - Fixed an issue where `--new_group_enforce_role top` was not abided when auto-creating groups for services posted in not-yet-existing groups.
+- [MARATHON-8697](https://jira.mesosphere.com/browse/MARATHON-8697) - Removed (another) external volume name validation that prevented the use of configuration parameters for some volume providers.
+
+## Changes from 1.8.212 to 1.9.73
 
 ### Multi-role support
 
@@ -83,7 +95,10 @@ Revive offers repetitions functionality no longer optional; after the duration s
 
 For more detailed information, see the JIRA ticket [MARATHON-8663](https://jira.mesosphere.com/browse/MARATHON-8663)
 
-## Changes from 1.8.218 to 1.8.xxx
+### Fixed issues
+- [MARATHON-8711](https://jira.mesosphere.com/browse/MARATHON-8711) - Fixed a rare issue where Marathon would fail to render a status for a resident scheduled pod instance with a goal `Stopped` 
+
+## Changes from 1.8.218 to 1.8.222
 
 ### External Volume Validation changes
 
@@ -178,6 +193,20 @@ when Marathon fails to clean up reservation which requires offers being sent.
 - [MARATHON-8422](https://jira.mesosphere.com/browse/MARATHON-8422) - Kill unreachable tasks that came back. Marathon could get stuck waiting for terminal events but not issue a kill.
 
 ## Changes from 1.7.xxx to 1.8.180
+
+### Aligning Ephemeral with Stateful Task Handling
+
+Marathon 1.8 introduces handling ephemeral instances similar to how it handled stateful instances since version 1.0. Until now, Marathon expunged ephemeral instances once all of their tasks ended up in a terminal state, and eventually launched replacements as a result of those instances being expunged. Instances will now only be expunged from the state once their goal is set to `Decommissioned` and all their tasks are in a terminal state. If their goal is still `Running`, they will be considered for scheduling and used to launch replacement tasks. This change not only merges two previously different code paths; this also simplifies debugging since users will be able to follow the task incarnations for a given instance throughout Marathons logs.
+
+This means that instance Ids are now stable for as long as an instance shall be kept running. New instances will be created only when replacing unreachable instances, and when replacing instances with new versions. Similar to the way we handle task Ids for stateful services, tasks of stateless services will now also provide an incarnation count, appended to the task Id. The first task created for an instance will be the .1, and subsequent replacements will increment that incarnation counter, e.g.
+
+```
+service-name.instance-c0caec0a-863a-11e9-915b-c610fee06dff._app.42
+```
+
+The above example denotes the 42nd incaration of instance `c0caec0a-863a-11e9-915b-c610fee06dff`.
+
+When killing an instance using the `wipe=true` flag, its goal will be set to `Decommission` and it will eventually be expunged when all tasks are terminal. Note that as long as its tasks are e.g. unreachable, it will not be expunged until they are reported terminal (in case they stay unreachable: `GONE`, `GONE_BY_OPERATOR`, or `UNKNOWN`). When killing instances without the `wipe=true` flag, Marathon will only issue kill requests to Mesos, but keep the current goal and will, therefore, launch replacements that are still associated with the existing instance.
 
 ### AppC is now deprecated
 AppC is now deprecated and will be removed in Marathon 1.9

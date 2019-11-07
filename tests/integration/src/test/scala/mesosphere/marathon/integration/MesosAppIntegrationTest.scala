@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.MesosAgentConfig
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator.UNIQUE
 import mesosphere.marathon.api.RestResource
@@ -9,7 +10,7 @@ import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.facades.AppMockFacade
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
+import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType}
 import mesosphere.marathon.state.{AbsolutePathId, HostVolume, PersistentVolume, VolumeMount}
 import mesosphere.mesos.Constraints.hostnameField
@@ -22,7 +23,7 @@ import scala.concurrent.duration._
 
 class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
-  override lazy val mesosConfig = MesosConfig(
+  override lazy val agentConfig = MesosAgentConfig(
     launcher = "linux",
     isolation = Some("filesystem/linux,docker/runtime"),
     imageProviders = Some("docker"))

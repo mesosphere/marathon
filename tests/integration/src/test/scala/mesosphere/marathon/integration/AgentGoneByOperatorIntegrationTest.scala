@@ -1,11 +1,13 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.http.RestResult
+import com.mesosphere.utils.mesos.MesosConfig
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.Task.TaskIdWithIncarnation
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig, RestResult}
+import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.App
 import mesosphere.marathon.state.AbsolutePathId
 import org.scalatest.Inside
@@ -31,7 +33,7 @@ class AgentGoneByOperatorIntegrationTest extends AkkaIntegrationTest with Embedd
     And("the matching agent is marked gone")
     val Seq(oldTask) = marathon.tasks(id).value
 
-    mesos.markAgentGone(oldTask.slaveId.get).success shouldBe true
+    mesosFacade.markAgentGone(oldTask.slaveId.get).success shouldBe true
 
     val oldTaskId = inside(Task.Id.parse(oldTask.id)) {
       case t: TaskIdWithIncarnation => t

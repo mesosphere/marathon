@@ -6,14 +6,15 @@ import java.util.UUID
 
 import akka.Done
 import akka.stream.scaladsl.Sink
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.base.JvmExitsCrashStrategy
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
+import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkPersistenceStore}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.util.ZookeeperServerTest
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.state.{AppDefinition, PathId, RootGroup, Timestamp}
 import mesosphere.marathon.test.Mockito
 
 import scala.collection.immutable.Seq
@@ -154,32 +155,32 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
   def createInMemRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     val store = new InMemoryPersistenceStore(metrics)
     store.markOpen()
-    GroupRepository.inMemRepository(store, appRepository, podRepository, versionCacheMaxSize)
+    GroupRepository.inMemRepository(store, appRepository, podRepository, versionCacheMaxSize, RootGroup.NewGroupStrategy.Fail)
   }
 
   private def zkStore: ZkPersistenceStore = {
     val root = UUID.randomUUID().toString
-    val rootClient = zkClient(namespace = Some(root))
+    val rootClient = RichCuratorFramework(zkClient(namespace = Some(root)), JvmExitsCrashStrategy)
     new ZkPersistenceStore(metrics, rootClient)
   }
 
   def createZkRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     val store = zkStore
     store.markOpen()
-    GroupRepository.zkRepository(store, appRepository, podRepository, versionCacheMaxSize)
+    GroupRepository.zkRepository(store, appRepository, podRepository, versionCacheMaxSize, RootGroup.NewGroupStrategy.Fail)
   }
 
   def createLazyCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     val store = LazyCachingPersistenceStore(metrics, new InMemoryPersistenceStore(metrics))
     store.markOpen()
-    GroupRepository.inMemRepository(store, appRepository, podRepository, versionCacheMaxSize)
+    GroupRepository.inMemRepository(store, appRepository, podRepository, versionCacheMaxSize, RootGroup.NewGroupStrategy.Fail)
   }
 
   def createLoadCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     val store = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore(metrics))
     store.markOpen()
     store.preDriverStarts.futureValue
-    GroupRepository.inMemRepository(store, appRepository, podRepository, versionCacheMaxSize)
+    GroupRepository.inMemRepository(store, appRepository, podRepository, versionCacheMaxSize, RootGroup.NewGroupStrategy.Fail)
   }
 
   behave like basicGroupRepository("InMemory", createInMemRepos)

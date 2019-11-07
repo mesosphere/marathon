@@ -2,6 +2,7 @@
 uses:
   strings: stringTypes.raml
   readinessCheck: readinessCheck.raml
+  pragma: pragma.raml
 
 types:
   DeploymentActionName:
@@ -29,6 +30,7 @@ types:
 
   DeploymentAction:
     type: object
+    (pragma.serializeOnly): # Used only for serialization
     description: An action in the deployment step
     properties:
       action:

@@ -31,7 +31,7 @@ class InstanceOpFactoryImpl(
     metrics: Metrics,
     config: MarathonConf,
     pluginManager: PluginManager = PluginManager.None,
-    rootGroupRetriever: GroupManager.CurrentRootGroupRetriever)(implicit clock: Clock)
+    enforceRoleProvider: GroupManager.EnforceRoleSettingProvider)(implicit clock: Clock)
   extends InstanceOpFactory with StrictLogging {
 
   private[this] val instanceOperationFactory = {
@@ -334,14 +334,10 @@ class InstanceOpFactoryImpl(
 
   private def getEnforceRole(pathId: AbsolutePathId): Boolean = {
     val topLevelPath = pathId.rootPath
-    val topLevelGroup = if (topLevelPath.isEmpty)
-      None
+    if (topLevelPath.isEmpty)
+      false
     else
-      rootGroupRetriever.rootGroup().group(topLevelPath)
-
-    topLevelGroup
-      .map { _.enforceRole }
-      .getOrElse(false)
+      enforceRoleProvider.enforceRoleSetting(topLevelPath)
   }
 
   private[this] def reserveAndCreateVolumes(

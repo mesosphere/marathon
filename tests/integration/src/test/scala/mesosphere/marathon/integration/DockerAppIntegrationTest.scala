@@ -1,15 +1,16 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.MesosAgentConfig
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
+import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType, Network, NetworkMode}
 import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 
 class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  override lazy val mesosConfig = MesosConfig(containerizers = "docker,mesos")
+  override lazy val agentConfig = MesosAgentConfig(containerizers = "docker,mesos")
 
   // FIXME (gkleiman): Docker tests don't work under Docker Machine yet. So they can be disabled through an env variable.
   val envVar = "RUN_DOCKER_INTEGRATION_TESTS"

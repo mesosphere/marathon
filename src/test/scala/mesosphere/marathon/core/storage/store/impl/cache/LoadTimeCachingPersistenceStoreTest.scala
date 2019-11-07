@@ -3,13 +3,14 @@ package core.storage.store.impl.cache
 
 import java.util.UUID
 
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.base.JvmExitsCrashStrategy
 import mesosphere.marathon.core.storage.store.PersistenceStoreTest
 import mesosphere.marathon.core.storage.store.impl.InMemoryTestClass1Serialization
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.storage.store.impl.zk.{ZkPersistenceStore, ZkTestClass1Serialization}
+import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkPersistenceStore, ZkTestClass1Serialization}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.util.ZookeeperServerTest
 import mesosphere.marathon.storage.store.InMemoryStoreSerialization
 
 class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
@@ -20,7 +21,7 @@ class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
 
   def zkStore: ZkPersistenceStore = {
     val root = UUID.randomUUID().toString
-    val rootZkClient = zkClient(namespace = Some(root))
+    val rootZkClient = RichCuratorFramework(zkClient(namespace = Some(root)), JvmExitsCrashStrategy)
     new ZkPersistenceStore(metrics, rootZkClient)
   }
 

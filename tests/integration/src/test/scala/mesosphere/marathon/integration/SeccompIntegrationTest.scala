@@ -1,8 +1,9 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.MesosAgentConfig
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
-import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
+import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType, LinuxInfo, Seccomp}
 import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
@@ -10,21 +11,21 @@ import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 class SeccompIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
   val projectDir: String = sys.props.getOrElse("user.dir", ".")
-  override lazy val mesosConfig = MesosConfig(
+  override lazy val agentConfig = MesosAgentConfig(
     launcher = "linux",
     containerizers = "docker,mesos",
     isolation = Some("filesystem/linux,docker/runtime,linux/seccomp"),
     imageProviders = Some("docker"),
-    agentSeccompConfigDir = Some(s"$projectDir/src/test/resources/mesos/seccomp"),
-    agentSeccompProfileName = Some("default.json")
+    seccompConfigDir = Some(s"$projectDir/src/test/resources/mesos/seccomp"),
+    seccompProfileName = Some("default.json")
   )
 
-  logger.info(s"Using --seccomp_config_dir = ${mesosConfig.agentSeccompConfigDir.get}")
-  logger.info(s"Using --seccomp_profile_name = ${mesosConfig.agentSeccompProfileName.get}")
+  logger.info(s"Using --seccomp_config_dir = ${agentConfig.seccompConfigDir.get}")
+  logger.info(s"Using --seccomp_profile_name = ${agentConfig.seccompProfileName.get}")
 
   "An app definition WITH seccomp profile defined and unconfined = false" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
     Given("an app WITH seccomp profile defined and unconfined = false")
-    val app = seccompApp(AbsolutePathId("/app-with-seccomp-profile-and-unconfined-false"), unconfined = false, profileName = mesosConfig.agentSeccompProfileName)
+    val app = seccompApp(AbsolutePathId("/app-with-seccomp-profile-and-unconfined-false"), unconfined = false, profileName = agentConfig.seccompProfileName)
 
     When("the app is successfully deployed")
     val result = marathon.createAppV2(app)
@@ -50,7 +51,7 @@ class SeccompIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
 
   "A pod definition WITH seccomp profile defined and unconfined = false" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
     Given("a pod WITH seccomp profile defined and unconfined = false")
-    val pod = seccompPod(AbsolutePathId("/pod-with-seccomp-profile-and-unconfined-false"), unconfined = false, profileName = mesosConfig.agentSeccompProfileName)
+    val pod = seccompPod(AbsolutePathId("/pod-with-seccomp-profile-and-unconfined-false"), unconfined = false, profileName = agentConfig.seccompProfileName)
 
     When("the pod is successfully deployed")
     val result = marathon.createPodV2(pod)

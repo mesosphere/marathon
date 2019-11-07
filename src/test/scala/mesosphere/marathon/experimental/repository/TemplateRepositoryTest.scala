@@ -5,6 +5,7 @@ import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
 import mesosphere.marathon.core.storage.zookeeper.{AsyncCuratorBuilderFactory, ZooKeeperPersistenceStore}
@@ -12,7 +13,6 @@ import mesosphere.marathon.experimental.storage.PathTrieTest
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
-import mesosphere.marathon.util.ZookeeperServerTest
 import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
 
@@ -30,7 +30,7 @@ class TemplateRepositoryTest
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val ec: ExecutionContext = system.dispatcher
 
-  lazy val client: CuratorFramework = zkClient(namespace = Some("test")).client
+  lazy val client: CuratorFramework = zkClient(namespace = Some("test"))
 
   lazy val factory: AsyncCuratorBuilderFactory = AsyncCuratorBuilderFactory(client)
   lazy val metrics: Metrics = DummyMetrics

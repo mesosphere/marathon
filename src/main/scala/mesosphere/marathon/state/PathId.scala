@@ -90,9 +90,9 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
     path.zip(definition.path).forall { case (left, right) => left == right }
   }
 
-  override val toString: String = toString("/")
+  override val toString: String = toStringWithDelimiter("/")
 
-  protected def toString(delimiter: String): String
+  protected def toStringWithDelimiter(delimiter: String): String
 
   override def compare(that: PathId): Int = {
     import Ordering.Implicits._
@@ -113,7 +113,7 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
 case class AbsolutePathId(path: Seq[String]) extends PathId {
   override val absolute: Boolean = true
 
-  protected def toString(delimiter: String): String =
+  protected def toStringWithDelimiter(delimiter: String): String =
     path.mkString("/", delimiter, "")
 
   override lazy val parent: AbsolutePathId = path match {
@@ -146,13 +146,12 @@ object AbsolutePathId {
   def apply(path: String): AbsolutePathId = {
     PathId(path).canonicalPath(PathId.root)
   }
-
 }
 
 case class RelativePathId(path: Seq[String]) extends PathId with StrictLogging {
   override val absolute: Boolean = false
 
-  protected def toString(delimiter: String): String =
+  protected def toStringWithDelimiter(delimiter: String): String =
     path.mkString(delimiter)
 }
 

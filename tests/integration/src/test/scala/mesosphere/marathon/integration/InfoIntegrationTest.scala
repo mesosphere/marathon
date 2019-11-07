@@ -42,7 +42,7 @@ class AuthorizedZooKeeperInfoIntegrationTest extends AkkaIntegrationTest with Em
   lazy val credentials = "user:secret"
   lazy val digest = org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest(credentials)
 
-  override val marathonArgs: Map[String, String] = Map("zk" -> s"zk://$credentials@${zkServer.connectUri}/marathon")
+  override val marathonArgs: Map[String, String] = Map("zk" -> s"zk://$credentials@${zkserver.connectUrl}/marathon")
 
   "AuthorizedZookeeperInfo" should {
     "v2/info doesn't include the zk credentials" in {

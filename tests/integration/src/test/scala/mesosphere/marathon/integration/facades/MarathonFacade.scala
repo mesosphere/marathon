@@ -17,13 +17,14 @@ import akka.util.ByteString
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.mesosphere.utils.http.RestResult
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon
+import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.raml18.PodStatus18
-import mesosphere.marathon.integration.setup.{AkkaHttpResponse, RestResult}
-import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
+import mesosphere.marathon.raml.{App, AppUpdate, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
@@ -102,7 +103,7 @@ class MarathonFacade(
     val system: ActorSystem, mat: Materializer)
   extends PodConversion with StrictLogging {
   implicit val scheduler = system.scheduler
-  import AkkaHttpResponse._
+  import com.mesosphere.utils.http.AkkaHttpResponse._
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -171,8 +172,7 @@ class MarathonFacade(
     * streamed via the materializable-once Source.
     */
   def events(eventsType: Seq[String] = Seq.empty): Future[Source[ITEvent, NotUsed]] = {
-
-    import EventUnmarshalling.fromEventStream
+    import EventUnmarshalling._
     val mapper = new ObjectMapper() with ScalaObjectMapper
     mapper.registerModule(DefaultScalaModule)
 
@@ -181,11 +181,14 @@ class MarathonFacade(
     Http().singleRequest(Get(akka.http.scaladsl.model.Uri(s"$url/v2/events").withQuery(eventsFilter))
       .withHeaders(Accept(MediaType.text("event-stream"))))
       .flatMap { response =>
+        logger.info(s"Unmarshall SSE response from $url")
         AkkaUnmarshal(response).to[Source[ServerSentEvent, NotUsed]]
       }
       .map { stream =>
+        logger.info(s"Mapping SSE stream from $url")
         stream
           .map { event =>
+            logger.info(s"Parsing JSON from $url")
             val json = mapper.readValue[Map[String, Any]](event.data) // linter:ignore
             ITEvent(event.eventType.getOrElse("unknown"), json)
           }
@@ -291,7 +294,7 @@ class MarathonFacade(
 
   def updatePod(id: AbsolutePathId, pod: PodDefinition, force: Boolean = false): RestResult[PodDefinition] = {
     requireInBaseGroup(id)
-    val res = result(requestFor[Pod](Put(s"$url/v2/pods$id?force=$force", pod)), waitTime)
+    val res = result(requestFor[Pod](Put(s"$url/v2/pods$id?force=$force", Raml.toRaml(pod))), waitTime)
     res.map(Raml.fromRaml(_))
   }
 
@@ -357,10 +360,12 @@ class MarathonFacade(
 
   //group resource -------------------------------------------
 
-  def listGroupsInBaseGroup: RestResult[Set[GroupInfo]] = {
-    import PathId._
-    val root = result(requestFor[GroupInfo](Get(s"$url/v2/groups")), waitTime)
-    root.map(_.groups.filter(group => isInBaseGroup(group.id.toPath)))
+  def listGroupIdsInBaseGroup: RestResult[Set[String]] = {
+    // This actually returns GroupInfo, not GroupUpdate, but it maps mostly the same and we don't have a
+    // deserializer for GroupInfo at the moment
+    val root = result(requestFor[raml.GroupUpdate](Get(s"$url/v2/groups")), waitTime)
+
+    root.map(_.groups.getOrElse(Set.empty).filter(subGroup => isInBaseGroup(PathId(subGroup.id.get))).map(_.id.get))
   }
 
   def listGroupVersions(id: AbsolutePathId): RestResult[List[String]] = {
@@ -368,9 +373,13 @@ class MarathonFacade(
     result(requestFor[List[String]](Get(s"$url/v2/groups$id/versions")), waitTime)
   }
 
-  def group(id: AbsolutePathId): RestResult[GroupInfo] = {
+  /**
+    * This should actually return a raml.GroupInfo, but we dont' have deserialization for that. GroupUpdate is only missing the
+    * pods, sooo, close enough
+    */
+  def group(id: AbsolutePathId): RestResult[raml.GroupUpdate] = {
     requireInBaseGroup(id)
-    result(requestFor[GroupInfo](Get(s"$url/v2/groups$id")), waitTime)
+    result(requestFor[raml.GroupUpdate](Get(s"$url/v2/groups$id")), waitTime)
   }
 
   def createGroup(group: GroupUpdate): RestResult[ITDeploymentResult] = {
@@ -495,4 +504,16 @@ object MarathonFacade {
         throw new RuntimeException(s"while parsing:\n${app.entityPrettyJsonString}", e)
     }
   }.to[marathon.IndexedSeq]
+
+  /**
+    * Enables easy access to a deployment ID in the header of an [[HttpResponse]] in a [[RestResult]].
+    * @param response The result of an HTTP request.
+    */
+  implicit class DeploymentId(response: RestResult[_]) {
+    /**
+      * @return Deployment ID from headers, if any
+      */
+    def deploymentId: Option[String] =
+      response.originalResponse.headers.collectFirst { case header if header.name == RestResource.DeploymentHeader => header.value }
+  }
 }

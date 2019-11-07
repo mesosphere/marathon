@@ -13,11 +13,13 @@ trait GroupCreation {
     dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
     validate: Boolean = true,
-    enabledFeatures: Set[String] = Set.empty): RootGroup = {
-    val group = RootGroup(apps, pods, groups.map(group => group.id -> group)(collection.breakOut), dependencies, version)
+    enabledFeatures: Set[String] = Set.empty,
+    newGroupEnforceRole: NewGroupEnforceRoleBehavior = NewGroupEnforceRoleBehavior.Off): RootGroup = {
+    val group = RootGroup(apps, pods, groups.map(group => group.id -> group)(collection.breakOut), dependencies, RootGroup.NewGroupStrategy.fromConfig(newGroupEnforceRole), version)
 
     if (validate) {
       val conf = if (enabledFeatures.isEmpty) AllConf.withTestConfig() else AllConf.withTestConfig("--enable_features", enabledFeatures.mkString(","))
+      conf.newGroupEnforceRole
       val validation = accord.validate(group)(RootGroup.validRootGroup(conf))
       assert(validation.isSuccess, s"Provided test root group was not valid: ${validation.toString}")
     }

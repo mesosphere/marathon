@@ -55,7 +55,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       Then("The group is updated")
       val result = marathon.group("test2".toRootTestPath)
       result should be(OK)
-      result.value.dependencies should be(dependencies)
+      result.value.dependencies.value should be(dependencies)
     }
 
     "deleting an existing group gives a 200 http response" in {
@@ -70,7 +70,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       Then("The group is deleted")
       result should be(OK)
       // only expect the test base group itself
-      marathon.listGroupsInBaseGroup.value.map(_.id) should not contain (group.id)
+      marathon.listGroupIdsInBaseGroup.value should not contain (group.id)
     }
 
     "delete a non existing group should give a 404 http response" in {
@@ -370,7 +370,6 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val app1V1 = appProxy(appId, "v1", 2, healthCheck = None)
       waitForDeployment(marathon.createGroup(GroupUpdate(Some(gid.toString), Some(Set(app1V1)))))
       waitForTasks(AbsolutePathId(app1V1.id), app1V1.instances)
-      val tasks = marathon.tasks(appId)
 
       When("The group is updated to change the enforce role setting")
       val result = marathon.updateGroup(gid, GroupUpdate(id = Some(gid.toString), apps = Some(Set(app1V1)), enforceRole = Some(true)))
@@ -435,8 +434,8 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
       logger.info("GroupInfo: " + groupInfo)
 
-      groupInfo.groups.find(_.id == (gid / "frontend").toString).value.dependencies should be(Set((gid / "service").toString))
-      groupInfo.groups.find(_.id == (gid / "service").toString).value.apps.find(_.id.endsWith("service1")).value.dependencies should be(Set((gid / "db" / "db1").toString))
+      groupInfo.groups.value.find(_.id.value == (gid / "frontend").toString).value.dependencies.value should be(Set((gid / "service").toString))
+      groupInfo.groups.value.find(_.id.value == (gid / "service").toString).value.apps.value.find(_.id.endsWith("service1")).value.dependencies should be(Set((gid / "db" / "db1").toString))
     }
   }
 }

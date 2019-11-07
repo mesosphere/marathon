@@ -2,10 +2,12 @@
 uses:
   strings: stringTypes.raml
   deploymentAction: deploymentAction.raml
+  pragma: pragma.raml
 
 types:
   DeploymentSteps:
     type: object
+    (pragma.serializeOnly): # Used only for serialization
     properties:
       steps:
         type: array
@@ -13,6 +15,7 @@ types:
 
   DeploymentStep:
     type: object
+    (pragma.serializeOnly): # Used only for serialization
     description: |
       A step in the deployment plan, represented as a list of actions to be performed
     properties:
