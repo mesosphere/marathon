@@ -1,5 +1,17 @@
+## Changes from 1.9.73 to 1.9.xxx
 
-## Changes from 1.8.212 to 1.9.xxx
+### Faster serialization
+
+The serialization speed in Marathon has been dramatically improved by switching to a more efficient serialization library for Marathon's auto-generated code. Marathon can generate JSON 50% faster; further, GC allocation cycles are reduced by 50%. This will help to alleviate performance issues resulting from many services frequently querying the API of a large Marathon instance.
+
+[MARATHON-8567](https://jira.mesosphere.com/browse/MARATHON-8706)
+
+### Fixed issues
+
+- [MARATHON-8706](https://jira.mesosphere.com/browse/MARATHON-8706) - Fixed an issue where `--new_group_enforce_role top` was not abided when auto-creating groups for services posted in not-yet-existing groups.
+- [MARATHON-8697](https://jira.mesosphere.com/browse/MARATHON-8697) - Removed (another) external volume name validation that prevented the use of configuration parameters for some volume providers.
+
+## Changes from 1.8.212 to 1.9.73
 
 ### Multi-role support
 
