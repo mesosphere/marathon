@@ -38,7 +38,7 @@ class MigrationTo19200(
 
     (
       (__ \ "instanceId").read[Id] ~
-      (__ \ "agentInfo").read[AgentInfo] ~
+      (__ \ "agentInfo").readNullable[AgentInfo] ~
       (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
       (__ \ "runSpecVersion").read[Timestamp] ~
       (__ \ "state").read[InstanceState] ~
@@ -49,7 +49,7 @@ class MigrationTo19200(
 
         val role = persistedRole.orElse(Some(defaultMesosRole))
 
-        new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation, role)
+        new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, reservation, role)
       }
   }
 
