@@ -69,7 +69,7 @@ object RoleSettings extends StrictLogging {
       } else {
         // Without enforce role, we allow default role, group role and already existing role
         // The default role depends on the config parameter
-        val defaultRoleToUse = if (defaultForEnforceFromConfig) topLevelGroupRole else defaultRole
+        val defaultRoleToUse = if (enforceRole) topLevelGroupRole else defaultRole
         RoleSettings(validRoles = Set(defaultRole, topLevelGroupRole) ++ maybeExistingRole, defaultRole = defaultRoleToUse, previousRole = oldServiceRole, forceRoleUpdate = forceRoleUpdate)
       }
     }
