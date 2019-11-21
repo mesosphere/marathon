@@ -1,4 +1,10 @@
-## Changes from 1.9.73 to 1.9.xxx
+## Changes from 1.9.100 to 1.9.xxx
+
+* [MARATHON-8713](https://jira.mesosphere.com/browse/MARATHON-8713) - Fixed issue where defaultRole for groups with enforceRole: false did not match the documentation and defaulted to the group-role, regardless.
+
+
+## Changes from 1.9.73 to 1.9.100
+
 
 ### Faster serialization
 

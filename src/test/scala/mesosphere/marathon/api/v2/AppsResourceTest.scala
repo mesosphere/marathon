@@ -2231,7 +2231,40 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       midGroup.enforceRole shouldBe false
     }
 
-    "Create a new app inside a top-group with enforceRole applies the proper group-role default" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/dev".toAbsolutePath, enforceRole = true)))) {
+    "Create a new app inside a top-level group with enforceRole disabled but --new_group_enforce_role=top" in new FixtureWithRealGroupManager(
+      configArgs = Seq("--new_group_enforce_role", "top"),
+      initialRoot = createRootGroup(groups = Set(createGroup("/dev".toAbsolutePath, enforceRole = false)))) {
+
+      service.deploy(any, any) returns Future.successful(Done)
+
+      Given("group /dev with enforceRole: false")
+      And("Marathon is configured with --new_group_enforce_role=top")
+
+      When("I post a sleeper app definition to /dev/sleeper without specifying the role")
+      val response = asyncRequest { r =>
+        val body =
+          """
+            |{
+            |  "id": "/dev/sleeper",
+            |  "cmd": "sleep 3600",
+            |  "instances": 1,
+            |  "cpus": 0.05,
+            |  "mem": 128
+            |}
+          """.stripMargin
+        appsResource.create(body.getBytes, force = false, auth.request, r)
+      }
+
+      Then("the request should succeed")
+      response.getStatus should be(201)
+
+      val Some(app) = groupManager.rootGroup().app(AbsolutePathId("/dev/sleeper"))
+
+      And("the role should default to the default mesos_role '*'")
+      app.role shouldBe "*"
+    }
+
+    "Create a new app inside a top-level group with enforceRole applies the proper group-role default" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/dev".toAbsolutePath, enforceRole = true)))) {
       service.deploy(any, any) returns Future.successful(Done)
 
       Given("group /dev with enforceRole: true")
