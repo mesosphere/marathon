@@ -67,9 +67,9 @@ object RoleSettings extends StrictLogging {
         // With enforceRole, we only allow the service to use the group-role or an existing role
         RoleSettings(validRoles = Set(topLevelGroupRole) ++ maybeExistingRole, defaultRole = topLevelGroupRole, previousRole = oldServiceRole, forceRoleUpdate = forceRoleUpdate)
       } else {
-        // Without enforce role, we allow default role, group role and already existing role
-        // The default role depends on the config parameter
-        val defaultRoleToUse = if (defaultForEnforceFromConfig) topLevelGroupRole else defaultRole
+        // Without enforce role, we allow default role, group role, and the already existing role
+        // We always default to the configured Mesos default role.
+        val defaultRoleToUse = if (enforceRole) topLevelGroupRole else defaultRole
         RoleSettings(validRoles = Set(defaultRole, topLevelGroupRole) ++ maybeExistingRole, defaultRole = defaultRoleToUse, previousRole = oldServiceRole, forceRoleUpdate = forceRoleUpdate)
       }
     }
