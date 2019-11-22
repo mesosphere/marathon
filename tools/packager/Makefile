@@ -1,5 +1,5 @@
 # Note that the prefix affects the init scripts as well.
-PREFIX := usr tag-docker all clean help push-docker
+PREFIX := usr
 
 FPM_VERSION := 1.10.2
 FPM := FPM_VERSION=$(FPM_VERSION) bin/fpm-docker
@@ -11,9 +11,10 @@ PKG_COMMIT := $(shell cd ../../ && ./version commit --ref $(REF))
 PKG_VER := $(shell cd ../../ && ./version --ref $(PKG_COMMIT))
 
 MESOS_PKG_VERSION := $(shell cat ../../project/Dependencies.scala | grep MesosDebian | cut -f 2 -d '"')
+BUILD_TARGET_ROOT := target/$(PKG_VER)
 
 FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
-	-p target/ \
+	-p $(BUILD_TARGET_ROOT)/ \
 	--architecture all \
 	--url "https://github.com/mesosphere/marathon" \
 	--license Apache-2.0 \
@@ -41,26 +42,28 @@ FPM_OPTS_RPM := -t rpm \
 	-d redhat-lsb-core
 
 
-EL6_PKG_PATH=target/marathon-$(PKG_VER)-$(PKG_REL).el6.noarch.rpm
-EL7_PKG_PATH=target/marathon-$(PKG_VER)-$(PKG_REL).el7.noarch.rpm
-UBUNTU_1604_PKG_PATH=target/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1604_all.deb
-UBUNTU_1804_PKG_PATH=target/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1804_all.deb
-DEBIAN_9_PKG_PATH=target/marathon_$(PKG_VER)-$(PKG_REL).debian9_all.deb
+EL6_PKG_PATH=$(BUILD_TARGET_ROOT)/marathon-$(PKG_VER)-$(PKG_REL).el6.noarch.rpm
+EL7_PKG_PATH=$(BUILD_TARGET_ROOT)/marathon-$(PKG_VER)-$(PKG_REL).el7.noarch.rpm
+UBUNTU_1604_PKG_PATH=$(BUILD_TARGET_ROOT)/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1604_all.deb
+UBUNTU_1804_PKG_PATH=$(BUILD_TARGET_ROOT)/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1804_all.deb
+DEBIAN_9_PKG_PATH=$(BUILD_TARGET_ROOT)/marathon_$(PKG_VER)-$(PKG_REL).debian9_all.deb
 
 ALL_PKGS=$(EL6_PKG_PATH) $(EL7_PKG_PATH) $(DEBIAN_9_PKG_PATH) $(UBUNTU_1804_PKG_PATH) $(UBUNTU_1604_PKG_PATH)
 
 .PHONY: help
 help:
 	@echo "Please choose one of the following targets:"
-	@echo "  all, deb, rpm, ubuntu, debian or el"
-	@echo "For build packages for the current checked-out version of Marathon:"
+	@echo "  all, deb, rpm, ubuntu, debian, docker or el"
+	@echo "To build all packages for the current checked-out version of Marathon:"
 	@echo "  make all"
+	@echo "To build and upload all packages, including docker:"
+	@echo "  make upload-packages push-docker"
 	@echo "To build packages for a different artifact version of Marathon:"
 	@echo "  make REF=v1.9.100 all"
 	@exit 0
 
 .PHONY: all
-all: $(foreach pkg,$(ALL_PKGS),$(pkg)) target/docker.tagged
+all: $(foreach pkg,$(ALL_PKGS),$(pkg)) $(BUILD_TARGET_ROOT)/docker.tagged
 
 .PHONY: deb
 deb: ubuntu debian
@@ -79,8 +82,8 @@ debian: debian-stretch-9
 
 .PHONY: el6
 el6: $(EL6_PKG_PATH)
-$(EL6_PKG_PATH): target/toor/el6/etc/init.d/marathon target/toor/el6/$(PREFIX)/share/marathon target/toor/el6/etc/default/marathon target/fpm-docker/.provisioned
-	$(FPM) -C target/toor/el6 \
+$(EL6_PKG_PATH): $(BUILD_TARGET_ROOT)/toor/el6/etc/init.d/marathon $(BUILD_TARGET_ROOT)/toor/el6/$(PREFIX)/share/marathon $(BUILD_TARGET_ROOT)/toor/el6/etc/default/marathon target/fpm-docker/.provisioned
+	$(FPM) -C $(BUILD_TARGET_ROOT)/toor/el6 \
 	        --config-files etc/default/marathon \
 		--iteration $(PKG_REL).el6 \
 	        --before-install scripts/adduser \
@@ -90,8 +93,8 @@ $(EL6_PKG_PATH): target/toor/el6/etc/init.d/marathon target/toor/el6/$(PREFIX)/s
 
 .PHONY: el7
 el7: $(EL7_PKG_PATH)
-$(EL7_PKG_PATH): target/toor/el7/usr/lib/systemd/system/marathon.service target/toor/el7/$(PREFIX)/share/marathon target/toor/el7/etc/default/marathon target/fpm-docker/.provisioned
-	$(FPM) -C target/toor/el7 \
+$(EL7_PKG_PATH): $(BUILD_TARGET_ROOT)/toor/el7/usr/lib/systemd/system/marathon.service $(BUILD_TARGET_ROOT)/toor/el7/$(PREFIX)/share/marathon $(BUILD_TARGET_ROOT)/toor/el7/etc/default/marathon target/fpm-docker/.provisioned
+	$(FPM) -C $(BUILD_TARGET_ROOT)/toor/el7 \
 		--iteration $(PKG_REL).el7 \
 		--config-files usr/lib/systemd/system/marathon.service \
                 --config-files etc/default/marathon \
@@ -103,46 +106,46 @@ $(EL7_PKG_PATH): target/toor/el7/usr/lib/systemd/system/marathon.service target/
 
 .PHONY: ubuntu-xenial-1604
 ubuntu-xenial-1604: $(UBUNTU_1604_PKG_PATH)
-$(UBUNTU_1604_PKG_PATH): target/toor/ubuntu-xenial/lib/systemd/system/marathon.service target/toor/ubuntu-xenial/$(PREFIX)/share/marathon target/toor/ubuntu-xenial/etc/default/marathon target/fpm-docker/.provisioned
-	$(FPM) -C target/toor/ubuntu-xenial \
+$(UBUNTU_1604_PKG_PATH): $(BUILD_TARGET_ROOT)/toor/ubuntu-xenial/lib/systemd/system/marathon.service $(BUILD_TARGET_ROOT)/toor/ubuntu-xenial/$(PREFIX)/share/marathon $(BUILD_TARGET_ROOT)/toor/ubuntu-xenial/etc/default/marathon target/fpm-docker/.provisioned
+	$(FPM) -C $(BUILD_TARGET_ROOT)/toor/ubuntu-xenial \
 		--iteration $(PKG_REL).ubuntu1604 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
 .PHONY: ubuntu-bionic-1804
 ubuntu-bionic-1804: $(UBUNTU_1804_PKG_PATH)
-$(UBUNTU_1804_PKG_PATH): target/toor/ubuntu-bionic/lib/systemd/system/marathon.service target/toor/ubuntu-bionic/$(PREFIX)/share/marathon target/toor/ubuntu-bionic/etc/default/marathon target/fpm-docker/.provisioned
-	$(FPM) -C target/toor/ubuntu-bionic \
+$(UBUNTU_1804_PKG_PATH): $(BUILD_TARGET_ROOT)/toor/ubuntu-bionic/lib/systemd/system/marathon.service $(BUILD_TARGET_ROOT)/toor/ubuntu-bionic/$(PREFIX)/share/marathon $(BUILD_TARGET_ROOT)/toor/ubuntu-bionic/etc/default/marathon target/fpm-docker/.provisioned
+	$(FPM) -C $(BUILD_TARGET_ROOT)/toor/ubuntu-bionic \
 		--iteration $(PKG_REL).ubuntu1804 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
 .PHONY: debian-stretch-9
 debian-stretch-9: $(DEBIAN_9_PKG_PATH)
-$(DEBIAN_9_PKG_PATH): target/toor/debian-stretch-9/lib/systemd/system/marathon.service target/toor/debian-stretch-9/$(PREFIX)/share/marathon target/toor/debian-stretch-9/etc/default/marathon target/fpm-docker/.provisioned
-	$(FPM) -C target/toor/debian-stretch-9 \
+$(DEBIAN_9_PKG_PATH): $(BUILD_TARGET_ROOT)/toor/debian-stretch-9/lib/systemd/system/marathon.service $(BUILD_TARGET_ROOT)/toor/debian-stretch-9/$(PREFIX)/share/marathon $(BUILD_TARGET_ROOT)/toor/debian-stretch-9/etc/default/marathon target/fpm-docker/.provisioned
+	$(FPM) -C $(BUILD_TARGET_ROOT)/toor/debian-stretch-9 \
 		--iteration $(PKG_REL).debian9 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
-target/toor/%/etc/default/marathon:
+$(BUILD_TARGET_ROOT)/toor/%/etc/default/marathon:
 	mkdir -p "$(dir $@)"
 	cp marathon.defaults $@
 
-target/toor/el6/etc/init.d/marathon: scripts/el6.init
+$(BUILD_TARGET_ROOT)/toor/el6/etc/init.d/marathon: scripts/el6.init
 	mkdir -p "$(dir $@)"
 	cp scripts/el6.init "$@"
 	chmod 0755 "$@"
 
-target/toor/%/usr/lib/systemd/system/marathon.service: scripts/marathon.systemd.service
+$(BUILD_TARGET_ROOT)/toor/%/usr/lib/systemd/system/marathon.service: scripts/marathon.systemd.service
 	mkdir -p "$(dir $@)"
 	cp scripts/marathon.systemd.service "$@"
 
-target/toor/%/lib/systemd/system/marathon.service: scripts/marathon.systemd.service
+$(BUILD_TARGET_ROOT)/toor/%/lib/systemd/system/marathon.service: scripts/marathon.systemd.service
 	mkdir -p "$(dir $@)"
 	cp scripts/marathon.systemd.service "$@"
 
-target/%/marathon: target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
+$(BUILD_TARGET_ROOT)/%/share/marathon: $(BUILD_TARGET_ROOT)/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
 	rm -rf "$(dir $@)"
 	mkdir -p "$(dir $@)"
-	tar xzf target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz -C "$(dir $@)"
+	tar xzf $(BUILD_TARGET_ROOT)/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz -C "$(dir $@)"
 	mv $@-$(PKG_VER)-$(PKG_COMMIT) $@
 	touch $@
 
@@ -150,12 +153,12 @@ ifeq ($(REF), HEAD)
 ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz:
 	cd ../../ && sbt universal:packageZipTarball
 
-target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz: ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
-	mkdir -p target/toor
+$(BUILD_TARGET_ROOT)/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz: ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
+	mkdir -p $(BUILD_TARGET_ROOT)/toor
 	cp ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz $@
 else
-target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz:
-	mkdir -p target/toor
+$(BUILD_TARGET_ROOT)/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz:
+	mkdir -p $(BUILD_TARGET_ROOT)/toor
 	curl -f -o $@ https://downloads.mesosphere.io/marathon/builds/$(PKG_VER)-$(PKG_COMMIT)/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
 endif
 
@@ -168,9 +171,11 @@ endef
 
 $(foreach target,$(ALL_PKGS),$(eval $(call upload_target,$(target))))
 
+.PHONY: upload-packages
 upload-packages: $(foreach target,$(ALL_PKGS),$(target).uploaded)
 
-download-marathon: | target/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
+.PHONY: download
+download: | $(BUILD_TARGET_ROOT)/toor/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
 
 target/fpm-docker/.provisioned:
 	cd fpm-docker && docker build . --build-arg FPM_VERSION=$(FPM_VERSION) -t fpm:$(FPM_VERSION)
@@ -179,26 +184,31 @@ target/fpm-docker/.provisioned:
 
 ### DOCKER BUILD section
 
-target/docker/Dockerfile: docker/Dockerfile
+$(BUILD_TARGET_ROOT)/docker/Dockerfile: docker/Dockerfile
 	mkdir -p "$(dir $@)"
 	cp $< $@
 
-target/docker.tagged: target/docker/Dockerfile target/docker/marathon
-	cd target/docker && docker build --build-arg MESOS_PKG_VERSION=$(MESOS_PKG_VERSION) --tag mesosphere/marathon:v$(PKG_VER) . 2>&1 | tee ../../$@.work
+$(BUILD_TARGET_ROOT)/docker.tagged: $(BUILD_TARGET_ROOT)/docker/Dockerfile $(BUILD_TARGET_ROOT)/docker/share/marathon
+	cd $(BUILD_TARGET_ROOT)/docker && docker build --build-arg MESOS_PKG_VERSION=$(MESOS_PKG_VERSION) --tag mesosphere/marathon:v$(PKG_VER) . 2>&1 | tee "$(PWD)/$@.work"
 	mv $@.work $@
 
-target/docker.pushed: target/docker.tagged
+$(BUILD_TARGET_ROOT)/docker.pushed: $(BUILD_TARGET_ROOT)/docker.tagged
 	docker push mesosphere/marathon:v$(PKG_VER) 2>&1 | tee $@.work
 
-tag-docker: target/docker.tagged
-push-docker: target/docker.pushed
+.PHONY: docker
+docker: $(BUILD_TARGET_ROOT)/docker.tagged
+
+.PHONY: push-docker
+push-docker: $(BUILD_TARGET_ROOT)/docker.pushed
 
 ### END DOCKER
 
 
+.PHONY: clean
 clean:
 	rm -rf marathon*.deb marathon*.rpm marathon*.pkg target
 
+.PHONY: purge
 purge: | clean
 	# We could also use 'sbt clean' but it takes forever and is not as thorough.
 	## || true is so that we still get an exit 0 to allow builds to proceed

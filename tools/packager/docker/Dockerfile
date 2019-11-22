@@ -5,7 +5,7 @@ WORKDIR /marathon
 ARG MESOS_PKG_VERSION
 
 ENV JAVA_HOME /docker-java-home
-ADD --chown=nobody:nogroup marathon /marathon
+ADD --chown=nobody:nogroup share/marathon /marathon
 
 RUN apt-get update && apt-get install -my wget gnupg && \
   apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \
