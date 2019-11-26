@@ -1,10 +1,12 @@
 ## Changes from 1.9.100 to 1.9.xxx
 
+### Fixed issues
+
+* [MARATHON-8711](https://jira.mesosphere.com/browse/MARATHON-8711) - Fix pod status for `Scheduled` instances with a goal `Stopped`
+* [MARATHON-8712](https://jira.mesosphere.com/browse/MARATHON-8712) - Fix an issue where the upgrade migration would fail if there were any persisted instances in state "scheduled" (IE ongoing deployment) during the upgrade attempt.
 * [MARATHON-8713](https://jira.mesosphere.com/browse/MARATHON-8713) - Fixed issue where defaultRole for groups with enforceRole: false did not match the documentation and defaulted to the group-role, regardless.
 
-
 ## Changes from 1.9.73 to 1.9.100
-
 
 ### Faster serialization
 
