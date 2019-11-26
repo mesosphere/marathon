@@ -151,7 +151,7 @@ Instructions on how to install prepackaged releases are available [in the Marath
 1.  Run `sbt universal:packageZipTarball` to package Marathon as an txz file
     containing bin/marathon fully packaged.
 
-1. Run `sbt docker:publishLocal` for a local marathon docker image.
+1. Run `cd tools/packager; make tag-docker` for a local Marathon docker image.
 
 ### Running in Development Mode
 
@@ -179,7 +179,7 @@ See [the documentation](https://mesosphere.github.io/marathon/docs/developing-vm
 
 Build it:
 
-    sbt docker:publishLocal
+    cd tools/packages; make tag-docker
 
 Note the version, e.g: `[info] Built image mesosphere/marathon:1.5.0-SNAPSHOT-461-gf1cc63e` => `1.5.0-SNAPSHOT-461-gf1cc63e`
 

@@ -1,7 +1,6 @@
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.typesafe.sbt.SbtNativePackager.autoImport.NativePackagerHelper.directory
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
-import com.typesafe.sbt.packager.docker.Cmd
 import mesosphere.maven.MavenSettings.{loadM2Credentials, loadM2Resolvers}
 import mesosphere.raml.RamlGeneratorPlugin
 import sbtprotobuf.ProtobufPlugin
@@ -154,58 +153,7 @@ lazy val packagingSettings = Seq(
   (topLevelDirectory in UniversalDocs) := { Some((packageName in UniversalDocs).value) },
   mappings in UniversalDocs ++= directory("docs/docs"),
 
-
-  /* Docker config (http://sbt-native-packager.readthedocs.io/en/latest/formats/docker.html)
-   */
-  dockerBaseImage := "debian:stretch-slim",
-  dockerRepository := Some("mesosphere"),
-  daemonUser in Docker := "nobody",
-  daemonGroup in Docker := "nogroup",
-  version in Docker := {
-    import sys.process._
-    ("./version docker" !!).trim
-  },
-  (defaultLinuxInstallLocation in Docker) := "/marathon",
-  maintainer := "Mesosphere Package Builder <support@mesosphere.io>",
-  dockerCommands := {
-    // kind of a work-around; we need our chown /marathon command to come after the WORKDIR command, and installation
-    // commands to preceed adding the Marthon artifact so that Docker can cache them
-    val (prefixCommands, restCommands) = dockerCommands.value.splitAt(dockerCommands.value.indexWhere(_.makeContent.startsWith("WORKDIR ")) + 1)
-
-    // Notes on the script below:
-    //
-    // 1) The `stretch-slim` does not contain `gnupg` and therefore `apt-key adv` will fail unless it's installed first
-    // 2) We are creating a dummy `systemctl` binary in order to satisfy mesos post-install script that tries to invoke
-    //   it for registering the systemd task.
-    //
-    prefixCommands ++
-      Seq(Cmd("RUN",
-        s"""apt-get update && apt-get install -my wget gnupg && \\
-          |apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \\
-          |apt-get update -y && \\
-          |apt-get upgrade -y && \\
-          |${NativePackagerSettings.debianSourceCommands} && \\
-          |apt-get update && \\
-          |# jdk setup
-          |mkdir -p /usr/share/man/man1 && \\
-          |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java && \\
-          |/var/lib/dpkg/info/ca-certificates-java.postinst configure && \\
-          |ln -svT "/usr/lib/jvm/java-8-openjdk-$$(dpkg --print-architecture)" /docker-java-home && \\
-          |# mesos setup
-          |echo exit 0 > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \\
-          |# Workaround required due to https://github.com/mesosphere/mesos-deb-packaging/issues/102
-          |# Remove after upgrading to Mesos 1.7.0
-          |apt-get install -y libcurl3-nss && \\
-          |apt-get install --no-install-recommends -y mesos=${Dependency.V.MesosDebian}.debian9 && \\
-          |rm /usr/bin/systemctl && \\
-          |apt-get clean && \\
-          |chown nobody:nogroup /marathon""".stripMargin)) ++
-      restCommands ++
-      Seq(
-        Cmd("ENV", "JAVA_HOME /docker-java-home"),
-        Cmd("RUN", s"""ln -sf /marathon/bin/marathon /marathon/bin/start && \\
-                      |chmod a+x /marathon/bin/marathon""".stripMargin))
-  })
+  maintainer := "Mesosphere Package Builder <support@mesosphere.io>")
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
     .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
@@ -222,7 +170,7 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
     )
 
 lazy val marathon = (project in file("."))
-  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin,
+  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging,
     RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning, ProtobufPlugin)
   .dependsOn(`plugin-interface`)
   .settings(pbSettings)

@@ -139,7 +139,7 @@ object Dependency {
     val UUIDGenerator = "3.1.4"
     val WixAccord = "0.7.1"
 
-    // Version of Mesos to use in Dockerfile.
+    // Version of Mesos to use when building docker image or testing packages
     val MesosDebian = "1.9.0-2.0.1"
 
 
