@@ -189,7 +189,7 @@ object Main {
     * Serialize configuration in form that can be presented in a log
     */
   def configToLogLines(conf: AllConf): Seq[String] = {
-    Seq("(* suffix means value was explicitly supplied, and not defaulted)") ++
+    Seq("Marathon configuration: (* suffix means value was explicitly supplied, and not defaulted)") ++
       ScallopHelper.scallopOptions(conf).filter(_.isDefined).map { opt =>
         val wasSupplied = if (opt.isSupplied) " (*)" else ""
         val redactedValue = opt() match {
