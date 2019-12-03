@@ -71,11 +71,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     Formats.configureJacksonSerializer()
 
     logger.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref}")
-    logger.whenInfoEnabled {
-      Main.configToLogLines(cliConf).foreach {
-        logger.info(_)
-      }
-    }
+    logger.info(Main.configToLogLines(cliConf))
 
     api.HttpBindings.apply(
       httpModule.servletContextHandler,
@@ -188,16 +184,18 @@ object Main {
   /**
     * Serialize configuration in form that can be presented in a log
     */
-  def configToLogLines(conf: AllConf): Seq[String] = {
-    Seq("Marathon configuration: (* suffix means value was explicitly supplied, and not defaulted)") ++
-      ScallopHelper.scallopOptions(conf).filter(_.isDefined).map { opt =>
-        val wasSupplied = if (opt.isSupplied) " (*)" else ""
-        val redactedValue = opt() match {
-          case z: ZkUrl => z.redactedConnectionString
-          case o => o.toString
-        }
-        s"${opt.name}${wasSupplied} = ${redactedValue}"
+  def configToLogLines(conf: AllConf): String = {
+    val s = new StringBuilder
+    s.append("Marathon configuration: (* suffix means value was explicitly supplied, and not defaulted)\n")
+    ScallopHelper.scallopOptions(conf).filter(_.isDefined).map { opt =>
+      val wasSupplied = if (opt.isSupplied) " (*)" else ""
+      val redactedValue = opt() match {
+        case z: ZkUrl => z.redactedConnectionString
+        case o => o.toString
       }
+      s.append(s" - ${opt.name}${wasSupplied} = ${redactedValue}\n")
+    }
+    s.result()
   }
 
   /**
