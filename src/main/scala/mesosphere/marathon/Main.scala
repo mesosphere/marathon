@@ -6,6 +6,7 @@ import akka.actor.ActorSystem
 import com.google.common.util.concurrent.{Service, ServiceManager}
 import com.google.inject.{Guice, Module}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.ZookeeperConf.ZkUrl
 import mesosphere.marathon.api.LeaderProxyFilterModule
 import org.eclipse.jetty.servlets.EventSourceServlet
 
@@ -190,8 +191,12 @@ object Main {
   def configToLogLines(conf: AllConf): Seq[String] = {
     Seq("(* suffix means value was explicitly supplied, and not defaulted)") ++
       ScallopHelper.scallopOptions(conf).filter(_.isDefined).map { opt =>
-        val suppliedString = if (opt.isSupplied) " (*)" else ""
-        s"${opt.name}${suppliedString} = ${opt()}"
+        val wasSupplied = if (opt.isSupplied) " (*)" else ""
+        val redactedValue = opt() match {
+          case z: ZkUrl => z.redactedConnectionString
+          case o => o.toString
+        }
+        s"${opt.name}${wasSupplied} = ${redactedValue}"
       }
   }
 
