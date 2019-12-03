@@ -69,7 +69,12 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     setConcurrentContextDefaults()
     Formats.configureJacksonSerializer()
 
-    logger.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref} with ${args.mkString(" ")}")
+    logger.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref}")
+    logger.whenInfoEnabled {
+      Main.configToLogLines(cliConf).foreach {
+        logger.info(_)
+      }
+    }
 
     api.HttpBindings.apply(
       httpModule.servletContextHandler,
@@ -179,6 +184,17 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
 }
 
 object Main {
+  /**
+    * Serialize configuration in form that can be presented in a log
+    */
+  def configToLogLines(conf: AllConf): Seq[String] = {
+    Seq("(* suffix means value was explicitly supplied, and not defaulted)") ++
+      ScallopHelper.scallopOptions(conf).filter(_.isDefined).map { opt =>
+        val suppliedString = if (opt.isSupplied) " (*)" else ""
+        s"${opt.name}${suppliedString} = ${opt()}"
+      }
+  }
+
   /**
     * Given environment variables starting with MARATHON_, convert to a series of arguments.
     *
