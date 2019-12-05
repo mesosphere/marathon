@@ -10,7 +10,7 @@ import scala.concurrent.duration._
 
 trait AppConversion extends DefaultConversions with CheckConversion with ConstraintConversion with EnvVarConversion with HealthCheckConversion
   with NetworkConversion with ReadinessConversions with SecretConversion with VolumeConversion
-  with UnreachableStrategyConversion with KillSelectionConversion {
+  with UnreachableStrategyConversion with KillSelectionConversion with ResourceLimitsConversion {
 
   import AppConversion._
 
@@ -82,7 +82,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       killSelection = app.killSelection.toRaml,
       tty = app.tty,
       executorResources = app.executorResources.toRaml,
-      role = Option(app.role)
+      role = Option(app.role),
+      resourceLimits = app.resourceLimits.map(_.toRaml)
     )
   }
 
@@ -170,7 +171,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       killSelection = app.killSelection.fromRaml,
       tty = app.tty,
       executorResources = app.executorResources.map(_.fromRaml),
-      role = role
+      role = role,
+      resourceLimits = app.resourceLimits.map(_.fromRaml)
     )
     result
   }
@@ -221,7 +223,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       killSelection = update.killSelection.getOrElse(app.killSelection),
       tty = update.tty.orElse(app.tty),
       executorResources = update.executorResources,
-      role = update.role.orElse(app.role)
+      role = update.role.orElse(app.role),
+      resourceLimits = update.resourceLimits
     )
   }
 
@@ -368,7 +371,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       killSelection = service.whenOrElse(_.hasKillSelection, _.getKillSelection.toRaml, App.DefaultKillSelection),
       unreachableStrategy = unreachableStrategy,
       tty = service.when(_.hasTty, _.getTty: Boolean).orElse(App.DefaultTty),
-      role = service.when(_.hasRole, _.getRole).orElse(App.DefaultRole)
+      role = service.when(_.hasRole, _.getRole).orElse(App.DefaultRole),
+      resourceLimits = service.when(_.hasResourceLimits, _.getResourceLimits.toRaml)
     )
     // special ports normalization when converting from protobuf, because the protos don't allow us to distinguish
     // between "I specified an empty set of ports" and "I specified a null set of ports" (for definitions and mappings).
@@ -430,7 +434,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       ports = app.ports,
       uris = app.uris,
       tty = app.tty,
-      role = app.role
+      role = app.role,
+      resourceLimits = app.resourceLimits
     )
   }
 }

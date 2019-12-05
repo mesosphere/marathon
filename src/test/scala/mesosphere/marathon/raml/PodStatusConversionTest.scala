@@ -460,6 +460,7 @@ class PodStatusConversionTest extends UnitTest {
 object PodStatusConversionTest {
 
   val containerResources = Resources(cpus = 0.01, mem = 100)
+  val containerResourceLimits = state.ResourceLimits(cpus = Some(Double.MaxValue), mem = Some(4096))
 
   val basicOneContainerPod = PodDefinition(
     id = AbsolutePathId("/foo"),
@@ -468,6 +469,7 @@ object PodStatusConversionTest {
       MesosContainer(
         name = "ct1",
         resources = containerResources,
+        resourceLimits = Some(containerResourceLimits),
         image = Some(Image(kind = ImageType.Docker, id = "busybox")),
         endpoints = Seq(
           Endpoint(name = "web", containerPort = Some(80)),

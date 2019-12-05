@@ -15,7 +15,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{HostNetwork, Network}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
-import mesosphere.marathon.raml.{App, Apps, ExecutorResources, Resources}
+import mesosphere.marathon.raml.{App, Apps, ExecutorResources, ResourceLimitNumber, ResourceLimitUnlimited, Resources}
 import mesosphere.marathon.state.Container.{Docker, MesosDocker}
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.stream.Implicits._
@@ -88,7 +88,9 @@ case class AppDefinition(
 
     tty: Option[Boolean] = AppDefinition.DefaultTTY,
 
-    role: Role) extends RunSpec
+    role: Role,
+
+    resourceLimits: Option[ResourceLimits] = None) extends RunSpec
   with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
@@ -192,6 +194,9 @@ case class AppDefinition(
       .setKillSelection(killSelection.toProto)
       .setRole(role)
 
+    resourceLimits.foreach { limits =>
+      builder.setResourceLimits(ResourceLimits.resourceLimitsToProto(limits))
+    }
     check.foreach { c => builder.setCheck(c.toProto) }
 
     executorResources.foreach(r => {

@@ -65,3 +65,22 @@ types:
         description: How much disk space is needed for for the executor. This number does not have to be an integer, but can be a fraction.
         example: 50
         default: 10.0
+  ResourceLimit: ResourceLimitUnlimited | ResourceLimitNumber
+  ResourceLimitUnlimited:
+    type: string
+    enum: [ unlimited ]
+  ResourceLimitNumber:
+    type: number
+    format: double
+  ResourceLimits:
+    type: object
+    description: Specify resource limits in addition to the requested resources, allowing containers / tasks to consume more CPU or memory than requested.
+    properties:
+      cpus?:
+        displayName: cpu shares limit
+        description: The total number of CPU shares this task / container can consume. If not specified, then the task / container is constrained to use only the CPUs requested. A value of "unlimited" means the task / container should be allowed to use as many spare CPU cycles as are available on the box. This setting has no effect on nodes with CFS disabled.
+        type: ResourceLimit
+      mem?:
+        displayName: memory
+        description: The total amount of memory that this task / container can consume. If not specified, then the task / container is constrained to use only the memory requested. A value of "unlimited" means the task / container should be allowed as much memory as is free on the agent. Note that when a task goes over its requested memory limit it has a higher chance of being OOM-killed in the case of resource contention on a node.
+        type: ResourceLimit
