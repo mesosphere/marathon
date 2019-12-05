@@ -102,6 +102,7 @@ lazy val commonSettings = Seq(
       "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven",
       "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",
       "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
+      "Temporary Mesos releases" at "https://greg-artifacts.s3-us-west-2.amazonaws.com/", // this is needed until an Mesos 1.10 RC release is available in Maven central
       Resolver.JCenterRepository
     ) ++ resolvers.value
   },

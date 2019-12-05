@@ -168,6 +168,7 @@ message ServiceDefinition {
   repeated mesos.Resource executorResources = 36;
   optional CheckDefinition check = 37;
   optional string role = 38;
+  optional ResourceLimits resourceLimits = 39;
 }
 
 enum KillSelection {
@@ -179,6 +180,11 @@ message UnreachableStrategy {
   // UnreachableDisabled is represented by both of these fields missing
   optional uint64 inactiveAfterSeconds = 1 [default = 900 ]; // 15 minutes
   optional uint64 expungeAfterSeconds = 2 [default = 604800 ]; // 7 days
+}
+
+message ResourceLimits {
+  optional double cpus = 1;
+  optional double mem = 2;
 }
 
 // we serialize PodDefinition and Instances as json, only required for legacy content

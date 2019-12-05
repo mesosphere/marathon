@@ -7,13 +7,14 @@ import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.{Protos => Mesos}
 import scala.jdk.CollectionConverters._
 
-trait ContainerConversion extends HealthCheckConversion with VolumeConversion with NetworkConversion with LinuxInfoConversion {
+trait ContainerConversion extends HealthCheckConversion with VolumeConversion with NetworkConversion with LinuxInfoConversion with ResourceLimitsConversion {
 
   implicit val containerRamlWrites: Writes[MesosContainer, PodContainer] = Writes { c =>
     PodContainer(
       name = c.name,
       exec = c.exec,
       resources = c.resources,
+      resourceLimits = c.resourceLimits.map(_.toRaml),
       endpoints = c.endpoints,
       image = c.image,
       environment = Raml.toRaml(c.env),
@@ -33,6 +34,7 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       name = c.name,
       exec = c.exec,
       resources = c.resources,
+      resourceLimits = c.resourceLimits.map(_.fromRaml),
       endpoints = c.endpoints,
       image = c.image,
       env = Raml.fromRaml(c.environment),

@@ -157,6 +157,13 @@ forwarded as gauges.
 * `marathon.mesos.task-updates.<task-state>.counter` — the count of task
   status updates received per each task state (`task-running`,
   `task-failed` and so on).
+* `marathon.mesos.task.oom.memory-limit-unfulfillable` - The count of
+  tasks OOM-killed because, while the container stayed within its
+  specified memory limit, the agent was too memory constrained to
+  support it.
+* `marathon.mesos.task.oom.memory-limit-exceeded` - The count of tasks
+  OOM-killed because it exceeded the specified memory limit (or,
+  request, if limit was not specified).
 
 ### HTTP-specific metrics
 

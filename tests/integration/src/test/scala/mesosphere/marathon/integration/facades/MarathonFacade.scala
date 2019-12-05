@@ -279,10 +279,14 @@ class MarathonFacade(
 
   def podTasksIds(podId: AbsolutePathId): Seq[String] = status(podId).value.instances.flatMap(_.containers.flatMap(_.containerId))
 
-  def createPodV2(pod: PodDefinition): RestResult[PodDefinition] = {
-    requireInBaseGroup(pod.id)
-    val res = result(requestFor[Pod](Post(s"$url/v2/pods", Raml.toRaml(pod))), waitTime)
+  def createPodV2(pod: Pod): RestResult[PodDefinition] = {
+    requireInBaseGroup(pod.id.toPath)
+    val res = result(requestFor[Pod](Post(s"$url/v2/pods", pod)), waitTime)
     res.map(Raml.fromRaml(_))
+  }
+
+  def createPodV2(pod: PodDefinition): RestResult[PodDefinition] = {
+    createPodV2(Raml.toRaml(pod))
   }
 
   def deletePod(id: AbsolutePathId, force: Boolean = false): RestResult[HttpResponse] = {

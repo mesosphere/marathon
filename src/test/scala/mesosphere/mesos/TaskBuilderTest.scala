@@ -32,6 +32,25 @@ class TaskBuilderTest extends UnitTest {
   val labels = Map("foo" -> "bar", "test" -> "test")
   val uuid = UUID.fromString("b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6")
 
+  class FixtureWithInstanceAndMatchedOffer(resourceLimits: Option[ResourceLimits] = None, taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod) {
+    val app = MarathonTestHelper.makeBasicApp().copy(
+      resourceLimits = resourceLimits,
+      taskKillGracePeriod = taskKillGracePeriod
+    )
+
+    val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
+    val config = MarathonTestHelper.defaultConfig()
+    val instanceId = Instance.Id.forRunSpec(app.id)
+    val taskId = Task.Id(instanceId)
+    val builder = new TaskBuilder(app, taskId, config)
+    val runningInstances = Set.empty[Instance]
+
+    val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
+      config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
+    assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
+    val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
+  }
+
   "TaskBuilder" should {
     "BuildIfMatches" in {
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 1.0, mem = 128.0, disk = 2000.0, beginPort = 31000, endPort = 32000).build
@@ -993,11 +1012,11 @@ class TaskBuilderTest extends UnitTest {
       val (taskInfo: TaskInfo, _) = task.get
 
       assert(taskInfo.hasExecutor)
-      assert(taskInfo.getExecutor.getResourcesList == Seq(
+      assert(taskInfo.getExecutor.getResourcesList.asScala == Seq(
         ScalarResource.cpus(0.1),
         ScalarResource.memory(32.0),
         ScalarResource.disk(10.0)
-      ).map(resourceToProto).asJava)
+      ).map(resourceToProto))
     }
 
     "BuildIfMatchesWithRole" in {
@@ -1889,23 +1908,7 @@ class TaskBuilderTest extends UnitTest {
       assert(portsFromTaskInfo.exists(_.toString == env("PORT5")))
     }
 
-    "taskKillGracePeriod specified in app definition is passed through to TaskInfo" in {
-      val seconds = 12345.seconds
-      val app = MarathonTestHelper.makeBasicApp().copy(
-        taskKillGracePeriod = Some(seconds)
-      )
-
-      val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
-      val config = MarathonTestHelper.defaultConfig()
-      val instanceId = Instance.Id.forRunSpec(app.id)
-      val taskId = Task.Id(instanceId)
-      val builder = new TaskBuilder(app, taskId, config)
-      val runningInstances = Set.empty[Instance]
-
-      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-        config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
-      assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
-      val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
+    "taskKillGracePeriod specified in app definition is passed through to TaskInfo" in new FixtureWithInstanceAndMatchedOffer(taskKillGracePeriod = Some(12345.seconds)) {
       val (taskInfo, _) = builder.build(offer, matches.resourceMatch, None, enforceRole = true)
 
       assert(taskInfo.hasKillPolicy)
@@ -1914,7 +1917,7 @@ class TaskBuilderTest extends UnitTest {
       val gracePeriod = killPolicy.getGracePeriod
       assert(gracePeriod.hasNanoseconds)
       val nanoSeconds = gracePeriod.getNanoseconds
-      assert(nanoSeconds == seconds.toNanos)
+      assert(nanoSeconds == app.taskKillGracePeriod.get.toNanos)
     }
 
     "tty defined in an app will render ContainerInfo correctly" in {
@@ -1978,6 +1981,14 @@ class TaskBuilderTest extends UnitTest {
       containerInfo.get.getLinuxInfo.getShmSize should be (64)
     }
 
+    "limits are propagated to the TaskInfo" in new FixtureWithInstanceAndMatchedOffer(resourceLimits = Some(ResourceLimits(cpus = Some(Double.PositiveInfinity), mem = Some(1024.0)))) {
+      val (taskInfo, _) = builder.build(offer, matches.resourceMatch, None, enforceRole = true)
+      val limits = taskInfo.getLimitsMap.asScala
+      limits.keySet shouldBe Set(Resource.CPUS, Resource.MEM)
+
+      limits(Resource.CPUS).getValue shouldBe Double.PositiveInfinity
+      limits(Resource.MEM).getValue shouldBe 1024.0
+    }
   }
 
   def buildIfMatches(

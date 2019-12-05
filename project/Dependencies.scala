@@ -130,7 +130,7 @@ object Dependency {
     val Logstash = "4.9"
     val MarathonApiConsole = "3.0.8-accept"
     val MarathonUI = "1.3.2"
-    val Mesos = "1.9.0"
+    val Mesos = "1.10.0"
     val Mustache = "0.9.0"
     val PlayJson = "2.8.1"
     val Raven = "8.0.3"
@@ -152,7 +152,7 @@ object Dependency {
     val JUnitBenchmarks = "0.7.2"
     val Mockito = "1.10.19"
     val ScalaTest = "3.0.8"
-    val UsiTestUtil = "0.1.35-450120f-SNAPSHOT"
+    val UsiTestUtil = "0.1.38"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")

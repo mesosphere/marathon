@@ -61,6 +61,7 @@ package object backend {
   val PlayJson = RootClass.newClass("play.api.libs.json.Json")
   val PlayJsValue = RootClass.newClass("play.api.libs.json.JsValue")
   val PlayJsString = RootClass.newClass("play.api.libs.json.JsString")
+  val PlayJsNumber = RootClass.newClass("play.api.libs.json.JsNumber")
   val PlayJsObject = RootClass.newClass("play.api.libs.json.JsObject")
   val PlayJsArray = RootClass.newClass("play.api.libs.json.JsArray")
   val PlayValidationError = RootClass.newClass("play.api.libs.json.JsonValidationError")

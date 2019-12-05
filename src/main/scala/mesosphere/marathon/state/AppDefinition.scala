@@ -88,7 +88,9 @@ case class AppDefinition(
 
     tty: Option[Boolean] = AppDefinition.DefaultTTY,
 
-    role: Role) extends RunSpec
+    role: Role,
+
+    resourceLimits: Option[ResourceLimits] = None) extends RunSpec
   with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
@@ -192,6 +194,9 @@ case class AppDefinition(
       .setKillSelection(killSelection.toProto)
       .setRole(role)
 
+    resourceLimits.foreach { limits =>
+      builder.setResourceLimits(ResourceLimits.resourceLimitsToProto(limits))
+    }
     check.foreach { c => builder.setCheck(c.toProto) }
 
     executorResources.foreach(r => {
