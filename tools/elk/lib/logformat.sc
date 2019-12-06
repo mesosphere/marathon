@@ -112,7 +112,7 @@ object DirectJournalFormat extends (String => Option[LogFormat]) {
 }
 
 
-object AwfulDatesFormat extends (String => Option[LogFormat]) {
+object TimezonesInDatacentersAreSadFormat extends (String => Option[LogFormat]) {
   // "2019-12-02 05:53:10.895189 -0500 EST [2019-12-02 05:53:10,885] INFO  Message"
   // "2019-12-02 05:51:04.810756 -0500 EST ... continued ..."
 
@@ -159,7 +159,7 @@ object LogFormat {
   def tryMatch(line: String): Option[LogFormat] = {
     DcosLogFormat(line)
       .orElse(DirectJournalFormat(line))
-      .orElse(AwfulDatesFormat(line))
+      .orElse(TimezonesInDatacentersAreSadFormat(line))
       .orElse(MomFormat(line))
   }
 }
