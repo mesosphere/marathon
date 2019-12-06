@@ -171,3 +171,9 @@ types:
           The role to use. If not specified, uses the role of the enclosing group, or the default role.
           At the moment, only the default role or the group role are allowed
       linuxInfo?: linux.LinuxInfo
+      legacySharedResources?:
+        type: boolean
+        description: |
+          Indicates that containers inside of the pod should be allowed to share resources. This is legacy behavior and
+          this flag exists to make it so pods deployed before sub-cgroup support in Mesos don't suddenly fail as a
+          result of relying on this behavior.
