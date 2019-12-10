@@ -28,13 +28,13 @@ object MigrationTo110000 {
 
   private[migration] val podMigratingFlow = Flow[(raml.Pod, Option[OffsetDateTime])].map {
     case (podRaml, version) =>
-      val migratedPod = podRaml.copy(legacySharedResources = Some(true))
+      val migratedPod = podRaml.copy(legacySharedCgroups = Some(true))
 
       migratedPod -> version
   }
 
   /**
-    * Loads all pod definitions from store and sets the boolean "legacySharedResources" to true
+    * Loads all pod definitions from store and sets the boolean "legacySharedCgroups" to true
     *
     * @param persistenceStore The ZooKeeper storage.
     * @return Successful future when done.

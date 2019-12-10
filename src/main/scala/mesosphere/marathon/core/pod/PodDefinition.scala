@@ -35,7 +35,7 @@ case class PodDefinition(
     override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
     role: Role,
-    legacySharedResources: Option[Boolean] = None
+    legacySharedCgroups: Option[Boolean] = None
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
   /**

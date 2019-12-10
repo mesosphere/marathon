@@ -21,17 +21,17 @@ class PodConversionTest extends UnitTest {
         ramlPod.linuxInfo should be(ramlLinuxInfo)
       }
 
-      "keeps legacySharedResources when it is set to true, but drops it when set to false" in {
+      "keeps legacySharedCgroups when it is set to true, but drops it when set to false" in {
         val ramlPod = pod.toRaml
-        ramlPod.copy(legacySharedResources = Some(false)).fromRaml.legacySharedResources shouldBe None
-        ramlPod.copy(legacySharedResources = Some(true)).fromRaml.legacySharedResources shouldBe Some(true)
+        ramlPod.copy(legacySharedCgroups = Some(false)).fromRaml.legacySharedCgroups shouldBe None
+        ramlPod.copy(legacySharedCgroups = Some(true)).fromRaml.legacySharedCgroups shouldBe Some(true)
       }
     }
 
     "converting internal model to raml" should {
-      "keeps legacySharedResources when it is set to true, but drops it when set to false" in {
-        pod.copy(legacySharedResources = Some(false)).toRaml.legacySharedResources shouldBe None
-        pod.copy(legacySharedResources = Some(true)).toRaml.legacySharedResources shouldBe Some(true)
+      "keeps legacySharedCgroups when it is set to true, but drops it when set to false" in {
+        pod.copy(legacySharedCgroups = Some(false)).toRaml.legacySharedCgroups shouldBe None
+        pod.copy(legacySharedCgroups = Some(true)).toRaml.legacySharedCgroups shouldBe Some(true)
       }
     }
     behave like convertToRamlAndBack(pod)

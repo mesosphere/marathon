@@ -66,7 +66,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       linuxInfo = linuxInfo.map(Raml.fromRaml(_)),
       unreachableStrategy = unreachableStrategy,
       killSelection = killSelection,
-      legacySharedResources = podd.legacySharedResources.filter(identity),
+      legacySharedCgroups = podd.legacySharedCgroups.filter(identity),
       role = role
     )
   }
@@ -109,7 +109,7 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
       executorResources = Some(podDef.executorResources.toRaml),
       role = Some(podDef.role),
       linuxInfo = Raml.toRaml(podDef.linuxInfo),
-      legacySharedResources = podDef.legacySharedResources.filter(identity)
+      legacySharedCgroups = podDef.legacySharedCgroups.filter(identity)
     )
   }
 
