@@ -158,7 +158,7 @@ def generateLogstashConfig(inputPath: Path, targetPath: Path, logFormat: LogForm
       "FILE" -> util.escapeString(logPath.toString),
       "SINCEDB" -> util.escapeString((targetPath / s"since-db-${host}.db").toString),
       "CODEC" -> logFormat.codec,
-      "EXTRA" -> s"""|"add_field" => {
+      "EXTRA" -> s"""|add_field => {
                      |  "file_host" => ${util.escapeString(host)}
                      |}
                      |""".stripMargin

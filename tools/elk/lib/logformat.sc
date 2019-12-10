@@ -111,6 +111,43 @@ object DirectJournalFormat extends (String => Option[LogFormat]) {
 
 }
 
+
+object TimezonesInDatacentersAreSadFormat extends (String => Option[LogFormat]) {
+  // "2019-12-02 05:53:10.895189 -0500 EST [2019-12-02 05:53:10,885] INFO  Message"
+  // "2019-12-02 05:51:04.810756 -0500 EST ... continued ..."
+
+  val regexPrefix = "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?( -[0-9]+( [A-Z]+)?)?".r
+  val regex = s"${regexPrefix} \\[".r
+
+  val example = "2019-12-02 05:53:10.895189 -0500 EST [2019-12-02 05:53:10,885] INFO  Message"
+
+  override def apply(line: String): Option[LogFormat] =
+    regex.findFirstMatchIn(line).map { m =>
+      LogFormat(
+        codec = codec,
+        example = example,
+        unframe = unframe,
+        host = Some(m.subgroups(0)))
+    }
+
+  val codec = s"""|multiline {
+                  |  pattern => "${regexPrefix} \\["
+                  |  negate => "true"
+                  |  what => "previous"
+                  |  max_lines => 1000
+                  |}""".stripMargin
+
+  val unframe = s"""|filter {
+                    |  grok {
+                    |    match => {
+                    |      "message" => "${regexPrefix} *%{GREEDYDATA:message}"
+                    |    }
+                    |    tag_on_failure => []
+                    |    overwrite => [ "message" ]
+                    |  }
+                    |}""".stripMargin
+}
+
 case class LogFormat(
   codec: String,
   example: String,
@@ -122,6 +159,7 @@ object LogFormat {
   def tryMatch(line: String): Option[LogFormat] = {
     DcosLogFormat(line)
       .orElse(DirectJournalFormat(line))
+      .orElse(TimezonesInDatacentersAreSadFormat(line))
       .orElse(MomFormat(line))
   }
 }
