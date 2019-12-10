@@ -15,7 +15,7 @@ import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.{HostNetwork, Network}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.plugin.validation.RunSpecValidator
-import mesosphere.marathon.raml.{App, Apps, ExecutorResources, ResourceLimitNumber, ResourceLimitUnlimited, Resources}
+import mesosphere.marathon.raml.{App, Apps, ExecutorResources, Resources}
 import mesosphere.marathon.state.Container.{Docker, MesosDocker}
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.stream.Implicits._
