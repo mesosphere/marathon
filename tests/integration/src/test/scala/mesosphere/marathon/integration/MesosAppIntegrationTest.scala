@@ -167,7 +167,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
         ports should have size (1)
         val facade = AppMockFacade(hosts.head, ports.head)
-        facade.get(s"/$containerDir/data/test").futureValue should be("hello\n")
+        facade.get(s"/$containerDir/data/test").futureValue.entityString should be("hello\n")
         facade
       }
 
