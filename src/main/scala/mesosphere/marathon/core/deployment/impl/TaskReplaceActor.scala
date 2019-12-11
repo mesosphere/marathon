@@ -65,7 +65,7 @@ class TaskReplaceActor(
   // All instances to kill queued up
   private[this] val toKill: mutable.Queue[Instance.Id] = oldActiveInstances.map(_.instanceId).to[mutable.Queue]
 
-  // The number of started instances. Defaults to the number of already started instances.
+  // The number of started or scheduled instances. Defaults to the number of already started instances.
   var instancesStarted: Int = instancesAlreadyStarted.size
 
   @SuppressWarnings(Array("all")) // async/await
