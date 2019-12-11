@@ -26,25 +26,25 @@ case class AppMockFacade(host: String, port: Int) extends StrictLogging {
     Done
   }
 
-  def ping()(implicit ec: ExecutionContext, system: ActorSystem, mat: Materializer, waitTime: FiniteDuration = 30.seconds): Future[RestResult[HttpResponse]] = async { await(get("/ping")) }
+  def ping(assertResult: Boolean = true)(implicit ec: ExecutionContext, system: ActorSystem, mat: Materializer, waitTime: FiniteDuration = 30.seconds): Future[RestResult[HttpResponse]] = async { await(get("/ping", assertResult)) }
 
-  def get(path: String)(implicit ec: ExecutionContext, system: ActorSystem, mat: Materializer, waitTime: FiniteDuration = 30.seconds): Future[RestResult[HttpResponse]] = async {
+  def get(path: String, assertResult: Boolean = true)(implicit ec: ExecutionContext, system: ActorSystem, mat: Materializer, waitTime: FiniteDuration = 30.seconds): Future[RestResult[HttpResponse]] = async {
     logger.info(s"Querying data from http://$host:$port$path")
 
     val url = Uri.from(scheme = "http", host = host, port = port, path = path)
 
     val result = await(AkkaHttpResponse.request(Get(url)))
-    assert(result.success, s"App data retrieval failed with status ${result.code}")
+    if (assertResult) assert(result.success, s"App data retrieval failed with status ${result.code}")
     result
   }
 
-  def post(path: String)(implicit ec: ExecutionContext, system: ActorSystem, mat: Materializer, waitTime: FiniteDuration = 30.seconds): Future[RestResult[HttpResponse]] = async {
+  def post(path: String, assertResult: Boolean = true)(implicit ec: ExecutionContext, system: ActorSystem, mat: Materializer, waitTime: FiniteDuration = 30.seconds): Future[RestResult[HttpResponse]] = async {
     logger.info(s"Querying data from http://$host:$port$path")
 
     val url = Uri.from(scheme = "http", host = host, port = port, path = path)
 
     val result = await(AkkaHttpResponse.request(Post(url)))
-    assert(result.success, s"App data retrieval failed with status ${result.code}")
+    if (assertResult) assert(result.success, s"App data retrieval failed with status ${result.code}")
     result
   }
 }

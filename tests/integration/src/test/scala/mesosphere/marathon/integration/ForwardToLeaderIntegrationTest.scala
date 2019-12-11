@@ -51,7 +51,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
       val forwardApp = forwarder.startForwarder(helloApp.port)
       forwardApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The forwarder service did not start in time"
 
-      val appFacade = new AppMockFacade("localhost", helloApp.port)
+      val appFacade = new AppMockFacade("localhost", forwardApp.port)
       val result = appFacade.ping().futureValue
       result should be(OK)
       result.entityString should be("pong\n")
@@ -138,7 +138,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
       val helloApp = forwarder.startHelloApp()
       helloApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The hello app did not start in time"
       val appFacade = new AppMockFacade("localhost", helloApp.port)
-      val result = appFacade.get("/notfound").futureValue
+      val result = appFacade.get("/notfound", assertResult = false).futureValue
       result should be(NotFound)
     }
 
@@ -148,7 +148,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
       val forwardApp = forwarder.startForwarder(helloApp.port)
       forwardApp.launched.futureValue
       val appFacade = new AppMockFacade("localhost", forwardApp.port)
-      val result = appFacade.get("/notfound").futureValue
+      val result = appFacade.get("/notfound", assertResult = false).futureValue
       result should be(NotFound)
     }
 
@@ -156,7 +156,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
       val helloApp = forwarder.startHelloApp()
       helloApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The hello app did not start in time"
       val appFacade = new AppMockFacade("localhost", helloApp.port)
-      val result = appFacade.get("/hello/crash").futureValue
+      val result = appFacade.get("/hello/crash", assertResult = false).futureValue
       result should be(ServerError)
       result.entityString should be("Error")
     }
@@ -167,7 +167,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
       val forwardApp = forwarder.startForwarder(helloApp.port)
       forwardApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The forwarder service did not start in time"
       val appFacade = new AppMockFacade("localhost", forwardApp.port)
-      val result = appFacade.get("/hello/crash").futureValue
+      val result = appFacade.get("/hello/crash", assertResult = false).futureValue
       result should be(ServerError)
       result.entityString should be("Error")
     }
@@ -176,7 +176,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
       val forwardApp = forwarder.startForwarder(PortAllocator.ephemeralPort())
       forwardApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The forwarder service did not start in time"
       val appFacade = new AppMockFacade("localhost", forwardApp.port)
-      val result = appFacade.ping().futureValue
+      val result = appFacade.ping(assertResult = false).futureValue
       result should be(BadGateway)
     }
 
@@ -187,7 +187,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
       forwardApp2.launched.futureValue
 
       val appFacade = new AppMockFacade("localhost", forwardApp1.port)
-      val result = appFacade.ping().futureValue
+      val result = appFacade.ping(assertResult = false).futureValue
       result should be(BadGateway)
     }
 
@@ -218,7 +218,7 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
       forwardApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The forwarder service did not start in time"
 
       val leaderResult = (new AppMockFacade("localhost", helloApp.port)).get("/v2/events").futureValue
-      val forwardResult = (new AppMockFacade("localhost", forwardApp.port)).get("/v2/events").futureValue
+      val forwardResult = (new AppMockFacade("localhost", forwardApp.port)).get("/v2/events", assertResult = false).futureValue
 
       leaderResult should be(OK)
       leaderResult.entityString should be("events")
