@@ -948,6 +948,18 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       port should be >= 10000
       port should be <= 20000
     }
+
+    // Regression test for COPS-5665
+    //    "update a failing app with temporarily failing app does not overscale" in {
+    //      Given("a running app")
+    //      val appv1 = {
+    //        val app = appProxy(appId(Some("overscale-app")), "v1", instances = 1, healthCheck = None)
+    //        marathon.createAppV2(app) should be(Created)
+    //        AppMockFacade(waitForTasks(AbsolutePathId(app.id), 1).head)
+    //      }
+    //
+    //      And("an update with a temporarily failing app")
+    //    }
   }
 
   private val ramlHealthCheck = AppHealthCheck(

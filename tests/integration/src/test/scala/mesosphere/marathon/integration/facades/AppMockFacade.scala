@@ -47,12 +47,6 @@ case class AppMockFacade(host: String, port: Int) extends StrictLogging {
     assert(result.success, s"App data retrieval failed with status ${result.code}")
     result
   }
-  //  def custom(uri: String, method: RequestBuilding.RequestBuilder = Get)(host: String, port: Int): Future[RestResult[HttpResponse]] = {
-  //    val url = s"$scheme://$host:$port$uri"
-  //    Retry(s"query: $url", Int.MaxValue, maxDuration = waitTime) {
-  //      request(method(url))
-  //    }
-  //  }
 }
 
 object AppMockFacade extends StrictLogging {
