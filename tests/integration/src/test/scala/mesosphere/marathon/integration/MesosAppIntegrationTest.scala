@@ -177,7 +177,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       Then("failed pod recovers")
       eventually {
         marathon.status(pod.id) should be(Stable)
-        runningPod.get(s"/$containerDir/data/test").futureValue should be("hello\nhello\n")
+        runningPod.get(s"/$containerDir/data/test").futureValue.entityString should be("hello\nhello\n")
       }
     }
 

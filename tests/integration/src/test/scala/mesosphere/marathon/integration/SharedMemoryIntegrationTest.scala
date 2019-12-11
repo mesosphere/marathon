@@ -192,8 +192,8 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
     Then("The SharedMemory size for both containers should match the one defined on the pod level")
 
-    shmSize1 should be(shmSize)
-    shmSize2 should be(shmSize)
+    shmSize1 should be(shmSize.toString)
+    shmSize2 should be(shmSize.toString)
 
     Then("The IPC ID should be the same for both containers")
 
