@@ -189,8 +189,8 @@ $(BUILD_TARGET_ROOT)/docker/Dockerfile: docker/Dockerfile
 	cp $< $@
 
 $(BUILD_TARGET_ROOT)/docker.tagged: $(BUILD_TARGET_ROOT)/docker/Dockerfile $(BUILD_TARGET_ROOT)/docker/share/marathon
-	cd $(BUILD_TARGET_ROOT)/docker && docker build --build-arg MESOS_PKG_VERSION=$(MESOS_PKG_VERSION) --tag mesosphere/marathon:v$(PKG_VER) . 2>&1 | tee "$(PWD)/$@.work"
-	mv $@.work $@
+	cd $(BUILD_TARGET_ROOT)/docker && docker build --build-arg MESOS_PKG_VERSION=$(MESOS_PKG_VERSION) --tag mesosphere/marathon:v$(PKG_VER) . 2>&1 | tee "docker.work"
+	mv $(BUILD_TARGET_ROOT)/docker/docker.work $@
 
 $(BUILD_TARGET_ROOT)/docker.pushed: $(BUILD_TARGET_ROOT)/docker.tagged
 	docker push mesosphere/marathon:v$(PKG_VER) 2>&1 | tee $@.work
