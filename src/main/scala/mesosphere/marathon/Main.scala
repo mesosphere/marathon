@@ -6,6 +6,7 @@ import akka.actor.ActorSystem
 import com.google.common.util.concurrent.{Service, ServiceManager}
 import com.google.inject.{Guice, Module}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.ZookeeperConf.ZkUrl
 import mesosphere.marathon.api.LeaderProxyFilterModule
 import org.eclipse.jetty.servlets.EventSourceServlet
 
@@ -69,7 +70,8 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     setConcurrentContextDefaults()
     Formats.configureJacksonSerializer()
 
-    logger.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref} with ${args.mkString(" ")}")
+    logger.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref}")
+    logger.info(Main.configToLogLines(cliConf))
 
     api.HttpBindings.apply(
       httpModule.servletContextHandler,
@@ -179,6 +181,23 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
 }
 
 object Main {
+  /**
+    * Serialize configuration in form that can be presented in a log
+    */
+  def configToLogLines(conf: AllConf): String = {
+    val s = new StringBuilder
+    s.append("Marathon configuration: (* suffix means value was explicitly supplied, and not defaulted)\n")
+    ScallopHelper.scallopOptions(conf).filter(_.isDefined).map { opt =>
+      val wasSupplied = if (opt.isSupplied) " (*)" else ""
+      val redactedValue = opt() match {
+        case z: ZkUrl => z.redactedConnectionString
+        case o => o.toString
+      }
+      s.append(s" - ${opt.name}${wasSupplied} = ${redactedValue}\n")
+    }
+    s.result()
+  }
+
   /**
     * Given environment variables starting with MARATHON_, convert to a series of arguments.
     *
