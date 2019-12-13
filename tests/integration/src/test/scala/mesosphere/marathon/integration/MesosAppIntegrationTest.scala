@@ -166,7 +166,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
         ports should have size (1)
         val facade = AppMockFacade(hosts.head, ports.head)
-        facade.get(s"/$containerDir/data/test").futureValue should be("hello\n")
+        facade.get(s"/$containerDir/data/test").futureValue.entityString should be("hello\n")
         facade
       }
 
@@ -176,7 +176,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       Then("failed pod recovers")
       eventually {
         marathon.status(pod.id) should be(Stable)
-        runningPod.get(s"/$containerDir/data/test").futureValue should be("hello\nhello\n")
+        runningPod.get(s"/$containerDir/data/test").futureValue.entityString should be("hello\nhello\n")
       }
     }
 

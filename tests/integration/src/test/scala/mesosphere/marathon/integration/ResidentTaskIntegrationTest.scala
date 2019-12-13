@@ -120,7 +120,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       tasks should have size (1)
       val failedTask = tasks.head
       val failedAppMock = AppMockFacade(failedTask)
-      failedAppMock.get(s"/$containerPath/data").futureValue should be("hello\n")
+      failedAppMock.get(s"/$containerPath/data").futureValue.entityString should be("hello\n")
       failedAppMock.suicide().futureValue
 
       Then("the failed task is restarted")
@@ -136,7 +136,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
       And("the data survived")
       eventually {
-        AppMockFacade(newTask).get(s"/$containerPath/data").futureValue should be("hello\nhello\n")
+        AppMockFacade(newTask).get(s"/$containerPath/data").futureValue.entityString should be("hello\nhello\n")
       }
     }
 

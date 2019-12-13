@@ -946,7 +946,6 @@ trait LocalMarathonTest extends MarathonTest with ScalaFutures
 
   val testBasePath: PathId = PathId("/")
   lazy val marathon = marathonServer.client
-  lazy val appMock: AppMockFacade = new AppMockFacade()
 
   /**
     * Return the current leading Marathon

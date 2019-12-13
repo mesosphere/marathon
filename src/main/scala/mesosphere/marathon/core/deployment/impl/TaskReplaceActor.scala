@@ -65,7 +65,7 @@ class TaskReplaceActor(
   // All instances to kill queued up
   private[this] val toKill: mutable.Queue[Instance.Id] = oldActiveInstances.map(_.instanceId).to[mutable.Queue]
 
-  // The number of started instances. Defaults to the number of already started instances.
+  // The number of started or scheduled instances. Defaults to the number of already started instances.
   var instancesStarted: Int = instancesAlreadyStarted.size
 
   @SuppressWarnings(Array("all")) // async/await
@@ -141,11 +141,11 @@ class TaskReplaceActor(
         logger.warn(s"Deployment $deploymentId: New $id is terminal ($condition) on agent $agentId during app $pathId restart: " +
           s"$condition reservation: ${instance.reservation}. Waiting for the task to restart...")
         instanceTerminated(id)
-        instancesStarted -= 1
       } // 2) Did someone tamper with new instance's goal? Don't do that - there should be only one "orchestrator" per service per time!
       else if (considerTerminal(condition) && goal.isTerminal()) {
         logger.error(s"Deployment $deploymentId: New $id is terminal ($condition) on agent $agentId during app $pathId restart " +
           s"(reservation: ${instance.reservation}) and the goal ($goal) is *NOT* Running! This means that someone is interfering with current deployment!")
+        instancesStarted -= 1
       } else {
         logger.info(s"Deployment $deploymentId: Unhandled InstanceChanged event for new instanceId=$id, condition=$condition " +
           s"(considered terminal=${considerTerminal(condition)}) and current goal=${instance.state.goal}")
@@ -208,12 +208,13 @@ class TaskReplaceActor(
     val instancesNotStartedYet = math.max(0, runSpec.instances - instancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
     if (instancesToStartNow > 0) {
-      logger.info(s"Deployment $deploymentId: Restarting app $pathId: queuing $instancesToStartNow new instances")
+      logger.info(s"Deployment $deploymentId: Restarting app $pathId: queuing $instancesToStartNow new instances since leftCapacity = $leftCapacity, " +
+        s"instancesStarted = $instancesStarted, instancesNotStartedYet = $instancesNotStartedYet and instancesToStartNow = $instancesToStartNow")
       instancesStarted += instancesToStartNow
       launchQueue.add(runSpec, instancesToStartNow)
     } else {
       logger.info(s"Deployment $deploymentId: Restarting app $pathId. No need to start new instances right now with leftCapacity = $leftCapacity, " +
-        s"instancesNotStartedYet = $instancesNotStartedYet and instancesToStartNow = $instancesToStartNow")
+        s"instancesStarted = $instancesStarted, instancesNotStartedYet = $instancesNotStartedYet and instancesToStartNow = $instancesToStartNow")
       Future.successful(Done)
     }
   }
