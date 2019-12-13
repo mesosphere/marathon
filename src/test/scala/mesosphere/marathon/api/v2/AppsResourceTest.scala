@@ -1842,7 +1842,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     }
 
-
     "ExternalVolume names with options are considered valid" in new Fixture() {
       Given("an app with external volume whose name serializes options")
       val volumeName = "name=teamvolumename,repl=1,secure=true,secret_key=volume-secret-key-team"

@@ -5,7 +5,7 @@ import java.util.UUID
 
 import akka.util.ByteString
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.facades.{ITDeployment, ITEnrichedTask, ITQueueItem}
+import mesosphere.marathon.integration.facades.{AppMockFacade, ITDeployment, ITEnrichedTask, ITQueueItem}
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{App, AppCommandCheck, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, UpgradeStrategy}
 import mesosphere.marathon.state.PathId._
@@ -652,7 +652,9 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       eventually {
         val tasks = marathon.tasks(appIdPath).value
         tasks.size shouldBe 2
-        tasks.foreach(et => appMock.ping(et.host, et.ports.get.head))
+        tasks.foreach {
+          et => AppMockFacade(et).ping()
+        }
       }
     }
 
@@ -946,6 +948,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       port should be >= 10000
       port should be <= 20000
     }
+
   }
 
   private val ramlHealthCheck = AppHealthCheck(
