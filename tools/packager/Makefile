@@ -11,6 +11,8 @@ PKG_COMMIT := $(shell cd ../../ && ./version commit --ref $(REF))
 PKG_VER := $(shell cd ../../ && ./version --ref $(PKG_COMMIT))
 
 MESOS_PKG_VERSION := $(shell cat ../../project/Dependencies.scala | grep MesosDebian | cut -f 2 -d '"')
+# Fun fact: PWD environment is not necessarily pwd when make is launched from ammonite.
+PWD := $(shell pwd)
 BUILD_TARGET_ROOT := target/$(PKG_VER)
 
 FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
