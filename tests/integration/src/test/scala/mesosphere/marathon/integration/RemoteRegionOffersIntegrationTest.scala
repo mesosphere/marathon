@@ -85,6 +85,46 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       task.region shouldBe Some(f.remoteRegion.value)
       task.zone shouldBe Some(f.remoteZone2.value)
     }
+
+    "Replace an unreachable instance in the same region" in {
+      val applicationId = appId("must-be-placed-in-remote-region-and-zone")
+      val strategy = raml.UnreachableEnabled(inactiveAfterSeconds = 0, expungeAfterSeconds = 4 * 60)
+      val app = appProxy(applicationId, "v1", instances = 4, healthCheck = None).copy(constraints = Set(
+        Constraints.regionField :: "GROUP_BY" :: "2" :: Nil
+      ), unreachableStrategy = Some(strategy))
+
+      Given("an app grouped by two regions")
+      val result = marathon.createAppV2(app)
+      result should be(Created)
+      waitForDeployment(result)
+      val tasks = marathon.tasks(applicationId).value
+      tasks should have size (4)
+      tasks.groupBy(_.region.value).keySet should be(Set("home_region", "remote_region"))
+      tasks.groupBy(_.region.value).get("home_region").value should have size (2)
+      tasks.groupBy(_.region.value).get("remote_region").value should have size (2)
+
+      When("one agent in the remote region becomes unreachable")
+      mesosCluster.agents.find(_.extraArgs.exists(_.contains("remote_region"))).value.stop()
+      waitForEventMatching("Task is declared lost") { event =>
+        event.info.get("taskStatus").contains("TASK_UNREACHABLE") &&
+          event.info.get("appId").contains(app.id)
+      }
+
+      Then("a replacement is launched in the remote region")
+      eventually {
+        val tasks = marathon.tasks(applicationId).value
+        tasks should have size (5)
+        tasks.groupBy(_.region.value).keySet should be(Set("home_region", "remote_region"))
+
+        // Actual
+        tasks.groupBy(_.region.value).get("home_region").value should have size (3)
+        tasks.groupBy(_.region.value).get("remote_region").value should have size (2)
+
+        // Expected
+        //tasks.groupBy(_.region.value).get("home_region").value should have size (2)
+        //tasks.groupBy(_.region.value).get("remote_region").value should have size (3)
+      }
+    }
   }
 
 }
