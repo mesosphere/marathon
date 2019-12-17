@@ -87,7 +87,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
     }
 
     "Replace an unreachable instance in the same region" in {
-      val applicationId = appId("must-be-placed-in-remote-region-and-zone")
+      val applicationId = appId("unreachable-instance-is-place-in-same-region")
       val strategy = raml.UnreachableEnabled(inactiveAfterSeconds = 0, expungeAfterSeconds = 4 * 60)
       val app = appProxy(applicationId, "v1", instances = 4, healthCheck = None).copy(constraints = Set(
         Constraints.regionField :: "GROUP_BY" :: "2" :: Nil
