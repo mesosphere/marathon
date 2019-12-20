@@ -79,6 +79,10 @@ object Dependencies {
     jerseyHk2 % "compile",
 
     scallop % "compile",
+    
+    usiCore % "compile",
+    usiModels % "compile",
+    usiMesosClient % "compile",
 
     // test
     Test.diffson % "test",
@@ -137,6 +141,7 @@ object Dependency {
     val ServletApi = "2.5"
     val Slf4j = "1.7.21"
     val UUIDGenerator = "3.1.4"
+    val USI = "0.1.28"
     val WixAccord = "0.7.1"
 
     // Version of Mesos to use when building docker image or testing packages
@@ -202,6 +207,10 @@ object Dependency {
   val servletApi = "javax.servlet" % "servlet-api" % V.ServletApi
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
+
+  val usiCore = "com.mesosphere.usi" % "core" % V.USI
+  val usiModels =  "com.mesosphere.usi" % "core-models" % V.USI
+  val usiMesosClient = "com.mesosphere.usi" % "mesos-client" % V.USI
 
   object Java9Compatibility {
 
