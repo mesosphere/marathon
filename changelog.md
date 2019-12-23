@@ -3,6 +3,8 @@
 ### Fixed issues
 
 - [MARATHON-8711](https://jira.mesosphere.com/browse/MARATHON-8711) - Fixed a rare issue where Marathon would fail to render a status for a resident scheduled pod instance with a goal `Stopped`
+* [MARATHON-8711](https://jira.mesosphere.com/browse/MARATHON-8711) - Fix pod status for `Scheduled` instances with a
+  goal `Stopped`, which was causing scaled-down, terminal resident instances to not show up anywhere in the list.
 
 ## Changes from 1.8.218 to 1.8.222
 
