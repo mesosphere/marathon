@@ -38,7 +38,7 @@ object InstanceUpdater extends StrictLogging {
 
     instance.copy(
       tasksMap = updatedTasks,
-      state = Instance.InstanceState(Some(instance.state), updatedTasks, now, instance.unreachableStrategy, instance.state.goal),
+      state = Instance.InstanceState.transitionTo(Some(instance.state), updatedTasks, now, instance.unreachableStrategy, instance.state.goal),
       reservation = updatedReservation)
   }
 

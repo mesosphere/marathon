@@ -195,7 +195,7 @@ object Fixture {
       new Instance(
         instanceId = task.taskId.instanceId,
         agentInfo = Some(AgentInfo(host = "host", agentId = Some("agent"), region = None, zone = None, attributes = Nil)),
-        state = Instance.InstanceState(None, tasksMap, task.status.startedAt.getOrElse(task.status.stagedAt), app.unreachableStrategy, Goal.Running),
+        state = Instance.InstanceState.transitionTo(None, tasksMap, task.status.startedAt.getOrElse(task.status.stagedAt), app.unreachableStrategy, Goal.Running),
         tasksMap = tasksMap,
         app,
         None, "*")
