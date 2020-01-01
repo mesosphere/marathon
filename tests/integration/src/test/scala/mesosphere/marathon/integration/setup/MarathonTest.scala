@@ -29,6 +29,7 @@ import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades._
 import mesosphere.marathon.raml.{App, AppCheck, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
 import mesosphere.marathon.state.{AbsolutePathId, PathId, PersistentVolume, VolumeMount}
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.util.{Lock, Retry, Timeout}
 import mesosphere.{AkkaUnitTestLike, WaitTestSupport}
 import org.apache.commons.io.FileUtils
@@ -368,7 +369,7 @@ trait MarathonAppFixtures {
 
   def appMockCmd(appId: PathId, versionId: String): String = {
     val projectDir = sys.props.getOrElse("user.dir", ".")
-    val appMock: File = new File(projectDir, "src/test/resources/python/app_mock.py")
+    val appMock: File = MarathonTestHelper.resourcePath("python/app_mock.py")
     if (!appMock.exists()) {
       throw new IllegalStateException("Failed to locate app_mock.py (" + appMock.getAbsolutePath + ")")
     }
