@@ -11,6 +11,8 @@ PKG_COMMIT := $(shell cd ../../ && ./version commit --ref $(REF))
 PKG_VER := $(shell cd ../../ && ./version --ref $(PKG_COMMIT))
 
 MESOS_PKG_VERSION := $(shell cat ../../project/Dependencies.scala | grep MesosDebian | cut -f 2 -d '"')
+# Fun fact: PWD environment is not necessarily pwd when make is launched from ammonite.
+PWD := $(shell pwd)
 BUILD_TARGET_ROOT := target/$(PKG_VER)
 
 FPM_OPTS := -s dir -n marathon -v $(PKG_VER) \
@@ -189,8 +191,9 @@ $(BUILD_TARGET_ROOT)/docker/Dockerfile: docker/Dockerfile
 	cp $< $@
 
 $(BUILD_TARGET_ROOT)/docker.tagged: $(BUILD_TARGET_ROOT)/docker/Dockerfile $(BUILD_TARGET_ROOT)/docker/share/marathon
-	cd $(BUILD_TARGET_ROOT)/docker && docker build --build-arg MESOS_PKG_VERSION=$(MESOS_PKG_VERSION) --tag mesosphere/marathon:v$(PKG_VER) . 2>&1 | tee "docker.work"
-	mv $(BUILD_TARGET_ROOT)/docker/docker.work $@
+	mkdir -p "$(dir $@)"
+	cd $(BUILD_TARGET_ROOT)/docker && docker build --build-arg MESOS_PKG_VERSION=$(MESOS_PKG_VERSION) --tag mesosphere/marathon:v$(PKG_VER) . 2>&1 | tee "$(PWD)/$@.work"
+	mv $@.work $@
 
 $(BUILD_TARGET_ROOT)/docker.pushed: $(BUILD_TARGET_ROOT)/docker.tagged
 	docker push mesosphere/marathon:v$(PKG_VER) 2>&1 | tee $@.work

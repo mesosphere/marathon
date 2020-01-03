@@ -2,9 +2,14 @@
 
 ### Fixed issues
 
-* [MARATHON-8711](https://jira.mesosphere.com/browse/MARATHON-8711) - Fix pod status for `Scheduled` instances with a goal `Stopped`
-* [MARATHON-8712](https://jira.mesosphere.com/browse/MARATHON-8712) - Fix an issue where the upgrade migration would fail if there were any persisted instances in state "scheduled" (IE ongoing deployment) during the upgrade attempt.
-* [MARATHON-8713](https://jira.mesosphere.com/browse/MARATHON-8713) - Fixed issue where defaultRole for groups with enforceRole: false did not match the documentation and defaulted to the group-role, regardless.
+* [MARATHON-8711](https://jira.mesosphere.com/browse/MARATHON-8711) - Fix pod status for `Scheduled` instances with a
+  goal `Stopped`, which was causing scaled-down, terminal resident instances to not show up anywhere in the list.
+* [MARATHON-8712](https://jira.mesosphere.com/browse/MARATHON-8712) - Fix an issue where the upgrade migration would
+  fail if there were any persisted instances in state "scheduled" (IE ongoing deployment) during the upgrade attempt.
+* [MARATHON-8713](https://jira.mesosphere.com/browse/MARATHON-8713) - Fixed issue where defaultRole for groups with
+  enforceRole: false did not match the documentation and defaulted to the group-role, regardless.
+* [MARATHON-8710](https://jira.mesosphere.com/browse/MARATHON-8710) - Marathon would not include failed and re-scheduled
+  instances in `/v2/pods/::status` calls. This has been fixed. Note: freshly scheduled instances won't be shown.
 
 ## Changes from 1.9.73 to 1.9.100
 

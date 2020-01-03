@@ -12,6 +12,7 @@ import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.{Raml, Resources, TaskConversion}
@@ -496,10 +497,53 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       f.groupManager.podVersion(any, any) returns Future.successful(None)
       f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq.empty)
 
-      When("requesting pod status")
-      f.baseData.podStatus(pod).futureValue
+      Then("requesting pod status should not throw an exception")
+      noException should be thrownBy {
+        f.baseData.podStatus(pod).futureValue
+      }
+    }
 
-      Then("no exception was thrown so status was successfully fetched")
+    "show a pod status with a task in TASK_UNKNOWN state" in {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      val f = new Fixture
+      Given("A pod instance")
+      val taskFailure = TaskFailureTestHelper.taskFailure
+      f.taskFailureRepository.get(pod.id) returns Future.successful(Some(taskFailure))
+      val instance1 = {
+        val instanceId = Instance.Id.forRunSpec(pod.id)
+        val tasks: Map[Task.Id, Task] = pod.containers.map { ct =>
+          val taskId = Task.Id(instanceId, Some(ct))
+          taskId -> Task(
+            taskId = taskId,
+            runSpecVersion = pod.version,
+            status = Task.Status.apply(
+              stagedAt = f.clock.now(),
+              startedAt = Some(f.clock.now()),
+              mesosStatus = Some(MesosTaskStatusTestHelper.unknown(taskId)),
+              condition = Condition.Unknown,
+              networkInfo = NetworkInfoPlaceholder()))
+        }(collection.breakOut)
+
+        Instance(
+          instanceId = instanceId,
+          agentInfo = Some(Instance.AgentInfo("", None, None, None, Nil)),
+          state = InstanceState(None, tasks, f.clock.now(), UnreachableStrategy.default(), Goal.Running),
+          tasksMap = tasks,
+          runSpec = pod,
+          None, "*"
+        )
+      }
+      f.instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
+
+      And("an instance in the repo")
+      f.groupManager.podVersion(any, any) returns Future.successful(Some(pod))
+      f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq.empty)
+
+      When("Getting pod status with last task failures")
+      val podStatus = f.baseData.podStatus(pod).futureValue
+
+      Then("we get the failure in the app info")
+      podStatus.instances should have size (pod.instances)
     }
 
     "requesting Pod lastTaskFailure when one exists" in {
