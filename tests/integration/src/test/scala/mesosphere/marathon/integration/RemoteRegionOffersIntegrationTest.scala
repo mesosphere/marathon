@@ -121,6 +121,20 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
         tasks.groupBy(_.region.value).get("home_region").value should have size (2)
         tasks.groupBy(_.region.value).get("remote_region").value should have size (2)
       }
+
+      When("the agent comes back")
+      agent.start()
+
+      Then("eventually Marathon kills the previously unreachable tasks")
+
+      eventually {
+        inside(mesosFacade.frameworks().value.frameworks) {
+          case Seq(marathonFramework) =>
+            val states = marathonFramework.tasks.map(_.state).flatten.toSet
+            logger.info(s"State: ${states}")
+            states shouldBe Set("TASK_KILLED", "TASK_RUNNING")
+        }
+      }
     }
   }
 
