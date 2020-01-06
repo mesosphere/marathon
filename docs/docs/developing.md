@@ -67,7 +67,7 @@ See [the documentation](https://mesosphere.github.io/marathon/docs/developing-vm
 
 Build it:
 
-    cd tools/packages; make tag-docker
+    cd tools/packager; make tag-docker
 
 The image will be tagged locally according to the version script output `./version`.
 
