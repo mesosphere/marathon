@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package test
 
+import java.io.{File, FileNotFoundException}
 import java.time.Clock
 
 import akka.stream.Materializer
@@ -532,4 +533,14 @@ object MarathonTestHelper {
     }
   }
 
+  def resourcePath(resourceName: String): File = {
+    val classLoader = getClass.getClassLoader
+
+    Option(classLoader.getResource(resourceName)) match {
+      case Some(fileName) =>
+        new File(fileName.getFile)
+      case None =>
+        throw new FileNotFoundException(s"Could not find resource ${resourceName}")
+    }
+  }
 }

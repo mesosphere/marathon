@@ -3,7 +3,6 @@ package raml
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.readiness.{ReadinessCheck => CoreReadinessCheck}
-import mesosphere.marathon.state.ReadinessCheckSerializer
 
 import scala.concurrent.duration._
 
