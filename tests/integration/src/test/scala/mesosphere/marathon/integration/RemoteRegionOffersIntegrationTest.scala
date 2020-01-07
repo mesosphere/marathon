@@ -85,6 +85,57 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       task.region shouldBe Some(f.remoteRegion.value)
       task.zone shouldBe Some(f.remoteZone2.value)
     }
+
+    "Replace an unreachable instance in the same region" in {
+      val applicationId = appId("unreachable-instance-is-place-in-same-region")
+      val strategy = raml.UnreachableEnabled(inactiveAfterSeconds = 0, expungeAfterSeconds = 0)
+      val app = appProxy(applicationId, "v1", instances = 4, healthCheck = None).copy(constraints = Set(
+        Constraints.regionField :: "GROUP_BY" :: "2" :: Nil
+      ), unreachableStrategy = Some(strategy))
+
+      Given("an app grouped by two regions")
+      val result = marathon.createAppV2(app)
+      result should be(Created)
+      waitForDeployment(result)
+      val tasks = marathon.tasks(applicationId).value
+      tasks should have size (4)
+      val originalAgentIds = tasks.map(_.slaveId).flatten.toSet
+      tasks.groupBy(_.region.value).keySet should be(Set("home_region", "remote_region"))
+      tasks.groupBy(_.region.value).get("home_region").value should have size (2)
+      tasks.groupBy(_.region.value).get("remote_region").value should have size (2)
+
+      When("one agent in the remote region becomes unreachable")
+      val Some(agent) = mesosCluster.agents.find(_.extraArgs.exists(_.contains("remote_region")))
+
+      agent.stop()
+      eventually {
+        marathon.tasks(applicationId).value.flatMap(_.slaveId).toSet shouldNot be(originalAgentIds)
+      }
+
+      Then("a replacement is launched in the remote region, and the constraints are still honored")
+      eventually {
+        val tasks = marathon.tasks(applicationId).value
+        tasks should have size (4)
+        tasks.groupBy(_.region.value).keySet should be(Set("home_region", "remote_region"))
+
+        tasks.groupBy(_.region.value).get("home_region").value should have size (2)
+        tasks.groupBy(_.region.value).get("remote_region").value should have size (2)
+      }
+
+      When("the agent comes back")
+      agent.start()
+
+      Then("eventually Marathon kills the previously unreachable tasks")
+
+      eventually {
+        inside(mesos.frameworks().value.frameworks) {
+          case Seq(marathonFramework) =>
+            val states = marathonFramework.tasks.map(_.state).flatten.toSet
+            logger.info(s"State: ${states}")
+            states shouldBe Set("TASK_KILLED", "TASK_RUNNING")
+        }
+      }
+    }
   }
 
 }

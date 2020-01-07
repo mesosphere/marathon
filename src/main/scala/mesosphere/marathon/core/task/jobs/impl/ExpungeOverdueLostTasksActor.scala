@@ -12,6 +12,8 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.SpecInstances
 import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, UnreachableEnabled}
 
+import scala.concurrent.duration.Duration
+
 /**
   * Business logic of overdue tasks actor.
   *
@@ -41,7 +43,8 @@ trait ExpungeOverdueLostTasksActorLogic extends StrictLogging {
     case UnreachableDisabled =>
       false
     case unreachableEnabled: UnreachableEnabled =>
-      instance.isUnreachableInactive &&
+      unreachableEnabled.expungeAfter == Duration.Zero ||
+        instance.isUnreachableInactive &&
         instance.tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, unreachableEnabled.expungeAfter))
   }
 }
