@@ -169,62 +169,7 @@ options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
 ## Developing Marathon
 
-See [the documentation](https://mesosphere.github.io/marathon/docs/developing-vm.html) on how to run Marathon locally inside a virtual machine.
-
-### Running in Development Mode on Docker
-
-* Note: Currently the Docker container fails due to strange behavior from the latest Mesos version.  There will be an error about `work_dir` that is still unresolved, much like this:
-
-        Failed to start a local cluster while loading agent flags from the environment: Flag 'work_dir' is required, but it was not provided
-
-Build it:
-
-    cd tools/packages; make tag-docker
-
-Note the version, e.g: `[info] Built image mesosphere/marathon:1.5.0-SNAPSHOT-461-gf1cc63e` => `1.5.0-SNAPSHOT-461-gf1cc63e`
-
-
-A running zookeeper instance is required, if there isn't one already available, there is a docker image available for this:
-
-    docker run --name some-zookeeper --restart always -d zookeeper
-
-Run it with zookeeper container:
-
-    docker run --link some-zookeeper:zookeeper marathon-head --master local --zk zk://zookeeper:2181/marathon
-
-Or run it without zookeeper container:
-
-    docker run marathon:{version} --master local --zk zk://localhost:2181/marathon
-
-If you want to inspect the contents of the Docker container:
-
-    docker run -it --entrypoint=/bin/bash marathon:{version} -s
-
-### Testing
-
-The tests and integration tests a run with:
-
-    sbt test integration/test
-
-You have to set the Mesos test IP and disable Docker tests on Mac:
-
-    MESOSTEST_IP_ADDRESS="127.0.0.1" \
-    RUN_DOCKER_INTEGRATION_TESTS=false \
-    RUN_MESOS_INTEGRATION_TESTS=false \
-    sbt test integration/test
-
-The Docker integration tests are not supported on Mac. The tests start and stop
-local Mesos clusters and Marathon instances. Sometimes processes leak after
-failed test runs. You can check them with `ps aux | grep "python|java|mesos"`
-and kill all `app_mock.py` processes and Mesos and Marathon instances unless
-they do not belong to a production environment of course.
-
-Also see the [CI instructions](ci/README.md) on running specfic build pipeline
-targets.
-
-### Marathon UI
-
-To develop on the web UI look into the instructions of the [Marathon UI](https://github.com/mesosphere/marathon-ui) repository.
+See [developing Marathon](./docs/docs/developing.md) in the docs.
 
 ## Marathon Clients
 
