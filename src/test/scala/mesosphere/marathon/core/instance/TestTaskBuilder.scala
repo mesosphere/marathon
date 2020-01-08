@@ -196,11 +196,11 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
     networkInfos: scala.collection.Seq[mesos.Protos.NetworkInfo] = Nil): TestTaskBuilder =
     copy(task = task.map(_.withNetworkInfo(hostName, hostPorts, networkInfos)))
 
-  def asHealthyTask(): TestTaskBuilder = {
+  def asHealthyTask(healthy: Boolean = true): TestTaskBuilder = {
     import mesosphere.marathon.test.MarathonTestHelper.Implicits._
     this.copy(task = task match {
       case Some(t: Task) => Some(t.withStatus(status =>
-        status.copy(mesosStatus = status.mesosStatus.map(_.toBuilder.setHealthy(true).build()))))
+        status.copy(mesosStatus = status.mesosStatus.map(_.toBuilder.setHealthy(healthy).build()))))
       case None => None
     })
   }
