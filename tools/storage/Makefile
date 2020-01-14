@@ -9,9 +9,6 @@ BUILD_TARGET_ROOT := target/$(PKG_VER)
 
 # General
 
-test:
-	echo ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
-	echo target/artifacts/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
 ifeq ($(REF), HEAD)
 ../../target/universal/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz:
 	cd ../../ && sbt universal:packageZipTarball
@@ -64,10 +61,18 @@ $(BUILD_TARGET_ROOT)/Dockerfile: src/Dockerfile
 	mkdir -p $(@D)
 	cp $< $@
 
+.PHONY: clean
+clean:
+	rm -rf target
+
+.PHONY: artifact
 artifact: target/artifacts/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
 
+.PHONY: compile
 compile: $(BUILD_TARGET_ROOT)/verified
 
+.PHONY: docker
 docker: $(BUILD_TARGET_ROOT)/docker-built
 
+.PHONY: push-docker
 push-docker: $(BUILD_TARGET_ROOT)/docker-pushed
