@@ -1,6 +1,6 @@
 #!/usr/bin/env amm
 
-import $ivy.`com.typesafe.play::play-json:2.6.0`
+import $ivy.`com.typesafe.play::play-json:2.8.1`
 import $ivy.`org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r`
 
 import ammonite.ops._

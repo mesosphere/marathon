@@ -109,7 +109,6 @@ def zipLogs(logFileName: String = "ci.log", sandboxFileName: String = "sandboxes
  * @return Artifact description if it was uploaded.
  */
 def uploadTarballPackagesToS3(version: SemVer, buildLocation: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
-  import scala.collection.breakOut
 
   // Upload docs
   PACKAGE_DOCS_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
