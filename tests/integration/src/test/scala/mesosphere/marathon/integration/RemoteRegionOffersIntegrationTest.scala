@@ -108,9 +108,12 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       val Some(agent) = mesosCluster.agents.find(_.extraArgs.exists(_.contains("remote_region")))
 
       agent.stop()
-      eventually {
-        marathon.tasks(applicationId).value.flatMap(_.slaveId).toSet shouldNot be(originalAgentIds)
+      val agentIdsAfterUnreachable = eventually {
+        val marathonTaskAgentIds = marathon.tasks(applicationId).value.flatMap(_.slaveId).toSet
+        marathonTaskAgentIds shouldNot be(originalAgentIds)
+        marathonTaskAgentIds
       }
+      val Seq(stoppedAgentId) = (originalAgentIds -- agentIdsAfterUnreachable).toSeq
 
       Then("a replacement is launched in the remote region, and the constraints are still honored")
       eventually {
@@ -124,15 +127,22 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
 
       When("the agent comes back")
       agent.start()
+      eventually {
+        inside(mesosFacade.agents().value.slaves.find(_.id == stoppedAgentId)) {
+          case Some(agent) =>
+            agent.active shouldBe true
+        }
+      }
 
       Then("eventually Marathon kills the previously unreachable tasks")
 
       eventually {
         inside(mesosFacade.frameworks().value.frameworks) {
           case Seq(marathonFramework) =>
-            val states = marathonFramework.tasks.map(_.state).flatten.toSet
-            logger.info(s"State: ${states}")
-            states shouldBe Set("TASK_KILLED", "TASK_RUNNING")
+            // Mesos may immediately GC the task upon killing it; so if there are no tasks for the agent, and said agent is active, this is also acceptable.
+            marathonFramework.tasks.filter(_.slave_id == stoppedAgentId).foreach { task =>
+              task.state shouldBe ("TASK_KILLED")
+            }
         }
       }
     }

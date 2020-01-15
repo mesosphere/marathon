@@ -150,7 +150,7 @@ object Dependency {
     val Mockito = "1.10.19"
     val ScalaCheck = "1.13.5"
     val ScalaTest = "3.0.4"
-    val UsiTestUtil = "0.1.12"
+    val UsiTestUtil = "0.1.29-63fe7d2-SNAPSHOT" // TODO - merge https://github.com/mesosphere/usi/pull/134
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")

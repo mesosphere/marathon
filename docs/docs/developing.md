@@ -13,6 +13,20 @@ The following project configuration should be enabled when developing Marathon:
 
 ### Common issues
 
+#### Local maven repository is not seen
+
+If you are publishing USI dependencies locally using `./gradlew publishMavenJavaPublicationToMavenLocal` (please catch your breath if reading out loud), and get the error that the dependency is not found, you need to configure sbt to globally look for your local maven repo. Usually, this is done by adding the following file:
+
+`~/.sbt/1.0/local-maven.sbt`
+
+```scala
+resolvers := {
+  val localMaven = "Local Maven Repository" at "file://"+Path.userHome.absolutePath+"/.m2/repository"
+  localMaven +: resolvers.value
+}
+```
+
+
 #### Compiler issue "Protos is already defined as class Protos"
 
 If you see the error:
