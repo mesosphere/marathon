@@ -7,6 +7,7 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.mesos.Constraints
 import org.scalatest.Inside
+import org.scalatest.Inspectors.forAll
 
 class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
@@ -31,6 +32,18 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       Some(FaultDomain(region = f.homeRegion, zone = f.homeZone)))
 
   )
+
+  // This hook is also defined in TaskUnreachableIntegrationTest. We should probably move it into MesosClusterTest.
+  override def afterAll(): Unit = {
+    // We need to start all the agents for the teardown to be able to kill all the (UNREACHABLE) executors/tasks
+    mesosCluster.agents.foreach(_.start())
+    eventually {
+      val state = mesosFacade.state.value
+      state.agents.size shouldBe mesosCluster.agents.size
+      forAll(state.frameworks) { _.unreachable_tasks should be('empty) }
+    }
+    super.afterAll()
+  }
 
   def appId(suffix: String): AbsolutePathId = testBasePath / s"app-${suffix}"
 
@@ -126,14 +139,6 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
 
         tasks.groupBy(_.region.value).get("home_region").value should have size (2)
         tasks.groupBy(_.region.value).get("remote_region").value should have size (2)
-      }
-      // restart the agent
-      agent.start()
-      withClue("In order for teardown to complete successfully, all agents must be active") {
-        eventually {
-          val inactiveAgents = mesosFacade.agents().value.slaves.filterNot(_.active)
-          inactiveAgents shouldBe (Nil)
-        }
       }
     }
   }
