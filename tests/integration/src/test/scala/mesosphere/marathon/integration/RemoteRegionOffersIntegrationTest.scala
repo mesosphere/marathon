@@ -7,7 +7,7 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.mesos.Constraints
 import org.scalatest.Inside
-import org.scalatest.Inspectors.forAll
+//import org.scalatest.Inspectors.forAll
 
 class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
