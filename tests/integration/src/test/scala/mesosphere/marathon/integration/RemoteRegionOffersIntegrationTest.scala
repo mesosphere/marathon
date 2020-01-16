@@ -87,7 +87,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
     }
 
     "Replace an unreachable instance in the same region" in {
-      val applicationId = appId("unreachable-instance-is-place-in-same-region")
+      val applicationId = appId("unreachable-instance-is-placed-in-same-region")
       val strategy = raml.UnreachableEnabled(inactiveAfterSeconds = 0, expungeAfterSeconds = 0)
       val app = appProxy(applicationId, "v1", instances = 4, healthCheck = None).copy(constraints = Set(
         Constraints.regionField :: "GROUP_BY" :: "2" :: Nil
@@ -97,23 +97,26 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       val result = marathon.createAppV2(app)
       result should be(Created)
       waitForDeployment(result)
-      val tasks = marathon.tasks(applicationId).value
-      tasks should have size (4)
+      val tasks = eventually {
+        val tasks = marathon.tasks(applicationId).value
+        tasks.filter(_.slaveId.nonEmpty) should have size (4)
+        tasks
+      }
       val originalAgentIds = tasks.map(_.slaveId).flatten.toSet
       tasks.groupBy(_.region.value).keySet should be(Set("home_region", "remote_region"))
       tasks.groupBy(_.region.value).get("home_region").value should have size (2)
       tasks.groupBy(_.region.value).get("remote_region").value should have size (2)
 
-      When("one agent in the remote region becomes unreachable")
-      val Some(agent) = mesosCluster.agents.find(_.extraArgs.exists(_.contains("remote_region")))
+      When("an agent in the remote region with running tasks becomes unreachable")
+      val Some(agent) = mesosCluster.agents.filter { agent =>
+        (originalAgentIds contains mesosCluster.agentIdFor(agent)) &&
+          agent.extraArgs.exists(_.contains("remote_region"))
+      }.headOption
 
       agent.stop()
-      val agentIdsAfterUnreachable = eventually {
-        val marathonTaskAgentIds = marathon.tasks(applicationId).value.flatMap(_.slaveId).toSet
-        marathonTaskAgentIds shouldNot be(originalAgentIds)
-        marathonTaskAgentIds
+      eventually {
+        marathon.tasks(applicationId).value.flatMap(_.slaveId).toSet shouldNot be(originalAgentIds)
       }
-      val Seq(stoppedAgentId) = (originalAgentIds -- agentIdsAfterUnreachable).toSeq
 
       Then("a replacement is launched in the remote region, and the constraints are still honored")
       eventually {
@@ -124,28 +127,14 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
         tasks.groupBy(_.region.value).get("home_region").value should have size (2)
         tasks.groupBy(_.region.value).get("remote_region").value should have size (2)
       }
-
-      When("the agent comes back")
+      // restart the agent
       agent.start()
-      eventually {
-        inside(mesosFacade.agents().value.slaves.find(_.id == stoppedAgentId)) {
-          case Some(agent) =>
-            agent.active shouldBe true
-        }
-      }
-
-      Then("eventually Marathon kills the previously unreachable tasks")
-
-      eventually {
-        inside(mesosFacade.frameworks().value.frameworks) {
-          case Seq(marathonFramework) =>
-            // Mesos may immediately GC the task upon killing it; so if there are no tasks for the agent, and said agent is active, this is also acceptable.
-            marathonFramework.tasks.filter(_.slave_id == stoppedAgentId).foreach { task =>
-              task.state shouldBe ("TASK_KILLED")
-            }
+      withClue("In order for teardown to complete successfully, all agents must be active") {
+        eventually {
+          val inactiveAgents = mesosFacade.agents().value.slaves.filterNot(_.active)
+          inactiveAgents shouldBe (Nil)
         }
       }
     }
   }
-
 }
