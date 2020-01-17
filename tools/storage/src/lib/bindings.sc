@@ -23,7 +23,7 @@ import mesosphere.marathon.core.base.{JvmExitsCrashStrategy, LifecycleState}
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.{PathId, RootGroup}
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage._
 import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
 import mesosphere.marathon.storage.repository._
@@ -80,7 +80,7 @@ class MarathonStorage(args: List[String] = helpers.InternalHelpers.argsFromEnv) 
     case zk: CuratorZk => zk
   }
   implicit lazy val client = storage.client
-  implicit lazy val underlyingModule = StorageModule(DummyMetrics, storage, RootGroup.NewGroupStrategy.Fail, "*")
+  implicit lazy val underlyingModule = StorageModule(DummyMetrics, storage, "mesos-bridge-name")
   lazy val store = {
     val s: ZkPersistenceStore = underlyingModule.persistenceStore match {
       case persistenceStore: ZkPersistenceStore => persistenceStore

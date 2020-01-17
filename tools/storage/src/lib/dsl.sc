@@ -9,7 +9,7 @@ import akka.util.Timeout
 import mesosphere.marathon.PrePostDriverCallback
 import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.AbsolutePathId
+import mesosphere.marathon.state.PathId
 import mesosphere.marathon.storage.migration.Migration
 import mesosphere.marathon.storage.repository._
 
@@ -24,10 +24,10 @@ import version.StorageToolVersion
 class DSL(unverifiedModule: => StorageToolModule)(implicit val mat: Materializer, timeout: Timeout) {
   import helpers.Helpers._
 
-  case class AppId(path: AbsolutePathId) {
+  case class AppId(path: PathId) {
     override def toString(): String = s"AppId(${path})"
   }
-  case class PodId(path: AbsolutePathId) {
+  case class PodId(path: PathId) {
     override def toString(): String = s"PodId(${path})"
   }
   case class DeploymentId(id: String)
@@ -62,17 +62,17 @@ class DSL(unverifiedModule: => StorageToolModule)(implicit val mat: Materializer
     def apply[T](values: Seq[T])(implicit formatter: StringFormatter[T]) = new QueryResult[T](values)
   }
 
-  implicit def stringToAppId(s: String): AppId = AppId(AbsolutePathId(s))
-  implicit def stringToPodId(s: String): PodId = PodId(AbsolutePathId(s))
-  implicit def stringToPathId(s: String): AbsolutePathId = AbsolutePathId(s)
+  implicit def stringToAppId(s: String): AppId = AppId(PathId(s))
+  implicit def stringToPodId(s: String): PodId = PodId(PathId(s))
+  implicit def stringToPathId(s: String): PathId = PathId(s)
 
-  implicit def appIdToPath(appId: AppId): AbsolutePathId = appId.path
-  implicit def podIdToPath(podId: PodId): AbsolutePathId = podId.path
+  implicit def appIdToPath(appId: AppId): PathId = appId.path
+  implicit def podIdToPath(podId: PodId): PathId = podId.path
 
   def listApps(containing: String = null, limit: Int = Int.MaxValue)(
     implicit module: StorageToolModule, timeout: Timeout): QueryResult[AppId] = {
     val predicates = List(
-      Option(containing).map { c => { pathId: AbsolutePathId => pathId.toString.contains(c) } }
+      Option(containing).map { c => { pathId: PathId => pathId.toString.contains(c) } }
     ).flatten
     // TODO - purge related deployments?
 
@@ -81,7 +81,7 @@ class DSL(unverifiedModule: => StorageToolModule)(implicit val mat: Materializer
         .filter { app =>
           predicates.forall { p => p(app) }
         }
-        .sortBy(_.toString)
+        .sorted
         .take(limit)
         .map(AppId(_))
     }
@@ -90,7 +90,7 @@ class DSL(unverifiedModule: => StorageToolModule)(implicit val mat: Materializer
   def listPods(containing: String = null, limit: Int = Int.MaxValue)(
     implicit module: StorageToolModule, timeout: Timeout): QueryResult[PodId] = {
     val predicates = List(
-      Option(containing).map { c => { pathId: AbsolutePathId => pathId.toString.contains(c) } }
+      Option(containing).map { c => { pathId: PathId => pathId.toString.contains(c) } }
     ).flatten
     // TODO - purge related deployments?
 
@@ -99,7 +99,7 @@ class DSL(unverifiedModule: => StorageToolModule)(implicit val mat: Materializer
         .filter { pod =>
           predicates.forall { p => p(pod) }
         }
-        .sortBy(_.toString)
+        .sorted
         .take(limit)
         .map(PodId(_))
     }
@@ -286,7 +286,7 @@ Commands:
 
       listApps(containing = "store", limit = 5)
 
-  listInstances(forApp: AbsolutePathId, containing: String, limit: Int)
+  listInstances(forApp: PathId, containing: String, limit: Int)
 
     description: List instances
     params:
