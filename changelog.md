@@ -10,6 +10,9 @@
   enforceRole: false did not match the documentation and defaulted to the group-role, regardless.
 * [MARATHON-8710](https://jira.mesosphere.com/browse/MARATHON-8710) - Marathon would not include failed and re-scheduled
   instances in `/v2/pods/::status` calls. This has been fixed. Note: freshly scheduled instances won't be shown.
+* [MARATHON-8719](https://jira.mesosphere.com/browse/MARATHON-8719) - With UnreachableStrategy, setting
+  expungeAfterSeconds and inactiveAfterSeconds to the same value will cause the instance to be expunged immediately;
+  this helps with `GROUP_BY` or `UNIQUE` constraints.
 
 ## Changes from 1.9.73 to 1.9.100
 
