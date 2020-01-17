@@ -93,14 +93,27 @@ class TasksResource @Inject() (
   @GET
   @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   @SuppressWarnings(Array("all")) /* async/await */
-  def indexTxt(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
+  def indexTxt(
+    @DefaultValue(MarathonCompatibility.Latest)@QueryParam("compatibilityMode") compatibilityMode: String = MarathonCompatibility.Latest,
+    @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       val rootGroup = groupManager.rootGroup()
-      val appsToEndpointString = EndpointsHelper.appsToEndpointString(
-        ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut))
-      )
+      val appsToEndpointString = {
+        compatibilityMode match {
+          case MarathonCompatibility.V1_4 =>
+            EndpointsHelper.appsToEndpointStringCompatibleWith14(
+              ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut))
+            )
+
+          case _ =>
+            //)(collection.breakOut))
+            EndpointsHelper.appsToEndpointString(
+              ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut)))
+        }
+
+      }
       ok(appsToEndpointString)
     }
   }
