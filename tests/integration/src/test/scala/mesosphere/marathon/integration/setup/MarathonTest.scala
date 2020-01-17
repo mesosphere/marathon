@@ -215,7 +215,11 @@ case class LocalMarathon(
 
     // Get JVM arguments, such as -javaagent:some.jar
     val runtimeMxBean = ManagementFactory.getRuntimeMXBean
-    val runtimeArguments = JavaConverters.collectionAsScalaIterable(runtimeMxBean.getInputArguments).toSeq
+    val runtimeArguments = JavaConverters.collectionAsScalaIterable(runtimeMxBean.getInputArguments)
+      .filterNot(_.contains("debugger-agent"))
+      .filterNot(_.startsWith("-javaagent"))
+      .filterNot(_.startsWith("-agentlib"))
+      .toSeq
 
     val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2") ++
       runtimeArguments ++ akkaJvmArgs ++
