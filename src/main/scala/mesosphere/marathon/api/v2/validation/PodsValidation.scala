@@ -150,6 +150,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     validator[PodContainer] { container =>
       container.name is notEqualTo(Task.Id.Names.anonymousContainer)
       container.resources is resourceValidator
+      container.resourceLimits is optional(AppValidation.resourceLimitsValidator(container.resources.cpus, container.resources.mem))
       container.endpoints is every(endpointValidator(pod.networks))
       container.image is optional(imageValidator(enabledFeatures, pod.secrets))
       container.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
@@ -157,6 +158,11 @@ trait PodsValidation extends GeneralPurposeCombinators {
       container.volumeMounts is every(volumeMountValidator(pod.volumes))
       container.artifacts is every(artifactValidator)
       container.linuxInfo is optional(state.LinuxInfo.validLinuxInfoForContainerRaml)
+      if (pod.legacySharedCgroups.exists(identity)) {
+        container.resourceLimits is isTrue("resourceLimits cannot be defined if legacySharedCgroups is enabled") { limits =>
+          limits.isEmpty
+        }
+      }
     }
 
   private def volumeValidator(containers: Seq[PodContainer]): Validator[PodVolume] =
@@ -212,10 +218,10 @@ trait PodsValidation extends GeneralPurposeCombinators {
     (podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is empty or valid(ResourceRole.validAcceptedResourceRoles("pod", podPersistentVolumes(pod).nonEmpty)))
   }
 
-  def podValidator(config: MarathonConf, mesosMasterVersion: Option[SemanticVersion] = Some(SemanticVersion.zero), roleSettings: RoleSettings): Validator[Pod] =
-    podValidator(config.availableFeatures, mesosMasterVersion.getOrElse(SemanticVersion.zero), config.defaultNetworkName.toOption, roleSettings)
+  def podValidator(config: MarathonConf, mesosMasterVersion: Option[SemanticVersion] = Some(SemanticVersion.zero)): Validator[Pod] =
+    podValidator(config.availableFeatures, mesosMasterVersion.getOrElse(SemanticVersion.zero), config.defaultNetworkName.toOption)
 
-  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String], roleSettings: RoleSettings): Validator[Pod] = validator[Pod] { pod =>
+  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String]): Validator[Pod] = validator[Pod] { pod =>
     PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
     pod.user is optional(notEmpty)
     pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
