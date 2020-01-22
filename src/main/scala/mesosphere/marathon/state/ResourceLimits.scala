@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package state
 
-import mesosphere.marathon.Protos
-
 case class ResourceLimits(cpus: Option[Double], mem: Option[Double])
 
 object ResourceLimits {

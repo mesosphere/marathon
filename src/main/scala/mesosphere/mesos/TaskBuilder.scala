@@ -13,7 +13,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import mesosphere.mesos.protos.Implicits._
-import mesosphere.mesos.protos.ScalarResource
+import mesosphere.mesos.protos.{Resource, ScalarResource}
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos._
 
@@ -44,6 +44,7 @@ class TaskBuilder(
       .setTaskId(taskId.mesosTaskId)
       .setSlaveId(offer.getSlaveId)
       .addAllResources(resourceMatch.resources.asJava)
+      .putAllLimits(TaskBuilder.limitsAsJavaMap(runSpec.resourceLimits))
 
     builder.setDiscovery(computeDiscoveryInfo(runSpec, resourceMatch.hostPorts))
 
@@ -198,6 +199,17 @@ class TaskBuilder(
 }
 
 object TaskBuilder {
+  def limitsAsJavaMap(maybeLimits: Option[ResourceLimits]): java.util.Map[String, Value.Scalar] = {
+    import scala.collection.JavaConverters._
+    maybeLimits.iterator.flatMap { limits =>
+      limits.cpus.iterator.map { cpus =>
+        Resource.CPUS -> Value.Scalar.newBuilder().setValue(cpus).build
+      } ++
+        limits.mem.iterator.map { mem =>
+          Resource.MEM -> Value.Scalar.newBuilder().setValue(mem).build
+        }
+    }.toMap.asJava
+  }
 
   def commandInfo(
     runSpec: AppDefinition,

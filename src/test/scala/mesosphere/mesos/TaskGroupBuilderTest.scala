@@ -9,12 +9,13 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ApplicationSpec, PodSpec}
 import mesosphere.marathon.raml
-import mesosphere.marathon.raml.{Endpoint, Resources, Lifecycle}
+import mesosphere.marathon.raml.{Endpoint, Lifecycle, Resources}
 import mesosphere.marathon.state._
 import mesosphere.marathon.state
 import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import mesosphere.marathon.AllConf
+import mesosphere.mesos.protos.Resource
 import org.apache.mesos.Protos.{ExecutorInfo, TaskGroupInfo, TaskInfo}
 import org.apache.mesos.{Protos => mesos}
 import org.scalatest.Inside
@@ -1157,7 +1158,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       containerInfo should be(empty)
     }
 
-    "IpcConfig defined on a pod renderes to executor info" in {
+    "IpcConfig defined on a pod renders to executor info" in {
       val ipcShmSize = 64
       val ipcMode = IpcMode.Private
 
@@ -1165,41 +1166,38 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       val ipcShmSizeContainer = 32
 
       val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 8000, endPort = 9000).build
-      val container = MesosContainer(name = "dummy", resources = Resources(), linuxInfo = Some(LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(ipcMode = ipcModeContainer, shmSize = Some(ipcShmSizeContainer))))))
+      val containerLinuxInfo = LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(ipcMode = ipcModeContainer, shmSize = Some(ipcShmSizeContainer))))
+      val podLinuxInfo = LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(ipcMode = ipcMode, shmSize = Some(ipcShmSize))))
 
-      val podSpec = PodDefinition(id = AbsolutePathId("/ipcConfig"), containers = Seq(container), linuxInfo = Some(LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(ipcMode = ipcMode, shmSize = Some(ipcShmSize))))), role = "*")
-      val instanceId = Instance.Id.forRunSpec(podSpec.id)
-      val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
-      val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Nil,
-        defaultBuilderConfig.acceptedResourceRoles, config, Nil)
+      new FixtureWithMatchedOffer(containerLinuxInfo = Some(containerLinuxInfo), podLinuxInfo = Some(podLinuxInfo)) {
+        val (executorInfo, taskGroup, _) = TaskGroupBuilder.build(
+          podSpec,
+          offer,
+          instanceId,
+          taskIds,
+          defaultBuilderConfig,
+          RunSpecTaskProcessor.empty,
+          resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
+          None,
+          true
+        )
 
-      val (executorInfo, taskGroup, _) = TaskGroupBuilder.build(
-        podSpec,
-        offer,
-        instanceId,
-        taskIds,
-        defaultBuilderConfig,
-        RunSpecTaskProcessor.empty,
-        resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
-        None,
-        true
-      )
+        executorInfo.hasContainer should be(true)
+        executorInfo.getContainer.hasLinuxInfo should be(true)
+        executorInfo.getContainer.getLinuxInfo.hasIpcMode should be(true)
+        executorInfo.getContainer.getLinuxInfo.getIpcMode should be(mesos.LinuxInfo.IpcMode.PRIVATE)
+        executorInfo.getContainer.getLinuxInfo.hasShmSize should be(true)
+        executorInfo.getContainer.getLinuxInfo.getShmSize should be(ipcShmSize)
 
-      executorInfo.hasContainer should be(true)
-      executorInfo.getContainer.hasLinuxInfo should be(true)
-      executorInfo.getContainer.getLinuxInfo.hasIpcMode should be(true)
-      executorInfo.getContainer.getLinuxInfo.getIpcMode should be(mesos.LinuxInfo.IpcMode.PRIVATE)
-      executorInfo.getContainer.getLinuxInfo.hasShmSize should be(true)
-      executorInfo.getContainer.getLinuxInfo.getShmSize should be(ipcShmSize)
-
-      taskGroup.getTasksCount should be(1)
-      val task = taskGroup.getTasksList.get(0)
-      task.hasContainer should be(true)
-      task.getContainer.hasLinuxInfo should be(true)
-      task.getContainer.getLinuxInfo.hasIpcMode should be(true)
-      task.getContainer.getLinuxInfo.getIpcMode should be(mesos.LinuxInfo.IpcMode.SHARE_PARENT)
-      task.getContainer.getLinuxInfo.hasShmSize should be(true)
-      task.getContainer.getLinuxInfo.getShmSize should be(ipcShmSizeContainer)
+        taskGroup.getTasksCount should be(1)
+        val task = taskGroup.getTasksList.get(0)
+        task.hasContainer should be(true)
+        task.getContainer.hasLinuxInfo should be(true)
+        task.getContainer.getLinuxInfo.hasIpcMode should be(true)
+        task.getContainer.getLinuxInfo.getIpcMode should be(mesos.LinuxInfo.IpcMode.SHARE_PARENT)
+        task.getContainer.getLinuxInfo.hasShmSize should be(true)
+        task.getContainer.getLinuxInfo.getShmSize should be(ipcShmSizeContainer)
+      }
 
     }
 
@@ -1231,5 +1229,55 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
 
       taskGroupInfo.getTasks(0).getKillPolicy.getGracePeriod.getNanoseconds shouldBe (killDuration.toNanos)
     }
+
+    "legacySharedCgroups is propagated to the executorInfo container properly" in new FixtureWithMatchedOffer(legacySharedCgroups = Some(true)) {
+      val (executorInfo, taskGroup, _) = TaskGroupBuilder.build(
+        podSpec,
+        offer,
+        instanceId,
+        taskIds,
+        defaultBuilderConfig,
+        RunSpecTaskProcessor.empty,
+        resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
+        None,
+        true
+      )
+
+      executorInfo.getContainer.getLinuxInfo.getShareCgroups shouldBe true
+    }
+
+    "resource limits are propagated for a container" in {
+      new FixtureWithMatchedOffer(legacySharedCgroups = Some(false), resourceLimits = Some(ResourceLimits(cpus = Some(Double.PositiveInfinity), mem = Some(1024.0)))) {
+        val (executorInfo, taskGroup, _) = TaskGroupBuilder.build(
+          podSpec,
+          offer,
+          instanceId,
+          taskIds,
+          defaultBuilderConfig,
+          RunSpecTaskProcessor.empty,
+          resourceMatch.asInstanceOf[ResourceMatchResponse.Match].resourceMatch,
+          None,
+          true
+        )
+
+        executorInfo.getContainer.getLinuxInfo.getShareCgroups shouldBe false
+        val limits = taskGroup.getTasks(0).getLimitsMap.asScala
+        limits.keySet shouldBe Set(Resource.CPUS, Resource.MEM)
+
+        limits(Resource.CPUS).getValue shouldBe Double.PositiveInfinity
+        limits(Resource.MEM).getValue shouldBe 1024.0
+      }
+    }
+  }
+
+  class FixtureWithMatchedOffer(podLinuxInfo: Option[LinuxInfo] = None, containerLinuxInfo: Option[LinuxInfo] = None, resourceLimits: Option[ResourceLimits] = None, legacySharedCgroups: Option[Boolean] = None) {
+    val offer = MarathonTestHelper.makeBasicOffer(cpus = 3.1, mem = 416.0, disk = 10.0, beginPort = 8000, endPort = 9000).build
+    val container = MesosContainer(name = "dummy", resources = Resources(), resourceLimits = resourceLimits, linuxInfo = containerLinuxInfo)
+
+    val podSpec = PodDefinition(id = AbsolutePathId("/ipcConfig"), legacySharedCgroups = legacySharedCgroups, containers = Seq(container), linuxInfo = podLinuxInfo, role = "*")
+    val instanceId = Instance.Id.forRunSpec(podSpec.id)
+    val taskIds = podSpec.containers.map(c => Task.Id(instanceId, Some(c)))
+    val resourceMatch = RunSpecOfferMatcher.matchOffer(podSpec, offer, Nil,
+      defaultBuilderConfig.acceptedResourceRoles, config, Nil)
   }
 }
