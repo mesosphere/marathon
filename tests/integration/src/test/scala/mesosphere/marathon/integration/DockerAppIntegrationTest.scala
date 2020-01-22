@@ -103,6 +103,7 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(result)
 
       And("the task out put should be correct")
+      // TODO: set compatibility mode
       val plainTextTasks = marathon.tasksAsPlainText(appId)
       plainTextTasks should be(OK)
       plainTextTasks.value should be("foo")
