@@ -22,6 +22,7 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
 import mesosphere.marathon
+import mesosphere.marathon.api.v2.MarathonCompatibility
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.setup.{AkkaHttpResponse, RestResult}
 import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
@@ -31,6 +32,7 @@ import mesosphere.marathon.util.Retry
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
 import mesosphere.marathon.state.PathId._
+import org.apache.curator.utils.Compatibility
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
@@ -310,9 +312,14 @@ class MarathonFacade(
     res.map(_.tasks.toList)
   }
 
-  def tasksAsPlainText(appId: PathId): RestResult[String] = {
+  def tasksAsPlainText(appId: PathId, compatibility: String = MarathonCompatibility.Latest): RestResult[String] = {
     requireInBaseGroup(appId)
-    val request = Get(s"$url/v2/apps$appId/tasks").withHeaders(Accept(MediaTypes.`text/plain`))
+    val request = compatibility match {
+      case MarathonCompatibility.Latest =>
+        Get(s"$url/v2/apps$appId/tasks").withHeaders(Accept(MediaTypes.`text/plain`))
+      case MarathonCompatibility.V1_4 =>
+        Get(s"$url/v2/apps$appId/tasks?compatibilityMode=${MarathonCompatibility.V1_4}").withHeaders(Accept(MediaTypes.`text/plain`))
+    }
     result(requestFor[String](request), waitTime)
   }
 
