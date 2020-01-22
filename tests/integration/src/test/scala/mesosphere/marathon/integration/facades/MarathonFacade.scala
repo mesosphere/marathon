@@ -310,6 +310,12 @@ class MarathonFacade(
     res.map(_.tasks.toList)
   }
 
+  def tasksAsPlainText(appId: PathId): RestResult[String] = {
+    requireInBaseGroup(appId)
+    val request = Get(s"$url/v2/apps$appId/tasks").withHeaders(Accept(MediaTypes.`text/plain`))
+    result(requestFor[String](request), waitTime)
+  }
+
   def killAllTasks(appId: PathId, scale: Boolean = false): RestResult[ITListTasks] = {
     requireInBaseGroup(appId)
     result(requestFor[ITListTasks](Delete(s"$url/v2/apps$appId/tasks?scale=$scale")), waitTime)

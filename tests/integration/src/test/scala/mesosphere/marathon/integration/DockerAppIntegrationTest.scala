@@ -3,7 +3,7 @@ package integration
 
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
-import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType, Network, NetworkMode}
+import mesosphere.marathon.raml.{App, Container, ContainerPortMapping, DockerContainer, DockerNetwork, EngineType, Network, NetworkMode}
 import mesosphere.marathon.state.PathId._
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
 
@@ -75,5 +75,37 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
         id = (testBasePath / "docker-http-app-with-bridge-networking").toString,
         networks = Seq(Network(mode = NetworkMode.ContainerBridge)))
     )
+
+    // Regression test for COPS-4483, COPS-5791, DCOS-63106
+    "return the proper text/plain output" in {
+      Given("a new Docker app in Bridge mode and with port mappings")
+      val appId = testBasePath / "simple-docker-app-bridge"
+      val app = App(
+        id = appId.toString,
+        cmd = Some("sleep 600"),
+        container = Some(Container(
+          `type` = EngineType.Docker,
+          docker = Some(DockerContainer(
+            image = "busybox",
+            network = Some(DockerNetwork.Bridge),
+            portMappings = Some(Seq(ContainerPortMapping()))
+          ))
+        )),
+        cpus = 0.2, mem = 16.0,
+        instances = 1
+      )
+
+      When("The app is deployed")
+      val result = marathon.createAppV2(app)
+
+      Then("The app is created")
+      result should be(Created)
+      waitForDeployment(result)
+
+      And("the task out put should be correct")
+      val plainTextTasks = marathon.tasksAsPlainText(appId)
+      plainTextTasks should be(OK)
+      plainTextTasks.value should be("foo")
+    }
   }
 }
