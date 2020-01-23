@@ -21,7 +21,7 @@ ansiColor('xterm') {
             string(credentialsId: 'f585ec9a-3c38-4f67-8bdb-79e5d4761937',variable: 'AWS_SECRET_ACCESS_KEY')
         ]) {
           sh 'cd ami && docker build -t mesosphere/marathon-build-env:unstable .' // Move out.
-	  sh 'sudo -E docker run -d --rm --privileged -v "$(pwd):/var/build" --name mini mesosphere/marathon-build-env:unstable'
+	  sh 'sudo -E docker run -d --rm --privileged -v "$(pwd):/var/build" $(env | cut -f1 -d= | sed "s/^/-e /") --name mini mesosphere/marathon-build-env:unstable'
           sh 'sudo -E docker exec -w /var/build mini ci/pipeline jenkins'
 	}
       } finally {
