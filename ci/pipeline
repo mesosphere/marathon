@@ -220,6 +220,22 @@ def testDockerAndLinuxPackages(): Unit = {
 }
 
 /**
+  * Builds the Marathon storage tool, just to check that compatibility isn't broken
+  *
+  * @return Tag of Docker image
+  */
+@main
+def buildStorageTool(): String = {
+  utils.stage("Building the Marathon storage tool") {
+    val toolPath = pwd/'tools/'storage
+    %('make, "clean")(toolPath)
+    %('make, "compile")(toolPath)
+
+    %%("./version", "docker").out.string.trim
+  }
+}
+
+/**
  * Update DC/OS repository and triggers build of update DC/OS image.
  *
  * @param version The newly built Marathon version.
@@ -248,6 +264,9 @@ def buildMaster(): Unit = {
   buildDockerAndLinuxPackages()
   testDockerAndLinuxPackages()
   // dcos.buildRegistry(version) The packaging is broken on master https://jira.mesosphere.com/browse/MARATHON-8442.
+
+  // Verify that storage tool works
+  buildStorageTool()
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
