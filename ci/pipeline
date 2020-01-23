@@ -97,7 +97,7 @@ def checkSystemIntegrationTests(logFileName: String): Unit = {
 @main
 def zipLogs(logFileName: String = "ci.log", sandboxFileName: String = "sandboxes"): Unit = {
   Try(%("tar", "--exclude=provisioner", "-zcf", s"$sandboxFileName.tar.gz", "sandboxes", "tests/integration/sandboxes"))
-  Try(%('sudo, "rm", "-rf", "sandboxes", "tests/integration/sandboxes"))
+  Try(%("rm", "-rf", "sandboxes", "tests/integration/sandboxes"))
   Try(%("tar", "-zcf", s"$logFileName.tar.gz", "--remove-files", logFileName))
 }
 
@@ -166,11 +166,11 @@ def asPullRequest(pullId: String)(run: => (SemVer, Option[awsClient.Artifact])):
  */
 def provisionHost(): Unit = utils.stage("Provision") {
   // Set port range for random port 0 allocation.
-  %('sudo, "ci/set_port_range.sh")
+  %("ci/set_port_range.sh")
 
   // First call to `docker --version` can take up to 30s. This sometimes leads to Mesos agent
   // failing to start when checking for the docker version. So we do it here (successive calls will be faster).
-  %('sudo, "docker", "--version")
+  %("docker", "--version")
 
   provision.killStaleTestProcesses()
   provision.installMesos()
