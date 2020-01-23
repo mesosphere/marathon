@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration
 
+import mesosphere.marathon.api.v2.MarathonCompatibility
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
 import mesosphere.marathon.raml.{App, Container, ContainerPortMapping, DockerContainer, DockerNetwork, EngineType, Network, NetworkMode}
@@ -104,9 +105,9 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       And("the task out put should be correct")
       // TODO: set compatibility mode
-      val plainTextTasks = marathon.tasksAsPlainText(appId)
+      val plainTextTasks = marathon.tasksAsPlainText(appId, MarathonCompatibility.V1_4)
       plainTextTasks should be(OK)
-      plainTextTasks.value should be("foo")
+      plainTextTasks.entityString should be("foo")
     }
   }
 }
