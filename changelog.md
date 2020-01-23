@@ -1,3 +1,13 @@
+## Changes from 1.9.xxx to 1.10.xxx
+
+### Vertical container bursting support and shared cgroups
+
+Marathon 1.10 brings support for Mesos resource-limits, allowing containers to formally allocate and consume more CPU or memory than are consumed from an offer. For example, the following service definition would allow a Marathon app to consumer as many CPU cycles are available, and also consume more than the 4gb of memory requested.
+
+Also, newly created pods will no longer containers to share resources with other containers in the pod. Poorly poorly configured pods will not launch properly when one of the containers is configured with less memory than it actually needs. In order to prevent a potential disruption in service for pods that relied on resource sharing, the field `legacySharedCgroups` is automatically added and enabled for all existing pods when upgrading to Marathon 1.10. Pods cannot specify resource limits when `legacySharedCgroups` is enabled.
+
+For more information, see [resource-limits.md](https://github.com/mesosphere/marathon/blob/master/docs/docs/auth-secret.md)
+
 ## Changes from 1.9.100 to 1.9.xxx
 
 ### Fixed issues
