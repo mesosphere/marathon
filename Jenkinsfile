@@ -11,7 +11,7 @@ ansiColor('xterm') {
       user_is_authorized(master_branches, '8b793652-f26a-422f-a9ba-0d1e47eb9d89', '#marathon-dev')
     }
   }
-  node('JenkinsMarathonCI-Debian9-2020-01-14') {
+  node('docker') {
     stage("Run Pipeline") {
       try {
         checkout scm
@@ -20,12 +20,12 @@ ansiColor('xterm') {
             string(credentialsId: '3f0dbb48-de33-431f-b91c-2366d2f0e1cf',variable: 'AWS_ACCESS_KEY_ID'),
             string(credentialsId: 'f585ec9a-3c38-4f67-8bdb-79e5d4761937',variable: 'AWS_SECRET_ACCESS_KEY')
         ]) {
-	    withDockerRegistry([credentialsId: 'docker-hub-credentials']) {
-                sh """sudo update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java"""
-                sh """sudo -E ci/pipeline jenkins"""
-            }
+          sh 'cd ami && docker build -t mesosphere/marathon-build-env:unstable .' // Move out.
+	  sh 'sudo -E docker run -d --rm --privileged -v "$(pwd):/var/build" --name mini mesosphere/marathon-build-env:unstable'
+          sh 'sudo -E docker exec -w /var/build mini ci/pipeline jenkins'
 	}
       } finally {
+        sh 'sudo docker kill mini'
         junit(allowEmptyResults: true, testResults: 'type-generator/target/test-reports/*.xml')
         junit(allowEmptyResults: true, testResults: 'target/test-reports/*.xml')
         junit(allowEmptyResults: true, testResults: 'tests/integration/target/test-reports/*.xml')

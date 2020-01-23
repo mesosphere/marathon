@@ -20,12 +20,14 @@ val maybeVersion =
 def installMesos(): Unit = {
   // Install Mesos
   def install_mesos(version: String): Unit = {
-    %%('sudo, "apt-get", "install", "-y", "--force-yes", "--no-install-recommends", s"mesos=$version.debian9")
+    ()
+    //%%('sudo, "yum", "install", "-y", "--force-yes", "--no-install-recommends", s"mesos=$version.debian9")
   }
 
   // Stop Mesos service
   def stop_mesos(): Unit = {
-    %%("sudo", "systemctl", "stop", "mesos-master.service", "mesos-slave.service", "mesos_executor.slice")
+    ()
+    //%%("sudo", "systemctl", "stop", "mesos-master.service", "mesos-slave.service", "mesos_executor.slice")
   }
 
   maybeVersion match {
