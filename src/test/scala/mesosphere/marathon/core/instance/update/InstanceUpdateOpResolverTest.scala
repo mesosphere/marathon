@@ -2,7 +2,6 @@ package mesosphere.marathon
 package core.instance.update
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
@@ -10,7 +9,8 @@ import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusU
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder, TaskConditionMapping}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.{Task, TaskCondition}
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state._
+import mesosphere.marathon.test.SettableClock
 import org.apache.mesos
 import org.scalatest.Inside
 
@@ -315,7 +315,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     }
 
     "Processing a TASK_UNREACHABLE update for a staging task" in new Fixture {
-      val builder = TestInstanceBuilder.newBuilder(appId)
+      val builder = TestInstanceBuilder.newBuilderForRunSpec(app)
       val instance = builder.addTaskStaged().getInstance()
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
       val update = TaskStatusUpdateTestHelper.unreachable(instance)
@@ -334,7 +334,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     }
 
     "Processing a TASK_UNREACHABLE update for a starting task" in new Fixture {
-      val builder = TestInstanceBuilder.newBuilder(appId)
+      val builder = TestInstanceBuilder.newBuilderForRunSpec(app)
       val instance = builder.addTaskStarting().getInstance()
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
       val update = TaskStatusUpdateTestHelper.unreachable(instance)
@@ -353,7 +353,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     }
 
     "Processing a TASK_UNREACHABLE update for a running task" in new Fixture {
-      val builder = TestInstanceBuilder.newBuilder(appId)
+      val builder = TestInstanceBuilder.newBuilderForRunSpec(app)
       val instance = builder.addTaskRunning().getInstance()
       instanceTracker.instance(instance.instanceId) returns Future.successful(Some(instance))
       val update = TaskStatusUpdateTestHelper.unreachable(instance)
@@ -388,14 +388,15 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     }
   }
 
-  class Fixture {
+  class Fixture(unreachableStrategy: UnreachableStrategy = UnreachableDisabled) {
     val eventsGenerator = InstanceChangedEventsGenerator
     val clock = SettableClock.ofNow()
     val instanceTracker = mock[InstanceTracker]
     val updateOpResolver = new InstanceUpdateOpResolver(instanceTracker, clock)
 
     lazy val appId = PathId("/app")
-    lazy val existingInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+    lazy val app = AppDefinition(appId, unreachableStrategy = unreachableStrategy)
+    lazy val existingInstance: Instance = TestInstanceBuilder.newBuilderForRunSpec(app).addTaskRunning().getInstance()
     lazy val existingTask: Task = existingInstance.appTask
 
     lazy val reservedInstance = TestInstanceBuilder.newBuilder(appId).addTaskReserved().getInstance()

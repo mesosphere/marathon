@@ -7,7 +7,7 @@ import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, Instan
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults, NetworkInfoPlaceholder}
-import mesosphere.marathon.state.{PathId, Timestamp, UnreachableEnabled, UnreachableStrategy}
+import mesosphere.marathon.state._
 import org.apache.mesos
 
 import scala.collection.immutable.Seq
@@ -93,7 +93,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
 
   private[instance] def addTask(task: Task): TestInstanceBuilder = {
-    this.copy(instance = InstanceUpdater.updatedInstance(instance, task, now + 1.second))
+    this.copy(instance = InstanceUpdater.applyTaskUpdate(instance, task, now + 1.second))
   }
 
   def getInstance(): Instance = instance
@@ -165,10 +165,26 @@ object TestInstanceBuilder {
     None
   )
 
+  def emptyInstanceForRunSpec(now: Timestamp = Timestamp.now(), runSpec: RunSpec, instanceId: Instance.Id): Instance = {
+    val resolvedInstanceId = Option(instanceId).getOrElse(Instance.Id.forRunSpec(runSpec.id))
+
+    require(resolvedInstanceId.runSpecId == runSpec.id, "provided instanceId did not match runSpec")
+
+    Instance(
+      instanceId = resolvedInstanceId,
+      agentInfo = TestInstanceBuilder.defaultAgentInfo,
+      state = InstanceState(Condition.Created, now, None, healthy = None, goal = Goal.Running),
+      tasksMap = Map.empty,
+      runSpecVersion = runSpec.version,
+      unreachableStrategy = runSpec.unreachableStrategy,
+      reservation = None
+    )
+  }
+
   def fromTask(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy): Instance = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
-    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
+    val state = Instance.InstanceState.transitionTo(None, tasksMap, since, unreachableStrategy, Goal.Running)
 
     new Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
   }
@@ -176,6 +192,9 @@ object TestInstanceBuilder {
   private val defaultAgentInfo = Instance.AgentInfo(
     host = AgentTestDefaults.defaultHostName,
     agentId = Some(AgentTestDefaults.defaultAgentId), region = None, zone = None, attributes = Seq.empty)
+
+  def newBuilderForRunSpec(runSpec: RunSpec, now: Timestamp = Timestamp.now(), instanceId: Instance.Id = null): TestInstanceBuilder =
+    TestInstanceBuilder(emptyInstanceForRunSpec(now, runSpec, instanceId = instanceId), now)
 
   def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =

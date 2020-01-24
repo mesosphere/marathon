@@ -116,11 +116,12 @@ object Instance {
       * @param now           Timestamp of update.
       * @return new InstanceState
       */
-    def apply(
+    def transitionTo(
       maybeOldState: Option[InstanceState],
       newTaskMap: Map[Task.Id, Task],
       now: Timestamp,
-      unreachableStrategy: UnreachableStrategy): InstanceState = {
+      unreachableStrategy: UnreachableStrategy,
+      goal: Goal): InstanceState = {
 
       val tasks = newTaskMap.values
 
@@ -132,7 +133,7 @@ object Instance {
       val healthy = computeHealth(tasks.toVector)
       maybeOldState match {
         case Some(state) if state.condition == condition && state.healthy == healthy => state
-        case _ => InstanceState(condition, now, active, healthy, maybeOldState.map(_.goal).getOrElse(Goal.Running))
+        case _ => InstanceState(condition, now, active, healthy, goal)
       }
     }
 
