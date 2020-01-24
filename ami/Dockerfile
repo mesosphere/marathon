@@ -1,7 +1,7 @@
 FROM mesos/mesos-mini:1.9.x
 
 # Install prerequisites
-RUN yum -y install git python-3.6.2 jq openjdk-8-jdk
+RUN yum -y install git python-3.6.2 jq java-1.8.0-openjdk-devel
 
 # Install Mesos via MVM
 # COPY mvm.sh /usr/local/bin/mvm
