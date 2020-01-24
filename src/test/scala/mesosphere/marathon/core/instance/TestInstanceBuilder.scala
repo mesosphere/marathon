@@ -159,10 +159,25 @@ object TestInstanceBuilder {
     )
   }
 
+  def emptyInstanceForRunSpec(now: Timestamp = Timestamp.now(), runSpec: RunSpec, instanceId: Instance.Id): Instance = {
+    val resolvedInstanceId = Option(instanceId).getOrElse(Instance.Id.forRunSpec(runSpec.id))
+
+    require(resolvedInstanceId.runSpecId == runSpec.id, "provided instanceId did not match runSpec")
+
+    Instance(
+      instanceId = resolvedInstanceId,
+      agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
+      state = InstanceState(Condition.Provisioned, now, None, healthy = None, goal = Goal.Running),
+      tasksMap = Map.empty,
+      runSpec = runSpec,
+      reservation = None
+    )
+  }
+
   def fromTask(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy): Instance = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
-    val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy, Goal.Running)
+    val state = Instance.InstanceState.transitionTo(None, tasksMap, since, unreachableStrategy, Goal.Running)
     val runSpec = AppDefinition(
       task.taskId.instanceId.runSpecId,
       unreachableStrategy = unreachableStrategy,
@@ -175,6 +190,9 @@ object TestInstanceBuilder {
   val defaultAgentInfo = Instance.AgentInfo(
     host = AgentTestDefaults.defaultHostName,
     agentId = Some(AgentTestDefaults.defaultAgentId), region = None, zone = None, attributes = Seq.empty)
+
+  def newBuilderForRunSpec(runSpec: RunSpec, now: Timestamp = Timestamp.now(), instanceId: Instance.Id = null): TestInstanceBuilder =
+    TestInstanceBuilder(emptyInstanceForRunSpec(now, runSpec, instanceId = instanceId), now)
 
   def newBuilder(runSpecId: PathId, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =

@@ -164,7 +164,7 @@ object Instance {
       * @param now           Timestamp of update.
       * @return new InstanceState
       */
-    def apply(
+    def transitionTo(
       maybeOldInstanceState: Option[InstanceState],
       newTaskMap: Map[Task.Id, Task],
       now: Timestamp,

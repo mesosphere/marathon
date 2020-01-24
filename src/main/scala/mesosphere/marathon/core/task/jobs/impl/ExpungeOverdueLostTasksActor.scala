@@ -41,6 +41,7 @@ trait ExpungeOverdueLostTasksActorLogic extends StrictLogging {
     case UnreachableDisabled =>
       false
     case unreachableEnabled: UnreachableEnabled =>
+      // Instances configured to expunge immediately will be expunged in response to the Mesos TASK_UNREACHABLE
       instance.isUnreachableInactive &&
         instance.tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, unreachableEnabled.expungeAfter))
   }

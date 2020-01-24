@@ -2,16 +2,15 @@ package mesosphere.marathon
 package core.instance
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, UnreachableStrategy}
-import org.scalatest.prop.TableDrivenPropertyChecks
+import mesosphere.marathon.state.{AppDefinition, PathId, UnreachableDisabled, UnreachableStrategy}
+import mesosphere.marathon.test.SettableClock
 import org.apache.mesos.Protos.Attribute
 import org.apache.mesos.Protos.Value.{Text, Type}
+import org.scalatest.prop.TableDrivenPropertyChecks
 import play.api.libs.json._
 
 class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
@@ -42,7 +41,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
 
       s"$from and tasks become ${withTasks.mkString(", ")}" should {
 
-        val status = Instance.InstanceState(Some(instance.state), tasks, f.clock.now(), UnreachableStrategy.default(), instance.state.goal)
+        val status = Instance.InstanceState.transitionTo(Some(instance.state), tasks, f.clock.now(), UnreachableStrategy.default(), instance.state.goal)
 
         s"change to $to" in {
           status.condition should be(to)
@@ -66,7 +65,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
   }
 
   "be unreachable" in {
-    val f = new Fixture
+    val f = new Fixture(unreachableStrategy = UnreachableDisabled)
 
     val (instance, _) = f.instanceWith(Condition.Unreachable, Seq(Condition.Unreachable))
     instance.isUnreachable should be(true)
@@ -80,7 +79,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
   }
 
   "be active only for active conditions" in {
-    val f = new Fixture
+    val f = new Fixture(unreachableStrategy = UnreachableDisabled)
 
     val activeConditions: Seq[Condition] = Seq(Provisioned, Killing, Running, Staging, Starting, Unreachable)
     activeConditions.foreach { condition =>
@@ -120,9 +119,9 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
     }
   }
 
-  class Fixture {
-    val id = "/test".toPath
-    val app = AppDefinition(id)
+  class Fixture(unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default(false)) {
+    val id = PathId("/test")
+    val app = AppDefinition(id, unreachableStrategy = unreachableStrategy)
     val clock = new SettableClock()
 
     val agentInfo = Instance.AgentInfo("", None, None, None, Nil)
@@ -139,7 +138,7 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
     def instanceWith(condition: Condition, conditions: Seq[Condition]): (Instance, Map[Task.Id, Task]) = {
       val currentTasks = tasks(conditions.map(_ => condition))
       val newTasks = tasks(conditions)
-      val state = Instance.InstanceState(None, currentTasks, clock.now(), UnreachableStrategy.default(), Goal.Running)
+      val state = Instance.InstanceState.transitionTo(None, currentTasks, clock.now(), unreachableStrategy, Goal.Running)
       val instance = Instance(Instance.Id.forRunSpec(id), Some(agentInfo), state, currentTasks, app, None)
       (instance, newTasks)
     }
