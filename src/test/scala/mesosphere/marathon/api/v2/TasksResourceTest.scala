@@ -24,13 +24,14 @@ import mesosphere.marathon.test.{GroupCreation, JerseyTest}
 import org.apache.mesos
 import org.mockito.Matchers
 import org.mockito.Mockito._
+import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
+class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with Inside {
   case class Fixture(
       auth: TestAuthFixture = new TestAuthFixture,
       instanceTracker: InstanceTracker = mock[InstanceTracker],
@@ -77,6 +78,9 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       response.getStatus shouldEqual 200
     }
 
+    def parseTxtResponse(response: String): List[List[String]] =
+      response.trim.split("\n").iterator.map(_.split("\t").toList).toList
+
     "list (txt) tasks with 1.4 compatibility mode outputs container network ips and ports" in new Fixture {
       Given("a running instance of an app using container networks")
       val app = AppDefinition(
@@ -113,22 +117,30 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val rootGroup = createRootGroup(apps = Map(app.id -> app))
       groupManager.rootGroup() returns rootGroup
 
-      When("Getting the txt tasks index")
-      val response = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.V1_4, auth.request, r) }
-
-      /* Note that without compatibility 1.4, the following (less useful) response is returned:
-       * foo   20163   host.some:0
-       * foo   13032   host.some:0
-       */
+      When("Getting the txt tasks index with 1.4 compatibility mode")
+      val response14 = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.V1_4, auth.request, r) }
 
       Then("The status should be 200")
-      response.getStatus shouldEqual 200
+      response14.getStatus shouldEqual 200
 
       And("the output should return the container ports used in container networks")
-      val lines = response.getEntity.toString.trim.split("\n").iterator.map(_.split("\t").toList).toList
-      lines.length shouldBe 2
-      lines(0) shouldBe List("foo", "20163", "10.11.12.13:22")
-      lines(1) shouldBe List("foo", "13032", "10.11.12.13:6090")
+      inside(parseTxtResponse(response14.getEntity.toString)) {
+        case line1 :: line2 :: Nil =>
+          line1 shouldBe List("foo", "20163", "10.11.12.13:22")
+          line2 shouldBe List("foo", "13032", "10.11.12.13:6090")
+      }
+
+      When("Getting the txt tasks index with Latest compatibility mode")
+      val responseLatest = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, auth.request, r) }
+      Then("The status should be 200")
+      responseLatest.getStatus shouldEqual 200
+
+      And("the output should return the nonsensical, useless entries of port:0")
+      inside(parseTxtResponse(responseLatest.getEntity.toString)) {
+        case line1 :: line2 :: Nil =>
+          line1 shouldBe List("foo", "20163", "host.some:0")
+          line2 shouldBe List("foo", "13032", "host.some:0")
+      }
     }
 
     "list apps when there are no apps" in new Fixture {
