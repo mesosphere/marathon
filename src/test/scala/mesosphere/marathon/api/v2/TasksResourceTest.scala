@@ -7,24 +7,26 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
-import mesosphere.marathon.test.JerseyTest
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.Identity
+import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.GroupCreation
+import mesosphere.marathon.test.{GroupCreation, JerseyTest}
+import org.apache.mesos
 import org.mockito.Matchers
 import org.mockito.Mockito._
 
 import scala.collection.immutable.Seq
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -73,6 +75,60 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
 
       Then("The status should be 200")
       response.getStatus shouldEqual 200
+    }
+
+    "list (txt) tasks with 1.4 compatibility mode outputs container network ips and ports" in new Fixture {
+      Given("a running instance of an app using container networks")
+      val app = AppDefinition(
+        "/foo".toAbsolutePath,
+        role = "*",
+        networks = Seq(ContainerNetwork("weave")),
+        container = Some(Container.Docker(
+          image = "alpine",
+          portMappings = Seq(
+            PortMapping(
+              name = Some("http"),
+              containerPort = 22,
+              hostPort = None,
+              servicePort = 20163),
+            PortMapping(
+              name = Some("https"),
+              containerPort = 6090,
+              hostPort = None,
+              servicePort = 13032)))))
+
+      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskWithBuilder()
+        .taskRunning()
+        .withNetworkInfo(
+          NetworkInfo(
+            hostName = "hostname",
+            hostPorts = Nil,
+            ipAddresses = Seq(mesos.Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress("10.11.12.13").build())))
+        .build()
+        .getInstance()
+
+      val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(instance)
+      instanceTracker.instancesBySpec returns Future.successful(tasksByApp)
+
+      val rootGroup = createRootGroup(apps = Map(app.id -> app))
+      groupManager.rootGroup() returns rootGroup
+
+      When("Getting the txt tasks index")
+      val response = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.V1_4, auth.request, r) }
+
+      /* Note that without compatibility 1.4, the following (less useful) response is returned:
+       * foo   20163   host.some:0
+       * foo   13032   host.some:0
+       */
+
+      Then("The status should be 200")
+      response.getStatus shouldEqual 200
+
+      And("the output should return the container ports used in container networks")
+      val lines = response.getEntity.toString.trim.split("\n").iterator.map(_.split("\t").toList).toList
+      lines.length shouldBe 2
+      lines(0) shouldBe List("foo", "20163", "10.11.12.13:22")
+      lines(1) shouldBe List("foo", "13032", "10.11.12.13:6090")
     }
 
     "list apps when there are no apps" in new Fixture {
