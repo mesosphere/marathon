@@ -40,7 +40,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       groupManager,
       auth.auth,
       auth.auth,
-      true
+      DeprecatedFeatureConfig.empty(SemVer(1, 9, 0))
     )
 
     config.zkTimeoutDuration returns 1.second
@@ -67,7 +67,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       groupManager,
       auth.auth,
       auth.auth,
-      true
+      DeprecatedFeatureConfig.empty(SemVer(1, 9, 0))
     )
 
     config.zkTimeoutDuration returns 1.second

@@ -38,7 +38,7 @@ class TasksResource @Inject() (
     healthCheckManager: HealthCheckManager,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    marathon15CompatibilityEnabled: Boolean)(implicit val executionContext: ExecutionContext) extends AuthResource {
+    deprecatedFeaturesSet: DeprecatedFeatureConfig)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
@@ -100,7 +100,7 @@ class TasksResource @Inject() (
       val rootGroup = groupManager.rootGroup()
       val data = ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut))
 
-      EndpointsHelper.dispatchAppsToEndpoint(data, Option(compatibilityMode).filterNot(_.isEmpty), marathon15CompatibilityEnabled, Option(containerNetworks).filterNot(_.isEmpty)) match {
+      EndpointsHelper.dispatchAppsToEndpoint(data, Option(compatibilityMode).filterNot(_.isEmpty), deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.marathonTasksCompatibility), Option(containerNetworks).filterNot(_.isEmpty)) match {
         case Right(response) =>
           ok(response)
         case Left(error) =>

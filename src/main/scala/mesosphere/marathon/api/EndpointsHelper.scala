@@ -14,7 +14,7 @@ object EndpointsHelper {
     val msg = "In order to use the network filters, 1.10 output mode must be used"
   }
   case object MarathonCompatibilityNotEnabled extends Error {
-    val msg = s"In order to use the flag compatibilityMode, 1.5 compatible task output must be enabled with --deprecated_features=${DeprecatedFeatures.marathon15Compatibility.key}."
+    val msg = s"In order to use the flag compatibilityMode, 1.5 compatible task output must be enabled with --deprecated_features=${DeprecatedFeatures.marathonTasksCompatibility.key}."
   }
   case class CompatibilityModeNotValid(mode: String) extends Error {
     val msg = s"compatibilityMode ${mode} is invalid"
@@ -31,21 +31,21 @@ object EndpointsHelper {
     * When DeprecatedFeatures.marathon15Compatibility is removed, remove this dispatch function and collapse to just the single helper
     * @param data
     * @param maybeCompatibilityMode
-    * @param marathon15CompatibilityEnabled
+    * @param marathonCompatibilityEnabled
     * @return
     */
-  def dispatchAppsToEndpoint(data: ListTasks, maybeCompatibilityMode: Option[String], marathon15CompatibilityEnabled: Boolean, containerNetworks: Option[String]): Either[Error, String] = {
-    val compatibilityMode = maybeCompatibilityMode.getOrElse { if (marathon15CompatibilityEnabled) MarathonCompatibility.V1_5 else MarathonCompatibility.Latest }
+  def dispatchAppsToEndpoint(data: ListTasks, maybeCompatibilityMode: Option[String], marathonCompatibilityEnabled: Boolean, containerNetworks: Option[String]): Either[Error, String] = {
+    val compatibilityMode = maybeCompatibilityMode.getOrElse { if (marathonCompatibilityEnabled) MarathonCompatibility.V1_8 else MarathonCompatibility.Latest }
     compatibilityMode match {
       case MarathonCompatibility.Latest =>
         Right(appsToEndpointString(data, parseNetworkPredicate(containerNetworks)))
-      case _ if marathon15CompatibilityEnabled == false =>
+      case _ if marathonCompatibilityEnabled == false =>
         Left(MarathonCompatibilityNotEnabled)
       case _ if containerNetworks.nonEmpty =>
         Left(NetworkFilterNotAvailable)
       case MarathonCompatibility.V1_4 =>
         Right(MarathonCompatibility14.appsToEndpointString(data))
-      case MarathonCompatibility.V1_5 =>
+      case MarathonCompatibility.V1_8 =>
         Right(MarathonCompatibility15.appsToEndpointString(data))
       case o =>
         Left(CompatibilityModeNotValid(o))

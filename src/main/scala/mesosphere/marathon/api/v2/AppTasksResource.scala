@@ -37,7 +37,7 @@ class AppTasksResource @Inject() (
     groupManager: GroupManager,
     val authorizer: Authorizer,
     val authenticator: Authenticator,
-    marathon15CompatibilityEnabled: Boolean)(implicit val executionContext: ExecutionContext) extends AuthResource {
+    deprecatedFeaturesSet: DeprecatedFeatureConfig)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   val GroupTasks = """^((?:.+/)|)\*$""".r
 
@@ -93,7 +93,7 @@ class AppTasksResource @Inject() (
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
         val data = ListTasks(instancesBySpec, Seq(app))
-        EndpointsHelper.dispatchAppsToEndpoint(data, Option(compatibilityMode).filterNot(_.isEmpty), marathon15CompatibilityEnabled, Option(containerNetworks).filterNot(_.isEmpty)) match {
+        EndpointsHelper.dispatchAppsToEndpoint(data, Option(compatibilityMode).filterNot(_.isEmpty), deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.marathonTasksCompatibility), Option(containerNetworks).filterNot(_.isEmpty)) match {
           case Right(response) =>
             ok(response)
           case Left(error) =>

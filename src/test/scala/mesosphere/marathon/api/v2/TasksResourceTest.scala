@@ -49,7 +49,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       healthCheckManager,
       auth.auth,
       auth.auth,
-      marathon15CompatibilityEnabled = true
+      DeprecatedFeatureConfig.empty(SemVer(1, 9, 0))
     )
   }
 
@@ -131,7 +131,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       }
 
       When("Getting the txt tasks index with 1.5 compatibility mode")
-      val response15 = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.V1_5, req = auth.request, asyncResponse = r) }
+      val response15 = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.V1_8, req = auth.request, asyncResponse = r) }
       Then("The status should be 200")
       response15.getStatus shouldEqual 200
 
@@ -142,8 +142,8 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
           line2 shouldBe List("foo", "13032", "host.some:0")
       }
 
-      When("Getting the txt tasks index with lastest compatibility mode")
-      val responseLatest = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, req = auth.request, asyncResponse = r) }
+      When("Getting the txt tasks index with lastest compatibility mode and including containerNetworks")
+      val responseLatest = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, containerNetworks = "*", req = auth.request, asyncResponse = r) }
 
       Then("The status should be 200")
       responseLatest.getStatus shouldEqual 200
@@ -411,7 +411,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
         healthCheckManager,
         auth.auth,
         auth.auth,
-        marathon15CompatibilityEnabled = true
+        DeprecatedFeatureConfig.empty(SemVer(1, 9, 0))
       )
 
       Given("the app exists")
