@@ -116,7 +116,7 @@ object TimezonesInDatacentersAreSadFormat extends (String => Option[LogFormat]) 
   // "2019-12-02 05:53:10.895189 -0500 EST [2019-12-02 05:53:10,885] INFO  Message"
   // "2019-12-02 05:51:04.810756 -0500 EST ... continued ..."
 
-  val regexPrefix = "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?( -[0-9]+( [A-Z]+)?)?".r
+  val regexPrefix = "^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]+)?( [+-][0-9]+( [A-Z]+)?)?".r
   val regex = s"${regexPrefix} \\[".r
 
   val example = "2019-12-02 05:53:10.895189 -0500 EST [2019-12-02 05:53:10,885] INFO  Message"
