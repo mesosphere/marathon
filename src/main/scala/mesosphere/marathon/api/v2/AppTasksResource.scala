@@ -37,7 +37,7 @@ class AppTasksResource @Inject() (
     groupManager: GroupManager,
     val authorizer: Authorizer,
     val authenticator: Authenticator,
-    deprecatedFeaturesSet: DeprecatedFeatureConfig)(implicit val executionContext: ExecutionContext) extends AuthResource {
+    marathon15CompatibilityEnabled: Boolean)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   val GroupTasks = """^((?:.+/)|)\*$""".r
 
@@ -84,22 +84,19 @@ class AppTasksResource @Inject() (
   @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   def indexTxt(
     @PathParam("appId") appId: String,
-    @DefaultValue(MarathonCompatibility.Latest)@QueryParam("compatibilityMode") compatibilityMode: String = MarathonCompatibility.Latest,
+    @DefaultValue(MarathonCompatibility.Latest)@QueryParam("compatibilityMode") compatibilityMode: String = null,
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
       val id = appId.toAbsolutePath
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
-        compatibilityMode match {
-          case MarathonCompatibility.V1_4 =>
-            if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.marathon14Compatibility)) {
-              ok(EndpointsHelper.appsToEndpointStringCompatibleWith14(ListTasks(instancesBySpec, Seq(app))))
-            } else {
-              status(Status.BAD_REQUEST, s"1.4 compatible task output must be enabled with ${DeprecatedFeatures.marathon14Compatibility.key}.")
-            }
-          case _ =>
-            ok(EndpointsHelper.appsToEndpointString(ListTasks(instancesBySpec, Seq(app))))
+        val data = ListTasks(instancesBySpec, Seq(app))
+        EndpointsHelper.dispatchAppsToEndpoint(data, Option(compatibilityMode), marathon15CompatibilityEnabled) match {
+          case Right(response) =>
+            ok(response)
+          case Left(error) =>
+            status(Status.BAD_REQUEST, error.msg)
         }
       }
     }

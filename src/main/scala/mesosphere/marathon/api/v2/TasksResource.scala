@@ -38,7 +38,7 @@ class TasksResource @Inject() (
     healthCheckManager: HealthCheckManager,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    deprecatedFeaturesSet: DeprecatedFeatureConfig)(implicit val executionContext: ExecutionContext) extends AuthResource {
+    marathon15CompatibilityEnabled: Boolean)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
@@ -91,25 +91,19 @@ class TasksResource @Inject() (
   @GET
   @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   def indexTxt(
-    @DefaultValue(MarathonCompatibility.Latest)@QueryParam("compatibilityMode") compatibilityMode: String = MarathonCompatibility.Latest,
+    @DefaultValue(MarathonCompatibility.Latest)@QueryParam("compatibilityMode") compatibilityMode: String = null,
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       val rootGroup = groupManager.rootGroup()
-      compatibilityMode match {
-        case MarathonCompatibility.V1_4 =>
-          if (deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.marathon14Compatibility)) {
-            ok(EndpointsHelper.appsToEndpointStringCompatibleWith14(
-              ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut))
-            ))
-          } else {
-            status(Status.BAD_REQUEST, s"1.4 compatible task output must be enabled with ${DeprecatedFeatures.marathon14Compatibility.key}.")
-          }
+      val data = ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut))
 
-        case _ =>
-          ok(EndpointsHelper.appsToEndpointString(
-            ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut))))
+      EndpointsHelper.dispatchAppsToEndpoint(data, Option(compatibilityMode), marathon15CompatibilityEnabled) match {
+        case Right(response) =>
+          ok(response)
+        case Left(error) =>
+          status(Status.BAD_REQUEST, error.msg)
       }
     }
   }
