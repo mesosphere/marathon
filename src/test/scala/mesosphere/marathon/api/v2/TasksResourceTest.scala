@@ -72,7 +72,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       assert(app.servicePorts.size > instance.appTask.status.networkInfo.hostPorts.size)
 
       When("Getting the txt tasks index")
-      val response = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, auth.request, r) }
+      val response = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, req = auth.request, asyncResponse = r) }
 
       Then("The status should be 200")
       response.getStatus shouldEqual 200
@@ -118,7 +118,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       groupManager.rootGroup() returns rootGroup
 
       When("Getting the txt tasks index with 1.4 compatibility mode")
-      val response14 = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.V1_4, auth.request, r) }
+      val response14 = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.V1_4, req = auth.request, asyncResponse = r) }
 
       Then("The status should be 200")
       response14.getStatus shouldEqual 200
@@ -131,7 +131,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       }
 
       When("Getting the txt tasks index with 1.5 compatibility mode")
-      val response15 = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.V1_5, auth.request, r) }
+      val response15 = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.V1_5, req = auth.request, asyncResponse = r) }
       Then("The status should be 200")
       response15.getStatus shouldEqual 200
 
@@ -143,7 +143,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       }
 
       When("Getting the txt tasks index with lastest compatibility mode")
-      val responseLatest = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, auth.request, r) }
+      val responseLatest = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, req = auth.request, asyncResponse = r) }
 
       Then("The status should be 200")
       responseLatest.getStatus shouldEqual 200
@@ -379,7 +379,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       running.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one index as txt is fetched")
-      val cancel = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, req, r) }
+      val cancel = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, req = auth.request, asyncResponse = r) }
       Then("we receive a NotAuthenticated response")
       cancel.getStatus should be(auth.NotAuthenticatedStatus)
     }

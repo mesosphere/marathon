@@ -17,13 +17,16 @@ import org.scalatest.Inside
 import scala.collection.immutable.Seq
 
 class EndpointsHelperTest extends UnitTest with Inside {
+  val allContainerNetworks = EndpointsHelper.parseNetworkPredicate(Some("*"))
+  val noContainerNetworks = EndpointsHelper.parseNetworkPredicate(None)
+
   def parseOutput(output: String): List[(String, String, Seq[String])] = {
     output.trim.split("\n").iterator
       .map {
         case line =>
           line.split("\t", -1).toList match {
             case app :: port :: endpoints =>
-              (app, port, endpoints.sorted)
+              (app, port, endpoints.sorted.filter(_.nonEmpty))
             case o =>
               throw new RuntimeException(s"parse error: ${o.toList}")
           }
@@ -64,22 +67,22 @@ class EndpointsHelperTest extends UnitTest with Inside {
     InstancesBySpec(Map(app.id -> instances))
   }
 
-  def fakeApp(appId: AbsolutePathId = AbsolutePathId("/foo"), container: => Option[Container] = None, network: => Network): AppDefinition =
-    AppDefinition(appId, cmd = Option("sleep"), container = container, networks = Seq(network), role = "*")
+  def fakeApp(appId: AbsolutePathId = AbsolutePathId("/foo"), container: => Option[Container] = None, networks: Seq[Network]): AppDefinition =
+    AppDefinition(appId, cmd = Option("sleep"), container = container, networks = networks, role = "*")
 
   def endpointsWithoutServicePorts(app: AppDefinition): Unit = {
     "handle single instance without service ports" in {
-      val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(1)), Seq(app))))
+      val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(1)), Seq(app)), allContainerNetworks))
       val expected = List(("foo", " ", Seq("agent1")))
       report should equal(expected)
     }
     "handle multiple instances, same agent, without service ports" in {
-      val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(2)), Seq(app))))
+      val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(2)), Seq(app)), allContainerNetworks))
       val expected = List(("foo", " ", Seq("agent1", "agent1")))
       report should equal(expected)
     }
     "handle multiple instances, different agents, without service ports" in {
-      val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(2, 1, 2)), Seq(app))))
+      val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(2, 1, 2)), Seq(app)), allContainerNetworks))
       val expected = List(("foo", " ", Seq("agent1", "agent1", "agent2", "agent3", "agent3")))
       report should equal(expected)
     }
@@ -87,17 +90,17 @@ class EndpointsHelperTest extends UnitTest with Inside {
 
   def endpointsWithSingleDynamicServicePorts(app: AppDefinition): Unit = {
     "handle single instance with 1 service port" in {
-      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(1)), Seq(app)))
+      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(1)), Seq(app)), allContainerNetworks)
       val expected = "foo\t80\tagent1:1010\t\n"
       report should equal(expected)
     }
     "handle multiple instances, same agent, with 1 service port" in {
-      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(2)), Seq(app)))
+      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(2)), Seq(app)), allContainerNetworks)
       val expected = "foo\t80\tagent1:1010\tagent1:1020\t\n"
       report should equal(expected)
     }
     "handle multiple instances, different agents, with 1 service port" in {
-      val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(2, 1, 2)), Seq(app))))
+      val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(2, 1, 2)), Seq(app)), allContainerNetworks))
       val expected = List(("foo", "80", Seq("agent1:1010", "agent1:1020", "agent2:1010", "agent3:1010", "agent3:1020")))
       report should equal(expected)
     }
@@ -105,12 +108,12 @@ class EndpointsHelperTest extends UnitTest with Inside {
 
   def endpointsWithSingleStaticServicePorts(app: AppDefinition, servicePort: Int, hostPort: Int): Unit = {
     s"handle single instance with 1 (static) service port $servicePort and host port $hostPort" in {
-      val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(1)), Seq(app))))
+      val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(1)), Seq(app)), allContainerNetworks))
       val expected = List(("foo", servicePort.toString, Seq(s"agent1:$hostPort")))
       report should equal(expected)
     }
     s"handle multiple instances, different agents, with 1 (static) service port $servicePort and host port $hostPort" in {
-      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(1, 1, 1)), Seq(app)))
+      val report = EndpointsHelper.appsToEndpointString(ListTasks(instances(app, Seq(1, 1, 1)), Seq(app)), allContainerNetworks)
       val expected = s"foo\t$servicePort\tagent1:$hostPort\tagent2:$hostPort\tagent3:$hostPort\t\n"
       report should equal(expected)
     }
@@ -118,10 +121,10 @@ class EndpointsHelperTest extends UnitTest with Inside {
 
   "EndpointsHelper" when {
     "generating (host network) app service port reports" should {
-      val hostNetworkedFakeApp = fakeApp(network = HostNetwork)
+      val hostNetworkedFakeApp = fakeApp(networks = Seq(HostNetwork))
       behave like endpointsWithoutServicePorts(hostNetworkedFakeApp)
 
-      val singleServicePort = fakeApp(network = HostNetwork).copy(portDefinitions = PortDefinitions(80))
+      val singleServicePort = fakeApp(networks = Seq(HostNetwork)).copy(portDefinitions = PortDefinitions(80))
 
       behave like endpointsWithSingleDynamicServicePorts(singleServicePort)
       behave like endpointsWithSingleStaticServicePorts(
@@ -150,11 +153,11 @@ class EndpointsHelperTest extends UnitTest with Inside {
       val container = Container.Mesos()
 
       behave like endpointsWithoutServicePorts(
-        fakeApp(container = Option(container), network = bridgeNetwork))
+        fakeApp(container = Option(container), networks = Seq(bridgeNetwork)))
 
       val singleServicePort = fakeApp(container = Option(container.copy(
         portMappings = Seq(Container.PortMapping(servicePort = 80, hostPort = Option(0)))
-      )), network = bridgeNetwork)
+      )), networks = Seq(bridgeNetwork))
 
       behave like endpointsWithSingleDynamicServicePorts(singleServicePort)
 
@@ -171,13 +174,14 @@ class EndpointsHelperTest extends UnitTest with Inside {
     }
 
     "generating (container network) app service port reports" should {
-      val containerNetwork = ContainerNetwork("whatever")
+      val containerNetwork = ContainerNetwork("macvlan")
+      val containerNetwork2 = ContainerNetwork("weave")
       val container = Container.Mesos()
       val servicePort = 80
 
       val singleServicePort = fakeApp(container = Option(container.copy(
         portMappings = Seq(Container.PortMapping(servicePort = servicePort, hostPort = Option(0)))
-      )), network = containerNetwork)
+      )), networks = Seq(containerNetwork))
 
       val appWithoutHostPorts = singleServicePort.copy(
         requirePorts = true,
@@ -186,7 +190,7 @@ class EndpointsHelperTest extends UnitTest with Inside {
         })
 
       behave like endpointsWithoutServicePorts(
-        fakeApp(container = Option(container), network = containerNetwork))
+        fakeApp(container = Option(container), networks = Seq(containerNetwork)))
 
       behave like endpointsWithSingleDynamicServicePorts(singleServicePort)
 
@@ -202,15 +206,47 @@ class EndpointsHelperTest extends UnitTest with Inside {
       )
 
       s"handle single instance with 1 (static) service port $servicePort and no host port by outputting the container ip and container port" in {
-        val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(appWithoutHostPorts, Seq(1)), Seq(appWithoutHostPorts))))
+        val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(appWithoutHostPorts, Seq(1)), Seq(appWithoutHostPorts)), allContainerNetworks))
         val expected = List(("foo", servicePort.toString, Seq(s"1.1.1.11:8080")))
         report should equal(expected)
       }
 
       s"handle multiple instances, different agents and no host port mapping by outputting the container ip and container port" in {
-        val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(appWithoutHostPorts, Seq(1, 1, 1)), Seq(appWithoutHostPorts))))
+        val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(appWithoutHostPorts, Seq(1, 1, 1)), Seq(appWithoutHostPorts)), allContainerNetworks))
         val expected = List(("foo", "80", List("1.1.1.11:8080", "1.1.1.21:8080", "1.1.1.31:8080")))
         report should equal(expected)
+      }
+
+      "exclude container-networked endpoints when not included in the network list" in {
+        val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(appWithoutHostPorts, Seq(1)), Seq(appWithoutHostPorts)), noContainerNetworks))
+        val expected = List(("foo", servicePort.toString, Seq()))
+        report should equal(expected)
+      }
+
+      "include only container-networked endpoints that are in the network list" in {
+        val dualServicePorts = fakeApp(
+          container = Option(container.copy(
+            portMappings = Seq(
+              Container.PortMapping(servicePort = 80, hostPort = None, containerPort = 8080, networkNames = Seq(containerNetwork.name)),
+              Container.PortMapping(servicePort = 81, hostPort = None, containerPort = 8081, networkNames = Seq(containerNetwork2.name)),
+            )
+          )),
+          networks = Seq(containerNetwork, containerNetwork2)
+        ).copy(
+          requirePorts = true
+        )
+
+        val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(dualServicePorts, Seq(1)), Seq(dualServicePorts)), Set(containerNetwork.name)))
+        inside(report) {
+          case (app1, port1, mappings1) :: (app2, port2, mappings2) :: Nil =>
+            app1 shouldBe "foo"
+            port1 shouldBe "80"
+            mappings1 shouldBe List("1.1.1.11:8080") // we include containerNetwork port mappings
+
+            app2 shouldBe "foo"
+            port2 shouldBe "81"
+            mappings2 shouldBe List() // but not containerNetwork2 port mappings
+        }
       }
 
       s"1.5: handle single instance and no host port by outputting the hostname and 0" in {
@@ -220,7 +256,7 @@ class EndpointsHelperTest extends UnitTest with Inside {
       }
 
       s"1.4: handle multiple instances, different agents and no host port mapping by outputting the container ip and container port" in {
-        val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(appWithoutHostPorts, Seq(1, 1, 1)), Seq(appWithoutHostPorts))))
+        val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(appWithoutHostPorts, Seq(1, 1, 1)), Seq(appWithoutHostPorts)), allContainerNetworks))
         val expected = List(("foo", "80", List("1.1.1.11:8080", "1.1.1.21:8080", "1.1.1.31:8080")))
         report shouldBe expected
       }

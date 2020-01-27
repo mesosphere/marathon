@@ -3,18 +3,28 @@ package api
 
 import mesosphere.marathon.api.v2.MarathonCompatibility
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.pod.HostNetwork
+import mesosphere.marathon.core.pod.{ContainerNetwork, HostNetwork}
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.Container.PortMapping
 
 object EndpointsHelper {
   sealed trait Error { val msg: String }
+  case object NetworkFilterNotAvailable extends Error {
+    val msg = "In order to use the network filters, 1.10 output mode must be used"
+  }
   case object MarathonCompatibilityNotEnabled extends Error {
     val msg = s"In order to use the flag compatibilityMode, 1.5 compatible task output must be enabled with --deprecated_features=${DeprecatedFeatures.marathon15Compatibility.key}."
   }
   case class CompatibilityModeNotValid(mode: String) extends Error {
     val msg = s"compatibilityMode ${mode} is invalid"
+  }
+
+  def parseNetworkPredicate(networkFilter: Option[String]): String => Boolean = networkFilter match {
+    case None => { _ => false }
+    case Some("*") => { _ => true }
+    case Some(list) =>
+      list.split(",").toSet
   }
 
   /**
@@ -24,18 +34,20 @@ object EndpointsHelper {
     * @param marathon15CompatibilityEnabled
     * @return
     */
-  def dispatchAppsToEndpoint(data: ListTasks, maybeCompatibilityMode: Option[String], marathon15CompatibilityEnabled: Boolean): Either[Error, String] = {
+  def dispatchAppsToEndpoint(data: ListTasks, maybeCompatibilityMode: Option[String], marathon15CompatibilityEnabled: Boolean, containerNetworks: Option[String]): Either[Error, String] = {
     val compatibilityMode = maybeCompatibilityMode.getOrElse { if (marathon15CompatibilityEnabled) MarathonCompatibility.V1_5 else MarathonCompatibility.Latest }
-    (compatibilityMode, marathon15CompatibilityEnabled) match {
-      case (MarathonCompatibility.Latest, _) =>
-        Right(appsToEndpointString(data))
-      case (_, false) =>
+    compatibilityMode match {
+      case MarathonCompatibility.Latest =>
+        Right(appsToEndpointString(data, parseNetworkPredicate(containerNetworks)))
+      case _ if marathon15CompatibilityEnabled == false =>
         Left(MarathonCompatibilityNotEnabled)
-      case (MarathonCompatibility.V1_4, _) =>
+      case _ if containerNetworks.nonEmpty =>
+        Left(NetworkFilterNotAvailable)
+      case MarathonCompatibility.V1_4 =>
         Right(MarathonCompatibility14.appsToEndpointString(data))
-      case (MarathonCompatibility.V1_5, _) =>
+      case MarathonCompatibility.V1_5 =>
         Right(MarathonCompatibility15.appsToEndpointString(data))
-      case (o, _) =>
+      case o =>
         Left(CompatibilityModeNotValid(o))
     }
   }
@@ -177,8 +189,9 @@ object EndpointsHelper {
     * network, and then, if a mapping is not available, the container ip and container port.
     *
     * @param data The tasks to render
+    * @param containerNetworkPredicate Whether or not to include the container-network ip and port in the list, when no host-mapping is available
     */
-  def appsToEndpointString(data: ListTasks): String = {
+  def appsToEndpointString(data: ListTasks, containerNetworkPredicate: String => Boolean): String = {
 
     val delimiter = "\t"
     val sb = new StringBuilder
@@ -188,6 +201,7 @@ object EndpointsHelper {
     apps.foreach { app =>
       val instances = instancesMap.specInstances(app.id)
       val cleanId = app.id.safePath
+      val appContainerNetworkNames = app.networks.collect { case ContainerNetwork(name, _) => name }
 
       val servicePorts = app.servicePorts
 
@@ -209,9 +223,14 @@ object EndpointsHelper {
           ipPerTaskPortMapping match {
             // port definition with no hostPort: container network
             case Some(portMapping) if portMapping.hostPort.isEmpty =>
-              // At a future point we may wish to only return port definitions pertaining to certain network types; this should be added as a separate parameter.
               runningInstances.foreach { instance =>
-                tryAppendContainerPort(sb, app, portMapping, instance, delimiter)
+                val networkNames = if (portMapping.networkNames.isEmpty)
+                  appContainerNetworkNames
+                else
+                  portMapping.networkNames
+                // note: this excludes bridge-networks
+                if (networkNames.exists(containerNetworkPredicate))
+                  tryAppendContainerPort(sb, app, portMapping, instance, delimiter)
               }
             case Some(portMapping) if portMapping.hostPort.nonEmpty =>
               // the task hostPorts only contains an entry for each portMapping that has a hostPort defined

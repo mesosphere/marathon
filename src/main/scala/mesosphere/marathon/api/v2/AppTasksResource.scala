@@ -84,7 +84,8 @@ class AppTasksResource @Inject() (
   @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   def indexTxt(
     @PathParam("appId") appId: String,
-    @DefaultValue(MarathonCompatibility.Latest)@QueryParam("compatibilityMode") compatibilityMode: String = null,
+    @DefaultValue("")@QueryParam("compatibilityMode") compatibilityMode: String = "",
+    @DefaultValue("")@QueryParam("containerNetworks") containerNetworks: String = "",
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
@@ -92,7 +93,7 @@ class AppTasksResource @Inject() (
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
         val data = ListTasks(instancesBySpec, Seq(app))
-        EndpointsHelper.dispatchAppsToEndpoint(data, Option(compatibilityMode), marathon15CompatibilityEnabled) match {
+        EndpointsHelper.dispatchAppsToEndpoint(data, Option(compatibilityMode).filterNot(_.isEmpty), marathon15CompatibilityEnabled, Option(containerNetworks).filterNot(_.isEmpty)) match {
           case Right(response) =>
             ok(response)
           case Left(error) =>
