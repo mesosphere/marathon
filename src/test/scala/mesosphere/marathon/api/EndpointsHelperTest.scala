@@ -17,8 +17,8 @@ import org.scalatest.Inside
 import scala.collection.immutable.Seq
 
 class EndpointsHelperTest extends UnitTest with Inside {
-  val allContainerNetworks = EndpointsHelper.parseNetworkPredicate(Some("*"))
-  val noContainerNetworks = EndpointsHelper.parseNetworkPredicate(None)
+  val allContainerNetworks: Option[String] = Some("*")
+  val noContainerNetworks: Option[String] = None
 
   def parseOutput(output: String): List[(String, String, Seq[String])] = {
     output.trim.split("\n").iterator
@@ -132,20 +132,6 @@ class EndpointsHelperTest extends UnitTest with Inside {
         servicePort = 80,
         hostPort = 80
       )
-
-      "1.4: returns the hosts space-delimited for host-networked apps" in {
-        // oddly, the delimiter differed only in this case for 1.4; for all other networking modes the entries were tab delimited
-        // https://github.com/mesosphere/marathon/blob/releases/1.4/src/main/scala/mesosphere/marathon/api/EndpointsHelper.scala#L45
-        val report = parseOutput(EndpointsHelper.MarathonCompatibility14.appsToEndpointString(ListTasks(instances(hostNetworkedFakeApp, Seq(2)), Seq(hostNetworkedFakeApp))))
-        val expected = List(("foo", " ", Seq("agent1 agent1")))
-        report should equal(expected)
-      }
-
-      "1.5: returns the hosts tab-delimited for host-networked apps" in {
-        val report = parseOutput(EndpointsHelper.MarathonCompatibility15.appsToEndpointString(ListTasks(instances(hostNetworkedFakeApp, Seq(2)), Seq(hostNetworkedFakeApp))))
-        val expected = List(("foo", " ", Seq("agent1", "agent1")))
-        report should equal(expected)
-      }
     }
 
     "generating (bridge network) app service port reports" should {
@@ -236,7 +222,7 @@ class EndpointsHelperTest extends UnitTest with Inside {
           requirePorts = true
         )
 
-        val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(dualServicePorts, Seq(1)), Seq(dualServicePorts)), Set(containerNetwork.name)))
+        val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(dualServicePorts, Seq(1)), Seq(dualServicePorts)), Some(containerNetwork.name)))
         inside(report) {
           case (app1, port1, mappings1) :: (app2, port2, mappings2) :: Nil =>
             app1 shouldBe "foo"
@@ -247,18 +233,6 @@ class EndpointsHelperTest extends UnitTest with Inside {
             port2 shouldBe "81"
             mappings2 shouldBe List() // but not containerNetwork2 port mappings
         }
-      }
-
-      s"1.5: handle single instance and no host port by outputting the hostname and 0" in {
-        val report = parseOutput(EndpointsHelper.MarathonCompatibility15.appsToEndpointString(ListTasks(instances(appWithoutHostPorts, Seq(1)), Seq(appWithoutHostPorts))))
-        val expected = List(("foo", servicePort.toString, Seq(s"agent1:0")))
-        report should equal(expected)
-      }
-
-      s"1.4: handle multiple instances, different agents and no host port mapping by outputting the container ip and container port" in {
-        val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(appWithoutHostPorts, Seq(1, 1, 1)), Seq(appWithoutHostPorts)), allContainerNetworks))
-        val expected = List(("foo", "80", List("1.1.1.11:8080", "1.1.1.21:8080", "1.1.1.31:8080")))
-        report shouldBe expected
       }
     }
   }

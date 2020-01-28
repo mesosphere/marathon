@@ -5,7 +5,6 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
-import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{Context, MediaType}
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api._
@@ -36,8 +35,7 @@ class AppTasksResource @Inject() (
     val config: MarathonConf,
     groupManager: GroupManager,
     val authorizer: Authorizer,
-    val authenticator: Authenticator,
-    deprecatedFeaturesSet: DeprecatedFeatureConfig)(implicit val executionContext: ExecutionContext) extends AuthResource {
+    val authenticator: Authenticator)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   val GroupTasks = """^((?:.+/)|)\*$""".r
 
@@ -84,7 +82,7 @@ class AppTasksResource @Inject() (
   @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   def indexTxt(
     @PathParam("appId") appId: String,
-    @DefaultValue("")@QueryParam("compatibilityMode") compatibilityMode: String = "",
+    @DefaultValue(MarathonCompatibility.Latest)@QueryParam("compatibilityMode") compatibilityMode: String = MarathonCompatibility.Latest,
     @DefaultValue("")@QueryParam("containerNetworks") containerNetworks: String = "",
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
@@ -93,12 +91,7 @@ class AppTasksResource @Inject() (
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
         val data = ListTasks(instancesBySpec, Seq(app))
-        EndpointsHelper.dispatchAppsToEndpoint(data, Option(compatibilityMode).filterNot(_.isEmpty), deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.marathonTasksCompatibility), Option(containerNetworks).filterNot(_.isEmpty)) match {
-          case Right(response) =>
-            ok(response)
-          case Left(error) =>
-            status(Status.BAD_REQUEST, error.msg)
-        }
+        ok(EndpointsHelper.appsToEndpointString(data, Option(containerNetworks).filterNot(_.isEmpty)))
       }
     }
   }

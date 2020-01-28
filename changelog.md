@@ -14,6 +14,14 @@
   expungeAfterSeconds and inactiveAfterSeconds to the same value will cause the instance to be expunged immediately;
   this helps with `GROUP_BY` or `UNIQUE` constraints.
 
+#### `/v2/tasks` `application/text` output
+
+Marathon outputs a terse, text-formatted list of instances with corresponding port-mappings with a request to `/v2/tasks` with content-type: `application/text`. Usage of this endpoint is generally discouraged, but some older tools continue to rely on it.
+
+As of Marathon 1.5, the output would include user container network endpoinst without a host port mapping, but in a form that was completely unusable (the agent's hostname as the address, even though the endpoint is fundamentally unreachable at that address, and the port 0). This behavior has been removed, and such results are not included by `/v2/tasks` application/text output, by default.
+
+A parameter `containerNetworks` has been added to filter and include port mappings pertaining to a comma-delimited list of user container network names. Setting this flag does not affect the output for port mappings that are bound to a host port in some way (either directly, in the case of host networking, or through a bridge-network port mapping). To see all container ips and endpoints for all user container networks, pass `?containerNetworks=*`.
+
 ## Changes from 1.9.73 to 1.9.100
 
 ### Faster serialization

@@ -48,8 +48,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       groupManager,
       healthCheckManager,
       auth.auth,
-      auth.auth,
-      DeprecatedFeatureConfig.empty(SemVer(1, 9, 0))
+      auth.auth
     )
   }
 
@@ -81,7 +80,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
     def parseTxtResponse(response: String): List[List[String]] =
       response.trim.split("\n").iterator.map(_.split("\t").toList).toList
 
-    "list (txt) tasks with 1.4 compatibility mode outputs container network ips and ports" in new Fixture {
+    "list (txt) tasks with  mode outputs container network ips and ports" in new Fixture {
       Given("a running instance of an app using container networks")
       val app = AppDefinition(
         "/foo".toAbsolutePath,
@@ -117,32 +116,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       val rootGroup = createRootGroup(apps = Map(app.id -> app))
       groupManager.rootGroup() returns rootGroup
 
-      When("Getting the txt tasks index with 1.4 compatibility mode")
-      val response14 = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.V1_4, req = auth.request, asyncResponse = r) }
-
-      Then("The status should be 200")
-      response14.getStatus shouldEqual 200
-
-      And("the output should return the container ports used in container networks")
-      inside(parseTxtResponse(response14.getEntity.toString)) {
-        case line1 :: line2 :: Nil =>
-          line1 shouldBe List("foo", "20163", "10.11.12.13:22")
-          line2 shouldBe List("foo", "13032", "10.11.12.13:6090")
-      }
-
-      When("Getting the txt tasks index with 1.5 compatibility mode")
-      val response15 = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.V1_8, req = auth.request, asyncResponse = r) }
-      Then("The status should be 200")
-      response15.getStatus shouldEqual 200
-
-      And("the output should return the nonsensical, useless entries of port:0")
-      inside(parseTxtResponse(response15.getEntity.toString)) {
-        case line1 :: line2 :: Nil =>
-          line1 shouldBe List("foo", "20163", "host.some:0")
-          line2 shouldBe List("foo", "13032", "host.some:0")
-      }
-
-      When("Getting the txt tasks index with lastest compatibility mode and including containerNetworks")
+      When("Getting the txt tasks index and including containerNetworks")
       val responseLatest = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, containerNetworks = "*", req = auth.request, asyncResponse = r) }
 
       Then("The status should be 200")
@@ -410,8 +384,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
         groupManager,
         healthCheckManager,
         auth.auth,
-        auth.auth,
-        DeprecatedFeatureConfig.empty(SemVer(1, 9, 0))
+        auth.auth
       )
 
       Given("the app exists")

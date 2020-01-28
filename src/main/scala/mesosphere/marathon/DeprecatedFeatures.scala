@@ -29,12 +29,6 @@ object DeprecatedFeatures {
     softRemoveVersion = SemVer(1, 8, 0),
     hardRemoveVersion = SemVer(1, 9, 0))
 
-  val marathonTasksCompatibility = DeprecatedFeature(
-    "marathon_tasks_compatibility",
-    description = "Enables Marathon to return 1.8 or 1.4 compatible format for application/text requests /tasks?compatibilityMode=1.4 and /apps/{...}/tasks?compatibilityMode=1.8",
-    softRemoveVersion = SemVer(1, 10, 0),
-    hardRemoveVersion = SemVer(1, 11, 0))
-
   /* Removed */
   val syncProxy = DeprecatedFeature(
     "sync_proxy",
@@ -73,7 +67,7 @@ object DeprecatedFeatures {
     hardRemoveVersion = SemVer(1, 11, 0))
 
   def all = Seq(syncProxy, jsonSchemasResource, apiHeavyEvents, proxyEvents, kamonMetrics, appC,
-    sanitizeAcceptedResourceRoles, marathonTasksCompatibility)
+    sanitizeAcceptedResourceRoles)
 
   def description: String = {
     "  - " + all.map { df =>

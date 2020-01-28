@@ -7,7 +7,6 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
-import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{Context, MediaType, Response}
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api.{EndpointsHelper, TaskKiller, _}
@@ -37,8 +36,7 @@ class TasksResource @Inject() (
     groupManager: GroupManager,
     healthCheckManager: HealthCheckManager,
     val authenticator: Authenticator,
-    val authorizer: Authorizer,
-    deprecatedFeaturesSet: DeprecatedFeatureConfig)(implicit val executionContext: ExecutionContext) extends AuthResource {
+    val authorizer: Authorizer)(implicit val executionContext: ExecutionContext) extends AuthResource {
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
@@ -91,7 +89,7 @@ class TasksResource @Inject() (
   @GET
   @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   def indexTxt(
-    @DefaultValue("")@QueryParam("compatibilityMode") compatibilityMode: String = "",
+    @DefaultValue(MarathonCompatibility.Latest)@QueryParam("compatibilityMode") compatibilityMode: String = MarathonCompatibility.Latest,
     @DefaultValue("")@QueryParam("containerNetworks") containerNetworks: String = "",
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
@@ -100,12 +98,7 @@ class TasksResource @Inject() (
       val rootGroup = groupManager.rootGroup()
       val data = ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut))
 
-      EndpointsHelper.dispatchAppsToEndpoint(data, Option(compatibilityMode).filterNot(_.isEmpty), deprecatedFeaturesSet.isEnabled(DeprecatedFeatures.marathonTasksCompatibility), Option(containerNetworks).filterNot(_.isEmpty)) match {
-        case Right(response) =>
-          ok(response)
-        case Left(error) =>
-          status(Status.BAD_REQUEST, error.msg)
-      }
+      ok(EndpointsHelper.appsToEndpointString(data, Option(containerNetworks).filterNot(_.isEmpty)))
     }
   }
 
