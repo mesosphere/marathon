@@ -8,11 +8,12 @@ import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.Container.PortMapping
 
 object EndpointsHelper {
-  private[api] def parseNetworkPredicate(networkFilter: Option[String]): String => Boolean = networkFilter match {
-    case None => { _ => false }
-    case Some("*") => { _ => true }
-    case Some(list) =>
-      list.split(",").toSet
+  private[api] def parseNetworkPredicate(networkFilter: Set[String]): String => Boolean = {
+    if (networkFilter contains "*") {
+      { _ => true }
+    } else {
+      networkFilter
+    }
   }
 
   /**
@@ -20,9 +21,9 @@ object EndpointsHelper {
     * network, and then, if a mapping is not available, the container ip and container port.
     *
     * @param data The tasks to render
-    * @param containerNetworks Whether or not to include the container-network ip and port in the list, when no host-mapping is available
+    * @param containerNetworks Set of container network names to include in the output. A network name of "*" indicates all networks should be included.
     */
-  def appsToEndpointString(data: ListTasks, containerNetworks: Option[String]): String = {
+  def appsToEndpointString(data: ListTasks, containerNetworks: Set[String]): String = {
     val delimiter = "\t"
     val sb = new StringBuilder
     val apps = data.apps

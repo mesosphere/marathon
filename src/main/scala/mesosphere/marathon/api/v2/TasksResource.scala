@@ -97,7 +97,7 @@ class TasksResource @Inject() (
       val rootGroup = groupManager.rootGroup()
       val data = ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut))
 
-      ok(EndpointsHelper.appsToEndpointString(data, Option(containerNetworks).filterNot(_.isEmpty)))
+      ok(EndpointsHelper.appsToEndpointString(data, containerNetworks.split(",").toSet))
     }
   }
 

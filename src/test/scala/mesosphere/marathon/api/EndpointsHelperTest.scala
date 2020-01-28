@@ -17,8 +17,8 @@ import org.scalatest.Inside
 import scala.collection.immutable.Seq
 
 class EndpointsHelperTest extends UnitTest with Inside {
-  val allContainerNetworks: Option[String] = Some("*")
-  val noContainerNetworks: Option[String] = None
+  private val allContainerNetworks = Set("*")
+  private val noContainerNetworks = Set.empty[String]
 
   def parseOutput(output: String): List[(String, String, Seq[String])] = {
     output.trim.split("\n").iterator
@@ -26,9 +26,9 @@ class EndpointsHelperTest extends UnitTest with Inside {
         case line =>
           line.split("\t", -1).toList match {
             case app :: port :: endpoints =>
-              (app, port, endpoints.sorted.filter(_.nonEmpty))
+              (app, port, endpoints.filter(_.nonEmpty).sorted)
             case o =>
-              throw new RuntimeException(s"parse error: ${o.toList}")
+              throw new RuntimeException(s"parse error: ${o}")
           }
       }
       .toList
@@ -193,11 +193,11 @@ class EndpointsHelperTest extends UnitTest with Inside {
 
       s"handle single instance with 1 (static) service port $servicePort and no host port by outputting the container ip and container port" in {
         val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(appWithoutHostPorts, Seq(1)), Seq(appWithoutHostPorts)), allContainerNetworks))
-        val expected = List(("foo", servicePort.toString, Seq(s"1.1.1.11:8080")))
+        val expected = List(("foo", servicePort.toString, Seq("1.1.1.11:8080")))
         report should equal(expected)
       }
 
-      s"handle multiple instances, different agents and no host port mapping by outputting the container ip and container port" in {
+      "handle multiple instances, different agents and no host port mapping by outputting the container ip and container port" in {
         val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(appWithoutHostPorts, Seq(1, 1, 1)), Seq(appWithoutHostPorts)), allContainerNetworks))
         val expected = List(("foo", "80", List("1.1.1.11:8080", "1.1.1.21:8080", "1.1.1.31:8080")))
         report should equal(expected)
@@ -222,7 +222,7 @@ class EndpointsHelperTest extends UnitTest with Inside {
           requirePorts = true
         )
 
-        val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(dualServicePorts, Seq(1)), Seq(dualServicePorts)), Some(containerNetwork.name)))
+        val report = parseOutput(EndpointsHelper.appsToEndpointString(ListTasks(instances(dualServicePorts, Seq(1)), Seq(dualServicePorts)), Set(containerNetwork.name)))
         inside(report) {
           case (app1, port1, mappings1) :: (app2, port2, mappings2) :: Nil =>
             app1 shouldBe "foo"

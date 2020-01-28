@@ -90,7 +90,7 @@ class AppTasksResource @Inject() (
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
         val data = ListTasks(instancesBySpec, Seq(app))
-        ok(EndpointsHelper.appsToEndpointString(data, Option(containerNetworks).filterNot(_.isEmpty)))
+        ok(EndpointsHelper.appsToEndpointString(data, containerNetworks.split(",").toSet))
       }
     }
   }
