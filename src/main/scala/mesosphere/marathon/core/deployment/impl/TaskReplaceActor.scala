@@ -59,8 +59,17 @@ class TaskReplaceActor(
   // All instances to kill as set for quick lookup
   private[this] var oldActiveInstanceIds: SortedSet[Id] = oldActiveInstances.map(_.instanceId).to[SortedSet]
 
+  // instance to kill sorted by decreasing order of priority
+  // we always prefer to kill unhealthy tasks first
+  private[this] val toKillOrdered = oldActiveInstances.sortWith((i1, i2) => {
+    (i1.consideredHealthy, i2.consideredHealthy) match {
+      case (_, false) => false
+      case _ => true
+    }
+  })
+
   // All instances to kill queued up
-  private[this] val toKill: mutable.Queue[Instance.Id] = oldActiveInstances.map(_.instanceId).to[mutable.Queue]
+  private[this] val toKill: mutable.Queue[Instance.Id] = toKillOrdered.map(_.instanceId).to[mutable.Queue]
 
   // The number of started or scheduled instances. Defaults to the number of already started instances.
   var instancesStarted: Int = instancesAlreadyStarted.size

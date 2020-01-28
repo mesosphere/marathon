@@ -514,7 +514,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       // one task is killed directly because we are over capacity
       eventually {
-        verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+        verify(f.tracker).setGoal(any, eq(Goal.Decommissioned), eq(GoalChangeReason.Upgrading))
       }
 
       // the kill is confirmed (see answer above) and the first new task is queued
