@@ -468,6 +468,13 @@
       get:
         description: List all running tasks for application `app_id`.
         is: [ secured ]
+        queryParameters:
+          containerNetworks:
+            required: false
+            description: |
+              Filter and include port mappings pertaining to a comma-delimited list of user container network names.
+              To see all container ips and endpoints for all user container networks, pass <code>?containerNetworks=*</code>.
+            type: String
         responses:
           200:
             description: The list of running tasks for application `app_id`.
