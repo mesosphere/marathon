@@ -71,7 +71,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       assert(app.servicePorts.size > instance.appTask.status.networkInfo.hostPorts.size)
 
       When("Getting the txt tasks index")
-      val response = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, req = auth.request, asyncResponse = r) }
+      val response = asyncRequest { r => taskResource.indexTxt(req = auth.request, asyncResponse = r) }
 
       Then("The status should be 200")
       response.getStatus shouldEqual 200
@@ -117,7 +117,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       groupManager.rootGroup() returns rootGroup
 
       When("Getting the txt tasks index and including containerNetworks")
-      val responseLatest = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, containerNetworks = "*", req = auth.request, asyncResponse = r) }
+      val responseLatest = asyncRequest { r => taskResource.indexTxt(containerNetworks = "*", req = auth.request, asyncResponse = r) }
 
       Then("The status should be 200")
       responseLatest.getStatus shouldEqual 200
@@ -353,7 +353,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       running.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one index as txt is fetched")
-      val cancel = asyncRequest { r => taskResource.indexTxt(MarathonCompatibility.Latest, req = auth.request, asyncResponse = r) }
+      val cancel = asyncRequest { r => taskResource.indexTxt(req = auth.request, asyncResponse = r) }
       Then("we receive a NotAuthenticated response")
       cancel.getStatus should be(auth.NotAuthenticatedStatus)
     }
