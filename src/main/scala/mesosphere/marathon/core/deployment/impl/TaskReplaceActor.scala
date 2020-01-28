@@ -48,11 +48,8 @@ class TaskReplaceActor(
     currentInstances.partition(_.runSpecVersion == runSpec.version)
   }
 
-  // Old and new instances that have the Goal.Running & are considered healthy
-  val consideredHealthyInstances = currentInstances.filter(i => i.state.goal == Goal.Running && i.consideredHealthy)
-
   // The ignition strategy for this run specification
-  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, consideredHealthyInstances.size)
+  private[this] val ignitionStrategy = computeRestartStrategy(runSpec, currentInstances)
 
   // compute all variables maintained in this actor =========================================================
 
@@ -285,9 +282,13 @@ object TaskReplaceActor extends StrictLogging {
   /** Encapsulates the logic how to get a Restart going */
   private[impl] case class RestartStrategy(nrToKillImmediately: Int, maxCapacity: Int)
 
-  private[impl] def computeRestartStrategy(runSpec: RunSpec, consideredHealthyInstancesCount: Int): RestartStrategy = {
+  private[impl] def computeRestartStrategy(runSpec: RunSpec, currentInstances: Seq[Instance]): RestartStrategy = {
     // in addition to a spec which passed validation, we require:
     require(runSpec.instances > 0, s"instances must be > 0 but is ${runSpec.instances}")
+    require(currentInstances.size >= 0, s"current instances count must be >=0 but is ${currentInstances.size}")
+
+    // Old and new instances that have the Goal.Running & are considered healthy
+    val consideredHealthyInstancesCount = currentInstances.filter(i => i.state.goal == Goal.Running && i.consideredHealthy).size
     require(consideredHealthyInstancesCount >= 0, s"running instances count must be >=0 but is $consideredHealthyInstancesCount")
 
     val minHealthy = (runSpec.instances * runSpec.upgradeStrategy.minimumHealthCapacity).ceil.toInt
@@ -307,6 +308,13 @@ object TaskReplaceActor extends StrictLogging {
         logger.info("maxCapacity == minHealthy: Allow temporary over-capacity of one instance to allow restarting")
         maxCapacity += 1
       }
+    }
+
+    // following condition addresses cases where we have extra-instances due to previous deployment adding extra-instances
+    // and deployment is force-updated
+    if (runSpec.instances < currentInstances.size) {
+      nrToKillImmediately = math.max(currentInstances.size - runSpec.instances, nrToKillImmediately)
+      logger.info(s"runSpec.instances < currentInstances: Allowing killing all $nrToKillImmediately extra-instances")
     }
 
     logger.info(s"For minimumHealthCapacity ${runSpec.upgradeStrategy.minimumHealthCapacity} of ${runSpec.id.toString} leave " +
