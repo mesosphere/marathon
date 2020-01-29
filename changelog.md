@@ -16,15 +16,21 @@
 * [MARATHON-8719](https://jira.mesosphere.com/browse/MARATHON-8719) - Marathon `/v2/tasks` text formatted output no
   longer includes endpoints without host-port mappings at the agent hostname and port 0.
 
-### `/v2/tasks` `application/text` output
+### `/v2/tasks` `text/plain` output
 
-#### Addition of containerNetworks parameter
+#### Addition of `containerNetworks` parameter
 
 Marathon outputs a terse, text-formatted list of instances with corresponding port-mappings with a request to `/v2/tasks` with content-type: `application/text`. Usage of this endpoint is generally discouraged, but some older tools continue to rely on it.
 
 As of Marathon 1.5, the output would include user container network endpoint without a host port mapping, but in a form that was completely unusable (the agent's hostname as the address, even though the endpoint is fundamentally unreachable at that address, and the port 0). This behavior has been removed, and such results are not included by `/v2/tasks` application/text output, by default.
 
 A parameter `containerNetworks` has been added to filter and include port mappings pertaining to a comma-delimited list of user container network names. Setting this flag does not affect the output for port mappings that are bound to a host port in some way (either directly, in the case of host networking, or through a bridge-network port mapping). To see all container ips and endpoints for all user container networks, pass `?containerNetworks=*`.
+
+#### Deprecation ####
+
+The `text/plain` output is deprecated. It will be soft removed with Marathon 1.10. Any request will
+result in an `HTTP 406 Not Accetable` if the accept header is `test/plain` unless `--deprecated_features text_plain_tasks`
+is enabled. It will be hard removed with Marathon 1.11.
 
 ## Changes from 1.9.73 to 1.9.100
 
