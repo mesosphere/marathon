@@ -5,27 +5,31 @@ import java.util.Collections
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
-import mesosphere.marathon.test.JerseyTest
-import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.Identity
+import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.GroupCreation
+import mesosphere.marathon.test.{GroupCreation, JerseyTest}
+import org.apache.mesos
 import org.mockito.Matchers
 import org.mockito.Mockito._
+import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
+class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with Inside {
   case class Fixture(
       auth: TestAuthFixture = new TestAuthFixture,
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
@@ -66,10 +70,62 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       assert(app.servicePorts.size > instance.appTask.status.networkInfo.hostPorts.size)
 
       When("Getting the txt tasks index")
-      val response = asyncRequest { r => taskResource.indexTxt(auth.request, r) }
+      val response = asyncRequest { r => taskResource.indexTxt(req = auth.request, asyncResponse = r) }
 
       Then("The status should be 200")
       response.getStatus shouldEqual 200
+    }
+
+    def parseTxtResponse(response: String): List[List[String]] =
+      response.trim.split("\n").iterator.map(_.split("\t").toList).toList
+
+    "list (txt) tasks with  mode outputs container network ips and ports" in new Fixture {
+      Given("a running instance of an app using container networks")
+      val app = AppDefinition(
+        "/foo".toPath,
+        networks = Seq(ContainerNetwork("weave")),
+        container = Some(Container.Docker(
+          image = "alpine",
+          portMappings = Seq(
+            PortMapping(
+              name = Some("http"),
+              containerPort = 22,
+              hostPort = None,
+              servicePort = 20163),
+            PortMapping(
+              name = Some("https"),
+              containerPort = 6090,
+              hostPort = None,
+              servicePort = 13032)))))
+
+      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskWithBuilder()
+        .taskRunning()
+        .withNetworkInfo(
+          NetworkInfo(
+            hostName = "hostname",
+            hostPorts = Nil,
+            ipAddresses = Seq(mesos.Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress("10.11.12.13").build())))
+        .build()
+        .getInstance()
+
+      val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(instance)
+      instanceTracker.instancesBySpec returns Future.successful(tasksByApp)
+
+      val rootGroup = createRootGroup(apps = Map(app.id -> app))
+      groupManager.rootGroup() returns rootGroup
+
+      When("Getting the txt tasks index and including containerNetworks")
+      val responseLatest = asyncRequest { r => taskResource.indexTxt(containerNetworks = "*", req = auth.request, asyncResponse = r) }
+
+      Then("The status should be 200")
+      responseLatest.getStatus shouldEqual 200
+
+      And("the output should return the container ports used in container networks")
+      inside(parseTxtResponse(responseLatest.getEntity.toString)) {
+        case line1 :: line2 :: Nil =>
+          line1 shouldBe List("foo", "20163", "10.11.12.13:22")
+          line2 shouldBe List("foo", "13032", "10.11.12.13:6090")
+      }
     }
 
     "list apps when there are no apps" in new Fixture {
@@ -288,7 +344,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       running.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one index as txt is fetched")
-      val cancel = asyncRequest { r => taskResource.indexTxt(req, r) }
+      val cancel = asyncRequest { r => taskResource.indexTxt(req = auth.request, asyncResponse = r) }
       Then("we receive a NotAuthenticated response")
       cancel.getStatus should be(auth.NotAuthenticatedStatus)
     }
