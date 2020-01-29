@@ -92,12 +92,18 @@ class TasksResource @Inject() (
     @DefaultValue("")@QueryParam("containerNetworks") containerNetworks: String = "",
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
-      implicit val identity = await(authenticatedAsync(req))
-      val instancesBySpec = await(instanceTracker.instancesBySpec)
-      val rootGroup = groupManager.rootGroup()
-      val data = ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut))
+      if (config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.textPlainTasks)) {
+        implicit val identity = await(authenticatedAsync(req))
+        val instancesBySpec = await(instanceTracker.instancesBySpec)
+        val rootGroup = groupManager.rootGroup()
+        val data = ListTasks(instancesBySpec, rootGroup.transitiveApps.filterAs(app => isAuthorized(ViewRunSpec, app))(collection.breakOut))
 
-      ok(EndpointsHelper.appsToEndpointString(data, containerNetworks.split(",").toSet))
+        ok(EndpointsHelper.appsToEndpointString(data, containerNetworks.split(",").toSet))
+      } else {
+        status(
+          Response.Status.NOT_ACCEPTABLE,
+          s"The text/plain output is deprecated. It can be enabled via ${DeprecatedFeatures.textPlainTasks.key}.")
+      }
     }
   }
 
