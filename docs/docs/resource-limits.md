@@ -4,7 +4,7 @@ Marathon can instruct Mesos to enable resource limits [TODO - LINK TO MESOS PAGE
 
 ## Apps
 
-Resource limits is specified in apps by the field "resourceLimits". The two valid keys are "cpus" and "mem", and the values may either be "unlimited" or a numeric value greater than or equal to the corresponding requested resource amount.
+Resource limits is specified in apps by the field `resourceLimits`. The two valid keys are `cpus` and `mem`, and the values may either be `unlimited` or a numeric value greater than or equal to the corresponding requested resource amount.
 
 ```
 {
@@ -21,7 +21,7 @@ Resource limits is specified in apps by the field "resourceLimits". The two vali
 
 ### Pods
 
-Similar to apps, pods may also have resourceLimits specified on a per-container basis.
+Similar to apps, pods may also optionally have `resourceLimits` specified on a per-container basis.
 
 ```
 {
@@ -43,7 +43,7 @@ Similar to apps, pods may also have resourceLimits specified on a per-container 
 
 #### Pod "legacySharedCgroups" field
 
-Pods created prior to Marathon 1.10 will have the option `legacySharedCgroups` enabled. This enables old behavior in which containers would share resources with other resources in pods. For example, if you had the following pod, and a task "big-compute-task" which only requested 32MB of memory but really consumed much more, it would consume memory resources from the container "primary-service".
+Pods created prior to Marathon 1.10 will have the option `legacySharedCgroups` enabled. This enables old behavior in which containers would share resources with other containers in a pod. For example, if you had the following pod, and a task `big-compute-task` which only requested 32MB of memory, but really required much more, then the container `big-compute-task` would steal memory resources from the other container, `primary-service`.
 
 ```
 {
@@ -67,7 +67,7 @@ Pods created prior to Marathon 1.10 will have the option `legacySharedCgroups` e
 }
 ```
 
-In order to specify `resourceLimits` for pods, `legacySharedCgroups` must be disabled. This is done by simply removing the field from the pod definition.
+To specify `resourceLimits` for a pod, you must remove the field `legacySharedCgroups` from the pod definition.
 
 ### OOM killing risk for memory bursting resources
 
