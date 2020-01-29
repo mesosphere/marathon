@@ -103,6 +103,7 @@ class TasksResource @Inject() (
         status(
           Response.Status.NOT_ACCEPTABLE,
           s"The text/plain output is deprecated. It can be enable via ${DeprecatedFeatures.textPlainTasks.key}.")
+      }
     }
   }
 
