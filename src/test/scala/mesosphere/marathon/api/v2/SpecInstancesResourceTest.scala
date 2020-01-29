@@ -321,7 +321,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       indexJson.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("the index as txt is fetched")
-      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("", req, r) }
+      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("", req = req, asyncResponse = r) }
       Then("we receive a NotAuthenticated response")
       indexTxt.getStatus should be(auth.NotAuthenticatedStatus)
 
@@ -416,7 +416,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
-      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("/app", req, r) }
+      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("/app", req = req, asyncResponse = r) }
       Then("we receive a not authorized response")
       indexTxt.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -432,7 +432,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
-      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("/app", req, r) }
+      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("/app", req = req, asyncResponse = r) }
       Then("we receive a not authorized response")
       indexTxt.getStatus should be(404)
     }
