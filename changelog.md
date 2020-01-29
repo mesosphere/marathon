@@ -20,7 +20,7 @@
 
 #### Addition of `containerNetworks` parameter
 
-Marathon outputs a terse, text-formatted list of instances with corresponding port-mappings with a request to `/v2/tasks` with content-type: `application/text`. Usage of this endpoint is generally discouraged, but some older tools continue to rely on it.
+Marathon outputs a terse, text-formatted list of instances with corresponding port-mappings with a request to `/v2/tasks` with content-type: `text/plain`. Usage of this endpoint is generally discouraged, but some older tools continue to rely on it.
 
 As of Marathon 1.5, the output would include user container network endpoint without a host port mapping, but in a form that was completely unusable (the agent's hostname as the address, even though the endpoint is fundamentally unreachable at that address, and the port 0). This behavior has been removed, and such results are not included by `/v2/tasks` application/text output, by default.
 
