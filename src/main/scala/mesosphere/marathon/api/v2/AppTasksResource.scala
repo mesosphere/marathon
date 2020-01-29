@@ -82,13 +82,15 @@ class AppTasksResource @Inject() (
   @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   def indexTxt(
     @PathParam("appId") appId: String,
+    @DefaultValue("")@QueryParam("containerNetworks") containerNetworks: String = "",
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
       val id = appId.toAbsolutePath
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
-        ok(EndpointsHelper.appsToEndpointString(ListTasks(instancesBySpec, Seq(app))))
+        val data = ListTasks(instancesBySpec, Seq(app))
+        ok(EndpointsHelper.appsToEndpointString(data, containerNetworks.split(",").toSet))
       }
     }
   }
