@@ -29,14 +29,13 @@ import org.scalatest.Inside
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with Inside {
   case class Fixture(
       auth: TestAuthFixture = new TestAuthFixture,
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       taskKiller: TaskKiller = mock[TaskKiller],
-      config: MarathonConf = mock[MarathonConf],
+      config: MarathonConf = AllConf.withTestConfig("--deprecated_features", "text_plain_tasks"),
       groupManager: GroupManager = mock[GroupManager],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
       implicit val identity: Identity = mock[Identity]) {
@@ -59,8 +58,6 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       val app = AppDefinition("/foo".toAbsolutePath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)), cmd = Some("sleep"), role = "*")
 
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
-
-      config.zkTimeoutDuration returns 5.seconds
 
       val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(instance)
       instanceTracker.instancesBySpec returns Future.successful(tasksByApp)
@@ -133,7 +130,6 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
     "list apps when there are no apps" in new Fixture {
       // Regression test for #4932
       Given("no apps")
-      config.zkTimeoutDuration returns 5.seconds
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
       groupManager.apps(any) returns Map.empty
 
@@ -160,7 +156,6 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       val body = s"""{"ids": ["${taskId1.idString}", "${taskId2.idString}"]}"""
       val bodyBytes = body.toCharArray.map(_.toByte)
 
-      config.zkTimeoutDuration returns 5.seconds
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
       groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))
@@ -196,7 +191,6 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       val body = s"""{"ids": ["${container.idString}"]}"""
       val bodyBytes = body.toCharArray.map(_.toByte)
 
-      config.zkTimeoutDuration returns 5.seconds
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
       groupManager.app(any) returns None
@@ -227,7 +221,6 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       val bodyBytes = body.toCharArray.map(_.toByte)
       val deploymentPlan = new DeploymentPlan("plan", createRootGroup(), createRootGroup(), Seq.empty[DeploymentStep], Timestamp.zero)
 
-      config.zkTimeoutDuration returns 5.seconds
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
       taskKiller.killAndScale(any, any)(any) returns Future.successful(deploymentPlan)
       groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))
@@ -277,7 +270,6 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       val body = s"""{"ids": ["${taskId1.idString}"]}"""
       val bodyBytes = body.toCharArray.map(_.toByte)
 
-      config.zkTimeoutDuration returns 5.seconds
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
       instanceTracker.specInstances(app1) returns Future.successful(Seq(instance1))
       taskKiller.kill(Matchers.eq(app1), any, Matchers.eq(true))(any) returns Future.successful(List(instance1))
@@ -388,7 +380,6 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       )
 
       Given("the app exists")
-      config.zkTimeoutDuration returns 5.seconds
       groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
