@@ -162,7 +162,6 @@ object TestInstanceBuilder {
 
   def emptyInstanceForRunSpec(now: Timestamp = Timestamp.now(), runSpec: RunSpec, instanceId: Instance.Id): Instance = {
     val resolvedInstanceId = Option(instanceId).getOrElse(Instance.Id.forRunSpec(runSpec.id))
-
     require(resolvedInstanceId.runSpecId == runSpec.id, "provided instanceId did not match runSpec")
 
     Instance(
