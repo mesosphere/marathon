@@ -93,9 +93,11 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       result should be(Created)
       waitForDeployment(result)
       waitForTasks(app.id.toPath, 1)
-      val task = marathon.tasks(applicationId).value.head
-      task.region shouldBe Some(f.remoteRegion.value)
-      task.zone shouldBe Some(f.remoteZone2.value)
+      eventually {
+        val task = marathon.tasks(applicationId).value.head
+        task.region shouldBe Some(f.remoteRegion.value)
+        task.zone shouldBe Some(f.remoteZone2.value)
+      }
     }
 
     "Replace an unreachable instance in the same region" in {
