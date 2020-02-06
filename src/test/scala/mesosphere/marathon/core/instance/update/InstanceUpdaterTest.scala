@@ -42,9 +42,9 @@ class InstanceUpdaterTest extends UnitTest {
   }
 
   "A Running instance" when {
-    "Processing an Unreachable update" should {
-      val f = new Fixture
-      val newMesosStatus = MesosTaskStatusTestHelper.unreachable(f.taskId)
+    "processing an Unreachable update" should {
+      val f = new Fixture(unreachableStrategy = UnreachableEnabled(0.seconds, 15.minutes))
+      val newMesosStatus = MesosTaskStatusTestHelper.unreachable(f.taskId, since = f.clock.now())
       val operation = InstanceUpdateOperation.MesosUpdate(f.instance, newMesosStatus, f.clock.now())
       val result = InstanceUpdater.mesosUpdate(f.instance, operation)
 
@@ -64,13 +64,13 @@ class InstanceUpdaterTest extends UnitTest {
       }
     }
 
-    "processing an expired unreachable" should {
-      val f = new Fixture
+    "should expunge instances immediately when the instance expunge" should {
+      val f = new Fixture(unreachableStrategy = UnreachableEnabled(0.seconds, 15.minutes))
       val unreachableInactiveAfter = f.instance.unreachableStrategy.asInstanceOf[UnreachableEnabled].inactiveAfter
       val newMesosStatus = MesosTaskStatusTestHelper.unreachable(f.taskId, since = f.clock.now())
 
       // Forward time to expire unreachable status
-      f.clock += unreachableInactiveAfter + 1.minute
+      f.clock += (unreachableInactiveAfter)
       val operation = InstanceUpdateOperation.MesosUpdate(f.instance, newMesosStatus, f.clock.now())
       val result = InstanceUpdater.mesosUpdate(f.instance, operation)
 
@@ -86,6 +86,57 @@ class InstanceUpdaterTest extends UnitTest {
       }
       "add a task event" in {
         val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
+        effect.events(0) match {
+          case MesosStatusUpdateEvent(_, _, taskStatus, _, _, _, _, _, _, _, _) =>
+            taskStatus should be(TASK_UNREACHABLE)
+          case _ => fail("Event did not match MesosStatusUpdateEvent")
+        }
+      }
+    }
+
+    "processing an expired unreachable, but not yet reaching the expunge threshold" should {
+      val f = new Fixture(unreachableStrategy = UnreachableEnabled(0.seconds, 15.minutes))
+      val unreachableInactiveAfter = f.instance.unreachableStrategy.asInstanceOf[UnreachableEnabled].inactiveAfter
+      val newMesosStatus = MesosTaskStatusTestHelper.unreachable(f.taskId, since = f.clock.now())
+
+      // Forward time to expire unreachable status
+      f.clock += unreachableInactiveAfter
+      val operation = InstanceUpdateOperation.MesosUpdate(f.instance, newMesosStatus, f.clock.now())
+      val result = InstanceUpdater.mesosUpdate(f.instance, operation)
+
+      "result in an update effect" in { result shouldBe a[InstanceUpdateEffect.Update] }
+      "become unreachable inactive" in {
+        val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
+        effect.events(1) match {
+          case InstanceChanged(instanceId, _, _, condition, _) =>
+            instanceId should be(f.instance.instanceId)
+            condition should be(Condition.UnreachableInactive)
+          case _ => fail("Event did not match InstanceChanged")
+        }
+      }
+      "add a task event" in {
+        val effect = result.asInstanceOf[InstanceUpdateEffect.Update]
+        effect.events(0) match {
+          case MesosStatusUpdateEvent(_, _, taskStatus, _, _, _, _, _, _, _, _) =>
+            taskStatus should be(TASK_UNREACHABLE)
+          case _ => fail("Event did not match MesosStatusUpdateEvent")
+        }
+      }
+    }
+
+    "processing an expired unreachable where the expunge threshold is reached" should {
+      val f = new Fixture(unreachableStrategy = UnreachableEnabled(0.seconds, 0.seconds))
+      val unreachableInactiveAfter = f.instance.unreachableStrategy.asInstanceOf[UnreachableEnabled].inactiveAfter
+      val newMesosStatus = MesosTaskStatusTestHelper.unreachable(f.taskId, since = f.clock.now())
+
+      // Forward time to expire unreachable status
+      f.clock += (unreachableInactiveAfter)
+      val operation = InstanceUpdateOperation.MesosUpdate(f.instance, newMesosStatus, f.clock.now())
+      val result = InstanceUpdater.mesosUpdate(f.instance, operation)
+
+      "result in an expunge effect" in { result shouldBe a[InstanceUpdateEffect.Expunge] }
+      "add a task event" in {
+        val effect = result.asInstanceOf[InstanceUpdateEffect.Expunge]
         effect.events(0) match {
           case MesosStatusUpdateEvent(_, _, taskStatus, _, _, _, _, _, _, _, _) =>
             taskStatus should be(TASK_UNREACHABLE)
@@ -145,10 +196,10 @@ class InstanceUpdaterTest extends UnitTest {
   "An unreachable instance" when {
 
     "updated to running" should {
-      val f = new Fixture
+      val f = new Fixture(unreachableStrategy = UnreachableEnabled(0.seconds, 15.minutes))
 
       // Setup unreachable instance with a unreachable task
-      val mesosTaskStatus = MesosTaskStatusTestHelper.unreachable(f.taskId)
+      val mesosTaskStatus = MesosTaskStatusTestHelper.unreachable(f.taskId, since = f.clock.now())
       val unreachableStatus = f.taskStatus.copy(startedAt = None, condition = Condition.Unreachable, mesosStatus = Some(mesosTaskStatus))
       val unreachableTask = f.task.copy(status = unreachableStatus)
       val unreachableState = f.instanceState.copy(condition = Condition.Unreachable)
@@ -166,10 +217,10 @@ class InstanceUpdaterTest extends UnitTest {
     }
 
     "update to unknown" should {
-      val f = new Fixture
+      val f = new Fixture(unreachableStrategy = UnreachableEnabled(0.seconds, 15.minutes))
 
       // Setup unreachable instance with a unreachable task
-      val mesosTaskStatus = MesosTaskStatusTestHelper.unreachable(f.taskId)
+      val mesosTaskStatus = MesosTaskStatusTestHelper.unreachable(f.taskId, since = f.clock.now())
       val unreachableStatus = f.taskStatus.copy(startedAt = None, condition = Condition.Unreachable, mesosStatus = Some(mesosTaskStatus))
       val unreachableTask = f.task.copy(status = unreachableStatus)
       val unreachableState = f.instanceState.copy(condition = Condition.Unreachable)
@@ -302,7 +353,7 @@ class InstanceUpdaterTest extends UnitTest {
     result.asInstanceOf[Update].instance.state.goal should be (Goal.Stopped)
   }
 
-  class Fixture {
+  class Fixture(unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default(resident = false)) {
     val container1 = MesosContainer(
       name = "container1",
       resources = Resources()
@@ -328,6 +379,6 @@ class InstanceUpdaterTest extends UnitTest {
     val task = Task(taskId, runSpecVersion = clock.now(), status = taskStatus)
     val instance = Instance(
       instanceId, agentInfo, instanceState, Map(taskId -> task), clock.now(),
-      UnreachableStrategy.default(), None)
+      unreachableStrategy, None)
   }
 }

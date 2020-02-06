@@ -52,10 +52,22 @@ object MesosFormats {
   implicit lazy val ITStatusFormat: Format[ITMesosState] = (
     (__ \ "version").format[String] ~
     (__ \ "git_sha").formatNullable[String] ~
-    (__ \ "slaves").format[Seq[ITAgent]]
+    (__ \ "slaves").format[Seq[ITAgent]] ~
+    (__ \ "frameworks").format[Seq[ITFramework]] ~
+    (__ \ "completed_frameworks").format[Seq[ITFramework]] ~
+    (__ \ "unregistered_frameworks").format[Seq[String]]
   )(ITMesosState.apply, unlift(ITMesosState.unapply))
+
+  implicit lazy val ITaskFormat: Format[ITask] = Json.format[ITask]
 
   implicit lazy val ITFrameworkFormat: Format[ITFramework] = Json.format[ITFramework]
 
   implicit lazy val ITFrameworksFormat: Format[ITFrameworks] = Json.format[ITFrameworks]
+
+  implicit val ITFaultDomainFormat: Format[ITFaultDomain] = (
+    (__ \ "fault_domain" \ "region" \ "name").format[String] ~
+    (__ \ "fault_domain" \ "zone" \ "name").format[String]
+  )(ITFaultDomain.apply, unlift(ITFaultDomain.unapply))
+
+  implicit val ITAgentDetailsFormat: Format[ITAgentDetails] = Json.format[ITAgentDetails]
 }

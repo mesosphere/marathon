@@ -9,7 +9,7 @@ import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep, Depl
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.{Health, HealthCheckManager}
 import mesosphere.marathon.core.instance.Instance.InstanceState
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
@@ -72,7 +72,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       Instance(
         instanceId = instanceId,
         agentInfo = Instance.AgentInfo("", None, None, None, Nil),
-        state = InstanceState(None, tasks, clock.now(), UnreachableStrategy.default()),
+        state = InstanceState.transitionTo(None, tasks, clock.now(), UnreachableStrategy.default(), Goal.Running),
         tasksMap = tasks,
         runSpecVersion = pod.version,
         unreachableStrategy = UnreachableStrategy.default(),
@@ -489,10 +489,10 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       f.groupManager.podVersion(any, any) returns Future.successful(None)
       f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq.empty)
 
-      When("requesting pod status")
-      f.baseData.podStatus(pod).futureValue
-
-      Then("no exception was thrown so status was successfully fetched")
+      Then("requesting pod status should not throw an exception")
+      noException should be thrownBy {
+        f.baseData.podStatus(pod).futureValue
+      }
     }
 
     "requesting Pod lastTaskFailure when one exists" in {

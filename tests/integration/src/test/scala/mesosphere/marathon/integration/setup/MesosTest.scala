@@ -11,6 +11,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Get
 import akka.stream.Materializer
 import mesosphere.marathon.integration.facades.MesosFacade
+import mesosphere.marathon.integration.facades.MesosFacade.ITAgentDetails
+import mesosphere.marathon.integration.setup.MesosTest.AgentLike
 import mesosphere.marathon.state.FaultDomain
 import mesosphere.marathon.util.{Retry, ZookeeperServerTest}
 import mesosphere.util.PortAllocator
@@ -76,6 +78,8 @@ case class MesosCluster(
       "--max_slave_ping_timeouts=4",
       s"--quorum=$quorumSize") ++ faultDomainJson.map(fd => s"--domain=$fd"))
   }
+
+  private var initialCachedAgentDetails: Map[AgentLike, ITAgentDetails] = Map.empty
 
   lazy val agents = 0.until(numSlaves).map { i =>
     // We can add additional resources constraints for our test clusters here.
@@ -162,6 +166,9 @@ case class MesosCluster(
       if (numAgents != agents.size) {
         throw new Exception(s"Agents are not ready. Found $numAgents but expected ${agents.size}")
       }
+      initialCachedAgentDetails = agents.map { a =>
+        a -> mesosFacade.agentDetails(a).value
+      }.toMap
       Done
     }
   }
@@ -218,6 +225,23 @@ case class MesosCluster(
       config.isolation.map("MESOS_ISOLATION" -> _).to[Seq] ++
       config.imageProviders.map("MESOS_IMAGE_PROVIDERS" -> _).to[Seq]
   }
+
+  /**
+    * Returns a agent id for an agent as it was initially queried during test cluster launch
+    *
+    * @param agent
+    */
+  def agentIdFor(agent: AgentLike): String = {
+    initialCachedAgentDetails(agent).id
+  }
+
+  /**
+    * Return the cached agent details that were returned when the agent first initialized
+    * @param agent Reference to the MesosTest Agent process
+    */
+  def initialAgentDetailsFor(agent: AgentLike): ITAgentDetails =
+    initialCachedAgentDetails(agent)
+
 
   // format: OFF
   case class Resources(cpus: Option[Int] = None, mem: Option[Int] = None, ports: (Int, Int), gpus: Option[Int] = None) {
@@ -288,7 +312,15 @@ case class MesosCluster(
     val processName: String = "Master"
   }
 
-  case class Agent(resources: Resources, extraArgs: Seq[String]) extends Mesos {
+  case class Agent(resources: Resources, extraArgs: Seq[String]) extends Mesos with MesosTest.AgentLike {
+    /**
+      * We can only specify the cgroups_root flag if running the integration tests under Linux; on Mac OS this flag is unrecognized.
+      */
+    private val cgroupsRootArgs: Seq[String] =
+      if (MesosTest.isLinux)
+        Seq(s"--cgroups_root=mesos$port") // See MESOS-9960 for more info
+      else
+        Nil
     override val workDir = Files.createTempDirectory(s"$suiteName-mesos-agent-$port").toFile
     override val processBuilder = Process(
       command = Seq(
@@ -300,9 +332,10 @@ case class MesosCluster(
         s"--resources=${resources.resourceString()}",
         s"--master=$masterUrl",
         s"--work_dir=${workDir.getAbsolutePath}",
-        s"--cgroups_root=mesos$port", // See MESOS-9960 for more info
-        s"""--executor_environment_variables={"GLOG_v": "2"}""") ++ extraArgs,
-      cwd = None, extraEnv = mesosEnv(workDir): _*)
+        s"""--executor_environment_variables={"GLOG_v": "2"}""") ++
+        cgroupsRootArgs ++
+        extraArgs,
+      cwd = None, extraEnv = Seq(("GLOG_v", "2")) ++ mesosEnv(workDir): _*)
 
     override val processName = "Agent"
   }
@@ -376,6 +409,16 @@ trait MesosClusterTest extends Suite with ZookeeperServerTest with MesosTest wit
   abstract override def afterAll(): Unit = {
     localMesosUrl.fold(mesosCluster.close())(_ => ())
     super.afterAll()
+  }
+}
+
+object MesosTest {
+  import sys.process._
+  lazy val isLinux: Boolean =
+    Seq("uname").!!.trim.startsWith("Linux")
+  trait AgentLike {
+    def ip: String
+    def port: Int
   }
 }
 

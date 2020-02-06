@@ -53,8 +53,8 @@ class TaskLauncherActorTest extends AkkaUnitTest {
 
   object f {
     import org.apache.mesos.{Protos => Mesos}
-    val app = AppDefinition(id = PathId("/testapp"))
-    val marathonInstance = TestInstanceBuilder.newBuilderWithLaunchedTask(app.id, version = app.version, now = Timestamp.now()).getInstance()
+    val app = AppDefinition(id = PathId("/testapp"), unreachableStrategy = UnreachableEnabled(inactiveAfter = 15.minutes, expungeAfter = 15.minutes))
+    val marathonInstance = TestInstanceBuilder.newBuilderForRunSpec(app).addTaskLaunched().getInstance()
     val marathonTask: Task = marathonInstance.appTask
     val instanceId = marathonInstance.instanceId
     val task = MarathonTestHelper.makeOneCPUTask(Task.Id.forInstanceId(instanceId, None)).build()

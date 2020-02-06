@@ -11,7 +11,7 @@ import akka.testkit.ImplicitSender
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance.AgentInfo
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder, TestTaskBuilder}
+import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder, TestTaskBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinition, UnreachableStrategy}
@@ -85,7 +85,7 @@ class HealthCheckWorkerTest extends AkkaUnitTest with ImplicitSender {
       val since = task.status.startedAt.getOrElse(task.status.stagedAt)
       val unreachableStrategy = UnreachableStrategy.default()
       val tasksMap = Map(task.taskId -> task)
-      val state = Instance.InstanceState(None, tasksMap, since, unreachableStrategy)
+      val state = Instance.InstanceState.transitionTo(None, tasksMap, since, unreachableStrategy, Goal.Running)
 
       val instance = Instance(task.taskId.instanceId, agentInfo, state, tasksMap, task.runSpecVersion, unreachableStrategy, None)
 

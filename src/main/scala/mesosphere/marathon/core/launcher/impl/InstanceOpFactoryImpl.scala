@@ -124,7 +124,7 @@ class InstanceOpFactoryImpl(
         val instance = new Instance(
           task.taskId.instanceId,
           agentInfo,
-          Instance.InstanceState(None, tasksMap, now, app.unreachableStrategy),
+          Instance.InstanceState.transitionTo(None, tasksMap, now, app.unreachableStrategy, Goal.Running),
           tasksMap,
           task.runSpecVersion,
           app.unreachableStrategy,

@@ -28,6 +28,7 @@ import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades._
 import mesosphere.marathon.raml.{App, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
 import mesosphere.marathon.state.{PathId, PersistentVolume, VolumeMount}
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.util.{Lock, Retry, Timeout, ZookeeperServerTest}
 import mesosphere.util.PortAllocator
 import org.apache.commons.io.FileUtils
@@ -216,7 +217,11 @@ case class LocalMarathon(
 
     // Get JVM arguments, such as -javaagent:some.jar
     val runtimeMxBean = ManagementFactory.getRuntimeMXBean
-    val runtimeArguments = JavaConverters.collectionAsScalaIterable(runtimeMxBean.getInputArguments).toSeq
+    val runtimeArguments = JavaConverters.collectionAsScalaIterable(runtimeMxBean.getInputArguments)
+      .filterNot(_.contains("debugger-agent"))
+      .filterNot(_.startsWith("-javaagent"))
+      .filterNot(_.startsWith("-agentlib"))
+      .toSeq
 
     val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2") ++
       runtimeArguments ++ akkaJvmArgs ++
@@ -355,6 +360,15 @@ trait MarathonAppFixtures {
   def healthEndpointFor(appId: PathId, versionId: String): String = {
     val encodedAppId = URLEncoder.encode(appId.toString, "UTF-8")
     s"http://$$HOST:$healthCheckPort/$encodedAppId/$versionId"
+  }
+
+  def appMockCmd(appId: PathId, versionId: String): String = {
+    val appMock: File = MarathonTestHelper.resourcePath("python/app_mock.py")
+    if (!appMock.exists()) {
+      throw new IllegalStateException("Failed to locate app_mock.py (" + appMock.getAbsolutePath + ")")
+    }
+    s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
+      s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}"""
   }
 
   def appProxyHealthCheck(
