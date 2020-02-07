@@ -102,7 +102,7 @@ def killStaleTestProcesses(): Unit = {
 }
 
 def installDcosCli(): Unit = {
-  val command = Path.root / 'usr / 'local / 'bin / 'dcos
+  val command = os.root / 'usr / 'local / 'bin / 'dcos
 
   if( ! (exists! command)) {
     val os = %%("uname", "-s").out.string.trim.toLowerCase
