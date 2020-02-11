@@ -12,7 +12,7 @@ import com.amazonaws.auth._
 import com.amazonaws.services.s3.transfer._
 import com.amazonaws.services.s3.transfer.Transfer.TransferState
 import com.amazonaws.services.s3.model.{CopyObjectRequest, PutObjectRequest, CannedAccessControlList}
-import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
 
 /**
  * Describes an S3 location.
