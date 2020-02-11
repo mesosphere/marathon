@@ -20,7 +20,7 @@ ansiColor('xterm') {
             string(credentialsId: '3f0dbb48-de33-431f-b91c-2366d2f0e1cf',variable: 'AWS_ACCESS_KEY_ID'),
             string(credentialsId: 'f585ec9a-3c38-4f67-8bdb-79e5d4761937',variable: 'AWS_SECRET_ACCESS_KEY')
         ]) {
-          sh 'cd ci/docker/ && ./build.sh' // Move out.
+          sh 'cd ci/docker/ && sudo ./build.sh' // Move out.
 	  sh 'sudo -E docker run -d --rm --privileged -v "$(pwd):/var/build" $(env | cut -f1 -d= | sed "s/^/-e /") --name mini mesosphere/marathon-build-env:unstable'
           sh 'sudo -E docker exec -w /var/build mini ci/pipeline jenkins'
 	}
