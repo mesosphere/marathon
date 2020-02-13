@@ -44,7 +44,7 @@ abstract case class Timestamp private (private val instant: Instant) extends Ord
   /**
     * @return true if this timestamp is more than "by" duration older than other timestamp.
     */
-  def expired(other: Timestamp, by: FiniteDuration): Boolean = this.until(other) > by
+  def expired(other: Timestamp, by: FiniteDuration): Boolean = this.until(other) >= by
 
   def +(duration: FiniteDuration): Timestamp = Timestamp(instant.plusMillis(duration.toMillis))
   def -(duration: FiniteDuration): Timestamp = Timestamp(instant.minusMillis(duration.toMillis))

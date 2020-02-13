@@ -7,7 +7,7 @@ import akka.http.scaladsl.model.{HttpEntity, HttpResponse}
 import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
-import mesosphere.marathon.integration.setup.RestResult
+import mesosphere.marathon.integration.setup.{MesosTest, RestResult}
 import mesosphere.marathon.integration.setup.AkkaHttpResponse._
 
 import scala.concurrent.Await._
@@ -21,7 +21,10 @@ object MesosFacade {
   case class ITMesosState(
       version: String,
       gitTag: Option[String],
-      agents: Seq[ITAgent])
+      agents: Seq[ITAgent],
+      frameworks: Seq[ITFramework],
+      completed_frameworks: Seq[ITFramework],
+      unregistered_framework_ids: Seq[String])
 
   case class ITAgent(
       id: String,
@@ -80,11 +83,24 @@ object MesosFacade {
     override def toString: String = '"' + portString + '"'
   }
 
-  case class ITFramework(id: String, name: String)
+  case class ITask(id: String, name: String, framework_id: String, state: Option[String])
+
+  case class ITFramework(id: String, name: String, tasks: Seq[ITask], unreachable_tasks: Seq[ITask])
+
   case class ITFrameworks(
       frameworks: Seq[ITFramework],
       completed_frameworks: Seq[ITFramework],
       unregistered_frameworks: Seq[ITFramework])
+
+  case class ITFaultDomain(region: String, Zone: String)
+
+  case class ITAgentDetails(
+      id: String,
+      pid: String,
+      hostname: String,
+      capabilities: Seq[String],
+      domain: Option[ITFaultDomain],
+      flags: Map[String, String])
 }
 
 class MesosFacade(val url: String, val waitTime: FiniteDuration = 30.seconds)(implicit val system: ActorSystem, materializer: Materializer)
@@ -96,13 +112,18 @@ class MesosFacade(val url: String, val waitTime: FiniteDuration = 30.seconds)(im
 
   // `waitTime` is passed implicitly to the `request` and `requestFor` methods
   implicit val requestTimeout = waitTime
-  def state: RestResult[ITMesosState] = {
+
+  def state(): RestResult[ITMesosState] = {
     logger.info(s"fetching state from $url")
     result(requestFor[ITMesosState](Get(s"$url/state")), waitTime)
   }
 
   def frameworks(): RestResult[ITFrameworks] = {
     result(requestFor[ITFrameworks](Get(s"$url/frameworks")), waitTime)
+  }
+
+  def agentDetails(agent: MesosTest.AgentLike): RestResult[ITAgentDetails] = {
+    result(requestFor[ITAgentDetails](Get(s"http://${agent.ip}:${agent.port}/state")), waitTime)
   }
 
   def frameworkIds(): RestResult[Seq[String]] = {
