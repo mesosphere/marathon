@@ -331,7 +331,7 @@ case class MesosCluster(
         s"--port=$port",
         s"--resources=${resources.resourceString()}",
         s"--master=$masterUrl",
-        s"--work_dir=${workDir.getAbsolutePath}",
+        s"--work_dir=${workDir.getAbsolutePath}") ++
         cgroupsRootArgs ++
         extraArgs,
       cwd = None, extraEnv = Seq(("GLOG_v", "2")) ++ mesosEnv(workDir): _*)
