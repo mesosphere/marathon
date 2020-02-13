@@ -2,10 +2,12 @@ package mesosphere.marathon
 package integration
 
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
+import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig, ProcessOutputToLogStream}
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType, Network, NetworkMode}
 import mesosphere.marathon.state.PathId._
 import mesosphere.{AkkaIntegrationTest, WhenEnvSet}
+
+import scala.sys.process.Process
 
 class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
@@ -13,6 +15,25 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
   // FIXME (gkleiman): Docker tests don't work under Docker Machine yet. So they can be disabled through an env variable.
   val envVar = "RUN_DOCKER_INTEGRATION_TESTS"
+
+  def waitForDocker(retries: Int): Unit = {
+    val timeoutSeconds = 5 // Mesos agent waits 5 seconds
+    val p = Process(command = Seq("timeout", (timeoutSeconds * 1000).toString, "docker", "-H", "/var/run/docker.sock", "--version"))
+
+    val result = p.!(ProcessOutputToLogStream(s"$suiteName-WaitForDocker"))
+    if (result != 0) {
+      logger.info("docker --version failed; not responsive?")
+      if (retries > 0)
+        waitForDocker(retries - 1)
+      else
+        assert(false, "Cannot run integration test. Docker API is not responsive.")
+    }
+  }
+
+  override def beforeAll(): Unit = {
+    waitForDocker(10)
+    super.beforeAll()
+  }
 
   // This suite would sometimes time out in `beforeAll` method because mesos agent would crash during docker initialisation
   // with:
