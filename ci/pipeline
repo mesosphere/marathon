@@ -165,7 +165,11 @@ def provisionHost(): Unit = utils.stage("Provision") {
   %('sudo, "ci/set_port_range.sh")
 
   provision.killStaleTestProcesses()
+  /* Disable Mesos installation step as downgrading to Mesos 1.7.0 from Mesos 1.9.0 in Debian stretch results in a
+   * broken install */
+
   // provision.installMesos()
+
   provision.installDcosCli()
 }
 
