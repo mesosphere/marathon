@@ -1,8 +1,9 @@
 #!/usr/bin/env amm
 
 import java.time.Instant
+import $ivy.`org.scalaj::scalaj-http:2.4.2`
 import scalaj.http._
-import upickle._
+import ujson._
 
 /**
  * Makes a POST request to DataDog's API with provided path and body.

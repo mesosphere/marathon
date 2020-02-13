@@ -165,7 +165,7 @@ def provisionHost(): Unit = utils.stage("Provision") {
   %('sudo, "ci/set_port_range.sh")
 
   provision.killStaleTestProcesses()
-  provision.installMesos()
+  // provision.installMesos()
   provision.installDcosCli()
 }
 
