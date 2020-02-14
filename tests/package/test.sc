@@ -24,10 +24,14 @@ case class Container(containerId: String, ipAddress: String)
 trait FailureWatcher extends Suite {
   private var _resultPromise = Promise[Boolean]
   def result = _resultPromise.future
-  override def run(testName: Option[String], args: Args): Status = {
+  override def run(testName: Option[String], args: Args): Status = try {
     val status = super.run(testName, args)
     status.whenCompleted { r => _resultPromise.tryComplete(r) }
     status
+  } catch {
+    case ex: Throwable =>
+      _resultPromise.tryFailure(ex)
+      throw ex
   }
 }
 
