@@ -43,9 +43,10 @@ EL6_PKG_PATH=target/marathon-$(PKG_VER)-$(PKG_REL).el6.noarch.rpm
 EL7_PKG_PATH=target/marathon-$(PKG_VER)-$(PKG_REL).el7.noarch.rpm
 UBUNTU_1604_PKG_PATH=target/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1604_all.deb
 UBUNTU_1804_PKG_PATH=target/marathon_$(PKG_VER)-$(PKG_REL).ubuntu1804_all.deb
+DEBIAN_8_PKG_PATH=target/marathon_$(PKG_VER)-$(PKG_REL).debian8_all.deb
 DEBIAN_9_PKG_PATH=target/marathon_$(PKG_VER)-$(PKG_REL).debian9_all.deb
 
-ALL_PKGS=$(EL6_PKG_PATH) $(EL7_PKG_PATH) $(DEBIAN_9_PKG_PATH) $(UBUNTU_1804_PKG_PATH) $(UBUNTU_1604_PKG_PATH)
+ALL_PKGS=$(EL6_PKG_PATH) $(EL7_PKG_PATH) $(DEBIAN_8_PKG_PATH) $(DEBIAN_9_PKG_PATH) $(UBUNTU_1804_PKG_PATH) $(UBUNTU_1604_PKG_PATH)
 
 .PHONY: help
 help:
@@ -111,6 +112,13 @@ ubuntu-bionic-1804: $(UBUNTU_1804_PKG_PATH)
 $(UBUNTU_1804_PKG_PATH): target/toor/ubuntu-bionic/lib/systemd/system/marathon.service target/toor/ubuntu-bionic/$(PREFIX)/share/marathon target/toor/ubuntu-bionic/etc/default/marathon target/fpm-docker/.provisioned
 	$(FPM) -C target/toor/ubuntu-bionic \
 		--iteration $(PKG_REL).ubuntu1804 \
+		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
+
+.PHONY: debian-jessie-8
+debian-jessie-8: $(DEBIAN_8_PKG_PATH)
+$(DEBIAN_8_PKG_PATH): target/toor/debian-jessie-8/lib/systemd/system/marathon.service target/toor/debian-jessie-8/$(PREFIX)/share/marathon target/toor/debian-jessie-8/etc/default/marathon target/fpm-docker/.provisioned
+	$(FPM) -C target/toor/debian-jessie-8 \
+		--iteration $(PKG_REL).debian8 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
 .PHONY: debian-stretch-9
