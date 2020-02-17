@@ -10,12 +10,7 @@ RUN rpm -Uvh http://repos.mesosphere.com/el/6/noarch/RPMS/mesosphere-el-repo-6-2
   chmod +x /usr/bin/jq && \
   ln -svT /usr/lib/jvm/java-1.8.0-openjdk-* /docker-java-home && \
 
-  # Install Python, Pip and dcrpm
-  yum install -y epel-release git && yum install -y python34 python34-devel python34-pip gcc gcc-c++ && \
-  pip3 install git+https://github.com/facebookincubator/dcrpm.git@v0.2.0 &&  \
-
-  # Clean
-  yum clean all && dcrpm -v
+  yum clean all
 
 ENV JAVA_HOME /docker-java-home
 
