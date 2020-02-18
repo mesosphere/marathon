@@ -24,7 +24,7 @@ Marathon:
 - `--enable_features gpu_resources` - Tell Mesos that Marathon should be offered GPU resources. (See the [command-line docs](./command-line-flags.html)).
 - `--gpu_scheduling_behavior` - Defines how offered GPU resources should be treated. Possible settings:
     - `unrestricted` - non-GPU tasks are launched irrespective of offers containing GPUs.
-    - `restricted` (Default) - non-GPU tasks will decline offers containing GPUs. A decline reason of `DeclinedScareResources` is given.
+    - `restricted` (Default) - non-GPU tasks will decline offers containing GPUs. A decline reason of `DeclinedScarceResources` is given.
 
 ## Enumeration of Different Possible Cluster Scenarios
 
