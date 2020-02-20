@@ -4,7 +4,7 @@ pipeline {
     stage("Build") {
       agent {
         dockerfile {
-          node 'large'
+          label 'large'
         }
       }
       steps {
