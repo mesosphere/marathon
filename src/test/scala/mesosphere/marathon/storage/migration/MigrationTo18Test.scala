@@ -66,15 +66,16 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
 
     /**
       * Construct JSON for an instance.
-      * @param i The id of the instance.
+      * @param instance The instance.
       * @return The JSON of the instance.
       */
 
     def setProvisionedCondition(instance: state.Instance): state.Instance = {
       instance.copy(
         state = instance.state.copy(condition = Condition.Provisioned),
-        tasksMap = instance.tasksMap.mapValues { task =>
-          task.copy(status = task.status.copy(condition = Condition.Provisioned))
+        tasksMap = instance.tasksMap.map {
+          case (k, task) =>
+            k -> task.copy(status = task.status.copy(condition = Condition.Provisioned))
         }
       )
     }

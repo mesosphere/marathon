@@ -313,7 +313,7 @@ class ScalingPropositionTest extends UnitTest {
       Seq.empty[Instance]
 
     def killToMeetConstraints(tasks: Instance*): (Seq[Instance], Int) => Seq[Instance] =
-      (running: Seq[Instance], killCount: Int) => tasks.to[Seq]
+      (running: Seq[Instance], killCount: Int) => tasks.to(Seq)
 
     def noTasks = Seq.empty[Instance]
   }

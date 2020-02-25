@@ -21,7 +21,7 @@ class AppDefinitionFormatsTest extends UnitTest
   with Matchers
   with ValidationTestLike {
 
-  import Formats.PathIdFormat
+  import Formats.{PathIdReads, PathIdWrites}
 
   object Fixture {
     val a1 = AppDefinition(
@@ -545,7 +545,7 @@ class AppDefinitionFormatsTest extends UnitTest
         |}""".stripMargin)
       the[JsResultException] thrownBy {
         normalizeAndConvert(json.as[raml.App])
-      } should have message "JsResultException(errors:List((/killSelection,List(JsonValidationError(List(error.unknown.enum.literal),WrappedArray(KillSelection (OLDEST_FIRST, YOUNGEST_FIRST)))))))"
+      } should have message "JsResultException(errors:List((/killSelection,List(JsonValidationError(List(error.unknown.enum.literal),ArraySeq(KillSelection (OLDEST_FIRST, YOUNGEST_FIRST)))))))"
     }
 
     "ToJSON should serialize kill selection" in {

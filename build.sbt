@@ -11,12 +11,11 @@ resolvers ++= loadM2Resolvers(sLog.value)
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 
-addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
 addCompilerPlugin(scalafixSemanticdb)
 
-val silencerVersion = "1.1"
-addCompilerPlugin("com.github.ghik" %% "silencer-plugin" % silencerVersion)
-libraryDependencies += "com.github.ghik" %% "silencer-lib" % silencerVersion % Provided
+val silencerVersion = "1.6.0"
+addCompilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full)
+libraryDependencies += "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
 
 lazy val formatSettings = Seq(
   ScalariformKeys.preferences := FormattingPreferences()
@@ -79,7 +78,7 @@ val pbSettings = ProtobufPlugin.projectSettings ++ Seq(
 lazy val commonSettings = Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
-  scalaVersion := "2.12.10",
+  scalaVersion := "2.13.1",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
     "-encoding", "UTF-8",
@@ -87,34 +86,25 @@ lazy val commonSettings = Seq(
     "-deprecation",
     "-feature",
     "-unchecked",
-    "-Xfuture",
     "-Xlint",
-    //FIXME: CORE-977 and MESOS-7368 are filed and need to be resolved to re-enable this
-    // "-Xfatal-warnings",
-    "-Yno-adapted-args",
     "-Yrangepos",
     "-Ywarn-numeric-widen",
-    //"-Ywarn-dead-code", We should turn this one on soon
-    "-Ywarn-inaccessible",
-    "-Ywarn-infer-any",
-    "-Ywarn-nullary-override",
-    "-Ywarn-nullary-unit",
-    "-Ywarn-unused-import",
-    "-Ywarn-unused:-locals,imports",
-    //"-Ywarn-value-discard", We should turn this one on soon.
+    "-Ywarn-unused"
   ),
   // Don't need any linting, etc for docs, so gain a small amount of build time there.
   scalacOptions in (Compile, doc) := Seq("-encoding", "UTF-8", "-deprecation", "-feature", "-Xfuture"),
   javacOptions in Compile ++= Seq(
     "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
   ),
-  resolvers ++= Seq(
-    Resolver.JCenterRepository,
-    "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",
-    "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
-    "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven",
-    "Mesosphere Snapshot Repo" at "https://downloads.mesosphere.com/maven-snapshot"
-  ),
+  resolvers := {
+    Seq(
+      "Mesosphere Snapshot Repo" at "https://downloads.mesosphere.com/maven-snapshot",
+      "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven",
+      "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",
+      "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
+      Resolver.JCenterRepository
+    ) ++ resolvers.value
+  },
   cancelable in Global := true,
   publishTo := Some(s3resolver.value(
     "Mesosphere Public Repo (S3)",
@@ -158,7 +148,7 @@ lazy val packagingSettings = Seq(
   maintainer := "Mesosphere Package Builder <support@mesosphere.io>")
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
-    .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
+    .enablePlugins(GitBranchPrompt)
     .settings(testSettings : _*)
     .settings(commonSettings : _*)
     .settings(formatSettings : _*)
@@ -173,7 +163,7 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
 
 lazy val marathon = (project in file("."))
   .enablePlugins(GitBranchPrompt, JavaServerAppPackaging,
-    RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning, ProtobufPlugin)
+    RamlGeneratorPlugin, GitVersioning, ProtobufPlugin)
   .dependsOn(`plugin-interface`)
   .settings(pbSettings)
   .settings(testSettings : _*)
@@ -185,7 +175,7 @@ lazy val marathon = (project in file("."))
       import sys.process._
       ("./version" !!).trim
     },
-    unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
+    unmanagedResourceDirectories in Compile += baseDirectory.value / "docs" / "docs" /  "rest-api",
     libraryDependencies ++= Dependencies.marathon,
     sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
     mainClass in Compile := Some("mesosphere.marathon.Main"),
@@ -206,7 +196,7 @@ lazy val ammonite = (project in file("./tools/repl-server"))
   .dependsOn(marathon)
 
 lazy val integration = (project in file("./tests/integration"))
-  .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
+  .enablePlugins(GitBranchPrompt)
   .settings(integrationTestSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
@@ -216,18 +206,20 @@ lazy val integration = (project in file("./tests/integration"))
   .dependsOn(marathon % "test->test")
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
-  .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
+  .enablePlugins(GitBranchPrompt)
   .settings(testSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
-  .dependsOn(marathon % "compile->compile; test->test")
+  .dependsOn(marathon % "test->test")
+  .dependsOn(marathon)
+  .dependsOn(integration % "test->test")
   .settings(
     name := "mesos-simulation"
   )
 
 // see also, benchmark/README.md
 lazy val benchmark = (project in file("benchmark"))
-  .enablePlugins(JmhPlugin, GitBranchPrompt, BasicLintingPlugin)
+  .enablePlugins(JmhPlugin, GitBranchPrompt)
   .settings(testSettings : _*)
   .settings(commonSettings : _*)
   .settings(formatSettings: _*)

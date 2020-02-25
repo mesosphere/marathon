@@ -78,9 +78,9 @@ class InMemoryPersistenceStore(
   override protected def rawVersions(id: RamId): Source[OffsetDateTime, NotUsed] = {
     require(isOpen, "the store must be opened before it can be used")
 
-    val versions = entries.collect {
+    val versions = entries.iterator.collect {
       case (RamId(category, rid, Some(v)), _) if category == id.category && id.id == rid => v
-    }(collection.breakOut)
+    }.toSeq
     Source(versions)
   }
 
@@ -102,7 +102,7 @@ class InMemoryPersistenceStore(
   override protected[store] def allKeys(): Source[CategorizedKey[String, RamId], NotUsed] = {
     require(isOpen, "the store must be opened before it can be used")
 
-    Source(entries.keySet.filter(_.version.isEmpty).map(id => CategorizedKey(id.category, id))(collection.breakOut))
+    Source(entries.keySet.filter(_.version.isEmpty).iterator.map(id => CategorizedKey(id.category, id)).toSeq)
   }
 
   override def backup(): Source[BackupItem, NotUsed] = {

@@ -187,7 +187,7 @@ case class DiskResourceNoMatch(
     case Left(value) => s"disk:root:$value"
     case Right(vm) =>
       val constraintsJson: Seq[Seq[String]] =
-        vm.volume.persistent.constraints.map(_.toRaml[Seq[String]])(collection.breakOut)
+        vm.volume.persistent.constraints.iterator.map(_.toRaml[Seq[String]]).toSeq
       s"disk:${vm.volume.persistent.`type`.toString}:${vm.volume.persistent.size}:[${constraintsJson.mkString(",")}]"
   }
 

@@ -11,7 +11,6 @@ import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{App, AppCommandCheck, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, UpgradeStrategy}
 import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
-import org.scalactic.source.Position
 
 import scala.concurrent.duration._
 
@@ -750,7 +749,13 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       // waitForEventWith("instance_changed_event", ev => ev.info("goal") == "Scheduled", s"event instance_changed_event with goal = Scheduled to arrive")
       // But since we don't have this event now, we just simply try to wait for 5s which seems to work too ¯\_(ツ)_/¯
       val start = System.currentTimeMillis()
-      eventually(System.currentTimeMillis() should be >= (start + 5000))(config = PatienceConfig(10.seconds, 100.millis), pos = Position.here)
+
+      {
+        implicit val patienceConfig = PatienceConfig(10.seconds, 100.millis)
+        eventually {
+          System.currentTimeMillis() should be >= (start + 5000)
+        }
+      }
 
       And("cancel previous update")
       val canceled = marathon.deleteDeployment(deploymentId)
@@ -783,7 +788,13 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       // waitForEventWith("instance_changed_event", ev => ev.info("goal") == "Scheduled", s"event instance_changed_event with goal = Scheduled to arrive")
       // But since we don't have this event now, we just simply try to wait for 5s which seems to work too ¯\_(ツ)_/¯
       val start = System.currentTimeMillis()
-      eventually(System.currentTimeMillis() should be >= (start + 5000))(config = PatienceConfig(10.seconds, 100.millis), pos = Position.here)
+
+      {
+        implicit val patienceConfig = PatienceConfig(10.seconds, 100.millis)
+        eventually {
+          System.currentTimeMillis() should be >= (start + 5000)
+        }
+      }
 
       And("cancel previous update")
       val canceled = marathon.deleteDeployment(deploymentId)
@@ -925,19 +936,20 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("an app update app")
       val applicationId = AbsolutePathId("/tomcat")
 
-      val appUpdateJson = """{
-                            |  "id":"tomcat",
-                            |  "mem":512,
-                            |  "cpus":1.0,
-                            |  "instances":1,
-                            |  "container": {
-                            |    "type":"DOCKER",
-                            |    "docker": {
-                            |      "image":"tomcat:8.0",
-                            |      "network":"HOST"
-                            |    }
-                            |  }
-                            |}""".stripMargin
+      val appUpdateJson =
+        """{
+          |  "id":"tomcat",
+          |  "mem":512,
+          |  "cpus":1.0,
+          |  "instances":1,
+          |  "container": {
+          |    "type":"DOCKER",
+          |    "docker": {
+          |      "image":"tomcat:8.0",
+          |      "network":"HOST"
+          |    }
+          |  }
+          |}""".stripMargin
 
       When("creating an app using PUT")
       marathon.putAppByteString(applicationId, ByteString.fromString(appUpdateJson))

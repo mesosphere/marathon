@@ -3,7 +3,6 @@ package core.condition
 
 import play.api.libs.json._
 import org.apache.mesos.Protos.{TaskState => MesosTaskState}
-import scala.collection.breakOut
 
 /**
   * To define the status of an Instance, this trait is used and stored for each Task in Task.Status.
@@ -120,9 +119,9 @@ object Condition {
   val all = Seq(Error, Failed, Finished, Killed, Killing, Running, Staging, Starting, Unreachable,
     UnreachableInactive, Gone, Dropped, Unknown, Scheduled, Provisioned)
 
-  private val lowerCaseStringToCondition: Map[String, Condition] = all.map { c =>
+  private val lowerCaseStringToCondition: Map[String, Condition] = all.iterator.map { c =>
     c.toString.toLowerCase -> c
-  }(breakOut)
+  }.toMap
 
   /** Converts the Condition to a mesos task state where such a conversion is possible */
   def toMesosTaskState(condition: Condition): Option[MesosTaskState] =

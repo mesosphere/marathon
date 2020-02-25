@@ -862,7 +862,7 @@ object LegacyRamlTypeGenerator {
         u.copy(childTypes = children)
       case obj: ObjectT if childTypes.contains(obj.name) =>
         val children = childTypes(obj.name)
-        obj.copy(childTypes = children.to[Seq])
+        obj.copy(childTypes = children.to(Seq))
       case t => t
     }
     filterPhase1.filter {

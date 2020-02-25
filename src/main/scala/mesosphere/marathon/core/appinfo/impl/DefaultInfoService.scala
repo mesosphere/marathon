@@ -8,7 +8,6 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.raml.PodStatus
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
 
 import scala.async.Async.{async, await}
 import scala.collection.immutable.Seq
@@ -49,7 +48,7 @@ private[appinfo] class DefaultInfoService(
     async { // linter:ignore UnnecessaryElseBranch
       logger.debug("queryAll")
       val rootGroup = groupManager.rootGroup()
-      val selectedApps: IndexedSeq[AppDefinition] = rootGroup.transitiveApps.filterAs(selector.matches)(collection.breakOut)
+      val selectedApps: IndexedSeq[AppDefinition] = rootGroup.transitiveApps.iterator.filter(selector.matches).to(IndexedSeq)
       val infos = await(resolveAppInfos(selectedApps, embed))
       infos
     }
@@ -61,7 +60,7 @@ private[appinfo] class DefaultInfoService(
       logger.debug(s"queryAllInGroup $groupId")
       val maybeGroup: Option[Group] = groupManager.group(groupId)
       val maybeApps: Option[IndexedSeq[AppDefinition]] =
-        maybeGroup.map(_.transitiveApps.filterAs(selector.matches)(collection.breakOut))
+        maybeGroup.map(_.transitiveApps.iterator.filter(selector.matches).to(IndexedSeq))
       maybeApps match {
         case Some(selectedApps) => await(resolveAppInfos(selectedApps, embed))
         case None => Seq.empty
@@ -102,10 +101,10 @@ private[appinfo] class DefaultInfoService(
       val infoById: Map[AbsolutePathId, raml.AppInfo] =
         if (groupEmbedApps) {
           val filteredApps: IndexedSeq[AppDefinition] =
-            group.transitiveApps.filterAs(selectors.appSelector.matches)(collection.breakOut)
-          await(resolveAppInfos(filteredApps, appEmbed, cachedBaseData.value)).map { info =>
+            group.transitiveApps.iterator.filter(selectors.appSelector.matches).to(IndexedSeq)
+          await(resolveAppInfos(filteredApps, appEmbed, cachedBaseData.value)).iterator.map { info =>
             AbsolutePathId(info.id) -> info
-          }(collection.breakOut)
+          }.toMap
         } else {
           Map.empty[AbsolutePathId, raml.AppInfo]
         }
@@ -113,10 +112,10 @@ private[appinfo] class DefaultInfoService(
       val statusById: Map[AbsolutePathId, PodStatus] =
         if (groupEmbedPods) {
           val filteredPods: IndexedSeq[PodDefinition] =
-            group.transitivePods.filterAs(selectors.podSelector.matches)(collection.breakOut)
-          await(resolvePodInfos(filteredPods, cachedBaseData.value)).map { status =>
+            group.transitivePods.iterator.filter(selectors.podSelector.matches).to(IndexedSeq)
+          await(resolvePodInfos(filteredPods, cachedBaseData.value)).iterator.map { status =>
             AbsolutePathId(status.id) -> status
-          }(collection.breakOut)
+          }.toMap
         } else {
           Map.empty[AbsolutePathId, PodStatus]
         }
@@ -145,7 +144,7 @@ private[appinfo] class DefaultInfoService(
               Set.empty
           val pods: Set[PodStatus] =
             if (groupEmbedPods)
-              ref.pods.keys.flatMap(statusById.get)(collection.breakOut).toSet
+              ref.pods.keys.iterator.flatMap(statusById.get).toSeq.toSet
             else
               Set.empty
 

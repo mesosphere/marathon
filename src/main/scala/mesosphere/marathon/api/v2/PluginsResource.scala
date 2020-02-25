@@ -6,15 +6,14 @@ import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.{Context, MediaType, Response}
-import mesosphere.marathon.MarathonConf
-import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.api._
+import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.plugin.PluginDefinitions
 import mesosphere.marathon.plugin.auth.AuthorizedResource.Plugins
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.plugin.http.HttpRequestHandler
 
-import scala.async.Async.{await, async}
+import scala.async.Async.{async, await}
 import scala.concurrent.ExecutionContext
 
 @Path("v2/plugins")
@@ -29,8 +28,10 @@ class PluginsResource @Inject() (
     val executionContext: ExecutionContext) extends RestResource with AuthResource {
 
   val pluginIdToHandler: Map[String, HttpRequestHandler] = definitions.plugins
+    .iterator
     .withFilter(_.plugin == classOf[HttpRequestHandler].getName)
-    .flatMap { d => requestHandlers.find(_.getClass.getName == d.implementation).map(d.id -> _) }(collection.breakOut)
+    .flatMap { d => requestHandlers.find(_.getClass.getName == d.implementation).map(d.id -> _) }
+    .toMap
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))

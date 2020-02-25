@@ -17,7 +17,7 @@ import mesosphere.marathon.core.matcher.manager.{OfferMatcherManagerConfig, Offe
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.marathon.test.MarathonTestHelper
 import org.apache.mesos.Protos.{Offer, TaskInfo}
@@ -75,13 +75,13 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     protected def matchTasks(offer: Offer): Seq[TaskInfo] = numberedTasks() // linter:ignore:UnusedParameter
 
     override def matchOffer(offer: Offer): Future[MatchedInstanceOps] = {
-      val opsWithSources = matchTasks(offer).map { taskInfo =>
+      val opsWithSources = matchTasks(offer).iterator.map { taskInfo =>
         val instance = TestInstanceBuilder.newBuilderWithInstanceId(F.instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).build().getInstance()
         val task: Task = instance.appTask
         val stateOp = InstanceUpdateOperation.Provision(instance.instanceId, instance.agentInfo.get, instance.runSpec, instance.tasksMap, Timestamp.now())
         val launch = F.launch(taskInfo, stateOp)
         InstanceOpWithSource(Source, launch)
-      }(collection.breakOut)
+      }.toSeq
 
       val result = MatchedInstanceOps(offer.getId, opsWithSources)
       results :+= result
@@ -105,7 +105,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
     val totalCpus: Double = {
       val cpuValues = for {
         task <- tasks
-        resource <- task.getResourcesList
+        resource <- task.getResourcesList.asScala
         if resource.getName == "cpus"
         cpuScalar <- Option(resource.getScalar)
         cpus = cpuScalar.getValue
@@ -115,7 +115,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
     override def matchTasks(offer: Offer): Seq[TaskInfo] = {
       val cpusInOffer: Double =
-        offer.getResourcesList.find(_.getName == "cpus")
+        offer.getResourcesList.asScala.find(_.getName == "cpus")
           .flatMap(r => Option(r.getScalar))
           .map(_.getValue)
           .getOrElse(0)
@@ -221,7 +221,7 @@ class OfferMatcherManagerModuleTest extends AkkaUnitTest with OfferMatcherSpec {
 
     "ports of an offer should be displayed in a short notation if they exceed a certain quantity" in new Fixture {
       val offer: Offer = MarathonTestHelper.makeBasicOfferWithManyPortRanges(100).build()
-      val resources = ResourceUtil.displayResources(offer.getResourcesList.toSeq, 10)
+      val resources = ResourceUtil.displayResources(offer.getResourcesList.asScala.toSeq, 10)
       resources should include("ports(*) 1->2,3->4,5->6,7->8,9->10,11->12,13->14,15->16,17->18,19->20 ... (90 more)")
     }
   }

@@ -18,7 +18,7 @@ import mesosphere.marathon.plugin.scheduler.SchedulerPlugin
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.plugin.{ApplicationSpec, PodSpec}
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.{DiskResourceMatch, NoOfferMatchReason, PersistentVolumeMatcher, ResourceMatchResponse, ResourceMatcher, RunSpecOfferMatcher, TaskBuilder, TaskGroupBuilder}
 import mesosphere.util.state.FrameworkId
@@ -94,7 +94,7 @@ class InstanceOpFactoryImpl(
       case matches: ResourceMatchResponse.Match =>
         val instanceId = scheduledInstance.instanceId
         val taskIds = if (scheduledInstance.tasksMap.nonEmpty) {
-          scheduledInstance.tasksMap.keysIterator.map(Task.Id.nextIncarnationFor).to[Seq]
+          scheduledInstance.tasksMap.keysIterator.map(Task.Id.nextIncarnationFor).to(Seq)
         } else {
           pod.containers.map { container => Task.Id(instanceId, Some(container)) }
         }
@@ -102,7 +102,7 @@ class InstanceOpFactoryImpl(
           instanceId, taskIds, builderConfig, runSpecTaskProc, matches.resourceMatch, None, getEnforceRole(pod.id))
 
         val agentInfo = Instance.AgentInfo(offer)
-        val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.map { t => Task.Id.parse(t.getTaskId) }(collection.breakOut)
+        val taskIDs: Seq[Task.Id] = groupInfo.getTasksList.asScala.iterator.map { t => Task.Id.parse(t.getTaskId) }.toSeq
         val now = clock.now()
         val tasks = Tasks.provisioned(taskIDs, networkInfos, pod.version, now)
         val stateOp = InstanceUpdateOperation.Provision(instanceId, agentInfo, pod, tasks, now)
@@ -187,7 +187,7 @@ class InstanceOpFactoryImpl(
       // instance: it would be considered as an instance on that agent, and would violate e.g. a hostname:unique
       // constraint although it is just a placeholder for the instance that will be launched.
       val instancesToConsiderForConstraints: Stream[Instance] =
-        instances.valuesIterator.toStream.filterAs(_.instanceId != volumeMatch.instance.instanceId)
+        instances.valuesIterator.toStream.filter(_.instanceId != volumeMatch.instance.instanceId)
 
       // resources are reserved for this role, so we only consider those resources
       val rolesToConsider = Set(volumeMatch.instance.role)
@@ -277,7 +277,7 @@ class InstanceOpFactoryImpl(
         // one. The used function will increment the attempt counter if it exists, of append a 1 to denote the first attempt
         // in version 1.5.
         val taskIds: Seq[Task.Id] = if (reservedInstance.tasksMap.nonEmpty) {
-          reservedInstance.tasksMap.keysIterator.map(Task.Id.nextIncarnationFor).to[Seq]
+          reservedInstance.tasksMap.keysIterator.map(Task.Id.nextIncarnationFor).to(Seq)
         } else {
           Seq(Task.Id(reservedInstance.instanceId))
         }
@@ -302,20 +302,20 @@ class InstanceOpFactoryImpl(
 
         val instanceId = reservedInstance.instanceId
         val taskIds = if (reservedInstance.tasksMap.nonEmpty) {
-          reservedInstance.tasksMap.keys.to[Seq]
+          reservedInstance.tasksMap.keys.to(Seq)
         } else {
           pod.containers.map { container =>
             Task.Id(reservedInstance.instanceId, Some(container))
           }
         }
-        val oldToNewTaskIds: Map[Task.Id, Task.Id] = taskIds.map { taskId =>
+        val oldToNewTaskIds: Map[Task.Id, Task.Id] = taskIds.iterator.map { taskId =>
           taskId -> Task.Id.nextIncarnationFor(taskId)
-        }(collection.breakOut)
+        }.toMap
 
-        val containerNameToTaskId: Map[String, Task.Id] = oldToNewTaskIds.values.map {
+        val containerNameToTaskId: Map[String, Task.Id] = oldToNewTaskIds.values.iterator.map {
           case taskId @ Task.TaskIdWithIncarnation(_, Some(containerName), _) => containerName -> taskId
           case taskId => throw new IllegalStateException(s"failed to extract a container name from the task id $taskId")
-        }(collection.breakOut)
+        }.toMap
         val podContainerTaskIds: Seq[Task.Id] = pod.containers.map { container =>
           containerNameToTaskId.getOrElse(container.name, throw new IllegalStateException(
             s"failed to get a task ID for the given container name: ${container.name}"))
@@ -403,11 +403,11 @@ object InstanceOpFactoryImpl {
 
     assume(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
 
-    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
+    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).iterator.collect {
       case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
-    }(collection.breakOut)
+    }.toSeq
 
-    taskIDs.map { taskId =>
+    taskIDs.iterator.map { taskId =>
       // the task level host ports are needed for fine-grained status/reporting later on
       val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
         allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
@@ -415,6 +415,6 @@ object InstanceOpFactoryImpl {
 
       val networkInfo = NetworkInfo(agentInfo.host, taskHostPorts, ipAddresses = Nil)
       taskId -> networkInfo
-    }(collection.breakOut)
+    }.toMap
   }
 }

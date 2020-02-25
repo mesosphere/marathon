@@ -59,7 +59,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
         state.Instance.fromCoreInstance(app2Instance1)
       )
 
-      f.instanceRepository.ids() returns Source(instances.map(_.instanceId)(collection.breakOut))
+      f.instanceRepository.ids() returns Source(instances.iterator.map(_.instanceId).toSeq)
       for (instance <- instances) {
         f.instanceRepository.get(instance.instanceId) returns Future.successful(Some(instance))
       }
@@ -69,7 +69,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
 
       Then("the resulting data is correct")
       // we do not need to verify the mocked calls because the only way to get the data is to perform the calls
-      val expectedData = InstanceTracker.InstancesBySpec.forInstances(app1Instance1, app1Instance2, app2Instance1)
+      val expectedData = InstanceTracker.InstancesBySpec.forInstances(Seq(app1Instance1, app1Instance2, app2Instance1))
       loaded.futureValue should equal(expectedData)
     }
 
@@ -100,7 +100,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
         state.Instance.fromCoreInstance(app2Instance1)
       )
 
-      f.instanceRepository.ids() returns Source(instances.map(_.instanceId)(collection.breakOut))
+      f.instanceRepository.ids() returns Source(instances.iterator.map(_.instanceId).toSeq)
       for (instance <- instances) {
         f.instanceRepository.get(instance.instanceId) returns Future.successful(Some(instance))
       }
@@ -110,7 +110,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
 
       Then("the resulting data includes an instance for app 2 with the latest run spec")
       // we do not need to verify the mocked calls because the only way to get the data is to perform the calls
-      val expectedData = InstanceTracker.InstancesBySpec.forInstances(app1Instance1, app1Instance2, app2Instance1.copy(runSpec = app2Newer))
+      val expectedData = InstanceTracker.InstancesBySpec.forInstances(Seq(app1Instance1, app1Instance2, app2Instance1.copy(runSpec = app2Newer)))
       loaded.futureValue should equal(expectedData)
     }
 
@@ -135,7 +135,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
         state.Instance.fromCoreInstance(app2Instance1)
       )
 
-      f.instanceRepository.ids() returns Source(instances.map(_.instanceId)(collection.breakOut))
+      f.instanceRepository.ids() returns Source(instances.iterator.map(_.instanceId).toSeq)
       for (instance <- instances) {
         f.instanceRepository.get(instance.instanceId) returns Future.successful(Some(instance))
       }
@@ -147,7 +147,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
 
       Then("the resulting data does not include instances from app2")
       // we do not need to verify the mocked calls because the only way to get the data is to perform the calls
-      val expectedData = InstanceTracker.InstancesBySpec.forInstances(app1Instance1, app1Instance2)
+      val expectedData = InstanceTracker.InstancesBySpec.forInstances(Seq(app1Instance1, app1Instance2))
       loaded.futureValue should equal(expectedData)
 
       And("the instance for app2 was expunged")

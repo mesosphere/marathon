@@ -3,7 +3,7 @@ package raml
 
 object Constraints {
   def apply(c: StringifiedConstraint*): Set[Seq[String]] =
-    c.map(_.toSeq)(collection.breakOut)
+    c.iterator.map(_.toSeq).toSet
 
   sealed trait StringifiedConstraint {
     def toSeq: Seq[String]

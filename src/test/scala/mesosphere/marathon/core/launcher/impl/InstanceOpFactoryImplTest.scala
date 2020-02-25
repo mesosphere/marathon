@@ -115,7 +115,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
     mappedPorts should be(hostPortsAllocatedFromOffer.flatten)
 
     // TODO(karsten): This is super similar to InstanceOpFactoryImpl.podTaskNetworkInfos.
-    val expectedHostPortsPerCT: Map[String, Seq[Int]] = pod.containers.map { ct =>
+    val expectedHostPortsPerCT: Map[String, Seq[Int]] = pod.containers.iterator.map { ct =>
       ct.name -> ct.endpoints.flatMap{ ep =>
         ep.hostPort match {
           case Some(hostPort) if hostPort == 0 => Some(fakeAllocatedPort)
@@ -125,9 +125,9 @@ class InstanceOpFactoryImplTest extends UnitTest {
           case None => None
         }
       }
-    }(collection.breakOut)
+    }.toMap
 
-    val allocatedPortsPerTask: Map[String, Seq[Int]] = instance.tasksMap.map {
+    val allocatedPortsPerTask: Map[String, Seq[Int]] = instance.tasksMap.iterator.map {
       case (EphemeralTaskId(_, Some(ctName)), task) =>
         val ports: Seq[Int] = task.status.networkInfo.hostPorts
         ctName -> ports
@@ -136,7 +136,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
         ctName -> ports
       case (other, _) =>
         throw new IllegalStateException(s"Unsupported task id: ${other}")
-    }(collection.breakOut)
+    }.toMap
 
     allocatedPortsPerTask should be(expectedHostPortsPerCT)
 
@@ -166,9 +166,9 @@ object InstanceOpFactoryImplTest {
   case class TestCase(pod: PodDefinition, agentInfo: AgentInfo) {
     val instanceId: Instance.Id = Instance.Id.forRunSpec(pod.id)
 
-    val taskIDs: Seq[Task.Id] = pod.containers.map { ct =>
+    val taskIDs: Seq[Task.Id] = pod.containers.iterator.map { ct =>
       Task.Id(instanceId, Some(ct))
-    }(collection.breakOut)
+    }.toSeq
 
     // faking it: we always get the host port that we try to allocate
     val hostPortsAllocatedFromOffer: Seq[Option[Int]] = pod.containers.flatMap(_.endpoints.map(_.hostPort)).map {

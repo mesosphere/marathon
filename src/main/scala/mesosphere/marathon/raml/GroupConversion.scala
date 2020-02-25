@@ -45,17 +45,17 @@ object UpdateGroupStructureOp {
     implicit val appNormalization: Normalization[App] = normalizeApp(pathNormalization)
     implicit val appDefinitionNormalization: Normalization[AppDefinition] = normalizeAppDefinition(version)
 
-    val appsById: Map[AbsolutePathId, AppDefinition] = groupUpdate.apps.getOrElse(Set.empty).map { currentApp =>
+    val appsById: Map[AbsolutePathId, AppDefinition] = groupUpdate.apps.getOrElse(Set.empty).iterator.map { currentApp =>
       val app = cf(currentApp.normalize).normalize
       app.id -> app
-    }(collection.breakOut)
+    }.toMap
 
-    val groupsById: Map[AbsolutePathId, CoreGroup] = groupUpdate.groups.getOrElse(Seq.empty).map { currentGroup =>
+    val groupsById: Map[AbsolutePathId, CoreGroup] = groupUpdate.groups.getOrElse(Seq.empty).iterator.map { currentGroup =>
       // TODO: tailrec needed
       val id = requireGroupPath(currentGroup).canonicalPath(gid)
       val group = createGroup(currentGroup, id, version)
       group.id -> group
-    }(collection.breakOut)
+    }.toMap
 
     CoreGroup(
       id = gid,
@@ -85,21 +85,21 @@ object UpdateGroupStructureOp {
     implicit val appNormalization: Normalization[AppDefinition] = normalizeAppDefinition(timestamp)
 
     val effectiveGroups: Map[AbsolutePathId, CoreGroup] = groupUpdate.groups.fold(current.groupsById) { updates =>
-      updates.map { groupUpdate =>
+      updates.iterator.map { groupUpdate =>
         val gid = requireGroupPath(groupUpdate).canonicalPath(current.id)
         val newGroup = current.groupsById.get(gid).map { group =>
           execute(groupUpdate, group, timestamp) // TODO: tailrec needed
         }.getOrElse(createGroup(groupUpdate, gid, timestamp))
 
         newGroup.id -> newGroup
-      }(collection.breakOut)
+      }.toMap
     }
 
     val effectiveApps: Map[AbsolutePathId, AppDefinition] = {
-      groupUpdate.apps.map(_.map(cf)).getOrElse(current.apps.values).map { currentApp =>
+      groupUpdate.apps.map(_.map(cf)).getOrElse(current.apps.values).iterator.map { currentApp =>
         val app = currentApp.normalize
         app.id -> app
-      }(collection.breakOut)
+      }.toMap
     }
 
     val effectiveDependencies = groupUpdate.dependencies.fold(current.dependencies)(_.map(PathId(_).canonicalPath(current.id)))

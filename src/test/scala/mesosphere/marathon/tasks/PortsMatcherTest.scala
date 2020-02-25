@@ -110,7 +110,7 @@ class PortsMatcherTest extends UnitTest {
 
       assert(matcher.portsMatch.isDefined)
       assert(5 == matcher.portsMatch.get.hostPorts.size)
-      assert(matcher.portsMatch.get.resources.map(_.getRole: @silent).to[Set] == Set(ResourceRole.Unreserved, "marathon"))
+      assert(matcher.portsMatch.get.resources.map(_.getRole: @silent).to(Set) == Set(ResourceRole.Unreserved, "marathon"))
     }
 
     "get ports from multiple ranges, ignore ranges with unwanted roles" in {

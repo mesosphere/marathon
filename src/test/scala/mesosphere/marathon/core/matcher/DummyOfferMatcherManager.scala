@@ -18,7 +18,10 @@ class DummyOfferMatcherManager extends OfferMatcherManager {
     }
 
   override def removeSubscription(offerMatcher: OfferMatcher)(implicit ec: ExecutionContext): Future[Unit] = {
-    Future.successful(offerMatchers = offerMatchers.filter(_ != offerMatcher))
+    Future.successful {
+      offerMatchers = offerMatchers.filter(_ != offerMatcher)
+      ()
+    }
   }
 
   def addLaunchTokens(tokens: Int): Unit = ???

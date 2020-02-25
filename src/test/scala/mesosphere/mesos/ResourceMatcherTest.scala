@@ -17,7 +17,7 @@ import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state.VersionInfo._
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import mesosphere.mesos.NoOfferMatchReason.{AgentMaintenance, DeclinedScarceResources, InsufficientCpus, InsufficientDisk, UnfulfilledConstraint}
@@ -39,11 +39,11 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
   "ResourceMatcher" should {
     "match with app.disk == 0, even if no disk resource is contained in the offer" in {
       val offerBuilder = MarathonTestHelper.makeBasicOffer()
-      val diskResourceIndex = offerBuilder.getResourcesList.toIndexedSeq.indexWhere(_.getName == "disk")
+      val diskResourceIndex = offerBuilder.getResourcesList.asScala.toIndexedSeq.indexWhere(_.getName == "disk")
       offerBuilder.removeResources(diskResourceIndex)
       val offer = offerBuilder.build()
 
-      offer.getResourcesList.find(_.getName == "disk") should be('empty)
+      offer.getResourcesList.asScala.find(_.getName == "disk") should be('empty)
 
       val app = AppDefinition(
         id = "/test".toAbsolutePath,
@@ -1275,7 +1275,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       s"Match an offer with $diskType disk type if disk is not required" in {
 
         val offerBuilder = MarathonTestHelper.makeBasicOffer()
-        val diskResourceIndex = offerBuilder.getResourcesList.toIndexedSeq.indexWhere(_.getName == "disk")
+        val diskResourceIndex = offerBuilder.getResourcesList.asScala.toIndexedSeq.indexWhere(_.getName == "disk")
         offerBuilder.removeResources(diskResourceIndex)
 
         addDiskResource(diskType, offerBuilder)
@@ -1326,7 +1326,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       s"Reject an offer with $diskType disk type if disk is required and there are no other disk types available" in {
         val offerBuilder = MarathonTestHelper.makeBasicOffer()
-        val diskResourceIndex = offerBuilder.getResourcesList.toIndexedSeq.indexWhere(_.getName == "disk")
+        val diskResourceIndex = offerBuilder.getResourcesList.asScala.toIndexedSeq.indexWhere(_.getName == "disk")
         offerBuilder.removeResources(diskResourceIndex)
 
         addDiskResource(diskType, offerBuilder)
@@ -1397,9 +1397,9 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
   val appId = AbsolutePathId("/test")
   def instance(id: String, version: Timestamp, attrs: Map[String, String]): Instance = { // linter:ignore:UnusedParameter
-    val attributes: Seq[Attribute] = attrs.map {
+    val attributes: Seq[Attribute] = attrs.iterator.map {
       case (name, v) => TextAttribute(name, v): Attribute
-    }(collection.breakOut)
+    }.toSeq
     TestInstanceBuilder.newBuilder(appId, version = version).addTaskWithBuilder().taskStaged()
       .build()
       .withAgentInfo(attributes = Some(attributes))

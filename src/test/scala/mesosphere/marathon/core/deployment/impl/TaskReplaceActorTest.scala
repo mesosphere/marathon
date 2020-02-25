@@ -157,11 +157,13 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       eventually {
         verify(f.tracker, once).setGoal(any, any, any)
+        ()
       }
 
       ref ! f.instanceChanged(newApp, Running)
       eventually {
         verify(f.tracker, times(2)).setGoal(any, any, any)
+        ()
       }
 
       ref ! f.instanceChanged(newApp, Running)
@@ -171,6 +173,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       eventually {
         verify(f.tracker, times(3)).setGoal(any, any, any)
+        ()
       }
       verify(f.queue).resetDelay(newApp)
 
@@ -209,18 +212,21 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // ceiling(minimumHealthCapacity * 3) = 2 are left running
       eventually{
         verify(f.tracker, once).setGoal(any, any, any)
+        ()
       }
 
       // first new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(2)).setGoal(any, any, any)
+        ()
       }
 
       // second new task becomes healthy and the last old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(3)).setGoal(any, any, any)
+        ()
       }
 
       // third new task becomes healthy
@@ -274,9 +280,11 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // and we can check deployment continue as usual
       eventually {
         verify(f.tracker, times(1)).setGoal(any, any, any)
+        ()
       }
       eventually {
         verify(f.queue, times(1)).add(newApp, 1)
+        ()
       }
 
       // and we don't need to wait for end of deployment
@@ -317,12 +325,14 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // ceiling(minimumHealthCapacity * 3) = 2 are left running
       eventually {
         verify(f.tracker, once).setGoal(any, any, any)
+        ()
       }
 
       // first new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(2)).setGoal(any, any, any)
+        ()
       }
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
@@ -332,6 +342,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(3)).setGoal(any, any, any)
+        ()
       }
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
@@ -387,6 +398,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, once).setGoal(any, any, any)
+        ()
       }
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
@@ -396,6 +408,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(2)).setGoal(any, any, any)
+        ()
       }
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
@@ -405,6 +418,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(3)).setGoal(any, any, any)
+        ()
       }
       queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
 
@@ -454,6 +468,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, once).setGoal(any, any, any)
+        ()
       }
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
@@ -463,6 +478,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(2)).setGoal(any, any, any)
+        ()
       }
       queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
 
@@ -470,6 +486,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(3)).setGoal(any, any, any)
+        ()
       }
       queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
 
@@ -515,6 +532,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // one task is killed directly because we are over capacity
       eventually {
         verify(f.tracker).setGoal(any, eq(Goal.Decommissioned), eq(GoalChangeReason.Upgrading))
+        ()
       }
 
       // the kill is confirmed (see answer above) and the first new task is queued
@@ -526,24 +544,29 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(2)).setGoal(any, any, any)
+        ()
       }
       eventually {
         verify(f.queue, times(2)).add(newApp, 1)
+        ()
       }
 
       // second new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(3)).setGoal(any, any, any)
+        ()
       }
       eventually {
         verify(f.queue, times(3)).add(newApp, 1)
+        ()
       }
 
       // third new task becomes healthy and last old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(4)).setGoal(any, any, any)
+        ()
       }
 
       promise.future.futureValue
@@ -698,24 +721,28 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! InstanceHealthChanged(newInstanceId, newApp.version, newApp.id, healthy = Some(false))
       eventually {
         verify(f.tracker, never).setGoal(any, any, any)
+        ()
       }
 
       //unready
       ref ! ReadinessCheckResult(ReadinessCheck.DefaultName, newTaskId, ready = false, None)
       eventually {
         verify(f.tracker, never).setGoal(any, any, any)
+        ()
       }
 
       //healthy
       ref ! InstanceHealthChanged(newInstanceId, newApp.version, newApp.id, healthy = Some(true))
       eventually {
         verify(f.tracker, never).setGoal(any, any, any)
+        ()
       }
 
       //ready
       ref ! ReadinessCheckResult(ReadinessCheck.DefaultName, newTaskId, ready = true, None)
       eventually {
         verify(f.tracker, once).setGoal(any, any, any)
+        ()
       }
 
       promise.future.futureValue

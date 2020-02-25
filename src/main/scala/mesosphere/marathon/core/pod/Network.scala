@@ -3,7 +3,7 @@ package core.pod
 
 import mesosphere.marathon.Protos.NetworkDefinition
 import mesosphere.marathon.plugin.NetworkSpec
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.{Protos => Mesos}
 
@@ -54,7 +54,7 @@ object Network {
   def fromProto(net: NetworkDefinition): Option[Network] = {
     import NetworkDefinition.Mode._
 
-    def labelsFromProto: Map[String, String] = net.getLabelsList.toSeq.fromProto
+    def labelsFromProto: Map[String, String] = net.getLabelsList.asScala.toSeq.fromProto
 
     net.getMode() match {
       case UNKNOWN =>

@@ -142,7 +142,7 @@ class AppInfoBaseData(
       logger.debug(s"assembling rich tasks for app [${app.id}]")
       def statusesToEnrichedTasks(instances: Seq[Instance], statuses: Map[Instance.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
         instances.flatMap { instance =>
-          EnrichedTask.singleFromInstance(instance, healthCheckResults = statuses.getOrElse(instance.instanceId, Nil).to[Seq])
+          EnrichedTask.singleFromInstance(instance, healthCheckResults = statuses.getOrElse(instance.instanceId, Nil).to(Seq))
         }
       }
 

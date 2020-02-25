@@ -17,7 +17,7 @@ class ConstraintTest extends UnitTest {
       JsSuccess(Raml.fromRaml(validateOrThrow(js.as[Seq[String]])(SchedulingValidation.complyWithAppConstraintRules)))
     } catch {
       case vfe: ValidationFailedException =>
-        JsError(JsonValidationError(messages = vfe.failure.violations.map(_.constraint)(collection.breakOut)))
+        JsError(JsonValidationError(messages = vfe.failure.violations.iterator.map(_.constraint).toSeq))
     }
   }
 

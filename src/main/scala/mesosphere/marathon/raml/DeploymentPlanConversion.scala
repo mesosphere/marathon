@@ -34,8 +34,8 @@ trait DeploymentPlanConversion extends ReadinessConversions {
     raml.DeploymentStepInfo(
       id = info.plan.id,
       version = info.plan.version.toOffsetDateTime,
-      affectedApps = info.plan.affectedAppIds.map(_.toString).to[Seq],
-      affectedPods = info.plan.affectedPodIds.map(_.toString).to[Seq],
+      affectedApps = info.plan.affectedAppIds.map(_.toString).to(Seq),
+      affectedPods = info.plan.affectedPodIds.map(_.toString).to(Seq),
       steps = info.plan.steps.toRaml,
       currentActions = info.step.actions.map(currentAction(info)),
       currentStep = info.stepIndex,

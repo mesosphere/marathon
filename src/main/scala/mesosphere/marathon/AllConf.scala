@@ -19,7 +19,7 @@ class AllConf(args: Seq[String] = Nil) extends ScallopConf(args)
 
 object AllConf {
   def apply(args: String*): AllConf = {
-    new AllConf(args.to[Seq])
+    new AllConf(args.to(Seq))
   }
 
   def withTestConfig(args: String*): AllConf = {

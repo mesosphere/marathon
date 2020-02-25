@@ -10,7 +10,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.test.{GroupCreation, MarathonTestHelper}
 
 import scala.concurrent.Future
@@ -51,7 +51,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
           InstanceOp.UnreserveAndDestroyVolumes(
             InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
             oldInstance = None,
-            resources = offer.getResourcesList.to[Seq]
+            resources = offer.getResourcesList.asScala.to(Seq)
           )
         )
 
@@ -81,7 +81,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
         InstanceOp.UnreserveAndDestroyVolumes(
           InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
           oldInstance = None,
-          resources = offer.getResourcesList.to[Seq]
+          resources = offer.getResourcesList.asScala.to(Seq)
         )
       )
 
@@ -101,7 +101,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       f.groupRepository.root() returns Future.successful(createRootGroup())
       And("a matching bogus instance")
       val bogusInstance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance().copy(instanceId = taskId.instanceId)
-      f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.forInstances(bogusInstance))
+      f.taskTracker.instancesBySpec()(any) returns Future.successful(InstancesBySpec.forInstances(Seq(bogusInstance)))
 
       When("reconciling")
       val matchedTaskOps = f.reconciler.matchOffer(offer).futureValue
@@ -111,7 +111,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
         InstanceOp.UnreserveAndDestroyVolumes(
           InstanceUpdateOperation.ForceExpunge(taskId.instanceId),
           oldInstance = Some(bogusInstance),
-          resources = offer.getResourcesList.to[Seq]
+          resources = offer.getResourcesList.asScala.to(Seq)
         )
       )
 
@@ -132,7 +132,7 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       f.groupRepository.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
       And("a matching bogus task")
       f.taskTracker.instancesBySpec()(any) returns Future.successful(
-        InstancesBySpec.forInstances(TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance().copy(instanceId = taskId.instanceId))
+        InstancesBySpec.forInstances(Seq(TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance().copy(instanceId = taskId.instanceId)))
       )
 
       When("reconciling")

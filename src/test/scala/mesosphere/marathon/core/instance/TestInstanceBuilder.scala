@@ -7,7 +7,7 @@ import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, Instan
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, AgentTestDefaults}
-import mesosphere.marathon.state._
+import mesosphere.marathon.state.{AbsolutePathId, RunSpec, Timestamp}
 import org.apache.mesos
 
 import scala.collection.immutable.Seq
@@ -32,7 +32,7 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
     addTaskWithBuilder().taskLost(since, containerName).build()
 
   def addTaskUnreachable(since: Timestamp = now, containerName: Option[String] = None,
-    unreachableStrategy: UnreachableStrategy = UnreachableEnabled()): TestInstanceBuilder = {
+    unreachableStrategy: state.UnreachableStrategy = state.UnreachableEnabled()): TestInstanceBuilder = {
     // we need to update the unreachable strategy first before adding an unreachable task
     this.withUnreachableStrategy(unreachableStrategy)
       .addTaskWithBuilder().taskUnreachable(since, containerName).build()
@@ -127,8 +127,8 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def withReservation(reservation: Reservation): TestInstanceBuilder =
     copy(instance = instance.copy(reservation = Some(reservation)))
 
-  def withUnreachableStrategy(unreachableStrategy: UnreachableStrategy): TestInstanceBuilder = {
-    val updatedRunSpec = instance.runSpec.asInstanceOf[AppDefinition].copy(unreachableStrategy = unreachableStrategy)
+  def withUnreachableStrategy(unreachableStrategy: state.UnreachableStrategy): TestInstanceBuilder = {
+    val updatedRunSpec = instance.runSpec.asInstanceOf[state.AppDefinition].copy(unreachableStrategy = unreachableStrategy)
     copy(instance = instance.copy(runSpec = updatedRunSpec))
   }
 
@@ -147,8 +147,8 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
 object TestInstanceBuilder {
 
   def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
-    instanceId: Instance.Id, unreachableStrategy: UnreachableStrategy = UnreachableStrategy.default()): Instance = {
-    val runSpec = AppDefinition(instanceId.runSpecId, unreachableStrategy = unreachableStrategy, versionInfo = VersionInfo.OnlyVersion(version), role = "*")
+    instanceId: Instance.Id, unreachableStrategy: state.UnreachableStrategy = state.UnreachableStrategy.default()): Instance = {
+    val runSpec = state.AppDefinition(instanceId.runSpecId, unreachableStrategy = unreachableStrategy, versionInfo = state.VersionInfo.OnlyVersion(version), role = "*")
     Instance(
       instanceId = instanceId,
       agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
@@ -160,7 +160,7 @@ object TestInstanceBuilder {
     )
   }
 
-  def emptyInstanceForRunSpec(now: Timestamp = Timestamp.now(), runSpec: RunSpec, instanceId: Instance.Id): Instance = {
+  def emptyInstanceForRunSpec(now: Timestamp = Timestamp.now(), runSpec: state.RunSpec, instanceId: Instance.Id): Instance = {
     val resolvedInstanceId = Option(instanceId).getOrElse(Instance.Id.forRunSpec(runSpec.id))
     require(resolvedInstanceId.runSpecId == runSpec.id, "provided instanceId did not match runSpec")
 
@@ -175,28 +175,28 @@ object TestInstanceBuilder {
     )
   }
 
-  def fromTask(task: Task, agentInfo: AgentInfo, unreachableStrategy: UnreachableStrategy): Instance = {
+  def fromTask(task: Task, agentInfo: AgentInfo, unreachableStrategy: state.UnreachableStrategy): Instance = {
     val since = task.status.startedAt.getOrElse(task.status.stagedAt)
     val tasksMap = Map(task.taskId -> task)
-    val state = Instance.InstanceState.transitionTo(None, tasksMap, since, unreachableStrategy, Goal.Running)
-    val runSpec = AppDefinition(
+    val instanceState = Instance.InstanceState.transitionTo(None, tasksMap, since, unreachableStrategy, Goal.Running)
+    val runSpec = state.AppDefinition(
       task.taskId.instanceId.runSpecId,
       unreachableStrategy = unreachableStrategy,
-      versionInfo = VersionInfo.OnlyVersion(task.runSpecVersion),
+      versionInfo = state.VersionInfo.OnlyVersion(task.runSpecVersion),
       role = "*"
     )
 
-    new Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, runSpec, None, "*")
+    new Instance(task.taskId.instanceId, Some(agentInfo), instanceState, tasksMap, runSpec, None, "*")
   }
 
   val defaultAgentInfo = Instance.AgentInfo(
     host = AgentTestDefaults.defaultHostName,
     agentId = Some(AgentTestDefaults.defaultAgentId), region = None, zone = None, attributes = Seq.empty)
 
-  def newBuilderForRunSpec(runSpec: RunSpec, now: Timestamp = Timestamp.now(), instanceId: Instance.Id = null): TestInstanceBuilder =
+  def newBuilderForRunSpec(runSpec: state.RunSpec, now: Timestamp = Timestamp.now(), instanceId: Instance.Id = null): TestInstanceBuilder =
     TestInstanceBuilder(emptyInstanceForRunSpec(now, runSpec, instanceId = instanceId), now)
 
-  def newBuilder(runSpecId: AbsolutePathId, now: Timestamp = Timestamp.now(),
+  def newBuilder(runSpecId: state.AbsolutePathId, now: Timestamp = Timestamp.now(),
     version: Timestamp = Timestamp.zero): TestInstanceBuilder =
     TestInstanceBuilder(emptyInstance(now, version, Instance.Id.forRunSpec(runSpecId)), now)
 

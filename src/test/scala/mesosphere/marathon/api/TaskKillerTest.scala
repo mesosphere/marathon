@@ -64,7 +64,7 @@ class TaskKillerTest extends AkkaUnitTest {
       val instance2 = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
       val tasksToKill = Seq(instance1, instance2)
 
-      when(f.tracker.instancesBySpec()).thenReturn(Future.successful(InstancesBySpec.forInstances(tasksToKill: _*)))
+      when(f.tracker.instancesBySpec()).thenReturn(Future.successful(InstancesBySpec.forInstances(tasksToKill)))
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
       when(f.groupManager.group(appId.parent)).thenReturn(Some(Group.empty(appId.parent)))
 
@@ -113,7 +113,7 @@ class TaskKillerTest extends AkkaUnitTest {
       val tasksToKill = Seq(instance1, instance2)
 
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
-      when(f.tracker.instancesBySpec()).thenReturn(Future.successful(InstancesBySpec.forInstances(tasksToKill: _*)))
+      when(f.tracker.instancesBySpec()).thenReturn(Future.successful(InstancesBySpec.forInstances(tasksToKill)))
       when(f.groupManager.group(appId.parent)).thenReturn(Some(Group.empty(appId.parent)))
       val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(RootGroup) => RootGroup])
       val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])

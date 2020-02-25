@@ -20,7 +20,6 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.{AbsolutePathId, RunSpec}
 import mesosphere.marathon.storage.repository.{DeploymentRepository, GroupRepository}
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.Constraints
 import org.apache.mesos
 import org.apache.mesos.Protos.Status
@@ -28,6 +27,7 @@ import org.apache.mesos.SchedulerDriver
 
 import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success}
 
@@ -445,13 +445,13 @@ class SchedulerActions(
   */
 object TaskStatusCollector {
   def collectTaskStatusFor(instances: Seq[Instance]): Seq[mesos.Protos.TaskStatus] = {
-    instances.flatMap { instance =>
+    instances.iterator.flatMap { instance =>
       instance.tasksMap.values.collect {
         // only tasks not confirmed by mesos does not have mesosStatus (condition Created)
         // OverdueTasksActor is taking care of those tasks, we don't need to reconcile them
         case task @ Task(_, _, Task.Status(_, _, Some(mesosStatus), _, _)) if !task.isTerminal =>
           mesosStatus
       }
-    }(collection.breakOut)
+    }.to(Seq)
   }
 }

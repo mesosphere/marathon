@@ -77,7 +77,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
         case _ =>
           TestInstanceBuilder.newBuilder(AbsolutePathId("/running")).addTaskRunning(startedAt = startedAt)
       }).withUnreachableStrategy(unreachableStrategy).getInstance()
-      val instances = InstancesBySpec.forInstances(instance).instancesMap
+      val instances = InstancesBySpec.forInstances(Seq(instance)).instancesMap
 
       val filterForExpunge = businessLogic.filterUnreachableForExpunge(instances, f.clock.now()).map(identity)
 
@@ -92,7 +92,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
     val running2 = TestInstanceBuilder.newBuilder(AbsolutePathId("/running2")).addTaskRunning(startedAt = Timestamp.zero)
       .withUnreachableStrategy(f.fiveTen)
       .getInstance()
-    val instances = InstancesBySpec.forInstances(running1, running2).instancesMap
+    val instances = InstancesBySpec.forInstances(Seq(running1, running2)).instancesMap
 
     val filtered = businessLogic.filterUnreachableForExpunge(instances, f.clock.now()).map(identity)
 
@@ -107,7 +107,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
       .withUnreachableStrategy(f.fiveTen)
       .getInstance()
 
-    val instances2 = InstancesBySpec.forInstances(inactive1, inactive2).instancesMap
+    val instances2 = InstancesBySpec.forInstances(Seq(inactive1, inactive2)).instancesMap
 
     val filtered2 = businessLogic.filterUnreachableForExpunge(instances2, f.clock.now()).map(identity)
 
@@ -124,7 +124,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
         .withUnreachableStrategy(f.fiveTen)
         .getInstance()
 
-      f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running1, running2))
+      f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(Seq(running1, running2)))
 
       Then("issue no expunge")
       noMoreInteractions(f.instanceTracker)
@@ -138,7 +138,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
         .withUnreachableStrategy(f.fiveTen)
         .getInstance()
 
-      f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(running, unreachable))
+      f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(Seq(running, unreachable)))
 
       val testProbe = TestProbe()
       testProbe.send(checkActor, ExpungeOverdueLostTasksActor.Tick)
@@ -156,7 +156,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
         .withUnreachableStrategy(f.fiveTen)
         .getInstance()
 
-      f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(unreachable1, unreachable2))
+      f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(Seq(unreachable1, unreachable2)))
 
       val testProbe = TestProbe()
       testProbe.send(checkActor, ExpungeOverdueLostTasksActor.Tick)
@@ -175,7 +175,7 @@ class ExpungeOverdueLostTasksActorTest extends AkkaUnitTest with TableDrivenProp
         .withUnreachableStrategy(f.fiveTen)
         .getInstance()
 
-      f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(unreachable1, unreachable2))
+      f.instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstancesBySpec.forInstances(Seq(unreachable1, unreachable2)))
 
       val testProbe = TestProbe()
 

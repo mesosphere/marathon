@@ -18,12 +18,11 @@ import akka.Done
 import akka.http.scaladsl.model.StatusCodes._
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.api.LeaderProxyFilter
-import mesosphere.marathon.stream.Implicits._
 
-import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.util.{Failure, Success}
+import scala.jdk.CollectionConverters._
 
 /**
   * Forwarder which uses Akka HTTP to proxy requests, and then streams the response back
@@ -103,7 +102,7 @@ class AsyncUrlConnectionRequestForwarder(
       if !name.equalsIgnoreCase("user-agent")
 
       headerValues <- Option(request.getHeaders(name))
-      headerValue <- headerValues.seq
+      headerValue <- headerValues.asScala
     } {
       logger.debug(s"add RawHeader $name: $headerValue")
       headers += RawHeader(name, headerValue)
@@ -158,7 +157,7 @@ class AsyncUrlConnectionRequestForwarder(
     asyncContext.setTimeout(0L) // delegate timeout to stream
 
     val result: Future[Done] = try {
-      val hasProxyLoop: Boolean = Option(request.getHeaders(HEADER_VIA)).exists(_.seq.contains(viaValue))
+      val hasProxyLoop: Boolean = Option(request.getHeaders(HEADER_VIA)).exists(_.asScala.contains(viaValue))
 
       if (hasProxyLoop) {
         logger.error("Prevent proxy cycle, rejecting request")

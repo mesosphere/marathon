@@ -33,9 +33,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
   val zkURLBase = s"zk://${zkserver.connectUrl}/marathon-$suiteName"
 
-  val marathonMinus3Artifact = MarathonArtifact(SemVer(1, 6, 567, Some("2d8b3e438")))
-  val marathonMinus2Artifact = MarathonArtifact(SemVer(1, 7, 216, Some("9e2a9b579")))
-  val marathonMinus1Artifact = MarathonArtifact(SemVer(1, 8, 222, Some("86475ddac")))
+  val marathonMinus3Artifact = MarathonArtifact(SemVer(1, 7, 216, Some("9e2a9b579")))
+  val marathonMinus2Artifact = MarathonArtifact(SemVer(1, 8, 222, Some("86475ddac")))
+  val marathonMinus1Artifact = MarathonArtifact(SemVer(1, 9, 124, Some("e04033c6f")))
 
   //   Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val agentConfig = MesosAgentConfig(

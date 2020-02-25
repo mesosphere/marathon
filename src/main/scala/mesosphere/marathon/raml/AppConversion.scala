@@ -2,11 +2,12 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.Protos.ResidencyDefinition
-import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import mesosphere.mesos.protos.Implicits._
+import mesosphere.marathon.stream.Implicits.toRichIterable
 
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 
 trait AppConversion extends DefaultConversions with CheckConversion with ConstraintConversion with EnvVarConversion with HealthCheckConversion
   with NetworkConversion with ReadinessConversions with SecretConversion with VolumeConversion
@@ -14,11 +15,11 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
 
   import AppConversion._
 
-  implicit val artifactWrites: Writes[FetchUri, Artifact] = Writes { fetch =>
+  implicit val artifactWrites: Writes[state.FetchUri, Artifact] = Writes { fetch =>
     Artifact(fetch.uri, fetch.extract, fetch.executable, fetch.cache, fetch.outputFile)
   }
 
-  implicit val upgradeStrategyWrites: Writes[state.UpgradeStrategy, UpgradeStrategy] = Writes { strategy =>
+  implicit val upgradeStrategyWrites: Writes[state.UpgradeStrategy, raml.UpgradeStrategy] = Writes { strategy =>
     UpgradeStrategy(strategy.maximumOverCapacity, strategy.minimumHealthCapacity)
   }
 
@@ -28,7 +29,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
     case state.VersionInfo.NoVersion => None
   }
 
-  implicit val appWriter: Writes[AppDefinition, App] = Writes { app =>
+  implicit val appWriter: Writes[state.AppDefinition, App] = Writes { app =>
     // we explicitly do not write ports, uris, ipAddress because they are deprecated fields
     App(
       id = app.id.toString,
@@ -102,8 +103,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
     }
   }
 
-  implicit val fetchUriReader: Reads[Artifact, FetchUri] = Reads { artifact =>
-    FetchUri(
+  implicit val fetchUriReader: Reads[Artifact, state.FetchUri] = Reads { artifact =>
+    state.FetchUri(
       uri = artifact.uri,
       extract = artifact.extract,
       executable = artifact.executable,
@@ -112,7 +113,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
     )
   }
 
-  implicit val upgradeStrategyRamlReader: Reads[UpgradeStrategy, state.UpgradeStrategy] = Reads { us =>
+  implicit val upgradeStrategyRamlReader: Reads[raml.UpgradeStrategy, state.UpgradeStrategy] = Reads { us =>
     state.UpgradeStrategy(
       maximumOverCapacity = us.maximumOverCapacity,
       minimumHealthCapacity = us.minimumHealthCapacity
@@ -123,14 +124,14 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
     * Generate an AppDefinition from an App RAML. Note: App.versionInfo is ignored, the resulting AppDefinition
     * has a `versionInfo` constructed from `OnlyVersion(app.version)`.
     */
-  implicit val appRamlReader: Reads[App, AppDefinition] = Reads[App, AppDefinition] { app =>
+  implicit val appRamlReader: Reads[App, state.AppDefinition] = Reads[App, state.AppDefinition] { app =>
     val selectedStrategy: state.UpgradeStrategy = UpgradeStrategyConverter(
       app.upgradeStrategy.map(Raml.fromRaml(_)),
       hasPersistentVolumes = app.container.exists(_.volumes.existsAn[AppPersistentVolume]),
       hasExternalVolumes = app.container.exists(_.volumes.existsAn[AppExternalVolume])
     )
 
-    val backoffStrategy = BackoffStrategy(
+    val backoffStrategy = state.BackoffStrategy(
       backoff = app.backoffSeconds.seconds,
       maxLaunchDelay = app.maxLaunchDelaySeconds.seconds,
       factor = app.backoffFactor
@@ -140,7 +141,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
 
     val role = app.role.getOrElse(throw new IllegalArgumentException("Failed to convert raml.App, no role provided. This is a bug in AppNormalization."))
 
-    val result: AppDefinition = AppDefinition(
+    val result: state.AppDefinition = state.AppDefinition(
       id = AbsolutePathId(app.id),
       cmd = app.cmd,
       args = app.args,
@@ -149,7 +150,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       instances = app.instances,
       resources = resources(Some(app.cpus), Some(app.mem), Some(app.disk), Some(app.gpus)),
       executor = app.executor,
-      constraints = app.constraints.map(Raml.fromRaml(_))(collection.breakOut),
+      constraints = app.constraints.iterator.map(Raml.fromRaml(_)).toSet,
       fetch = app.fetch.map(Raml.fromRaml(_)),
       portDefinitions = app.portDefinitions.map(_.map(Raml.fromRaml(_))).getOrElse(Nil),
       requirePorts = app.requirePorts,
@@ -159,14 +160,14 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       check = app.check.map(Raml.fromRaml(_)),
       readinessChecks = app.readinessChecks.map(Raml.fromRaml(_)),
       taskKillGracePeriod = app.taskKillGracePeriodSeconds.map(_.second),
-      dependencies = app.dependencies.map(AbsolutePathId(_))(collection.breakOut),
+      dependencies = app.dependencies.iterator.map(AbsolutePathId(_)).toSet,
       upgradeStrategy = selectedStrategy,
       labels = app.labels,
-      acceptedResourceRoles = app.acceptedResourceRoles.getOrElse(AppDefinition.DefaultAcceptedResourceRoles),
+      acceptedResourceRoles = app.acceptedResourceRoles.getOrElse(state.AppDefinition.DefaultAcceptedResourceRoles),
       networks = app.networks.map(Raml.fromRaml(_)),
       versionInfo = versionInfo,
       secrets = Raml.fromRaml(app.secrets),
-      unreachableStrategy = app.unreachableStrategy.map(_.fromRaml).getOrElse(AppDefinition.DefaultUnreachableStrategy),
+      unreachableStrategy = app.unreachableStrategy.map(_.fromRaml).getOrElse(state.AppDefinition.DefaultUnreachableStrategy),
       killSelection = app.killSelection.fromRaml,
       tty = app.tty,
       executorResources = app.executorResources.map(_.fromRaml),
@@ -175,8 +176,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
     result
   }
 
-  implicit val appUpdateRamlReader: Reads[(AppUpdate, AppDefinition), App] = Reads { src =>
-    val (update: AppUpdate, appDef: AppDefinition) = src
+  implicit val appUpdateRamlReader: Reads[(AppUpdate, state.AppDefinition), App] = Reads { src =>
+    val (update: AppUpdate, appDef: state.AppDefinition) = src
     // for validating and converting the returned App API object
     val app: App = appDef.toRaml
     app.copy(
@@ -277,13 +278,13 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       number = port.whenOrElse(_.hasNumber, _.getNumber, IpDiscoveryPort.DefaultNumber),
       name = port.getName,
       protocol = port.when(_.hasProtocol, _.getProtocol).flatMap(NetworkProtocol.fromString).getOrElse(IpDiscoveryPort.DefaultProtocol),
-      labels = port.getLabels.getLabelsList.map { label => label.getKey -> label.getValue }(collection.breakOut)
+      labels = port.getLabels.getLabelsList.asScala.iterator.map { label => label.getKey -> label.getValue }.toMap
     )
   }
 
   implicit val discoveryProtoRamlWriter: Writes[Protos.ObsoleteDiscoveryInfo, IpDiscovery] = Writes { di =>
     IpDiscovery(
-      ports = di.whenOrElse(_.getPortsCount > 0, _.getPortsList.map(_.toRaml[IpDiscoveryPort])(collection.breakOut), IpDiscovery.DefaultPorts)
+      ports = di.whenOrElse(_.getPortsCount > 0, _.getPortsList.asScala.iterator.map(_.toRaml[IpDiscoveryPort]).toSeq, IpDiscovery.DefaultPorts)
     )
   }
 
@@ -292,8 +293,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       discovery = ip.collect {
         case x if x.hasDiscoveryInfo && x.getDiscoveryInfo.getPortsCount > 0 => x.getDiscoveryInfo.toRaml
       }.orElse(IpAddress.DefaultDiscovery),
-      groups = ip.whenOrElse(_.getGroupsCount > 0, _.getGroupsList.to[Set], IpAddress.DefaultGroups),
-      labels = ip.whenOrElse(_.getLabelsCount > 0, _.getLabelsList.to[Seq].fromProto, IpAddress.DefaultLabels),
+      groups = ip.whenOrElse(_.getGroupsCount > 0, _.getGroupsList.asScala.to(Set), IpAddress.DefaultGroups),
+      labels = ip.whenOrElse(_.getLabelsCount > 0, _.getLabelsList.asScala.to(Seq).fromProto, IpAddress.DefaultLabels),
       networkName = ip.when(_.hasNetworkName, _.getNetworkName).orElse(IpAddress.DefaultNetworkName)
     )
   }
@@ -302,9 +303,9 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
     import mesosphere.mesos.protos.Resource
 
     val resourcesMap: Map[String, Double] =
-      service.getResourcesList.map {
+      service.getResourcesList.asScala.iterator.map {
         r => r.getName -> (r.getScalar.getValue: Double)
-      }(collection.breakOut)
+      }.toMap
 
     val version = service.when(_.hasVersion, s => Timestamp(s.getVersion).toOffsetDateTime).orElse(App.DefaultVersion)
     val versionInfo: Option[VersionInfo] =
@@ -316,7 +317,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
 
     val unreachableStrategy: Option[raml.UnreachableStrategy] = service.when(_.hasUnreachableStrategy, _.getUnreachableStrategy.toRaml).orElse(App.DefaultUnreachableStrategy)
 
-    val hasPersistentVolumes = service.hasContainer && service.getContainer.getVolumesList.exists(_.hasPersistent)
+    val hasPersistentVolumes = service.hasContainer && service.getContainer.getVolumesList.asScala.exists(_.hasPersistent)
 
     val residency = if (hasPersistentVolumes || service.hasResidency) {
       unreachableStrategy.flatMap {
@@ -330,23 +331,23 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
 
     val app = App(
       id = service.getId,
-      acceptedResourceRoles = if (service.hasAcceptedResourceRoles && service.getAcceptedResourceRoles.getRoleCount > 0) Option(service.getAcceptedResourceRoles.getRoleList.to[Set]) else App.DefaultAcceptedResourceRoles,
-      args = if (service.hasCmd && service.getCmd.getArgumentsCount > 0) service.getCmd.getArgumentsList.to[Seq] else App.DefaultArgs,
+      acceptedResourceRoles = if (service.hasAcceptedResourceRoles && service.getAcceptedResourceRoles.getRoleCount > 0) Option(service.getAcceptedResourceRoles.getRoleList.asScala.to(Set)) else App.DefaultAcceptedResourceRoles,
+      args = if (service.hasCmd && service.getCmd.getArgumentsCount > 0) service.getCmd.getArgumentsList.asScala.to(Seq) else App.DefaultArgs,
       backoffFactor = service.whenOrElse(_.hasBackoffFactor, _.getBackoffFactor, App.DefaultBackoffFactor),
       backoffSeconds = service.whenOrElse(_.hasBackoff, b => (b.getBackoff / 1000L).toInt, App.DefaultBackoffSeconds),
       cmd = if (service.hasCmd && service.getCmd.getArgumentsCount == 0 && service.getCmd.hasValue) Option(service.getCmd.getValue) else App.DefaultCmd,
-      constraints = service.whenOrElse(_.getConstraintsCount > 0, _.getConstraintsList.map(_.toRaml[Seq[String]])(collection.breakOut), App.DefaultConstraints),
+      constraints = service.whenOrElse(_.getConstraintsCount > 0, _.getConstraintsList.asScala.iterator.map(_.toRaml[Seq[String]]).toSet, App.DefaultConstraints),
       container = service.when(_.hasContainer, _.getContainer.toRaml).orElse(App.DefaultContainer),
       cpus = resourcesMap.getOrElse(Resource.CPUS, App.DefaultCpus),
-      dependencies = service.whenOrElse(_.getDependenciesCount > 0, _.getDependenciesList.to[Set], App.DefaultDependencies),
+      dependencies = service.whenOrElse(_.getDependenciesCount > 0, _.getDependenciesList.asScala.to(Set), App.DefaultDependencies),
       disk = resourcesMap.getOrElse(Resource.DISK, App.DefaultDisk),
-      env = service.whenOrElse(_.hasCmd, s => (s.getCmd.getEnvironment.getVariablesList.to[Seq], s.getEnvVarReferencesList.to[Seq]).toRaml, App.DefaultEnv),
+      env = service.whenOrElse(_.hasCmd, s => (s.getCmd.getEnvironment.getVariablesList.asScala.to(Seq), s.getEnvVarReferencesList.asScala.to(Seq)).toRaml, App.DefaultEnv),
       executor = service.whenOrElse(_.hasExecutor, _.getExecutor, App.DefaultExecutor),
       fetch = if (service.hasCmd && service.getCmd.getUrisCount > 0) service.getCmd.getUrisList.toRaml else App.DefaultFetch,
-      healthChecks = service.whenOrElse(_.getHealthChecksCount > 0, _.getHealthChecksList.toRaml.to[Set], App.DefaultHealthChecks),
+      healthChecks = service.whenOrElse(_.getHealthChecksCount > 0, _.getHealthChecksList.toRaml.to(Set), App.DefaultHealthChecks),
       check = if (service.hasCheck) Option(service.getCheck.toRaml) else App.DefaultCheck,
       instances = service.whenOrElse(_.hasInstances, _.getInstances, App.DefaultInstances),
-      labels = service.getLabelsList.map { label => label.getKey -> label.getValue }(collection.breakOut),
+      labels = service.getLabelsList.asScala.iterator.map { label => label.getKey -> label.getValue }.toMap,
       maxLaunchDelaySeconds = service.whenOrElse(_.hasMaxLaunchDelay, m => (m.getMaxLaunchDelay / 1000L).toInt, App.DefaultMaxLaunchDelaySeconds),
       mem = resourcesMap.getOrElse(Resource.MEM, App.DefaultMem),
       gpus = resourcesMap.get(Resource.GPUS).fold(App.DefaultGpus)(_.toInt),
@@ -354,11 +355,11 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       networks = service.whenOrElse(_.getNetworksCount > 0, _.getNetworksList.toRaml, App.DefaultNetworks),
       ports = None, // not stored in protobuf
       portDefinitions = Option(Seq.empty[PortDefinition]).unless( // the RAML default is None, which is not what an empty proto port collection means.
-        service.when(_.getPortDefinitionsCount > 0, _.getPortDefinitionsList.map(_.toRaml[PortDefinition])(collection.breakOut))),
+        service.when(_.getPortDefinitionsCount > 0, _.getPortDefinitionsList.asScala.iterator.map(_.toRaml[PortDefinition]).toSeq)),
       readinessChecks = service.whenOrElse(_.getReadinessCheckDefinitionCount > 0, _.getReadinessCheckDefinitionList.toRaml, App.DefaultReadinessChecks),
       residency = residency,
       requirePorts = service.whenOrElse(_.hasRequirePorts, _.getRequirePorts, App.DefaultRequirePorts),
-      secrets = service.whenOrElse(_.getSecretsCount > 0, _.getSecretsList.map(_.toRaml)(collection.breakOut), App.DefaultSecrets),
+      secrets = service.whenOrElse(_.getSecretsCount > 0, _.getSecretsList.asScala.iterator.map(_.toRaml).toMap, App.DefaultSecrets),
       taskKillGracePeriodSeconds = service.when(_.hasTaskKillGracePeriod, _.getTaskKillGracePeriod.millis.toSeconds.toInt).orElse(App.DefaultTaskKillGracePeriodSeconds),
       upgradeStrategy = service.when(_.hasUpgradeStrategy, _.getUpgradeStrategy.toRaml).orElse(App.DefaultUpgradeStrategy),
       uris = None, // not stored in protobuf

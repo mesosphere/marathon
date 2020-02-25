@@ -8,7 +8,7 @@ import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.state.{FaultDomain, Region, Zone}
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.util.SemanticVersion
 import mesosphere.mesos.LibMesos
 import mesosphere.util.state.{FrameworkId, MesosLeaderInfo}
@@ -57,7 +57,7 @@ class MarathonScheduler(
   }
 
   override def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]): Unit = {
-    offers.foreach { offer =>
+    offers.asScala.foreach { offer =>
       val processFuture = offerProcessor.processOffer(offer)
       processFuture.onComplete {
         case scala.util.Success(_) => logger.debug(s"Finished processing offer '${offer.getId.getValue}'")

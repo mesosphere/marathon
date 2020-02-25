@@ -74,7 +74,7 @@ private[health] class HealthCheckActor(
   def purgeStatusOfDoneInstances(instances: Seq[Instance]): Unit = {
     logger.debug(s"Purging health status of inactive instances for app ${app.id} version ${app.version} and healthCheck ${healthCheck}")
 
-    val inactiveInstanceIds: Set[Instance.Id] = instances.filterNot(_.isActive).map(_.instanceId)(collection.breakOut)
+    val inactiveInstanceIds: Set[Instance.Id] = instances.filterNot(_.isActive).iterator.map(_.instanceId).toSet
     inactiveInstanceIds.foreach { inactiveId =>
       healthByInstanceId.remove(inactiveId)
     }
@@ -184,7 +184,7 @@ private[health] class HealthCheckActor(
     case GetInstanceHealth(instanceId) => sender() ! healthByInstanceId.getOrElse(instanceId, Health(instanceId))
 
     case GetAppHealth =>
-      sender() ! AppHealth(healthByInstanceId.values.to[Seq])
+      sender() ! AppHealth(healthByInstanceId.values.to(Seq))
 
     case result: HealthResult if result.version == app.version =>
       handleHealthResult(result)

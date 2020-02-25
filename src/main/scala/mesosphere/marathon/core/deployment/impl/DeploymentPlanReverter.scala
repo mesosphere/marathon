@@ -25,7 +25,7 @@ private[deployment] object DeploymentPlanReverter extends StrictLogging {
 
     def changesOnIds[T](originalById: Map[AbsolutePathId, T], targetById: Map[AbsolutePathId, T]): Seq[(Option[T], Option[T])] = {
       val ids = originalById.keys ++ targetById.keys
-      ids.map { id => originalById.get(id) -> targetById.get(id) }(collection.breakOut)
+      ids.iterator.map { id => originalById.get(id) -> targetById.get(id) }.toSeq
     }
 
     /* a sequence of tuples with the old and the new group definition (also for unchanged groups) */

@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.EnvVarValue._
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import org.apache.mesos.{Protos => mesos}
 
 import scala.concurrent.duration._
@@ -35,7 +35,7 @@ class AppDefinitionTest extends UnitTest {
       assert(proto1.getCmd.getShell)
       assert("bash foo-*/start -Dhttp.port=$PORT" == proto1.getCmd.getValue)
       assert(5 == proto1.getInstances)
-      assert(Seq(8080, 8081) == proto1.getPortDefinitionsList.map(_.getNumber))
+      assert(Seq(8080, 8081) == proto1.getPortDefinitionsList.asScala.map(_.getNumber))
       assert("//cmd" == proto1.getExecutor)
       assert(4 == getScalarResourceValue(proto1, "cpus"), 1e-6)
       assert(256 == getScalarResourceValue(proto1, "mem"), 1e-6)
@@ -65,7 +65,7 @@ class AppDefinitionTest extends UnitTest {
       assert(!proto2.getCmd.getShell)
       proto2.getCmd.getArgumentsList should contain theSameElementsInOrderAs Seq("a", "b", "c")
       assert(5 == proto2.getInstances)
-      assert(Seq(8080, 8081) == proto2.getPortDefinitionsList.map(_.getNumber))
+      assert(Seq(8080, 8081) == proto2.getPortDefinitionsList.asScala.map(_.getNumber))
       assert("//cmd" == proto2.getExecutor)
       assert(4 == getScalarResourceValue(proto2, "cpus"), 1e-6)
       assert(256 == getScalarResourceValue(proto2, "mem"), 1e-6)
@@ -375,6 +375,7 @@ class AppDefinitionTest extends UnitTest {
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {
     proto.getResourcesList
+      .asScala
       .find(_.getName == name)
       .get.getScalar.getValue
   }

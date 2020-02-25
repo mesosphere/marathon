@@ -18,14 +18,14 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val f = new Fixture
 
       val startTimestamps = Seq(Some(f.clock.now()), Some(f.clock.now - 1.hour))
-      val tasks: Map[Task.Id, Task] = f.tasks(Condition.Running, Condition.Running)
+      val tasks: Map[Task.Id, Task] = f.tasks(Seq(Condition.Running, Condition.Running))
         .values
         .zip(startTimestamps)
-        .map {
+        .iterator.map {
           case (task, startTime) =>
             val newStatus: Task.Status = task.status.copy(startedAt = startTime)
             task.taskId -> task.copy(status = newStatus)
-        }(collection.breakOut)
+        }.toMap
 
       val state = Instance.InstanceState.transitionTo(None, tasks, f.clock.now(), UnreachableStrategy.default(), Goal.Running)
 
@@ -36,7 +36,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
     "passed only staging tasks" should {
       val f = new Fixture
 
-      val tasks: Map[Task.Id, Task] = f.tasks(Condition.Staging, Condition.Staging)
+      val tasks: Map[Task.Id, Task] = f.tasks(Seq(Condition.Staging, Condition.Staging))
       val state = Instance.InstanceState.transitionTo(None, tasks, f.clock.now(), UnreachableStrategy.default(), Goal.Running)
 
       "not set the activeSince timestamp" in { state.activeSince should not be 'defined }
@@ -47,14 +47,14 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val f = new Fixture
 
       val startTimestamps = Seq(Some(f.clock.now - 1.hour), None)
-      val tasks: Map[Task.Id, Task] = f.tasks(Condition.Running, Condition.Staging)
+      val tasks: Map[Task.Id, Task] = f.tasks(Seq(Condition.Running, Condition.Staging))
         .values
         .zip(startTimestamps)
-        .map {
+        .iterator.map {
           case (task, startTime) =>
             val newStatus: Task.Status = task.status.copy(startedAt = startTime)
             task.taskId -> task.copy(status = newStatus)
-        }(collection.breakOut)
+        }.toMap
 
       val state = Instance.InstanceState.transitionTo(None, tasks, f.clock.now(), UnreachableStrategy.default(), Goal.Running)
 
@@ -66,14 +66,14 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val f = new Fixture
 
       val startTimestamps = Seq(Some(f.clock.now - 1.hour), None)
-      val tasks: Map[Task.Id, Task] = f.tasks(Condition.Running, Condition.Unreachable)
+      val tasks: Map[Task.Id, Task] = f.tasks(Seq(Condition.Running, Condition.Unreachable))
         .values
         .zip(startTimestamps)
-        .map {
+        .iterator.map {
           case (task, startTime) =>
             val newStatus: Task.Status = task.status.copy(startedAt = startTime)
             task.taskId -> task.copy(status = newStatus)
-        }(collection.breakOut)
+        }.toMap
 
       val state = Instance.InstanceState.transitionTo(None, tasks, f.clock.now(), UnreachableStrategy.default(), Goal.Running)
 
@@ -139,16 +139,14 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
     val id = AbsolutePathId("/test")
     val clock = new SettableClock()
 
-    def tasks(statuses: Condition*): Map[Task.Id, Task] = tasks(statuses.to[Seq])
-
     def tasks(statuses: Seq[Condition]): Map[Task.Id, Task] = {
-      statuses.map { status =>
+      statuses.iterator.map { status =>
         val instanceId = Instance.Id.forRunSpec(id)
         val taskId = Task.Id(instanceId)
         val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(status, taskId, Timestamp.now)
         val task = TestTaskBuilder.Helper.minimalTask(taskId, Timestamp.now(), mesosStatus, status)
         task.taskId -> task
-      }(collection.breakOut)
+      }.toMap
     }
   }
 }

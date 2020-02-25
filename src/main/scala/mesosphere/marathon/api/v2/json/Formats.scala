@@ -20,6 +20,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 
 import scala.concurrent.duration._
+import scala.collection.compat._
 
 // TODO: We should replace this entire thing with the auto-generated formats from the RAML.
 // See https://mesosphere.atlassian.net/browse/MARATHON-1291
@@ -112,16 +113,14 @@ trait Formats
     (__ \ "ipAddresses").format[Seq[mesos.NetworkInfo.IPAddress]]
   )(NetworkInfo(_, _, _), unlift(NetworkInfo.unapply))
 
-  implicit lazy val PathIdFormat: Format[PathId] = Format(
-    Reads.of[String](Reads.minLength[String](1)).map(PathId(_)),
-    Writes[PathId] { id => JsString(id.toString) }
-  )
+  def newPathIdWrites[O <: PathId]: Writes[O] = Writes[O] { id => JsString(id.toString) }
+  implicit val PathIdReads: Reads[PathId] = Reads.of[String](Reads.minLength[String](1)).map(PathId(_))
+  implicit val PathIdWrites: Writes[PathId] = newPathIdWrites[PathId]
 
-  implicit lazy val PathIdWrites: Writes[PathId] = Writes{ id => JsString(id.toString) }
+  implicit val AbsolutePathIdReads: Reads[AbsolutePathId] = Reads.of[String](Reads.minLength[String](1)).map(AbsolutePathId(_))
+  implicit val AbsolutePathIdWrites: Writes[AbsolutePathId] = newPathIdWrites[AbsolutePathId]
 
-  implicit lazy val AbsolutePathIdReads: Reads[AbsolutePathId] = Reads.of[String](Reads.minLength[String](1)).map(AbsolutePathId(_))
-
-  implicit lazy val TimestampFormat: Format[Timestamp] = Format(
+  implicit val TimestampFormat: Format[Timestamp] = Format(
     Reads.of[String].map(Timestamp(_)),
     Writes[Timestamp] { t => JsString(t.toString) }
   )
@@ -157,7 +156,7 @@ trait DeploymentFormats {
     Format(
       Reads.of[Seq[Int]].map(_.map(_.toByte).toArray),
       Writes { xs =>
-        JsArray(xs.to[Seq].map(b => JsNumber(b.toInt)))
+        JsArray(xs.to(Seq).map(b => JsNumber(b.toInt)))
       }
     )
 
