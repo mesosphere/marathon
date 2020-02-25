@@ -8,11 +8,11 @@ pipeline {
         }
       }
       steps {
-       // ansiColor('xterm') {
+        ansiColor('xterm') {
           sh '''
 	    sbt compile
 	  '''
-//	}
+	}
       }
     }
   }
