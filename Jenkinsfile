@@ -9,9 +9,7 @@ pipeline {
       }
       steps {
         ansiColor('xterm') {
-          sh '''
-	    sbt compile
-	  '''
+          sh("sbt compile")
 	}
       }
     }
