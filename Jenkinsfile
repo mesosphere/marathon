@@ -27,7 +27,7 @@ pipeline {
       steps {
         ansiColor('xterm') {
           sh '''
-	    pip install -y flake8
+	    pip install flake8
   	    flake8 --count --max-line-length=120 tests/system tests/integration/src/test/resources/python
 	  '''
 	}
