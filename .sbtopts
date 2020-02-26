@@ -1,4 +1,4 @@
--mem 8192
+-mem 7000
 -J-XX:MaxMetaspaceSize=512m
 -J-XX:+CMSClassUnloadingEnabled
 -J-server
