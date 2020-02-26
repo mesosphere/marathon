@@ -3,14 +3,15 @@ pipeline {
   stages {
     stage("Build") {
       agent {
-        dockerfile {
+        docker {
+	  image 'mesosphere/scala-sbt:marathon'
           label 'large'
         }
       }
       steps {
         ansiColor('xterm') {
           sh '''
-	    sbt -Dsbt.global.base=/var/tmp/.sbt -Dsbt.boot.directory=/var/tmp/.sbt -Dsbt.ivy.home=/var/tmp/.ivy2 test
+	    /usr/local/sbt/bin/sbt test
 	  '''
 	}
       }

@@ -1,14 +1,20 @@
+FROM amazoncorretto:8u242 as downloader
+
+USER root
+ENV SBT_VERSION=1.2.8 \
+    SBT_HOME=/usr/local/sbt
+ENV PATH=${SBT_HOME}/bin:${PATH}
+
+RUN yum install -y curl ca-certificates bash git tar
+RUN curl -sL /tmp/sbt-${SBT_VERSION}.tgz "https://github.com/sbt/sbt/releases/download/v${SBT_VERSION}/sbt-${SBT_VERSION}.tgz" | \
+    gunzip | tar -x -C /usr/local
+
+RUN git clone https://github.com/mesosphere/marathon.git && cd marathon && \
+    sbt -Dsbt.log.noformat=true +compile test:compile;
+
 FROM amazoncorretto:8u242
-
-RUN curl https://bintray.com/sbt/rpm/rpm | tee /etc/yum.repos.d/bintray-sbt-rpm.repo && \
-  yum install -y sbt-1.2.8-0 git
-
-RUN curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/2.0.1/2.12-2.0.1 && \
-  chmod +x /usr/local/bin/amm && \
-  ln -sf /usr/local/bin/amm /usr/local/bin/amm-2.12
-
-# Warmup .ivy2 and .sbt cache. This requires a lot of memory.
-RUN mkdir -p /var/tmp/.ivy2 && mkdir -p /var/tmp/.sbt \
-  git clone https://github.com/mesosphere/marathon.git /tmp/marathon && cd /tmp/marathon && \
-  sbt -Dsbt.global.base=/var/tmp/.sbt -Dsbt.boot.directory=/var/tmp/.sbt -Dsbt.ivy.home=/var/tmp/.ivy2 update && \
-  rm -r /tmp/marathon
+COPY --from=downloader /usr/local/sbt /usr/local/sbt
+COPY --from=downloader /root/.cache/coursier /root/.cache/coursier
+COPY --from=downloader /root/.ivy2 /root/.ivy2
+COPY --from=downloader /root/.sbt /root/.sbt
+ENV PATH=${SBT_HOME}/bin:${PATH}
