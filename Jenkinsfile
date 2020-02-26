@@ -22,6 +22,7 @@ pipeline {
         docker {
 	  image 'python:3.6-alpine'
           label 'large'
+	  args '-u root'
         }
       }
       steps {
