@@ -16,6 +16,11 @@ pipeline {
 	  '''
 	}
       }
+      post {
+          always {
+              junit 'target/test-reports/*.xml'
+          }
+      }
     }
     stage("Lint Tests") {
       agent {
@@ -34,10 +39,5 @@ pipeline {
 	}
       }
     }
-  }
-  post {
-      always {
-          junit 'target/test-reports/*.xml'
-      }
   }
 }
