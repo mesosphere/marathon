@@ -12,10 +12,23 @@ pipeline {
       steps {
         ansiColor('xterm') {
           sh '''
-	    whoami
-	    pwd
-	    yum install -y git
-	    /usr/local/sbt/bin/sbt test
+	    sbt test
+	  '''
+	}
+      }
+    }
+    stage("Lint Tests") {
+      agent {
+        docker {
+	  image 'python:3.6-alpine'
+          label 'large'
+        }
+      }
+      steps {
+        ansiColor('xterm') {
+          sh '''
+	    pip install -y flake8
+  	    flake8 --count --max-line-length=120 tests/system tests/integration/src/test/resources/python
 	  '''
 	}
       }

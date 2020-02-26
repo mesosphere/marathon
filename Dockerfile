@@ -12,4 +12,4 @@ RUN curl -sL /tmp/sbt-${SBT_VERSION}.tgz "https://github.com/sbt/sbt/releases/do
 
 # Warm up caches. This requires ~8gb of memroy.
 RUN git clone https://github.com/mesosphere/marathon.git && cd marathon && \
-    sbt -Dsbt.log.noformat=true +compile test:compile;
+    sbt -Dsbt.log.noformat=true +compile test:compile
