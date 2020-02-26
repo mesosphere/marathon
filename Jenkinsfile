@@ -6,6 +6,7 @@ pipeline {
         docker {
 	  image 'mesosphere/scala-sbt:marathon'
           label 'large'
+	  args '-u root'
         }
       }
       steps {
