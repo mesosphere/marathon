@@ -10,7 +10,7 @@ pipeline {
       steps {
         ansiColor('xterm') {
           sh '''
-	    sbt -Dsbt.global.base=.sbt -Dsbt.boot.directory=.sbt -Dsbt.ivy.home=.ivy2 test
+	    sbt -Dsbt.global.base=/var/tmp/.sbt -Dsbt.boot.directory=/var/tmp/.sbt -Dsbt.ivy.home=/var/tmp/.ivy2 test
 	  '''
 	}
       }
