@@ -11,6 +11,7 @@ pipeline {
       steps {
         ansiColor('xterm') {
           sh '''
+	    yum install -y git
 	    /usr/local/sbt/bin/sbt test
 	  '''
 	}
