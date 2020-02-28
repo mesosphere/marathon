@@ -11,15 +11,9 @@ pipeline {
       }
       steps {
         ansiColor('xterm') {
-          sh '''
-	    sbt test
-	  '''
+          sh 'sbt test'
+          junit 'target/test-reports/*.xml'
 	}
-      }
-      post {
-          always {
-              junit 'target/test-reports/*.xml'
-          }
       }
     }
     stage("Lint Tests") {
