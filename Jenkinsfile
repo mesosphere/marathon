@@ -39,5 +39,21 @@ pipeline {
 	}
       }
     }
+    stage("Tast Packages") {
+      agent {
+        docker {
+	  image 'mesosphere/scala-sbt:marathon'
+          label 'large'
+	  args '-u root'
+	}
+      }
+      steps {
+        ansiColor('xterm') {
+          sh '''
+            ci/pipeline buildDockerAndLinuxPackages
+	  '''
+	}
+      }
+    }
   }
 }
