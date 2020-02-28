@@ -6,7 +6,7 @@ ENV SBT_VERSION=1.2.8 \
 ENV PATH=${SBT_HOME}/bin:${PATH}
 
 # Install sbt and Ammoite
-RUN yum install -y curl ca-certificates bash git tar
+RUN yum install -y curl ca-certificates bash git make tar
 RUN curl -sL /tmp/sbt-${SBT_VERSION}.tgz "https://github.com/sbt/sbt/releases/download/v${SBT_VERSION}/sbt-${SBT_VERSION}.tgz" | \
     gunzip | tar -x -C /usr/local && \
     curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/2.0.1/2.12-2.0.1 && \
