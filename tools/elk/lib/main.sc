@@ -91,12 +91,12 @@ def detectLogFormat(logFiles: Seq[Path])(implicit mat: Materializer): Option[Log
         val linesSample = await(
           FileIO.fromPath(input.toNIO)
             .via(warningLineSplitter(input, 128000))
-            .take(100)
+            .take(1000)
             .map(_.utf8String)
             .runWith(Sink.seq))
 
         val maybeFormat = (for {
-          line <- linesSample.take(100)
+          line <- linesSample.take(1000)
           format <- LogFormat.tryMatch(line)
         } yield format).headOption
 
