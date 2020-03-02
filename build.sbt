@@ -12,6 +12,7 @@ resolvers ++= loadM2Resolvers(sLog.value)
 resolvers += Resolver.sonatypeRepo("snapshots")
 
 addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
+addCompilerPlugin(scalafixSemanticdb)
 
 val silencerVersion = "1.1"
 addCompilerPlugin("com.github.ghik" %% "silencer-plugin" % silencerVersion)
@@ -78,7 +79,7 @@ val pbSettings = ProtobufPlugin.projectSettings ++ Seq(
 lazy val commonSettings = Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
-  scalaVersion := "2.12.7",
+  scalaVersion := "2.12.10",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
     "-encoding", "UTF-8",
@@ -91,13 +92,14 @@ lazy val commonSettings = Seq(
     //FIXME: CORE-977 and MESOS-7368 are filed and need to be resolved to re-enable this
     // "-Xfatal-warnings",
     "-Yno-adapted-args",
+    "-Yrangepos",
     "-Ywarn-numeric-widen",
     //"-Ywarn-dead-code", We should turn this one on soon
     "-Ywarn-inaccessible",
     "-Ywarn-infer-any",
     "-Ywarn-nullary-override",
     "-Ywarn-nullary-unit",
-    //"-Ywarn-unused", We should turn this one on soon
+    "-Ywarn-unused-import",
     "-Ywarn-unused:-locals,imports",
     //"-Ywarn-value-discard", We should turn this one on soon.
   ),
