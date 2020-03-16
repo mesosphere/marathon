@@ -368,7 +368,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       def materializerSettings = ActorMaterializerSettings(system)
       implicit val mat = ActorMaterializer(materializerSettings)
       override val taskKiller = new TaskKiller(
-        instanceTracker, groupManager, config, auth.auth, auth.auth, killService)
+        instanceTracker, groupManager, auth.auth, auth.auth, killService)
       override val taskResource = new TasksResource(
         instanceTracker,
         taskKiller,

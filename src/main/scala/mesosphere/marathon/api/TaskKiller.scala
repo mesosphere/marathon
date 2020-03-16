@@ -22,7 +22,6 @@ import scala.util.control.NonFatal
 class TaskKiller @Inject() (
     instanceTracker: InstanceTracker,
     groupManager: GroupManager,
-    val config: MarathonConf,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
     killService: KillService)(implicit val executionContext: ExecutionContext, implicit val materializer: Materializer) extends AuthResource with StrictLogging {
@@ -94,8 +93,8 @@ class TaskKiller @Inject() (
     appInstances: Map[AbsolutePathId, Seq[Instance]],
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
     def scaleApp(app: AppDefinition): AppDefinition = {
-      checkAuthorization(UpdateRunSpec, app)
       appInstances.get(app.id).fold(app) { instances =>
+        checkAuthorization(UpdateRunSpec, app)
         // only count active instances that did not already receive a kill request.
         val toKillCount = instances.count(i => i.isActive && !i.isKilling)
         // make sure we never scale below zero instances.
