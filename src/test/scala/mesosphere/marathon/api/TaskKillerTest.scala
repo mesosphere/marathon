@@ -164,7 +164,7 @@ class TaskKillerTest extends AkkaUnitTest {
       // Regression test for MARATHON-8731
       val business = Builders.newAppDefinition.command(id = AbsolutePathId("/business"))
       val devBackend = Builders.newAppDefinition.command(id = AbsolutePathId("/dev/backend"))
-      val initialRoot = Builders.newRootGroup.withApps(Seq(business, devBackend))
+      val initialRoot = Builders.newRootGroup(apps = Seq(business, devBackend))
       val businessInstance = TestInstanceBuilder.newBuilderForRunSpec(business).addTaskRunning().instance
       val devBackendInstance = TestInstanceBuilder.newBuilderForRunSpec(devBackend).addTaskRunning().instance
       val authFn: Any => Boolean = {

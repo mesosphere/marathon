@@ -6,7 +6,7 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.{NewGroupEnforceRoleBehavior, Seq}
 import mesosphere.marathon.core.check.Check
 import mesosphere.marathon.core.health.HealthCheck
-import mesosphere.marathon.core.pod.Network
+import mesosphere.marathon.core.pod.{Network, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.raml.{App, Apps, Resources}
 import mesosphere.marathon.state.RootGroup.NewGroupStrategy
@@ -14,18 +14,40 @@ import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, BackoffStrategy
 
 import scala.concurrent.duration.FiniteDuration
 
+/**
+  * Home for constructors of common test fixtures.
+  *
+  * Convention: new{EntityType}.{variant}, where variant describes some recipe for creating different variations of standard fixtures; for example, a command app definition.
+  *
+  * For the standard variant, `apply` is used.
+  *
+  * All builders return valid objects with the least amount of information required (IE - where empty list or None is valid, this is used as a default)
+  */
 object Builders {
 
   object newRootGroup {
-    def withApps(apps: Seq[AppDefinition]): RootGroup = {
-      apps.foldLeft(RootGroup.empty(NewGroupStrategy.fromConfig(NewGroupEnforceRoleBehavior.Top))) { (rootGroup, app) =>
+    /**
+      * Construct a new rootGroup containing the specified pods and apps. Interim groups are automatically created.
+      * @param apps Apps to include, in any nested path structure.
+      * @param pods Pods to include, in any nested path structure.
+      * @param newGroupEnforceRoleBehavior Controls the default value for enforceRole in interim created groups.
+      * @return Root group containing the apps and pods specified
+      */
+    def apply(apps: Seq[AppDefinition] = Nil, pods: Seq[PodDefinition] = Nil, newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior = NewGroupEnforceRoleBehavior.Top): RootGroup = {
+      val initialGroup = RootGroup.empty(NewGroupStrategy.fromConfig(newGroupEnforceRoleBehavior))
+      val groupWithApps = apps.foldLeft(initialGroup) { (rootGroup, app) =>
         rootGroup.updateApp(app.id, _ => app)
+      }
+      pods.foldLeft(groupWithApps) { (rootGroup, pod) =>
+        rootGroup.updatePod(pod.id, _ => pod)
       }
     }
   }
+
   object newAppDefinition {
     val appIdIncrementor = new AtomicInteger()
 
+    /** Return a valid command app definition (using command executor, not using UCR or Docker). */
     def command(
       id: AbsolutePathId = AbsolutePathId(s"/app-${appIdIncrementor.incrementAndGet()}"),
       cmd: Option[String] = Some("sleep 3600"),
@@ -81,5 +103,4 @@ object Builders {
         tty = tty)
     }
   }
-
 }
