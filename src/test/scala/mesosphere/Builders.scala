@@ -10,7 +10,7 @@ import mesosphere.marathon.core.pod.Network
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.raml.{App, Apps, Resources}
 import mesosphere.marathon.state.RootGroup.NewGroupStrategy
-import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, BackoffStrategy, Container, EnvVarValue, FetchUri, KillSelection, PortDefinition, PortDefinitions, Role, RootGroup, Secret, Timestamp, UnreachableStrategy, UpgradeStrategy, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, BackoffStrategy, EnvVarValue, KillSelection, PortDefinition, Role, RootGroup, Secret, Timestamp, UnreachableStrategy, UpgradeStrategy, VersionInfo}
 
 import scala.concurrent.duration.FiniteDuration
 
