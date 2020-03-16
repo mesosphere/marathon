@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package api
 
-import java.time.Clock
-
 import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.scaladsl.Source
@@ -13,18 +11,14 @@ import mesosphere.marathon.core.instance.update.{InstanceUpdateOperation, Instan
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.core.task.tracker.impl.{InstanceTrackerActor, InstanceTrackerDelegate}
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig}
+import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state._
-import mesosphere.marathon.storage.repository.InstanceView
-import mesosphere.marathon.test.TestCrashStrategy
 import mesosphere.{AkkaUnitTest, Builders}
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito._
-import org.rogach.scallop.ScallopConf
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 class TaskKillerTest extends AkkaUnitTest {
   "TaskKiller" should {
@@ -213,34 +207,4 @@ class TaskKillerTest extends AkkaUnitTest {
     val taskKiller: TaskKiller = new TaskKiller(
       tracker, groupManager, auth.auth, auth.auth, killService)
   }
-}
-
-class TestInstanceTrackerFixture(
-    initialRoot: RootGroup = RootGroup.empty(),
-    authenticated: Boolean = true,
-    authorized: Boolean = true,
-    authFn: Any => Boolean = _ => true,
-    val clock: Clock = Clock.systemUTC(),
-    config: AllConf = AllConf.withTestConfig("--zk_timeout", "3000"))(implicit as: ActorSystem, ec: ExecutionContext) extends TestGroupManagerFixture(
-  initialRoot,
-  authenticated = authenticated,
-  authorized = authorized,
-  authFn = authFn,
-  config = config) {
-
-  val crashStrategy = new TestCrashStrategy
-  val instanceTrackerConfig: InstanceTrackerConfig = new ScallopConf() with InstanceTrackerConfig {}
-  val instanceView = InstanceView(instanceRepository, groupRepository)
-  val instanceTrackerActor = as.actorOf(InstanceTrackerActor.props(
-    metrics = metrics,
-    config: InstanceTrackerConfig,
-    steps = Nil,
-    repository = instanceView,
-    clock = clock,
-    crashStrategy = crashStrategy))
-  val instanceTracker = new InstanceTrackerDelegate(
-    metrics = metrics,
-    clock = clock,
-    config = config,
-    instanceTrackerActor)
 }
