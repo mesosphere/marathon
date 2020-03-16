@@ -28,28 +28,17 @@ import scala.util.{Failure, Success}
 
 object InstanceTrackerActor {
   def props(
-    metrics: ActorMetrics,
-    taskLoader: InstancesLoader,
-    updateStepProcessor: InstanceTrackerUpdateStepProcessor,
-    stateOpResolver: InstanceUpdateOpResolver,
-    repository: InstanceView,
-    clock: Clock,
-    crashStrategy: CrashStrategy): Props = {
-    Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, stateOpResolver, repository, clock, crashStrategy))
-  }
-
-  def props(
     metrics: Metrics,
     config: InstanceTrackerConfig,
     steps: Seq[InstanceChangeHandler],
     repository: InstanceView,
     clock: Clock,
     crashStrategy: CrashStrategy)(implicit mat: Materializer): Props = {
-    val taskLoader = new InstancesLoaderImpl(repository, config)(mat)
+    val instancesLoader = new InstancesLoaderImpl(repository, config)(mat)
     val updateStepProcessor = new InstanceTrackerUpdateStepProcessorImpl(metrics, steps)
     val stateOpResolver: InstanceUpdateOpResolver = new InstanceUpdateOpResolver(clock)
 
-    Props(new InstanceTrackerActor(new ActorMetrics(metrics), taskLoader, updateStepProcessor, stateOpResolver, repository, clock, crashStrategy))
+    Props(new InstanceTrackerActor(new ActorMetrics(metrics), instancesLoader, updateStepProcessor, stateOpResolver, repository, clock, crashStrategy))
   }
 
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */

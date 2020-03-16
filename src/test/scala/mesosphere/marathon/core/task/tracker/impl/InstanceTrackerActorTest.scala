@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.task.tracker.impl
 
 import akka.Done
-import akka.actor.{Status, Terminated}
+import akka.actor.{Props, Status, Terminated}
 import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
@@ -342,7 +342,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
 
       stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(Done)
 
-      lazy val instanceTrackerActor = TestActorRef[InstanceTrackerActor](InstanceTrackerActor.props(actorMetrics, instancesLoader, stepProcessor, updateResolver, repository, clock, crashStrategy))
+      lazy val instanceTrackerActor = TestActorRef[InstanceTrackerActor](Props(new InstanceTrackerActor(actorMetrics, instancesLoader, stepProcessor, updateResolver, repository, clock, crashStrategy)))
 
       def verifyNoMoreInteractions(): Unit = {
         noMoreInteractions(instancesLoader)
