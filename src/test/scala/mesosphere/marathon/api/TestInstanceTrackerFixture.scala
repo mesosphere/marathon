@@ -4,13 +4,10 @@ package api
 import java.time.Clock
 
 import akka.actor.ActorSystem
-import mesosphere.marathon.AllConf
-import mesosphere.marathon.core.task.tracker.InstanceTrackerConfig
 import mesosphere.marathon.core.task.tracker.impl.{InstanceTrackerActor, InstanceTrackerDelegate}
 import mesosphere.marathon.state.RootGroup
 import mesosphere.marathon.storage.repository.InstanceView
 import mesosphere.marathon.test.TestCrashStrategy
-import org.rogach.scallop.ScallopConf
 
 import scala.concurrent.ExecutionContext
 
