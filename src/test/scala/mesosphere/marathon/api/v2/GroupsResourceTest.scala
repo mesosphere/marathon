@@ -113,7 +113,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       val req = auth.request
       val body = """{"id":"/a/b/c","cmd":"foo","ports":[]}"""
 
-      groupManager.rootGroup() returns createRootGroup()
+      groupManager.rootGroup() returns Builders.newRootGroup()
 
       When("the root is fetched from index")
       val root = asyncRequest { r =>
@@ -285,8 +285,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
     "Creation of a group with same path as an existing app should be prohibited (fixes #3385)" in new FixtureWithRealGroupManager(
       initialRoot = {
-        val app = AppDefinition("/group/app".toAbsolutePath, cmd = Some("sleep"), role = "*")
-        createRootGroup(groups = Set(createGroup("/group".toAbsolutePath, Map(app.id -> app))), validate = false)
+        val app = Builders.newAppDefinition.command("/group/app".toAbsolutePath)
+        Builders.newRootGroup(apps = Seq(app))
       }
     ) {
       Given("A real group manager with one app")
@@ -302,7 +302,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "Creation of a group with same path as an existing group should be prohibited" in
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/group".toAbsolutePath)))) {
+      new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup(groupIds = Seq("/group".toAbsolutePath))) {
         When("creating a group with the same path existing app")
         val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("/group"))))
 
@@ -317,7 +317,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       rootGroup.transitiveGroups().map(_._1.toString).toSet + rootGroup.id.toString
     }
     "Creation of a top-level relative group path creates the group in the root" in {
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+      new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup()) {
         f.service.deploy(any, any).returns(Future(Done))
         When("creating a group without an absolute path")
         val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("relative"))))
@@ -335,7 +335,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "Creation of a relative group path inside of a specified parent group creates the group in the parent group" in {
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+      new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup()) {
         f.service.deploy(any, any).returns(Future(Done))
         When("creating a group without an absolute path")
         val body = Json.stringify(Json.toJson(GroupUpdate(id = Some("child"))))
@@ -352,7 +352,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "Rejects group updates with apps that don't belong directly to a group" in {
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+      new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup()) {
         val body = """{
           "id": "sub",
           "apps": [
@@ -377,7 +377,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "Allows group updates with apps directly in a group" in {
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+      new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup()) {
         val body = """{
           "id": "sub",
           "apps": [
@@ -405,7 +405,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "Allows group updates with mid-level groups" in {
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+      new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup()) {
         val body = """
         {
           "groups": [
@@ -436,7 +436,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "Allow batch creation of a top-level group with enforce role and apps" in {
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+      new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup()) {
         val body =
           """
         {
@@ -503,7 +503,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "allow an update to enforceRole when id is not specified" in {
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(Group("/dev".toAbsolutePath, enforceRole = false)))) {
+      val group = Group("/dev".toAbsolutePath, enforceRole = false)
+      new FixtureWithRealGroupManager(initialRoot = RootGroup(groupsById = Map(group.id -> group))) {
         val body = """{"enforceRole": true}"""
         f.service.deploy(any, any).returns(Future(Done))
 
@@ -519,7 +520,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "Fail a batch update when app role is invalid" in {
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+      new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup()) {
         val body =
           """
         {
@@ -582,7 +583,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "Default according to the top-level group when enforce role = false" in {
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+      new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup()) {
         val body =
           """
         {
