@@ -14,7 +14,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.Identity
 import mesosphere.marathon.state._
-import mesosphere.{AkkaUnitTest, Builders}
+import mesosphere.AkkaUnitTest
 import org.mockito.ArgumentCaptor
 import org.mockito.Mockito._
 

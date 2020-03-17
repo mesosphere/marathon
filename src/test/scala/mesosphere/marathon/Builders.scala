@@ -1,16 +1,15 @@
-package mesosphere
+package mesosphere.marathon
 
 import java.util.concurrent.atomic.AtomicInteger
 
 import mesosphere.marathon.Protos.Constraint
-import mesosphere.marathon.{NewGroupEnforceRoleBehavior, Seq}
 import mesosphere.marathon.core.check.Check
 import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.pod.{Network, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.raml.{App, Apps, Resources}
 import mesosphere.marathon.state.RootGroup.NewGroupStrategy
-import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, BackoffStrategy, EnvVarValue, KillSelection, PortDefinition, Role, RootGroup, Secret, Timestamp, UnreachableStrategy, UpgradeStrategy, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, BackoffStrategy, EnvVarValue, Group, KillSelection, PortDefinition, Role, RootGroup, Secret, Timestamp, UnreachableStrategy, UpgradeStrategy, VersionInfo}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -33,13 +32,31 @@ object Builders {
       * @param newGroupEnforceRoleBehavior Controls the default value for enforceRole in interim created groups.
       * @return Root group containing the apps and pods specified
       */
-    def apply(apps: Seq[AppDefinition] = Nil, pods: Seq[PodDefinition] = Nil, newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior = NewGroupEnforceRoleBehavior.Top): RootGroup = {
-      val initialGroup = RootGroup.empty(NewGroupStrategy.fromConfig(newGroupEnforceRoleBehavior))
-      val groupWithApps = apps.foldLeft(initialGroup) { (rootGroup, app) =>
-        rootGroup.updateApp(app.id, _ => app)
+    def apply( apps: Seq[AppDefinition] = Nil,
+               pods: Seq[PodDefinition] = Nil,
+               groupDependencies: Map[AbsolutePathId, Set[AbsolutePathId]] = Map.empty,
+               groupIds: Seq[AbsolutePathId] = Nil,
+               newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior = NewGroupEnforceRoleBehavior.Top,
+               version: Timestamp = Group.defaultVersion,
+             ): RootGroup = {
+      val newGroupStrategy = NewGroupStrategy.fromConfig(newGroupEnforceRoleBehavior)
+      val initialGroup = RootGroup(
+        newGroupStrategy = newGroupStrategy,
+        version = version)
+      val withEmptyGroups = groupIds.foldLeft(initialGroup) { (rootGroup, groupId) =>
+        rootGroup.updateGroup(groupId, _.getOrElse { newGroupStrategy.newGroup(groupId) })
       }
-      pods.foldLeft(groupWithApps) { (rootGroup, pod) =>
-        rootGroup.updatePod(pod.id, _ => pod)
+      val groupWithApps = apps.foldLeft(withEmptyGroups) { (rootGroup, app) =>
+        rootGroup.updateApp(app.id, _ => app, version = version)
+      }
+      val groupWithPods = pods.foldLeft(groupWithApps) { (rootGroup, pod) =>
+        rootGroup.updatePod(pod.id, _ => pod, version = version)
+      }
+      groupDependencies.foldLeft(groupWithPods) { case (rootGroup, (groupId, dependencies)) =>
+        rootGroup.updateGroup(groupId, {
+          case Some(group) => group.withDependencies(dependencies)
+          case None => newGroupStrategy.newGroup(groupId).withDependencies(dependencies)
+        })
       }
     }
   }
@@ -80,6 +97,7 @@ object Builders {
         cmd = cmd,
         user = user,
         env = env,
+        args = args,
         container = None,
         resources = resources,
         instances = instances,

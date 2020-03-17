@@ -219,16 +219,7 @@ class RootGroup(
     val oldGroup = group(groupId).getOrElse(newGroupStrategy.newGroup(groupId))
     val oldDependencies = oldGroup.dependencies
     val newDependencies = dependencies(oldDependencies)
-    val newGroup = Group(
-      id = oldGroup.id,
-      apps = oldGroup.apps,
-      pods = oldGroup.pods,
-      groupsById = oldGroup.groupsById,
-      dependencies = newDependencies,
-      version = version,
-      enforceRole = oldGroup.enforceRole
-    )
-    putGroup(newGroup, version)
+    putGroup(oldGroup.withDependencies(newDependencies), version)
   }
 
   /**
