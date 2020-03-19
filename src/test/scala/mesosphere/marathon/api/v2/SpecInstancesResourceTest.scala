@@ -59,7 +59,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
     def materializerSettings = ActorMaterializerSettings(system)
     implicit val mat = ActorMaterializer(materializerSettings)
     val taskKiller = new TaskKiller(
-      instanceTracker, groupManager, config, auth.auth, auth.auth, killService)
+      instanceTracker, groupManager, auth.auth, auth.auth, killService)
     val appsTaskResource = new AppTasksResource(
       instanceTracker,
       taskKiller,

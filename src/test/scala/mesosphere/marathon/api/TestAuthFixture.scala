@@ -14,7 +14,7 @@ class TestAuthFixture() extends Mockito {
 
   type Auth = Authenticator with Authorizer
 
-  var identity: Identity = new Identity {}
+  implicit var identity: Identity = new Identity {}
 
   @volatile var authenticated: Boolean = true
   @volatile var authorized: Boolean = true

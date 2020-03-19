@@ -9,14 +9,15 @@ import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
 import akka.event.LoggingReceive
 import akka.pattern.pipe
+import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdated, InstancesSnapshot}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdated, InstancesSnapshot}
 import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{RepositoryStateUpdated, UpdateContext}
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.metrics.{Metrics, SettableGauge}
 import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceView
@@ -27,14 +28,17 @@ import scala.util.{Failure, Success}
 
 object InstanceTrackerActor {
   def props(
-    metrics: ActorMetrics,
-    taskLoader: InstancesLoader,
-    updateStepProcessor: InstanceTrackerUpdateStepProcessor,
-    stateOpResolver: InstanceUpdateOpResolver,
+    metrics: Metrics,
+    config: InstanceTrackerConfig,
+    steps: Seq[InstanceChangeHandler],
     repository: InstanceView,
     clock: Clock,
-    crashStrategy: CrashStrategy): Props = {
-    Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, stateOpResolver, repository, clock, crashStrategy))
+    crashStrategy: CrashStrategy)(implicit mat: Materializer): Props = {
+    val instancesLoader = new InstancesLoaderImpl(repository, config)(mat)
+    val updateStepProcessor = new InstanceTrackerUpdateStepProcessorImpl(metrics, steps)
+    val stateOpResolver: InstanceUpdateOpResolver = new InstanceUpdateOpResolver(clock)
+
+    Props(new InstanceTrackerActor(new ActorMetrics(metrics), instancesLoader, updateStepProcessor, stateOpResolver, repository, clock, crashStrategy))
   }
 
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */

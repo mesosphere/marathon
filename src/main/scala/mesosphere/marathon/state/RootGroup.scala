@@ -208,15 +208,7 @@ class RootGroup(
     val oldGroup = group(groupId).getOrElse(Group.empty(groupId))
     val oldDependencies = oldGroup.dependencies
     val newDependencies = dependencies(oldDependencies)
-    val newGroup = Group(
-      id = oldGroup.id,
-      apps = oldGroup.apps,
-      pods = oldGroup.pods,
-      groupsById = oldGroup.groupsById,
-      dependencies = newDependencies,
-      version = version
-    )
-    putGroup(newGroup, version)
+    putGroup(oldGroup.withDependencies(newDependencies), version)
   }
 
   /**
@@ -287,6 +279,21 @@ class RootGroup(
       dependencies = oldGroup.dependencies,
       version = version)
     putGroup(newGroup, version)
+  }
+
+  /**
+    * Update a group with the specified group id by applying the update function.
+    *
+    * It has the same semantics as [[updateApp()]] and [[updatePod()]]. If the group does not exist
+    * it will be created. The update does *not* change the group version.
+    *
+    * @param groupId the if od the group to be updated.
+    * @param fn      the update function.
+    * @return the new root group with the update group.
+    */
+  def updateGroup(groupId: PathId, fn: Option[Group] => Group): RootGroup = {
+    val updatedGroup = fn(group(groupId))
+    putGroup(updatedGroup, updatedGroup.version)
   }
 
   private def updateVersion(group: Group, version: Timestamp): Group = {

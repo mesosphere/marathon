@@ -21,7 +21,6 @@ import scala.util.{Failure, Success}
 
 trait RestResource extends JaxResource {
   implicit val executionContext: ExecutionContext
-  protected val config: MarathonConf
   case class FailureResponse(response: Response) extends Throwable
 
   /**
