@@ -213,14 +213,6 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     }
 
     "reconcile" in new Fixture {
-      def taskStatus(instance: Instance, state: mesos.TaskState = mesos.TaskState.TASK_RUNNING) =
-        mesos.TaskStatus.newBuilder
-          .setTaskId(mesos.TaskID.newBuilder()
-            .setValue(instance.tasksMap.keys.head.idString)
-            .build)
-          .setState(state)
-          .setHealthy(true)
-          .build
 
       val healthChecks = List(0, 1, 2).map { i =>
         (0 until i).map { j =>

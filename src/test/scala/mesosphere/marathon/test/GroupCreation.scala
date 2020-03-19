@@ -6,6 +6,7 @@ import mesosphere.marathon.state._
 import com.wix.accord
 
 trait GroupCreation {
+  @deprecated("Prefer Builders.newRootGroup instead", since = "1.9")
   def createRootGroup(
     apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
     pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
