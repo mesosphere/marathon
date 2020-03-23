@@ -123,8 +123,8 @@ $(UBUNTU_1804_PKG_PATH): $(BUILD_TARGET_ROOT)/toor/ubuntu-bionic/lib/systemd/sys
 
 .PHONY: debian-jessie-8
 debian-jessie-8: $(DEBIAN_8_PKG_PATH)
-$(DEBIAN_8_PKG_PATH): target/toor/debian-jessie-8/lib/systemd/system/marathon.service target/toor/debian-jessie-8/$(PREFIX)/share/marathon target/toor/debian-jessie-8/etc/default/marathon target/fpm-docker/.provisioned
-	$(FPM) -C target/toor/debian-jessie-8 \
+$(DEBIAN_8_PKG_PATH): $(BUILD_TARGET_ROOT)/toor/debian-jessie-8/lib/systemd/system/marathon.service $(BUILD_TARGET_ROOT)/toor/debian-jessie-8/$(PREFIX)/share/marathon $(BUILD_TARGET_ROOT)/toor/debian-jessie-8/etc/default/marathon target/fpm-docker/.provisioned
+	$(FPM) -C $(BUILD_TARGET_ROOT)/toor/debian-jessie-8 \
 		--iteration $(PKG_REL).debian8 \
 		$(FPM_OPTS_DEB_SYSTEMD) $(FPM_OPTS) .
 
