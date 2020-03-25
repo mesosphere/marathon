@@ -93,6 +93,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   def versionWithoutCommit(version: SemVer): String =
     version.copy(commit = None).toString
 
+  def statusMap(tasks: Iterable[ITEnrichedTask]): Map[String, String] = {
+    tasks.iterator.map { task => task.id -> task.state }.toMap
+  }
+
   "Ephemeral and persistent apps and pods" should {
     "survive an upgrade cycle" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
 
@@ -191,8 +195,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       eventually { AkkaHttpResponse.request(Get(s"http://$resident_pod_nm1_address:$resident_pod_nm1_port/pst1/foo")).futureValue.entityString should be("start\n") }
 
       Then(s"All apps from n-3 and n-2 are still running (${marathonMinus3Artifact.version} and ${marathonMinus2Artifact.version})")
-      marathonMinus1.client.tasks(AbsolutePathId(app_nm3.id)).value should contain theSameElementsAs (originalAppNm3Tasks)
-      marathonMinus1.client.tasks(AbsolutePathId(app_nm2.id)).value should contain theSameElementsAs (originalAppNm2Tasks)
+      statusMap(marathonMinus1.client.tasks(AbsolutePathId(app_nm3.id)).value) should be(statusMap(originalAppNm3Tasks))
+      statusMap(marathonMinus1.client.tasks(AbsolutePathId(app_nm2.id)).value) should be(statusMap(originalAppNm2Tasks))
 
       // Pass upgrade to current
       When("Marathon is upgraded to the current version")
@@ -209,10 +213,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       And(s"All apps from n-3 and n-2 are recovered and running again (${marathonMinus3Artifact.version} and ${marathonMinus2Artifact.version})")
       eventually { marathonCurrent should have(runningTasksFor(AbsolutePathId(app_nm3_fail.id), 1)) }
-      marathonCurrent.client.tasks(AbsolutePathId(app_nm3_fail.id)).value should not contain theSameElementsAs(originalAppNm3FailedTasks)
+      statusMap(marathonCurrent.client.tasks(AbsolutePathId(app_nm3_fail.id)).value) shouldNot be(statusMap(originalAppNm3FailedTasks))
 
       eventually { marathonCurrent should have(runningTasksFor(AbsolutePathId(app_nm2_fail.id), 1)) }
-      marathonCurrent.client.tasks(AbsolutePathId(app_nm2_fail.id)).value should not contain theSameElementsAs(originalAppNm2FailedTasks)
+      statusMap(marathonCurrent.client.tasks(AbsolutePathId(app_nm2_fail.id)).value) shouldNot be(statusMap(originalAppNm2FailedTasks))
 
       And(s"All pods from n-1 are still running (${marathonMinus1Artifact.version})")
       eventually { marathonCurrent.client.status(resident_pod_nm1.id) should be(Stable) }
