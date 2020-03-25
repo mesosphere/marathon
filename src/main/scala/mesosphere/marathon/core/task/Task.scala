@@ -306,9 +306,6 @@ object Task {
     object Names {
       val anonymousContainer = "_app" // presence of `_` is important since it's illegal for a real container name!
     }
-    // Regular expression for matching taskIds before instance-era
-    private val LegacyTaskIdRegex = """^(.+)([\._])([^_\.]+)$""".r
-    private val ResidentTaskIdRegex = """^(.+)([\._])([^_\.]+)(\.)(\d+)$""".r
 
     // UUID Parse according to [[UUID.toString]]
     def uuidP[_: P]: P[UUID] = P((TimeLow ~ "-" ~ TimeMid ~ "-" ~ TimeHighAndVersion ~ "-" ~ VariantAndSequence ~ "-" ~ Node).!).log.map(UUID.fromString(_))
@@ -346,7 +343,7 @@ object Task {
     def taskIdWithInstanceIdP[_: P]: P[EphemeralTaskId] = P(safeRunSpecIdP ~ "." ~ prefix ~ uuidP ~ CharIn("._") ~ container)
       .map {
         case ((runSpecId, prefix, uuid, container)) =>
-          val instanceId = Instance.Id(runSpecId, prefix, uuid)
+          val instanceId = Instance.Id(runSpecId, prefix, uuid) // TODO: parse instance id to be type safe.
           val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
 
           // We have a reservation or and old ephemeral task without incarnation count.
@@ -362,12 +359,8 @@ object Task {
           TaskIdWithIncarnation(instanceId, containerName, attempt)
       }
 
-    //def taskIdP[_: P]: P[Task.Id] = P(Start ~ (taskIdWithIncarnationP | taskIdWithInstanceIdP | residentTaskIdP | legacyTaskId) ~ End)
-    def taskIdP[_: P]: P[Task.Id] = P(Start ~ residentTaskIdP ~ End)
-
-    // Regular expression for matching taskIds since instance-era
-    private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^\.]+)$""".r
-    private val TaskIdWithInstanceIdAndIncarnationRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^\.]+)\.(\d+)$""".r
+    def taskIdP[_: P]: P[Task.Id] = P(Start ~ (taskIdWithIncarnationP | taskIdWithInstanceIdP | residentTaskIdP | legacyTaskId) ~ End)
+    //def taskIdP[_: P]: P[Task.Id] = P(Start ~ residentTaskIdP ~ End)
 
     /**
       * Parse instance and task id from idString.
