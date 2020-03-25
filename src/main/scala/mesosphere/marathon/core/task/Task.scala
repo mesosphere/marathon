@@ -19,6 +19,7 @@ import org.apache.mesos.{Protos => MesosProtos}
 import scala.concurrent.duration.FiniteDuration
 import mesosphere.marathon.api.v2.json.Formats._
 import play.api.libs.json._
+import fastparse._, NoWhitespace._
 
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
@@ -309,6 +310,61 @@ object Task {
     private val LegacyTaskIdRegex = """^(.+)([\._])([^_\.]+)$""".r
     private val ResidentTaskIdRegex = """^(.+)([\._])([^_\.]+)(\.)(\d+)$""".r
 
+    // UUID Parse according to [[UUID.toString]]
+    def uuidP[_: P]: P[UUID] = P((TimeLow ~ "-" ~ TimeMid ~ "-" ~ TimeHighAndVersion ~ "-" ~ VariantAndSequence ~ "-" ~ Node).!).log.map(UUID.fromString(_))
+
+    def TimeLow[_: P] = P(HexOctet.rep(exactly = 4))
+    def TimeMid[_: P] = P(HexOctet.rep(exactly = 2))
+    def TimeHighAndVersion[_: P] = P(HexOctet.rep(exactly = 2))
+    def VariantAndSequence[_: P] = P(HexOctet.rep(exactly = 2))
+    def Node[_: P] = P(HexOctet.rep(exactly = 6))
+    def HexOctet[_: P] = P(HexDigit ~ HexDigit)
+    def HexDigit[_: P] = P(CharIn("0-9a-fA-F"))
+
+    // "^(
+    //    ( [a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9] )\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.
+    //   )$".r
+    // app.test.23.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6.41
+    def safeRunSpecIdP[_: P]: P[AbsolutePathId] = P(CharsWhileIn("a-z0-9_.").!).map(PathId.fromSafePath(_)).log
+    def separatorP[_: P]: P[String] = P(CharIn("_.").!)
+    def number[_: P]: P[Long] = P(CharIn("0-9").rep(1).!.map(_.toLong))
+    def prefix[_: P]: P[Instance.Prefix] = P(("instance-" | "marathon-").!).map(Instance.Prefix.fromString(_))
+    def container[_: P]: P[String] = P(CharsWhile(_ != '.').!)
+
+    def legacyTaskId[_: P]: P[LegacyId] = P(safeRunSpecIdP ~ separatorP ~ uuidP)
+      .map {
+        case ((runSpecId, separator, uuid)) =>
+          LegacyId(runSpecId, separator, uuid)
+      }
+
+    def residentTaskIdP[_: P]: P[LegacyResidentId] = P(safeRunSpecIdP ~ separatorP ~ uuidP ~ "." ~ number)
+      .map {
+        case ((runSpecId, separator, uuid, attempt)) =>
+          LegacyResidentId(runSpecId, separator, uuid, attempt)
+      }
+
+    def taskIdWithInstanceIdP[_: P]: P[EphemeralTaskId] = P(safeRunSpecIdP ~ "." ~ prefix ~ uuidP ~ CharIn("._") ~ container)
+      .map {
+        case ((runSpecId, prefix, uuid, container)) =>
+          val instanceId = Instance.Id(runSpecId, prefix, uuid)
+          val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
+
+          // We have a reservation or and old ephemeral task without incarnation count.
+          EphemeralTaskId(instanceId, containerName)
+      }
+
+    def taskIdWithIncarnationP[_: P]: P[TaskIdWithIncarnation] = P(safeRunSpecIdP ~ "." ~ prefix ~ uuidP ~ CharIn("._") ~ container ~ "." ~ number)
+      .log
+      .map {
+        case ((runSpecId, prefix, uuid, container, attempt)) =>
+          val instanceId = Instance.Id(runSpecId, prefix, uuid)
+          val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
+          TaskIdWithIncarnation(instanceId, containerName, attempt)
+      }
+
+    //def taskIdP[_: P]: P[Task.Id] = P(Start ~ (taskIdWithIncarnationP | taskIdWithInstanceIdP | residentTaskIdP | legacyTaskId) ~ End)
+    def taskIdP[_: P]: P[Task.Id] = P(Start ~ residentTaskIdP ~ End)
+
     // Regular expression for matching taskIds since instance-era
     private val TaskIdWithInstanceIdRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^\.]+)$""".r
     private val TaskIdWithInstanceIdAndIncarnationRegex = """^(.+)\.(instance-|marathon-)([^_\.]+)[\._]([^\.]+)\.(\d+)$""".r
@@ -326,26 +382,9 @@ object Task {
       * @return Task.Id
       */
     def parse(idString: String): Task.Id = {
-      idString match {
-        case TaskIdWithInstanceIdAndIncarnationRegex(safeRunSpecId, prefix, uuid, container, attempt) =>
-          val runSpec = PathId.fromSafePath(safeRunSpecId)
-          val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
-          val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
-          TaskIdWithIncarnation(instanceId, containerName, attempt.toLong)
-        case TaskIdWithInstanceIdRegex(safeRunSpecId, prefix, uuid, container) =>
-          val runSpec = PathId.fromSafePath(safeRunSpecId)
-          val instanceId = Instance.Id(runSpec, Instance.Prefix.fromString(prefix), UUID.fromString(uuid))
-          val containerName: Option[String] = if (container == Names.anonymousContainer) None else Some(container)
-
-          // We have a reservation or and old ephemeral task without incarnation count.
-          EphemeralTaskId(instanceId, containerName)
-        case ResidentTaskIdRegex(safeRunSpecId, separator, uuid, _, attempt) =>
-          val runSpec = PathId.fromSafePath(safeRunSpecId)
-          LegacyResidentId(runSpec, separator, UUID.fromString(uuid), attempt.toLong)
-        case LegacyTaskIdRegex(safeRunSpecId, separator, uuid) =>
-          val runSpec = PathId.fromSafePath(safeRunSpecId)
-          LegacyId(runSpec, separator, UUID.fromString(uuid))
-        case _ => throw new MatchError(s"taskId $idString no valid identifier")
+      fastparse.parse(idString, taskIdP(_)) match {
+        case Parsed.Success(parsedId, _) => parsedId
+        case f @ Parsed.Failure(_) => throw new MatchError(s"taskId $idString no valid identifier: ${f.trace().longMsg}")
       }
     }
 

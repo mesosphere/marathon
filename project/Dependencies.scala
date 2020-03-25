@@ -60,6 +60,7 @@ object Dependencies {
     commonsCompress % "compile", // used for tar flow
     commonsIO % "compile",
     alpakkaCodes % "compile",
+    fastparse % "compile",
 
     // old Chaos deps
     guava % "compile",
@@ -115,6 +116,7 @@ object Dependency {
     val AsyncAwait = "0.9.7"
     val Aws = "1.11.243"
     val Diffson = "2.2.2"
+    val Fastparse = "2.2.2"
     val Guava = "20.0"
     val Guice = "4.1.0"
     val JGraphT = "0.9.3"
@@ -168,6 +170,7 @@ object Dependency {
   val beanUtils = "commons-beanutils" % "commons-beanutils" % "1.9.3"
   val commonsCompress = "org.apache.commons" % "commons-compress" % V.ApacheCommonsCompress
   val commonsIO = "commons-io" % "commons-io" % V.ApacheCommonsIO
+  val fastparse = "com.lihaoyi" %% "fastparse" % V.Fastparse
   val guava = "com.google.guava" % "guava" % V.Guava
   val guice = "com.google.inject" % "guice" % V.Guice
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
