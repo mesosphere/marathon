@@ -54,7 +54,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
 
       res.scalarMatch(Resource.CPUS).get.roles should be(Seq(ResourceRole.Unreserved))
@@ -75,7 +75,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
 
       res.scalarMatch(Resource.CPUS).get.roles should be(Seq(ResourceRole.Unreserved))
@@ -104,7 +104,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
 
       res.scalarMatch(Resource.CPUS).get.roles should be(Seq(ResourceRole.Unreserved))
@@ -134,7 +134,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
 
       res.scalarMatch(Resource.CPUS).get.roles should be(Seq(ResourceRole.Unreserved))
@@ -177,7 +177,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         offer, app,
         knownInstances = Seq(), ResourceSelector.reservedWithLabels(Set(ResourceRole.Unreserved, "marathon"), labels), config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
 
       res.scalarMatches should have size 3
@@ -207,7 +207,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       // reserved resources with labels should not be matched by selector if don't match for reservation with labels
       ResourceMatcher.matchResources(
         offer, app,
-        knownInstances = Seq(), ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")), config, Seq.empty) shouldBe a[ResourceMatchResponse.NoMatch]
+        knownInstances = Seq(), ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")), config, Seq.empty).should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "dynamically reserved resources are matched if they have no labels" in {
@@ -238,7 +238,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         offer, app,
         knownInstances = Seq(), ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")), config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
 
       res.scalarMatches should have size 3
@@ -297,7 +297,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         offer, app,
         knownInstances = Seq(), ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")), config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "ResourceSelector.reservedWithLabels should not match disk resource without label" in {
@@ -324,7 +324,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         knownInstances = Seq(), ResourceSelector.reservedWithLabels(Set(ResourceRole.Unreserved, "marathon"), Map("some" -> "label")), config, Seq.empty
       )
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "match resources success with preserved roles" in {
@@ -340,7 +340,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         offer, app,
         knownInstances = Seq(), ResourceSelector.any(Set("marathon")), config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
 
       res.scalarMatch(Resource.CPUS).get.roles should be(Seq("marathon"))
@@ -361,7 +361,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         offer, app,
         knownInstances = Seq(), unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "match resources success with constraints" in {
@@ -401,7 +401,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "match resources fail on cpu" in {
@@ -415,7 +415,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "match resources fail on mem" in {
@@ -429,7 +429,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "match resources should always match constraints and therefore return NoOfferMatchReason.UnfulfilledConstraint in case of no match" in {
@@ -448,7 +448,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
       noMatch.reasons should contain(NoOfferMatchReason.UnfulfilledConstraint)
@@ -466,7 +466,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "match resources fail on ports" in {
@@ -480,7 +480,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "resource matcher should not respond with NoOfferMatchReason.UnfulfilledRole if role matches" in {
@@ -494,7 +494,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, ResourceSelector.any(Set("A", "B")), config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
       noMatch.reasons should not contain NoOfferMatchReason.UnfulfilledRole
@@ -511,7 +511,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
       noMatch.reasons should contain(NoOfferMatchReason.UnfulfilledRole)
@@ -527,7 +527,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
       noMatch.reasons should contain(NoOfferMatchReason.UnfulfilledRole)
@@ -544,7 +544,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
       noMatch.reasons should contain(NoOfferMatchReason.UnfulfilledRole)
@@ -560,7 +560,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
       noMatch.reasons should contain allOf (NoOfferMatchReason.InsufficientCpus, NoOfferMatchReason.InsufficientMemory,
@@ -578,7 +578,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
       noMatch.reasons should be(Seq(NoOfferMatchReason.InsufficientPorts))
@@ -596,7 +596,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
       noMatch.reasons should not contain NoOfferMatchReason.InsufficientPorts
@@ -731,7 +731,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, instances, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "match disk won't allocate resources across disk different paths" in {
@@ -772,14 +772,14 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       ResourceMatcher.matchResources(
         offerDisksTooSmall, app,
         knownInstances = Seq(),
-        ResourceSelector.reservable, config, Seq.empty) shouldBe a[ResourceMatchResponse.NoMatch]
+        ResourceSelector.reservable, config, Seq.empty).should(be(a[ResourceMatchResponse.NoMatch]))
 
       val resourceMatchResponse = ResourceMatcher.matchResources(
         offerSufficeWithMultOffers, app,
         knownInstances = Seq(),
         ResourceSelector.reservable, config, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch.scalarMatch("disk").get.consumed.toSet shouldBe Set(
         DiskResourceMatch.Consumption(1024.0, "*", None, None, DiskSource.fromParams(DiskType.Path, Some("/path2"), None, None, None, None),
           Some(VolumeWithMount(persistentVolume, mount))),
@@ -819,12 +819,12 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       ResourceMatcher.matchResources(
         offers("/mnt/disk-a"), app,
         knownInstances = Seq(),
-        ResourceSelector.reservable, config, Seq.empty) shouldBe a[ResourceMatchResponse.NoMatch]
+        ResourceSelector.reservable, config, Seq.empty).should(be(a[ResourceMatchResponse.NoMatch]))
 
       ResourceMatcher.matchResources(
         offers("/mnt/disk-b"), app,
         knownInstances = Seq(),
-        ResourceSelector.reservable, config, Seq.empty) shouldBe a[ResourceMatchResponse.Match]
+        ResourceSelector.reservable, config, Seq.empty).should(be(a[ResourceMatchResponse.Match]))
     }
 
     "mount disk enforces maxSize constraints" in {
@@ -873,12 +873,12 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       ResourceMatcher.matchResources(
         offer, mountRequest(500, Some(750)),
         knownInstances = Seq(),
-        ResourceSelector.reservable, config, Seq.empty) shouldBe a[ResourceMatchResponse.NoMatch]
+        ResourceSelector.reservable, config, Seq.empty).should(be(a[ResourceMatchResponse.NoMatch]))
 
       ResourceMatcher.matchResources(
         offer, mountRequest(500, Some(1024)),
         knownInstances = Seq(),
-        ResourceSelector.reservable, config, Seq.empty) shouldBe a[ResourceMatchResponse.Match]
+        ResourceSelector.reservable, config, Seq.empty).should(be(a[ResourceMatchResponse.Match]))
     }
 
     "a Reserved instance prevents creation of another reservation when hostname constraint is set" in {
@@ -910,7 +910,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val response = ResourceMatcher.matchResources(
         offer, app, knownInstances = Seq(instance), ResourceSelector.reservable, config, Seq.empty)
 
-      response shouldBe a[ResourceMatchResponse.NoMatch]
+      response.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "a Reserved instance DOES NOT prevent creation of another reservation when NO hostname constraint is set" in {
@@ -939,7 +939,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val response = ResourceMatcher.matchResources(
         offer, app, knownInstances = Seq(instance), ResourceSelector.reservable, config, Seq.empty)
 
-      response shouldBe a[ResourceMatchResponse.Match]
+      response.should(be(a[ResourceMatchResponse.Match]))
     }
 
     "when ignore maintenance mode is configured, offers with an active maintenance window should match" in {
@@ -953,7 +953,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, maintenanceDisabledConf, Seq.empty)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
 
       res.scalarMatch(Resource.CPUS).get.roles should be(Seq(ResourceRole.Unreserved))
@@ -971,7 +971,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe ResourceMatchResponse.NoMatch(Seq(UnfulfilledConstraint, AgentMaintenance))
+      resourceMatchResponse.should(be(ResourceMatchResponse.NoMatch(Seq(UnfulfilledConstraint, AgentMaintenance))))
     }
 
     "match offers with maintenance mode, too many required cpus and enabled feature should not match" in {
@@ -984,7 +984,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-      resourceMatchResponse shouldBe ResourceMatchResponse.NoMatch(Seq(InsufficientCpus, UnfulfilledConstraint, AgentMaintenance))
+      resourceMatchResponse.should(be(ResourceMatchResponse.NoMatch(Seq(InsufficientCpus, UnfulfilledConstraint, AgentMaintenance))))
     }
 
     "match offers with maintenance mode and enabled feature but no maintenance scheduled should not match because of *only* insufficient cpus" in {
@@ -998,7 +998,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, maintenanceEnabledConf, Seq.empty)
 
-      resourceMatchResponse shouldBe ResourceMatchResponse.NoMatch(Seq(InsufficientCpus))
+      resourceMatchResponse.should(be(ResourceMatchResponse.NoMatch(Seq(InsufficientCpus))))
     }
 
     "match offers with empty region if localRegion is not available" in {
@@ -1011,7 +1011,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       )
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
     }
 
     "match offers with empty region if localRegion is available" in {
@@ -1025,7 +1025,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty,
         unreservedResourceSelector, config, Seq.empty, localRegion = Some(Region("local_region")))
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
     }
 
     "do not match offers with nonempty region if localRegion is empty" in {
@@ -1041,7 +1041,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty, localRegion = None)
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "do not match offers with nonempty region if localRegion is different" in {
@@ -1057,7 +1057,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
       val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty, localRegion = Some(Region("local_region")))
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "decline GPU-containing offers for non-GPU apps with the default gpu scheduling behavior" in {
@@ -1086,7 +1086,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         Seq.empty
       )
 
-      nonGpuAppMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      nonGpuAppMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
 
       val gpuAppMatchResponse = ResourceMatcher.matchResources(
         gpuOffer,
@@ -1097,7 +1097,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         Seq.empty
       )
 
-      gpuAppMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      gpuAppMatchResponse.should(be(a[ResourceMatchResponse.Match]))
     }
 
     "match any offer on gpu-enabled agent with a unrestricted gpu scheduling behavior" in {
@@ -1130,7 +1130,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         Seq.empty
       )
 
-      nonGpuResourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      nonGpuResourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
 
       val gpuResourceMatchResponse = ResourceMatcher.matchResources(
         offer,
@@ -1141,7 +1141,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         Seq.empty
       )
 
-      gpuResourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      gpuResourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
     }
 
     "not match an offer on gpu-enabled agent with a restricted gpu scheduling behavior if GPU is not required by app" in {
@@ -1167,7 +1167,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         Seq.empty
       )
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual DeclinedScarceResources
     }
 
@@ -1194,7 +1194,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         Seq.empty
       )
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
     }
 
     "match an offer on gpu-enabled agent with a restricted gpu scheduling behavior if GPU is not required by app but there is a Persistent Volume" in {
@@ -1221,7 +1221,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         reservedInstances = Seq(instance)
       )
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
     }
 
     "not match an offer on gpu-enabled agent with a restricted gpu scheduling behavior if GPU is not required by app and we want to reserve a new Persistent Volume" in {
@@ -1250,7 +1250,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         reservedInstances = Seq.empty
       )
 
-      resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+      resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual DeclinedScarceResources
     }
 
@@ -1291,7 +1291,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
         val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-        resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+        resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
         val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
 
         res.scalarMatch(Resource.CPUS).get.roles should be(Seq(ResourceRole.Unreserved))
@@ -1316,7 +1316,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
         val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-        resourceMatchResponse shouldBe a[ResourceMatchResponse.Match]
+        resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
         val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
 
         res.scalarMatch(Resource.CPUS).get.roles should be(Seq(ResourceRole.Unreserved))
@@ -1342,7 +1342,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
         val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
-        resourceMatchResponse shouldBe a[ResourceMatchResponse.NoMatch]
+        resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
         resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual InsufficientDisk
       }
 
