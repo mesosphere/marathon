@@ -120,6 +120,9 @@ class Group(
 
     s"Group($id, apps = $summarizedApps, pods = $summarizedPods, groups = $summarizedGroups, dependencies = $summarizedDependencies, version = $version)"
   }
+
+  def withDependencies(dependencies: Set[PathId]): Group =
+    new Group(this.id, this.apps, this.pods, this.groupsById, dependencies, this.version)
 }
 
 object Group extends StrictLogging {

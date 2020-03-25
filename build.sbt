@@ -243,7 +243,7 @@ lazy val ammonite = (project in file("./tools/repl-server"))
   .settings(formatSettings: _*)
   .settings(
     mainClass in Compile := Some("ammoniterepl.Main"),
-    libraryDependencies += "com.lihaoyi" % "ammonite-sshd" % "1.5.0" cross CrossVersion.full
+    libraryDependencies += "com.lihaoyi" % "ammonite-sshd" % "2.0.4" cross CrossVersion.full
   )
   .dependsOn(marathon)
 
