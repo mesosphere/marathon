@@ -46,7 +46,7 @@ class MarathonStorage(args: List[String] = helpers.InternalHelpers.argsFromEnv) 
   implicit val actorMaterializer = ActorMaterializer()
   implicit val scheduler: Scheduler = actorSystem.scheduler
   implicit val timeout = Timeout(5.seconds)
-  /*private*/ class ScallopStub[A](name: String, value: Option[A]) extends ScallopOption[A](name) {
+  /*private*/ class ScallopStub[A](name: String, value: Option[A]) extends ScallopOption[A](() => name) {
     override def get = value
     override def apply() = value.get
   }
