@@ -470,7 +470,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "Fail a batch update when apps are modified and enforceRole is changed for an unrelated group" in {
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(Group(id = AbsolutePathId("/dev"), enforceRole = false)))) {
+      new FixtureWithRealGroupManager(initialRoot = Group("/".toAbsolutePath, groupsById = Map("/dev".toAbsolutePath -> Group(id = AbsolutePathId("/dev"), enforceRole = false)))) {
         val body =
           """
         {
@@ -550,7 +550,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "Default according to the top-level group enforce role field" in {
-      new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set())) {
+      new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup()) {
         val body =
           """
         {
