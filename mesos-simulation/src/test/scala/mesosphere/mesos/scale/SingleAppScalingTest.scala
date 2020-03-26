@@ -1,12 +1,15 @@
 package mesosphere.mesos.scale
 
+import com.mesosphere.utils.http.RestResult
+import com.mesosphere.utils.mesos.{MesosFacade, MesosTest}
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.IntegrationTest
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.facades.{ITDeploymentResult, MarathonFacade, MesosFacade}
+import mesosphere.marathon.integration.facades.{ITDeploymentResult, MarathonFacade}
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{App, AppUpdate}
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AbsolutePathId, PathId}
 import org.scalatest.concurrent.Eventually
 import play.api.libs.json._
 
@@ -20,11 +23,11 @@ object SingleAppScalingTest {
 }
 
 trait SimulatedMesosTest extends MesosTest {
-  def mesos: MesosFacade = {
+  def mesosFacade: MesosFacade = {
     require(false, "No access to mesos")
     ???
   }
-  val mesosMasterUrl = ""
+  val mesosMasterZkUrl = ""
 }
 
 @IntegrationTest
@@ -34,7 +37,7 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
 
   val maxInstancesPerOffer = Option(System.getenv("MARATHON_MAX_INSTANCES_PER_OFFER")).getOrElse("1")
 
-  lazy val marathonServer = LocalMarathon(suiteName = suiteName, "localhost:5050", zkUrl = s"zk://${zkServer.connectUri}/marathon", conf = Map(
+  lazy val marathonServer = LocalMarathon(suiteName = suiteName, "localhost:5050", zkUrl = s"zk://${zkserver.connectUrl}/marathon", conf = Map(
     "max_instances_per_offer" -> maxInstancesPerOffer,
     "task_launch_timeout" -> "20000",
     "task_launch_confirm_timeout" -> "1000"),
@@ -43,7 +46,7 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
   override lazy val leadingMarathon = Future.successful(marathonServer)
 
   override lazy val marathonUrl: String = s"http://localhost:${marathonServer.httpPort}"
-  override lazy val testBasePath: PathId = PathId.root
+  override lazy val testBasePath: AbsolutePathId = PathId.root
   override lazy val marathon: MarathonFacade = new MarathonFacade(marathonUrl, testBasePath)
 
   override def beforeAll(): Unit = {
@@ -66,7 +69,7 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
 
   private[this] def createStopApp(instances: Int): Unit = {
     Given("a new app")
-    val appIdPath: PathId = testBasePath / "/test/app"
+    val appIdPath: AbsolutePathId = testBasePath / "/test/app"
     val app = appProxy(appIdPath, "v1", instances = instances, healthCheck = None)
 
     When("the app gets posted")
@@ -134,7 +137,7 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
       ScalingTestResultFiles.writeJson(SingleAppScalingTest.metricsFile, metrics.result())
 
       logger.info("XXX suspend")
-      val result = marathon.updateApp(appWithManyInstances.id.toPath, AppUpdate(instances = Some(0)), force = true).originalResponse
+      val result = marathon.updateApp(appWithManyInstances.id.toAbsolutePath, AppUpdate(instances = Some(0)), force = true).originalResponse
       logger.info(s"XXX ${result.status}: ${result.entity}")
 
       eventually {
@@ -150,7 +153,7 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
 
       eventually {
         logger.info("XXX deleting")
-        val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteApp(appWithManyInstances.id.toPath, force = true)
+        val deleteResult: RestResult[ITDeploymentResult] = marathon.deleteApp(appWithManyInstances.id.toAbsolutePath, force = true)
         waitForDeployment(deleteResult)
       }
 

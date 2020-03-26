@@ -89,7 +89,7 @@ class ConditionTest extends UnitTest {
     }
 
     "can round trip serialize a condition" in {
-      Json.toJson(Condition.Error).as[Condition] shouldBe (Condition.Error)
+      Json.toJson(Condition.Error: Condition).as[Condition] shouldBe (Condition.Error)
     }
   }
 }

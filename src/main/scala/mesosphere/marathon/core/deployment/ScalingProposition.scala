@@ -22,8 +22,8 @@ object ScalingProposition extends StrictLogging {
     val instancesGoalRunning: Map[Instance.Id, Instance] = instances
       .filter(_.state.goal == Goal.Running)
       .filter(_.state.condition != UnreachableInactive)
-      .map(instance => instance.instanceId -> instance)(collection.breakOut)
-    val toDecommissionMap: Map[Instance.Id, Instance] = toDecommission.map(instance => instance.instanceId -> instance)(collection.breakOut)
+      .iterator.map(instance => instance.instanceId -> instance).toMap
+    val toDecommissionMap: Map[Instance.Id, Instance] = toDecommission.iterator.map(instance => instance.instanceId -> instance).toMap
 
     val (sentencedAndRunningMap, notSentencedAndRunningMap) = instancesGoalRunning partition {
       case (instanceId, _) =>
@@ -33,12 +33,12 @@ object ScalingProposition extends StrictLogging {
     val decommissionCount = math.max(instancesGoalRunning.size - scaleTo, sentencedAndRunningMap.size)
     // tasks that should be killed to meet constraints – pass notSentenced & consider the sentenced 'already killed'
     val killToMeetConstraints = meetConstraints(
-      notSentencedAndRunningMap.values.to[Seq],
+      notSentencedAndRunningMap.values.to(Seq),
       decommissionCount - sentencedAndRunningMap.size
     )
 
     // rest are tasks that are not sentenced and need not be killed to meet constraints
-    val rest: Seq[Instance] = (notSentencedAndRunningMap -- killToMeetConstraints.map(_.instanceId)).values.to[Seq]
+    val rest: Seq[Instance] = (notSentencedAndRunningMap -- killToMeetConstraints.map(_.instanceId)).values.to(Seq)
 
     val orderedDecommissionCandidates =
       Seq(sentencedAndRunningMap.values, killToMeetConstraints, rest.sortWith(sortByConditionAndDate(killSelection))).flatten

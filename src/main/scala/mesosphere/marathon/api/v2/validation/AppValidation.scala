@@ -10,7 +10,6 @@ import mesosphere.marathon.api.v2.Validation.{featureEnabled, _}
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{AppDefinition, PathId, ResourceRole}
-import mesosphere.marathon.stream.Implicits._
 
 import scala.util.Try
 
@@ -114,7 +113,7 @@ trait AppValidation {
   def validContainer(enabledFeatures: Set[String], networks: Seq[Network], secrets: Map[String, SecretDef]): Validator[Container] = {
     // When https://github.com/wix/accord/issues/120 is resolved, we can inline this expression again
     def secretVolumes(container: Container) =
-      container.volumes.filterPF { case _: AppSecretVolume => true }
+      container.volumes.collect { case vol: AppSecretVolume => vol }
 
     def volumesValidator(container: Container): Validator[Seq[AppVolume]] =
       isTrue("Volume names must be unique") { (vols: Seq[AppVolume]) =>
@@ -242,8 +241,8 @@ trait AppValidation {
 
   def readinessCheckValidator(app: App): Validator[ReadinessCheck] = {
     // we expect that the deprecated API has already been translated into canonical form
-    def namesFromDefinitions = app.portDefinitions.fold(Set.empty[String])(_.flatMap(_.name)(collection.breakOut))
-    def portNames = app.container.flatMap(_.portMappings).fold(namesFromDefinitions)(_.flatMap(_.name)(collection.breakOut))
+    def namesFromDefinitions = app.portDefinitions.fold(Set.empty[String])(_.iterator.flatMap(_.name).toSet)
+    def portNames = app.container.flatMap(_.portMappings).fold(namesFromDefinitions){ l => l.iterator.flatMap(_.name).toSet }
     def portNameExists = isTrue[String]{ name: String => s"No port definition reference for portName $name" } { name =>
       portNames.contains(name)
     }

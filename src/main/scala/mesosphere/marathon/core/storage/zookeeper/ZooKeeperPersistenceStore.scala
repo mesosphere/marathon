@@ -171,7 +171,7 @@ class ZooKeeperPersistenceStore(
       .map{ list =>
         Try(
           JavaConverters.asScalaBuffer(list)
-            .to[Seq]
+            .to(Seq)
             .map(child => if (absolute) Paths.get(path, child).toString else child))
       }
       .recover {

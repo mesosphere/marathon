@@ -9,12 +9,11 @@ import com.wix.accord.dsl._
 import com.wix.accord.ViolationBuilder._
 import mesosphere.marathon.api.v2.Validation.ConstraintViolation
 import mesosphere.marathon.state.FetchUri
-import mesosphere.marathon.stream.Implicits._
 import play.api.libs.json._
 
 import scala.collection.GenTraversableOnce
-import scala.util.matching.Regex
 import scala.language.implicitConversions
+import scala.util.matching.Regex
 
 // TODO(jdef) move this into package "validation"
 trait Validation {
@@ -195,7 +194,7 @@ trait Validation {
     errorMessage: String = "Elements must be unique.",
     filter: B => Boolean = { _: B => true }): Validator[Iterable[A]] = {
     new Validator[Iterable[A]] {
-      def apply(seq: Iterable[A]) = areUnique(seq.map(fn).filterAs(filter)(collection.breakOut), errorMessage)
+      def apply(seq: Iterable[A]) = areUnique(seq.map(fn).iterator.filter(filter).toSeq, errorMessage)
     }
   }
 
@@ -204,7 +203,7 @@ trait Validation {
     errorMessage: String = "Elements must be unique.",
     filter: B => Boolean = { _: B => true }): Validator[Iterable[A]] = {
     new Validator[Iterable[A]] {
-      def apply(seq: Iterable[A]) = areUnique(seq.flatMap(fn).filterAs(filter)(collection.breakOut), errorMessage)
+      def apply(seq: Iterable[A]) = areUnique(seq.flatMap(fn).filter(filter), errorMessage)
     }
   }
 
@@ -216,8 +215,8 @@ trait Validation {
     }
   }
 
-  private[this] def areUnique[A](seq: Seq[A], errorMessage: String): Result = {
-    if (seq.size == seq.distinct.size) Success
+  private[this] def areUnique[A](seq: Iterable[A], errorMessage: String): Result = {
+    if (seq.size == seq.toSeq.distinct.size) Success
     else Failure(Set(RuleViolation(seq, errorMessage)))
   }
 
@@ -269,7 +268,7 @@ trait Validation {
     }
   }
 
-  def group(violations: Iterable[Violation]): Result = if (violations.nonEmpty) Failure(violations.to[Set]) else Success
+  def group(violations: Iterable[Violation]): Result = if (violations.nonEmpty) Failure(violations.to(Set)) else Success
 
   def matchRegexWithFailureMessage(regex: Regex, failureMessage: String): Validator[String] =
     new NullSafeValidator[String](
@@ -301,13 +300,13 @@ trait Validation {
     def collectViolation(violation: Violation, parents: Path): Seq[ConstraintViolation] = {
       violation match {
         case RuleViolation(_, constraint, path) => Seq(ConstraintViolation(mkPath(parents ++ path), constraint))
-        case GroupViolation(_, _, children, path) => children.to[Seq].flatMap(collectViolation(_, parents ++ path))
+        case GroupViolation(_, _, children, path) => children.to(Seq).flatMap(collectViolation(_, parents ++ path))
       }
     }
     result match {
       case Success => Seq.empty
       case Failure(violations) =>
-        violations.to[Seq].flatMap(collectViolation(_, Nil))
+        violations.to(Seq).flatMap(collectViolation(_, Nil))
     }
   }
 }

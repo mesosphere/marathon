@@ -3,9 +3,9 @@ package raml
 
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.state.Parameter
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.{Protos => Mesos}
+import scala.jdk.CollectionConverters._
 
 trait ContainerConversion extends HealthCheckConversion with VolumeConversion with NetworkConversion with LinuxInfoConversion {
 
@@ -154,9 +154,9 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       forcePullImage = docker.when(_.hasForcePullImage, _.getForcePullImage).getOrElse(DockerContainer.DefaultForcePullImage),
       image = docker.getImage,
       network = docker.when(_.hasOBSOLETENetwork, _.getOBSOLETENetwork.toRaml).orElse(DockerContainer.DefaultNetwork),
-      parameters = docker.whenOrElse(_.getParametersCount > 0, _.getParametersList.map(_.toRaml)(collection.breakOut), DockerContainer.DefaultParameters),
+      parameters = docker.whenOrElse(_.getParametersCount > 0, _.getParametersList.asScala.iterator.map(_.toRaml).toSeq, DockerContainer.DefaultParameters),
       portMappings = Option.empty[Seq[ContainerPortMapping]].unless(
-        docker.when(_.getOBSOLETENetwork != Mesos.ContainerInfo.DockerInfo.Network.HOST, _.getOBSOLETEPortMappingsList.map(_.toRaml)(collection.breakOut))),
+        docker.when(_.getOBSOLETENetwork != Mesos.ContainerInfo.DockerInfo.Network.HOST, _.getOBSOLETEPortMappingsList.asScala.iterator.map(_.toRaml).toSeq)),
       privileged = docker.when(_.hasPrivileged, _.getPrivileged).getOrElse(DockerContainer.DefaultPrivileged)
     )
   }
@@ -206,10 +206,10 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
           case x if x.hasDocker => x.getDocker.toRaml
           case x if x.hasMesosDocker => x.getMesosDocker.toRaml
         }.orElse(Container.DefaultDocker),
-      volumes = container.whenOrElse(_.getVolumesCount > 0, _.getVolumesList.map(_.toRaml)(collection.breakOut), Container.DefaultVolumes),
+      volumes = container.whenOrElse(_.getVolumesCount > 0, _.getVolumesList.asScala.iterator.map(_.toRaml).toSeq, Container.DefaultVolumes),
       portMappings = container.collect {
         case x if !x.hasDocker || x.getDocker.getOBSOLETEPortMappingsCount == 0 =>
-          container.getPortMappingsList.map(_.toRaml)(collection.breakOut)
+          container.getPortMappingsList.asScala.iterator.map(_.toRaml).toSeq
       },
       linuxInfo = container.when(_.hasLinuxInfo, _.getLinuxInfo.toRaml).orElse(None)
     )

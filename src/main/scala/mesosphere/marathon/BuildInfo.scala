@@ -3,12 +3,12 @@ package mesosphere.marathon
 import java.util.jar.{Attributes, Manifest}
 import scala.Predef._
 import scala.util.control.NonFatal
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.io.IO
 
 case object BuildInfo {
   private val marathonJar = "\\bmesosphere\\.marathon\\.marathon-[0-9.]+".r
-  val DefaultBuildVersion = SemVer(1, 9, 0, Some("SNAPSHOT"))
+  val DefaultBuildVersion = SemVer(1, 10, 0, Some("SNAPSHOT"))
 
   /**
     * sbt-native-package provides all of the files as individual JARs. By default, `getResourceAsStream` returns the
@@ -16,7 +16,7 @@ case object BuildInfo {
     * manifests, and find the one that applies to the Marathon application jar.
     */
   private lazy val marathonManifestPath: List[java.net.URL] =
-    getClass().getClassLoader().getResources("META-INF/MANIFEST.MF").toIterator.filter { manifest =>
+    getClass().getClassLoader().getResources("META-INF/MANIFEST.MF").asScala.iterator.filter { manifest =>
       marathonJar.findFirstMatchIn(manifest.getPath).nonEmpty
     }.toList
 

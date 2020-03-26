@@ -3,7 +3,7 @@ package api.v2
 
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{AbsolutePathId, FetchUri, PathId, ResourceRole}
-import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.stream.Implicits.toRichIterable
 import mesosphere.mesos.ResourceMatcher.Role
 
 object AppNormalization {

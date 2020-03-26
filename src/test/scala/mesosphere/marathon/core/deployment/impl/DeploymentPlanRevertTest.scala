@@ -71,11 +71,11 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
 
     s"Reverting ${firstDeployment.name} after deploying ${deployments.tail.map(_.name).mkString(", ")}" in {
       Given("an existing group with apps")
-      val original = performDeployments(originalBeforeChanges, changesBeforeTest.to[Seq])
+      val original = performDeployments(originalBeforeChanges, changesBeforeTest.to(Seq))
 
       When(s"performing a series of deployments (${deployments.map(_.name).mkString(", ")})")
 
-      val targetWithAllDeployments = performDeployments(original, deployments.to[Seq])
+      val targetWithAllDeployments = performDeployments(original, deployments.to(Seq))
 
       When("reverting the first one while we reset the versions before that")
       val newVersion = Timestamp(1)
@@ -99,7 +99,7 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
       }
 
       Then("the result should be the same as if we had only applied all the other deployments")
-      val targetWithoutFirstDeployment = performDeployments(original, deployments.tail.to[Seq])
+      val targetWithoutFirstDeployment = performDeployments(original, deployments.tail.to(Seq))
       withClue("while comparing reverted with targetWithoutFirstDeployment: ") {
         assertEqualsExceptVersion(targetWithoutFirstDeployment, reverted)
       }

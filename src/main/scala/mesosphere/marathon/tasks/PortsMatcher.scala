@@ -4,7 +4,7 @@ package tasks
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.state.{AppDefinition, Container, ResourceRole, RunSpec}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos
@@ -164,15 +164,16 @@ class PortsMatcher private[tasks] (
   }
 
   private[this] lazy val offeredPortRanges: Seq[PortRange] = {
-    offer.getResourcesList
-      .withFilter(resource => resourceSelector(resource) && resource.getName == Resource.PORTS)
-      .flatMap { resource =>
+    offer.getResourcesList().asScala
+      .iterator
+      .filter(resource => resourceSelector(resource) && resource.getName == Resource.PORTS)
+      .iterator.flatMap { resource =>
         val rangeInResource = resource.getRanges.getRangeList
         val reservation = if (resource.hasReservation) Option(resource.getReservation) else None
-        rangeInResource.map { range =>
+        rangeInResource.asScala.map { range =>
           PortRange(resource.getRole: @silent, range.getBegin.toInt, range.getEnd.toInt, reservation)
         }
-      }(collection.breakOut)
+      }.toSeq
   }
 
   private[this] def shuffledAvailablePorts: Iterator[PortWithRole] =

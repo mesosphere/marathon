@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.Reservation
 import mesosphere.marathon.core.pod.{ContainerNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.{AbsolutePathId, PathId, Timestamp}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import org.apache.mesos.Protos
 
 import scala.concurrent.duration._
@@ -53,13 +53,13 @@ class PodStatusConversionTest extends UnitTest {
   "PodStatusConversion" should {
     "multiple tasks with multiple container networks convert to proper network status" in {
 
-      def fakeContainerNetworks(netmap: Map[String, String]): Seq[Protos.NetworkInfo] = netmap.map { entry =>
+      def fakeContainerNetworks(netmap: Map[String, String]): Seq[Protos.NetworkInfo] = netmap.iterator.map { entry =>
         val (name, ip) = entry
         Protos.NetworkInfo.newBuilder()
           .setName(name)
           .addIpAddresses(Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ip))
           .build()
-      }(collection.breakOut)
+      }.toSeq
 
       val tasksWithNetworks: Seq[core.task.Task] = Seq(
         fakeTask(fakeContainerNetworks(Map("abc" -> "1.2.3.4", "def" -> "5.6.7.8"))),
@@ -76,11 +76,11 @@ class PodStatusConversionTest extends UnitTest {
 
     "multiple tasks with multiple host networks convert to proper network status" in {
 
-      def fakeHostNetworks(ips: Seq[String]): Seq[Protos.NetworkInfo] = ips.map { ip =>
+      def fakeHostNetworks(ips: Seq[String]): Seq[Protos.NetworkInfo] = ips.iterator.map { ip =>
         Protos.NetworkInfo.newBuilder()
           .addIpAddresses(Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ip))
           .build()
-      }(collection.breakOut)
+      }.toSeq
 
       val tasksWithNetworks: Seq[core.task.Task] = Seq(
         fakeTask(fakeHostNetworks(Seq("1.2.3.4", "5.6.7.8"))),
@@ -573,7 +573,7 @@ object PodStatusConversionTest {
             networkInfo = NetworkInfoPlaceholder(hostPorts = Seq(1001))
           )
         )
-      ).map(t => t.taskId -> t)(collection.breakOut),
+      ).iterator.map(t => t.taskId -> t).toMap,
       runSpec = pod,
       reservation = maybeReservation,
       role = "test"

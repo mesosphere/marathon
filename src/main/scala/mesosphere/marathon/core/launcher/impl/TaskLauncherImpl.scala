@@ -6,7 +6,7 @@ import java.util.Collections
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.launcher.{InstanceOp, TaskLauncher}
 import mesosphere.marathon.metrics.Metrics
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import org.apache.mesos.Protos.{OfferID, Status}
 import org.apache.mesos.{Protos, SchedulerDriver}
 

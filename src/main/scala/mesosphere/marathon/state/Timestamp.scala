@@ -1,5 +1,4 @@
-package mesosphere.marathon
-package state
+package mesosphere.marathon.state
 
 import java.time.format.{DateTimeFormatter, DateTimeParseException}
 import java.time.{Duration, Instant, OffsetDateTime, ZoneOffset}

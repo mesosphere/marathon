@@ -3,7 +3,7 @@ package core.storage.store.impl.zk
 
 import akka.Done
 import akka.util.ByteString
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import org.apache.curator.framework.CuratorFramework
 import org.apache.curator.framework.api.CuratorEventType._
 import org.apache.curator.framework.api.{BackgroundCallback, CuratorEvent}
@@ -114,7 +114,7 @@ case class Children(path: String, stat: Stat, children: Seq[String])
 private class ChildrenFuture extends ZkFuture[Children] {
   override protected def processEvent(event: CuratorEvent): Try[Children] = event.getType match {
     case CHILDREN =>
-      Success(Children(event.getPath, event.getStat, event.getChildren.toIndexedSeq))
+      Success(Children(event.getPath, event.getStat, event.getChildren.asScala.to(IndexedSeq)))
     case _ =>
       Failure(new IllegalArgumentException(s"${event.getType} is not a CHILDREN operation"))
   }
@@ -132,7 +132,7 @@ private class SyncFuture extends ZkFuture[Option[Stat]] {
 private class GetAclFuture extends ZkFuture[Seq[ACL]] {
   override protected def processEvent(event: CuratorEvent): Try[Seq[ACL]] = event.getType match {
     case GET_ACL =>
-      Success(event.getACLList.toIndexedSeq)
+      Success(event.getACLList.asScala.to(IndexedSeq))
     case _ =>
       Failure(new IllegalArgumentException(s"${event.getType} is not a GET_ACL operation"))
   }

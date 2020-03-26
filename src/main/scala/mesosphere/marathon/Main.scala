@@ -16,12 +16,12 @@ import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.{CrashStrategy, toRichRuntime}
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.LibMesos
 import org.slf4j.bridge.SLF4JBridgeHandler
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 
 class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   private var running = false
@@ -206,7 +206,7 @@ object Main {
     * @returns A list of args intended to be arg-parsed
     */
   def envToArgs(env: Map[String, String]): Seq[String] = {
-    env.flatMap {
+    env.iterator.flatMap {
       case (k, v) if k.startsWith("MARATHON_APP_") =>
         /* Marathon sets passes several environment variables, prefixed with MARATHON_APP_, to Marathon instances. We
          * need to explicitly ignore these and not treat them as parameters in the case of Marathon launching other
@@ -219,7 +219,7 @@ object Main {
         else
           Seq(argName, v)
       case _ => Nil
-    }(collection.breakOut)
+    }.to(Seq)
   }
 
   def main(args: Array[String]): Unit = {

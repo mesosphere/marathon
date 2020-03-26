@@ -20,14 +20,12 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.mesosphere.utils.http.RestResult
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
-import mesosphere.marathon
 import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.integration.raml18.PodStatus18
 import mesosphere.marathon.raml.{App, AppUpdate, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.Retry
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
@@ -199,12 +197,12 @@ class MarathonFacade(
 
   def listAppsInBaseGroup: RestResult[List[App]] = {
     val res = result(requestFor[ITListAppsResult](Get(s"$url/v2/apps")), waitTime)
-    res.map(_.apps.filterAs(app => isInBaseGroup(app.id.toPath))(collection.breakOut))
+    res.map(_.apps.iterator.filter(app => isInBaseGroup(app.id.toPath)).toList)
   }
 
   def listAppsInBaseGroupForAppId(appId: AbsolutePathId): RestResult[List[App]] = {
     val res = result(requestFor[ITListAppsResult](Get(s"$url/v2/apps")), waitTime)
-    res.map(_.apps.filterAs(app => isInBaseGroup(app.id.toPath) && app.id.toPath == appId)(collection.breakOut))
+    res.map(_.apps.iterator.filter(app => isInBaseGroup(app.id.toPath) && app.id.toPath == appId).toList)
   }
 
   def app(id: AbsolutePathId): RestResult[ITAppDefinition] = {
@@ -481,7 +479,7 @@ class MarathonFacade(
 
   def launchQueueForAppId(appId: AbsolutePathId): RestResult[List[ITQueueItem]] = {
     val res = result(requestFor[ITLaunchQueue](Get(s"$url/v2/queue")), waitTime)
-    res.map(_.queue.filterAs(q => q.app.id.toPath == appId)(collection.breakOut))
+    res.map(_.queue.iterator.filter(q => q.app.id.toPath == appId).toList)
   }
 
   def launchQueueDelayReset(appId: AbsolutePathId): RestResult[HttpResponse] =
@@ -503,7 +501,7 @@ object MarathonFacade {
       case NonFatal(e) =>
         throw new RuntimeException(s"while parsing:\n${app.entityPrettyJsonString}", e)
     }
-  }.to[marathon.IndexedSeq]
+  }.to(IndexedSeq)
 
   /**
     * Enables easy access to a deployment ID in the header of an [[HttpResponse]] in a [[RestResult]].

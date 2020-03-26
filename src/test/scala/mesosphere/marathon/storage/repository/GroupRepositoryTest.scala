@@ -55,7 +55,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         val apps = Seq(AppDefinition("app1".toAbsolutePath, role = "*"), AppDefinition("app2".toAbsolutePath, role = "*"))
         val root = repo.root().futureValue
 
-        val newRoot = root.updateApps(PathId.root, _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
+        val newRoot = root.updateApps(PathId.root, _ => apps.iterator.map(app => app.id -> app).toMap, root.version)
 
         appRepo.store(any) returns Future.successful(Done)
 
@@ -74,7 +74,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         val root = repo.root().futureValue
         repo.storeRoot(root, Nil, Nil, Nil, Nil).futureValue
 
-        val newRoot = root.updateApps(PathId.root, apps = _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
+        val newRoot = root.updateApps(PathId.root, apps = _ => apps.iterator.map(app => app.id -> app).toMap, root.version)
 
         val exception = new Exception("App Store Failed")
         appRepo.store(any) returns Future.failed(exception)
@@ -101,7 +101,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         repo.storeRoot(root, Nil, Nil, Nil, Nil).futureValue
         val deleted = "deleteMe".toAbsolutePath
 
-        val newRoot = root.updateApps(PathId.root, _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
+        val newRoot = root.updateApps(PathId.root, _ => apps.iterator.map(app => app.id -> app).toMap, root.version)
 
         val exception = new Exception("App Delete Failed")
         appRepo.store(any) returns Future.successful(Done)

@@ -101,14 +101,14 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
     "offer_matching_timeout" -> 10.seconds.toMillis.toString // see https://github.com/mesosphere/marathon/issues/4920
   ) ++ conf
 
-  val args = config.flatMap {
+  val args = config.iterator.flatMap {
     case (k, v) =>
       if (v.nonEmpty) {
         Seq(s"--$k", v)
       } else {
         Seq(s"--$k")
       }
-  }(collection.breakOut)
+  }.toSeq
 
   @volatile var marathonProcess = Option.empty[Process]
 
@@ -147,9 +147,9 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
 
   def activePids: Seq[String] = {
     val PIDRE = """^\s*(\d+)\s+\s*(.*)$""".r
-    Process("jps -lv").!!.split("\n").collect {
+    Process("jps -lv").!!.split("\n").iterator.collect {
       case PIDRE(pid, jvmArgs) if jvmArgs.contains(uuid) => pid
-    }(collection.breakOut)
+    }.toSeq
   }
 
   def stop(): Future[Done] = {
@@ -239,9 +239,9 @@ case class LocalMarathon(
 
   override def activePids: Seq[String] = {
     val PIDRE = """^\s*(\d+)\s+(\S*)\s*(.*)$""".r
-    Process("jps -lv").!!.split("\n").collect {
+    Process("jps -lv").!!.split("\n").iterator.collect {
       case PIDRE(pid, main, jvmArgs) if main.contains(mainClass) && jvmArgs.contains(uuid) => pid
-    }(collection.breakOut)
+    }.toSeq
   }
 }
 
@@ -657,7 +657,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
       "status_update_event",
       _.taskStatus == kind,
       s"event status_update_event (${kinds.mkString(",")}) to arrive")
-  }.to[Seq]
+  }.to(Seq)
 
   def waitForEvent(
     kind: String,

@@ -35,8 +35,8 @@ object InstanceOpFactory {
       scheduledInstances: NonEmptyIterable[Instance],
       localRegion: Option[Region] = None) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
-    def instances: Seq[Instance] = instanceMap.values.to[Seq]
-    lazy val reserved: Seq[Instance] = scheduledInstances.filter(_.hasReservation).to[Seq]
+    def instances: Seq[Instance] = instanceMap.values.to(Seq)
+    lazy val reserved: Seq[Instance] = scheduledInstances.filter(_.hasReservation).to(Seq)
     def hasWaitingReservations: Boolean = reserved.nonEmpty
     def numberOfWaitingReservations: Int = reserved.size
   }

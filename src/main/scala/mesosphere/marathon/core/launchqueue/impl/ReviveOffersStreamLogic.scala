@@ -157,12 +157,12 @@ object ReviveOffersStreamLogic extends StrictLogging {
         val newlyWanted = newState
           .iterator
           .collect { case (role, v) if v.roleState.isWanted && !lastState.get(role).exists(_.roleState.isWanted) => role }
-          .to[Set]
+          .to(Set)
 
         val newlyNotWanted = newState
           .iterator
           .collect { case (role, v) if !v.roleState.isWanted && lastState.get(role).exists(_.roleState.isWanted) => role }
-          .to[Set]
+          .to(Set)
         directives += UpdateFramework(roleState, newlyRevived = newlyWanted, newlySuppressed = newlyNotWanted)
       }
 

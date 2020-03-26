@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext
-import stream.Implicits._
+import scala.jdk.CollectionConverters._
 import com.wix.accord.dsl._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 
@@ -123,7 +123,7 @@ class SystemResource @Inject() (val config: MarathonConf, val metricsModule: Met
       withAuthorization(ViewResource, SystemConfig) {
         LoggerFactory.getILoggerFactory match {
           case lc: LoggerContext =>
-            ok(jsonString(lc.getLoggerList.map { logger =>
+            ok(jsonString(lc.getLoggerList.asScala.map { logger =>
               logger.getName -> Option(logger.getLevel).map(_.levelStr).getOrElse(logger.getEffectiveLevel.levelStr + " (inherited)")
             }.toMap))
         }

@@ -7,7 +7,7 @@ import mesosphere.marathon.api.v2.ValidationHelper
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.raml.Resources
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.test.GroupCreation
 
 class RootGroupTest extends UnitTest with GroupCreation {
@@ -312,7 +312,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
       When("the dependency graph is computed")
       val dependencyGraph = current.dependencyGraph
-      val ids: Set[PathId] = dependencyGraph.vertexSet.map(_.id)
+      val ids: Set[PathId] = dependencyGraph.vertexSet.asScala.map(_.id).toSet
 
       Then("the dependency graph is correct")
       ids should have size 8
@@ -383,7 +383,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
       When("the dependency graph is calculated")
       val dependencyGraph = current.dependencyGraph
-      val ids: Set[PathId] = dependencyGraph.vertexSet.map(_.id)
+      val ids: Set[PathId] = dependencyGraph.vertexSet.asScala.map(_.id).toSet
 
       Then("the dependency graph is correct")
       ids should have size 8

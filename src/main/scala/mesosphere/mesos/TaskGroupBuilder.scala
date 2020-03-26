@@ -13,13 +13,13 @@ import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
 import mesosphere.marathon.raml.Endpoint
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.Protos.{DurationInfo, KillPolicy}
 import org.apache.mesos.{Protos => mesos}
 
 import scala.collection.immutable.Seq
+import scala.jdk.CollectionConverters._
 
 object TaskGroupBuilder extends StrictLogging {
 
@@ -730,18 +730,18 @@ object TaskGroupBuilder extends StrictLogging {
 
     require(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
 
-    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
+    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).iterator.collect {
       case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
-    }(collection.breakOut)
+    }.toSeq
 
-    taskIDs.map { taskId =>
+    taskIDs.iterator.map { taskId =>
       // the task level host ports are needed for fine-grained status/reporting later on
       val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
-        allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
+        allocPortsByCTName.withFilter { case (name, _) => name == ctName }.map(_._2)
       }.getOrElse(Seq.empty[Int])
 
       val networkInfo = NetworkInfo(host, taskHostPorts, ipAddresses = Nil)
       taskId -> networkInfo
-    }(collection.breakOut)
+    }.toMap
   }
 }

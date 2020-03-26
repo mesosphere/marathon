@@ -3,7 +3,7 @@ package util
 
 import org.rogach.scallop.ScallopOption
 
-class ScallopStub[A](name: String, value: Option[A]) extends ScallopOption[A](name) {
+class ScallopStub[A](name: String, value: Option[A]) extends ScallopOption[A](() => name) {
   override def get = value
   override def apply() = value.get
 }

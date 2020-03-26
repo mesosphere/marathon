@@ -10,7 +10,7 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Role
 import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy, _}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.tasks.OfferUtil
 import mesosphere.mesos.Placed
 import org.apache._
@@ -129,7 +129,7 @@ object Instance {
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
   def instancesById(instances: Seq[Instance]): Map[Instance.Id, Instance] =
-    instances.map(instance => instance.instanceId -> instance)(collection.breakOut)
+    instances.iterator.map(instance => instance.instanceId -> instance).toMap
 
   object Running {
     def unapply(instance: Instance): Option[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]] = instance match {
@@ -380,7 +380,7 @@ object Instance {
       agentId = Some(offer.getSlaveId.getValue),
       region = OfferUtil.region(offer),
       zone = OfferUtil.zone(offer),
-      attributes = offer.getAttributesList.toIndexedSeq
+      attributes = offer.getAttributesList.asScala.to(IndexedSeq)
     )
   }
 

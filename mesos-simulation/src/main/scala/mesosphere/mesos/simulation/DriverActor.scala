@@ -5,13 +5,13 @@ import java.util.UUID
 import akka.actor.{Actor, ActorRef, Cancellable, Props}
 import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.simulation.DriverActor._
 import mesosphere.mesos.simulation.SchedulerActor.ResourceOffers
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 import scala.util.Random
 
 object DriverActor {
@@ -181,7 +181,7 @@ class DriverActor(schedulerProps: Props) extends Actor with StrictLogging {
 
   private[this] def extractTaskInfos(ops: Seq[Offer.Operation]): Seq[TaskInfo] = {
     ops.withFilter(_.getType == Offer.Operation.Type.LAUNCH).flatMap { op =>
-      Option(op.getLaunch).map(_.getTaskInfosList.toSeq).getOrElse(Seq.empty)
+      Option(op.getLaunch).map(_.getTaskInfosList.asScala.toSeq).getOrElse(Seq.empty)
     }
   }
 

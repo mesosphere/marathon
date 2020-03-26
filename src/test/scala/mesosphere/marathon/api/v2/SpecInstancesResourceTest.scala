@@ -257,7 +257,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, clock.now()).getInstance()
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, clock.now()).getInstance()
 
-      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1, instance2)))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
       groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
 

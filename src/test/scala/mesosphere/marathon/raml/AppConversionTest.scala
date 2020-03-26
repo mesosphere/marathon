@@ -4,7 +4,7 @@ package raml
 import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{BridgeNetwork, HostNetwork}
-import mesosphere.marathon.state._
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
 import mesosphere.{UnitTest, ValidationTestLike}
 import org.apache.mesos.{Protos => Mesos}
 
@@ -25,8 +25,8 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       resources = Resources(),
       executor = "executor",
       constraints = Set(constraint),
-      fetch = Seq(FetchUri("http://test.this")),
-      backoffStrategy = BackoffStrategy(),
+      fetch = Seq(state.FetchUri("http://test.this")),
+      backoffStrategy = state.BackoffStrategy(),
       container = Some(state.Container.Docker(
         volumes = Seq(state.VolumeWithMount(
           volume = state.HostVolume(None, "/host"),
@@ -91,7 +91,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val readApp: AppDefinition = withValidationClue {
         Raml.fromRaml(
           AppHelpers.appNormalization(
-            AppNormalization.Configuration(None, "bridge-name", features, ResourceRole.Unreserved, true), Set(ResourceRole.Unreserved)).normalized(ramlApp)
+            AppNormalization.Configuration(None, "bridge-name", features, state.ResourceRole.Unreserved, true), Set(state.ResourceRole.Unreserved)).normalized(ramlApp)
         )
       }
       Then("The app is identical")
@@ -108,7 +108,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val protoRamlApp = app.toProto.toRaml[App]
 
       Then("The direct and indirect RAML conversions are identical")
-      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved, true)
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), state.ResourceRole.Unreserved, true)
       val normalizedProtoRamlApp = AppNormalization(
         config).normalized(AppNormalization.forDeprecated(config).normalized(protoRamlApp))
       normalizedProtoRamlApp should be(ramlApp)

@@ -6,7 +6,7 @@ import java.util.Collections
 import akka.actor.{ActorRef, ActorSystem, Props}
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import org.apache.mesos.Protos._
 import org.apache.mesos.SchedulerDriver
 
@@ -40,16 +40,16 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver with StrictLog
     driverCmd(DriverActor.DeclineOffer(offerId))
 
   override def launchTasks(offerIds: util.Collection[OfferID], tasks: util.Collection[TaskInfo]): Status =
-    driverCmd(DriverActor.LaunchTasks(offerIds.toSeq, tasks.toSeq))
+    driverCmd(DriverActor.LaunchTasks(offerIds.asScala.toSeq, tasks.asScala.toSeq))
 
   // Mesos 0.23.x
   override def acceptOffers(
     offerIds: util.Collection[OfferID], ops: util.Collection[Offer.Operation], filters: Filters): Status =
-    driverCmd(DriverActor.AcceptOffers(offerIds.toSeq, ops.toSeq, filters))
+    driverCmd(DriverActor.AcceptOffers(offerIds.asScala.toSeq, ops.asScala.toSeq, filters))
 
   override def killTask(taskId: TaskID): Status = driverCmd(DriverActor.KillTask(taskId))
   override def reconcileTasks(statuses: util.Collection[TaskStatus]): Status = {
-    driverCmd(DriverActor.ReconcileTask(statuses.toSeq))
+    driverCmd(DriverActor.ReconcileTask(statuses.asScala.toSeq))
   }
 
   override def suppressOffers(): Status = driverCmd(DriverActor.SuppressOffers)

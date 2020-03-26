@@ -9,7 +9,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
 import org.apache.mesos.Protos.Volume.Mode
@@ -219,7 +219,7 @@ object PersistentVolumeInfo {
       maxSize = if (pvi.hasMaxSize) Some(pvi.getMaxSize) else None,
       `type` = DiskType.fromMesosType(if (pvi.hasType) Some(pvi.getType) else None),
       profileName = if (pvi.hasProfileName) Some(pvi.getProfileName) else None,
-      constraints = pvi.getConstraintsList.toSet
+      constraints = pvi.getConstraintsList.asScala.toSet
     )
 
   private val complyWithVolumeConstraintRules: Validator[Constraint] = new Validator[Constraint] {
@@ -378,7 +378,7 @@ object ExternalVolumeInfo {
       name = evi.getName,
       provider = evi.getProvider,
       shared = if (evi.hasShared) evi.getShared else false,
-      options = evi.getOptionsList.map { p => p.getKey -> p.getValue }(collection.breakOut)
+      options = evi.getOptionsList.asScala.iterator.map { p => p.getKey -> p.getValue }.toMap
     )
 }
 

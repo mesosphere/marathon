@@ -6,13 +6,12 @@ import org.mockito.stubbing.{Answer, OngoingStubbing}
 import org.mockito.verification.VerificationMode
 import org.mockito.{Mockito => M}
 import org.scalatest.concurrent.PatienceConfiguration
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 
 /**
   * ScalaTest mockito support is quite limited and ugly.
   */
 trait Mockito extends MockitoSugar with PatienceConfiguration {
-
   def equalTo[T](t: T) = org.mockito.Matchers.eq(t)
   def eq[T](t: T) = org.mockito.Matchers.eq(t)
   def any[T] = org.mockito.Matchers.any[T]

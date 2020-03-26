@@ -2,7 +2,7 @@ package mesosphere.marathon
 package state
 
 import org.apache.mesos.{Protos => MesosProtos}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 
 sealed trait Executable
 
@@ -50,7 +50,7 @@ case class ArgvList(value: Seq[String]) extends Executable with MarathonState[Me
   }
 
   def mergeFromProto(proto: MesosProtos.CommandInfo): ArgvList =
-    ArgvList(value = proto.getArgumentsList.toSeq)
+    ArgvList(value = proto.getArgumentsList.asScala.toSeq)
 
   def mergeFromProto(bytes: Array[Byte]): ArgvList =
     mergeFromProto(MesosProtos.CommandInfo.parseFrom(bytes))

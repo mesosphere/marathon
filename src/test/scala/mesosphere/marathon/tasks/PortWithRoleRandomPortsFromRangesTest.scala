@@ -20,7 +20,7 @@ class PortWithRoleRandomPortsFromRangesTest extends UnitTest {
       withClue(s"seed = $seed") {
         val rand = new Random(new util.Random(seed.toLong))
 
-        assert(PortWithRole.lazyRandomPortsFromRanges(rand)(input).to[Set] == expectedOutput.to[Set])
+        assert(PortWithRole.lazyRandomPortsFromRanges(rand)(input).to(Set) == expectedOutput.to(Set))
       }
     }
 
@@ -28,12 +28,12 @@ class PortWithRoleRandomPortsFromRangesTest extends UnitTest {
 
   "PortWithRoleRandomPortsFromRanges" should {
     "works for empty seq" in {
-      assert(PortWithRole.lazyRandomPortsFromRanges()(Seq.empty).to[Seq] == Seq.empty)
+      assert(PortWithRole.lazyRandomPortsFromRanges()(Seq.empty).to(Seq) == Seq.empty)
     }
 
     "works for one element range" in {
       assert(
-        PortWithRole.lazyRandomPortsFromRanges()(Seq(portRange("role", 10, 10))).to[Seq] == Seq(PortWithRole("role", 10)))
+        PortWithRole.lazyRandomPortsFromRanges()(Seq(portRange("role", 10, 10))).to(Seq) == Seq(PortWithRole("role", 10)))
     }
 
     "works for one range with four ports" in {

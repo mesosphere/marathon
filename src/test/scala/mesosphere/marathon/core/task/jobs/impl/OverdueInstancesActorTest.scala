@@ -74,7 +74,7 @@ class OverdueInstancesActorTest extends AkkaUnitTest {
       Given("one overdue task")
       val appId = AbsolutePathId("/some")
       val mockInstance = TestInstanceBuilder.newBuilder(appId).addTaskStaged(version = Some(Timestamp(1)), stagedAt = Timestamp(2)).getInstance()
-      val app = InstanceTracker.InstancesBySpec.forInstances(mockInstance)
+      val app = InstanceTracker.InstancesBySpec.forInstances(Seq(mockInstance))
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
 
       When("the check is initiated")
@@ -107,12 +107,13 @@ class OverdueInstancesActorTest extends AkkaUnitTest {
 
       Given("Several somehow overdue tasks plus some not overdue tasks")
       val app = InstanceTracker.InstancesBySpec.forInstances(
-        unconfirmedOverdueTask,
-        unconfirmedNotOverdueTask,
-        overdueUnstagedTask,
-        overdueStagedTask,
-        stagedTask,
-        runningTask
+        Seq(
+          unconfirmedOverdueTask,
+          unconfirmedNotOverdueTask,
+          overdueUnstagedTask,
+          overdueStagedTask,
+          stagedTask,
+          runningTask)
       )
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
 
@@ -142,7 +143,7 @@ class OverdueInstancesActorTest extends AkkaUnitTest {
       val appId = AbsolutePathId("/test")
       val overdueReserved = reservedWithTimeout(appId, deadline = clock.now() - 1.second)
       val recentReserved = reservedWithTimeout(appId, deadline = clock.now() + 1.second)
-      val app = InstanceTracker.InstancesBySpec.forInstances(recentReserved, overdueReserved)
+      val app = InstanceTracker.InstancesBySpec.forInstances(Seq(recentReserved, overdueReserved))
       instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(app)
       instanceTracker.reservationTimeout(overdueReserved.instanceId) returns Future.successful(Done)
 
@@ -157,6 +158,7 @@ class OverdueInstancesActorTest extends AkkaUnitTest {
       verifyClean()
     }
   }
+
   private[this] def reservedWithTimeout(appId: AbsolutePathId, deadline: Timestamp): Instance = {
     val state = Reservation.State.New(timeout = Some(Reservation.Timeout(
       initiated = Timestamp.zero,

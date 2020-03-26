@@ -57,7 +57,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
     def fakeInstance(pod: PodDefinition): Instance = {
       val instanceId = Instance.Id.forRunSpec(pod.id)
-      val tasks: Map[Task.Id, Task] = pod.containers.map { ct =>
+      val tasks: Map[Task.Id, Task] = pod.containers.iterator.map { ct =>
         val taskId = Task.Id(instanceId, Some(ct))
         taskId -> Task(
           taskId = taskId,
@@ -68,7 +68,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
             mesosStatus = None,
             condition = Condition.Running,
             networkInfo = NetworkInfoPlaceholder()))
-      }(collection.breakOut)
+      }.toMap
 
       Instance(
         instanceId = instanceId,
@@ -126,7 +126,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1, instance2)))
       f.healthCheckManager.statuses(app.id) returns Future.successful(Map.empty[Instance.Id, Seq[Health]])
 
       When("requesting AppInfos with tasks")
@@ -156,7 +156,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances(builder1.getInstance(), builder2.getInstance(), builder3.getInstance()))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(builder1.getInstance(), builder2.getInstance(), builder3.getInstance())))
 
       val alive = Health(running2.instanceId, lastSuccess = Some(Timestamp(1)))
       val unhealthy = Health(running3.instanceId, lastFailure = Some(Timestamp(1)))
@@ -205,7 +205,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances())
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Nil))
 
       f.healthCheckManager.statuses(app.id) returns Future.successful(Map())
 
@@ -230,7 +230,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance()))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance())))
 
       f.healthCheckManager.statuses(app.id) returns Future.successful(
         Map(
@@ -491,7 +491,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1)))
 
       And("with no instances in the repo")
       f.groupManager.podVersion(any, any) returns Future.successful(None)
@@ -511,7 +511,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       f.taskFailureRepository.get(pod.id) returns Future.successful(Some(taskFailure))
       val instance1 = {
         val instanceId = Instance.Id.forRunSpec(pod.id)
-        val tasks: Map[Task.Id, Task] = pod.containers.map { ct =>
+        val tasks: Map[Task.Id, Task] = pod.containers.iterator.map { ct =>
           val taskId = Task.Id(instanceId, Some(ct))
           taskId -> Task(
             taskId = taskId,
@@ -522,7 +522,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
               mesosStatus = Some(MesosTaskStatusTestHelper.unknown(taskId)),
               condition = Condition.Unknown,
               networkInfo = NetworkInfoPlaceholder()))
-        }(collection.breakOut)
+        }.toMap
 
         Instance(
           instanceId = instanceId,
@@ -533,7 +533,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
           None, "*"
         )
       }
-      f.instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
+      f.instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1)))
 
       And("an instance in the repo")
       f.groupManager.podVersion(any, any) returns Future.successful(Some(pod))
@@ -558,7 +558,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
         val failedTask = task.copy(taskId = Task.Id.parse(taskFailure.taskId))
         instance.copy(tasksMap = instance.tasksMap + (failedTask.taskId -> failedTask))
       }
-      f.instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
+      f.instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1)))
 
       And("an instance in the repo")
       f.groupManager.podVersion(any, any) returns Future.successful(Some(pod))

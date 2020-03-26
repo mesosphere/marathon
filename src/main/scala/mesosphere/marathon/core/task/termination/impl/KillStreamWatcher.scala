@@ -39,7 +39,7 @@ object KillStreamWatcher extends StrictLogging {
   private def emitPendingTerminal(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Iterable[Instance], terminalPredicate: TerminalPredicate): Source[Set[Instance.Id], NotUsed] = {
 
     val instanceTasks: Map[Instance.Id, Set[Task.Id]] =
-      instances.map { i => i.instanceId -> i.tasksMap.values.map(_.taskId).toSet }(collection.breakOut)
+      instances.iterator.map { i => i.instanceId -> i.tasksMap.values.map(_.taskId).toSet }.toMap
 
     instanceUpdates
       .flatMapConcat {
@@ -48,7 +48,7 @@ object KillStreamWatcher extends StrictLogging {
             .filter { i => instanceTasks.contains(i.instanceId) }
             .filterNot { i => terminalPredicate(i, instanceTasks(i.instanceId)) }
             .map(_.instanceId)
-            .to[Set]
+            .to(Set)
 
           updates
             .filter { change => instanceTasks.contains(change.id) }
@@ -73,7 +73,7 @@ object KillStreamWatcher extends StrictLogging {
     * specified with the watch, or if the instance itself is in a state we consider terminal.
     *
     * @param instanceUpdates InstanceTracker instanceUpdates feed
-    * @param instanceIds Instance ids to wait to be considered killed
+    * @param instances Instances to wait to be considered killed
     * @return Akka stream Source as described
     *
     */
@@ -93,7 +93,7 @@ object KillStreamWatcher extends StrictLogging {
     * precede the receipt of the update goal command.
     *
     * @param instanceUpdates InstanceTracker instanceUpdates feed
-    * @param instanceIds Instance ids to wait to be expunged from the instance tracker due to decomissioning
+    * @param instances Instances to wait to be expunged from the instance tracker due to decomissioning
     * @return Akka stream Source as described
     */
   def watchForDecommissionedInstances(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Iterable[Instance]): Source[Set[Instance.Id], NotUsed] =

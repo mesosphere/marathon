@@ -218,7 +218,7 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
         (0 until i).map { j =>
           val check: HealthCheck = MesosCommandHealthCheck(gracePeriod = (i * 3 + j).seconds, command = Command("true"))
           check
-        }.to[Set]
+        }.to(Set)
       }
       val versions = List(0L, 1L, 2L).map {
         Timestamp(_)

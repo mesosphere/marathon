@@ -93,7 +93,7 @@ object Stracer extends StrictLogging {
       .filter(_.contains(searchStr))
       .map(s => s.split(" +")(1))
       .flatMap(p => Try(p.toInt).toOption)
-      .to[Seq]
+      .to(Seq)
   }
 
   /**

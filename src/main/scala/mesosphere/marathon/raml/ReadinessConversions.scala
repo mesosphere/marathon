@@ -1,9 +1,8 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.stream.Implicits._
-
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 
 trait ReadinessConversions {
 
@@ -71,7 +70,7 @@ trait ReadinessConversions {
       portName = if (rc.hasPortName) rc.getPortName else ReadinessCheck.DefaultPortName,
       intervalSeconds = if (rc.hasIntervalMillis) (rc.getIntervalMillis / 1000).toInt else ReadinessCheck.DefaultIntervalSeconds,
       timeoutSeconds = if (rc.hasTimeoutMillis) (rc.getTimeoutMillis / 1000).toInt else ReadinessCheck.DefaultTimeoutSeconds,
-      httpStatusCodesForReady = if (rc.getHttpStatusCodeForReadyCount > 0) Option(rc.getHttpStatusCodeForReadyList.map(_.intValue())(collection.breakOut)) else None,
+      httpStatusCodesForReady = if (rc.getHttpStatusCodeForReadyCount > 0) Option(rc.getHttpStatusCodeForReadyList.asScala.iterator.map(_.intValue()).toSet) else None,
       preserveLastResponse = if (rc.hasPreserveLastResponse) rc.getPreserveLastResponse else ReadinessCheck.DefaultPreserveLastResponse
     )
   }

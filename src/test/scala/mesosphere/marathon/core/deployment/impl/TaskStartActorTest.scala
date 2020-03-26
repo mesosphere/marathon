@@ -33,7 +33,10 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
-      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances) }
+      eventually {
+        verify(f.launchQueue, atLeastOnce).add(app, app.instances)
+        ()
+      }
 
       for (i <- 0 until app.instances)
         system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
@@ -55,7 +58,10 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
-      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances - 1) }
+      eventually {
+        verify(f.launchQueue, atLeastOnce).add(app, app.instances - 1)
+        ()
+      }
 
       for (i <- 0 until (app.instances - 1))
         system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
@@ -77,7 +83,10 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
-      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances - 1) }
+      eventually {
+        verify(f.launchQueue, atLeastOnce).add(app, app.instances - 1)
+        ()
+      }
 
       for (i <- 0 until (app.instances - 1))
         system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
@@ -118,7 +127,10 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
-      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances) }
+      eventually {
+        verify(f.launchQueue, atLeastOnce).add(app, app.instances)
+        ()
+      }
 
       for (i <- 0 until app.instances)
         system.eventStream.publish(f.healthChange(app, Instance.Id.forRunSpec(app.id), healthy = true))
@@ -159,7 +171,10 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
-      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances) }
+      eventually {
+        verify(f.launchQueue, atLeastOnce).add(app, app.instances)
+        ()
+      }
 
       system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Failed))
 
@@ -186,7 +201,10 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
-      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances) }
+      eventually {
+        verify(f.launchQueue, atLeastOnce).add(app, app.instances)
+        ()
+      }
 
       system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Failed, Decommissioned))
 
@@ -194,7 +212,10 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
 
       // for decommissioned instances, we need to schedule a new one
-      eventually { verify(f.launchQueue, once).add(app, 1) }
+      eventually {
+        verify(f.launchQueue, once).add(app, 1)
+        ()
+      }
 
       promise.future.futureValue should be(())
 
@@ -212,7 +233,10 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       val ref = f.startActor(app, app.instances, promise)
       watch(ref)
 
-      eventually { verify(f.launchQueue, atLeastOnce).add(app, app.instances) }
+      eventually {
+        verify(f.launchQueue, atLeastOnce).add(app, app.instances)
+        ()
+      }
 
       system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Failed, Stopped))
 
@@ -220,7 +244,10 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         system.eventStream.publish(f.instanceChange(app, Instance.Id.forRunSpec(app.id), Running))
 
       // for stopped instances, we need to schedule a new one
-      eventually { verify(f.launchQueue, once).add(app, 1) }
+      eventually {
+        verify(f.launchQueue, once).add(app, 1)
+        ()
+      }
 
       promise.future.futureValue should be(())
 
@@ -275,4 +302,5 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
         ))
     }
   }
+
 }

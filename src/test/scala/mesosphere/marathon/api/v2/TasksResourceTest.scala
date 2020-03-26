@@ -59,7 +59,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
 
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
-      val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(instance)
+      val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(Seq(instance))
       instanceTracker.instancesBySpec returns Future.successful(tasksByApp)
 
       val rootGroup = createRootGroup(apps = Map(app.id -> app))
@@ -107,7 +107,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
         .build()
         .getInstance()
 
-      val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(instance)
+      val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(Seq(instance))
       instanceTracker.instancesBySpec returns Future.successful(tasksByApp)
 
       val rootGroup = createRootGroup(apps = Map(app.id -> app))
@@ -156,7 +156,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       val body = s"""{"ids": ["${taskId1.idString}", "${taskId2.idString}"]}"""
       val bodyBytes = body.toCharArray.map(_.toByte)
 
-      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1, instance2)))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
       groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))
       groupManager.app(app2) returns Some(AppDefinition(app2, role = "*"))
@@ -191,7 +191,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       val body = s"""{"ids": ["${container.idString}"]}"""
       val bodyBytes = body.toCharArray.map(_.toByte)
 
-      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance)))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
       groupManager.app(any) returns None
 
@@ -221,7 +221,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       val bodyBytes = body.toCharArray.map(_.toByte)
       val deploymentPlan = new DeploymentPlan("plan", createRootGroup(), createRootGroup(), Seq.empty[DeploymentStep], Timestamp.zero)
 
-      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1, instance2)))
       taskKiller.killAndScale(any, any)(any) returns Future.successful(deploymentPlan)
       groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))
       groupManager.app(app2) returns Some(AppDefinition(app2, role = "*"))
@@ -270,7 +270,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       val body = s"""{"ids": ["${taskId1.idString}"]}"""
       val bodyBytes = body.toCharArray.map(_.toByte)
 
-      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1)))
       instanceTracker.specInstances(app1) returns Future.successful(Seq(instance1))
       taskKiller.kill(Matchers.eq(app1), any, Matchers.eq(true))(any) returns Future.successful(List(instance1))
       groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))

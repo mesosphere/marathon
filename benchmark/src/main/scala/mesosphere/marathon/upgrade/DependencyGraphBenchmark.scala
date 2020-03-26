@@ -8,7 +8,6 @@ import mesosphere.marathon.state._
 import org.openjdk.jmh.annotations.{Group => _, _}
 import org.openjdk.jmh.infra.Blackhole
 
-import scala.collection.breakOut
 import scala.util.Random
 
 @State(Scope.Benchmark)
@@ -21,46 +20,26 @@ object DependencyGraphBenchmark {
   val version1 = VersionInfo.forNewConfig(Timestamp(1))
   val version2 = VersionInfo.forNewConfig(Timestamp(2))
 
-  val superGroups: Map[AbsolutePathId, Group] = superGroupIds.map { superGroupId =>
+  val superGroups: Map[AbsolutePathId, Group] = superGroupIds.iterator.map { superGroupId =>
 
     val paths: Vector[Vector[AbsolutePathId]] =
-      groupIds.map { groupId =>
-        appIds.map { appId =>
+      groupIds.iterator.map { groupId =>
+        appIds.iterator.map { appId =>
           AbsolutePathId(s"/supergroup-${superGroupId}/group-${groupId}/app-${appId}")
         }.toVector
-      }(breakOut)
+      }.toVector
 
-    val appDefs: Map[AbsolutePathId, AppDefinition] =
-      groupIds.flatMap { groupId =>
-        appIds.map { appId =>
-          val dependencies = for {
-            depGroupId <- groupIds if depGroupId < groupId
-            depAppId <- appIds
-            if r.nextBoolean
-          } yield paths(depGroupId)(depAppId)
-
-          val path = paths(groupId)(appId)
-          path -> AppDefinition(
-            id = path,
-            role = "someRole",
-            dependencies = dependencies.toSet,
-            labels = Map("ID" -> appId.toString),
-            versionInfo = version1
-          )
-        }(breakOut)
-      }(breakOut)
-
-    val subGroups: Map[AbsolutePathId, Group] = groupIds.map { groupId =>
+    val subGroups: Map[AbsolutePathId, Group] = groupIds.iterator.map { groupId =>
       val id = AbsolutePathId(s"/supergroup-${superGroupId}/group-${groupId}")
       id -> Group(id = id)
-    }(breakOut)
+    }.toMap
 
     val id = AbsolutePathId(s"/supergroup-${superGroupId}")
     id -> Group(
       id = id,
       groupsById = subGroups
     )
-  }(breakOut)
+  }.toMap
 
   val rootGroup = RootGroup(
     groupsById = superGroups)
@@ -79,7 +58,7 @@ object DependencyGraphBenchmark {
         } else {
           superGroupId -> superGroup
         }
-    }(breakOut)
+    }
   )
 }
 
