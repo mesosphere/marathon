@@ -308,17 +308,3 @@ def updateDcosServiceEE(url: String, sha1: String, message: String, serviceName:
     push(git, commitRev, destination = s"refs/heads/$branchName")
   }
 }
-
-
-/**
-  * Checks out a DC/OS Enterprise repository and updates the Marathon package ee.buildinfo.json
-  * to the passed url and sha1.
-  *
-  * @param url The URL to the new Marathon artifact.
-  * @param sha1 The sha1 checksum of the Marathon artifact.
-  * @param message The commit message for the change.
-  */
-@main
-def updateMarathonEE(url: String, sha1: String, message: String): Unit = {
-  updateDcosServiceEE(url, sha1, message, "Marathon", "mergebot/dcos/master/1739")
-}
