@@ -36,4 +36,4 @@ As usual, replace the storage tool version with the version of Marathon in use b
 
 ## Building
 
-See `BUILDING.md`.
+See [BUILDING.md](BUILDING.md).

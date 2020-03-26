@@ -7,8 +7,8 @@ RUN apk update && \
 
 
 # install ammonite
-RUN curl -L -o /usr/local/bin/amm-2.12 https://github.com/lihaoyi/Ammonite/releases/download/2.0.1/2.12-2.0.1 && \
-  chmod +x /usr/local/bin/amm-2.12 && \
-  /usr/local/bin/amm-2.12 --predef-code "sys.exit(0)"
+RUN curl -L -o /usr/local/bin/amm-2.13 https://github.com/lihaoyi/Ammonite/releases/download/2.0.4/2.13-2.0.4 && \
+  chmod +x /usr/local/bin/amm-2.13 && \
+  /usr/local/bin/amm-2.13 --predef-code "sys.exit(0)"
 
-ENTRYPOINT ["/usr/local/bin/amm-2.12-2.0.1"]
+ENTRYPOINT ["/usr/local/bin/amm-2.13"]
