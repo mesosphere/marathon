@@ -6,4 +6,4 @@ for a in "$@"; do
 done
 
 export MARATHON_ARGS
-exec amm-2.12 --predef lib/predef.sc --predef-code "help"
+exec amm-2.13 --predef lib/predef.sc --predef-code "help"
