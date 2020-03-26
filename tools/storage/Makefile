@@ -35,7 +35,6 @@ $(BUILD_TARGET_ROOT)/docker-pushed: $(BUILD_TARGET_ROOT)/docker-built
 	docker push mesosphere/marathon-storage-tool:$(PKG_VER)
 	touch $@
 
-# 1.9.x
 $(BUILD_TARGET_ROOT)/marathon: target/artifacts/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz
 	mkdir -p $(BUILD_TARGET_ROOT)
 	tar xzf target/artifacts/marathon-$(PKG_VER)-$(PKG_COMMIT).tgz -C $(BUILD_TARGET_ROOT)
