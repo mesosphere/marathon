@@ -22,7 +22,7 @@ ansiColor('xterm') {
         ]) {
 	    withDockerRegistry([credentialsId: 'docker-hub-credentials']) {
                 sh """sudo update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java"""
-                sh """AMMONITE_213=/usr/local/bin/amm sudo -E ci/pipeline jenkins"""
+                sh """sudo -E ci/pipeline jenkins"""
             }
 	}
       } finally {
