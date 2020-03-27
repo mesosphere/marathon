@@ -1,4 +1,6 @@
-AMMONITE_213?=$(PWD)/bin/amm
+MAKEFILE_DIR := $(dir $(realpath $(firstword $(MAKEFILE_LIST))))
+
+AMMONITE_213 ?= $(MAKEFILE_DIR)/bin/amm
 REF ?= HEAD
 PKG_COMMIT := $(shell cd ../../ && ./version commit --ref $(REF))
 PKG_VER := $(shell cd ../../ && ./version --ref $(PKG_COMMIT))
