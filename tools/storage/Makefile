@@ -1,4 +1,4 @@
-AMMONITE_213:=$(PWD)/bin/amm
+AMMONITE_213?=$(PWD)/bin/amm
 REF ?= HEAD
 PKG_COMMIT := $(shell cd ../../ && ./version commit --ref $(REF))
 PKG_VER := $(shell cd ../../ && ./version --ref $(PKG_COMMIT))
