@@ -144,8 +144,7 @@ object Dependency {
     val WixAccord = "0.7.6"
 
     // Version of Mesos to use when building docker image or testing packages
-    val MesosDebian = "1.9.0-2.0.1"
-
+    val MesosDebian = "1.10.0-0.1.1225.pre.20200327gitbeaf0cd84"
 
     // test deps versions
     val JMH = "1.19"
