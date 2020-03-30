@@ -48,9 +48,8 @@ def cgroup_name(resource_type):
                 if t == resource_type:
                     logging.info("My cgroup: %s", cgroup_name)
                     return cgroup_name
-                
 
-        
+
 # reads all the files in a folder that are readable, return them in a map of filename: contents
 def read_cgroup_values(resource_type):
     name = cgroup_name(resource_type)
@@ -68,6 +67,7 @@ def read_cgroup_values(resource_type):
                 ()
                 # ignore
     return result
+
 
 def make_handler(app_id, version, task_id, base_url):
     """
