@@ -1156,7 +1156,7 @@ class TaskGroupBuilderTest extends UnitTest with Inside {
       val container = MesosContainer(name = "withTTY", resources = Resources())
       val pod = PodDefinition(id = AbsolutePathId("/notty"), role = "*", containers = Seq(container))
       val containerInfo = TaskGroupBuilder.computeContainerInfo(pod, container)
-      containerInfo should be(empty)
+      containerInfo.get.hasTtyInfo shouldBe false
     }
 
     "IpcConfig defined on a pod renders to executor info" in {
