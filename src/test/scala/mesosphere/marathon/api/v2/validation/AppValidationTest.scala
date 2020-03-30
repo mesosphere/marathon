@@ -417,4 +417,26 @@ class AppValidationTest extends UnitTest with ValidationTestLike with TableDrive
       }
     }
   }
+
+  "resourceLimits validation" should {
+    val basicApp = App(id = "/foo", mem = 256, cpus = 2, cmd = Some("sleep 3600"))
+    basicValidator(basicApp) should be(aSuccess)
+
+    "succeed when resource limits are >= requested resources" in {
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(mem = Some(ResourceLimitNumber(256.0)))))) should be(aSuccess)
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(mem = Some(ResourceLimitNumber(300.0)))))) should be(aSuccess)
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(mem = Some(ResourceLimitUnlimited("unlimited")))))) should be(aSuccess)
+
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(cpus = Some(ResourceLimitNumber(2.0)))))) should be(aSuccess)
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(cpus = Some(ResourceLimitNumber(10.0)))))) should be(aSuccess)
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(cpus = Some(ResourceLimitUnlimited("unlimited")))))) should be(aSuccess)
+    }
+
+    "fail when resource limits are less than requested resources" in {
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(mem = Some(ResourceLimitNumber(200)))))) should haveViolations(
+        "/resourceLimits/mem" -> "resource limit must be greater than or equal to requested resource (256.0)")
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(cpus = Some(ResourceLimitNumber(1)))))) should haveViolations(
+        "/resourceLimits/cpus" -> "resource limit must be greater than or equal to requested resource (2.0)")
+    }
+  }
 }

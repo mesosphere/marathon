@@ -371,14 +371,14 @@ trait MarathonAppFixtures {
     s"http://$$HOST:$healthCheckPort/$encodedAppId/$versionId"
   }
 
-  def appMockCmd(appId: PathId, versionId: String): String = {
+  def appMockCmd(appId: PathId, versionId: String, port: String = "$PORT0"): String = {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val appMock: File = MarathonTestHelper.resourcePath("python/app_mock.py")
     if (!appMock.exists()) {
       throw new IllegalStateException("Failed to locate app_mock.py (" + appMock.getAbsolutePath + ")")
     }
     s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
-      s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}"""
+      s"""${port} $appId $versionId ${healthEndpointFor(appId, versionId)}"""
   }
 
   def appProxyHealthCheck(

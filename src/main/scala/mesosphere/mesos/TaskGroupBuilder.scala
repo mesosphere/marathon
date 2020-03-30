@@ -350,6 +350,7 @@ object TaskGroupBuilder extends StrictLogging {
       .setName(container.name)
       .setTaskId(mesos.TaskID.newBuilder.setValue(taskId.idString))
       .setSlaveId(offer.getSlaveId)
+      .putAllLimits(TaskBuilder.limitsAsJavaMap(container.resourceLimits))
 
     val consumer = new ResourceConsumer(matchedResources)
     consumer.consumeCpus(container.resources.cpus).foreach(builder.addResources)
@@ -415,29 +416,27 @@ object TaskGroupBuilder extends StrictLogging {
     consumer.consumeGpus(podDefinition.executorResources.gpus.toDouble).foreach(executorInfo.addResources)
     executorInfo.addAllResources(portsMatch.resources.asJava)
 
+    val containerInfo = mesos.ContainerInfo.newBuilder
+      .setType(mesos.ContainerInfo.Type.MESOS)
+    val linuxInfoBuilder = mesos.LinuxInfo.newBuilder
+    linuxInfoBuilder.setShareCgroups(podDefinition.legacySharedCgroups.getOrElse(false))
+
     if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty || podDefinition.linuxInfo.nonEmpty) {
-      val containerInfo = mesos.ContainerInfo.newBuilder
-        .setType(mesos.ContainerInfo.Type.MESOS)
 
       mesosNetworks.foreach(containerInfo.addNetworkInfos)
       volumeMatchOption.foreach(_.persistentVolumeResources.foreach(executorInfo.addResources))
 
       podDefinition.linuxInfo.foreach({ linuxInfo =>
-        val linuxInfoBuilder = mesos.LinuxInfo.newBuilder
-
         linuxInfo.ipcInfo.foreach({ ipcInfo =>
           ipcInfo.shmSize.foreach(linuxInfoBuilder.setShmSize)
           linuxInfoBuilder.setIpcMode(ipcInfo.ipcMode.toMesos)
         })
-
-        containerInfo.setLinuxInfo(linuxInfoBuilder)
       })
-
-      executorInfo.setContainer(containerInfo)
     }
 
+    containerInfo.setLinuxInfo(linuxInfoBuilder)
+    executorInfo.setContainer(containerInfo)
     executorInfo.setLabels(podDefinition.labels.toMesosLabels)
-
     executorInfo
   }
 
@@ -589,9 +588,10 @@ object TaskGroupBuilder extends StrictLogging {
     // attach a tty if specified
     container.tty.filter(tty => tty).foreach(containerInfo.setTtyInfo(_))
 
+    val linuxBuilder = mesos.LinuxInfo.newBuilder
+    linuxBuilder.setShareCgroups(podDefinition.legacySharedCgroups.getOrElse(false))
     // setup linux info
     container.linuxInfo.foreach { linuxInfo =>
-      val linuxBuilder = mesos.LinuxInfo.newBuilder
       linuxInfo.seccomp.foreach { seccomp =>
         val seccompBuilder = mesos.SeccompInfo.newBuilder
 
@@ -606,8 +606,8 @@ object TaskGroupBuilder extends StrictLogging {
         linuxBuilder.setIpcMode(ipcInfo.ipcMode.toMesos)
       }
 
-      containerInfo.setLinuxInfo(linuxBuilder.build)
     }
+    containerInfo.setLinuxInfo(linuxBuilder.build)
 
     // Only create a 'ContainerInfo' when some of it's fields are set.
     // If no fields other than the type have been set, then we shouldn't pass the container info

@@ -17,39 +17,6 @@ class PodStatusConversionTest extends UnitTest {
 
   import PodStatusConversionTest._
 
-  "PodConversion" should {
-    val pod = basicOneContainerPod.copy(linuxInfo = Some(state.LinuxInfo(seccomp = None, ipcInfo = Some(state.IPCInfo(ipcMode = state.IpcMode.Private, shmSize = Some(32))))))
-
-    "keep linux info on executor" in {
-      val ramlPod = pod.toRaml
-      val ramlLinuxInfo = Some(LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(mode = IPCMode.Private, shmSize = Some(32)))))
-      ramlPod.linuxInfo should be(ramlLinuxInfo)
-    }
-
-    behave like convertToRamlAndBack(pod)
-
-  }
-
-  def convertToRamlAndBack(pod: PodDefinition): Unit = {
-    s"pod ${pod.id.toString} is written to json and can be read again via formats" in {
-      Given("An pod")
-      val ramlPod = pod.toRaml[Pod]
-
-      When("The pod is translated to json and read back from formats")
-      val readPod: PodDefinition = withValidationClue {
-        Raml.fromRaml(ramlPod)
-      }
-      Then("The pod is identical")
-      readPod should be(pod)
-    }
-  }
-
-  def withValidationClue[T](f: => T): T = scala.util.Try { f }.recover {
-    // handle RAML validation errors
-    case vfe: ValidationFailedException => fail(vfe.failure.violations.toString())
-    case th => throw th
-  }.get
-
   "PodStatusConversion" should {
     "multiple tasks with multiple container networks convert to proper network status" in {
 
@@ -460,6 +427,7 @@ class PodStatusConversionTest extends UnitTest {
 object PodStatusConversionTest {
 
   val containerResources = Resources(cpus = 0.01, mem = 100)
+  val containerResourceLimits = state.ResourceLimits(cpus = Some(Double.MaxValue), mem = Some(4096))
 
   val basicOneContainerPod = PodDefinition(
     id = AbsolutePathId("/foo"),
@@ -468,6 +436,7 @@ object PodStatusConversionTest {
       MesosContainer(
         name = "ct1",
         resources = containerResources,
+        resourceLimits = Some(containerResourceLimits),
         image = Some(Image(kind = ImageType.Docker, id = "busybox")),
         endpoints = Seq(
           Endpoint(name = "web", containerPort = Some(80)),

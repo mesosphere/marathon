@@ -324,6 +324,25 @@ trait AppValidation {
       .flatMap(_.portMappings).orElse(app.portDefinitions).getOrElse(Nil).indices
   }
 
+  def validResourceLimit(requestResource: Double): Validator[ResourceLimit] = new Validator[ResourceLimit] {
+    override def apply(resourceLimit: ResourceLimit): Result = {
+      resourceLimit match {
+        case ResourceLimitUnlimited(_) => Success
+        case ResourceLimitNumber(value) =>
+          if (value < requestResource)
+            Failure(Set(RuleViolation(value, s"resource limit must be greater than or equal to requested resource (${requestResource})")))
+          else
+            Success
+      }
+    }
+  }
+
+  def validResourceLimits(requestCpus: Double, requestMem: Double): Validator[ResourceLimits] = validator[ResourceLimits] { resourceLimits =>
+    resourceLimits.cpus is optional(validResourceLimit(requestCpus))
+    resourceLimits.mem is
+      optional(validResourceLimit(requestMem))
+  }
+
   /** validate most canonical API fields */
   private def validBasicAppDefinition(enabledFeatures: Set[String], validRoles: Set[String]): Validator[App] = validator[App] { app =>
     app.container is optional(validContainer(enabledFeatures, app.networks, app.secrets))
@@ -333,6 +352,7 @@ trait AppValidation {
     app.healthChecks is every(complyWithIpProtocolRules(app.container))
     app must haveAtMostOneMesosHealthCheck
     app.fetch is every(valid)
+    app.resourceLimits is optional(validResourceLimits(app.cpus, app.mem))
     app.secrets is { secrets: Map[String, SecretDef] =>
       secrets.nonEmpty
     } -> (featureEnabled(enabledFeatures, Features.SECRETS))
