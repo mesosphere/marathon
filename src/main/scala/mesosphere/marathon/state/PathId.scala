@@ -5,6 +5,7 @@ import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation.isTrue
+import mesosphere.marathon.raml.App
 
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
@@ -199,11 +200,10 @@ object PathId {
   /**
     * This regular expression is used to validate each path segment of an ID.
     *
-    * If you change this, please also change `PathId` in stringTypes.raml, and
-    * notify the maintainers of the DCOS CLI.
+    * To change it, update  `PathId` in stringTypes.raml; also, notify the maintainers of the DCOS CLI.
     */
   private[this] val ID_PATH_SEGMENT_PATTERN =
-    "^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$".r
+    App.ConstraintIdPattern
 
   private val validPathChars = isTrue[PathId](s"must fully match regular expression '${ID_PATH_SEGMENT_PATTERN.pattern.pattern()}'") { id =>
     id.path.forall(part => ID_PATH_SEGMENT_PATTERN.pattern.matcher(part).matches())

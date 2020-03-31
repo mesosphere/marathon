@@ -22,13 +22,14 @@ types:
       validation has historically been lax.
   PathId:
     type: string
-    pattern: ^(\/?((\.\.)|(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9]))?($|\/))+$
+    pattern: ^(\/?((\.\.)|(([a-z0-9]|[a-z0-9][a-z0-9\-_]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-_]*[a-z0-9]))?($|\/))+$
     minLength: 1
     example: /ops/audit
     description: |
-      Unique identifier for the pod consisting of a series of names separated by slashes.
-      Each name must be at least 1 character and may only contain digits (`0-9`), dashes
-      (`-`), dots (`.`), and lowercase letters (`a-z`). The name may not begin or end with a dash.
+      Unique identifier for the pod consisting of a series of names separated by
+      slashes.  Each name must be at least 1 character and may only contain
+      digits (`0-9`), dashes (`-`), underscores (`_`), dots (`.`), and lowercase
+      letters (`a-z`). The name may not begin or end with a dash.
   Uri:
     type: string
     minLength: 1

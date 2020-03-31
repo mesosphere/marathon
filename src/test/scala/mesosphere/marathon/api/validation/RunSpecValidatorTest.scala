@@ -91,6 +91,10 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       testValidId("/trailing/")
     }
 
+    "id '/slave_public/with_underscores' is valid" in {
+      testValidId("/slave_public/with_underscores'")
+    }
+
     "single dots in id '/test/.' fails in validation" in {
       val app = App(
         id = "/test/.",
