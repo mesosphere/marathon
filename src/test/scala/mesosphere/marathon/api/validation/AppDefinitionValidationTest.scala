@@ -49,7 +49,7 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
         )
 
         validator(app) should haveViolations(
-          "/dependencies(0)" -> """must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])|(\.|\.\.)$'""")
+          "/dependencies(0)" -> s"must fully match regular expression '${PathId.ID_PATH_SEGMENT_PATTERN}'")
       }
     }
 

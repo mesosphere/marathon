@@ -38,7 +38,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
   "AppDefinition" should {
     "Validation" in {
       var app = AppDefinition(id = "a b".toAbsolutePath, role = "*")
-      val idError = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'"
+      val idError = s"must fully match regular expression '${PathId.ID_PATH_SEGMENT_PATTERN}'"
       validator(app) should haveViolations("/id" -> idError)
 
       app = app.copy(id = "a#$%^&*b".toAbsolutePath)
