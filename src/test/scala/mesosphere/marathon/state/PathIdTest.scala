@@ -208,7 +208,7 @@ class PathIdTest extends UnitTest with ValidationTestLike {
       "be invalid" in {
         val path = AbsolutePathId("/@§\'foobar-0")
         pathIdValidator(path) should haveViolations(
-          "/" -> "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'")
+          "/" -> s"must fully match regular expression '${PathId.ID_PATH_SEGMENT_PATTERN}'")
       }
     }
 

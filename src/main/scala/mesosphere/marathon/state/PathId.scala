@@ -202,7 +202,7 @@ object PathId {
     *
     * To change it, update  `PathId` in stringTypes.raml; also, notify the maintainers of the DCOS CLI.
     */
-  private[this] val ID_PATH_SEGMENT_PATTERN =
+  private[state] val ID_PATH_SEGMENT_PATTERN =
     App.ConstraintIdPattern
 
   private val validPathChars = isTrue[PathId](s"must fully match regular expression '${ID_PATH_SEGMENT_PATTERN.pattern.pattern()}'") { id =>
