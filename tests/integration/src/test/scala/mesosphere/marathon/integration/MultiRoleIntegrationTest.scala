@@ -127,6 +127,19 @@ class MultiRoleIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForTasks(AbsolutePathId(appInDev.id), 1) //make sure the app has really started
     }
 
+    "Marathon should launch an app under as slave_public" in {
+      Given("an app in role slave_public")
+      val appInDev = appProxy(AbsolutePathId("/slave_public/app-with-role"), "v1", instances = 1, role = Some("slave_public"))
+
+      When("The app is deployed")
+      val resultInDev = marathon.createAppV2(appInDev)
+
+      Then("The apps are created")
+      resultInDev should be(Created)
+      waitForDeployment(resultInDev)
+      waitForTasks(AbsolutePathId(appInDev.id), 1) //make sure the app has really started
+    }
+
   }
 
 }
