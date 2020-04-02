@@ -12,6 +12,7 @@ RUN apt-get update && apt-get install -my wget gnupg && \
   apt-get update -y && \
   apt-get upgrade -y && \
   echo "deb http://repos.mesosphere.com/debian stretch-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
+  echo "deb http://repos.mesosphere.com/debian stretch-unstable main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
   echo "deb http://repos.mesosphere.com/debian stretch main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \
   apt-get update && \
   # jdk setup
