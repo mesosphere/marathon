@@ -42,7 +42,7 @@ object InstanceTrackerActor {
   }
 
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
-  private[impl] case object List
+  @LeaderDeferrable private[impl] case object List
 
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]] by RunSpec [[AbsolutePathId]]. */
   private[impl] case class ListBySpec(appId: AbsolutePathId)
