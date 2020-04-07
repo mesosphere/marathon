@@ -151,7 +151,7 @@ object Dependency {
     val JUnitBenchmarks = "0.7.2"
     val Mockito = "1.10.19"
     val ScalaTest = "3.0.8"
-    val UsiTestUtil = "0.1.38"
+    val UsiTestUtil = "0.1.39"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
