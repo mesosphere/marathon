@@ -57,5 +57,14 @@ ansiColor('xterm') {
         archive includes: "ci-${env.BUILD_TAG}.log"  // Only in case the build was  aborted and the logs weren't zipped
       }
     }
+
+    stage('Release MoM EE Docker Image') {
+      def version = sh returnStdout: true, script: './version docker'
+      build(
+           job: '/marathon-dcos-plugins/release-mom-ee-docker-image/releases%252Fdcos-1.13',
+           parameters: [string(name: 'from_image_tag', value: version)],
+           propagate: true
+      )
+    }
   }
 }
