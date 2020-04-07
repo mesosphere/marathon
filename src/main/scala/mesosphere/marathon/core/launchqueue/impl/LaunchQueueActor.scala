@@ -1,7 +1,9 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.stream.ActorMaterializer
+import java.util.concurrent.atomic.AtomicLong
+
+import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import akka.{Done, NotUsed}
 import akka.actor.SupervisorStrategy.Stop
@@ -81,8 +83,8 @@ private[impl] class LaunchQueueActor(
     import context.dispatcher
     instanceTracker.instancesBySpec().pipeTo(self)
 
-    // Using an actorMaterializer that encompasses this context will cause the stream to auto-terminate when this actor does
-    implicit val materializer = ActorMaterializer()(context)
+    // Using an Materializer that encompasses this context will cause the stream to auto-terminate when this actor does
+    implicit val materializer = Materializer(context)
     delayUpdates.runWith(
       Sink.actorRef(
         self,
@@ -107,6 +109,8 @@ private[impl] class LaunchQueueActor(
 
       unstashAll()
 
+    case Status.Failure(cause: akka.stream.AbruptStageTerminationException) =>
+      logger.info(s"Ignoring AbruptStageTerminationException; was likely emitted from crash of former actor instance", cause)
     case Status.Failure(cause) =>
       // escalate this failure
       throw new IllegalStateException("while loading instances", cause)
