@@ -35,6 +35,9 @@ case $FILE in
   *.ubuntu1804_all.deb)
     DISTPATH=ubuntu/bionic${PKG_TYPE}
     ;;
+  *.debian8_all.deb)
+    DISTPATH=debian/jessie${PKG_TYPE}
+    ;;
   *.debian9_all.deb)
     DISTPATH=debian/stretch${PKG_TYPE}
     ;;

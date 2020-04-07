@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 # Note that the prefix affects the init scripts as well.
 PREFIX := usr
 
