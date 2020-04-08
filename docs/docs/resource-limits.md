@@ -1,6 +1,6 @@
 # Resource Limits
 
-Marathon can instruct Mesos to enable resource limits [TODO - LINK TO MESOS PAGE WHEN IT IS AVAILBLE](http://mesos.apache.org/documentation/latest/resource-limits) for launched pods and tasks.
+Marathon can instruct Mesos to enable resource limits for launched pods and tasks.
 
 ## Apps
 
@@ -72,5 +72,3 @@ To specify `resourceLimits` for a pod, you must remove the field `legacySharedCg
 ### OOM killing risk for memory bursting resources
 
 When memory bursting is enabled, it is the responsibility of the task being launched to avoid consuming extra memory if memory is in short supply, otherwise it will be potentially OOM killed.
-
-For more information about Mesos handling of resource limits and OOM killing, please see [TODO - LINK TO MESOS PAGE WHEN IT IS AVAILBLE](http://mesos.apache.org/documentation/latest/resource-limits)
