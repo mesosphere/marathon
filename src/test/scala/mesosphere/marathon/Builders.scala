@@ -32,10 +32,10 @@ object Builders {
       * @param newGroupEnforceRoleBehavior Controls the default value for enforceRole in interim created groups.
       * @return Root group containing the apps and pods specified
       */
-    def apply( apps: Seq[AppDefinition] = Nil,
-               pods: Seq[PodDefinition] = Nil,
+    def apply( apps: Iterable[AppDefinition] = Nil,
+               pods: Iterable[PodDefinition] = Nil,
                groupDependencies: Map[AbsolutePathId, Set[AbsolutePathId]] = Map.empty,
-               groupIds: Seq[AbsolutePathId] = Nil,
+               groupIds: Iterable[AbsolutePathId] = Nil,
                newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior = NewGroupEnforceRoleBehavior.Top,
                version: Timestamp = Group.defaultVersion,
              ): RootGroup = {

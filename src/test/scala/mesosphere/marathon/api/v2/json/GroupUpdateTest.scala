@@ -7,9 +7,8 @@ import mesosphere.marathon.api.v2.{AppNormalization, GroupNormalization}
 import mesosphere.marathon.raml.{App, GroupConversion, GroupUpdate, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.GroupCreation
 
-class GroupUpdateTest extends UnitTest with GroupCreation {
+class GroupUpdateTest extends UnitTest {
   val noEnabledFeatures = AllConf.withTestConfig()
   val appConversionFunc: (App => AppDefinition) = { app =>
     // assume canonical form and that the app is valid
@@ -20,7 +19,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
   "GroupUpdate" should {
     "A group update can be applied to an empty group" in {
       Given("An empty group with updates")
-      val rootGroup = createRootGroup()
+      val rootGroup = Builders.newRootGroup()
       val update = GroupUpdate(
         Some(PathId.root.toString),
         Some(Set.empty[App]),
@@ -57,11 +56,8 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
 
     "A group update can be applied to existing entries" in {
       Given("A group with updates of existing nodes")
-      val blaApp = AppDefinition(AbsolutePathId("/test/bla"), Some("foo"), role = "*")
-      val initialRootGroup = createRootGroup(groups = Set(
-        createGroup("/test".toAbsolutePath, apps = Map(blaApp.id -> blaApp)),
-        createGroup("/apps".toAbsolutePath, groups = Set(createGroup("/apps/foo".toAbsolutePath)))
-      ))
+      val blaApp = Builders.newAppDefinition.command(AbsolutePathId("/test/bla"))
+      val initialRootGroup = Builders.newRootGroup(apps = Seq(blaApp), groupIds = Seq("/apps/foo".toAbsolutePath))
       val update = GroupUpdate(
         Some(PathId.root.toString),
         Some(Set.empty[App]),
@@ -106,13 +102,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       Given("An existing group with two subgroups")
       val app1 = AppDefinition(AbsolutePathId("/test/group1/app1"), Some("foo"), role = "*")
       val app2 = AppDefinition(AbsolutePathId("/test/group2/app2"), Some("foo"), role = "*")
-      val current = createGroup(
-        "/test".toAbsolutePath,
-        groups = Set(
-          createGroup("/test/group1".toAbsolutePath, Map(app1.id -> app1)),
-          createGroup("/test/group2".toAbsolutePath, Map(app2.id -> app2))
-        )
-      )
+      val current = Builders.newRootGroup(apps = Seq(app1, app2)).groupsById("/test".toAbsolutePath)
 
       When("A group update is applied")
       val update = GroupUpdate(
@@ -131,9 +121,9 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       )
 
       val timestamp = Timestamp.now()
-      val normalized = GroupNormalization(noEnabledFeatures, createRootGroup()).updateNormalization(AbsolutePathId("/test")).normalized(update)
+      val normalized = GroupNormalization(noEnabledFeatures, Builders.newRootGroup()).updateNormalization(AbsolutePathId("/test")).normalized(update)
       val next = GroupConversion(normalized, current, timestamp).apply(appConversionFunc)
-      val result = createRootGroup(groups = Set(next))
+      val result = RootGroup(groupsById = Map(next.id -> next))
 
       validate(result)(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
@@ -155,14 +145,14 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
     "A group update should not contain a version" in {
       val update = GroupUpdate(None, version = Some(Timestamp.now().toOffsetDateTime))
       intercept[IllegalArgumentException] {
-        GroupConversion(update, createRootGroup(), Timestamp.now()).apply(appConversionFunc)
+        GroupConversion(update, Builders.newRootGroup(), Timestamp.now()).apply(appConversionFunc)
       }
     }
 
     "A group update should not contain a scaleBy" in {
       val update = GroupUpdate(None, scaleBy = Some(3))
       intercept[IllegalArgumentException] {
-        GroupConversion(update, createRootGroup(), Timestamp.now()).apply(appConversionFunc)
+        GroupConversion(update, Builders.newRootGroup(), Timestamp.now()).apply(appConversionFunc)
       }
     }
 
@@ -178,8 +168,8 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       )))
 
       When("The update is performed")
-      val normalized = GroupNormalization(noEnabledFeatures, createRootGroup()).updateNormalization(PathId.root).normalized(update)
-      val initialRootGroup = createRootGroup()
+      val normalized = GroupNormalization(noEnabledFeatures, Builders.newRootGroup()).updateNormalization(PathId.root).normalized(update)
+      val initialRootGroup = Builders.newRootGroup()
       val result = GroupConversion(normalized, initialRootGroup, Timestamp.now()).apply(appConversionFunc)
 
       validate(initialRootGroup.updatedWith(result))(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)

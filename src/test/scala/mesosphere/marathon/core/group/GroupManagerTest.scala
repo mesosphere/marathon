@@ -45,9 +45,9 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
 
     "not store invalid groups" in new Fixture {
       val app1 = AppDefinition(AbsolutePathId("/app1"), role = "*")
-      val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/app1".toAbsolutePath)), validate = false)
+      val rootGroup = Builders.newRootGroup(apps = Seq(app1))
 
-      groupRepository.root() returns Future.successful(createRootGroup())
+      groupRepository.root() returns Future.successful(Builders.newRootGroup())
 
       intercept[ValidationFailedException] {
         throw groupManager.updateRoot(PathId.root, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
@@ -59,7 +59,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     "return multiple apps when asked" in {
       val app1 = AppDefinition(AbsolutePathId("/app1"), role = "*", cmd = Some("sleep"))
       val app2 = AppDefinition(AbsolutePathId("/app2"), role = "*", cmd = Some("sleep"))
-      val rootGroup = createRootGroup(Map(app1.id -> app1, app2.id -> app2))
+      val rootGroup = Builders.newRootGroup(apps = Seq(app1, app2))
       val f = new Fixture(initialRoot = Some(rootGroup))
 
       f.groupManager.apps(Set(app1.id, app2.id)) should be(Map(app1.id -> Some(app1), app2.id -> Some(app2)))
@@ -69,18 +69,16 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       val app: AppDefinition = AppDefinition(AbsolutePathId("/group/app1"), role = "*", cmd = Some("sleep 3"), portDefinitions = Seq.empty)
       val group = createGroup("/group".toAbsolutePath, apps = Map(app.id -> app), version = Timestamp(1))
 
-      groupRepository.root() returns Future.successful(createRootGroup())
+      groupRepository.root() returns Future.successful(Builders.newRootGroup(version = Timestamp(1)))
       deploymentService.deploy(any, any) returns Future.successful(Done)
       val appWithAdditionalInfo = app.copy(
         versionInfo = VersionInfo.forNewConfig(Timestamp(1)),
         role = "*"
       )
 
-      val groupWithVersionInfo = createRootGroup(
+      val groupWithVersionInfo = Builders.newRootGroup(
         version = Timestamp(1),
-        groups = Set(
-          createGroup(
-            "/group".toAbsolutePath, apps = Map(appWithAdditionalInfo.id -> appWithAdditionalInfo), version = Timestamp(1))))
+        apps = Seq(appWithAdditionalInfo))
       groupRepository.storeRootVersion(any, any, any) returns Future.successful(Done)
       groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
       val groupChangeSuccess = Promise[GroupChangeSuccess]
@@ -103,7 +101,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
     "store new apps with correct version infos in groupRepo and appRepo" in new Fixture {
 
       val app: AppDefinition = AppDefinition(AbsolutePathId("/app1"), role = "*", cmd = Some("sleep 3"), portDefinitions = Seq.empty)
-      val rootGroup = createRootGroup(Map(app.id -> app), version = Timestamp(1))
+      val rootGroup = Builders.newRootGroup(apps = Seq(app), version = Timestamp(1))
       groupRepository.root() returns Future.successful(createRootGroup())
       deploymentService.deploy(any, any) returns Future.successful(Done)
       val appWithAdditionalInfo = app.copy(
@@ -139,10 +137,10 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
 
     "dismiss deployments when max_running_deployments limit is achieved" in new Fixture(maxRunningDeployments = 5) {
       val app1 = AppDefinition(AbsolutePathId("/app1"), role = "*")
-      val rootGroup = createRootGroup(Map(app1.id -> app1), groups = Set(createGroup("/app1".toAbsolutePath)), validate = false)
-      groupRepository.root() returns Future.successful(createRootGroup())
+      val rootGroup = Builders.newRootGroup(apps = Seq(app1))
+      groupRepository.root() returns Future.successful(Builders.newRootGroup())
 
-      val running = (1.to(maxRunningDeployments).map(_ => mock[DeploymentStepInfo]))
+      val running = 1.to(maxRunningDeployments).map(_ => mock[DeploymentStepInfo])
       deploymentService.listRunningDeployments() returns Future.successful(running)
 
       intercept[TooManyRunningDeploymentsException] {
