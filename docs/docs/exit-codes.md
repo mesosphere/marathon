@@ -22,6 +22,7 @@ help you figure out why the Marathon process stopped.
 |109        | `IncompatibleLibMesos` Provided LibMesos version is incompatible                                     |
 |110        | `FrameworkHasBeenRemoved` Framework has been removed via Mesos teardown call                         |
 |111        | `BindingError` Marathon could not bind to the address provided by `--http_address` and `--http_port` |
+|112        | `InvalidCommandLineFlag` Marathon was started with an invalid command line flag. Check the error message for deprecated options. |
 |137        | Killed by an external process or uncaught exception                                                  |
 
 ## Troubleshooting Exit Codes
