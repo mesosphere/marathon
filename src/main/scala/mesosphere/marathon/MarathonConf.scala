@@ -154,7 +154,7 @@ trait MarathonConf
     str.split(',').map(_.trim).toSet
 
   private[this] def validateDefaultAcceptedResourceRoles(str: String): Boolean = {
-    require(BuildInfo.version.minor < 10, "This flag has been removed in Marathon 1.10.0; use --accepted_resource_roles_default_behavior, instead.")
+    require(BuildInfo.version.minor < 10, "The flag '--default_accepted_resource_roles' has been removed in Marathon 1.10.0; use --accepted_resource_roles_default_behavior, instead.")
     false
   }
 
