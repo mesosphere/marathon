@@ -43,12 +43,13 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     System.exit(CrashStrategy.IncompatibleLibMesos.code)
   }
 
-  val cliConf = try {
+  val cliConf: AllConf = try {
     new AllConf(args)
   } catch {
     case e: Throwable =>
       logger.error("Invalid command line flag", e)
       Runtime.getRuntime.exit(CrashStrategy.InvalidCommandLineFlag.code)
+      ???
   }
 
   val actorSystem = ActorSystem("marathon")
