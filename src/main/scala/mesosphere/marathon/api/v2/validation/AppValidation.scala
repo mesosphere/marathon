@@ -327,7 +327,11 @@ trait AppValidation {
   def validResourceLimit(requestResource: Double): Validator[ResourceLimit] = new Validator[ResourceLimit] {
     override def apply(resourceLimit: ResourceLimit): Result = {
       resourceLimit match {
-        case ResourceLimitUnlimited(_) => Success
+        case ResourceLimitUnlimited(value) =>
+          if (value != "unlimited")
+            Failure(Set(RuleViolation(value, s"'$value' is an invalid resource limit. It must be 'unlimited' or a number")))
+          else
+            Success
         case ResourceLimitNumber(value) =>
           if (value < requestResource)
             Failure(Set(RuleViolation(value, s"resource limit must be greater than or equal to requested resource (${requestResource})")))
