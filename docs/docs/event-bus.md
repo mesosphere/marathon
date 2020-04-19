@@ -47,7 +47,7 @@ The events are emitted by asynchronous components inside of Marathon. Generally 
 
 ## Event Types
 
-Below are example JSON bodies that are send by Marathon.
+Below are example JSON bodies that are sent by Marathon.
 
 ### API Request
 
