@@ -299,8 +299,9 @@ case class MesosCluster(
         s"--port=$port",
         s"--resources=${resources.resourceString()}",
         s"--master=$masterUrl",
-        s"--work_dir=${workDir.getAbsolutePath}") ++ extraArgs,
-      cwd = None, extraEnv = mesosEnv(workDir): _*)
+        s"--work_dir=${workDir.getAbsolutePath}") ++
+        extraArgs,
+      cwd = None, extraEnv = Seq(("GLOG_v", "2")) ++ mesosEnv(workDir): _*)
 
     override val processName = "Agent"
   }

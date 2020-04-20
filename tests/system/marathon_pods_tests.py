@@ -105,7 +105,7 @@ def test_create_pod_with_private_image():
 @shakedown.dcos_1_9 # NOQA F811
 @pytest.mark.usefixtures("wait_for_marathon_and_cleanup")
 @pytest.mark.asyncio
-async def test_event_channel_for_pods(sse_events):
+async def test_event_channel_for_pods(sse_events): # NOQA F811
     """Tests the Marathon event channel specific to pod events."""
 
     await common.assert_event('event_stream_attached', sse_events)
