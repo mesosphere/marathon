@@ -900,7 +900,7 @@ def wait_for_service_endpoint(service_name, timeout_sec=120, path=""):
                 timeout=5,
                 auth=auth,
                 verify=verify_ssl())
-        except ReadTimeout as e:
+        except ReadTimeout:
             raise DCOSException("service " + service_name + " is unavailable at " + master_ip)
 
         if response.status_code == 200:
