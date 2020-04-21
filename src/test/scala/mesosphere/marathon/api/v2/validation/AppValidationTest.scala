@@ -438,5 +438,12 @@ class AppValidationTest extends UnitTest with ValidationTestLike with TableDrive
       basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(cpus = Some(ResourceLimitNumber(1)))))) should haveViolations(
         "/resourceLimits/cpus" -> "resource limit must be greater than or equal to requested resource (2.0)")
     }
+
+    "fail when resource limits are an invalid enum value" in {
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(mem = Some(ResourceLimitUnlimited("Infinity")))))) should haveViolations(
+        "/resourceLimits/mem" -> "'Infinity' is an invalid resource limit. It must be 'unlimited' or a number")
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(cpus = Some(ResourceLimitUnlimited("Infinity")))))) should haveViolations(
+        "/resourceLimits/cpus" -> "'Infinity' is an invalid resource limit. It must be 'unlimited' or a number")
+    }
   }
 }
