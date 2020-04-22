@@ -54,9 +54,6 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
   run("sbt", "benchmark/compile")
   run("sbt", "mesos-simulation/compile")
   run("sbt", "plugin-interface/compile")
-
-  // Check system integration tests.
-  checkSystemIntegrationTests(logFileName)
 }
 
 /**
@@ -75,12 +72,6 @@ def checkUnusedImports(logFileName: String): Unit = {
   val unusedImports = unusedImportMatch.findAllIn(logs).toVector
 
   assert(unusedImports.isEmpty, s"Found unused imports:\n${unusedImports.mkString("\n")}")
-}
-
-@main
-def checkSystemIntegrationTests(logFileName: String): Unit = {
-  def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
-  run("flake8", "--count", "--max-line-length=120", "tests/system", "tests/integration/src/test/resources/python")
 }
 
 /**
@@ -158,7 +149,7 @@ def provisionHost(): Unit = utils.stage("Provision") {
   %('sudo, "ci/set_port_range.sh")
 
   provision.killStaleTestProcesses()
-  provision.installMesos()
+  // provision.installMesos()
 }
 
 //////////////////// MAIN TARGETS ////////////////////
