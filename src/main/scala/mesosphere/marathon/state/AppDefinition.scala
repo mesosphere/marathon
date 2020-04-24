@@ -90,8 +90,10 @@ case class AppDefinition(
 
     role: Role,
 
-    resourceLimits: Option[ResourceLimits] = None) extends RunSpec
-  with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
+    resourceLimits: Option[ResourceLimits] = None,
+
+    // Adding a new property? Make sure to update the method isUpgrade appropriately
+  ) extends RunSpec with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
     * As an optimization, we precompute and cache the hash of this object
@@ -392,7 +394,8 @@ case class AppDefinition(
           unreachableStrategy != to.unreachableStrategy ||
           killSelection != to.killSelection ||
           tty != to.tty ||
-          role != to.role
+          role != to.role ||
+          resourceLimits != to.resourceLimits
       }
     case _ =>
       // A validation rule will ensure, this can not happen
