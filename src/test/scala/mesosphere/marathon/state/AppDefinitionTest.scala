@@ -373,7 +373,7 @@ class AppDefinitionTest extends UnitTest {
       assert(result == update, s"expected $update instead of $result")
     }
 
-    "isUpgrade" in {
+    "isUpgrade" should {
       "recognizes a change to resourceLimits as an upgrade" in {
         val original = Builders.newAppDefinition.command(resourceLimits = None)
         val updated = original.copy(resourceLimits = Some(ResourceLimits(cpus = Some(Double.PositiveInfinity), mem = None)))
