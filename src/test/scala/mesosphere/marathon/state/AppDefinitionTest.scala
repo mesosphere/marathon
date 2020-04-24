@@ -4,8 +4,9 @@ package state
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.raml.{ResourceLimitUnlimited, Resources}
 import mesosphere.marathon.state.EnvVarValue._
+
 import scala.jdk.CollectionConverters._
 import org.apache.mesos.{Protos => mesos}
 
@@ -370,6 +371,14 @@ class AppDefinitionTest extends UnitTest {
       )
       val result = app.mergeFromProto(update.toProto)
       assert(result == update, s"expected $update instead of $result")
+    }
+
+    "isUpgrade" should {
+      "recognizes a change to resourceLimits as an upgrade" in {
+        val original = Builders.newAppDefinition.command(resourceLimits = None)
+        val updated = original.copy(resourceLimits = Some(ResourceLimits(cpus = Some(Double.PositiveInfinity), mem = None)))
+        original.isUpgrade(updated) shouldBe true
+      }
     }
   }
 

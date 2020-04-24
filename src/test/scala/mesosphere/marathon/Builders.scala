@@ -9,7 +9,7 @@ import mesosphere.marathon.core.pod.{Network, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.raml.{App, Apps, Resources}
 import mesosphere.marathon.state.RootGroup.NewGroupStrategy
-import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, BackoffStrategy, EnvVarValue, Group, KillSelection, PortDefinition, Role, RootGroup, Secret, Timestamp, UnreachableStrategy, UpgradeStrategy, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, BackoffStrategy, EnvVarValue, Group, KillSelection, PortDefinition, ResourceLimits, Role, RootGroup, Secret, Timestamp, UnreachableStrategy, UpgradeStrategy, VersionInfo}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -90,7 +90,8 @@ object Builders {
       unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
       killSelection: KillSelection = KillSelection.DefaultKillSelection,
       tty: Option[Boolean] = AppDefinition.DefaultTTY,
-      role: Role = "*"): AppDefinition = {
+      role: Role = "*",
+      resourceLimits: Option[ResourceLimits] = None): AppDefinition = {
       AppDefinition(
         id = id,
         role = role,
@@ -118,7 +119,8 @@ object Builders {
         secrets = secrets,
         unreachableStrategy = unreachableStrategy,
         killSelection = killSelection,
-        tty = tty)
+        tty = tty,
+        resourceLimits = resourceLimits)
     }
   }
 }
