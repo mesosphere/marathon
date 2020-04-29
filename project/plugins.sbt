@@ -43,3 +43,8 @@ scalaVersion := {
     case "1.0" => "2.12.4"
   }
 }
+
+// Documentation
+addSbtPlugin("com.typesafe.sbt" % "sbt-ghpages" % "0.6.3")
+addSbtPlugin("com.typesafe.sbt" % "sbt-site" % "1.3.2")
+addSbtPlugin("io.github.jonas" % "sbt-paradox-material-theme" % "0.6.0")

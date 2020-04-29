@@ -1,4 +1,5 @@
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import com.typesafe.sbt.SbtGit.GitKeys._
 import com.typesafe.sbt.SbtNativePackager.autoImport.NativePackagerHelper.directory
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import mesosphere.maven.MavenSettings.{loadM2Credentials, loadM2Resolvers}
@@ -228,4 +229,24 @@ lazy val benchmark = (project in file("benchmark"))
   .settings(
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
     libraryDependencies ++= Dependencies.benchmark
+  )
+
+lazy val docs = (project in file("docs"))
+  .enablePlugins(GhpagesPlugin, ParadoxSitePlugin, ParadoxMaterialThemePlugin)
+  .settings(
+    version := {
+      import sys.process._
+      ("./version" !!).trim
+    },
+
+    s3credentials := DefaultAWSCredentialsProviderChain.getInstance(),
+    s3region :=  com.amazonaws.services.s3.model.Region.US_Standard,
+    publish / skip := true,
+
+    name := "Marathon",
+    gitRemoteRepo := "git@github.com:mesosphere/marathon",
+    ghpagesNoJekyll := true,
+
+    ParadoxMaterialThemePlugin.paradoxMaterialThemeSettings(Paradox),
+    paradoxProperties ++= Map("image.base_url" -> ".../img")
   )

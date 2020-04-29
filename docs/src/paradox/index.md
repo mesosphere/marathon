@@ -1,6 +1,9 @@
----
-title: A container orchestration platform for Mesos and DC/OS
----
+@@@ index
+
+  * [Getting Started](getting-started/index.md)
+  * [Using Marathon](using-marathon/index.md)
+
+@@@
 
 <div class="jumbotron text-center">
   <h1>Marathon</h1>
@@ -23,6 +26,8 @@ title: A container orchestration platform for Mesos and DC/OS
     v1.8.222 Release Notes
   </a>
 </div>
+
+# Introduction
 
 ## Overview
 
@@ -68,9 +73,7 @@ Meanwhile, Marathon also runs the other application containers - either Docker o
 
 We have shown that Marathon is responsible for running other frameworks, helps them maintain 100% uptime, and coexists with them creating workloads in Mesos.
 
-<p class="text-center">
-  <img src="{{ site.baseurl}}/img/architecture.png" width="423" height="477" alt="">
-</p>
+![architecture](.../architecture.png)
 
 ### Scaling and fault recovery
 
@@ -78,20 +81,14 @@ The next three images illustrate scaling and container placement.
 
 Below we see Marathon running three applications, each scaled to a different number of containers: Search (1), Jetty (3), and Rails (5).
 
-<p class="text-center">
-  <img src="{{ site.baseurl}}/img/marathon1.png" width="420" height="269" alt="">
-</p>
+![marathon1](.../marathon1.png)
 
 As the website gains traction, we decide to scale out the Search service and our Rails-based application.
 
 We use the Marathon REST API call to to add more instances. Marathon will take care of placing the new containers on machines with spare capacity, honoring the constraints we previously set. We can see the containers are dynamically placed:
 
-<p class="text-center">
-  <img src="{{ site.baseurl}}/img/marathon2.png" width="420" height="269" alt="">
-</p>
+![marathon2](.../marathon2.png)
 
 Finally, imagine that one of the datacenter workers trips over a power cord and a server is unplugged. No problem for Marathon: it moves the affected Search and Rails containers to a node that has spare capacity. Marathon has maintained our uptime in the face of machine failure.
 
-<p class="text-center">
-  <img src="{{ site.baseurl}}/img/marathon3.png" width="417" height="268" alt="">
-</p>
+![marathon3](.../marathon3.png)
