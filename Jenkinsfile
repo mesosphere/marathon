@@ -35,15 +35,14 @@ ansiColor('xterm') {
     }
 
     stage('Release MoM EE Docker Image') {
-      //if (env.BRANCH_NAME == 'master' || env.BRANCH_NAME ==~ /releases\/.*/) { Always run for testing.
-        //env['DOCKER_VERSION'] = sh(script: "./version docker", returnStdout: true).trim()
+      if (env.BRANCH_NAME == 'master' || env.BRANCH_NAME ==~ /releases\/.*/) {
         version = sh(script: "./version docker", returnStdout: true).trim()
         build(
              job: '/marathon-dcos-plugins/release-mom-ee-docker-image/master',
              parameters: [string(name: 'from_image_tag', value: version)],
              propagate: true
         )
-      //}
+      }
     }
   }
 }
