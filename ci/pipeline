@@ -285,9 +285,9 @@ def buildMaster(): Unit = {
     updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
   }
 
-  // Publish Docker image as `unstable`
-  %('docker, "tag", s"mesosphere/marathon:${dockerTag}", "mesosphere/marathon:unstable")
-  %('docker, "push", "mesosphere/marathon:unstable")
+  // Publish Docker image
+  %('docker, "tag", s"mesosphere/marathon:${dockerTag}")
+  %('docker, "push", s"mesosphere/marathon:${dockerTag}")
 }
 
 /**
