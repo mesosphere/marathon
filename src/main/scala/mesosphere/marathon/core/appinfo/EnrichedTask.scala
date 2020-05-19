@@ -5,7 +5,7 @@ import mesosphere.marathon.core.health.Health
 import mesosphere.marathon.core.instance.Instance.AgentInfo
 import mesosphere.marathon.core.instance.{Instance, Reservation}
 import mesosphere.marathon.core.task.{Task, Tasks}
-import mesosphere.marathon.state.{AbsolutePathId, Role}
+import mesosphere.marathon.state.{AbsolutePathId, ResourceLimits, Role}
 
 case class EnrichedTask(
     appId: AbsolutePathId,
@@ -14,7 +14,10 @@ case class EnrichedTask(
     healthCheckResults: Seq[Health],
     servicePorts: Seq[Int],
     reservation: Option[Reservation],
-    role: Role
+    role: Role,
+    cpus: Double,
+    mem: Double,
+    resourceLimits: Option[ResourceLimits]
 )
 
 object EnrichedTask {
@@ -33,7 +36,18 @@ object EnrichedTask {
     instance match {
       case Instance(instanceId, Some(agentInfo), _, tasksMap @ NonEmpty(), _, reservation, role) =>
         tasksMap.values.map { task =>
-          EnrichedTask(instanceId.runSpecId, task, agentInfo, healthCheckResults, servicePorts, reservation, role)
+          EnrichedTask(
+            instanceId.runSpecId,
+            task,
+            agentInfo,
+            healthCheckResults,
+            servicePorts,
+            reservation,
+            role,
+            cpus = instance.runSpec.resources.cpus,
+            mem = instance.runSpec.resources.mem,
+            resourceLimits = instance.runSpec.resourceLimits
+          )
         }
       case _ => Seq.empty
     }
@@ -51,7 +65,20 @@ object EnrichedTask {
   def singleFromInstance(instance: Instance, healthCheckResults: Seq[Health] = Nil): Option[EnrichedTask] =
     instance match {
       case instance @ Instance(instanceId, Some(agentInfo), _, Tasks(firstTask, _*), _, reservation, role) =>
-        Some(EnrichedTask(instanceId.runSpecId, firstTask, agentInfo, healthCheckResults, Nil, reservation, role))
+        Some(
+          EnrichedTask(
+            instanceId.runSpecId,
+            firstTask,
+            agentInfo,
+            healthCheckResults,
+            Nil,
+            reservation,
+            role,
+            cpus = instance.runSpec.resources.cpus,
+            mem = instance.runSpec.resources.mem,
+            resourceLimits = instance.runSpec.resourceLimits
+          )
+        )
       case _ => None
     }
 }

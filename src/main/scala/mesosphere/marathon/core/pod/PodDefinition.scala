@@ -48,6 +48,7 @@ case class PodDefinition(
 
   val endpoints: Seq[Endpoint] = containers.flatMap(_.endpoints)
   val resources = aggregateResources()
+  val resourceLimits = PodDefinition.aggregateResourceLimits(containers.flatMap(_.resourceLimits))
 
   override val volumeMounts: Seq[VolumeMount] = containers.flatMap(_.volumeMounts)
 
@@ -148,4 +149,20 @@ object PodDefinition {
   val DefaultBackoffStrategy = BackoffStrategy()
   val DefaultUpgradeStrategy = AppDefinition.DefaultUpgradeStrategy
   val DefaultUnreachableStrategy = UnreachableStrategy.default(resident = false)
+
+  private[core] def aggregateResourceLimits(resourceLimits: Seq[ResourceLimits]): Option[ResourceLimits] = {
+    val cpusLimit = resourceLimits.iterator.flatMap(_.cpus).sum
+    val memLimit = resourceLimits.iterator.flatMap(_.mem).sum
+    if ((cpusLimit == 0d) && (memLimit == 0d)) {
+      None
+    } else {
+      Some(
+        ResourceLimits(
+          cpus = (if (cpusLimit == 0d) None else Some(cpusLimit)),
+          mem = (if (memLimit == 0d) None else Some(memLimit))
+        )
+      )
+    }
+
+  }
 }

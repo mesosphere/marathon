@@ -50,6 +50,7 @@ trait PodStatusConversion {
       endpoints = endpointStatus,
       conditions = List(maybeHealthCondition(targetTask.status, maybeContainerSpec, endpointStatus, since, instance)).flatten,
       resources = resources,
+      resourceLimits = pod.resourceLimits.map(_.toRaml),
       lastUpdated = since, // TODO(jdef) pods fixme
       lastChanged = since // TODO(jdef) pods.fixme
     )
@@ -90,6 +91,7 @@ trait PodStatusConversion {
       agentRegion = instance.region,
       agentZone = instance.zone,
       resources = Some(resources),
+      resourceLimits = instance.runSpec.resourceLimits.map(_.toRaml),
       networks = networkStatus,
       containers = containerStatus,
       localVolumes = localVolumes,

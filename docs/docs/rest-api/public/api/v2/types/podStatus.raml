@@ -92,6 +92,10 @@ types:
         type: resources.Resources
         description: |
           Resources in use by this container.
+      resourceLimits?:
+        type: resources.ResourceLimits
+        description: |
+          Aggregate resource limits for all containers in a pod
       termination?: ContainerTerminationState
       lastUpdated:
         type: datetime
@@ -169,6 +173,10 @@ types:
         description: |
           Sum of all resources allocated for this pod instance.
           May include additional, system-allocated resources for the default executor.
+      resourceLimits?:
+        type: resources.ResourceLimits
+        description: |
+          Aggregate resource limits for all containers in a pod
       networks?:
         type: array
         items: NetworkStatus

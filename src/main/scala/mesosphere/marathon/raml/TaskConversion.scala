@@ -60,7 +60,10 @@ object TaskConversion extends HealthConversion with DefaultConversions {
       localVolumes = localVolumes,
       region = enrichedTask.agentInfo.region,
       zone = enrichedTask.agentInfo.zone,
-      role = enrichedTask.role
+      role = enrichedTask.role,
+      cpus = enrichedTask.cpus,
+      mem = enrichedTask.mem,
+      resourceLimits = enrichedTask.resourceLimits.map(_.toRaml)
     )
   }
 }

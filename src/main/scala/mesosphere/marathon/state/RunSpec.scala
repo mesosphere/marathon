@@ -38,6 +38,7 @@ trait RunSpec extends plugin.RunSpec {
   val constraints: Set[Constraint]
   val version: Timestamp
   val resources: Resources
+  val resourceLimits: Option[ResourceLimits]
   val backoffStrategy: BackoffStrategy
   val upgradeStrategy: UpgradeStrategy
   def isResident: Boolean = persistentVolumes.nonEmpty
@@ -69,6 +70,7 @@ trait RunSpec extends plugin.RunSpec {
     * Reference to the last config ref
     */
   final def configRef: RunSpecConfigRef = RunSpecConfigRef(id, versionInfo.lastConfigChangeVersion)
+
 }
 
 object RunSpec {

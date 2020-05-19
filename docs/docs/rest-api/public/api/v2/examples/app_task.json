@@ -13,6 +13,8 @@
     "state" : "TASK_STAGING",
     "region": "primary",
     "zone" : "a",
-    "role" : "*"
+    "role" : "*",
+    "cpus": 0.1,
+    "mem": 32
   }
 }

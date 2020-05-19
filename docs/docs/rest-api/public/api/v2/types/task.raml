@@ -5,6 +5,7 @@ uses:
   localVolumes: localVolumes.raml
   numbers: numberTypes.raml
   strings: stringTypes.raml
+  resources: resources.raml
 
 types:
 
@@ -45,6 +46,9 @@ types:
       checkResult?: check.CheckStatus
       host: string
       id: string
+      cpus: number
+      mem: number
+      resourceLimits?: resources.ResourceLimits
       ipAddresses?: IpAddr[]
       ports?: numbers.Port[]
       servicePorts?: numbers.Port[]

@@ -17,7 +17,9 @@
       ],
       "region": "primary",
       "zone" : "a",
-      "role" : "*"
+      "role" : "*",
+      "cpus": 0.1,
+      "mem": 32
     },
     {
       "id": "tools_docker_registry.002b4d28-46b9-11e5-b731-525400cce7ed",
@@ -36,7 +38,9 @@
       ],
       "region": "primary",
       "zone" : "a",
-      "role" : "*"
+      "role" : "*",
+      "cpus": 0.1,
+      "mem": 32
     }
   ]
 }
