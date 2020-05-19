@@ -286,7 +286,6 @@ def buildMaster(): Unit = {
   }
 
   // Publish Docker image
-  %('docker, "tag", s"mesosphere/marathon:${dockerTag}")
   %('docker, "push", s"mesosphere/marathon:${dockerTag}")
 }
 
