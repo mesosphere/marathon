@@ -3,6 +3,13 @@
 ### Fixed issues
 
 * [MARATHON-8762](https://jira.d2iq.com/browse/MARATHON-8762) - Marathon allows migrations to be re-applied if they did not previously complete.
+## Changes from 1.10.17 to 1.10.x
+
+### resourceLimits in pods and apps instance API
+
+`/v2/tasks` and `/v2/pods::status` includes the aggregate resourceLimits for each instance, enabling easier reporting of resourceLimits.
+
+Also, `/v2/tasks` now reports the cpus and mem consumed for each instance.
 
 ## Changes from 1.9.136 to 1.10.17
 
