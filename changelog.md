@@ -29,6 +29,13 @@ Also, newly created pods will no longer allow containers to steal resources from
 For more information, see [resource-limits.md](https://github.com/mesosphere/marathon/blob/master/docs/docs/resource-limits.md)
 
 ## Changes from 1.9.100 to 1.9.136
+## Changes from 1.9.139 to 1.9.xxx
+
+### Compatibility breaking changes
+
+* [MARATHON-8748] - Marathon now returns an error if a completely invalid `acceptedResourceRoles` is specified, rather than sanitizing it and using `["*"]`. This is intended to address a situation where users were attempting to deploy an app on a DC/OS public node, but weren't using the service role `slave_public`.
+
+## Changes from 1.9.100 to 1.9.139
 
 ### Fixed issues
 

@@ -212,8 +212,10 @@ object AppNormalization {
       // This method is only called when [[DeprecatedFeatures.sanitizeAcceptedResourceRoles]] is ON. In this
       // case we not only filter out invalid roles, but also fallback to the default (*) one. Note that acceptedResourceRoles
       // is about reservations and NOT allocation, so the default one is (*) and not (--mesos_role)
-      if (sanitized.isEmpty) Set(ResourceRole.Unreserved)
-      else sanitized
+      if (sanitized.isEmpty)
+        throw NormalizationException(s"acceptedResourceRoles is invalid. Specify either '*', '${effectiveRole}' (the service role), or both.")
+      else
+        sanitized
     }
   }
 

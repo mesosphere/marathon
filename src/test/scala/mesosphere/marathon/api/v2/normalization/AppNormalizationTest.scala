@@ -6,8 +6,11 @@ import mesosphere.marathon.api.v2.{AppNormalization, NetworkNormalizationMessage
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.util.RoleSettings
+import org.scalatest.Inside
 
-class AppNormalizationTest extends UnitTest {
+import scala.util.{Failure, Try}
+
+class AppNormalizationTest extends UnitTest with Inside {
 
   import Normalization._
 
@@ -706,24 +709,39 @@ class AppNormalizationTest extends UnitTest {
         )
         raw.normalize(configuredNormalizer) should be(raw.copy(role = Some("someCustomRole")))
       }
-
     }
 
     "normalize accepted resource roles" when {
-      val raw = App(
+      val `without-*-role` = App(
+        id = "/foo",
+        cmd = Option("sleep"),
+        acceptedResourceRoles = Some(Set("other"))
+      )
+
+      val `with-*-role` = App(
         id = "/foo",
         cmd = Option("sleep"),
         acceptedResourceRoles = Some(Set("*", "other"))
       )
 
+      "refuses to normalize when neither '*' nor the app role is contained" in {
+        val configuredNormalizer = normalizer(role = Some("default_role"), sanitizeAcceptedResourceRoles = true)
+        inside(Try({
+          `without-*-role`.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*"))
+        })) {
+          case Failure(ex: NormalizationException) =>
+            ex.msg shouldBe "acceptedResourceRoles is invalid. Specify either '*', 'default_role' (the service role), or both."
+        }
+      }
+
       s"the ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} feature is enabled" in {
         val configuredNormalizer = normalizer(role = Some("default_role"), sanitizeAcceptedResourceRoles = true)
-        raw.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*"))
+        `with-*-role`.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*"))
       }
 
       s"the ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} feature is disabled" in {
         val configuredNormalizer = normalizer(role = Some("default_role"), sanitizeAcceptedResourceRoles = false)
-        raw.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*", "other"))
+        `with-*-role`.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*", "other"))
       }
     }
   }
