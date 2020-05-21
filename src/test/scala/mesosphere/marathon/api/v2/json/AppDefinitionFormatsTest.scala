@@ -213,8 +213,8 @@ class AppDefinitionFormatsTest extends UnitTest with HealthCheckFormats with Mat
       appDef.acceptedResourceRoles should equal(Set(ResourceRole.Unreserved))
     }
 
-    "FromJSON should is sanitized when 'acceptedResourceRoles' is defined but empty" in {
-      val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": [] }""")
+    "FromJSON should is sanitized when 'acceptedResourceRoles' is defined but contains an invalid role" in {
+      val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": ["*", "invalid"] }""")
       val appDef = normalizeAndConvert(json.as[raml.App])
       appDef.acceptedResourceRoles should equal(Set(ResourceRole.Unreserved))
     }

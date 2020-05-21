@@ -730,7 +730,7 @@ class AppNormalizationTest extends UnitTest with Inside {
           `without-*-role`.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*"))
         })) {
           case Failure(ex: NormalizationException) =>
-            ex.msg shouldBe "acceptedResourceRoles is invalid. Specify either '*', 'default_role' (the service role), or both."
+            ex.msg shouldBe """acceptedResourceRoles is invalid. Valid values are ["*"], ["default_role"], or ["*", "default_role"]."""
         }
       }
 
