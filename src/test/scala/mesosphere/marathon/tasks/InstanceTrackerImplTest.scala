@@ -106,10 +106,6 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       testAppInstances should have size (3)
     }
 
-    "Contains" in new Fixture {
-      testContains(_.hasSpecInstancesSync(_))
-    }
-
     "Contains Async" in new Fixture {
       testContains(_.hasSpecInstances(_).futureValue)
     }
@@ -159,7 +155,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       state.ids().runWith(EnrichedSink.set).futureValue should not contain (sampleInstance.instanceId)
 
       // APP SHUTDOWN
-      assert(!instanceTracker.hasSpecInstancesSync(TEST_APP_NAME), "App was not removed")
+      assert(!instanceTracker.hasSpecInstances(TEST_APP_NAME).futureValue, "App was not removed")
 
       // ERRONEOUS MESSAGE, TASK DOES NOT EXIST ANYMORE
       val lostStatus = makeTaskStatus(sampleInstance, TaskState.TASK_LOST)

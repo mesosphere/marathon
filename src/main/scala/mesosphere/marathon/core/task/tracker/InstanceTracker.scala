@@ -69,7 +69,6 @@ trait InstanceTracker extends StrictLogging {
 
   def countActiveSpecInstances(appId: AbsolutePathId): Future[Int]
 
-  def hasSpecInstancesSync(appId: AbsolutePathId): Boolean
   def hasSpecInstances(appId: AbsolutePathId)(implicit ec: ExecutionContext): Future[Boolean]
 
   /** Process an InstanceUpdateOperation and propagate its result. */

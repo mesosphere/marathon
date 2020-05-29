@@ -58,7 +58,6 @@ private[marathon] class InstanceTrackerDelegate(
     specInstances(appId).map(_.count(instance => instance.isActive))
   }
 
-  override def hasSpecInstancesSync(appId: AbsolutePathId): Boolean = specInstancesSync(appId).nonEmpty
   override def hasSpecInstances(appId: AbsolutePathId)(implicit ec: ExecutionContext): Future[Boolean] =
     specInstances(appId).map(_.nonEmpty)
 
