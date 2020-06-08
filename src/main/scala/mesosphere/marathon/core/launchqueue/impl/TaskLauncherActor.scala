@@ -150,7 +150,7 @@ private class TaskLauncherActor(
     case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if scheduledVersions.contains(ref) =>
       val now = clock.now()
       // If there's no delay, then launch immediately
-      launchAllowedAt += ref -> maybeDelayUntil.map(_.deadline).getOrElse(now)
+      launchAllowedAt += ref -> maybeDelayUntil.fold(now)(_.deadline)
 
       manageOfferMatcherStatus(now)
 
@@ -158,7 +158,7 @@ private class TaskLauncherActor(
 
       logger.debug(s"After delay update $status")
 
-    case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref.id != runSpecId =>
+    case RateLimiter.DelayUpdate(ref, delayUntil) if ref.id != runSpecId =>
       logger.warn(s"BUG! Received delay update for other run spec $ref and delay $delayUntil. Current run spec is $runSpecId")
 
     case RecheckIfBackOffUntilReached => manageOfferMatcherStatus(clock.now())
