@@ -58,10 +58,6 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       deserializedInstance should equal(Some(originalInstance))
     }
 
-    "List" in new Fixture {
-      testList(_.instancesBySpecSync)
-    }
-
     "List Async" in new Fixture {
       testList(_.instancesBySpec().futureValue)
     }

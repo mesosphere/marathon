@@ -20,7 +20,7 @@ import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import org.apache.mesos
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success}
 
 /**
@@ -34,11 +34,6 @@ private[marathon] class InstanceTrackerDelegate(
     clock: Clock,
     config: InstanceTrackerConfig,
     instanceTrackerRef: ActorRef)(implicit mat: Materializer) extends InstanceTracker {
-
-  override def instancesBySpecSync: InstanceTracker.InstancesBySpec = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    Await.result(instancesBySpec(), instanceTrackerQueryTimeout.duration)
-  }
 
   override def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec] =
     tasksByAppTimeMetric {

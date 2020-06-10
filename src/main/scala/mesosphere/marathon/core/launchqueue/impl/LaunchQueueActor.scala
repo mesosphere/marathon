@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import java.util.concurrent.atomic.AtomicLong
-
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import akka.{Done, NotUsed}
@@ -95,6 +93,7 @@ private[impl] class LaunchQueueActor(
 
   def initializing: Receive = {
     case instances: InstanceTracker.InstancesBySpec =>
+      println(s"###### Loaded: $instances")
 
       instances.instancesMap.collect {
         case (id, specInstances) if specInstances.instances.exists(_.isScheduled) =>
