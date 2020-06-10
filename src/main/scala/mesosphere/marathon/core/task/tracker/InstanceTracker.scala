@@ -45,9 +45,6 @@ trait InstanceTracker extends StrictLogging {
     */
   def specInstances(pathId: AbsolutePathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]]
 
-  /** Synchronous blocking version of [[InstanceTracker.specInstances()]]. */
-  def specInstancesSync(pathId: AbsolutePathId, readAfterWrite: Boolean = false): Seq[Instance]
-
   /**
     * Look up a specific instance by id.
     *
@@ -141,7 +138,7 @@ object InstanceTracker {
   object InstancesBySpec {
 
     def of(specInstances: collection.immutable.Map[AbsolutePathId, InstanceTracker.SpecInstances]): InstancesBySpec = {
-      new InstancesBySpec(specInstances.withDefault(appId => InstanceTracker.SpecInstances()))
+      new InstancesBySpec(specInstances.withDefault(_ => InstanceTracker.SpecInstances()))
     }
 
     def forInstances(instances: Iterable[Instance]): InstancesBySpec = of(

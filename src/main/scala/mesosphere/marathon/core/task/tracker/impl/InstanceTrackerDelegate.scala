@@ -43,7 +43,7 @@ private[marathon] class InstanceTrackerDelegate(
   override def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec] =
     tasksByAppTimeMetric {
       (instanceTrackerRef ? InstanceTrackerActor.List).mapTo[InstanceTracker.InstancesBySpec].recover {
-        case e: AskTimeoutException =>
+        case _: AskTimeoutException =>
           throw new TimeoutException(
             s"timeout while calling instancesBySpec() (current value = ${config.internalTaskTrackerRequestTimeout().milliseconds}ms." +
               "If you know what you are doing, you can adjust the timeout " +
@@ -60,11 +60,6 @@ private[marathon] class InstanceTrackerDelegate(
 
   override def hasSpecInstances(appId: AbsolutePathId)(implicit ec: ExecutionContext): Future[Boolean] =
     specInstances(appId).map(_.nonEmpty)
-
-  override def specInstancesSync(appId: AbsolutePathId, readAfterWrite: Boolean = false): Seq[Instance] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    Await.result(specInstances(appId, readAfterWrite), instanceTrackerQueryTimeout.duration)
-  }
 
   override def specInstances(appId: AbsolutePathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]] = {
     val query = InstanceTrackerActor.ListBySpec(appId)
