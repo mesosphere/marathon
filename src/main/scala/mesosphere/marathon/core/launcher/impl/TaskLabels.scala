@@ -30,12 +30,14 @@ object TaskLabels {
   }
 
   def labelsForTask(frameworkId: FrameworkId, reservationId: Reservation.Id): ReservationLabels = {
-    ReservationLabels(Map(
-      FRAMEWORK_ID_LABEL -> frameworkId.id,
-      // This uses taskId.reservationId to match against the id that was originally used to create the reservation
-      // We probably want to call it RESERVATION_ID_LABEL in the future. See MARATHON-8517.
-      TASK_ID_LABEL -> reservationId.label
-    ))
+    ReservationLabels(
+      Map(
+        FRAMEWORK_ID_LABEL -> frameworkId.id,
+        // This uses taskId.reservationId to match against the id that was originally used to create the reservation
+        // We probably want to call it RESERVATION_ID_LABEL in the future. See MARATHON-8517.
+        TASK_ID_LABEL -> reservationId.label
+      )
+    )
   }
 
   def labelKeysForReservations: Set[String] = Set(FRAMEWORK_ID_LABEL, TASK_ID_LABEL)

@@ -14,21 +14,24 @@ import mesosphere.marathon.stream.Implicits.toRichIterable
 
 object AppHelpers {
 
-  def appNormalization(config: AppNormalization.Config, validRoles: Set[String]): Normalization[raml.App] = Normalization { app =>
+  def appNormalization(config: AppNormalization.Config, validRoles: Set[String]): Normalization[raml.App] =
+    Normalization { app =>
+      validateOrThrow(app)(AppValidation.validateOldAppAPI)
 
-    validateOrThrow(app)(AppValidation.validateOldAppAPI)
+      val migrated = AppNormalization.forDeprecated(config).normalized(app)
+      val preNormalized = AppNormalization.forPreValidation(config).normalized(migrated)
+      validateOrThrow(preNormalized)(
+        AppValidation.validateCanonicalAppAPI(config.enabledFeatures, () => config.defaultNetworkName, validRoles)
+      )
+      AppNormalization.forPostValidation(config).normalized(preNormalized)
+    }
 
-    val migrated = AppNormalization.forDeprecated(config).normalized(app)
-    val preNormalized = AppNormalization.forPreValidation(config).normalized(migrated)
-    validateOrThrow(preNormalized)(AppValidation.validateCanonicalAppAPI(config.enabledFeatures, () => config.defaultNetworkName, validRoles))
-    AppNormalization.forPostValidation(config).normalized(preNormalized)
-  }
-
-  def appUpdateNormalization(config: AppNormalization.Config): Normalization[raml.AppUpdate] = Normalization { app =>
-    val migrated = AppNormalization.forDeprecatedUpdates(config).normalized(app)
-    validateOrThrow(migrated)(AppValidation.validateAppUpdateVersion)
-    AppNormalization.forUpdates(config).normalized(migrated)
-  }
+  def appUpdateNormalization(config: AppNormalization.Config): Normalization[raml.AppUpdate] =
+    Normalization { app =>
+      val migrated = AppNormalization.forDeprecatedUpdates(config).normalized(app)
+      validateOrThrow(migrated)(AppValidation.validateAppUpdateVersion)
+      AppNormalization.forUpdates(config).normalized(migrated)
+    }
 
   /**
     * Create an App from an AppUpdate. This basically applies when someone uses our API to create apps
@@ -42,8 +45,8 @@ object AppHelpers {
       hasExternalVolumes = update.container.exists(_.volumes.existsAn[AppExternalVolume])
     )
     val hasPersistentVols = update.container.exists(_.volumes.existsAn[AppPersistentVolume])
-    val unreachableStrategy = update
-      .unreachableStrategy.map(Raml.fromRaml(_))
+    val unreachableStrategy = update.unreachableStrategy
+      .map(Raml.fromRaml(_))
       .getOrElse(UnreachableStrategy.default(hasPersistentVols))
 
     // We're using orNull here, as the AppDefinition is only used as a template to create an raml.App from
@@ -51,16 +54,19 @@ object AppHelpers {
     // in the normalization
     val role = update.role.orNull
 
-    val template = AppDefinition(
-      appId, role = role, upgradeStrategy = selectedStrategy, unreachableStrategy = unreachableStrategy)
+    val template = AppDefinition(appId, role = role, upgradeStrategy = selectedStrategy, unreachableStrategy = unreachableStrategy)
     Raml.fromRaml(update -> template)
   }
 
-  def authzSelector(implicit authz: Authorizer, identity: Identity): AppSelector = Selector[AppDefinition] { app =>
-    authz.isAuthorized(identity, ViewRunSpec, app)
-  }
+  def authzSelector(implicit authz: Authorizer, identity: Identity): AppSelector =
+    Selector[AppDefinition] { app =>
+      authz.isAuthorized(identity, ViewRunSpec, app)
+    }
 
-  private def checkAuthorization[A, B >: A](action: AuthorizedAction[B], resource: A)(implicit identity: Identity, authorizer: Authorizer): A = {
+  private def checkAuthorization[A, B >: A](action: AuthorizedAction[B], resource: A)(implicit
+      identity: Identity,
+      authorizer: Authorizer
+  ): A = {
     if (authorizer.isAuthorized(identity, action, resource)) resource
     else throw RejectionException(Rejection.AccessDeniedRejection(authorizer, identity))
   }
@@ -75,17 +81,19 @@ object AppHelpers {
     * TODO - move async concern out
     */
   def updateOrCreate(
-    appId: AbsolutePathId,
-    existing: Option[AppDefinition],
-    appUpdate: raml.AppUpdate,
-    partialUpdate: Boolean,
-    allowCreation: Boolean,
-    now: Timestamp,
-    service: MarathonSchedulerService)(implicit
-    identity: Identity,
-    authorizer: Authorizer,
-    appDefinitionValidator: Validator[AppDefinition],
-    appNormalization: Normalization[raml.App]): AppDefinition = {
+      appId: AbsolutePathId,
+      existing: Option[AppDefinition],
+      appUpdate: raml.AppUpdate,
+      partialUpdate: Boolean,
+      allowCreation: Boolean,
+      now: Timestamp,
+      service: MarathonSchedulerService
+  )(implicit
+      identity: Identity,
+      authorizer: Authorizer,
+      appDefinitionValidator: Validator[AppDefinition],
+      appNormalization: Normalization[raml.App]
+  ): AppDefinition = {
     import Normalization._
     def createApp(): AppDefinition = {
       val app = withoutPriorAppDefinition(appUpdate, appId).normalize
@@ -116,9 +124,10 @@ object AppHelpers {
       app
     }
 
-    def updateOrRollback(current: AppDefinition): AppDefinition = appUpdate.version
-      .map(v => rollback(current, Timestamp(v)))
-      .getOrElse(updateApp(current))
+    def updateOrRollback(current: AppDefinition): AppDefinition =
+      appUpdate.version
+        .map(v => rollback(current, Timestamp(v)))
+        .getOrElse(updateApp(current))
 
     existing match {
       case Some(app) =>

@@ -43,12 +43,13 @@ object CuratorElectionStream extends StrictLogging {
     * - Crash if the stream fails (ElectionService handles this)
     */
   def apply(
-    metrics: Metrics,
-    clientCloseable: LifeCycledCloseableLike[CuratorFramework],
-    zooKeeperLeaderPath: String,
-    zooKeeperConnectionTimeout: FiniteDuration,
-    hostPort: String,
-    singleThreadEC: ExecutionContext): Source[LeadershipState, Cancellable] = {
+      metrics: Metrics,
+      clientCloseable: LifeCycledCloseableLike[CuratorFramework],
+      zooKeeperLeaderPath: String,
+      zooKeeperConnectionTimeout: FiniteDuration,
+      hostPort: String,
+      singleThreadEC: ExecutionContext
+  ): Source[LeadershipState, Cancellable] = {
     leaderLatchStream(metrics, clientCloseable, zooKeeperLeaderPath, hostPort, singleThreadEC)
       .initialTimeout(zooKeeperConnectionTimeout)
       .concat(Source.single(LeadershipState.Standby(None)))
@@ -67,70 +68,72 @@ object CuratorElectionStream extends StrictLogging {
   }
 
   private def leaderLatchStream(
-    metrics: Metrics,
-    clientCloseable: LifeCycledCloseableLike[CuratorFramework],
-    zooKeeperLeaderPath: String,
-    hostPort: String,
-    singleThreadEC: ExecutionContext): Source[LeadershipState, Cancellable] = {
+      metrics: Metrics,
+      clientCloseable: LifeCycledCloseableLike[CuratorFramework],
+      zooKeeperLeaderPath: String,
+      hostPort: String,
+      singleThreadEC: ExecutionContext
+  ): Source[LeadershipState, Cancellable] = {
 
-    Source.queue[LeadershipState](16, OverflowStrategy.dropHead)
-      .mapMaterializedValue { sq =>
-        val client: CuratorFramework = clientCloseable.closeable
-        val cancelled = new AtomicBoolean(false)
-        val curatorLeaderLatchPath = zooKeeperLeaderPath + "-curator"
-        val latch = new LeaderLatch(client, curatorLeaderLatchPath, hostPort)
+    Source.queue[LeadershipState](16, OverflowStrategy.dropHead).mapMaterializedValue { sq =>
+      val client: CuratorFramework = clientCloseable.closeable
+      val cancelled = new AtomicBoolean(false)
+      val curatorLeaderLatchPath = zooKeeperLeaderPath + "-curator"
+      val latch = new LeaderLatch(client, curatorLeaderLatchPath, hostPort)
 
-        /**
-          * On first invocation, synchronously close the latch.
-          *
+      /**
+        * On first invocation, synchronously close the latch.
+        *
           * This allows us to remove our leadership offering before closing the zookeeper client.
-          */
-        lazy val closeHook: () => Unit = { () =>
-          // logger.debug
-          if (cancelled.compareAndSet(false, true)) {
-            clientCloseable.removeBeforeClose(closeHook)
-            try {
-              logger.info("Closing leader latch")
-              latch.close()
-              logger.info("Leader latch closed")
-            } catch {
-              case ex: Throwable =>
-                logger.error("Error closing CuratorElectionStream latch", ex)
-            }
-            sq.complete()
+        */
+      lazy val closeHook: () => Unit = { () =>
+        // logger.debug
+        if (cancelled.compareAndSet(false, true)) {
+          clientCloseable.removeBeforeClose(closeHook)
+          try {
+            logger.info("Closing leader latch")
+            latch.close()
+            logger.info("Leader latch closed")
+          } catch {
+            case ex: Throwable =>
+              logger.error("Error closing CuratorElectionStream latch", ex)
           }
+          sq.complete()
         }
+      }
 
-        try {
-          /* We register the beforeClose hook to ensure that we have an opportunity to remove the latch entry before we
-           * lose our connection to Zookeeper */
-          clientCloseable.beforeClose(closeHook)
+      try {
+        /* We register the beforeClose hook to ensure that we have an opportunity to remove the latch entry before we
+         * lose our connection to Zookeeper */
+        clientCloseable.beforeClose(closeHook)
 
-          logger.info("Starting leader latch")
-          latch.start()
-          startLeaderEventsPoll(latch, metrics, singleThreadEC, client, curatorLeaderLatchPath, hostPort, sq)
-        } catch {
-          case ex: Throwable =>
-            logger.error("Error starting curator leader latch")
-            sq.fail(ex)
-        }
+        logger.info("Starting leader latch")
+        latch.start()
+        startLeaderEventsPoll(latch, metrics, singleThreadEC, client, curatorLeaderLatchPath, hostPort, sq)
+      } catch {
+        case ex: Throwable =>
+          logger.error("Error starting curator leader latch")
+          sq.fail(ex)
+      }
 
-        sq.watchCompletion().onComplete { result =>
+      sq.watchCompletion()
+        .onComplete { result =>
           logger.info(s"Leader status update SourceQueue is completed with ${result}")
           closeHook()
         }(singleThreadEC)
-        new CancellableOnce(closeHook)
-      }
+      new CancellableOnce(closeHook)
+    }
   }
 
   private def startLeaderEventsPoll(
-    latch: LeaderLatch,
-    metrics: Metrics,
-    singleThreadEC: ExecutionContext,
-    client: CuratorFramework,
-    curatorLeaderLatchPath: String,
-    hostPort: String,
-    sq: SourceQueueWithComplete[LeadershipState]): Unit = {
+      latch: LeaderLatch,
+      metrics: Metrics,
+      singleThreadEC: ExecutionContext,
+      client: CuratorFramework,
+      curatorLeaderLatchPath: String,
+      hostPort: String,
+      sq: SourceQueueWithComplete[LeadershipState]
+  ): Unit = {
 
     require(latch.getState == LeaderLatch.State.STARTED, "The leader latch must be started before calling this method.")
     val currentLoopId = new AtomicInteger()
@@ -164,48 +167,49 @@ object CuratorElectionStream extends StrictLogging {
      * @param loopId The current loopId. Used as a cancellation mechanism which ensures only one instance of this loop is running.
      * @param retries Retry mechanism, used during first initialization of Marathon
      */
-    def longPollLeaderChange(loopId: Int, retries: Int = 0): Unit = singleThreadEC.execute { () =>
-      if (currentLoopId.get() != loopId) {
-        logger.info(s"Leader watch loop ${loopId} cancelled")
-      } else {
-        try {
-          logger.debug(s"Leader watch loop ${loopId} registering watch")
-          client.getChildren
-            .usingWatcher(new CuratorWatcher {
-              override def process(event: WatchedEvent): Unit = {
-                logger.debug(s"Leader watch loop ${loopId} event received: ${event}")
-                if (event.getType != EventType.None) // ignore connection errors
-                  longPollLeaderChange(loopId)
-              }
-            })
-            .forPath(curatorLeaderLatchPath)
-          emitLeader(loopId)
-        } catch {
-          case ex: KeeperException.NoNodeException if retries < 10 =>
-            /**
-              * During the first boot of Marathon, the parent node that we watch for ephemeral leader records will be
-              * eventually created. There is no hook to which we can subscribe to be notified when this initial
-              * registration is completed.
-              *
+    def longPollLeaderChange(loopId: Int, retries: Int = 0): Unit =
+      singleThreadEC.execute { () =>
+        if (currentLoopId.get() != loopId) {
+          logger.info(s"Leader watch loop ${loopId} cancelled")
+        } else {
+          try {
+            logger.debug(s"Leader watch loop ${loopId} registering watch")
+            client.getChildren
+              .usingWatcher(new CuratorWatcher {
+                override def process(event: WatchedEvent): Unit = {
+                  logger.debug(s"Leader watch loop ${loopId} event received: ${event}")
+                  if (event.getType != EventType.None) // ignore connection errors
+                    longPollLeaderChange(loopId)
+                }
+              })
+              .forPath(curatorLeaderLatchPath)
+            emitLeader(loopId)
+          } catch {
+            case ex: KeeperException.NoNodeException if retries < 10 =>
+              /**
+                * During the first boot of Marathon, the parent node that we watch for ephemeral leader records will be
+                * eventually created. There is no hook to which we can subscribe to be notified when this initial
+                * registration is completed.
+                *
               * We retry up to 10 times, increasing the delay between retries by 10ms per loop, waiting up to a total of
-              * 450ms. If the background process does not succeed before that, we crash. (again, note, this only applies
-              * to the first boot of Marathon, ever).
-              *
+                * 450ms. If the background process does not succeed before that, we crash. (again, note, this only applies
+                * to the first boot of Marathon, ever).
+                *
               * This retry logic is not used for any other purpose (lost connections, etc.).
-              */
-            logger.info(s"Leader watch loop ${loopId} retrying; waiting for latch initialization.")
-            Thread.sleep(retries * 10L)
-            longPollLeaderChange(loopId, retries + 1)
-          case ex: KeeperException.ConnectionLossException =>
-            // Do nothing; we emit a None on loss already, and we'll start a new loop
-            logger.info(s"Leader watch loop ${loopId} stopped due to connection loss", ex)
-          case ex: Throwable =>
-            logger.info(s"Leader watch loop ${loopId} failed", ex)
-            // This will lead to ElectionService crashing (standby or not); it ends the stream
-            sq.fail(ex)
+                */
+              logger.info(s"Leader watch loop ${loopId} retrying; waiting for latch initialization.")
+              Thread.sleep(retries * 10L)
+              longPollLeaderChange(loopId, retries + 1)
+            case ex: KeeperException.ConnectionLossException =>
+              // Do nothing; we emit a None on loss already, and we'll start a new loop
+              logger.info(s"Leader watch loop ${loopId} stopped due to connection loss", ex)
+            case ex: Throwable =>
+              logger.info(s"Leader watch loop ${loopId} failed", ex)
+              // This will lead to ElectionService crashing (standby or not); it ends the stream
+              sq.fail(ex)
+          }
         }
       }
-    }
 
     /**
       * Emit current leader. Does not fail on connection error, but throws if multiple election candidates have the same
@@ -245,28 +249,30 @@ object CuratorElectionStream extends StrictLogging {
       * potentially other buggy cases?). This is in alignment with how LeaderLatch behaves.
       */
     val leaderEmitterListener: ConnectionStateListener = new ConnectionStateListener {
-      def stateChanged(client: CuratorFramework, state: ConnectionState): Unit = state match {
-        case ConnectionState.RECONNECTED =>
-          // prevent spawning off another loop if source queue is completed.
-          if (!sq.watchCompletion().isCompleted) {
-            val nextLoopId = currentLoopId.incrementAndGet()
-            logger.info(s"Connection reestablished; spawning new leader watch loop ${nextLoopId}")
-            longPollLeaderChange(nextLoopId)
-          }
-        case ConnectionState.LOST | ConnectionState.SUSPENDED =>
-          logger.info(s"Connection ${state}; assuming leader is unknown")
-          sq.offer(LeadershipState.Standby(None)) // https://cwiki.apache.org/confluence/display/CURATOR/TN14
-        case otherwise =>
-          logger.debug(s"Connection State ${otherwise}")
-      }
+      def stateChanged(client: CuratorFramework, state: ConnectionState): Unit =
+        state match {
+          case ConnectionState.RECONNECTED =>
+            // prevent spawning off another loop if source queue is completed.
+            if (!sq.watchCompletion().isCompleted) {
+              val nextLoopId = currentLoopId.incrementAndGet()
+              logger.info(s"Connection reestablished; spawning new leader watch loop ${nextLoopId}")
+              longPollLeaderChange(nextLoopId)
+            }
+          case ConnectionState.LOST | ConnectionState.SUSPENDED =>
+            logger.info(s"Connection ${state}; assuming leader is unknown")
+            sq.offer(LeadershipState.Standby(None)) // https://cwiki.apache.org/confluence/display/CURATOR/TN14
+          case otherwise =>
+            logger.debug(s"Connection State ${otherwise}")
+        }
     }
 
     client.getConnectionStateListenable.addListener(leaderEmitterListener)
     longPollLeaderChange(currentLoopId.incrementAndGet())
-    sq.watchCompletion().onComplete {
-      case _ =>
-        client.getConnectionStateListenable.removeListener(leaderEmitterListener)
-        currentLoopId.incrementAndGet() // cancel poll loop
-    }(singleThreadEC)
+    sq.watchCompletion()
+      .onComplete {
+        case _ =>
+          client.getConnectionStateListenable.removeListener(leaderEmitterListener)
+          currentLoopId.incrementAndGet() // cancel poll loop
+      }(singleThreadEC)
   }
 }

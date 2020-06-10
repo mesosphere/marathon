@@ -57,15 +57,14 @@ object AppHealthCheckActor {
     * @param healthCheck The health check for which the status is updated
     * @param healthState The new state of the health check
     */
-  case class HealthCheckStatusChanged(
-      appKey: ApplicationKey,
-      healthCheck: HealthCheck, healthState: Health)
+  case class HealthCheckStatusChanged(appKey: ApplicationKey, healthCheck: HealthCheck, healthState: Health)
 
   /**
     * This proxy class is the implementation of the actor. It has been created to be used in performance benchmarks.
     * Beware this class is NOT thread safe.
     */
   class AppHealthCheckProxy extends StrictLogging {
+
     /**
       * Map of health check definitions of all applications
       */
@@ -128,7 +127,10 @@ object AppHealthCheckActor {
       * @param toPurge the health checks to purge from the container
       */
     private def purgeHealthChecks[K, A, V <: Iterable[A]](
-      healthChecksContainers: mutable.Map[K, V], toPurge: Seq[(K, HealthCheck)], remove: (V, HealthCheck) => V): Unit = {
+        healthChecksContainers: mutable.Map[K, V],
+        toPurge: Seq[(K, HealthCheck)],
+        remove: (V, HealthCheck) => V
+    ): Unit = {
       toPurge.foreach({
         case (key, healthCheck) =>
           healthChecksContainers.get(key) match {
@@ -169,17 +171,25 @@ object AppHealthCheckActor {
       * @param healthState The new state of the health check
       * @param notifier The notifier callback called when the instance healthiness has changed.
       */
-    def updateHealthCheckStatus(appKey: ApplicationKey, healthCheck: HealthCheck, healthState: Health,
-      notifier: (Option[Boolean] => Unit)): Unit = {
+    def updateHealthCheckStatus(
+        appKey: ApplicationKey,
+        healthCheck: HealthCheck,
+        healthState: Health,
+        notifier: (Option[Boolean] => Unit)
+    ): Unit = {
       healthChecks.get(appKey) match {
         case Some(hcDefinitions) if hcDefinitions.contains(healthCheck) =>
-          logger.debug(s"Status changed to $healthState for health check $healthCheck of " +
-            s"instance appId:${appKey.appId} version:${appKey.version} instanceId:${healthState.instanceId}")
+          logger.debug(
+            s"Status changed to $healthState for health check $healthCheck of " +
+              s"instance appId:${appKey.appId} version:${appKey.version} instanceId:${healthState.instanceId}"
+          )
 
           val instanceKey = InstanceKey(appKey, healthState.instanceId)
-          val currentInstanceHealthResults = healthCheckStates.getOrElse(instanceKey, {
-            hcDefinitions.map(x => (x, Option.empty[Health])).toMap
-          })
+          val currentInstanceHealthResults = healthCheckStates.getOrElse(
+            instanceKey, {
+              hcDefinitions.map(x => (x, Option.empty[Health])).toMap
+            }
+          )
 
           val newInstanceHealthResults = currentInstanceHealthResults + (healthCheck -> Some(healthState))
 
@@ -208,12 +218,12 @@ class AppHealthCheckActor(eventBus: EventStream) extends Actor with StrictLoggin
   // A proxy class has been created in order to be tested in performance benchmarks.
   val proxy = new AppHealthCheckProxy
 
-  private def notifyHealthChanged(applicationKey: ApplicationKey, instanceId: Instance.Id,
-    healthiness: Option[Boolean]): Unit = {
-    logger.debug(s"Instance global health status changed to healthiness=$healthiness " +
-      s"for instance appId:$applicationKey instanceId:$instanceId")
-    eventBus.publish(InstanceHealthChanged(
-      instanceId, applicationKey.version, applicationKey.appId, healthiness))
+  private def notifyHealthChanged(applicationKey: ApplicationKey, instanceId: Instance.Id, healthiness: Option[Boolean]): Unit = {
+    logger.debug(
+      s"Instance global health status changed to healthiness=$healthiness " +
+        s"for instance appId:$applicationKey instanceId:$instanceId"
+    )
+    eventBus.publish(InstanceHealthChanged(instanceId, applicationKey.version, applicationKey.appId, healthiness))
   }
 
   override def receive: Receive = {

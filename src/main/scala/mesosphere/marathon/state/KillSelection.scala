@@ -5,10 +5,11 @@ package state
   * Defines a kill selection for tasks. See [[mesosphere.marathon.core.deployment.ScalingProposition]].
   */
 sealed trait KillSelection {
-  def apply(a: Timestamp, b: Timestamp): Boolean = this match {
-    case KillSelection.YoungestFirst => a.youngerThan(b)
-    case KillSelection.OldestFirst => a.olderThan(b)
-  }
+  def apply(a: Timestamp, b: Timestamp): Boolean =
+    this match {
+      case KillSelection.YoungestFirst => a.youngerThan(b)
+      case KillSelection.OldestFirst => a.olderThan(b)
+    }
   val value: String
 
   def toProto: Protos.KillSelection

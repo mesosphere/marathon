@@ -35,10 +35,11 @@ object TaskStatsByVersion {
   }
 
   def apply(
-    now: Timestamp,
-    versionInfo: VersionInfo,
-    instances: Seq[Instance],
-    statuses: Map[Instance.Id, Seq[Health]]): raml.TaskStatsByVersion = {
+      now: Timestamp,
+      versionInfo: VersionInfo,
+      instances: Seq[Instance],
+      statuses: Map[Instance.Id, Seq[Health]]
+  ): raml.TaskStatsByVersion = {
     TaskStatsByVersion(versionInfo, TaskForStatistics.forInstances(now, instances, statuses))
   }
 }

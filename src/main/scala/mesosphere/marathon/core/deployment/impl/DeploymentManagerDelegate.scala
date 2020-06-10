@@ -12,9 +12,7 @@ import mesosphere.marathon.core.deployment.{DeploymentConfig, DeploymentManager,
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-class DeploymentManagerDelegate(
-    config: DeploymentConfig,
-    deploymentManagerActor: ActorRef) extends DeploymentManager with StrictLogging {
+class DeploymentManagerDelegate(config: DeploymentConfig, deploymentManagerActor: ActorRef) extends DeploymentManager with StrictLogging {
 
   val requestTimeout: Timeout = config.deploymentManagerRequestDuration
 
@@ -27,9 +25,7 @@ class DeploymentManagerDelegate(
   override def list(): Future[Seq[DeploymentStepInfo]] =
     askActorFuture[ListRunningDeployments.type, Seq[DeploymentStepInfo]]("list")(ListRunningDeployments)
 
-  private[this] def askActorFuture[T, R](
-    method: String,
-    timeout: Timeout = requestTimeout)(message: T): Future[R] = {
+  private[this] def askActorFuture[T, R](method: String, timeout: Timeout = requestTimeout)(message: T): Future[R] = {
 
     implicit val timeoutImplicit: Timeout = timeout
     val answerFuture = (deploymentManagerActor ? message).mapTo[Future[R]]

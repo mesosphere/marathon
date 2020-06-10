@@ -16,6 +16,7 @@ import java.time.OffsetDateTime
   * @tparam V          The value type being stored
   */
 trait IdResolver[Id, V, Category, K] {
+
   /**
     * Translate the marathon id into the given persisted format
     */

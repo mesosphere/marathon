@@ -35,50 +35,55 @@ trait PodsValidation extends GeneralPurposeCombinators {
     resource.gpus should be >= 0
   }
 
-  private def httpHealthCheckValidator(endpoints: Seq[Endpoint]) = validator[HttpCheck] { hc =>
-    hc.endpoint.length is between(1, 63)
-    hc.endpoint should matchRegexFully(NamePattern)
-    hc.endpoint is isTrue("contained in the container endpoints") { endpoint =>
-      endpoints.exists(_.name == endpoint)
-    }
-    hc.path.map(_.length).getOrElse(1) is between(1, 1024)
-  }
-
-  private def tcpHealthCheckValidator(endpoints: Seq[Endpoint]) = validator[TcpCheck] { hc =>
-    hc.endpoint.length is between(1, 63)
-    hc.endpoint should matchRegexFully(NamePattern)
-    hc.endpoint is isTrue("contained in the container endpoints") { endpoint =>
-      endpoints.exists(_.name == endpoint)
-    }
-  }
-
-  private def commandCheckValidator(mesosMasterVersion: SemanticVersion) = new Validator[CommandCheck] {
-    override def apply(v1: CommandCheck): Result = if (mesosMasterVersion >= PodsValidation.MinCommandCheckMesosVersion) {
-      v1.command match {
-        case ShellCommand(shell) =>
-          (shell.length should be > 0)(shell.length)
-        case ArgvCommand(argv) =>
-          (argv.size should be > 0)(argv.size)
+  private def httpHealthCheckValidator(endpoints: Seq[Endpoint]) =
+    validator[HttpCheck] { hc =>
+      hc.endpoint.length is between(1, 63)
+      hc.endpoint should matchRegexFully(NamePattern)
+      hc.endpoint is isTrue("contained in the container endpoints") { endpoint =>
+        endpoints.exists(_.name == endpoint)
       }
-    } else {
-      Failure(Set(RuleViolation(v1, s"Mesos Master ($mesosMasterVersion) does not support Command Health Checks")))
+      hc.path.map(_.length).getOrElse(1) is between(1, 1024)
     }
-  }
 
-  private def healthCheckValidator(endpoints: Seq[Endpoint], mesosMasterVersion: SemanticVersion) = validator[HealthCheck] { hc =>
-    hc.gracePeriodSeconds should be >= 0
-    hc.intervalSeconds should be >= 0
-    hc.timeoutSeconds should be < hc.intervalSeconds
-    hc.maxConsecutiveFailures should be >= 0
-    hc.timeoutSeconds should be >= 0
-    hc.delaySeconds should be >= 0
-    hc.http is optional(httpHealthCheckValidator(endpoints))
-    hc.tcp is optional(tcpHealthCheckValidator(endpoints))
-    hc.exec is optional(commandCheckValidator(mesosMasterVersion))
-    hc is isTrue("Only one of http, tcp, or command may be specified") { hc =>
-      Seq(hc.http.isDefined, hc.tcp.isDefined, hc.exec.isDefined).count(identity) == 1
+  private def tcpHealthCheckValidator(endpoints: Seq[Endpoint]) =
+    validator[TcpCheck] { hc =>
+      hc.endpoint.length is between(1, 63)
+      hc.endpoint should matchRegexFully(NamePattern)
+      hc.endpoint is isTrue("contained in the container endpoints") { endpoint =>
+        endpoints.exists(_.name == endpoint)
+      }
     }
-  }
+
+  private def commandCheckValidator(mesosMasterVersion: SemanticVersion) =
+    new Validator[CommandCheck] {
+      override def apply(v1: CommandCheck): Result =
+        if (mesosMasterVersion >= PodsValidation.MinCommandCheckMesosVersion) {
+          v1.command match {
+            case ShellCommand(shell) =>
+              (shell.length should be > 0)(shell.length)
+            case ArgvCommand(argv) =>
+              (argv.size should be > 0)(argv.size)
+          }
+        } else {
+          Failure(Set(RuleViolation(v1, s"Mesos Master ($mesosMasterVersion) does not support Command Health Checks")))
+        }
+    }
+
+  private def healthCheckValidator(endpoints: Seq[Endpoint], mesosMasterVersion: SemanticVersion) =
+    validator[HealthCheck] { hc =>
+      hc.gracePeriodSeconds should be >= 0
+      hc.intervalSeconds should be >= 0
+      hc.timeoutSeconds should be < hc.intervalSeconds
+      hc.maxConsecutiveFailures should be >= 0
+      hc.timeoutSeconds should be >= 0
+      hc.delaySeconds should be >= 0
+      hc.http is optional(httpHealthCheckValidator(endpoints))
+      hc.tcp is optional(tcpHealthCheckValidator(endpoints))
+      hc.exec is optional(commandCheckValidator(mesosMasterVersion))
+      hc is isTrue("Only one of http, tcp, or command may be specified") { hc =>
+        Seq(hc.http.isDefined, hc.tcp.isDefined, hc.exec.isDefined).count(identity) == 1
+      }
+    }
 
   private def endpointValidator(networks: Seq[Network]) = {
     val networkNamess = networks.flatMap(_.name)
@@ -103,7 +108,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
 
       // protocol is an optional field, so we really don't need to validate that is empty/non-empty
       // but we should validate that it only contains distinct items
-      endpoint.protocol is isTrue ("Duplicate protocols within the same endpoint are not allowed") { proto =>
+      endpoint.protocol is isTrue("Duplicate protocols within the same endpoint are not allowed") { proto =>
         proto == proto.distinct
       }
     }
@@ -111,35 +116,38 @@ trait PodsValidation extends GeneralPurposeCombinators {
     normalValidation and implied(networks.count(_.mode == NetworkMode.Container) > 1)(hostPortRequiresNetworkName)
   }
 
-  private def imageValidator(enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[Image] = new Validator[Image] {
-    override def apply(image: Image): Result = {
-      val dockerImageValidator: Validator[Image] = validator[Image] { image =>
-        image.pullConfig is empty or featureEnabled(enabledFeatures, Features.SECRETS)
-        image.pullConfig is optional(
-          isTrue("pullConfig.secret must refer to an existing secret")(
-            config => secrets.contains(config.secret)))
+  private def imageValidator(enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[Image] =
+    new Validator[Image] {
+      override def apply(image: Image): Result = {
+        val dockerImageValidator: Validator[Image] = validator[Image] { image =>
+          image.pullConfig is empty or featureEnabled(enabledFeatures, Features.SECRETS)
+          image.pullConfig is optional(
+            isTrue("pullConfig.secret must refer to an existing secret")(config => secrets.contains(config.secret))
+          )
+        }
+
+        image.kind match {
+          case ImageType.Docker => validate(image)(dockerImageValidator)
+        }
       }
+    }
 
-      image.kind match {
-        case ImageType.Docker => validate(image)(dockerImageValidator)
+  private def volumeMountValidator(volumes: Seq[PodVolume]): Validator[VolumeMount] =
+    validator[VolumeMount] { volumeMount => // linter:ignore:UnusedParameter
+      volumeMount.name.length is between(1, 63)
+      volumeMount.name should matchRegexFully(NamePattern)
+      volumeMount.mountPath.length is between(1, 1024)
+      volumeMount.name is isTrue("Referenced Volume in VolumeMount should exist") { name =>
+        volumeNames(volumes).contains(name)
       }
     }
-  }
 
-  private def volumeMountValidator(volumes: Seq[PodVolume]): Validator[VolumeMount] = validator[VolumeMount] { volumeMount => // linter:ignore:UnusedParameter
-    volumeMount.name.length is between(1, 63)
-    volumeMount.name should matchRegexFully(NamePattern)
-    volumeMount.mountPath.length is between(1, 1024)
-    volumeMount.name is isTrue("Referenced Volume in VolumeMount should exist") { name =>
-      volumeNames(volumes).contains(name)
+  private def secretVolumesValidator(secrets: Map[String, SecretDef]): Validator[PodSecretVolume] =
+    validator[PodSecretVolume] { vol =>
+      vol.secret is isTrue(SecretVolumeMustReferenceSecret) {
+        secrets.contains(_)
+      }
     }
-  }
-
-  private def secretVolumesValidator(secrets: Map[String, SecretDef]): Validator[PodSecretVolume] = validator[PodSecretVolume] { vol =>
-    vol.secret is isTrue(SecretVolumeMustReferenceSecret) {
-      secrets.contains(_)
-    }
-  }
 
   private val artifactValidator = validator[Artifact] { artifact =>
     artifact.uri.length is between(1, 1024)
@@ -175,10 +183,11 @@ trait PodsValidation extends GeneralPurposeCombinators {
   }
 
   private val scalingValidator: Validator[PodScalingPolicy] = new Validator[PodScalingPolicy] {
-    override def apply(v1: PodScalingPolicy): Result = v1 match {
-      case fsf: FixedPodScalingPolicy => fixedPodScalingPolicyValidator(fsf)
-      case _ => Failure(Set(RuleViolation(v1, "Not a fixed scaling policy")))
-    }
+    override def apply(v1: PodScalingPolicy): Result =
+      v1 match {
+        case fsf: FixedPodScalingPolicy => fixedPodScalingPolicyValidator(fsf)
+        case _ => Failure(Set(RuleViolation(v1, "Not a fixed scaling policy")))
+      }
   }
 
   private val endpointNamesUnique: Validator[Pod] = isTrue(EndpointNamesMustBeUnique) { pod: Pod =>
@@ -214,68 +223,76 @@ trait PodsValidation extends GeneralPurposeCombinators {
       }
     }
 
-  private def haveValidAcceptedResourceRoles: Validator[Pod] = validator[Pod] { pod =>
-    (podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is empty or valid(ResourceRole.validAcceptedResourceRoles("pod", podPersistentVolumes(pod).nonEmpty)))
-  }
+  private def haveValidAcceptedResourceRoles: Validator[Pod] =
+    validator[Pod] { pod =>
+      (podAcceptedResourceRoles(pod) as "acceptedResourceRoles" is empty or valid(
+        ResourceRole.validAcceptedResourceRoles("pod", podPersistentVolumes(pod).nonEmpty)
+      ))
+    }
 
   def podValidator(config: MarathonConf, mesosMasterVersion: Option[SemanticVersion] = Some(SemanticVersion.zero)): Validator[Pod] =
     podValidator(config.availableFeatures, mesosMasterVersion.getOrElse(SemanticVersion.zero), config.defaultNetworkName.toOption)
 
-  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String]): Validator[Pod] = validator[Pod] { pod =>
-    PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
-    pod.user is optional(notEmpty)
-    pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
-    podSecretVolumes(pod) is empty or featureEnabled(enabledFeatures, Features.SECRETS)
-    podSecretVolumes(pod) is empty or every(secretVolumesValidator(pod.secrets))
-    pod.volumes is every(volumeValidator(pod.containers)) and isTrue(VolumeNamesMustBeUnique) { volumes: Seq[PodVolume] =>
-      val names = volumeNames(volumes)
-      names.distinct.size == names.size
-    }
-    pod.containers is notEmpty and every(containerValidator(pod, enabledFeatures, mesosMasterVersion))
-    pod.containers is isTrue(ContainerNamesMustBeUnique) { containers: Seq[PodContainer] =>
-      val names = pod.containers.map(_.name)
-      names.distinct.size == names.size
-    }
-    pod.secrets is empty or (secretValidator and featureEnabled(enabledFeatures, Features.SECRETS))
-    pod.networks is ramlNetworksValidator
-    pod.networks is defaultNetworkNameValidator(() => defaultNetworkName)
-    pod.scheduling is optional(schedulingValidator)
-    pod.scaling is optional(scalingValidator)
-    pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
-    pod should complyWithPodUpgradeStrategyRules
-    pod should haveUnreachableDisabledForResidentPods
-    pod should haveValidAcceptedResourceRoles
-    pod.linuxInfo is optional(state.LinuxInfo.validLinuxInfoForPodRaml)
-  }
-
-  def podDefValidator(pluginManager: PluginManager, roleSettings: RoleSettings): Validator[PodDefinition] = validator[PodDefinition] { podDef =>
-    podDef is pluginValidators(pluginManager)
-    podDef is validPodDefinitionWithRoleEnforcement(roleSettings)
-  }
-
-  def validPodDefinitionWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[PodDefinition] = validator[PodDefinition] { pod =>
-    pod.role is in(roleEnforcement.validRoles)
-    // DO NOT MERGE THESE TWO similar if blocks! Wix Accord macros do weird stuff otherwise.
-    if (pod.isResident) {
-      pod.role is isTrue(s"Resident pods cannot have the role ${ResourceRole.Unreserved}") { role: Role =>
-        !role.equals(ResourceRole.Unreserved)
+  def podValidator(enabledFeatures: Set[String], mesosMasterVersion: SemanticVersion, defaultNetworkName: Option[String]): Validator[Pod] =
+    validator[Pod] { pod =>
+      PathId(pod.id) as "id" is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
+      pod.user is optional(notEmpty)
+      pod.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
+      podSecretVolumes(pod) is empty or featureEnabled(enabledFeatures, Features.SECRETS)
+      podSecretVolumes(pod) is empty or every(secretVolumesValidator(pod.secrets))
+      pod.volumes is every(volumeValidator(pod.containers)) and isTrue(VolumeNamesMustBeUnique) { volumes: Seq[PodVolume] =>
+        val names = volumeNames(volumes)
+        names.distinct.size == names.size
       }
-    }
-    if (pod.isResident) {
-      pod.role is isTrue((role: Role) => RoleSettings.residentRoleChangeWarningMessage(roleEnforcement.previousRole.get, role)) { role: Role =>
-        roleEnforcement.previousRole.map(_.equals(role) || roleEnforcement.forceRoleUpdate).getOrElse(true)
+      pod.containers is notEmpty and every(containerValidator(pod, enabledFeatures, mesosMasterVersion))
+      pod.containers is isTrue(ContainerNamesMustBeUnique) { containers: Seq[PodContainer] =>
+        val names = pod.containers.map(_.name)
+        names.distinct.size == names.size
       }
+      pod.secrets is empty or (secretValidator and featureEnabled(enabledFeatures, Features.SECRETS))
+      pod.networks is ramlNetworksValidator
+      pod.networks is defaultNetworkNameValidator(() => defaultNetworkName)
+      pod.scheduling is optional(schedulingValidator)
+      pod.scaling is optional(scalingValidator)
+      pod is endpointNamesUnique and endpointContainerPortsUnique and endpointHostPortsUnique
+      pod should complyWithPodUpgradeStrategyRules
+      pod should haveUnreachableDisabledForResidentPods
+      pod should haveValidAcceptedResourceRoles
+      pod.linuxInfo is optional(state.LinuxInfo.validLinuxInfoForPodRaml)
     }
-    pod.acceptedResourceRoles is valid(ResourceRole.validForRole(pod.role))
-  }
+
+  def podDefValidator(pluginManager: PluginManager, roleSettings: RoleSettings): Validator[PodDefinition] =
+    validator[PodDefinition] { podDef =>
+      podDef is pluginValidators(pluginManager)
+      podDef is validPodDefinitionWithRoleEnforcement(roleSettings)
+    }
+
+  def validPodDefinitionWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[PodDefinition] =
+    validator[PodDefinition] { pod =>
+      pod.role is in(roleEnforcement.validRoles)
+      // DO NOT MERGE THESE TWO similar if blocks! Wix Accord macros do weird stuff otherwise.
+      if (pod.isResident) {
+        pod.role is isTrue(s"Resident pods cannot have the role ${ResourceRole.Unreserved}") { role: Role =>
+          !role.equals(ResourceRole.Unreserved)
+        }
+      }
+      if (pod.isResident) {
+        pod.role is isTrue((role: Role) => RoleSettings.residentRoleChangeWarningMessage(roleEnforcement.previousRole.get, role)) {
+          role: Role =>
+            roleEnforcement.previousRole.map(_.equals(role) || roleEnforcement.forceRoleUpdate).getOrElse(true)
+        }
+      }
+      pod.acceptedResourceRoles is valid(ResourceRole.validForRole(pod.role))
+    }
 
   private def volumeNames(volumes: Seq[PodVolume]): Seq[String] = volumes.map(volumeName)
-  private def volumeName(volume: PodVolume): String = volume match {
-    case PodEphemeralVolume(name) => name
-    case PodHostVolume(name, _) => name
-    case PodSecretVolume(name, _) => name
-    case PodPersistentVolume(name, _) => name
-  }
+  private def volumeName(volume: PodVolume): String =
+    volume match {
+      case PodEphemeralVolume(name) => name
+      case PodHostVolume(name, _) => name
+      case PodSecretVolume(name, _) => name
+      case PodPersistentVolume(name, _) => name
+    }
 
   private def pluginValidators(implicit pluginManager: PluginManager): Validator[PodDefinition] =
     new Validator[PodDefinition] {
@@ -291,9 +308,10 @@ trait PodsValidation extends GeneralPurposeCombinators {
         val fromVolumes = from.persistentVolumes
         val toVolumes = to.persistentVolumes
         def sameSize = fromVolumes.size == toVolumes.size
-        def noVolumeChange = fromVolumes.forall { fromVolume =>
-          toVolumes.find(_.name == fromVolume.name).contains(fromVolume)
-        }
+        def noVolumeChange =
+          fromVolumes.forall { fromVolume =>
+            toVolumes.find(_.name == fromVolume.name).contains(fromVolume)
+          }
         sameSize && noVolumeChange
       }
 
@@ -335,14 +353,15 @@ trait PodsValidation extends GeneralPurposeCombinators {
     }
   }
 
-  def updateIsValid(from: RootGroup): Validator[PodDefinition] = new Validator[PodDefinition] {
-    override def apply(pod: PodDefinition): Result = {
-      from.pod(pod.id) match {
-        case (Some(last)) if last.isResident || pod.isResident => residentUpdateIsValid(last)(pod)
-        case _ => Success
+  def updateIsValid(from: RootGroup): Validator[PodDefinition] =
+    new Validator[PodDefinition] {
+      override def apply(pod: PodDefinition): Result = {
+        from.pod(pod.id) match {
+          case (Some(last)) if last.isResident || pod.isResident => residentUpdateIsValid(last)(pod)
+          case _ => Success
+        }
       }
     }
-  }
 }
 
 object PodsValidation extends PodsValidation {

@@ -31,11 +31,12 @@ import scala.util.control.NonFatal
 
 private[launchqueue] object LaunchQueueActor {
   def props(
-    config: LaunchQueueConfig,
-    instanceTracker: InstanceTracker,
-    runSpecProvider: GroupManager.RunSpecProvider,
-    runSpecActorProps: RunSpec => Props,
-    delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]): Props = {
+      config: LaunchQueueConfig,
+      instanceTracker: InstanceTracker,
+      runSpecProvider: GroupManager.RunSpecProvider,
+      runSpecActorProps: RunSpec => Props,
+      delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]
+  ): Props = {
     Props(new LaunchQueueActor(config, instanceTracker, runSpecProvider, runSpecActorProps, delayUpdates))
   }
 
@@ -55,11 +56,14 @@ private[impl] class LaunchQueueActor(
     runSpecProvider: GroupManager.RunSpecProvider,
     runSpecActorProps: RunSpec => Props,
     delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]
-) extends Actor with Stash with StrictLogging {
+) extends Actor
+    with Stash
+    with StrictLogging {
   import LaunchQueueDelegate._
 
   /** Currently active actors by pathId. */
   var launchers = Map.empty[PathId, ActorRef]
+
   /** Maps actorRefs to the PathId they handle. */
   var launcherRefs = Map.empty[ActorRef, PathId]
 
@@ -85,25 +89,19 @@ private[impl] class LaunchQueueActor(
 
     // Using an Materializer that encompasses this context will cause the stream to auto-terminate when this actor does
     implicit val materializer = Materializer(context)
-    delayUpdates.runWith(
-      Sink.actorRef(
-        self,
-        Status.Failure(new RuntimeException("The delay updates stream closed"))))
+    delayUpdates.runWith(Sink.actorRef(self, Status.Failure(new RuntimeException("The delay updates stream closed"))))
   }
 
   override def receive: Receive = initializing
 
   def initializing: Receive = {
     case instances: InstanceTracker.InstancesBySpec =>
-
       instances.instancesMap.collect {
         case (id, specInstances) if specInstances.instances.exists(_.isScheduled) =>
           runSpecProvider.runSpec(id)
+      }.flatten.foreach { scheduledRunSpec =>
+        launchers.getOrElse(scheduledRunSpec.id, createAppTaskLauncher(scheduledRunSpec))
       }
-        .flatten
-        .foreach { scheduledRunSpec =>
-          launchers.getOrElse(scheduledRunSpec.id, createAppTaskLauncher(scheduledRunSpec))
-        }
 
       context.become(initialized)
 
@@ -119,12 +117,13 @@ private[impl] class LaunchQueueActor(
       stash()
   }
 
-  def initialized: Receive = LoggingReceive {
-    Seq(
-      receiveInstanceUpdate,
-      receiveHandleNormalCommands
-    ).reduce(_.orElse[Any, Unit](_))
-  }
+  def initialized: Receive =
+    LoggingReceive {
+      Seq(
+        receiveInstanceUpdate,
+        receiveHandleNormalCommands
+      ).reduce(_.orElse[Any, Unit](_))
+    }
 
   /**
     * Fetch an existing actorRef, or create a new actor if the given instance is scheduled.
@@ -195,17 +194,23 @@ private[impl] class LaunchQueueActor(
       val existingReservedStoppedInstances = await(instanceTracker.specInstances(runSpec.id))
         .filter(i => i.hasReservation && i.state.condition.isTerminal && i.state.goal == Goal.Stopped) // resident to relaunch
         .take(queuedItem.add.count)
-      await(Future.sequence(existingReservedStoppedInstances.map { instance => instanceTracker.process(RescheduleReserved(instance.instanceId, runSpec)) }))
+      await(Future.sequence(existingReservedStoppedInstances.map { instance =>
+        instanceTracker.process(RescheduleReserved(instance.instanceId, runSpec))
+      }))
 
       logger.debug(s"Rescheduled existing instances for ${runSpec.id}")
 
       // Schedule additional resident instances or all ephemeral instances
-      val instancesToSchedule = existingReservedStoppedInstances.length.until(queuedItem.add.count).map { _ => Instance.scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id)) }
+      val instancesToSchedule = existingReservedStoppedInstances.length.until(queuedItem.add.count).map { _ =>
+        Instance.scheduled(runSpec, Instance.Id.forRunSpec(runSpec.id))
+      }
       if (instancesToSchedule.nonEmpty) {
         await(instanceTracker.schedule(instancesToSchedule))
       }
-      logger.info(s"Scheduling ${instancesToSchedule.length} new instances (first five: ${instancesToSchedule.take(5)} ) " +
-        s"and rescheduling (${existingReservedStoppedInstances.length}) reserved instances due to LaunchQueue.Add for ${runSpec.id}")
+      logger.info(
+        s"Scheduling ${instancesToSchedule.length} new instances (first five: ${instancesToSchedule.take(5)} ) " +
+          s"and rescheduling (${existingReservedStoppedInstances.length}) reserved instances due to LaunchQueue.Add for ${runSpec.id}"
+      )
 
       AddFinished(queuedItem)
     }
@@ -230,8 +235,9 @@ private[impl] class LaunchQueueActor(
     }
   }
 
-  override def supervisorStrategy: SupervisorStrategy = OneForOneStrategy() {
-    case NonFatal(e) => Stop
-    case m: Any => SupervisorStrategy.defaultDecider(m)
-  }
+  override def supervisorStrategy: SupervisorStrategy =
+    OneForOneStrategy() {
+      case NonFatal(e) => Stop
+      case m: Any => SupervisorStrategy.defaultDecider(m)
+    }
 }

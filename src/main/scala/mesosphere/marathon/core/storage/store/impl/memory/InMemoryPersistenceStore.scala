@@ -25,11 +25,8 @@ case class RamId(category: String, id: String, version: Option[OffsetDateTime])
 
 case class Identity(value: Any)
 
-class InMemoryPersistenceStore(
-    metrics: Metrics)(implicit
-    protected val mat: Materializer,
-    ctx: ExecutionContext)
-  extends BasePersistenceStore[RamId, String, Identity](metrics) {
+class InMemoryPersistenceStore(metrics: Metrics)(implicit protected val mat: Materializer, ctx: ExecutionContext)
+    extends BasePersistenceStore[RamId, String, Identity](metrics) {
 
   val entries = TrieMap[RamId, Identity]()
   val version = Lock(StorageVersions(Migration.steps).toBuilder)
@@ -108,15 +105,19 @@ class InMemoryPersistenceStore(
   override def backup(): Source[BackupItem, NotUsed] = {
     require(isOpen, "the store must be opened before it can be used")
 
-    Source.fromIterator(() => entries.iterator.map {
-      case (key, value) =>
-        BackupItem(key.category, key.id, key.version, ByteString(InMemoryPersistenceStore.objectToByteArray(value.value)))
-    }).concat {
-      Source.single {
-        val name = Migration.StorageVersionName
-        BackupItem(name, name, None, ByteString(version(_.build().toByteArray)))
+    Source
+      .fromIterator(() =>
+        entries.iterator.map {
+          case (key, value) =>
+            BackupItem(key.category, key.id, key.version, ByteString(InMemoryPersistenceStore.objectToByteArray(value.value)))
+        }
+      )
+      .concat {
+        Source.single {
+          val name = Migration.StorageVersionName
+          BackupItem(name, name, None, ByteString(version(_.build().toByteArray)))
+        }
       }
-    }
   }
 
   override def restore(): Sink[BackupItem, Future[Done]] = {
@@ -137,12 +138,10 @@ class InMemoryPersistenceStore(
       version(_.mergeFrom(item.data.toArray))
       Done
     }
-    Flow[BackupItem]
-      .map {
-        case item if item.key == Migration.StorageVersionName => setVersion(item)
-        case item => store(item)
-      }
-      .prepend { Source.single(clean()) }
+    Flow[BackupItem].map {
+      case item if item.key == Migration.StorageVersionName => setVersion(item)
+      case item => store(item)
+    }.prepend { Source.single(clean()) }
       .toMat(Sink.ignore)(Keep.right)
   }
 

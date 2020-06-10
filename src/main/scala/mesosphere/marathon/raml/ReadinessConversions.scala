@@ -29,7 +29,8 @@ trait ReadinessConversions {
       name = result.name,
       taskId = result.taskId.idString,
       ready = result.ready,
-      lastResponse = result.lastResponse.map(response => raml.ReadinessCheckHttpResponse(response.status, response.contentType, response.body))
+      lastResponse =
+        result.lastResponse.map(response => raml.ReadinessCheckHttpResponse(response.status, response.contentType, response.body))
     )
   }
 
@@ -48,7 +49,8 @@ trait ReadinessConversions {
       timeout = check.timeoutSeconds.seconds,
       httpStatusCodesForReady = check.httpStatusCodesForReady.getOrElse(
         // normalization should have taken care of this already..
-        throw SerializationFailedException("httpStatusCodesForReady must be specified")),
+        throw SerializationFailedException("httpStatusCodesForReady must be specified")
+      ),
       preserveLastResponse = check.preserveLastResponse
     )
   }
@@ -70,7 +72,9 @@ trait ReadinessConversions {
       portName = if (rc.hasPortName) rc.getPortName else ReadinessCheck.DefaultPortName,
       intervalSeconds = if (rc.hasIntervalMillis) (rc.getIntervalMillis / 1000).toInt else ReadinessCheck.DefaultIntervalSeconds,
       timeoutSeconds = if (rc.hasTimeoutMillis) (rc.getTimeoutMillis / 1000).toInt else ReadinessCheck.DefaultTimeoutSeconds,
-      httpStatusCodesForReady = if (rc.getHttpStatusCodeForReadyCount > 0) Option(rc.getHttpStatusCodeForReadyList.asScala.iterator.map(_.intValue()).toSet) else None,
+      httpStatusCodesForReady =
+        if (rc.getHttpStatusCodeForReadyCount > 0) Option(rc.getHttpStatusCodeForReadyList.asScala.iterator.map(_.intValue()).toSet)
+        else None,
       preserveLastResponse = if (rc.hasPreserveLastResponse) rc.getPreserveLastResponse else ReadinessCheck.DefaultPreserveLastResponse
     )
   }

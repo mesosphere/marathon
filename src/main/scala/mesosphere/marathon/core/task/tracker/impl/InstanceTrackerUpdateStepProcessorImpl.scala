@@ -13,17 +13,15 @@ import scala.concurrent.{ExecutionContext, Future}
   * Takes care of processing [[InstanceChange]]s and will be called after an instance state
   * change has been persisted in the repository
   */
-private[tracker] class InstanceTrackerUpdateStepProcessorImpl(
-    metrics: Metrics,
-    steps: Seq[InstanceChangeHandler]) extends InstanceTrackerUpdateStepProcessor with StrictLogging {
+private[tracker] class InstanceTrackerUpdateStepProcessorImpl(metrics: Metrics, steps: Seq[InstanceChangeHandler])
+    extends InstanceTrackerUpdateStepProcessor
+    with StrictLogging {
 
   private[this] val stepTimeMetrics: Map[String, Timer] = steps.iterator.map { step =>
     step.metricName -> metrics.timer(s"debug.instance-tracker.update-steps.${step.metricName}.duration")
   }.toMap
 
-  logger.info(
-    "Started TaskTrackerUpdateStepsProcessorImpl with steps:\n{}",
-    steps.map(step => s"* ${step.name}").mkString("\n"))
+  logger.info("Started TaskTrackerUpdateStepsProcessorImpl with steps:\n{}", steps.map(step => s"* ${step.name}").mkString("\n"))
 
   override def process(change: InstanceChange)(implicit ec: ExecutionContext): Future[Done] = {
     steps.foldLeft(Future.successful(Done)) { (resultSoFar, nextStep) =>

@@ -11,8 +11,7 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 
 import scala.concurrent.Future
 
-class NotifyRateLimiterStepImpl @Inject() (
-    launchQueueProvider: Provider[LaunchQueue]) extends InstanceChangeHandler with StrictLogging {
+class NotifyRateLimiterStepImpl @Inject() (launchQueueProvider: Provider[LaunchQueue]) extends InstanceChangeHandler with StrictLogging {
 
   import NotifyRateLimiterStep._
 
@@ -35,7 +34,9 @@ class NotifyRateLimiterStepImpl @Inject() (
         val runSpecId = update.runSpecId
         val instanceId = instance.instanceId
         val agentId = instance.agentInfo.flatMap(_.agentId).getOrElse("unknown")
-        logger.info(s"Reset delay for $runSpecId because status update for $instanceId (${update.condition}) indicated $agentId is being drained")
+        logger.info(
+          s"Reset delay for $runSpecId because status update for $instanceId (${update.condition}) indicated $agentId is being drained"
+        )
         launchQueue.resetDelay(instance.runSpec)
 
       case instance if limitWorthy(instance.state.condition) && update.conditionUpdated =>
@@ -81,11 +82,18 @@ private[steps] object NotifyRateLimiterStep extends StrictLogging {
 
   // A set of conditions that are worth rate limiting the associated runSpec
   val limitWorthy: Set[Condition] = Set(
-    Condition.Dropped, Condition.Error, Condition.Failed, Condition.Gone, Condition.Finished
+    Condition.Dropped,
+    Condition.Error,
+    Condition.Failed,
+    Condition.Gone,
+    Condition.Finished
   )
 
   // A set of conditions that are worth advancing an existing delay of the corresponding runSpec
   val advanceWorthy: Set[Condition] = Set(
-    Condition.Staging, Condition.Starting, Condition.Running, Condition.Provisioned
+    Condition.Staging,
+    Condition.Starting,
+    Condition.Running,
+    Condition.Provisioned
   )
 }

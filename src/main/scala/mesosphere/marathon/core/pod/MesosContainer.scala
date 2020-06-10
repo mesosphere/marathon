@@ -22,4 +22,5 @@ case class MesosContainer(
     lifecycle: Option[Lifecycle] = None,
     tty: Option[Boolean] = None,
     linuxInfo: Option[LinuxInfo] = None,
-    resourceLimits: Option[ResourceLimits] = None) extends ContainerSpec
+    resourceLimits: Option[ResourceLimits] = None
+) extends ContainerSpec

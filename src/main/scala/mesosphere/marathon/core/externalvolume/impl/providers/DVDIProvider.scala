@@ -37,13 +37,14 @@ private[externalvolume] case object DVDIProvider extends ExternalVolumeProvider 
 
       // forward all dvdi/* options to the dvdcli driver, stripping the dvdi/ prefix
       // and trimming the values
-      opts.filterKeys{ k =>
+      opts.filterKeys { k =>
         k.startsWith(prefix) && !ignore.contains(k.toLowerCase)
       }.iterator.map {
-        case (k, v) => Parameter.newBuilder
-          .setKey(k.substring(prefix.length))
-          .setValue(v.trim())
-          .build
+        case (k, v) =>
+          Parameter.newBuilder
+            .setKey(k.substring(prefix.length))
+            .setValue(v.trim())
+            .build
       }.toSeq
     }
 
@@ -71,10 +72,12 @@ private[externalvolume] case object DVDIProvider extends ExternalVolumeProvider 
       MesosVolume.newBuilder
         .setContainerPath(mount.mountPath)
         .setMode(mode)
-        .setSource(MesosVolume.Source.newBuilder
-          .setType(MesosVolume.Source.Type.DOCKER_VOLUME)
-          .setDockerVolume(volBuilder.build)
-        ).build
+        .setSource(
+          MesosVolume.Source.newBuilder
+            .setType(MesosVolume.Source.Type.DOCKER_VOLUME)
+            .setDockerVolume(volBuilder.build)
+        )
+        .build
     }
   } // Builders
 
@@ -97,10 +100,9 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
   override lazy val rootGroup = new Validator[RootGroup] {
     override def apply(rootGroup: RootGroup): Result = {
       val appsByVolume: Map[String, Iterable[PathId]] =
-        rootGroup.transitiveApps
-          .flatMap { app => namesOfMatchingVolumes(app).map(_ -> app.id) }
-          .groupBy { case (volumeName, _) => volumeName }
-          .map { case (volumeName, volumes) => volumeName -> volumes.map { case (_, appId) => appId } }
+        rootGroup.transitiveApps.flatMap { app => namesOfMatchingVolumes(app).map(_ -> app.id) }.groupBy {
+          case (volumeName, _) => volumeName
+        }.map { case (volumeName, volumes) => volumeName -> volumes.map { case (_, appId) => appId } }
 
       val appValid: Validator[AppDefinition] = {
         def volumeNameUnique(appId: PathId): Validator[ExternalVolume] = {
@@ -111,7 +113,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
             val conflictingAppIds = conflictingApps(vol).mkString(", ")
             s"Volume name '${vol.external.name}' in $appId conflicts with volume(s) of same name in app(s): " +
               s"$conflictingAppIds"
-          }{ vol => conflictingApps(vol).isEmpty }
+          } { vol => conflictingApps(vol).isEmpty }
         }
 
         validator[AppDefinition] { app =>
@@ -119,10 +121,11 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         }
       }
 
-      def groupValid: Validator[Group] = validator[Group] { group =>
-        group.apps.values as "apps" is every(appValid)
-        group.groupsById.values as "groups" is every(groupValid)
-      }
+      def groupValid: Validator[Group] =
+        validator[Group] { group =>
+          group.apps.values as "apps" is every(appValid)
+          group.groupsById.values as "groups" is every(groupValid)
+        }
 
       // We need to call the validators recursively such that the "description" of the rule violations
       // is correctly calculated.
@@ -133,11 +136,9 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
   override lazy val ramlApp = {
     val haveOnlyOneInstance: Validator[App] =
-      isTrue[App](
-        (app: App) => s"Number of instances is limited to 1 when declaring DVDI volumes in app [$app.id]"
-      ) {
-          _.instances <= 1
-        }
+      isTrue[App]((app: App) => s"Number of instances is limited to 1 when declaring DVDI volumes in app [$app.id]") {
+        _.instances <= 1
+      }
 
     case object haveUniqueExternalVolumeNames extends Validator[App] {
       override def apply(app: App): Result = {
@@ -157,10 +158,9 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     val validContainer = {
       import PathPatterns._
 
-      val validMesosVolume = validator[AppExternalVolume] {
-        volume =>
-          volume.mode is equalTo(ReadMode.Rw)
-          volume.containerPath is notOneOf(DotPaths: _*)
+      val validMesosVolume = validator[AppExternalVolume] { volume =>
+        volume.mode is equalTo(ReadMode.Rw)
+        volume.containerPath is notOneOf(DotPaths: _*)
       }
 
       val validDockerExternalVolume = validator[raml.ExternalVolumeInfo] { external =>
@@ -175,13 +175,14 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       def ifDVDIVolume(vtor: Validator[AppExternalVolume]): Validator[AppExternalVolume] = conditional(matchesProviderRaml)(vtor)
 
-      def volumeValidator(container: EngineType): Validator[AppExternalVolume] = container match {
-        case EngineType.Mesos => validMesosVolume
-        case EngineType.Docker => validDockerVolume
-      }
+      def volumeValidator(container: EngineType): Validator[AppExternalVolume] =
+        container match {
+          case EngineType.Mesos => validMesosVolume
+          case EngineType.Docker => validDockerVolume
+        }
 
       validator[AppContainer] { ct =>
-        ct.volumes.collect{ case v: AppExternalVolume => v } as "volumes" is
+        ct.volumes.collect { case v: AppExternalVolume => v } as "volumes" is
           every(ifDVDIVolume(volumeValidator(ct.`type`)))
       }
     }
@@ -196,11 +197,9 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
   override lazy val app = {
     val haveOnlyOneInstance: Validator[AppDefinition] =
-      isTrue[AppDefinition](
-        (app: AppDefinition) => s"Number of instances is limited to 1 when declaring DVDI volumes in app [$app.id]"
-      ) {
-          _.instances <= 1
-        }
+      isTrue[AppDefinition]((app: AppDefinition) => s"Number of instances is limited to 1 when declaring DVDI volumes in app [$app.id]") {
+        _.instances <= 1
+      }
 
     case object haveUniqueExternalVolumeNames extends Validator[AppDefinition] {
       override def apply(app: AppDefinition): Result = {
@@ -238,16 +237,18 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         mount.mountPath is notOneOf(DotPaths: _*)
       }
 
-      def volumeValidator(container: Container) = container match {
-        case _: Container.Mesos => validMesosVolume
-        case _: Container.MesosDocker => validMesosVolume
-        case _: Container.Docker => validDockerVolume
-      }
+      def volumeValidator(container: Container) =
+        container match {
+          case _: Container.Mesos => validMesosVolume
+          case _: Container.MesosDocker => validMesosVolume
+          case _: Container.Docker => validDockerVolume
+        }
 
-      def volumeMountValidator(container: Container) = container match {
-        case _: Container.Docker => validDockerVolumeMount
-        case _ => validMesosVolumeMount
-      }
+      def volumeMountValidator(container: Container) =
+        container match {
+          case _: Container.Docker => validDockerVolumeMount
+          case _ => validMesosVolumeMount
+        }
 
       validator[Container] { ct =>
         ct.volumes.collect {
@@ -294,10 +295,9 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     import PathPatterns._
     import VolumeOptions._
 
-    val validMesosVolume = validator[AppExternalVolume] {
-      volume =>
-        volume.mode is equalTo(ReadMode.Rw)
-        volume.containerPath is notOneOf(DotPaths: _*)
+    val validMesosVolume = validator[AppExternalVolume] { volume =>
+      volume.mode is equalTo(ReadMode.Rw)
+      volume.containerPath is notOneOf(DotPaths: _*)
     }
     val dockerVolumeInfo = validator[raml.ExternalVolumeInfo] { v =>
       v.options is isTrue(s"must only contain $driverOption")(_.filterKeys(_ != driverOption).isEmpty)
@@ -332,15 +332,14 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
   private[this] def isForUniquenessCheckRaml(volume: AppExternalVolume): Boolean = !volume.external.shared
 
   private[this] def namesOfMatchingVolumes(app: AppDefinition): Seq[String] =
-    app
-      .externalVolumes
+    app.externalVolumes
       .withFilter(matchesProvider)
       .withFilter(isForUniquenessCheck)
       .map(_.external.name)
 
   private[this] def namesOfMatchingVolumes(app: App): Seq[String] =
     app.container
-      .fold(Seq.empty[AppExternalVolume])(_.volumes.collect{ case v: AppExternalVolume => v })
+      .fold(Seq.empty[AppExternalVolume])(_.volumes.collect { case v: AppExternalVolume => v })
       .withFilter(matchesProviderRaml)
       .withFilter(isForUniquenessCheckRaml)
       .flatMap(_.external.name)

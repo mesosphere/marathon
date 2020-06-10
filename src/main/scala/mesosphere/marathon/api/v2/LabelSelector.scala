@@ -43,22 +43,25 @@ class LabelSelectorParsers extends RegexParsers with StrictLogging {
   //Allowed characters are A-Za-z0-9._- All other characters can be used, but need to be escaped.
   def term: Parser[String] = """(\\.|[-A-Za-z0-9_.])+""".r ^^ { _.replaceAll("""\\(.)""", "$1") }
 
-  def existenceSelector: Parser[LabelSelector] = term ^^ {
-    existence: String => LabelSelector(existence, _ => true, List.empty)
-  }
+  def existenceSelector: Parser[LabelSelector] =
+    term ^^ { existence: String =>
+      LabelSelector(existence, _ => true, List.empty)
+    }
 
   def equalityOp: Parser[String] = """(==|!=)""".r
-  def equalitySelector: Parser[LabelSelector] = term ~ equalityOp ~ term ^^ {
-    case label ~ "==" ~ value => LabelSelector(label, value == _, List(value))
-    case label ~ "!=" ~ value => LabelSelector(label, value != _, List(value))
-  }
+  def equalitySelector: Parser[LabelSelector] =
+    term ~ equalityOp ~ term ^^ {
+      case label ~ "==" ~ value => LabelSelector(label, value == _, List(value))
+      case label ~ "!=" ~ value => LabelSelector(label, value != _, List(value))
+    }
 
   def set: Parser[List[String]] = "(" ~> repsep(term, ",") <~ ")"
   def setOp: Parser[String] = """(in|notin)""".r
-  def setSelector: Parser[LabelSelector] = term ~ setOp ~ set ^^ {
-    case label ~ "in" ~ set => LabelSelector(label, set.contains(_), set)
-    case label ~ "notin" ~ set => LabelSelector(label, !set.contains(_), set)
-  }
+  def setSelector: Parser[LabelSelector] =
+    term ~ setOp ~ set ^^ {
+      case label ~ "in" ~ set => LabelSelector(label, set.contains(_), set)
+      case label ~ "notin" ~ set => LabelSelector(label, !set.contains(_), set)
+    }
 
   def selector: Parser[LabelSelector] = setSelector | equalitySelector | existenceSelector
   def selectors: Parser[List[LabelSelector]] = repsep(selector, ",")
@@ -76,9 +79,9 @@ class LabelSelectorParsers extends RegexParsers with StrictLogging {
     }
   }
 
-  def parsed(in: String): LabelSelectors = parseSelectors(in) match {
-    case Left(message) => throw new IllegalArgumentException(s"Can not parse label selector $in. Reason: $message")
-    case Right(selectors) => selectors
-  }
+  def parsed(in: String): LabelSelectors =
+    parseSelectors(in) match {
+      case Left(message) => throw new IllegalArgumentException(s"Can not parse label selector $in. Reason: $message")
+      case Right(selectors) => selectors
+    }
 }
-

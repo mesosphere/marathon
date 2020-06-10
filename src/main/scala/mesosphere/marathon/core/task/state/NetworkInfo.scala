@@ -15,10 +15,7 @@ import scala.annotation.tailrec
   * @param hostName the agent's hostName
   * @param ipAddresses all associated IP addresses, computed from mesosStatus
   */
-case class NetworkInfo(
-    hostName: String,
-    hostPorts: Seq[Int],
-    ipAddresses: Seq[mesos.Protos.NetworkInfo.IPAddress]) {
+case class NetworkInfo(hostName: String, hostPorts: Seq[Int], ipAddresses: Seq[mesos.Protos.NetworkInfo.IPAddress]) {
 
   import NetworkInfo._
 
@@ -95,11 +92,12 @@ object NetworkInfo extends StrictLogging {
   }
 
   private def computePortAssignments(
-    app: AppDefinition,
-    hostName: String,
-    hostPorts: Seq[Int],
-    effectiveIpAddress: Option[String],
-    includeUnresolved: Boolean): Seq[PortAssignment] = {
+      app: AppDefinition,
+      hostName: String,
+      hostPorts: Seq[Int],
+      effectiveIpAddress: Option[String],
+      includeUnresolved: Boolean
+  ): Seq[PortAssignment] = {
 
     def fromPortMappings(container: Container): Seq[PortAssignment] = {
       import Container.PortMapping
@@ -134,7 +132,8 @@ object NetworkInfo extends StrictLogging {
             assignments
           case _ =>
             throw new IllegalStateException(
-              s"failed to align remaining allocated host ports $ports with remaining declared port mappings $mappings in app ${app.id}")
+              s"failed to align remaining allocated host ports $ports with remaining declared port mappings $mappings in app ${app.id}"
+            )
         }
       }
       gen(hostPorts.to(List), container.portMappings.to(List), Nil).reverse
@@ -147,7 +146,8 @@ object NetworkInfo extends StrictLogging {
             portName = portDefinition.name,
             effectiveIpAddress = effectiveIpAddress,
             effectivePort = hostPort,
-            hostPort = Some(hostPort))
+            hostPort = Some(hostPort)
+          )
       }
 
     app.container.collect {

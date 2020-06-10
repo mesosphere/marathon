@@ -1,7 +1,18 @@
 package mesosphere.marathon
 package api.v2
 
-import mesosphere.marathon.raml.{AnyToRaml, Endpoint, Network, NetworkMode, Pod, PodContainer, PodPersistentVolume, PodPlacementPolicy, PodSchedulingPolicy, PodUpgradeStrategy}
+import mesosphere.marathon.raml.{
+  AnyToRaml,
+  Endpoint,
+  Network,
+  NetworkMode,
+  Pod,
+  PodContainer,
+  PodPersistentVolume,
+  PodPlacementPolicy,
+  PodSchedulingPolicy,
+  PodUpgradeStrategy
+}
 import mesosphere.marathon.util.RoleSettings
 import mesosphere.marathon.stream.Implicits.toRichIterable
 
@@ -19,17 +30,16 @@ object PodNormalization {
     def sanitizeAcceptedResourceRoles: Boolean
   }
 
-  case class Configuration(
-      defaultNetworkName: Option[String],
-      roleSettings: RoleSettings,
-      sanitizeAcceptedResourceRoles: Boolean) extends Config
+  case class Configuration(defaultNetworkName: Option[String], roleSettings: RoleSettings, sanitizeAcceptedResourceRoles: Boolean)
+      extends Config
 
   object Configuration {
     def apply(config: MarathonConf, roleSettings: RoleSettings): Config =
       Configuration(
         config.defaultNetworkName.toOption,
         roleSettings,
-        config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles))
+        config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles)
+      )
   }
 
   case class Containers(networks: Seq[Network], containers: Seq[PodContainer])
@@ -69,13 +79,14 @@ object PodNormalization {
     val defaultUpgradeStrategy = state.UpgradeStrategy.forResidentTasks.toRaml
     val defaultUnreachableStrategy = state.UnreachableStrategy.default(true).toRaml
     val scheduling = pod.scheduling.getOrElse(PodSchedulingPolicy())
-    val upgradeStrategy = scheduling.upgrade.getOrElse(PodUpgradeStrategy(
-      minimumHealthCapacity = defaultUpgradeStrategy.minimumHealthCapacity,
-      maximumOverCapacity = defaultUpgradeStrategy.maximumOverCapacity))
+    val upgradeStrategy = scheduling.upgrade.getOrElse(
+      PodUpgradeStrategy(
+        minimumHealthCapacity = defaultUpgradeStrategy.minimumHealthCapacity,
+        maximumOverCapacity = defaultUpgradeStrategy.maximumOverCapacity
+      )
+    )
     val unreachableStrategy = scheduling.unreachableStrategy.getOrElse(defaultUnreachableStrategy)
-    scheduling.copy(
-      upgrade = Some(upgradeStrategy),
-      unreachableStrategy = Some(unreachableStrategy))
+    scheduling.copy(upgrade = Some(upgradeStrategy), unreachableStrategy = Some(unreachableStrategy))
   }
 
   /**
@@ -104,14 +115,15 @@ object PodNormalization {
     } else normalized
   }
 
-  def apply(config: Config): Normalization[Pod] = Normalization { pod =>
-    val networks = Networks(config, Some(pod.networks)).normalize.networks.filter(_.nonEmpty).getOrElse(DefaultNetworks)
-    NetworkNormalization.requireContainerNetworkNameResolution(networks)
-    val containers = Containers(networks, pod.containers).normalize.containers
-    val role = pod.role.getOrElse(config.roleSettings.defaultRole)
+  def apply(config: Config): Normalization[Pod] =
+    Normalization { pod =>
+      val networks = Networks(config, Some(pod.networks)).normalize.networks.filter(_.nonEmpty).getOrElse(DefaultNetworks)
+      NetworkNormalization.requireContainerNetworkNameResolution(networks)
+      val containers = Containers(networks, pod.containers).normalize.containers
+      val role = pod.role.getOrElse(config.roleSettings.defaultRole)
 
-    val scheduling = normalizeScheduling(pod, role, config)
+      val scheduling = normalizeScheduling(pod, role, config)
 
-    pod.copy(containers = containers, networks = networks, scheduling = scheduling, role = Some(role))
-  }
+      pod.copy(containers = containers, networks = networks, scheduling = scheduling, role = Some(role))
+    }
 }

@@ -24,12 +24,14 @@ class TaskKiller @Inject() (
     groupManager: GroupManager,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    killService: KillService)(implicit val executionContext: ExecutionContext, implicit val materializer: Materializer) extends AuthResource with StrictLogging {
+    killService: KillService
+)(implicit val executionContext: ExecutionContext, implicit val materializer: Materializer)
+    extends AuthResource
+    with StrictLogging {
 
-  def kill(
-    runSpecId: AbsolutePathId,
-    findToKill: (Seq[Instance] => Seq[Instance]),
-    wipe: Boolean = false)(implicit identity: Identity): Future[Seq[Instance]] = {
+  def kill(runSpecId: AbsolutePathId, findToKill: (Seq[Instance] => Seq[Instance]), wipe: Boolean = false)(implicit
+      identity: Identity
+  ): Future[Seq[Instance]] = {
 
     groupManager.runSpec(runSpecId) match {
       case Some(runSpec) =>
@@ -43,7 +45,10 @@ class TaskKiller @Inject() (
             val instancesAreTerminal: Future[Done] = KillStreamWatcher
               .watchForDecommissionedInstances(instanceTracker.instanceUpdates, activeInstances)
               .runWith(Sink.ignore)
-            await(Future.sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequest)))): @silent
+            await(
+              Future
+                .sequence(foundInstances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.UserRequest)))
+            ): @silent
             await(doForceExpunge(foundInstances.map(_.instanceId))): @silent
             await(instancesAreTerminal): @silent
           } else {
@@ -69,29 +74,31 @@ class TaskKiller @Inject() (
     instances.foldLeft(Future.successful(Done)) { (resultSoFar, nextInstanceId) =>
       resultSoFar.flatMap { _ =>
         logger.info(s"Expunging ${nextInstanceId}")
-        instanceTracker.forceExpunge(nextInstanceId)
+        instanceTracker
+          .forceExpunge(nextInstanceId)
           .recover {
             case NonFatal(cause) =>
               logger.warn(s"Failed to expunge ${nextInstanceId}, got:", cause)
               Done
-          }.map(_ => Done)
+          }
+          .map(_ => Done)
       }
     }
   }
 
-  def killAndScale(
-    appId: AbsolutePathId,
-    findToKill: (Seq[Instance] => Seq[Instance]),
-    force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = async {
-    val instances = await(instanceTracker.specInstances(appId))
-    val activeInstances = instances.filter(_.isActive)
-    val instancesToKill = findToKill(activeInstances)
-    await(killAndScale(Map(appId -> instancesToKill), force))
-  }
+  def killAndScale(appId: AbsolutePathId, findToKill: (Seq[Instance] => Seq[Instance]), force: Boolean)(implicit
+      identity: Identity
+  ): Future[DeploymentPlan] =
+    async {
+      val instances = await(instanceTracker.specInstances(appId))
+      val activeInstances = instances.filter(_.isActive)
+      val instancesToKill = findToKill(activeInstances)
+      await(killAndScale(Map(appId -> instancesToKill), force))
+    }
 
-  def killAndScale(
-    appInstances: Map[AbsolutePathId, Seq[Instance]],
-    force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
+  def killAndScale(appInstances: Map[AbsolutePathId, Seq[Instance]], force: Boolean)(implicit
+      identity: Identity
+  ): Future[DeploymentPlan] = {
     def scaleApp(app: AppDefinition): AppDefinition = {
       appInstances.get(app.id).fold(app) { instances =>
         checkAuthorization(UpdateRunSpec, app)
@@ -104,13 +111,14 @@ class TaskKiller @Inject() (
 
     val version = Timestamp.now()
 
-    def killDeployment = groupManager.updateRoot(
-      PathId.root,
-      _.updateTransitiveApps(PathId.root, scaleApp, version),
-      version = version,
-      force = force,
-      toKill = appInstances
-    )
+    def killDeployment =
+      groupManager.updateRoot(
+        PathId.root,
+        _.updateTransitiveApps(PathId.root, scaleApp, version),
+        version = version,
+        force = force,
+        toKill = appInstances
+      )
 
     async {
       val allInstances = await(instanceTracker.instancesBySpec()).instancesMap

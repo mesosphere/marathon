@@ -56,7 +56,7 @@ class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInter
       stay using DataActive(reactor = newReactor, sessionToken = newToken)
   }
 
-  whenUnhandled{
+  whenUnhandled {
     case Event(e, d) =>
       logger.warn("unhandled event {} in state {}/{}", e, stateName, d)
       stay
@@ -68,9 +68,7 @@ class HeartbeatActor(config: Heartbeat.Config) extends LoggingFSM[HeartbeatInter
 }
 
 object Heartbeat {
-  case class Config(
-      heartbeatTimeout: FiniteDuration,
-      missedHeartbeatsThreshold: Int)
+  case class Config(heartbeatTimeout: FiniteDuration, missedHeartbeatsThreshold: Int)
 
   sealed trait Message
   case object MessagePulse extends Message
@@ -96,8 +94,5 @@ private[heartbeat] object HeartbeatInternal {
   case object DataNone extends Data
 
   /** @constructor capture the state of an active heartbeat monitor */
-  case class DataActive(
-      reactor: Reactor,
-      sessionToken: AnyRef,
-      missed: Int = 0) extends Data
+  case class DataActive(reactor: Reactor, sessionToken: AnyRef, missed: Int = 0) extends Data
 }

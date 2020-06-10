@@ -27,29 +27,34 @@ import scala.util.{Failure, Success}
 
 object HealthCheckWorker extends StrictLogging {
 
-  def run(app: AppDefinition, instance: Instance, healthCheck: MarathonHealthCheck)(implicit mat: ActorMaterializer): Future[HealthResult] = {
+  def run(app: AppDefinition, instance: Instance, healthCheck: MarathonHealthCheck)(implicit
+      mat: ActorMaterializer
+  ): Future[HealthResult] = {
     logger.debug("Dispatching health check job for {}", instance.instanceId)
 
     implicit val system = mat.system
     implicit val ex = mat.executionContext
 
-    check(app, instance, healthCheck)
-      .transform {
-        case Failure(ex) =>
-          logger.warn(s"Performing health check for app=${app.id} instance=${instance.instanceId} port=${healthCheck.port} failed with exception", ex)
-          Success(Unhealthy(
+    check(app, instance, healthCheck).transform {
+      case Failure(ex) =>
+        logger.warn(
+          s"Performing health check for app=${app.id} instance=${instance.instanceId} port=${healthCheck.port} failed with exception",
+          ex
+        )
+        Success(
+          Unhealthy(
             instance.instanceId,
             instance.runSpecVersion,
             s"${ex.getClass.getSimpleName}: ${ex.getMessage}"
-          ))
-        case other => other
-      }
+          )
+        )
+      case other => other
+    }
   }
 
-  def check(
-    app: AppDefinition,
-    instance: Instance,
-    healthCheck: MarathonHealthCheck)(implicit mat: ActorMaterializer): Future[HealthResult] = {
+  def check(app: AppDefinition, instance: Instance, healthCheck: MarathonHealthCheck)(implicit
+      mat: ActorMaterializer
+  ): Future[HealthResult] = {
 
     // HealthChecks are only supported for legacy App instances with exactly one task
     val effectiveIpAddress = instance.appTask.status.networkInfo.effectiveIpAddress(app)
@@ -62,7 +67,9 @@ object HealthCheckWorker extends StrictLogging {
               case Protocol.HTTPS => https(instance, hc, host, port)
               case Protocol.HTTP => http(instance, hc, host, port)
               case invalid =>
-                Future.failed (new UnsupportedOperationException(s"Health check failed: HTTP health check contains invalid protocol: $invalid"))
+                Future.failed(
+                  new UnsupportedOperationException(s"Health check failed: HTTP health check contains invalid protocol: $invalid")
+                )
             }
           case (hc: MarathonTcpHealthCheck, Some(port)) => tcp(instance, hc, host, port)
           case _ => Future.failed(new UnsupportedOperationException("Health check failed: unable to get the task's effectivePort"))
@@ -72,11 +79,9 @@ object HealthCheckWorker extends StrictLogging {
     }
   }
 
-  def http(
-    instance: Instance,
-    check: MarathonHttpHealthCheck,
-    host: String,
-    port: Int)(implicit mat: ActorMaterializer): Future[HealthResult] = {
+  def http(instance: Instance, check: MarathonHttpHealthCheck, host: String, port: Int)(implicit
+      mat: ActorMaterializer
+  ): Future[HealthResult] = {
 
     implicit val ec = mat.executionContext
 
@@ -85,31 +90,25 @@ object HealthCheckWorker extends StrictLogging {
     val url = s"http://$host:$port$absolutePath"
     logger.debug(s"Checking the health of [$url] for instance=${instance.instanceId} via HTTP")
 
-    singleRequest(RequestBuilding.Get(url), check.timeout)
-      .map { response =>
-        response.discardEntityBytes() //forget about the body
-        if (acceptableResponses.contains(response.status.intValue())) {
-          Healthy(instance.instanceId, instance.runSpecVersion)
-        } else if (check.ignoreHttp1xx && (toIgnoreResponses.contains(response.status.intValue))) {
-          logger.debug(s"Ignoring health check HTTP response ${response.status.intValue} for instance=${instance.instanceId}")
-          Ignored(instance.instanceId, instance.runSpecVersion)
-        } else {
-          logger.debug(s"Health check for instance=${instance.instanceId} responded with ${response.status}")
-          Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString())
-        }
+    singleRequest(RequestBuilding.Get(url), check.timeout).map { response =>
+      response.discardEntityBytes() //forget about the body
+      if (acceptableResponses.contains(response.status.intValue())) {
+        Healthy(instance.instanceId, instance.runSpecVersion)
+      } else if (check.ignoreHttp1xx && (toIgnoreResponses.contains(response.status.intValue))) {
+        logger.debug(s"Ignoring health check HTTP response ${response.status.intValue} for instance=${instance.instanceId}")
+        Ignored(instance.instanceId, instance.runSpecVersion)
+      } else {
+        logger.debug(s"Health check for instance=${instance.instanceId} responded with ${response.status}")
+        Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString())
       }
-      .recover {
-        case NonFatal(e) =>
-          logger.debug(s"Health check for instance=${instance.instanceId} did not respond due to ${e.getMessage}.")
-          Unhealthy(instance.instanceId, instance.runSpecVersion, e.getMessage)
-      }
+    }.recover {
+      case NonFatal(e) =>
+        logger.debug(s"Health check for instance=${instance.instanceId} did not respond due to ${e.getMessage}.")
+        Unhealthy(instance.instanceId, instance.runSpecVersion, e.getMessage)
+    }
   }
 
-  def tcp(
-    instance: Instance,
-    check: MarathonTcpHealthCheck,
-    host: String,
-    port: Int): Future[HealthResult] = {
+  def tcp(instance: Instance, check: MarathonTcpHealthCheck, host: String, port: Int): Future[HealthResult] = {
 
     val address = s"$host:$port"
     val timeoutMillis = check.timeout.toMillis.toInt
@@ -126,11 +125,9 @@ object HealthCheckWorker extends StrictLogging {
     }(ThreadPoolContext.ioContext)
   }
 
-  def https(
-    instance: Instance,
-    check: MarathonHttpHealthCheck,
-    host: String,
-    port: Int)(implicit mat: ActorMaterializer): Future[HealthResult] = {
+  def https(instance: Instance, check: MarathonHttpHealthCheck, host: String, port: Int)(implicit
+      mat: ActorMaterializer
+  ): Future[HealthResult] = {
 
     implicit val ec = mat.executionContext
 
@@ -139,21 +136,19 @@ object HealthCheckWorker extends StrictLogging {
     val url = s"https://$host:$port$absolutePath"
     logger.debug(s"Checking the health of [$url] for instance=${instance.instanceId} via HTTPS")
 
-    singleRequestHttps(RequestBuilding.Get(url), check.timeout)
-      .map { response =>
-        response.discardEntityBytes() // forget about the body
-        if (acceptableResponses.contains(response.status.intValue())) {
-          Healthy(instance.instanceId, instance.runSpecVersion)
-        } else {
-          logger.debug(s"Health check for ${instance.instanceId} responded with ${response.status}")
-          Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString())
-        }
+    singleRequestHttps(RequestBuilding.Get(url), check.timeout).map { response =>
+      response.discardEntityBytes() // forget about the body
+      if (acceptableResponses.contains(response.status.intValue())) {
+        Healthy(instance.instanceId, instance.runSpecVersion)
+      } else {
+        logger.debug(s"Health check for ${instance.instanceId} responded with ${response.status}")
+        Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString())
       }
-      .recover {
-        case NonFatal(e) =>
-          logger.debug(s"Health check for instance=${instance.instanceId} failed to respond due to ${e.getMessage}.")
-          Unhealthy(instance.instanceId, instance.runSpecVersion, e.getMessage)
-      }
+    }.recover {
+      case NonFatal(e) =>
+        logger.debug(s"Health check for instance=${instance.instanceId} failed to respond due to ${e.getMessage}.")
+        Unhealthy(instance.instanceId, instance.runSpecVersion, e.getMessage)
+    }
   }
 
   def singleRequest(httpRequest: HttpRequest, timeout: FiniteDuration)(implicit mat: ActorMaterializer): Future[HttpResponse] = {
@@ -211,13 +206,17 @@ object HealthCheckWorker extends StrictLogging {
     context
   }
 
-  def disabledSslConfig()(implicit as: ActorSystem): AkkaSSLConfig = AkkaSSLConfig().mapSettings(s => s.withLoose {
-    s.loose.withAcceptAnyCertificate(true)
-      .withAllowLegacyHelloMessages(Some(true))
-      .withAllowUnsafeRenegotiation(Some(true))
-      .withAllowWeakCiphers(true)
-      .withAllowWeakProtocols(true)
-      .withDisableHostnameVerification(true)
-      .withDisableSNI(true)
-  })
+  def disabledSslConfig()(implicit as: ActorSystem): AkkaSSLConfig =
+    AkkaSSLConfig().mapSettings(s =>
+      s.withLoose {
+        s.loose
+          .withAcceptAnyCertificate(true)
+          .withAllowLegacyHelloMessages(Some(true))
+          .withAllowUnsafeRenegotiation(Some(true))
+          .withAllowWeakCiphers(true)
+          .withAllowWeakProtocols(true)
+          .withDisableHostnameVerification(true)
+          .withDisableSNI(true)
+      }
+    )
 }

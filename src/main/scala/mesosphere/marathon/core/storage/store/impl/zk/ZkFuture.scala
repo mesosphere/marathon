@@ -72,79 +72,87 @@ private[zk] abstract class ZkFuture[T] extends Future[T] with BackgroundCallback
 }
 
 private class CreateOrDeleteFuture extends ZkFuture[String] {
-  override protected def processEvent(event: CuratorEvent): Try[String] = event.getType match {
-    case CREATE | DELETE =>
-      Success(event.getPath)
-    case _ =>
-      Failure(new IllegalArgumentException(s"${event.getType} is not a CREATE or DELETE operation"))
-  }
+  override protected def processEvent(event: CuratorEvent): Try[String] =
+    event.getType match {
+      case CREATE | DELETE =>
+        Success(event.getPath)
+      case _ =>
+        Failure(new IllegalArgumentException(s"${event.getType} is not a CREATE or DELETE operation"))
+    }
 }
 
 case class ExistsResult(path: String, stat: Stat)
 private class ExistsFuture extends ZkFuture[ExistsResult] {
-  override protected def processEvent(event: CuratorEvent): Try[ExistsResult] = event.getType match {
-    case EXISTS =>
-      Success(ExistsResult(event.getPath, event.getStat))
-    case _ =>
-      Failure(new IllegalArgumentException(s"${event.getType} is not an EXISTS operation"))
-  }
+  override protected def processEvent(event: CuratorEvent): Try[ExistsResult] =
+    event.getType match {
+      case EXISTS =>
+        Success(ExistsResult(event.getPath, event.getStat))
+      case _ =>
+        Failure(new IllegalArgumentException(s"${event.getType} is not an EXISTS operation"))
+    }
 }
 
 case class GetData(path: String, stat: Stat, data: ByteString)
 private class GetDataFuture extends ZkFuture[GetData] {
-  override protected def processEvent(event: CuratorEvent): Try[GetData] = event.getType match {
-    case GET_DATA =>
-      Success(GetData(event.getPath, event.getStat, ByteString(event.getData)))
-    case _ =>
-      Failure(new IllegalArgumentException(s"${event.getType} is not a GET_DATA operation"))
-  }
+  override protected def processEvent(event: CuratorEvent): Try[GetData] =
+    event.getType match {
+      case GET_DATA =>
+        Success(GetData(event.getPath, event.getStat, ByteString(event.getData)))
+      case _ =>
+        Failure(new IllegalArgumentException(s"${event.getType} is not a GET_DATA operation"))
+    }
 }
 
 case class SetData(path: String, stat: Stat)
 private class SetDataFuture extends ZkFuture[SetData] {
-  override protected def processEvent(event: CuratorEvent): Try[SetData] = event.getType match {
-    case SET_DATA =>
-      Success(SetData(event.getPath, event.getStat))
-    case _ =>
-      Failure(new IllegalArgumentException(s"${event.getType} is not a SET_DATA operation"))
-  }
+  override protected def processEvent(event: CuratorEvent): Try[SetData] =
+    event.getType match {
+      case SET_DATA =>
+        Success(SetData(event.getPath, event.getStat))
+      case _ =>
+        Failure(new IllegalArgumentException(s"${event.getType} is not a SET_DATA operation"))
+    }
 }
 
 case class Children(path: String, stat: Stat, children: Seq[String])
 private class ChildrenFuture extends ZkFuture[Children] {
-  override protected def processEvent(event: CuratorEvent): Try[Children] = event.getType match {
-    case CHILDREN =>
-      Success(Children(event.getPath, event.getStat, event.getChildren.asScala.to(IndexedSeq)))
-    case _ =>
-      Failure(new IllegalArgumentException(s"${event.getType} is not a CHILDREN operation"))
-  }
+  override protected def processEvent(event: CuratorEvent): Try[Children] =
+    event.getType match {
+      case CHILDREN =>
+        Success(Children(event.getPath, event.getStat, event.getChildren.asScala.to(IndexedSeq)))
+      case _ =>
+        Failure(new IllegalArgumentException(s"${event.getType} is not a CHILDREN operation"))
+    }
 }
 
 private class SyncFuture extends ZkFuture[Option[Stat]] {
-  override protected def processEvent(event: CuratorEvent): Try[Option[Stat]] = event.getType match {
-    case SYNC =>
-      Success(Option(event.getStat))
-    case _ =>
-      Failure(new IllegalArgumentException(s"${event.getType} is not a SYNC operation"))
-  }
+  override protected def processEvent(event: CuratorEvent): Try[Option[Stat]] =
+    event.getType match {
+      case SYNC =>
+        Success(Option(event.getStat))
+      case _ =>
+        Failure(new IllegalArgumentException(s"${event.getType} is not a SYNC operation"))
+    }
 }
 
 private class GetAclFuture extends ZkFuture[Seq[ACL]] {
-  override protected def processEvent(event: CuratorEvent): Try[Seq[ACL]] = event.getType match {
-    case GET_ACL =>
-      Success(event.getACLList.asScala.to(IndexedSeq))
-    case _ =>
-      Failure(new IllegalArgumentException(s"${event.getType} is not a GET_ACL operation"))
-  }
+  override protected def processEvent(event: CuratorEvent): Try[Seq[ACL]] =
+    event.getType match {
+      case GET_ACL =>
+        Success(event.getACLList.asScala.to(IndexedSeq))
+      case _ =>
+        Failure(new IllegalArgumentException(s"${event.getType} is not a GET_ACL operation"))
+    }
 }
 
 private class SetAclFuture extends ZkFuture[Done] {
-  override protected def processEvent(event: CuratorEvent): Try[Done] = event.getType match {
-    case SET_ACL =>
-      Success(Done)
-    case _ =>
-      Failure(new IllegalArgumentException(s"${event.getType} is not a SET_ACL operation"))
-  }
+  override protected def processEvent(event: CuratorEvent): Try[Done] =
+    event.getType match {
+      case SET_ACL =>
+        Success(Done)
+      case _ =>
+        Failure(new IllegalArgumentException(s"${event.getType} is not a SET_ACL operation"))
+    }
 }
 
 private[zk] object ZkFuture {

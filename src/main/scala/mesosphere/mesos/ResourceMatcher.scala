@@ -51,10 +51,7 @@ object ResourceMatcher extends StrictLogging {
     * @param labelMatcher a matcher that checks if the given resource labels
     *                     are compliant with the expected or not expected labels
     */
-  case class ResourceSelector(
-      acceptedRoles: Set[String],
-      needToReserve: Boolean,
-      labelMatcher: LabelMatcher) {
+  case class ResourceSelector(acceptedRoles: Set[String], needToReserve: Boolean, labelMatcher: LabelMatcher) {
 
     def apply(resource: Protos.Resource): Boolean = {
       import ResourceSelector._
@@ -73,6 +70,7 @@ object ResourceMatcher extends StrictLogging {
   }
 
   object ResourceSelector {
+
     /** The reservation labels if the resource is reserved, or an empty Map */
     private def reservationLabels(resource: Protos.Resource): Map[String, String] =
       if (!resource.hasReservation || !resource.getReservation.hasLabels)
@@ -87,6 +85,7 @@ object ResourceMatcher extends StrictLogging {
     def reservedWithLabels(acceptedRoles: Set[String], labels: Map[String, String]): ResourceSelector = {
       ResourceSelector(acceptedRoles, needToReserve = false, LabelMatcher.WithReservationLabels(labels))
     }
+
     /** Match resources with given roles that do not have known reservation labels */
     def reservable: ResourceSelector = {
       ResourceSelector(Set(ResourceRole.Unreserved), needToReserve = true, LabelMatcher.WithoutReservationLabels)
@@ -134,16 +133,18 @@ object ResourceMatcher extends StrictLogging {
     * the reservation.
     */
   def matchResources(
-    offer: Offer,
-    runSpec: RunSpec,
-    knownInstances: => Seq[Instance],
-    selector: ResourceSelector,
-    conf: MatcherConf,
-    schedulerPlugins: Seq[SchedulerPlugin],
-    localRegion: Option[Region] = None,
-    reservedInstances: Seq[Instance] = Seq.empty)(implicit clock: Clock): ResourceMatchResponse = {
+      offer: Offer,
+      runSpec: RunSpec,
+      knownInstances: => Seq[Instance],
+      selector: ResourceSelector,
+      conf: MatcherConf,
+      schedulerPlugins: Seq[SchedulerPlugin],
+      localRegion: Option[Region] = None,
+      reservedInstances: Seq[Instance] = Seq.empty
+  )(implicit clock: Clock): ResourceMatchResponse = {
 
-    val groupedResources: Map[Role, Seq[Protos.Resource]] = offer.getResourcesList.asScala.groupBy(_.getName).map { case (k, v) => k -> v.to(Seq) }
+    val groupedResources: Map[Role, Seq[Protos.Resource]] =
+      offer.getResourcesList.asScala.groupBy(_.getName).map { case (k, v) => k -> v.to(Seq) }
 
     val scalarResourceMatch = matchScalarResource(groupedResources, selector) _
     val diskResourceMatch = matchDiskResource(groupedResources, selector) _
@@ -167,10 +168,7 @@ object ResourceMatcher extends StrictLogging {
             VolumeWithMount(volume, mount)
           }
       }
-      diskResourceMatch(
-        runSpec.resources.disk,
-        volumesWithMounts,
-        ScalarMatchResult.Scope.IncludingLocalVolumes)
+      diskResourceMatch(runSpec.resources.disk, volumesWithMounts, ScalarMatchResult.Scope.IncludingLocalVolumes)
     } else {
       diskResourceMatch(runSpec.resources.disk, Nil, ScalarMatchResult.Scope.ExcludingLocalVolumes)
     }
@@ -179,14 +177,16 @@ object ResourceMatcher extends StrictLogging {
       Seq(
         scalarResourceMatch(Resource.CPUS, runSpec.resources.cpus, ScalarMatchResult.Scope.NoneDisk),
         scalarResourceMatch(Resource.MEM, runSpec.resources.mem, ScalarMatchResult.Scope.NoneDisk),
-        scalarResourceMatch(Resource.GPUS, runSpec.resources.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)) ++
+        scalarResourceMatch(Resource.GPUS, runSpec.resources.gpus.toDouble, ScalarMatchResult.Scope.NoneDisk)
+      ) ++
         diskMatch
     ).filter(_.requiredValue != 0)
 
     // add scalar resources to noOfferMatchReasons
     val noOfferMatchReasons = scalarMatchResults
       .filter(scalar => !scalar.matches)
-      .map(scalar => NoOfferMatchReason.fromResourceType(scalar.resourceName)).toBuffer
+      .map(scalar => NoOfferMatchReason.fromResourceType(scalar.resourceName))
+      .toBuffer
 
     var onMatchActions: Vector[() => Unit] = Vector.empty
     def addOnMatch(action: () => Unit) = {
@@ -248,8 +248,9 @@ object ResourceMatcher extends StrictLogging {
     }
 
     val checkGpuSchedulingBehaviour: Boolean = {
-      val applicationSpecificGpuBehavior: Option[GpuSchedulingBehavior] = runSpec.labels.get("GPU_SCHEDULING_BEHAVIOR").flatMap { behaviorName =>
-        validBehaviors.find(_.name == behaviorName)
+      val applicationSpecificGpuBehavior: Option[GpuSchedulingBehavior] = runSpec.labels.get("GPU_SCHEDULING_BEHAVIOR").flatMap {
+        behaviorName =>
+          validBehaviors.find(_.name == behaviorName)
       }
       val availableGPUs = groupedResources.getOrElse(Resource.GPUS, Nil).foldLeft(0.0)(_ + _.getScalar.getValue)
       val gpuResourcesAreWasted = availableGPUs > 0 && runSpec.resources.gpus == 0
@@ -262,8 +263,12 @@ object ResourceMatcher extends StrictLogging {
             noOfferMatchReasons += NoOfferMatchReason.DeclinedScarceResources
             false
           } else {
-            addOnMatch(() => logger.info(s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
-              "will be launched on an agent with GPU resources due to required persistent volume."))
+            addOnMatch(() =>
+              logger.info(
+                s"Runspec [${runSpec.id}] doesn't require any GPU resources but " +
+                  "will be launched on an agent with GPU resources due to required persistent volume."
+              )
+            )
             true
           }
 
@@ -272,24 +277,27 @@ object ResourceMatcher extends StrictLogging {
       }
     }
 
-    val resourceMatchOpt = if (scalarMatchResults.forall(_.matches)
-      && meetsFaultDomainRequirements
-      && meetsAllConstraints
-      && checkAvailability
-      && schedulerPlugins.forall(_.isMatch(offer, runSpec))
-      && checkGpuSchedulingBehaviour) {
-      portsMatchOpt match {
-        case Some(portsMatch) =>
-          onMatchActions.foreach(action => action.apply())
-          Some(ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }, portsMatch))
-        case None =>
-          // Add ports to noOfferMatchReasons
-          noOfferMatchReasons += NoOfferMatchReason.InsufficientPorts
-          None
+    val resourceMatchOpt =
+      if (
+        scalarMatchResults.forall(_.matches)
+        && meetsFaultDomainRequirements
+        && meetsAllConstraints
+        && checkAvailability
+        && schedulerPlugins.forall(_.isMatch(offer, runSpec))
+        && checkGpuSchedulingBehaviour
+      ) {
+        portsMatchOpt match {
+          case Some(portsMatch) =>
+            onMatchActions.foreach(action => action.apply())
+            Some(ResourceMatch(scalarMatchResults.collect { case m: ScalarMatch => m }, portsMatch))
+          case None =>
+            // Add ports to noOfferMatchReasons
+            noOfferMatchReasons += NoOfferMatchReason.InsufficientPorts
+            None
+        }
+      } else {
+        None
       }
-    } else {
-      None
-    }
 
     resourceMatchOpt match {
       case Some(resourceMatch) => ResourceMatchResponse.Match(resourceMatch)
@@ -315,9 +323,7 @@ object ResourceMatcher extends StrictLogging {
 
    TODO - test. Also, parameterize?
    */
-  private[this] def prioritizeDiskResources(
-    diskType: DiskType,
-    resources: List[SourceResources]): List[SourceResources] = {
+  private[this] def prioritizeDiskResources(diskType: DiskType, resources: List[SourceResources]): List[SourceResources] = {
     diskType match {
       case DiskType.Root =>
         resources
@@ -337,43 +343,42 @@ object ResourceMatcher extends StrictLogging {
     matcher: Protos.Resource => Boolean):
       Option[(Option[Source], List[GeneralScalarMatch.Consumption], List[SourceResources])] =
     // format: ON
-    resourcesRemaining match {
-      case Nil =>
-        None
-      case next :: rest =>
-        consumeResources(requiredValue, next.resources, matcher = matcher) match {
-          case Left(_) =>
-            findDiskGroupMatches(requiredValue, rest, allSourceResources, matcher)
-          case Right((resourcesConsumed, remainingAfterConsumption)) =>
-            val sourceResourcesAfterConsumption = if (remainingAfterConsumption.isEmpty)
+  resourcesRemaining match {
+    case Nil =>
+      None
+    case next :: rest =>
+      consumeResources(requiredValue, next.resources, matcher = matcher) match {
+        case Left(_) =>
+          findDiskGroupMatches(requiredValue, rest, allSourceResources, matcher)
+        case Right((resourcesConsumed, remainingAfterConsumption)) =>
+          val sourceResourcesAfterConsumption =
+            if (remainingAfterConsumption.isEmpty)
               None
             else
               Some(next.copy(resources = remainingAfterConsumption))
 
-            Some((
-              next.source,
-              resourcesConsumed,
-              (sourceResourcesAfterConsumption ++ allSourceResources.filterNot(_ == next)).toList))
-        }
-    }
+          Some((next.source, resourcesConsumed, (sourceResourcesAfterConsumption ++ allSourceResources.filterNot(_ == next)).toList))
+      }
+  }
 
   /**
     * Match volumes against disk resources and return results which keep disk sources and persistentVolumes associated.
     *
     * TODO - handle matches for a single volume across multiple resource offers for the same disk
     */
-  private[this] def matchDiskResource(
-    groupedResources: Map[Role, Seq[Protos.Resource]], selector: ResourceSelector)(
-    scratchDisk: Double,
-    volumesWithMounts: Seq[VolumeWithMount[PersistentVolume]],
-    scope: ScalarMatchResult.Scope): Seq[ScalarMatchResult] = {
+  private[this] def matchDiskResource(groupedResources: Map[Role, Seq[Protos.Resource]], selector: ResourceSelector)(
+      scratchDisk: Double,
+      volumesWithMounts: Seq[VolumeWithMount[PersistentVolume]],
+      scope: ScalarMatchResult.Scope
+  ): Seq[ScalarMatchResult] = {
 
     @tailrec
     def findMatches(
-      diskType: DiskType,
-      pendingAllocations: List[Either[Double, VolumeWithMount[PersistentVolume]]],
-      resourcesRemaining: List[SourceResources],
-      resourcesConsumed: List[DiskResourceMatch.Consumption] = Nil): Either[DiskResourceNoMatch, DiskResourceMatch] = {
+        diskType: DiskType,
+        pendingAllocations: List[Either[Double, VolumeWithMount[PersistentVolume]]],
+        resourcesRemaining: List[SourceResources],
+        resourcesConsumed: List[DiskResourceMatch.Consumption] = Nil
+    ): Either[DiskResourceNoMatch, DiskResourceMatch] = {
       val orderedResources = prioritizeDiskResources(diskType, resourcesRemaining)
 
       pendingAllocations match {
@@ -385,7 +390,7 @@ object ResourceMatcher extends StrictLogging {
             case Right(VolumeWithMount(volume, _)) =>
               def matcher(resource: Protos.Resource): Boolean = {
                 VolumeConstraints.meetsAllConstraints(resource, volume.persistent.constraints) &&
-                  VolumeProfileMatcher.matchesProfileName(volume.persistent.profileName, resource)
+                VolumeProfileMatcher.matchesProfileName(volume.persistent.profileName, resource)
               }
 
               (matcher _, volume.persistent.size.toDouble)
@@ -393,37 +398,33 @@ object ResourceMatcher extends StrictLogging {
 
           findDiskGroupMatches(nextAllocationSize, orderedResources, orderedResources, matcher) match {
             case None =>
-              Left(
-                DiskResourceNoMatch(resourcesConsumed, resourcesRemaining.flatMap(_.resources), nextAllocation, scope))
+              Left(DiskResourceNoMatch(resourcesConsumed, resourcesRemaining.flatMap(_.resources), nextAllocation, scope))
             case Some((source, generalConsumptions, decrementedResources)) =>
               val consumptions = generalConsumptions.map { c =>
                 val volumeWithMount = nextAllocation.right.toOption
                 DiskResourceMatch.Consumption(c, source, volumeWithMount)
               }
 
-              findMatches(
-                diskType,
-                restAllocations,
-                decrementedResources,
-                consumptions ++ resourcesConsumed)
+              findMatches(diskType, restAllocations, decrementedResources, consumptions ++ resourcesConsumed)
           }
       }
     }
 
     /*
-      * The implementation for finding mount matches differs from disk matches because:
-      * - A mount volume cannot be partially allocated. The resource allocation request must be sized up to match the
-      *   actual resource size
-      * - The mount volume can't be split amongst reserved / non-reserved.
-      * - The mount volume has an extra maxSize concern
-      *
+     * The implementation for finding mount matches differs from disk matches because:
+     * - A mount volume cannot be partially allocated. The resource allocation request must be sized up to match the
+     *   actual resource size
+     * - The mount volume can't be split amongst reserved / non-reserved.
+     * - The mount volume has an extra maxSize concern
+     *
       * If this method can be generalized to worth with the above code, then so be it.
-      */
+     */
     @tailrec
     def findMountMatches(
-      pendingAllocations: List[VolumeWithMount[PersistentVolume]],
-      resources: List[Protos.Resource],
-      resourcesConsumed: List[DiskResourceMatch.Consumption] = Nil): Either[DiskResourceNoMatch, DiskResourceMatch] = {
+        pendingAllocations: List[VolumeWithMount[PersistentVolume]],
+        resources: List[Protos.Resource],
+        resourcesConsumed: List[DiskResourceMatch.Consumption] = Nil
+    ): Either[DiskResourceNoMatch, DiskResourceMatch] = {
       pendingAllocations match {
         case Nil =>
           Right(DiskResourceMatch(DiskType.Mount, resourcesConsumed, scope))
@@ -431,27 +432,27 @@ object ResourceMatcher extends StrictLogging {
           resources.find { resource =>
             val resourceSize = resource.getScalar.getValue
             VolumeConstraints.meetsAllConstraints(resource, nextAllocation.volume.persistent.constraints) &&
-              (resourceSize >= nextAllocation.volume.persistent.size) &&
-              (resourceSize <= nextAllocation.volume.persistent.maxSize.getOrElse(Long.MaxValue)) &&
-              VolumeProfileMatcher.matchesProfileName(nextAllocation.volume.persistent.profileName, resource)
+            (resourceSize >= nextAllocation.volume.persistent.size) &&
+            (resourceSize <= nextAllocation.volume.persistent.maxSize.getOrElse(Long.MaxValue)) &&
+            VolumeProfileMatcher.matchesProfileName(nextAllocation.volume.persistent.profileName, resource)
           } match {
             case Some(matchedResource) =>
               val consumedAmount = matchedResource.getScalar.getValue
-              val grownVolumeWithMount = nextAllocation.copy(volume = nextAllocation.volume.copy(
-                persistent = nextAllocation.volume.persistent.copy(size = consumedAmount.toLong)))
+              val grownVolumeWithMount = nextAllocation.copy(volume =
+                nextAllocation.volume.copy(persistent = nextAllocation.volume.persistent.copy(size = consumedAmount.toLong))
+              )
               val consumption =
                 DiskResourceMatch.Consumption(
                   consumedAmount,
                   role = matchedResource.getRole: @silent,
-                  providerId = if (matchedResource.hasProviderId) Option(ResourceProviderID(matchedResource.getProviderId.getValue)) else None,
+                  providerId =
+                    if (matchedResource.hasProviderId) Option(ResourceProviderID(matchedResource.getProviderId.getValue)) else None,
                   reservation = if (matchedResource.hasReservation) Option(matchedResource.getReservation) else None,
                   source = DiskSource.fromMesos(matchedResource.getDiskSourceOption),
-                  Some(grownVolumeWithMount))
+                  Some(grownVolumeWithMount)
+                )
 
-              findMountMatches(
-                restAllocations,
-                resources.filterNot(_ == matchedResource),
-                consumption :: resourcesConsumed)
+              findMountMatches(restAllocations, resources.filterNot(_ == matchedResource), consumption :: resourcesConsumed)
             case None =>
               Left(DiskResourceNoMatch(resourcesConsumed, resources, Right(nextAllocation), scope))
           }
@@ -463,7 +464,7 @@ object ResourceMatcher extends StrictLogging {
     val withoutUnsupportedTypes = diskResources.filterNot { r =>
       r.getDiskSourceOption.exists { source =>
         source.getType == Source.Type.BLOCK ||
-          source.getType == Source.Type.RAW
+        source.getType == Source.Type.RAW
       }
     }
 
@@ -480,28 +481,22 @@ object ResourceMatcher extends StrictLogging {
 
     requestedResourcesByType.keys.map { diskType =>
       val withBiggestRequestsFirst =
-        requestedResourcesByType(diskType).
-          toList.
-          sortBy({ r => r.right.map(_.volume.persistent.size.toDouble).merge })(implicitly[Ordering[Double]].reverse)
+        requestedResourcesByType(diskType).toList
+          .sortBy({ r => r.right.map(_.volume.persistent.size.toDouble).merge })(implicitly[Ordering[Double]].reverse)
 
       val resources: List[Protos.Resource] = resourcesByType(diskType).iterator.filter(selector(_)).toList
 
       if (diskType == DiskType.Mount) {
-        findMountMatches(
-          withBiggestRequestsFirst.flatMap(_.right.toOption),
-          resources)
+        findMountMatches(withBiggestRequestsFirst.flatMap(_.right.toOption), resources)
       } else
-        findMatches(
-          diskType,
-          withBiggestRequestsFirst,
-          SourceResources.listFromResources(resources))
+        findMatches(diskType, withBiggestRequestsFirst, SourceResources.listFromResources(resources))
     }.toList.map(_.merge)
   }
 
   private[this] def matchScalarResource(
-    groupedResources: Map[Role, Seq[Protos.Resource]], selector: ResourceSelector)(
-    name: String, requiredValue: Double,
-    scope: ScalarMatchResult.Scope): ScalarMatchResult = {
+      groupedResources: Map[Role, Seq[Protos.Resource]],
+      selector: ResourceSelector
+  )(name: String, requiredValue: Double, scope: ScalarMatchResult.Scope): ScalarMatchResult = {
 
     require(scope == ScalarMatchResult.Scope.NoneDisk || name == Resource.DISK)
 
@@ -526,12 +521,13 @@ object ResourceMatcher extends StrictLogging {
     */
   @tailrec
   private[this] def consumeResources(
-    valueLeft: Double,
-    resourcesLeft: List[Protos.Resource],
-    resourcesNotConsumed: List[Protos.Resource] = Nil,
-    resourcesConsumed: List[GeneralScalarMatch.Consumption] = Nil,
-    matcher: Protos.Resource => Boolean = { _ => true }):
-      // format: OFF
+      valueLeft: Double,
+      resourcesLeft: List[Protos.Resource],
+      resourcesNotConsumed: List[Protos.Resource] = Nil,
+      resourcesConsumed: List[GeneralScalarMatch.Consumption] = Nil,
+      matcher: Protos.Resource => Boolean = { _ => true }
+  ):
+  // format: OFF
       Either[(Double), (List[GeneralScalarMatch.Consumption], List[Protos.Resource])] = {
     // format: ON
     if (valueLeft <= 0) {
@@ -549,8 +545,13 @@ object ResourceMatcher extends StrictLogging {
             val reservation = if (nextResource.hasReservation) Option(nextResource.getReservation) else None
             val consumedValue = GeneralScalarMatch.Consumption(consume, nextResource.getRole: @silent, providerId, reservation)
 
-            consumeResources(newValueLeft, restResources, (decrementedResource ++ resourcesNotConsumed).toList,
-              consumedValue :: resourcesConsumed, matcher)
+            consumeResources(
+              newValueLeft,
+              restResources,
+              (decrementedResource ++ resourcesNotConsumed).toList,
+              consumedValue :: resourcesConsumed,
+              matcher
+            )
           } else {
             consumeResources(valueLeft, restResources, nextResource :: resourcesNotConsumed, resourcesConsumed, matcher)
           }
@@ -558,16 +559,14 @@ object ResourceMatcher extends StrictLogging {
     }
   }
 
-  private[this] def logUnsatisfiedResources(
-    offer: Offer,
-    selector: ResourceSelector,
-    scalarMatchResults: Seq[ScalarMatchResult]): Unit = {
+  private[this] def logUnsatisfiedResources(offer: Offer, selector: ResourceSelector, scalarMatchResults: Seq[ScalarMatchResult]): Unit = {
     if (scalarMatchResults.exists(!_.matches)) {
       val basicResourceString = scalarMatchResults.mkString(", ")
       logger.info(
         s"Offer [${offer.getId.getValue}] with role ${offer.getAllocationInfo.getRole}. " +
           s"$selector. " +
-          s"Not all basic resources satisfied: $basicResourceString")
+          s"Not all basic resources satisfied: $basicResourceString"
+      )
     }
   }
 

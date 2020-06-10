@@ -14,10 +14,11 @@ import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
-private[appinfo] class DefaultInfoService(
-    groupManager: GroupManager,
-    newBaseData: () => AppInfoBaseData)(implicit ec: ExecutionContext)
-  extends AppInfoService with GroupInfoService with PodStatusService with StrictLogging {
+private[appinfo] class DefaultInfoService(groupManager: GroupManager, newBaseData: () => AppInfoBaseData)(implicit ec: ExecutionContext)
+    extends AppInfoService
+    with GroupInfoService
+    with PodStatusService
+    with StrictLogging {
 
   override def selectPodStatus(id: AbsolutePathId, selector: PodSelector): Future[Option[PodStatus]] =
     async { // linter:ignore UnnecessaryElseBranch
@@ -53,9 +54,7 @@ private[appinfo] class DefaultInfoService(
       infos
     }
 
-  override def selectAppsInGroup(groupId: AbsolutePathId, selector: AppSelector,
-    embed: Set[AppInfo.Embed]): Future[Seq[raml.AppInfo]] =
-
+  override def selectAppsInGroup(groupId: AbsolutePathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[raml.AppInfo]] =
     async { // linter:ignore UnnecessaryElseBranch
       logger.debug(s"queryAllInGroup $groupId")
       val maybeGroup: Option[Group] = groupManager.group(groupId)
@@ -67,16 +66,24 @@ private[appinfo] class DefaultInfoService(
       }
     }
 
-  override def selectGroup(groupId: AbsolutePathId, selectors: GroupInfoService.Selectors,
-    appEmbed: Set[Embed], groupEmbed: Set[GroupInfo.Embed]): Future[Option[raml.GroupInfo]] = {
+  override def selectGroup(
+      groupId: AbsolutePathId,
+      selectors: GroupInfoService.Selectors,
+      appEmbed: Set[Embed],
+      groupEmbed: Set[GroupInfo.Embed]
+  ): Future[Option[raml.GroupInfo]] = {
     groupManager.group(groupId) match {
       case Some(group) => queryForGroup(group, selectors, appEmbed, groupEmbed)
       case None => Future.successful(None)
     }
   }
 
-  override def selectGroupVersion(groupId: AbsolutePathId, version: Timestamp, selectors: GroupInfoService.Selectors,
-    groupEmbed: Set[GroupInfo.Embed]): Future[Option[raml.GroupInfo]] = {
+  override def selectGroupVersion(
+      groupId: AbsolutePathId,
+      version: Timestamp,
+      selectors: GroupInfoService.Selectors,
+      groupEmbed: Set[GroupInfo.Embed]
+  ): Future[Option[raml.GroupInfo]] = {
     groupManager.group(groupId, version).flatMap {
       case Some(group) => queryForGroup(group, selectors, Set.empty, groupEmbed)
       case None => Future.successful(None)
@@ -86,11 +93,11 @@ private[appinfo] class DefaultInfoService(
   private case class LazyCell[T](evalution: () => T) { lazy val value = evalution() }
 
   private[this] def queryForGroup(
-    group: Group,
-    selectors: GroupInfoService.Selectors,
-    appEmbed: Set[AppInfo.Embed],
-    groupEmbed: Set[GroupInfo.Embed]): Future[Option[raml.GroupInfo]] =
-
+      group: Group,
+      selectors: GroupInfoService.Selectors,
+      appEmbed: Set[AppInfo.Embed],
+      groupEmbed: Set[GroupInfo.Embed]
+  ): Future[Option[raml.GroupInfo]] =
     async { // linter:ignore UnnecessaryElseBranch
       val cachedBaseData = LazyCell(() => newBaseData()) // Work around strange async/eval compile bug in Scala 2.12
 
@@ -129,7 +136,8 @@ private[appinfo] class DefaultInfoService(
             group.id,
             selectors.groupSelector.matches(group) ||
               group.groupsById.exists { case (_, group) => groupMatches(group) } ||
-              group.apps.keys.exists(infoById.contains)) || group.pods.keys.exists(statusById.contains)
+              group.apps.keys.exists(infoById.contains)
+          ) || group.pods.keys.exists(statusById.contains)
         }
         if (groupMatches(ref)) {
           val groups: Set[raml.GroupInfo] =
@@ -148,31 +156,35 @@ private[appinfo] class DefaultInfoService(
             else
               Set.empty
 
-          Some(raml.GroupInfo(
-            id = ref.id.toString,
-            apps = apps,
-            pods = pods,
-            groups = groups,
-            dependencies = ref.dependencies.map(_.toString),
-            version = Some(ref.version.toOffsetDateTime),
-            enforceRole = Some(ref.enforceRole)))
+          Some(
+            raml.GroupInfo(
+              id = ref.id.toString,
+              apps = apps,
+              pods = pods,
+              groups = groups,
+              dependencies = ref.dependencies.map(_.toString),
+              version = Some(ref.version.toOffsetDateTime),
+              enforceRole = Some(ref.enforceRole)
+            )
+          )
         } else None
       }
       queryGroup(group)
     }
 
   private[this] def resolveAppInfos(
-    specs: Seq[RunSpec],
-    embed: Set[AppInfo.Embed],
-    baseData: AppInfoBaseData = newBaseData()): Future[Seq[raml.AppInfo]] = Future.sequence(specs.collect {
-    case app: AppDefinition =>
-      baseData.appInfoFuture(app, embed)
-  })
+      specs: Seq[RunSpec],
+      embed: Set[AppInfo.Embed],
+      baseData: AppInfoBaseData = newBaseData()
+  ): Future[Seq[raml.AppInfo]] =
+    Future.sequence(specs.collect {
+      case app: AppDefinition =>
+        baseData.appInfoFuture(app, embed)
+    })
 
-  private[this] def resolvePodInfos(
-    specs: Seq[RunSpec],
-    baseData: AppInfoBaseData): Future[Seq[PodStatus]] = Future.sequence(specs.collect {
-    case pod: PodDefinition =>
-      baseData.podStatus(pod)
-  })
+  private[this] def resolvePodInfos(specs: Seq[RunSpec], baseData: AppInfoBaseData): Future[Seq[PodStatus]] =
+    Future.sequence(specs.collect {
+      case pod: PodDefinition =>
+        baseData.podStatus(pod)
+    })
 }

@@ -21,7 +21,7 @@ object NetworkNormalization {
   object Networks {
     implicit val normalizedNetworks: Normalization[Networks] = Normalization { n =>
       // IMPORTANT: only evaluate config.defaultNetworkName if we actually need it
-      n.copy(networks = n.networks.map{ networks =>
+      n.copy(networks = n.networks.map { networks =>
         networks.map {
           case x: Network if x.name.isEmpty && x.mode == NetworkMode.Container => x.copy(name = n.config.defaultNetworkName)
           case x => x

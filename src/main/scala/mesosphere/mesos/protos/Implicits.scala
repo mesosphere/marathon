@@ -214,16 +214,17 @@ trait Implicits {
     )
   }
 
-  implicit def attributeToProto(attribute: Attribute): Protos.Attribute = attribute match {
-    case TextAttribute(name, text) =>
-      Protos.Attribute.newBuilder
-        .setType(Protos.Value.Type.TEXT)
-        .setName(name)
-        .setText(Protos.Value.Text.newBuilder.setValue(text))
-        .build
-    case unsupported: Attribute =>
-      throw new IllegalArgumentException(s"Unsupported type: $unsupported")
-  }
+  implicit def attributeToProto(attribute: Attribute): Protos.Attribute =
+    attribute match {
+      case TextAttribute(name, text) =>
+        Protos.Attribute.newBuilder
+          .setType(Protos.Value.Type.TEXT)
+          .setName(name)
+          .setText(Protos.Value.Text.newBuilder.setValue(text))
+          .build
+      case unsupported: Attribute =>
+        throw new IllegalArgumentException(s"Unsupported type: $unsupported")
+    }
 
   implicit def attributeToCaseClass(attribute: Protos.Attribute): Attribute = {
     attribute.getType match {
@@ -315,9 +316,14 @@ object Implicits extends Implicits {
 
   implicit final class LabelsToMap(val labels: Protos.Labels) extends AnyVal {
     def fromProto: Map[String, String] =
-      labels.getLabelsList().asScala.iterator.collect {
-        case label if label.hasKey && label.hasValue => label.getKey -> label.getValue
-      }.toMap
+      labels
+        .getLabelsList()
+        .asScala
+        .iterator
+        .collect {
+          case label if label.hasKey && label.hasValue => label.getKey -> label.getValue
+        }
+        .toMap
   }
 
   implicit final class LabelToTuple(val label: Protos.Label) extends AnyVal {

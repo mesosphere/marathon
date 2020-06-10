@@ -21,8 +21,7 @@ class RichConfig(val config: Config) extends AnyVal {
       Option.empty[T]
     }
   }
-  private def list[A, B](path: String, nonEmpty: Config => util.List[A],
-    ifEmpty: Seq[B])(implicit toScala: A => B): Seq[B] = {
+  private def list[A, B](path: String, nonEmpty: Config => util.List[A], ifEmpty: Seq[B])(implicit toScala: A => B): Seq[B] = {
     if (config.hasPath(path)) {
       nonEmpty(config).asScala.iterator.map(toScala).toSeq
     } else {

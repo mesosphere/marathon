@@ -28,6 +28,7 @@ class ResponseFacade extends HttpResponse {
 }
 
 object ResponseFacade {
+
   /**
     * Factory method for building a response using [[ResponseFacade]]
     */

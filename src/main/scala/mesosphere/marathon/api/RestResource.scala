@@ -33,18 +33,19 @@ trait RestResource extends JaxResource {
     * @param asyncResponse The AsyncResponse instance for the request to a controller method
     * @param body The response-generating code.
     */
-  def sendResponse(asyncResponse: AsyncResponse)(body: => Future[Response])(implicit ec: ExecutionContext) = try {
-    body.onComplete {
-      case Success(r) =>
-        asyncResponse.resume(r: Object)
-      case Failure(f: Throwable) =>
-        asyncResponse.resume(f)
-    }(ec)
-  } catch {
-    case ex: Throwable =>
-      asyncResponse.resume(ex)
+  def sendResponse(asyncResponse: AsyncResponse)(body: => Future[Response])(implicit ec: ExecutionContext) =
+    try {
+      body.onComplete {
+        case Success(r) =>
+          asyncResponse.resume(r: Object)
+        case Failure(f: Throwable) =>
+          asyncResponse.resume(f)
+      }(ec)
+    } catch {
+      case ex: Throwable =>
+        asyncResponse.resume(ex)
 
-  }
+    }
 
   protected def unknownGroup(id: PathId, version: Option[Timestamp] = None): Response = {
     notFound(s"Group '$id' does not exist" + version.fold("")(v => s" in version $v"))
@@ -65,7 +66,8 @@ trait RestResource extends JaxResource {
   }
 
   protected def deploymentResult(d: DeploymentPlan, response: ResponseBuilder = Response.ok()) = {
-    response.entity(new RestStreamingBody(raml.DeploymentResult(version = d.version.toOffsetDateTime, deploymentId = d.id)))
+    response
+      .entity(new RestStreamingBody(raml.DeploymentResult(version = d.version.toOffsetDateTime, deploymentId = d.id)))
       .header(RestResource.DeploymentHeader, d.id)
       .build()
   }
@@ -77,7 +79,8 @@ trait RestResource extends JaxResource {
   protected def ok(entity: String, mediaType: MediaType): Response = Response.ok(entity).`type`(mediaType).build()
   protected def ok[T <: raml.RamlGenerated](obj: Seq[T]): Response = Response.ok(new RestStreamingBody(obj)).build()
   protected def ok[T <: raml.RamlGenerated](obj: T): Response = Response.ok(new RestStreamingBody(obj)).build()
-  protected def ok[T <: raml.RamlGenerated](obj: T, mediaType: MediaType): Response = Response.ok(new RestStreamingBody(obj)).`type`(mediaType).build()
+  protected def ok[T <: raml.RamlGenerated](obj: T, mediaType: MediaType): Response =
+    Response.ok(new RestStreamingBody(obj)).`type`(mediaType).build()
   protected def created(uri: String): Response = Response.created(new URI(uri)).build()
   protected def noContent: Response = Response.noContent().build()
 

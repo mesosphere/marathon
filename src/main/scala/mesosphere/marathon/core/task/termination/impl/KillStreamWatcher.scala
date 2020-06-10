@@ -11,6 +11,7 @@ import mesosphere.marathon.core.task.termination.InstanceChangedPredicates.consi
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 
 object KillStreamWatcher extends StrictLogging {
+
   /**
     * We have two separate predicates for determining instance terminality: tasks have since been restarted, or instance
     * is decommissioned.
@@ -36,32 +37,34 @@ object KillStreamWatcher extends StrictLogging {
     * @param terminalPredicate The mechanism to judge instance terminality; are we watching for tasks to be killed, or instance to be decommissioned.
     * @return Source of instanceIds which emits a diminishing Set of pending instanceIds, and completes when that set is empty.
     */
-  private def emitPendingTerminal(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Iterable[Instance], terminalPredicate: TerminalPredicate): Source[Set[Instance.Id], NotUsed] = {
+  private def emitPendingTerminal(
+      instanceUpdates: InstanceTracker.InstanceUpdates,
+      instances: Iterable[Instance],
+      terminalPredicate: TerminalPredicate
+  ): Source[Set[Instance.Id], NotUsed] = {
 
     val instanceTasks: Map[Instance.Id, Set[Task.Id]] =
       instances.iterator.map { i => i.instanceId -> i.tasksMap.values.map(_.taskId).toSet }.toMap
 
-    instanceUpdates
-      .flatMapConcat {
-        case (snapshot, updates) =>
-          val pendingInstanceIds: Set[Instance.Id] = snapshot.instances.iterator
-            .filter { i => instanceTasks.contains(i.instanceId) }
-            .filterNot { i => terminalPredicate(i, instanceTasks(i.instanceId)) }
-            .map(_.instanceId)
-            .to(Set)
+    instanceUpdates.flatMapConcat {
+      case (snapshot, updates) =>
+        val pendingInstanceIds: Set[Instance.Id] = snapshot.instances.iterator.filter { i =>
+          instanceTasks.contains(i.instanceId)
+        }.filterNot { i => terminalPredicate(i, instanceTasks(i.instanceId)) }
+          .map(_.instanceId)
+          .to(Set)
 
-          updates
-            .filter { change => instanceTasks.contains(change.id) }
-            .scan(pendingInstanceIds) {
-              case (remaining, deleted: InstanceDeleted) =>
-                remaining - deleted.id
-              case (remaining, InstanceUpdated(instance, _, _)) if terminalPredicate(instance, instanceTasks(instance.instanceId)) =>
-                remaining - instance.instanceId
-              case (remaining, _) =>
-                remaining
-            }
-            .takeWhile(_.nonEmpty, inclusive = true)
-      }
+        updates.filter { change => instanceTasks.contains(change.id) }
+          .scan(pendingInstanceIds) {
+            case (remaining, deleted: InstanceDeleted) =>
+              remaining - deleted.id
+            case (remaining, InstanceUpdated(instance, _, _)) if terminalPredicate(instance, instanceTasks(instance.instanceId)) =>
+              remaining - instance.instanceId
+            case (remaining, _) =>
+              remaining
+          }
+          .takeWhile(_.nonEmpty, inclusive = true)
+    }
   }
 
   /**
@@ -77,7 +80,10 @@ object KillStreamWatcher extends StrictLogging {
     * @return Akka stream Source as described
     *
     */
-  def watchForKilledTasks(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Iterable[Instance]): Source[Set[Instance.Id], NotUsed] =
+  def watchForKilledTasks(
+      instanceUpdates: InstanceTracker.InstanceUpdates,
+      instances: Iterable[Instance]
+  ): Source[Set[Instance.Id], NotUsed] =
     emitPendingTerminal(instanceUpdates, instances, considerTerminalIfConditionTerminalOrTasksReplaced)
 
   /**
@@ -96,6 +102,9 @@ object KillStreamWatcher extends StrictLogging {
     * @param instances Instances to wait to be expunged from the instance tracker due to decomissioning
     * @return Akka stream Source as described
     */
-  def watchForDecommissionedInstances(instanceUpdates: InstanceTracker.InstanceUpdates, instances: Iterable[Instance]): Source[Set[Instance.Id], NotUsed] =
+  def watchForDecommissionedInstances(
+      instanceUpdates: InstanceTracker.InstanceUpdates,
+      instances: Iterable[Instance]
+  ): Source[Set[Instance.Id], NotUsed] =
     emitPendingTerminal(instanceUpdates, instances, considerTerminalIfConditionTerminalAndGoalDecommissioned)
 }

@@ -15,19 +15,18 @@ import scala.concurrent.ExecutionContext
 /**
   * Provides a [[GroupManager]] implementation.
   */
-class GroupManagerModule(
-    metrics: Metrics,
-    config: MarathonConf,
-    scheduler: Provider[DeploymentService],
-    groupRepo: GroupRepository)(implicit ctx: ExecutionContext, eventStream: EventStream, authorizer: Authorizer) {
+class GroupManagerModule(metrics: Metrics, config: MarathonConf, scheduler: Provider[DeploymentService], groupRepo: GroupRepository)(
+    implicit
+    ctx: ExecutionContext,
+    eventStream: EventStream,
+    authorizer: Authorizer
+) {
 
   val groupManager: GroupManager = {
     val groupManager = new GroupManagerImpl(metrics, config, None, groupRepo, scheduler)
 
     val startedAt = System.currentTimeMillis()
-    metrics.closureGauge(
-      "uptime",
-      () => (System.currentTimeMillis() - startedAt).toDouble / 1000.0, unit = UnitOfMeasurement.Time)
+    metrics.closureGauge("uptime", () => (System.currentTimeMillis() - startedAt).toDouble / 1000.0, unit = UnitOfMeasurement.Time)
 
     groupManager
   }

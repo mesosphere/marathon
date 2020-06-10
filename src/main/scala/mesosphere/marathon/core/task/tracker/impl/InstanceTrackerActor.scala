@@ -14,7 +14,16 @@ import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdated, InstancesSnapshot}
+import mesosphere.marathon.core.instance.update.{
+  InstanceChange,
+  InstanceChangeHandler,
+  InstanceDeleted,
+  InstanceUpdateEffect,
+  InstanceUpdateOpResolver,
+  InstanceUpdateOperation,
+  InstanceUpdated,
+  InstancesSnapshot
+}
 import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{RepositoryStateUpdated, UpdateContext}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig, InstanceTrackerUpdateStepProcessor}
@@ -28,17 +37,28 @@ import scala.util.{Failure, Success}
 
 object InstanceTrackerActor {
   def props(
-    metrics: Metrics,
-    config: InstanceTrackerConfig,
-    steps: Seq[InstanceChangeHandler],
-    repository: InstanceView,
-    clock: Clock,
-    crashStrategy: CrashStrategy)(implicit mat: Materializer): Props = {
+      metrics: Metrics,
+      config: InstanceTrackerConfig,
+      steps: Seq[InstanceChangeHandler],
+      repository: InstanceView,
+      clock: Clock,
+      crashStrategy: CrashStrategy
+  )(implicit mat: Materializer): Props = {
     val instancesLoader = new InstancesLoaderImpl(repository, config)(mat)
     val updateStepProcessor = new InstanceTrackerUpdateStepProcessorImpl(metrics, steps)
     val stateOpResolver: InstanceUpdateOpResolver = new InstanceUpdateOpResolver(clock)
 
-    Props(new InstanceTrackerActor(new ActorMetrics(metrics), instancesLoader, updateStepProcessor, stateOpResolver, repository, clock, crashStrategy))
+    Props(
+      new InstanceTrackerActor(
+        new ActorMetrics(metrics),
+        instancesLoader,
+        updateStepProcessor,
+        stateOpResolver,
+        repository,
+        clock,
+        crashStrategy
+      )
+    )
   }
 
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
@@ -82,7 +102,10 @@ private[impl] class InstanceTrackerActor(
     updateOperationResolver: InstanceUpdateOpResolver,
     repository: InstanceView,
     clock: Clock,
-    crashStrategy: CrashStrategy) extends Actor with Stash with StrictLogging {
+    crashStrategy: CrashStrategy
+) extends Actor
+    with Stash
+    with StrictLogging {
 
   // Internal state of the tracker. It is set after initialization.
   var instancesBySpec: InstanceTracker.InstancesBySpec = _
@@ -119,29 +142,30 @@ private[impl] class InstanceTrackerActor(
 
   override def receive: Receive = initializing
 
-  private[this] def initializing: Receive = LoggingReceive.withLabel("initializing") {
-    case initialInstances: InstanceTracker.InstancesBySpec =>
-      logger.info("Instances loading complete.")
-      logger.info(s"Loaded ${initialInstances.allInstances.size} instances.")
+  private[this] def initializing: Receive =
+    LoggingReceive.withLabel("initializing") {
+      case initialInstances: InstanceTracker.InstancesBySpec =>
+        logger.info("Instances loading complete.")
+        logger.info(s"Loaded ${initialInstances.allInstances.size} instances.")
 
-      instancesBySpec = initialInstances
-      counts = TaskCounts(initialInstances.allInstances, healthStatuses = Map.empty)
+        instancesBySpec = initialInstances
+        counts = TaskCounts(initialInstances.allInstances, healthStatuses = Map.empty)
 
-      metrics.stagedTasksMetric.setValue(counts.tasksStaged.toLong)
-      metrics.runningTasksMetric.setValue(counts.tasksRunning.toLong)
+        metrics.stagedTasksMetric.setValue(counts.tasksStaged.toLong)
+        metrics.runningTasksMetric.setValue(counts.tasksRunning.toLong)
 
-      context.become(initialized)
+        context.become(initialized)
 
-      unstashAll()
+        unstashAll()
 
-    case Status.Failure(cause) =>
-      // escalate this failure
-      logger.error("InstanceTracker failed to load tasks because: ", cause)
-      throw new IllegalStateException("Error while loading tasks", cause)
+      case Status.Failure(cause) =>
+        // escalate this failure
+        logger.error("InstanceTracker failed to load tasks because: ", cause)
+        throw new IllegalStateException("Error while loading tasks", cause)
 
-    case _: AnyRef =>
-      stash()
-  }
+      case _: AnyRef =>
+        stash()
+    }
 
   var subscribers: Set[ActorRef] = Set.empty
 
@@ -171,9 +195,10 @@ private[impl] class InstanceTrackerActor(
         logger.info(s"Processing ${update.operation.shortString}")
 
         val originalSender = sender
-        val updateEffect = try {
-          resolveUpdateEffect(update)
-        } catch { case ex: Throwable => InstanceUpdateEffect.Failure(ex) }
+        val updateEffect =
+          try {
+            resolveUpdateEffect(update)
+          } catch { case ex: Throwable => InstanceUpdateEffect.Failure(ex) }
         import scala.concurrent.ExecutionContext.Implicits.global
 
         updateEffect match {
@@ -242,12 +267,15 @@ private[impl] class InstanceTrackerActor(
 
   def resolveUpdateEffect(update: UpdateContext): InstanceUpdateEffect = {
     if (update.deadline <= clock.now()) {
-      InstanceUpdateEffect.Failure(new TimeoutException(s"Timeout: ${update.operation} for app [${update.appId}] and ${update.instanceId}."))
+      InstanceUpdateEffect.Failure(
+        new TimeoutException(s"Timeout: ${update.operation} for app [${update.appId}] and ${update.instanceId}.")
+      )
     } else {
       val maybeInstance = instancesBySpec.instance(update.operation.instanceId)
       updateOperationResolver.resolve(maybeInstance, update.operation)
     }
   }
+
   /**
     * Update the state of an app or pod and its instances.
     *

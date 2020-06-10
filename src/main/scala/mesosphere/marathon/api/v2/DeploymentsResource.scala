@@ -25,50 +25,58 @@ class DeploymentsResource @Inject() (
     groupManager: GroupManager,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    val config: MarathonConf)(implicit val executionContext: ExecutionContext)
-  extends AuthResource
-  with StrictLogging {
+    val config: MarathonConf
+)(implicit val executionContext: ExecutionContext)
+    extends AuthResource
+    with StrictLogging {
 
   @GET
-  def running(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
-    async {
-      implicit val identity = await(authenticatedAsync(req))
-      val infos = await(service.listRunningDeployments())
-        .filter(_.plan.affectedRunSpecs.exists(isAuthorized(ViewRunSpec, _)))
-      ok(Raml.toRaml(infos))
+  def running(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit =
+    sendResponse(asyncResponse) {
+      async {
+        implicit val identity = await(authenticatedAsync(req))
+        val infos = await(service.listRunningDeployments())
+          .filter(_.plan.affectedRunSpecs.exists(isAuthorized(ViewRunSpec, _)))
+        ok(Raml.toRaml(infos))
+      }
     }
-  }
 
   @DELETE
   @Path("{id}")
   def cancel(
-    @PathParam("id") id: String,
-    @DefaultValue("false")@QueryParam("force") force: Boolean,
-    @Context req: HttpServletRequest,
-    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
-    async {
-      implicit val identity = await(authenticatedAsync(req))
-      val plan = await(service.listRunningDeployments()).find(_.plan.id == id).map(_.plan)
-      plan match {
-        case None =>
-          notFound(s"DeploymentPlan $id does not exist")
-        case Some(deployment) =>
-          deployment.affectedRunSpecs.foreach(checkAuthorization(UpdateRunSpec, _))
+      @PathParam("id") id: String,
+      @DefaultValue("false") @QueryParam("force") force: Boolean,
+      @Context req: HttpServletRequest,
+      @Suspended asyncResponse: AsyncResponse
+  ): Unit =
+    sendResponse(asyncResponse) {
+      async {
+        implicit val identity = await(authenticatedAsync(req))
+        val plan = await(service.listRunningDeployments()).find(_.plan.id == id).map(_.plan)
+        plan match {
+          case None =>
+            notFound(s"DeploymentPlan $id does not exist")
+          case Some(deployment) =>
+            deployment.affectedRunSpecs.foreach(checkAuthorization(UpdateRunSpec, _))
 
-          if (force) {
-            // do not create a new deployment to return to the previous state
-            logger.info(s"Canceling deployment [$id]")
-            service.cancelDeployment(deployment)
-            status(ACCEPTED) // 202: Accepted
-          } else {
-            // create a new deployment to return to the previous state
-            deploymentResult(await(groupManager.updateRoot(
-              PathId.root,
-              deployment.revert,
-              force = true
-            )))
-          }
+            if (force) {
+              // do not create a new deployment to return to the previous state
+              logger.info(s"Canceling deployment [$id]")
+              service.cancelDeployment(deployment)
+              status(ACCEPTED) // 202: Accepted
+            } else {
+              // create a new deployment to return to the previous state
+              deploymentResult(
+                await(
+                  groupManager.updateRoot(
+                    PathId.root,
+                    deployment.revert,
+                    force = true
+                  )
+                )
+              )
+            }
+        }
       }
     }
-  }
 }

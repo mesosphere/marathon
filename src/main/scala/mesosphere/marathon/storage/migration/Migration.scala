@@ -60,7 +60,8 @@ class Migration(
     private[migration] val backup: PersistentStoreBackup,
     private[migration] val config: StorageConfig,
     private[migration] val steps: List[MigrationAction] = Migration.steps
-)(implicit mat: Materializer, scheduler: Scheduler) extends StrictLogging {
+)(implicit mat: Materializer, scheduler: Scheduler)
+    extends StrictLogging {
 
   import StorageVersions.OrderedStorageVersion
   import Migration.statusLoggingInterval
@@ -82,49 +83,53 @@ class Migration(
   }
 
   def applyMigrationSteps(from: StorageVersion): Future[Seq[StorageVersion]] = {
-    steps
-      .filter { case (version, _) => version > from }
-      .sortBy { case (version, _) => version }
+    steps.filter { case (version, _) => version > from }.sortBy { case (version, _) => version }
       .foldLeft(Future.successful(Seq.empty[StorageVersion])) {
-        case (resultsFuture, (migrateVersion, change)) => resultsFuture.flatMap { res =>
-          logger.info(
-            s"Migration for storage: ${from.str} to target: ${targetVersion.str}: apply change for version: ${migrateVersion.str} "
-          )
+        case (resultsFuture, (migrateVersion, change)) =>
+          resultsFuture.flatMap { res =>
+            logger.info(
+              s"Migration for storage: ${from.str} to target: ${targetVersion.str}: apply change for version: ${migrateVersion.str} "
+            )
 
-          val migrationInProgressNotification = scheduler.schedule(statusLoggingInterval, statusLoggingInterval) {
-            notifyMigrationInProgress(from, migrateVersion)
-          }
+            val migrationInProgressNotification = scheduler.schedule(statusLoggingInterval, statusLoggingInterval) {
+              notifyMigrationInProgress(from, migrateVersion)
+            }
 
-          val step = change.apply(this)
-          step.migrate().recover {
-            case e: MigrationCancelledException => throw e
-            case NonFatal(e) =>
-              throw new MigrationFailedException(s"while migrating storage to $migrateVersion", e)
-          }.map { _ =>
-            res :+ migrateVersion
-          }.andThen {
-            case _ =>
-              migrationInProgressNotification.cancel()
+            val step = change.apply(this)
+            step
+              .migrate()
+              .recover {
+                case e: MigrationCancelledException => throw e
+                case NonFatal(e) =>
+                  throw new MigrationFailedException(s"while migrating storage to $migrateVersion", e)
+              }
+              .map { _ =>
+                res :+ migrateVersion
+              }
+              .andThen {
+                case _ =>
+                  migrationInProgressNotification.cancel()
+              }
           }
-        }
       }
   }
 
-  def migrateAsync(): Future[Seq[StorageVersion]] = async {
+  def migrateAsync(): Future[Seq[StorageVersion]] =
+    async {
 
-    val config = await(runtimeConfigurationRepository.get()).getOrElse(RuntimeConfiguration())
-    // before backup/restore called, reset the runtime configuration
-    await(runtimeConfigurationRepository.store(RuntimeConfiguration(None, None)))
-    // step 1: backup current zk state
-    await(config.backup.map(uri => backup.backup(new URI(uri))).getOrElse(Future.successful(Done)))
-    // step 2: restore state from given backup
-    await(config.restore.map(uri => backup.restore(new URI(uri))).getOrElse(Future.successful(Done)))
+      val config = await(runtimeConfigurationRepository.get()).getOrElse(RuntimeConfiguration())
+      // before backup/restore called, reset the runtime configuration
+      await(runtimeConfigurationRepository.store(RuntimeConfiguration(None, None)))
+      // step 1: backup current zk state
+      await(config.backup.map(uri => backup.backup(new URI(uri))).getOrElse(Future.successful(Done)))
+      // step 2: restore state from given backup
+      await(config.restore.map(uri => backup.restore(new URI(uri))).getOrElse(Future.successful(Done)))
 
-    // last step: run the migration, to ensure we can operate on the zk state
-    val result = await(migrateStorage(backupCreated = config.backup.isDefined || config.restore.isDefined))
-    logger.info(s"Migration successfully applied for version ${targetVersion.str}")
-    result
-  }
+      // last step: run the migration, to ensure we can operate on the zk state
+      val result = await(migrateStorage(backupCreated = config.backup.isDefined || config.restore.isDefined))
+      logger.info(s"Migration successfully applied for version ${targetVersion.str}")
+      result
+    }
 
   def migrate(): Seq[StorageVersion] =
     Await.result(migrateAsync(), Duration.Inf)
@@ -216,7 +221,9 @@ object Migration {
       StorageVersions(18, 100) -> { (migration) => new MigrationTo18100(migration.instanceRepo, migration.persistenceStore) },
       StorageVersions(18, 200) -> { (migration) => new MigrationTo18200(migration.instanceRepo, migration.persistenceStore) },
       StorageVersions(19, 100) -> { (migration) => new MigrationTo19100(migration.defaultMesosRole, migration.persistenceStore) },
-      StorageVersions(19, 200) -> { (migration) => new MigrationTo19200(migration.defaultMesosRole, migration.instanceRepo, migration.persistenceStore) },
+      StorageVersions(19, 200) -> { (migration) =>
+        new MigrationTo19200(migration.defaultMesosRole, migration.instanceRepo, migration.persistenceStore)
+      },
       StorageVersions(19, 300) -> { (migration) => new MigrationTo19300(migration.persistenceStore) },
       StorageVersions(110, 100) -> { (migration) => new MigrationTo110000(migration.persistenceStore) }
     )
@@ -224,8 +231,12 @@ object Migration {
 
 object StorageVersions {
 
-  def apply(major: Int, minor: Int = 0, patch: Int = 0,
-    format: StorageVersion.StorageFormat = StorageVersion.StorageFormat.PERSISTENCE_STORE): StorageVersion = {
+  def apply(
+      major: Int,
+      minor: Int = 0,
+      patch: Int = 0,
+      format: StorageVersion.StorageFormat = StorageVersion.StorageFormat.PERSISTENCE_STORE
+  ): StorageVersion = {
     StorageVersion
       .newBuilder()
       .setMajor(major)
@@ -246,10 +257,11 @@ object StorageVersions {
   implicit class OrderedStorageVersion(val version: StorageVersion) extends AnyVal with Ordered[StorageVersion] {
     override def compare(that: StorageVersion): Int = {
       def by(left: Int, right: Int, fn: => Int): Int = if (left.compareTo(right) != 0) left.compareTo(right) else fn
-      by(version.getFormat.getNumber, that.getFormat.getNumber,
-        by(version.getMajor, that.getMajor,
-          by(version.getMinor, that.getMinor,
-            by(version.getPatch, that.getPatch, 0))))
+      by(
+        version.getFormat.getNumber,
+        that.getFormat.getNumber,
+        by(version.getMajor, that.getMajor, by(version.getMinor, that.getMinor, by(version.getPatch, that.getPatch, 0)))
+      )
     }
 
     def str: String = s"Version(${version.getMajor}, ${version.getMinor}, ${version.getPatch}, ${version.getFormat})"

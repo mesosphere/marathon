@@ -7,7 +7,7 @@ resolvers ++= Seq(
 )
 
 addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.12")
-addSbtPlugin("org.scalariform" % "sbt-scalariform" % "1.8.2")
+addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.0")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
 addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.19.0")
 addSbtPlugin("com.timushev.sbt" % "sbt-updates" % "0.3.3")

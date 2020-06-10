@@ -10,6 +10,7 @@ package core.task.termination
 trait KillReason
 
 object KillReason {
+
   /** The task is killed because of an incoming http request */
   case object KillingTasksViaApi extends KillReason
 

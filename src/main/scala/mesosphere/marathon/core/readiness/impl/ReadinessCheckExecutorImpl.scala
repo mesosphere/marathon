@@ -23,7 +23,8 @@ import scala.util.control.NonFatal
   * A Akka-HTTP-based implementation of a ReadinessCheckExecutor.
   */
 private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorSystem, materializer: Materializer)
-  extends ReadinessCheckExecutor with StrictLogging {
+    extends ReadinessCheckExecutor
+    with StrictLogging {
 
   import scala.concurrent.ExecutionContext.Implicits.global
   private[readiness] implicit val scheduler = actorSystem.scheduler
@@ -36,14 +37,15 @@ private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorS
     * First check is eager. Next check will not commence until after both 1) first check completes, and 2)
     * iterator.next() is called
     */
-  private def serialChecksIterator(spec: ReadinessCheckSpec) = Iterator.iterate(executeSingleCheck(spec)) { result =>
-    result.flatMap { r =>
-      if (r.ready)
-        result
-      else
-        after(spec.interval, scheduler) { executeSingleCheck(spec) }
+  private def serialChecksIterator(spec: ReadinessCheckSpec) =
+    Iterator.iterate(executeSingleCheck(spec)) { result =>
+      result.flatMap { r =>
+        if (r.ready)
+          result
+        else
+          after(spec.interval, scheduler) { executeSingleCheck(spec) }
+      }
     }
-  }
 
   /**
     * Returns an akka stream source that, when materializes, runs readiness checks periodically according to the spec.
@@ -54,7 +56,8 @@ private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorS
     * completing.
     */
   override def execute(readinessCheckSpec: ReadinessCheckSpec): Source[ReadinessCheckResult, Cancellable] = {
-    Source.fromIterator(() => serialChecksIterator(readinessCheckSpec))
+    Source
+      .fromIterator(() => serialChecksIterator(readinessCheckSpec))
       .mapAsync(1)(identity)
       .takeWhile({ result => !result.ready }, inclusive = true)
       .viaMat(KillSwitches.single)(Keep.right)
@@ -82,8 +85,7 @@ private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorS
     }
   }
 
-  private[impl] def exceptionToErrorResponse(
-    check: ReadinessCheckSpec): PartialFunction[Throwable, ReadinessCheckResult] = {
+  private[impl] def exceptionToErrorResponse(check: ReadinessCheckSpec): PartialFunction[Throwable, ReadinessCheckResult] = {
     case NonFatal(e) =>
       val response = HttpResponse(
         status = StatusCodes.GatewayTimeout.intValue,
@@ -95,9 +97,12 @@ private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorS
   }
 
   private[impl] def akkaHttpGet(check: ReadinessCheckSpec): Future[AkkaHttpResponse] = {
-    Timeout(check.timeout)(Http().singleRequest(
-      request = RequestBuilding.Get(check.url),
-      connectionContext = ConnectionContext.https(HealthCheckWorker.disabledSslContext, sslConfig = Some(HealthCheckWorker.disabledSslConfig()))
-    ))
+    Timeout(check.timeout)(
+      Http().singleRequest(
+        request = RequestBuilding.Get(check.url),
+        connectionContext =
+          ConnectionContext.https(HealthCheckWorker.disabledSslContext, sslConfig = Some(HealthCheckWorker.disabledSslConfig()))
+      )
+    )
   }
 }

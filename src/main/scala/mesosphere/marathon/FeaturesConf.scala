@@ -7,22 +7,19 @@ trait FeaturesConf extends ScallopConf {
 
   private val deprecatedFeatureParser: ValueConverter[DeprecatedFeatureConfig] = setStringParser.map { values =>
     val DisabledRegex = "^disable_(.+)$".r
-    val parsed = values
-      .iterator
-      .map { unparsedKey =>
-        val (key, enabled) = unparsedKey match {
-          case DisabledRegex(key) => key -> false
-          case key => key -> true
-        }
-
-        DeprecatedFeatures.all.find(_.key == key) match {
-          case Some(df) =>
-            Right(df -> enabled)
-          case None =>
-            Left(key)
-        }
+    val parsed = values.iterator.map { unparsedKey =>
+      val (key, enabled) = unparsedKey match {
+        case DisabledRegex(key) => key -> false
+        case key => key -> true
       }
-      .toSeq
+
+      DeprecatedFeatures.all.find(_.key == key) match {
+        case Some(df) =>
+          Right(df -> enabled)
+        case None =>
+          Left(key)
+      }
+    }.toSeq
 
     val unknown = parsed.collect { case Left(key) => key }
     require(
@@ -51,7 +48,8 @@ trait FeaturesConf extends ScallopConf {
     required = false,
     default = Some(DeprecatedFeatureConfig(BuildInfo.version, Map.empty)),
     noshort = true,
-    validate = { dfs => dfs.isValid() })(deprecatedFeatureParser)
+    validate = { dfs => dfs.isValid() }
+  )(deprecatedFeatureParser)
 
   def availableFeatures: Set[String] = features()
   def availableDeprecatedFeatures: DeprecatedFeatureConfig = deprecatedFeatures()

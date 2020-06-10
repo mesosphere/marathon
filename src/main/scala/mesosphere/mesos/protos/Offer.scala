@@ -7,4 +7,5 @@ case class Offer(
     hostname: String,
     resources: Seq[Resource],
     attributes: Seq[Attribute],
-    executorIds: Seq[ExecutorID])
+    executorIds: Seq[ExecutorID]
+)

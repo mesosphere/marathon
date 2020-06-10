@@ -15,7 +15,11 @@ import mesosphere.marathon.Protos.StorageVersion
 import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.instance.Reservation.{LegacyId, SimplifiedId}
 import mesosphere.marathon.core.instance.{LocalVolumeId, Reservation}
-import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
+import mesosphere.marathon.core.storage.store.impl.cache.{
+  LazyCachingPersistenceStore,
+  LazyVersionCachingPersistentStore,
+  LoadTimeCachingPersistenceStore
+}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkPersistenceStore, ZkSerialized}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
 import mesosphere.marathon.core.task.Task
@@ -66,15 +70,15 @@ object InstanceMigration extends MaybeStore with StrictLogging {
     * This function traverses all instances in ZK and passes them through the migration flow before saving the updates.
     */
   def migrateInstances(
-    instanceRepository: InstanceRepository,
-    persistenceStore: PersistenceStore[_, _, _],
-    migrationFlow: Flow[JsValue, Instance, NotUsed])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+      instanceRepository: InstanceRepository,
+      persistenceStore: PersistenceStore[_, _, _],
+      migrationFlow: Flow[JsValue, Instance, NotUsed]
+  )(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
 
-    val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }
-      .mapMaterializedValue { f =>
-        f.map(i => logger.info(s"$i instances migrated"))
-        NotUsed
-      }
+    val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }.mapMaterializedValue { f =>
+      f.map(i => logger.info(s"$i instances migrated"))
+      NotUsed
+    }
 
     maybeStore(persistenceStore).map { store =>
       instanceRepository
@@ -132,12 +136,12 @@ object InstanceMigration extends MaybeStore with StrictLogging {
   def legacyReservationReads(tasksMap: Map[Task.Id, Task], instanceId: Id): Reads[Reservation] = {
     (
       (__ \ "volumeIds").read[Seq[LocalVolumeId]] ~
-      (__ \ "state").read[Reservation.State] ~
-      (__ \ "id").readNullable[Reservation.Id]
+        (__ \ "state").read[Reservation.State] ~
+        (__ \ "id").readNullable[Reservation.Id]
     ) { (volumesIds, state, maybeId) =>
-        val reservationId = maybeId.getOrElse(inferReservationId(tasksMap, instanceId))
-        Reservation(volumesIds, state, reservationId)
-      }
+      val reservationId = maybeId.getOrElse(inferReservationId(tasksMap, instanceId))
+      Reservation(volumesIds, state, reservationId)
+    }
   }
 
   /**
@@ -183,6 +187,7 @@ object InstanceMigration extends MaybeStore with StrictLogging {
 }
 
 object ServiceMigration extends StrictLogging with MaybeStore {
+
   /**
     * Helper method to migrate all versions for all apps by loading them, threading them through the provided flow, and
     * then storing them. Filtered entities are simply unaffected in persistence.
@@ -192,8 +197,11 @@ object ServiceMigration extends StrictLogging with MaybeStore {
     * @param migratingFlow The flow which actually performs the migrations.
     * @return
     */
-  def migrateAppVersions(storageVersion: StorageVersion, persistenceStore: PersistenceStore[ZkId, String, ZkSerialized],
-    migratingFlow: Flow[(Protos.ServiceDefinition, Option[OffsetDateTime]), (Protos.ServiceDefinition, Option[OffsetDateTime]), NotUsed])(implicit ec: ExecutionContext, mat: Materializer): Future[Done] = {
+  def migrateAppVersions(
+      storageVersion: StorageVersion,
+      persistenceStore: PersistenceStore[ZkId, String, ZkSerialized],
+      migratingFlow: Flow[(Protos.ServiceDefinition, Option[OffsetDateTime]), (Protos.ServiceDefinition, Option[OffsetDateTime]), NotUsed]
+  )(implicit ec: ExecutionContext, mat: Materializer): Future[Done] = {
     implicit val appProtosUnmarshaller: Unmarshaller[ZkSerialized, Protos.ServiceDefinition] =
       Unmarshaller.strict {
         case ZkSerialized(byteString) => Protos.ServiceDefinition.parseFrom(byteString.toArray)
@@ -203,15 +211,18 @@ object ServiceMigration extends StrictLogging with MaybeStore {
       Marshaller.opaque(appProtos => ZkSerialized(ByteString(appProtos.toByteArray)))
 
     implicit val appIdResolver: IdResolver[AbsolutePathId, Protos.ServiceDefinition, String, ZkId] =
-      new ZkStoreSerialization.ZkPathIdResolver[Protos.ServiceDefinition]("apps", true, AppDefinition.versionInfoFrom(_).version.toOffsetDateTime)
+      new ZkStoreSerialization.ZkPathIdResolver[Protos.ServiceDefinition](
+        "apps",
+        true,
+        AppDefinition.versionInfoFrom(_).version.toOffsetDateTime
+      )
 
-    val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }
-      .mapMaterializedValue { f =>
-        f.map(i => logger.info(s"$i apps modified when migrating to ${storageVersion}"))
-        NotUsed
-      }
+    val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }.mapMaterializedValue { f =>
+      f.map(i => logger.info(s"$i apps modified when migrating to ${storageVersion}"))
+      NotUsed
+    }
 
-    maybeStore(persistenceStore).map{ zkStore =>
+    maybeStore(persistenceStore).map { zkStore =>
       zkStore
         .ids()
         .flatMapConcat(appId => zkStore.versions(appId).map(v => (appId, Some(v))) ++ Source.single((appId, Option.empty[OffsetDateTime])))
@@ -219,7 +230,7 @@ object ServiceMigration extends StrictLogging with MaybeStore {
           case (appId, Some(version)) => zkStore.get(appId, version).map(app => (app, Some(version)))
           case (appId, None) => zkStore.get(appId).map(app => (app, Option.empty[OffsetDateTime]))
         }
-        .collect{ case (Some(appProtos), optVersion) if !appProtos.hasRole => (appProtos, optVersion) }
+        .collect { case (Some(appProtos), optVersion) if !appProtos.hasRole => (appProtos, optVersion) }
         .via(migratingFlow)
         .mapAsync(Migration.maxConcurrency) {
           case (appProtos, Some(version)) => zkStore.store(AbsolutePathId(appProtos.getId), appProtos, version)
@@ -241,8 +252,11 @@ object ServiceMigration extends StrictLogging with MaybeStore {
     * @param migratingFlow The flow which actually performs the migrations.
     * @return
     */
-  def migratePodVersions(storageVersion: StorageVersion, persistenceStore: PersistenceStore[ZkId, String, ZkSerialized],
-    migratingFlow: Flow[(raml.Pod, Option[OffsetDateTime]), (raml.Pod, Option[OffsetDateTime]), NotUsed])(implicit ec: ExecutionContext, mat: Materializer): Future[Done] = {
+  def migratePodVersions(
+      storageVersion: StorageVersion,
+      persistenceStore: PersistenceStore[ZkId, String, ZkSerialized],
+      migratingFlow: Flow[(raml.Pod, Option[OffsetDateTime]), (raml.Pod, Option[OffsetDateTime]), NotUsed]
+  )(implicit ec: ExecutionContext, mat: Materializer): Future[Done] = {
     implicit val podIdResolver =
       new ZkStoreSerialization.ZkPathIdResolver[raml.Pod]("pods", true, _.version.getOrElse(Timestamp.now().toOffsetDateTime))
 
@@ -256,13 +270,12 @@ object ServiceMigration extends StrictLogging with MaybeStore {
         ZkSerialized(ByteString(Json.stringify(Json.toJson(podRaml)), StandardCharsets.UTF_8.name()))
       }
 
-    val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }
-      .mapMaterializedValue { f =>
-        f.map(i => logger.info(s"$i pods modified when migrating to ${storageVersion}"))
-        NotUsed
-      }
+    val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }.mapMaterializedValue { f =>
+      f.map(i => logger.info(s"$i pods modified when migrating to ${storageVersion}"))
+      NotUsed
+    }
 
-    maybeStore(persistenceStore).map{ zkStore =>
+    maybeStore(persistenceStore).map { zkStore =>
       zkStore
         .ids()
         .flatMapConcat(podId => zkStore.versions(podId).map(v => (podId, Some(v))) ++ Source.single((podId, Option.empty[OffsetDateTime])))
@@ -270,7 +283,7 @@ object ServiceMigration extends StrictLogging with MaybeStore {
           case (podId, Some(version)) => zkStore.get(podId, version).map(pod => (pod, Some(version)))
           case (podId, None) => zkStore.get(podId).map(pod => (pod, Option.empty[OffsetDateTime]))
         }
-        .collect{ case (Some(podRaml), optVersion) if podRaml.role.isEmpty => (podRaml, optVersion) }
+        .collect { case (Some(podRaml), optVersion) if podRaml.role.isEmpty => (podRaml, optVersion) }
         .via(migratingFlow)
         .mapAsync(Migration.maxConcurrency) {
           case (podRaml, Some(version)) => zkStore.store(AbsolutePathId(podRaml.id), podRaml, version)

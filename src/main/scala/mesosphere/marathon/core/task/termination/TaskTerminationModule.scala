@@ -16,7 +16,8 @@ class TaskTerminationModule(
     config: KillConfig,
     metrics: Metrics,
     clock: Clock,
-    actorSystem: ActorSystem) {
+    actorSystem: ActorSystem
+) {
 
   private[this] lazy val instanceTracker = instanceTrackerModule.instanceTracker
 
