@@ -3,7 +3,7 @@ package api
 
 import javax.ws.rs.core.Application
 import javax.ws.rs.ext.ExceptionMapper
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 /**
   * Simple JAX Application containing instances of controllers, exception mappers, and other things.

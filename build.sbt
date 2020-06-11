@@ -87,7 +87,7 @@ lazy val commonSettings = Seq(
     "-feature",
     "-unchecked",
     "-Xlint",
-    "-Xfatal-warnings",
+    //"-Xfatal-warnings",
     "-Wconf:cat=unused:info",
     "-Yrangepos",
     "-Ywarn-numeric-widen",

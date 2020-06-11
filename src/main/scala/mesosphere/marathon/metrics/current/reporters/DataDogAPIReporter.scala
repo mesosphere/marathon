@@ -14,8 +14,8 @@ import com.codahale.metrics.{Counter, Gauge, Histogram, Metered, MetricRegistry,
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.metrics.MetricsConf
 
-import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.CollectionConverters._
 
 class DataDogAPIReporter(metricsConf: MetricsConf, registry: MetricRegistry) extends Actor with StrictLogging {
   private val apiKey = metricsConf.metricsDataDogApiKey()

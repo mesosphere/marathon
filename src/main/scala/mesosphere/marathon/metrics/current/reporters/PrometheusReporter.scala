@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 
 import com.codahale.metrics.{Counter, Gauge, Histogram, Meter, Metered, MetricRegistry, Timer}
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 object PrometheusReporter {
   def report(registry: MetricRegistry): String = {

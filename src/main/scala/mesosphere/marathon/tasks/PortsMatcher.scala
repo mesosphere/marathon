@@ -59,7 +59,7 @@ class PortsMatcher private[tasks] (
           case (Nil, None) => // optimization for empty special case
             Some(Seq.empty)
 
-          case (ports, Some(mappings)) =>
+          case (_, Some(mappings)) =>
             // We use the mappings from the containers if they are available and ignore any other port specification.
             // We cannot warn about this because we autofill the ports field.
             mappedPortRanges(mappings.map(_.hostPort))

@@ -11,8 +11,8 @@ import akka.util.ByteString
 import com.codahale.metrics.{Counter, Gauge, Histogram, Meter, Metered, MetricRegistry, Snapshot, Timer}
 import mesosphere.marathon.metrics.MetricsConf
 
-import scala.collection.JavaConverters._
 import scala.concurrent.duration.FiniteDuration
+import scala.jdk.CollectionConverters._
 
 class DataDogUDPReporter(metricsConf: MetricsConf, registry: MetricRegistry) extends Actor {
   private val remote: InetSocketAddress = {

@@ -118,7 +118,7 @@ object EndpointsHelper {
         None
       else
         // count each preceeding nonEmpty hostPort to get new index
-        Some(pm.toIterator.take(idx).count(_.hostPort.nonEmpty))
+        Some(pm.iterator.take(idx).count(_.hostPort.nonEmpty))
     }
   }
 

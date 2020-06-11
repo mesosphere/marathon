@@ -14,9 +14,9 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
 import org.apache.mesos.Protos.FrameworkInfo
 
-import scala.collection.JavaConverters._
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 
 sealed trait RoleOfferState { def isWanted: Boolean }
 case object OffersWanted extends RoleOfferState { def isWanted = true }

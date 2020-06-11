@@ -72,7 +72,7 @@ private[readiness] class ReadinessCheckExecutorImpl(implicit actorSystem: ActorS
   }
 
   private[impl] def akkaResponseToCheckResponse(akkaResponse: AkkaHttpResponse, check: ReadinessCheckSpec): Future[HttpResponse] = {
-    val contentType = akkaResponse.headers.collectFirst { case `Content-Type`(t) ⇒ t }
+    val contentType = akkaResponse.headers.collectFirst { case `Content-Type`(t) => t }
     akkaResponse.entity.toStrict(check.timeout).map { strict =>
       HttpResponse(
         status = akkaResponse.status.intValue,

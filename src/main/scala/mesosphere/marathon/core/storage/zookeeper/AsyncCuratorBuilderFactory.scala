@@ -8,7 +8,7 @@ import org.apache.curator.x.async.api._
 import org.apache.zookeeper.CreateMode
 import org.apache.zookeeper.data.ACL
 
-import scala.collection.JavaConverters
+import scala.jdk.CollectionConverters._
 
 /**
   * Simple case class holding factory's configuration options. Sensible defaults are provided for all options.
@@ -61,8 +61,8 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework, defaults: AsyncCurat
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val builder = async.create()
-    builder.withOptions(JavaConverters.setAsJavaSet(options), mode)
-    if (acl.nonEmpty) builder.withACL(JavaConverters.seqAsJavaList(acl))
+    builder.withOptions(options.asJava, mode)
+    if (acl.nonEmpty) builder.withACL(acl.asJava)
     builder
   }
 
@@ -108,7 +108,7 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework, defaults: AsyncCurat
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val builder = async.delete()
-    builder.withOptions(JavaConverters.setAsJavaSet(options))
+    builder.withOptions(options.asJava)
     if (version != -1) builder.withVersion(version)
     builder
   }
@@ -123,7 +123,7 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework, defaults: AsyncCurat
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val builder = async.checkExists()
-    builder.withOptions(JavaConverters.setAsJavaSet(options))
+    builder.withOptions(options.asJava)
     builder
   }
 
@@ -170,7 +170,7 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework, defaults: AsyncCurat
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val builder = async.setACL()
-    if (acl.nonEmpty) builder.withACL(JavaConverters.seqAsJavaList(acl))
+    if (acl.nonEmpty) builder.withACL(acl.asJava)
     builder
   }
 
@@ -202,7 +202,7 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework, defaults: AsyncCurat
     val op = async.transactionOp().create()
     op.withMode(mode)
     if (compressed) op.compressed()
-    if (acl.nonEmpty) op.withACL(JavaConverters.seqAsJavaList(acl))
+    if (acl.nonEmpty) op.withACL(acl.asJava)
     op
   }
 

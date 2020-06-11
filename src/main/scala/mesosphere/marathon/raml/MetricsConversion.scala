@@ -6,7 +6,7 @@ import java.util.concurrent.TimeUnit
 
 import com.codahale.metrics.MetricRegistry
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 trait MetricsConversion {
   lazy val zoneId = ZoneId.systemDefault()

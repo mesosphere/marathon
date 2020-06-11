@@ -80,14 +80,14 @@ case class StoredGroup(
     val allApps = await(Future.sequence(appFutures))
     if (allApps.exists { case (_, maybeAppDef) => maybeAppDef.isEmpty }) {
       val missingApps = allApps.filter { case (_, maybeAppDef) => maybeAppDef.isEmpty }
-      val summarizedMissingApps = summarize(missingApps.toIterator.map(_._1))
+      val summarizedMissingApps = summarize(missingApps.iterator.map(_._1))
       logger.warn(s"Group $id $version is missing apps: $summarizedMissingApps")
     }
 
     val allPods = await(Future.sequence(podFutures))
     if (allPods.exists { case (_, maybePodDef) => maybePodDef.isEmpty }) {
       val missingPods = allPods.filter { case (_, maybePodDef) => maybePodDef.isEmpty }
-      val summarizedMissingPods = summarize(missingPods.toIterator.map(_._1))
+      val summarizedMissingPods = summarize(missingPods.iterator.map(_._1))
       logger.warn(s"Group $id $version is missing pods: $summarizedMissingPods")
     }
 
@@ -348,18 +348,18 @@ class StoredGroupRepositoryImpl[K, C, S](
               revertRoot(ex)
           }
         case (Failure(ex), Success(_)) =>
-          val summarizedApps = summarize(updatedApps.toIterator.map(_.id))
-          val summarizedPods = summarize(updatedPods.toIterator.map(_.id))
+          val summarizedApps = summarize(updatedApps.iterator.map(_.id))
+          val summarizedPods = summarize(updatedPods.iterator.map(_.id))
           logger.error(s"Unable to store updated apps or pods: $summarizedApps $summarizedPods", ex)
           revertRoot(ex)
         case (Success(_), Failure(ex)) =>
-          val summarizedApps = summarize(updatedApps.toIterator.map(_.id))
-          val summarizedPods = summarize(updatedPods.toIterator.map(_.id))
+          val summarizedApps = summarize(updatedApps.iterator.map(_.id))
+          val summarizedPods = summarize(updatedPods.iterator.map(_.id))
           logger.error(s"Unable to store updated apps or pods: $summarizedApps $summarizedPods", ex)
           revertRoot(ex)
         case (Failure(ex), Failure(_)) =>
-          val summarizedApps = summarize(updatedApps.toIterator.map(_.id))
-          val summarizedPods = summarize(updatedPods.toIterator.map(_.id))
+          val summarizedApps = summarize(updatedApps.iterator.map(_.id))
+          val summarizedPods = summarize(updatedPods.iterator.map(_.id))
           logger.error(s"Unable to store updated apps or pods: $summarizedApps $summarizedPods", ex)
           revertRoot(ex)
       }
@@ -390,8 +390,8 @@ class StoredGroupRepositoryImpl[K, C, S](
               throw ex
           }
         case Failure(ex) =>
-          val summarizedApps = summarize(updatedApps.toIterator.map(_.id))
-          val summarizedPods = summarize(updatedPods.toIterator.map(_.id))
+          val summarizedApps = summarize(updatedApps.iterator.map(_.id))
+          val summarizedPods = summarize(updatedPods.iterator.map(_.id))
           logger.error(s"Unable to store updated apps or pods: $summarizedApps $summarizedPods", ex)
           throw ex
       }

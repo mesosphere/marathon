@@ -251,7 +251,7 @@ class DeploymentManagerActor(
     val toCancel = conflicts.filter(_.status == DeploymentStatus.Canceling)
     val cancellations: Seq[Future[Done]] = toCancel.flatMap(_.cancel)
 
-    async {
+    async { // linter:ignore AssigningOptionToNull
       await(Future.sequence(cancellations))
 
       logger.info(s"Conflicting deployments ${conflicts.map(_.plan.id)} for deployment ${plan.id} have been canceled")
