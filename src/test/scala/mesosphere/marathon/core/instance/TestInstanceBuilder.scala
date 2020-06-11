@@ -24,18 +24,23 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def addTaskUnreachable(volumeIds: Seq[LocalVolumeId]): TestInstanceBuilder =
     withReservation(volumeIds).addTaskWithBuilder().taskUnreachable().build()
 
-  def addTaskRunning(containerName: Option[String] = None, stagedAt: Timestamp = now,
-    startedAt: Timestamp = now): TestInstanceBuilder =
+  def addTaskRunning(containerName: Option[String] = None, stagedAt: Timestamp = now, startedAt: Timestamp = now): TestInstanceBuilder =
     addTaskWithBuilder().taskRunning(containerName, stagedAt, startedAt).build()
 
   def addTaskLost(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskLost(since, containerName).build()
 
-  def addTaskUnreachable(since: Timestamp = now, containerName: Option[String] = None,
-    unreachableStrategy: state.UnreachableStrategy = state.UnreachableEnabled()): TestInstanceBuilder = {
+  def addTaskUnreachable(
+      since: Timestamp = now,
+      containerName: Option[String] = None,
+      unreachableStrategy: state.UnreachableStrategy = state.UnreachableEnabled()
+  ): TestInstanceBuilder = {
     // we need to update the unreachable strategy first before adding an unreachable task
-    this.withUnreachableStrategy(unreachableStrategy)
-      .addTaskWithBuilder().taskUnreachable(since, containerName).build()
+    this
+      .withUnreachableStrategy(unreachableStrategy)
+      .addTaskWithBuilder()
+      .taskUnreachable(since, containerName)
+      .build()
   }
 
   def addTaskUnreachableInactive(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
@@ -74,8 +79,11 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def addTaskStarting(since: Timestamp = now, containerName: Option[String] = None): TestInstanceBuilder =
     addTaskWithBuilder().taskStarting(since, containerName).build()
 
-  def addTaskStaged(stagedAt: Timestamp = now, version: Option[Timestamp] = None,
-    containerName: Option[String] = None): TestInstanceBuilder =
+  def addTaskStaged(
+      stagedAt: Timestamp = now,
+      version: Option[Timestamp] = None,
+      containerName: Option[String] = None
+  ): TestInstanceBuilder =
     addTaskWithBuilder().taskStaged(containerName, stagedAt, version).build()
 
   def addTaskWithBuilder(): TestTaskBuilder = TestTaskBuilder.newBuilder(this)
@@ -94,11 +102,11 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
   def withAgentInfo(agentInfo: AgentInfo): TestInstanceBuilder = copy(instance = instance.copy(agentInfo = Some(agentInfo)))
 
   def withAgentInfo(
-    agentId: Option[String] = None,
-    hostName: Option[String] = None,
-    attributes: Option[Seq[mesos.Protos.Attribute]] = None,
-    region: Option[String] = None,
-    zone: Option[String] = None
+      agentId: Option[String] = None,
+      hostName: Option[String] = None,
+      attributes: Option[Seq[mesos.Protos.Attribute]] = None,
+      region: Option[String] = None,
+      zone: Option[String] = None
   ): TestInstanceBuilder = {
     val updatedAgentInfo = instance.agentInfo.map { current =>
       current.copy(
@@ -146,9 +154,18 @@ case class TestInstanceBuilder(instance: Instance, now: Timestamp = Timestamp.no
 
 object TestInstanceBuilder {
 
-  def emptyInstance(now: Timestamp = Timestamp.now(), version: Timestamp = Timestamp.zero,
-    instanceId: Instance.Id, unreachableStrategy: state.UnreachableStrategy = state.UnreachableStrategy.default()): Instance = {
-    val runSpec = state.AppDefinition(instanceId.runSpecId, unreachableStrategy = unreachableStrategy, versionInfo = state.VersionInfo.OnlyVersion(version), role = "*")
+  def emptyInstance(
+      now: Timestamp = Timestamp.now(),
+      version: Timestamp = Timestamp.zero,
+      instanceId: Instance.Id,
+      unreachableStrategy: state.UnreachableStrategy = state.UnreachableStrategy.default()
+  ): Instance = {
+    val runSpec = state.AppDefinition(
+      instanceId.runSpecId,
+      unreachableStrategy = unreachableStrategy,
+      versionInfo = state.VersionInfo.OnlyVersion(version),
+      role = "*"
+    )
     Instance(
       instanceId = instanceId,
       agentInfo = Some(TestInstanceBuilder.defaultAgentInfo),
@@ -191,31 +208,51 @@ object TestInstanceBuilder {
 
   val defaultAgentInfo = Instance.AgentInfo(
     host = AgentTestDefaults.defaultHostName,
-    agentId = Some(AgentTestDefaults.defaultAgentId), region = None, zone = None, attributes = Seq.empty)
+    agentId = Some(AgentTestDefaults.defaultAgentId),
+    region = None,
+    zone = None,
+    attributes = Seq.empty
+  )
 
   def newBuilderForRunSpec(runSpec: state.RunSpec, now: Timestamp = Timestamp.now(), instanceId: Instance.Id = null): TestInstanceBuilder =
     TestInstanceBuilder(emptyInstanceForRunSpec(now, runSpec, instanceId = instanceId), now)
 
-  def newBuilder(runSpecId: state.AbsolutePathId, now: Timestamp = Timestamp.now(),
-    version: Timestamp = Timestamp.zero): TestInstanceBuilder =
+  def newBuilder(
+      runSpecId: state.AbsolutePathId,
+      now: Timestamp = Timestamp.now(),
+      version: Timestamp = Timestamp.zero
+  ): TestInstanceBuilder =
     TestInstanceBuilder(emptyInstance(now, version, Instance.Id.forRunSpec(runSpecId)), now)
 
-  def newBuilderWithInstanceId(instanceId: Instance.Id, now: Timestamp = Timestamp.now(),
-    version: Timestamp = Timestamp.zero): TestInstanceBuilder =
+  def newBuilderWithInstanceId(
+      instanceId: Instance.Id,
+      now: Timestamp = Timestamp.now(),
+      version: Timestamp = Timestamp.zero
+  ): TestInstanceBuilder =
     TestInstanceBuilder(emptyInstance(now, version, instanceId), now)
 
-  def newBuilderWithLaunchedTask(runSpecId: AbsolutePathId, now: Timestamp = Timestamp.now(),
-    version: Timestamp = Timestamp.zero): TestInstanceBuilder =
+  def newBuilderWithLaunchedTask(
+      runSpecId: AbsolutePathId,
+      now: Timestamp = Timestamp.now(),
+      version: Timestamp = Timestamp.zero
+  ): TestInstanceBuilder =
     newBuilder(runSpecId, now, version)
       .addTaskLaunched()
 
   implicit class EnhancedLegacyInstanceImprovement(val instance: Instance) extends AnyVal {
+
     /** Convenient access to a legacy instance's only task */
     def appTask[T <: Task]: T = new LegacyInstanceImprovement(instance).appTask.asInstanceOf[T]
   }
 
-  def scheduledWithReservation(runSpec: RunSpec, localVolumes: Seq[LocalVolumeId] = Seq.empty, state: Reservation.State = Reservation.State.New(None)): Instance = {
+  def scheduledWithReservation(
+      runSpec: RunSpec,
+      localVolumes: Seq[LocalVolumeId] = Seq.empty,
+      state: Reservation.State = Reservation.State.New(None)
+  ): Instance = {
     val instanceId = Instance.Id.forRunSpec(runSpec.id)
-    Instance.scheduled(runSpec, instanceId).reserved(Reservation(localVolumes, state, Reservation.SimplifiedId(instanceId)), AgentInfoPlaceholder())
+    Instance
+      .scheduled(runSpec, instanceId)
+      .reserved(Reservation(localVolumes, state, Reservation.SimplifiedId(instanceId)), AgentInfoPlaceholder())
   }
 }

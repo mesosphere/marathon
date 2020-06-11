@@ -41,8 +41,8 @@ class HealthCheckWorkerTest extends AkkaUnitTest with ImplicitSender {
       }
       val instance = TestInstanceBuilder.fromTask(task, agentInfo, UnreachableStrategy.default())
 
-      val resF = HealthCheckWorker.run(app, instance,
-        healthCheck = MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))(mat.asInstanceOf[ActorMaterializer])
+      val resF = HealthCheckWorker
+        .run(app, instance, healthCheck = MarathonTcpHealthCheck(portIndex = Some(PortReference(0))))(mat.asInstanceOf[ActorMaterializer])
 
       try { res.futureValue }
       finally { socket.close() }
@@ -63,7 +63,7 @@ class HealthCheckWorkerTest extends AkkaUnitTest with ImplicitSender {
             complete(StatusCodes.OK)
           }
         } ~
-          path("unhealthy"){
+          path("unhealthy") {
             get {
               complete(StatusCodes.InternalServerError)
             }
@@ -89,14 +89,17 @@ class HealthCheckWorkerTest extends AkkaUnitTest with ImplicitSender {
 
       val instance = Instance(task.taskId.instanceId, Some(agentInfo), state, tasksMap, app, None, "*")
 
-      val resF = HealthCheckWorker.run(app, instance,
-        healthCheck = MarathonHttpHealthCheck(port = Some(port), path = Some("/health")))(mat.asInstanceOf[ActorMaterializer])
+      val resF = HealthCheckWorker.run(app, instance, healthCheck = MarathonHttpHealthCheck(port = Some(port), path = Some("/health")))(
+        mat.asInstanceOf[ActorMaterializer]
+      )
 
       resF.futureValue shouldBe a[Healthy]
       promise.future.futureValue shouldEqual "success"
 
-      val unhealthyResF = HealthCheckWorker.run(app, instance,
-        healthCheck = MarathonHttpHealthCheck(port = Some(port), path = Some("/unhealthy")))(mat.asInstanceOf[ActorMaterializer])
+      val unhealthyResF =
+        HealthCheckWorker.run(app, instance, healthCheck = MarathonHttpHealthCheck(port = Some(port), path = Some("/unhealthy")))(
+          mat.asInstanceOf[ActorMaterializer]
+        )
 
       unhealthyResF.futureValue shouldBe a[Unhealthy]
     }

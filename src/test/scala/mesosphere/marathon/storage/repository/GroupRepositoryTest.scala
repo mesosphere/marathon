@@ -47,7 +47,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         val root = repo.root().futureValue
         repo.storeRoot(root, Nil, Nil, Nil, Nil).futureValue
         repo.root().futureValue should be(root)
-        root.id should be ('empty)
+        root.id should be('empty)
       }
       "store new apps when storing the root" in {
         val appRepo = mock[AppRepository]
@@ -61,7 +61,7 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
 
         repo.storeRoot(newRoot, apps, Nil, Nil, Nil).futureValue
         repo.root().futureValue should equal(newRoot)
-        newRoot.id should be ('empty)
+        newRoot.id should be('empty)
 
         verify(appRepo).store(apps.head)
         verify(appRepo).store(apps.tail.head)
@@ -143,8 +143,12 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         repo.rootVersion(firstRoot.version.toOffsetDateTime).futureValue.value should equal(firstRoot)
         repo.rootVersions().runWith(Sink.seq).futureValue should contain theSameElementsAs
           Seq(firstRoot.version.toOffsetDateTime, nextRoot.version.toOffsetDateTime)
-        repo.rootVersions().mapAsync(RepositoryConstants.maxConcurrency)(repo.rootVersion)
-          .collect { case Some(g) => g }.runWith(Sink.seq).futureValue should contain theSameElementsAs
+        repo
+          .rootVersions()
+          .mapAsync(RepositoryConstants.maxConcurrency)(repo.rootVersion)
+          .collect { case Some(g) => g }
+          .runWith(Sink.seq)
+          .futureValue should contain theSameElementsAs
           Seq(firstRoot, nextRoot)
       }
     }
@@ -188,4 +192,3 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
   behave like basicGroupRepository("LazyCaching", createLazyCachingRepos)
   behave like basicGroupRepository("LoadCaching", createLoadCachingRepos)
 }
-

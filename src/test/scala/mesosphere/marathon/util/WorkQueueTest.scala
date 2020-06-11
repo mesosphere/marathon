@@ -84,7 +84,7 @@ class WorkQueueTest extends UnitTest with Inside {
         }
       }
       latch.await()
-      counter.get() should equal (100)
+      counter.get() should equal(100)
     }
 
   }
@@ -139,7 +139,7 @@ class WorkQueueTest extends UnitTest with Inside {
         }
       }
       latch.await()
-      counter.get() should equal (100)
+      counter.get() should equal(100)
     }
   }
 }

@@ -25,7 +25,8 @@ class RateLimiterActorTest extends AkkaUnitTest {
       launchQueueConfig: LaunchQueueConfig = new LaunchQueueConfig { verify() },
       clock: SettableClock = new SettableClock(),
       instanceTracker: InstanceTracker = mock[InstanceTracker],
-      updateReceiver: TestProbe = TestProbe()) {
+      updateReceiver: TestProbe = TestProbe()
+  ) {
     val rateLimiter: RateLimiter = Mockito.spy(new RateLimiter(clock))
     val props = RateLimiterActor.props(rateLimiter)
     val limiterRef = system.actorOf(props)

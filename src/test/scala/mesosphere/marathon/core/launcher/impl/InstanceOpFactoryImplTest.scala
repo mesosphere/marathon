@@ -28,8 +28,9 @@ class InstanceOpFactoryImplTest extends UnitTest {
       val pod = minimalPod
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
-      val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
+      val instance = Instance
+        .scheduled(pod, tc.instanceId)
+        .provisioned(agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
       check(tc, instance)
     }
 
@@ -39,8 +40,9 @@ class InstanceOpFactoryImplTest extends UnitTest {
       })
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
-      val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
+      val instance = Instance
+        .scheduled(pod, tc.instanceId)
+        .provisioned(agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
       check(tc, instance)
     }
 
@@ -50,56 +52,74 @@ class InstanceOpFactoryImplTest extends UnitTest {
       })
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
-      val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
+      val instance = Instance
+        .scheduled(pod, tc.instanceId)
+        .provisioned(agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
       check(tc, instance)
     }
 
     "ephemeralPodInstance with multiple endpoints, mixed host ports" in {
       val pod = minimalPod.copy(containers = minimalPod.containers.map { ct =>
-        ct.copy(endpoints = Seq(
-          Endpoint(name = "ep0", hostPort = Some(80)),
-          Endpoint(name = "ep1"),
-          Endpoint(name = "ep2", hostPort = Some(90)),
-          Endpoint(name = "ep3")
-        ))
+        ct.copy(endpoints =
+          Seq(
+            Endpoint(name = "ep0", hostPort = Some(80)),
+            Endpoint(name = "ep1"),
+            Endpoint(name = "ep2", hostPort = Some(90)),
+            Endpoint(name = "ep3")
+          )
+        )
       })
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
-      val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
+      val instance = Instance
+        .scheduled(pod, tc.instanceId)
+        .provisioned(agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
       check(tc, instance)
     }
 
     "ephemeralPodInstance with multiple containers, multiple endpoints, mixed host ports" in {
-      val pod = minimalPod.copy(containers = Seq(
-        MesosContainer(name = "ct0", resources = someRes, endpoints = Seq(Endpoint(name = "ep0"))),
-        MesosContainer(name = "ct1", resources = someRes, endpoints = Seq(
-          Endpoint(name = "ep1", hostPort = Some(1)),
-          Endpoint(name = "ep2", hostPort = Some(2))
-        )),
-        MesosContainer(name = "ct2", resources = someRes, endpoints = Seq(Endpoint(name = "ep3", hostPort = Some(3))))
-      ))
+      val pod = minimalPod.copy(containers =
+        Seq(
+          MesosContainer(name = "ct0", resources = someRes, endpoints = Seq(Endpoint(name = "ep0"))),
+          MesosContainer(
+            name = "ct1",
+            resources = someRes,
+            endpoints = Seq(
+              Endpoint(name = "ep1", hostPort = Some(1)),
+              Endpoint(name = "ep2", hostPort = Some(2))
+            )
+          ),
+          MesosContainer(name = "ct2", resources = someRes, endpoints = Seq(Endpoint(name = "ep3", hostPort = Some(3))))
+        )
+      )
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
-      val instance = Instance.scheduled(pod, tc.instanceId).provisioned(
-        agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
+      val instance = Instance
+        .scheduled(pod, tc.instanceId)
+        .provisioned(agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
       check(tc, instance)
     }
 
     "ephemeralPodInstance with multiple containers, multiple endpoints, mixed allocated/unallocated host ports" in {
-      val pod = minimalPod.copy(containers = Seq(
-        MesosContainer(name = "ct0", resources = someRes, endpoints = Seq(Endpoint(name = "ep0"))),
-        MesosContainer(name = "ct1", resources = someRes, endpoints = Seq(
-          Endpoint(name = "ep1", hostPort = Some(1)),
-          Endpoint(name = "ep2", hostPort = Some(0))
-        )),
-        MesosContainer(name = "ct2", resources = someRes, endpoints = Seq(Endpoint(name = "ep3", hostPort = Some(3))))
-      ))
+      val pod = minimalPod.copy(containers =
+        Seq(
+          MesosContainer(name = "ct0", resources = someRes, endpoints = Seq(Endpoint(name = "ep0"))),
+          MesosContainer(
+            name = "ct1",
+            resources = someRes,
+            endpoints = Seq(
+              Endpoint(name = "ep1", hostPort = Some(1)),
+              Endpoint(name = "ep2", hostPort = Some(0))
+            )
+          ),
+          MesosContainer(name = "ct2", resources = someRes, endpoints = Seq(Endpoint(name = "ep3", hostPort = Some(3))))
+        )
+      )
       val tc = TestCase(pod, agentInfo)
       implicit val clock = new SettableClock()
-      val instance = Instance.scheduled(tc.pod, tc.instanceId).provisioned(
-        agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
+      val instance = Instance
+        .scheduled(tc.pod, tc.instanceId)
+        .provisioned(agentInfo, pod, Tasks.provisioned(tc.taskIDs, tc.networkInfos, pod.version, clock.now()), clock.now())
       check(tc, instance)
     }
   }
@@ -116,7 +136,7 @@ class InstanceOpFactoryImplTest extends UnitTest {
 
     // TODO(karsten): This is super similar to InstanceOpFactoryImpl.podTaskNetworkInfos.
     val expectedHostPortsPerCT: Map[String, Seq[Int]] = pod.containers.iterator.map { ct =>
-      ct.name -> ct.endpoints.flatMap{ ep =>
+      ct.name -> ct.endpoints.flatMap { ep =>
         ep.hostPort match {
           case Some(hostPort) if hostPort == 0 => Some(fakeAllocatedPort)
 

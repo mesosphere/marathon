@@ -15,7 +15,11 @@ import scala.concurrent.duration._
 
 class TaskStatsByVersionTest extends UnitTest {
 
-  private[this] def taskStatsForSomeTasks(now: Timestamp, instances: Seq[Instance], statuses: Map[Instance.Id, Seq[Health]]): Option[raml.TaskStats] = {
+  private[this] def taskStatsForSomeTasks(
+      now: Timestamp,
+      instances: Seq[Instance],
+      statuses: Map[Instance.Id, Seq[Health]]
+  ): Option[raml.TaskStats] = {
     TaskStats.forSomeTasks(TaskForStatistics.forInstances(now, instances, statuses))
   }
 

@@ -45,8 +45,7 @@ class InstanceMigrationTest extends AkkaUnitTest with StrictLogging {
     val instanceRepository: InstanceRepository = mock[InstanceRepository]
     val persistenceStore: ZkPersistenceStore = mock[ZkPersistenceStore]
 
-    def legacyInstanceJson(i: Id): JsObject = Json.parse(
-      s"""
+    def legacyInstanceJson(i: Id): JsObject = Json.parse(s"""
          |{
          |  "instanceId": { "idString": "${i.idString}" },
          |  "tasksMap": {},

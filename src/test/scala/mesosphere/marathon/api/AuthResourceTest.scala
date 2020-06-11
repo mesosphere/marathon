@@ -50,18 +50,18 @@ class AuthResourceTest extends UnitTest with JerseyTest {
       val response = asyncRequest { r => resource.foo(f.auth.request, r) }
 
       Then("we receive a forbidden response")
-      response.getStatus should be (Response.Status.FORBIDDEN.getStatusCode)
+      response.getStatus should be(Response.Status.FORBIDDEN.getStatusCode)
     }
 
-    class TestResource(val authenticator: Authenticator, val authorizer: Authorizer, val config: MarathonConf)
-      extends AuthResource {
+    class TestResource(val authenticator: Authenticator, val authorizer: Authorizer, val config: MarathonConf) extends AuthResource {
       val executionContext = scala.concurrent.ExecutionContext.global
-      def foo(request: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
-        async {
-          implicit val identity = await(authenticatedAsync(request))
-          Response.ok("foo").build()
+      def foo(request: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit =
+        sendResponse(asyncResponse) {
+          async {
+            implicit val identity = await(authenticatedAsync(request))
+            Response.ok("foo").build()
+          }
         }
-      }
     }
 
   }

@@ -41,7 +41,10 @@ class EnvironmentHelperTest extends UnitTest {
     }
 
     "DeclaredPortsEnvNamed" in {
-      val env = EnvironmentHelper.portsEnv(Seq(PortRequest("http", 80), PortRequest(8080), PortRequest("https", 443)), Helpers.hostPorts(1001, 1002, 1003))
+      val env = EnvironmentHelper.portsEnv(
+        Seq(PortRequest("http", 80), PortRequest(8080), PortRequest("https", 443)),
+        Helpers.hostPorts(1001, 1002, 1003)
+      )
       assert("1001" == env("PORT"))
       assert("1001" == env("PORT0"))
       assert("1002" == env("PORT1"))

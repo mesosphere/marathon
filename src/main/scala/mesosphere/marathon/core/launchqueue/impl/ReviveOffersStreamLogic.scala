@@ -30,11 +30,10 @@ object ReviveOffersStreamLogic extends StrictLogging {
   val activelyDelayedRefs: Flow[RateLimiter.DelayUpdate, DelayedStatus, NotUsed] = Flow[RateLimiter.DelayUpdate].map { delayUpdate =>
     val deadline = delayUpdate.delay.map(_.deadline.toInstant)
     delayUpdate.ref -> deadline
-  }.via(TimedEmitter.flow)
-    .map {
-      case TimedEmitter.Active(ref) => Delayed(ref)
-      case TimedEmitter.Inactive(ref) => NotDelayed(ref)
-    }
+  }.via(TimedEmitter.flow).map {
+    case TimedEmitter.Active(ref) => Delayed(ref)
+    case TimedEmitter.Inactive(ref) => NotDelayed(ref)
+  }
 
   def reviveStateFromInstancesAndDelays(
       defaultRole: Role

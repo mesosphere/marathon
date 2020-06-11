@@ -49,6 +49,7 @@ class RunSpecOfferStatisticsTest extends UnitTest {
       updated.rejectSummary.size should be(0)
     }
   }
+
   /**
     * The set of reasons is applied to an empty statistics.
     * It should increment the expectedIncrements.

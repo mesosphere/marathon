@@ -134,14 +134,7 @@ class DeploymentManagerActor(
     readinessCheckExecutor: ReadinessCheckExecutor,
     deploymentRepository: DeploymentRepository,
     deploymentActorProps: (
-        ActorRef,
-        KillService,
-        DeploymentPlan,
-        InstanceTracker,
-        LaunchQueue,
-        HealthCheckManager,
-        EventStream,
-        ReadinessCheckExecutor
+        ActorRef, KillService, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor
     ) => Props = DeploymentActor.props
 )(implicit val mat: Materializer)
     extends Actor
@@ -435,14 +428,7 @@ object DeploymentManagerActor {
       readinessCheckExecutor: ReadinessCheckExecutor,
       deploymentRepository: DeploymentRepository,
       deploymentActorProps: (
-          ActorRef,
-          KillService,
-          DeploymentPlan,
-          InstanceTracker,
-          LaunchQueue,
-          HealthCheckManager,
-          EventStream,
-          ReadinessCheckExecutor
+          ActorRef, KillService, DeploymentPlan, InstanceTracker, LaunchQueue, HealthCheckManager, EventStream, ReadinessCheckExecutor
       ) => Props = DeploymentActor.props
   )(implicit mat: Materializer): Props = {
     Props(

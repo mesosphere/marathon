@@ -20,7 +20,13 @@ import mesosphere.marathon.state._
 import scala.jdk.CollectionConverters._
 import mesosphere.marathon.tasks.PortsMatcher
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
-import mesosphere.mesos.NoOfferMatchReason.{AgentMaintenance, DeclinedScarceResources, InsufficientCpus, InsufficientDisk, UnfulfilledConstraint}
+import mesosphere.mesos.NoOfferMatchReason.{
+  AgentMaintenance,
+  DeclinedScarceResources,
+  InsufficientCpus,
+  InsufficientDisk,
+  UnfulfilledConstraint
+}
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
 import mesosphere.mesos.protos.Implicits._
 import mesosphere.mesos.protos.{Resource, ResourceProviderID, TextAttribute}
@@ -52,7 +58,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         role = "*"
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -73,7 +80,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         role = "*"
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -92,17 +100,20 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = Nil,
-        networks = Seq(BridgeNetwork()), container = Some(Container.Docker(
-          image = "foo/bar",
-
-          portMappings = Seq(
-            Container.PortMapping(31001, Some(0), 0, "tcp", Some("qax")),
-            Container.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
+        networks = Seq(BridgeNetwork()),
+        container = Some(
+          Container.Docker(
+            image = "foo/bar",
+            portMappings = Seq(
+              Container.PortMapping(31001, Some(0), 0, "tcp", Some("qax")),
+              Container.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
+            )
           )
-        ))
+        )
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -121,18 +132,21 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
         portDefinitions = Nil,
-        networks = Seq(ContainerNetwork("whatever")), container = Some(Container.Docker(
-          image = "foo/bar",
-
-          portMappings = Seq(
-            Container.PortMapping(0, Some(0), 0, "tcp", Some("yas")),
-            Container.PortMapping(31001, None, 0, "tcp", Some("qax")),
-            Container.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
+        networks = Seq(ContainerNetwork("whatever")),
+        container = Some(
+          Container.Docker(
+            image = "foo/bar",
+            portMappings = Seq(
+              Container.PortMapping(0, Some(0), 0, "tcp", Some("yas")),
+              Container.PortMapping(31001, None, 0, "tcp", Some("qax")),
+              Container.PortMapping(31002, Some(0), 0, "tcp", Some("qab"))
+            )
           )
-        ))
+        )
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -156,13 +170,15 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val portsReservation = MarathonTestHelper.reservation(principal = "portPrincipal", labels)
 
       val offer =
-        MarathonTestHelper.makeBasicOffer(role = "marathon")
+        MarathonTestHelper
+          .makeBasicOffer(role = "marathon")
           .clearResources()
           .addResources(MarathonTestHelper.scalarResource("cpus", 1.0, role = "marathon", reservation = Some(cpuReservation)))
           .addResources(MarathonTestHelper.scalarResource("cpus", 1.0, role = "marathon", reservation = Some(cpuReservation2)))
           .addResources(MarathonTestHelper.scalarResource("mem", 128.0, reservation = Some(memReservation)))
-          .addResources(MarathonTestHelper.scalarResource("disk", 2,
-            providerId = Some(ResourceProviderID("pID")), reservation = Some(diskReservation)))
+          .addResources(
+            MarathonTestHelper.scalarResource("disk", 2, providerId = Some(ResourceProviderID("pID")), reservation = Some(diskReservation))
+          )
           .addResources(MarathonTestHelper.portsResource(80, 80, reservation = Some(portsReservation)))
           .build()
 
@@ -174,8 +190,13 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       )
 
       val resourceMatchResponse = ResourceMatcher.matchResources(
-        offer, app,
-        knownInstances = Seq(), ResourceSelector.reservedWithLabels(Set(ResourceRole.Unreserved, "marathon"), labels), config, Seq.empty)
+        offer,
+        app,
+        knownInstances = Seq(),
+        ResourceSelector.reservedWithLabels(Set(ResourceRole.Unreserved, "marathon"), labels),
+        config,
+        Seq.empty
+      )
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -195,8 +216,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       )
       res.scalarMatch(Resource.DISK).get.consumed.toSet should be(
         Set(
-          DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, Some(ResourceProviderID("pID")),
-            Some(diskReservation2), DiskSource.root, None)
+          DiskResourceMatch
+            .Consumption(2.0, ResourceRole.Unreserved, Some(ResourceProviderID("pID")), Some(diskReservation2), DiskSource.root, None)
         )
       )
 
@@ -205,9 +226,16 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       )
 
       // reserved resources with labels should not be matched by selector if don't match for reservation with labels
-      ResourceMatcher.matchResources(
-        offer, app,
-        knownInstances = Seq(), ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")), config, Seq.empty).should(be(a[ResourceMatchResponse.NoMatch]))
+      ResourceMatcher
+        .matchResources(
+          offer,
+          app,
+          knownInstances = Seq(),
+          ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")),
+          config,
+          Seq.empty
+        )
+        .should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "dynamically reserved resources are matched if they have no labels" in {
@@ -218,7 +246,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val portsReservation = MarathonTestHelper.reservation(principal = "portPrincipal")
 
       val offer =
-        MarathonTestHelper.makeBasicOffer(role = "marathon")
+        MarathonTestHelper
+          .makeBasicOffer(role = "marathon")
           .clearResources()
           .addResources(MarathonTestHelper.scalarResource("cpus", 1.0, role = "marathon", reservation = Some(cpuReservation)))
           .addResources(MarathonTestHelper.scalarResource("cpus", 1.0, role = "marathon", reservation = Some(cpuReservation2)))
@@ -235,8 +264,13 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       )
 
       val resourceMatchResponse = ResourceMatcher.matchResources(
-        offer, app,
-        knownInstances = Seq(), ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")), config, Seq.empty)
+        offer,
+        app,
+        knownInstances = Seq(),
+        ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")),
+        config,
+        Seq.empty
+      )
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -256,8 +290,7 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       )
       res.scalarMatch(Resource.DISK).get.consumed.toSet should be(
         Set(
-          DiskResourceMatch.Consumption(
-            2.0, ResourceRole.Unreserved, None, reservation = Some(diskReservation), DiskSource.root, None)
+          DiskResourceMatch.Consumption(2.0, ResourceRole.Unreserved, None, reservation = Some(diskReservation), DiskSource.root, None)
         )
       )
 
@@ -272,12 +305,14 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val cpuReservation2 = MarathonTestHelper.reservation(principal = "cpuPrincipal")
       val memReservation = MarathonTestHelper.reservation(
         principal = "memPrincipal",
-        labels = TaskLabels.labelsForTask(FrameworkId("foo"), Reservation.SimplifiedId(instanceId)).labels)
+        labels = TaskLabels.labelsForTask(FrameworkId("foo"), Reservation.SimplifiedId(instanceId)).labels
+      )
       val diskReservation = MarathonTestHelper.reservation(principal = "diskPrincipal")
       val portsReservation = MarathonTestHelper.reservation(principal = "portPrincipal")
 
       val offer =
-        MarathonTestHelper.makeBasicOffer(role = "marathon")
+        MarathonTestHelper
+          .makeBasicOffer(role = "marathon")
           .clearResources()
           .addResources(MarathonTestHelper.scalarResource("cpus", 1.0, role = "marathon", reservation = Some(cpuReservation)))
           .addResources(MarathonTestHelper.scalarResource("cpus", 1.0, role = "marathon", reservation = Some(cpuReservation2)))
@@ -294,8 +329,13 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       )
 
       val resourceMatchResponse = ResourceMatcher.matchResources(
-        offer, app,
-        knownInstances = Seq(), ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")), config, Seq.empty)
+        offer,
+        app,
+        knownInstances = Seq(),
+        ResourceSelector.any(Set(ResourceRole.Unreserved, "marathon")),
+        config,
+        Seq.empty
+      )
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
@@ -305,7 +345,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       val memReservation = MarathonTestHelper.reservation(principal = "memPrincipal", labels = Map("some" -> "label"))
 
       val offer =
-        MarathonTestHelper.makeBasicOffer(role = "marathon")
+        MarathonTestHelper
+          .makeBasicOffer(role = "marathon")
           .clearResources()
           .addResources(MarathonTestHelper.scalarResource("cpus", 1.0, role = "marathon", reservation = Some(cpuReservation)))
           .addResources(MarathonTestHelper.scalarResource("mem", 128.0, reservation = Some(memReservation)))
@@ -320,8 +361,12 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       )
 
       val resourceMatchResponse = ResourceMatcher.matchResources(
-        offer, app,
-        knownInstances = Seq(), ResourceSelector.reservedWithLabels(Set(ResourceRole.Unreserved, "marathon"), Map("some" -> "label")), config, Seq.empty
+        offer,
+        app,
+        knownInstances = Seq(),
+        ResourceSelector.reservedWithLabels(Set(ResourceRole.Unreserved, "marathon"), Map("some" -> "label")),
+        config,
+        Seq.empty
       )
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
@@ -336,9 +381,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         portDefinitions = PortDefinitions(0, 0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(
-        offer, app,
-        knownInstances = Seq(), ResourceSelector.any(Set("marathon")), config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq(), ResourceSelector.any(Set("marathon")), config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -357,9 +401,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         portDefinitions = PortDefinitions(0, 0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(
-        offer, app,
-        knownInstances = Seq(), unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq(), unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
@@ -379,7 +422,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         )
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse should not be a[ResourceMatchResponse.NoMatch]
     }
@@ -399,7 +443,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         )
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
@@ -413,7 +458,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         portDefinitions = PortDefinitions(0, 0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
@@ -427,7 +473,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         portDefinitions = PortDefinitions(0, 0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
@@ -439,14 +486,16 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         role = "*",
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0), // cpu does not match
         constraints = Set(
-          Constraint.newBuilder.setField("test") // and constraint does not match
+          Constraint.newBuilder
+            .setField("test") // and constraint does not match
             .setOperator(Operator.LIKE)
             .setValue("test")
             .build()
         )
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
@@ -464,7 +513,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         portDefinitions = PortDefinitions(0, 0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
@@ -478,7 +528,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         portDefinitions = PortDefinitions(1, 2)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
@@ -492,7 +543,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         acceptedResourceRoles = Set("A", "B")
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, ResourceSelector.any(Set("A", "B")), config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, ResourceSelector.any(Set("A", "B")), config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
@@ -509,7 +561,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         acceptedResourceRoles = Set(ResourceRole.Unreserved)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
@@ -525,7 +578,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0) // make sure it mismatches
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
@@ -542,7 +596,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         acceptedResourceRoles = Set("A", "B")
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
@@ -558,13 +613,14 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         resources = Resources(cpus = 2, mem = 2, disk = 2, gpus = 2) // make sure it mismatches
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
 
       noMatch.reasons should contain allOf (NoOfferMatchReason.InsufficientCpus, NoOfferMatchReason.InsufficientMemory,
-        NoOfferMatchReason.InsufficientGpus, NoOfferMatchReason.InsufficientDisk)
+      NoOfferMatchReason.InsufficientGpus, NoOfferMatchReason.InsufficientDisk)
     }
 
     "resource matcher should respond with NoOfferMatchReason.InsufficientPorts if ports mismatch and other requirements matches" in {
@@ -576,7 +632,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         portDefinitions = PortDefinitions(1, 2) // this match fails
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
@@ -594,7 +651,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         portDefinitions = PortDefinitions(1, 2) // this would fail as well, but is not evaluated of the resource matcher
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
       val noMatch = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch]
@@ -605,47 +663,48 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     "resource matcher preserves unknown fields on the Source protobuf object" in {
       val disk = MarathonTestHelper.pathDisk("/path1")
 
-      val diskWithUnknownFields = disk.toBuilder.setSource(
-        disk.getSource.toBuilder.setUnknownFields(
-          UnknownFieldSet.newBuilder
-            .addField(254, UnknownFieldSet.Field.newBuilder().addFixed32(100).build)
-            .build()).build).build
+      val diskWithUnknownFields = disk.toBuilder
+        .setSource(
+          disk.getSource.toBuilder
+            .setUnknownFields(
+              UnknownFieldSet.newBuilder
+                .addField(254, UnknownFieldSet.Field.newBuilder().addFixed32(100).build)
+                .build()
+            )
+            .build
+        )
+        .build
 
-      val offerWithUnrecognizedSourceField = MarathonTestHelper.makeBasicOffer()
-        .addResources(MarathonTestHelper.scalarResource("disk", 1024.0,
-          disk = Some(diskWithUnknownFields)))
+      val offerWithUnrecognizedSourceField = MarathonTestHelper
+        .makeBasicOffer()
+        .addResources(MarathonTestHelper.scalarResource("disk", 1024.0, disk = Some(diskWithUnknownFields)))
         .build()
 
       val volume = VolumeWithMount(
-        PersistentVolume(
-          name = None,
-          persistent = PersistentVolumeInfo(
-            size = 128,
-            `type` = DiskType.Path)),
-        VolumeMount(None, "/var/lib/data"))
+        PersistentVolume(name = None, persistent = PersistentVolumeInfo(size = 128, `type` = DiskType.Path)),
+        VolumeMount(None, "/var/lib/data")
+      )
 
       val app = AppDefinition(
         id = "/test".toAbsolutePath,
         role = "*",
-        resources = Resources(
-          cpus = 1.0,
-          mem = 128.0,
-          disk = 0.0),
-        container = Some(Container.Mesos(
-          volumes = List(volume))),
-        versionInfo = OnlyVersion(Timestamp(2)))
+        resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
+        container = Some(Container.Mesos(volumes = List(volume))),
+        versionInfo = OnlyVersion(Timestamp(2))
+      )
 
-      inside(ResourceMatcher.matchResources(
-        offerWithUnrecognizedSourceField, app,
-        knownInstances = Seq(),
-        ResourceSelector.reservable, config, Seq.empty)) {
+      inside(
+        ResourceMatcher
+          .matchResources(offerWithUnrecognizedSourceField, app, knownInstances = Seq(), ResourceSelector.reservable, config, Seq.empty)
+      ) {
         case m: ResourceMatchResponse.Match =>
           m.resourceMatch.localVolumes.head.source.asMesos.get.getUnknownFields.getField(254).getFixed32List.get(0) shouldBe 100
       }
     }
 
     "match resources success with constraints and old tasks in previous version" in {
-      val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0)
+      val offer = MarathonTestHelper
+        .makeBasicOffer(beginPort = 0, endPort = 0)
         .addAttributes(TextAttribute("region", "pl-east"))
         .addAttributes(TextAttribute("zone", "pl-east-1b"))
         .build()
@@ -673,11 +732,9 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       //According to constraints it should be placed
       //in pl-east-1b
       val instances = Seq(
-
         instance("1", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
         instance("2", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
         instance("3", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
-
         instance("4", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1a")),
         instance("5", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1b"))
       )
@@ -688,7 +745,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
 
     "match resources fail with constraints and old tasks deployed since last config change" in {
-      val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = 0)
+      val offer = MarathonTestHelper
+        .makeBasicOffer(beginPort = 0, endPort = 0)
         .addAttributes(TextAttribute("region", "pl-east"))
         .addAttributes(TextAttribute("zone", "pl-east-1b"))
         .build()
@@ -720,11 +778,9 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
       //We want to scale our application.
       //But it will conflict with previously launched tasks.
       val instances = Seq(
-
         instance("1", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
         instance("2", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
         instance("3", oldVersion, Map("region" -> "pl-east", "zone" -> "pl-east-1a")),
-
         instance("4", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1a")),
         instance("5", oldVersion, Map("region" -> "pl-west", "zone" -> "pl-west-1b"))
       )
@@ -735,25 +791,18 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
 
     "match disk won't allocate resources across disk different paths" in {
-      val offerDisksTooSmall = MarathonTestHelper.makeBasicOffer().
-        addResources(MarathonTestHelper.scalarResource("disk", 1024.0,
-          disk = Some(MarathonTestHelper.pathDisk("/path1")))).
-        addResources(MarathonTestHelper.scalarResource("disk", 1024.0,
-          disk = Some(MarathonTestHelper.pathDisk("/path2")))).
-        build()
+      val offerDisksTooSmall = MarathonTestHelper
+        .makeBasicOffer()
+        .addResources(MarathonTestHelper.scalarResource("disk", 1024.0, disk = Some(MarathonTestHelper.pathDisk("/path1"))))
+        .addResources(MarathonTestHelper.scalarResource("disk", 1024.0, disk = Some(MarathonTestHelper.pathDisk("/path2"))))
+        .build()
 
       val offerSufficeWithMultOffers =
         offerDisksTooSmall.toBuilder.
-          // add another resource for /path2, in addition to the resources from the previous offer
-          addResources(MarathonTestHelper.scalarResource("disk", 500,
-            disk = Some(MarathonTestHelper.pathDisk("/path2")))).
-          build()
+        // add another resource for /path2, in addition to the resources from the previous offer
+        addResources(MarathonTestHelper.scalarResource("disk", 500, disk = Some(MarathonTestHelper.pathDisk("/path2")))).build()
 
-      val persistentVolume = PersistentVolume(
-        name = None,
-        persistent = PersistentVolumeInfo(
-          size = 1500,
-          `type` = DiskType.Path))
+      val persistentVolume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(size = 1500, `type` = DiskType.Path))
       val mount = VolumeMount(None, "/var/lib/data")
       val volume = VolumeWithMount(persistentVolume, mount)
 
@@ -765,34 +814,50 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           mem = 128.0,
           disk = 0.0
         ),
-        container = Some(Container.Mesos(
-          volumes = List(volume))),
-        versionInfo = OnlyVersion(Timestamp(2)))
+        container = Some(Container.Mesos(volumes = List(volume))),
+        versionInfo = OnlyVersion(Timestamp(2))
+      )
 
-      ResourceMatcher.matchResources(
-        offerDisksTooSmall, app,
-        knownInstances = Seq(),
-        ResourceSelector.reservable, config, Seq.empty).should(be(a[ResourceMatchResponse.NoMatch]))
+      ResourceMatcher
+        .matchResources(offerDisksTooSmall, app, knownInstances = Seq(), ResourceSelector.reservable, config, Seq.empty)
+        .should(be(a[ResourceMatchResponse.NoMatch]))
 
       val resourceMatchResponse = ResourceMatcher.matchResources(
-        offerSufficeWithMultOffers, app,
+        offerSufficeWithMultOffers,
+        app,
         knownInstances = Seq(),
-        ResourceSelector.reservable, config, Seq.empty)
+        ResourceSelector.reservable,
+        config,
+        Seq.empty
+      )
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch.scalarMatch("disk").get.consumed.toSet shouldBe Set(
-        DiskResourceMatch.Consumption(1024.0, "*", None, None, DiskSource.fromParams(DiskType.Path, Some("/path2"), None, None, None, None),
-          Some(VolumeWithMount(persistentVolume, mount))),
-        DiskResourceMatch.Consumption(476.0, "*", None, None, DiskSource.fromParams(DiskType.Path, Some("/path2"), None, None, None, None),
-          Some(VolumeWithMount(persistentVolume, mount))))
+        DiskResourceMatch.Consumption(
+          1024.0,
+          "*",
+          None,
+          None,
+          DiskSource.fromParams(DiskType.Path, Some("/path2"), None, None, None, None),
+          Some(VolumeWithMount(persistentVolume, mount))
+        ),
+        DiskResourceMatch.Consumption(
+          476.0,
+          "*",
+          None,
+          None,
+          DiskSource.fromParams(DiskType.Path, Some("/path2"), None, None, None, None),
+          Some(VolumeWithMount(persistentVolume, mount))
+        )
+      )
     }
 
     "match disk enforces constraints" in {
       val offers = Seq("/mnt/disk-a", "/mnt/disk-b").map { path =>
-        path -> MarathonTestHelper.makeBasicOffer().
-          addResources(MarathonTestHelper.scalarResource("disk", 1024.0,
-            disk = Some(MarathonTestHelper.pathDisk(path)))).
-          build()
+        path -> MarathonTestHelper
+          .makeBasicOffer()
+          .addResources(MarathonTestHelper.scalarResource("disk", 1024.0, disk = Some(MarathonTestHelper.pathDisk(path))))
+          .build()
       }.toMap
 
       val volume = VolumeWithMount(
@@ -801,8 +866,11 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           persistent = PersistentVolumeInfo(
             size = 500,
             `type` = DiskType.Path,
-            constraints = Set(MarathonTestHelper.constraint("path", "LIKE", Some(".+disk-b"))))),
-        mount = VolumeMount(None, "/var/lib/data"))
+            constraints = Set(MarathonTestHelper.constraint("path", "LIKE", Some(".+disk-b")))
+          )
+        ),
+        mount = VolumeMount(None, "/var/lib/data")
+      )
 
       val app = AppDefinition(
         id = "/test".toAbsolutePath,
@@ -812,38 +880,32 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           mem = 128.0,
           disk = 0.0
         ),
-        container = Some(Container.Mesos(
-          volumes = List(volume))),
-        versionInfo = OnlyVersion(Timestamp(2)))
+        container = Some(Container.Mesos(volumes = List(volume))),
+        versionInfo = OnlyVersion(Timestamp(2))
+      )
 
-      ResourceMatcher.matchResources(
-        offers("/mnt/disk-a"), app,
-        knownInstances = Seq(),
-        ResourceSelector.reservable, config, Seq.empty).should(be(a[ResourceMatchResponse.NoMatch]))
+      ResourceMatcher
+        .matchResources(offers("/mnt/disk-a"), app, knownInstances = Seq(), ResourceSelector.reservable, config, Seq.empty)
+        .should(be(a[ResourceMatchResponse.NoMatch]))
 
-      ResourceMatcher.matchResources(
-        offers("/mnt/disk-b"), app,
-        knownInstances = Seq(),
-        ResourceSelector.reservable, config, Seq.empty).should(be(a[ResourceMatchResponse.Match]))
+      ResourceMatcher
+        .matchResources(offers("/mnt/disk-b"), app, knownInstances = Seq(), ResourceSelector.reservable, config, Seq.empty)
+        .should(be(a[ResourceMatchResponse.Match]))
     }
 
     "mount disk enforces maxSize constraints" in {
       val offer =
-        MarathonTestHelper.makeBasicOffer().
-          addResources(
-            MarathonTestHelper.scalarResource("disk", 1024.0,
-              disk = Some(MarathonTestHelper.mountDisk("/mnt/disk1")))).
-            build()
+        MarathonTestHelper
+          .makeBasicOffer()
+          .addResources(MarathonTestHelper.scalarResource("disk", 1024.0, disk = Some(MarathonTestHelper.mountDisk("/mnt/disk1"))))
+          .build()
 
       def mountRequest(size: Long, maxSize: Option[Long]) = {
         val volume = VolumeWithMount(
-          volume = PersistentVolume(
-            name = None,
-            persistent = PersistentVolumeInfo(
-              size = size,
-              maxSize = maxSize,
-              `type` = DiskType.Mount)),
-          mount = VolumeMount(None, "/var/lib/data"))
+          volume =
+            PersistentVolume(name = None, persistent = PersistentVolumeInfo(size = size, maxSize = maxSize, `type` = DiskType.Mount)),
+          mount = VolumeMount(None, "/var/lib/data")
+        )
 
         val app = AppDefinition(
           id = "/test".toAbsolutePath,
@@ -853,16 +915,16 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
             mem = 128.0,
             disk = 0.0
           ),
-          container = Some(Container.Mesos(
-            volumes = List(volume))),
-          versionInfo = OnlyVersion(Timestamp(2)))
+          container = Some(Container.Mesos(volumes = List(volume))),
+          versionInfo = OnlyVersion(Timestamp(2))
+        )
         app
       }
 
-      inside(ResourceMatcher.matchResources(
-        offer, mountRequest(500, None),
-        knownInstances = Seq(),
-        ResourceSelector.reservable, config, Seq.empty)) {
+      inside(
+        ResourceMatcher
+          .matchResources(offer, mountRequest(500, None), knownInstances = Seq(), ResourceSelector.reservable, config, Seq.empty)
+      ) {
         case matches: ResourceMatchResponse.Match =>
           matches.resourceMatch.scalarMatches.collectFirst {
             case m: DiskResourceMatch =>
@@ -870,27 +932,23 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           } shouldBe Some((1024, 1024))
       }
 
-      ResourceMatcher.matchResources(
-        offer, mountRequest(500, Some(750)),
-        knownInstances = Seq(),
-        ResourceSelector.reservable, config, Seq.empty).should(be(a[ResourceMatchResponse.NoMatch]))
+      ResourceMatcher
+        .matchResources(offer, mountRequest(500, Some(750)), knownInstances = Seq(), ResourceSelector.reservable, config, Seq.empty)
+        .should(be(a[ResourceMatchResponse.NoMatch]))
 
-      ResourceMatcher.matchResources(
-        offer, mountRequest(500, Some(1024)),
-        knownInstances = Seq(),
-        ResourceSelector.reservable, config, Seq.empty).should(be(a[ResourceMatchResponse.Match]))
+      ResourceMatcher
+        .matchResources(offer, mountRequest(500, Some(1024)), knownInstances = Seq(), ResourceSelector.reservable, config, Seq.empty)
+        .should(be(a[ResourceMatchResponse.Match]))
     }
 
     "a Reserved instance prevents creation of another reservation when hostname constraint is set" in {
-      val offer = MarathonTestHelper.makeBasicOffer().
-        addResources(MarathonTestHelper.scalarResource("disk", 1024.0)).
-        setHostname(AgentTestDefaults.defaultHostName).
-        build()
+      val offer = MarathonTestHelper
+        .makeBasicOffer()
+        .addResources(MarathonTestHelper.scalarResource("disk", 1024.0))
+        .setHostname(AgentTestDefaults.defaultHostName)
+        .build()
 
-      val persistentVolume = PersistentVolume(
-        name = None,
-        persistent = PersistentVolumeInfo(
-          size = 500, `type` = DiskType.Root))
+      val persistentVolume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(size = 500, `type` = DiskType.Root))
       val mount = VolumeMount(None, "/var/data")
       val volume = VolumeWithMount(persistentVolume, mount)
 
@@ -898,30 +956,28 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         id = "/test-persistent-volumes-with-unique-constraint".toAbsolutePath,
         instances = 3,
         resources = Resources(cpus = 0.1, mem = 32.0, disk = 0.0),
-        constraints = Set(Constraint.newBuilder.setField("hostname").
-          setOperator(Constraint.Operator.UNIQUE).build),
-        container = Some(Container.Mesos(
-          volumes = List(volume))),
-        role = "*")
+        constraints = Set(Constraint.newBuilder.setField("hostname").setOperator(Constraint.Operator.UNIQUE).build),
+        container = Some(Container.Mesos(volumes = List(volume))),
+        role = "*"
+      )
 
       // Since offer matcher checks the instance version it's should be >= app.version
       val instance = TestInstanceBuilder.scheduledWithReservation(app, Seq(LocalVolumeId(app.id, persistentVolume, mount)))
 
-      val response = ResourceMatcher.matchResources(
-        offer, app, knownInstances = Seq(instance), ResourceSelector.reservable, config, Seq.empty)
+      val response =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq(instance), ResourceSelector.reservable, config, Seq.empty)
 
       response.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "a Reserved instance DOES NOT prevent creation of another reservation when NO hostname constraint is set" in {
-      val offer = MarathonTestHelper.makeBasicOffer().
-        addResources(MarathonTestHelper.scalarResource("disk", 1024.0)).
-        setHostname(AgentTestDefaults.defaultHostName).
-        build()
+      val offer = MarathonTestHelper
+        .makeBasicOffer()
+        .addResources(MarathonTestHelper.scalarResource("disk", 1024.0))
+        .setHostname(AgentTestDefaults.defaultHostName)
+        .build()
 
-      val persistentVolume = PersistentVolume(
-        name = None,
-        persistent = PersistentVolumeInfo(size = 500, `type` = DiskType.Root))
+      val persistentVolume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(size = 500, `type` = DiskType.Root))
       val mount = VolumeMount(None, "/var/data")
       val volume = VolumeWithMount(persistentVolume, mount)
 
@@ -929,15 +985,15 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         id = "/test-persistent-volumes-without-unique-constraint".toAbsolutePath,
         instances = 3,
         resources = Resources(cpus = 0.1, mem = 32.0, disk = 0.0),
-        container = Some(Container.Mesos(
-          volumes = List(volume))),
-        role = "*")
+        container = Some(Container.Mesos(volumes = List(volume))),
+        role = "*"
+      )
 
       // Since offer matcher checks the instance version it's should be >= app.version
       val instance = TestInstanceBuilder.scheduledWithReservation(app, Seq(LocalVolumeId(app.id, persistentVolume, mount)))
 
-      val response = ResourceMatcher.matchResources(
-        offer, app, knownInstances = Seq(instance), ResourceSelector.reservable, config, Seq.empty)
+      val response =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq(instance), ResourceSelector.reservable, config, Seq.empty)
 
       response.should(be(a[ResourceMatchResponse.Match]))
     }
@@ -951,7 +1007,14 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         resources = Resources(cpus = 0.1, mem = 128.0, disk = 0.0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, maintenanceDisabledConf, Seq.empty)
+      val resourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        maintenanceDisabledConf,
+        Seq.empty
+      )
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
       val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -969,7 +1032,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         resources = Resources(cpus = 0.1, mem = 128.0, disk = 0.0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(ResourceMatchResponse.NoMatch(Seq(UnfulfilledConstraint, AgentMaintenance))))
     }
@@ -982,7 +1046,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         resources = Resources(cpus = 1000, mem = 128.0, disk = 0.0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
       resourceMatchResponse.should(be(ResourceMatchResponse.NoMatch(Seq(InsufficientCpus, UnfulfilledConstraint, AgentMaintenance))))
     }
@@ -996,7 +1061,14 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         resources = Resources(cpus = 1000, mem = 128.0, disk = 0.0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, maintenanceEnabledConf, Seq.empty)
+      val resourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        maintenanceEnabledConf,
+        Seq.empty
+      )
 
       resourceMatchResponse.should(be(ResourceMatchResponse.NoMatch(Seq(InsufficientCpus))))
     }
@@ -1010,7 +1082,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         portDefinitions = PortDefinitions(0, 0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+      val resourceMatchResponse =
+        ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
       resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
     }
 
@@ -1023,13 +1096,21 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         portDefinitions = PortDefinitions(0, 0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty,
-        unreservedResourceSelector, config, Seq.empty, localRegion = Some(Region("local_region")))
+      val resourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        config,
+        Seq.empty,
+        localRegion = Some(Region("local_region"))
+      )
       resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
     }
 
     "do not match offers with nonempty region if localRegion is empty" in {
-      val offer = MarathonTestHelper.makeBasicOffer()
+      val offer = MarathonTestHelper
+        .makeBasicOffer()
         .setDomain(MarathonTestHelper.newDomainInfo("region", "zone"))
         .build()
       val app = AppDefinition(
@@ -1039,13 +1120,22 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         portDefinitions = PortDefinitions(0, 0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty, localRegion = None)
+      val resourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        config,
+        Seq.empty,
+        localRegion = None
+      )
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "do not match offers with nonempty region if localRegion is different" in {
-      val offer = MarathonTestHelper.makeBasicOffer()
+      val offer = MarathonTestHelper
+        .makeBasicOffer()
         .setDomain(MarathonTestHelper.newDomainInfo("region", "zone"))
         .build()
       val app = AppDefinition(
@@ -1055,13 +1145,22 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
         portDefinitions = PortDefinitions(0, 0)
       )
 
-      val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty, localRegion = Some(Region("local_region")))
+      val resourceMatchResponse = ResourceMatcher.matchResources(
+        offer,
+        app,
+        knownInstances = Seq.empty,
+        unreservedResourceSelector,
+        config,
+        Seq.empty,
+        localRegion = Some(Region("local_region"))
+      )
 
       resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
     }
 
     "decline GPU-containing offers for non-GPU apps with the default gpu scheduling behavior" in {
-      val gpuOffer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+      val gpuOffer = MarathonTestHelper
+        .makeBasicOffer(gpus = 4)
         .build()
       val app = AppDefinition(
         id = "/test".toAbsolutePath,
@@ -1102,10 +1201,15 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
 
     "match any offer on gpu-enabled agent with a unrestricted gpu scheduling behavior" in {
       val gpuConfig = AllConf.withTestConfig(
-        "--draining_seconds", "300",
-        "--gpu_scheduling_behavior", "unrestricted",
-        "--enable_features", "gpu_resources")
-      val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+        "--draining_seconds",
+        "300",
+        "--gpu_scheduling_behavior",
+        "unrestricted",
+        "--enable_features",
+        "gpu_resources"
+      )
+      val offer = MarathonTestHelper
+        .makeBasicOffer(gpus = 4)
         .build()
       val app = AppDefinition(
         id = "/test".toAbsolutePath,
@@ -1145,11 +1249,10 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
 
     "not match an offer on gpu-enabled agent with a restricted gpu scheduling behavior if GPU is not required by app" in {
-      val gpuConfig = AllConf.withTestConfig(
-        "--draining_seconds", "300",
-        "--gpu_scheduling_behavior", "restricted",
-        "--enable_features", "gpu_resources")
-      val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+      val gpuConfig =
+        AllConf.withTestConfig("--draining_seconds", "300", "--gpu_scheduling_behavior", "restricted", "--enable_features", "gpu_resources")
+      val offer = MarathonTestHelper
+        .makeBasicOffer(gpus = 4)
         .build()
       val app = AppDefinition(
         id = "/test".toAbsolutePath,
@@ -1172,11 +1275,10 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
 
     "match an offer on gpu-enabled agent with a restricted gpu scheduling behavior if GPU is required by app" in {
-      val gpuConfig = AllConf.withTestConfig(
-        "--draining_seconds", "300",
-        "--gpu_scheduling_behavior", "restricted",
-        "--enable_features", "gpu_resources")
-      val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+      val gpuConfig =
+        AllConf.withTestConfig("--draining_seconds", "300", "--gpu_scheduling_behavior", "restricted", "--enable_features", "gpu_resources")
+      val offer = MarathonTestHelper
+        .makeBasicOffer(gpus = 4)
         .build()
       val app = AppDefinition(
         id = "/test".toAbsolutePath,
@@ -1198,10 +1300,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
 
     "match an offer on gpu-enabled agent with a restricted gpu scheduling behavior if GPU is not required by app but there is a Persistent Volume" in {
-      val gpuConfig = AllConf.withTestConfig(
-        "--draining_seconds", "300",
-        "--gpu_scheduling_behavior", "restricted",
-        "--enable_features", "gpu_resources")
+      val gpuConfig =
+        AllConf.withTestConfig("--draining_seconds", "300", "--gpu_scheduling_behavior", "restricted", "--enable_features", "gpu_resources")
 
       val app = MarathonTestHelper.appWithPersistentVolume()
       val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
@@ -1225,10 +1325,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
 
     "not match an offer on gpu-enabled agent with a restricted gpu scheduling behavior if GPU is not required by app and we want to reserve a new Persistent Volume" in {
-      val gpuConfig = AllConf.withTestConfig(
-        "--draining_seconds", "300",
-        "--gpu_scheduling_behavior", "restricted",
-        "--enable_features", "gpu_resources")
+      val gpuConfig =
+        AllConf.withTestConfig("--draining_seconds", "300", "--gpu_scheduling_behavior", "restricted", "--enable_features", "gpu_resources")
 
       val app = MarathonTestHelper.appWithPersistentVolume()
       val localVolumeId = LocalVolumeId(app.id, "persistent-volume", "uuid")
@@ -1255,18 +1353,13 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     }
 
     List("RAW", "BLOCK").foreach { diskType =>
-
       def addDiskResource(diskType: String, builder: Offer.Builder) = {
         diskType match {
           case "RAW" =>
-            builder.addResources(
-              MarathonTestHelper.scalarResource("disk", 1024.0,
-                disk = Some(MarathonTestHelper.rawDisk())))
+            builder.addResources(MarathonTestHelper.scalarResource("disk", 1024.0, disk = Some(MarathonTestHelper.rawDisk())))
 
           case "BLOCK" =>
-            builder.addResources(
-              MarathonTestHelper.scalarResource("disk", 1024.0,
-                disk = Some(MarathonTestHelper.blockDisk())))
+            builder.addResources(MarathonTestHelper.scalarResource("disk", 1024.0, disk = Some(MarathonTestHelper.blockDisk())))
 
           case other => throw new IllegalArgumentException("expected RAW or BLOCK disk type but got " + other)
         }
@@ -1289,7 +1382,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           portDefinitions = PortDefinitions(0, 0)
         )
 
-        val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+        val resourceMatchResponse =
+          ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
         resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
         val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -1314,7 +1408,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           portDefinitions = PortDefinitions(0, 0)
         )
 
-        val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+        val resourceMatchResponse =
+          ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
         resourceMatchResponse.should(be(a[ResourceMatchResponse.Match]))
         val res = resourceMatchResponse.asInstanceOf[ResourceMatchResponse.Match].resourceMatch
@@ -1340,7 +1435,8 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
           portDefinitions = PortDefinitions(0, 0)
         )
 
-        val resourceMatchResponse = ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
+        val resourceMatchResponse =
+          ResourceMatcher.matchResources(offer, app, knownInstances = Seq.empty, unreservedResourceSelector, config, Seq.empty)
 
         resourceMatchResponse.should(be(a[ResourceMatchResponse.NoMatch]))
         resourceMatchResponse.asInstanceOf[ResourceMatchResponse.NoMatch].reasons.head shouldEqual InsufficientDisk
@@ -1361,21 +1457,24 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     )
 
     forAll(overrideCases) { (gpuSchedulingBehavior, overrideLabel, expected) =>
-
       s"return a $expected in case of ${overrideLabel.getOrElse("no")} override of $gpuSchedulingBehavior behavior and no Persistent Volume involved" in {
 
         val gpuConfig = AllConf.withTestConfig(
-          "--draining_seconds", "300",
-          "--gpu_scheduling_behavior", gpuSchedulingBehavior,
-          "--enable_features", "gpu_resources")
-        val offer = MarathonTestHelper.makeBasicOffer(gpus = 4)
+          "--draining_seconds",
+          "300",
+          "--gpu_scheduling_behavior",
+          gpuSchedulingBehavior,
+          "--enable_features",
+          "gpu_resources"
+        )
+        val offer = MarathonTestHelper
+          .makeBasicOffer(gpus = 4)
           .build()
         val app = AppDefinition(
           id = "/test".toAbsolutePath,
           role = "*",
           resources = Resources(cpus = 1.0, mem = 128.0, disk = 0.0),
           portDefinitions = PortDefinitions(0, 0),
-
           labels = overrideLabel.map(label => Map("GPU_SCHEDULING_BEHAVIOR" -> label)).getOrElse(Map.empty)
         )
 
@@ -1400,7 +1499,10 @@ class ResourceMatcherTest extends UnitTest with Inside with TableDrivenPropertyC
     val attributes: Seq[Attribute] = attrs.iterator.map {
       case (name, v) => TextAttribute(name, v): Attribute
     }.toSeq
-    TestInstanceBuilder.newBuilder(appId, version = version).addTaskWithBuilder().taskStaged()
+    TestInstanceBuilder
+      .newBuilder(appId, version = version)
+      .addTaskWithBuilder()
+      .taskStaged()
       .build()
       .withAgentInfo(attributes = Some(attributes))
       .getInstance()

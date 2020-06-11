@@ -16,7 +16,8 @@ class ResourceMatchTest extends UnitTest {
       val resourceMatch = ResourceMatcher.ResourceMatch(
         scalarMatches = Seq(
           GeneralScalarMatch(
-            "mem", 128.0,
+            "mem",
+            128.0,
             consumed = Seq(GeneralScalarMatch.Consumption(128.0, "role1", None, reservation = Some(memReservation))),
             scope = ScalarMatchResult.Scope.NoneDisk
           )

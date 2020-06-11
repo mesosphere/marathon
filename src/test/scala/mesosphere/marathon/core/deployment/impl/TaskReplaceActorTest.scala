@@ -36,7 +36,8 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         role = "*",
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
-        upgradeStrategy = UpgradeStrategy(0.0))
+        upgradeStrategy = UpgradeStrategy(0.0)
+      )
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
 
@@ -68,7 +69,8 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         role = "*",
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
-        upgradeStrategy = UpgradeStrategy(0.0))
+        upgradeStrategy = UpgradeStrategy(0.0)
+      )
 
       val instanceA = f.runningInstance(app)
 
@@ -104,7 +106,8 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
         healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))),
-        upgradeStrategy = UpgradeStrategy(0.0))
+        upgradeStrategy = UpgradeStrategy(0.0)
+      )
 
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
@@ -138,7 +141,8 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         role = "*",
         instances = 2,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1.0))
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1.0)
+      )
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
       val instanceC = f.runningInstance(app)
@@ -210,7 +214,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       eventually { app: AppDefinition => verify(f.queue, times(3)).add(app) }
 
       // ceiling(minimumHealthCapacity * 3) = 2 are left running
-      eventually{
+      eventually {
         verify(f.tracker, once).setGoal(any, any, any)
         ()
       }
@@ -606,7 +610,8 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       val f = new Fixture
       val check = ReadinessCheck()
       val port = PortDefinition(0, name = Some(check.portName))
-      val app = AppDefinition(id = AbsolutePathId("/myApp"), role = "*", instances = 1, portDefinitions = Seq(port), readinessChecks = Seq(check))
+      val app =
+        AppDefinition(id = AbsolutePathId("/myApp"), role = "*", instances = 1, portDefinitions = Seq(port), readinessChecks = Seq(check))
       val instance = f.runningInstance(app)
       f.tracker.specInstancesSync(app.id, readAfterWrite = true) returns Seq(instance)
       f.tracker.get(instance.instanceId) returns Future.successful(Some(instance))
@@ -659,7 +664,8 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         role = "*",
         instances = 5,
         versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
-        upgradeStrategy = UpgradeStrategy(0.0))
+        upgradeStrategy = UpgradeStrategy(0.0)
+      )
       val instanceA = f.runningInstance(app)
       val instanceB = f.runningInstance(app)
 
@@ -751,11 +757,8 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     // regression DCOS-54927
     "only handle InstanceChanged events of its own RunSpec" in {
       val f = new Fixture
-      val app = AppDefinition(
-        id = AbsolutePathId("/myApp"),
-        role = "*",
-        instances = 1,
-        versionInfo = VersionInfo.forNewConfig(Timestamp(0)))
+      val app =
+        AppDefinition(id = AbsolutePathId("/myApp"), role = "*", instances = 1, versionInfo = VersionInfo.forNewConfig(Timestamp(0)))
       val instanceA = f.runningInstance(app)
 
       f.tracker.specInstancesSync(app.id, readAfterWrite = true) returns Seq(instanceA)
@@ -810,21 +813,35 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     }
 
     def runningInstance(app: AppDefinition): Instance = {
-      TestInstanceBuilder.newBuilder(app.id, version = app.version)
-        .addTaskWithBuilder().taskRunning().withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts).build()
+      TestInstanceBuilder
+        .newBuilder(app.id, version = app.version)
+        .addTaskWithBuilder()
+        .taskRunning()
+        .withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts)
+        .build()
         .getInstance()
     }
 
     def healthyInstance(app: AppDefinition, healthy: Boolean = true): Instance = {
-      TestInstanceBuilder.newBuilderForRunSpec(app, now = app.version)
-        .addTaskWithBuilder().taskRunning().asHealthyTask(healthy).withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts).build()
+      TestInstanceBuilder
+        .newBuilderForRunSpec(app, now = app.version)
+        .addTaskWithBuilder()
+        .taskRunning()
+        .asHealthyTask(healthy)
+        .withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts)
+        .build()
         .getInstance()
     }
 
-    def readinessResults(instance: Instance, checkName: String, ready: Boolean): (Cancellable, Source[ReadinessCheckResult, Cancellable]) = {
+    def readinessResults(
+        instance: Instance,
+        checkName: String,
+        ready: Boolean
+    ): (Cancellable, Source[ReadinessCheckResult, Cancellable]) = {
       val cancellable = new CancellableOnce(() => ())
-      val source = Source(instance.tasksMap.values.map(task => ReadinessCheckResult(checkName, task.taskId, ready, None)).toList).
-        mapMaterializedValue { _ => cancellable }
+      val source = Source(
+        instance.tasksMap.values.map(task => ReadinessCheckResult(checkName, task.taskId, ready, None)).toList
+      ).mapMaterializedValue { _ => cancellable }
       (cancellable, source)
     }
 
@@ -840,9 +857,10 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       InstanceHealthChanged(Instance.Id.forRunSpec(app.id), app.version, app.id, healthy = Some(healthy))
     }
 
-    def replaceActor(app: AppDefinition, promise: Promise[Unit]): ActorRef = system.actorOf(
-      TaskReplaceActor.props(deploymentsManager, deploymentStatus, queue,
-        tracker, system.eventStream, readinessCheckExecutor, app, promise)
-    )
+    def replaceActor(app: AppDefinition, promise: Promise[Unit]): ActorRef =
+      system.actorOf(
+        TaskReplaceActor
+          .props(deploymentsManager, deploymentStatus, queue, tracker, system.eventStream, readinessCheckExecutor, app, promise)
+      )
   }
 }

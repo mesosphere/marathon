@@ -20,11 +20,15 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
   class Fixture(
       val servicePortsRange: Range = 1000.to(20000),
       val initialRoot: Option[RootGroup] = Some(RootGroup.empty()),
-      val maxRunningDeployments: Int = 100) {
+      val maxRunningDeployments: Int = 100
+  ) {
     val config = AllConf.withTestConfig(
-      "--local_port_min", servicePortsRange.min.toString,
-      "--local_port_max", (servicePortsRange.max).toString,
-      "--max_running_deployments", maxRunningDeployments.toString
+      "--local_port_min",
+      servicePortsRange.min.toString,
+      "--local_port_max",
+      (servicePortsRange.max).toString,
+      "--max_running_deployments",
+      maxRunningDeployments.toString
     )
     val groupRepository = mock[GroupRepository]
     val deploymentService = mock[DeploymentService]
@@ -33,9 +37,14 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
 
     val eventStream = mock[EventStream]
     val groupManager = new GroupManagerImpl(
-      metrics, config, initialRoot, groupRepository, new Provider[DeploymentService] {
-      override def get(): DeploymentService = deploymentService
-    })(eventStream, ExecutionContext.Implicits.global)
+      metrics,
+      config,
+      initialRoot,
+      groupRepository,
+      new Provider[DeploymentService] {
+        override def get(): DeploymentService = deploymentService
+      }
+    )(eventStream, ExecutionContext.Implicits.global)
   }
 
   "GroupManager" should {
@@ -50,7 +59,10 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       groupRepository.root() returns Future.successful(Builders.newRootGroup())
 
       intercept[ValidationFailedException] {
-        throw groupManager.updateRoot(PathId.root, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
+        throw groupManager
+          .updateRoot(PathId.root, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false)
+          .failed
+          .futureValue
       }
 
       verify(groupRepository, times(0)).storeRoot(any, any, any, any, any)
@@ -76,9 +88,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
         role = "*"
       )
 
-      val groupWithVersionInfo = Builders.newRootGroup(
-        version = Timestamp(1),
-        apps = Seq(appWithAdditionalInfo))
+      val groupWithVersionInfo = Builders.newRootGroup(version = Timestamp(1), apps = Seq(appWithAdditionalInfo))
       groupRepository.storeRootVersion(any, any, any) returns Future.successful(Done)
       groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
       val groupChangeSuccess = Promise[GroupChangeSuccess]
@@ -93,9 +103,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       verify(groupRepository).storeRoot(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil, Nil, Nil)
       verify(groupRepository).storeRootVersion(groupWithVersionInfo, Seq(appWithAdditionalInfo), Nil)
 
-      groupChangeSuccess.future.
-        futureValue.
-        groupId shouldBe PathId.root
+      groupChangeSuccess.future.futureValue.groupId shouldBe PathId.root
     }
 
     "store new apps with correct version infos in groupRepo and appRepo" in new Fixture {
@@ -109,8 +117,7 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
         role = "*"
       )
 
-      val groupWithVersionInfo = createRootGroup(Map(
-        appWithAdditionalInfo.id -> appWithAdditionalInfo), version = Timestamp(1))
+      val groupWithVersionInfo = createRootGroup(Map(appWithAdditionalInfo.id -> appWithAdditionalInfo), version = Timestamp(1))
       groupRepository.storeRootVersion(any, any, any) returns Future.successful(Done)
       groupRepository.storeRoot(any, any, any, any, any) returns Future.successful(Done)
 
@@ -144,7 +151,10 @@ class GroupManagerTest extends AkkaUnitTest with GroupCreation {
       deploymentService.listRunningDeployments() returns Future.successful(running)
 
       intercept[TooManyRunningDeploymentsException] {
-        throw groupManager.updateRoot(PathId.root, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false).failed.futureValue
+        throw groupManager
+          .updateRoot(PathId.root, _.putGroup(rootGroup, rootGroup.version), rootGroup.version, force = false)
+          .failed
+          .futureValue
       }
 
     }

@@ -84,7 +84,10 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
     "a volume with parameters in the name and result in no error" in {
       val f = new Fixture
       Given("a root group with two apps and conflicting volumes")
-      val app1 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app1"), volumeName = "name=teamvolumename,secret_key=volume-secret-key-team,secure=true,size=5,repl=1,shared=true")
+      val app1 = f.appWithDVDIVolume(
+        appId = AbsolutePathId("/nested/app1"),
+        volumeName = "name=teamvolumename,secret_key=volume-secret-key-team,secure=true,size=5,repl=1,shared=true"
+      )
       val rootGroup = Builders.newRootGroup(apps = Seq(app1))
 
       f.checkResult(
@@ -94,7 +97,12 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
     }
 
     class Fixture {
-      def appWithDVDIVolume(appId: AbsolutePathId, volumeName: String, provider: String = DVDIProvider.name, shared: Boolean = false): AppDefinition = {
+      def appWithDVDIVolume(
+          appId: AbsolutePathId,
+          volumeName: String,
+          provider: String = DVDIProvider.name,
+          shared: Boolean = false
+      ): AppDefinition = {
         AppDefinition(
           id = appId,
           role = "*",
@@ -110,12 +118,15 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
                       name = volumeName,
                       shared = shared,
                       provider = provider,
-                      options = Map(
-                        DVDIProvider.driverOption -> "rexray"))),
-                  mount = VolumeMount(
-                    volumeName = None,
-                    mountPath = "ignoreme",
-                    readOnly = false))))))
+                      options = Map(DVDIProvider.driverOption -> "rexray")
+                    )
+                  ),
+                  mount = VolumeMount(volumeName = None, mountPath = "ignoreme", readOnly = false)
+                )
+              )
+            )
+          )
+        )
       }
 
       def jsonResult(result: Result): String = {

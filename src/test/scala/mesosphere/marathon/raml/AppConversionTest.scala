@@ -10,7 +10,8 @@ import org.apache.mesos.{Protos => Mesos}
 
 class AppConversionTest extends UnitTest with ValidationTestLike {
   private lazy val dockerBridgeApp = {
-    val constraint = Protos.Constraint.newBuilder()
+    val constraint = Protos.Constraint
+      .newBuilder()
       .setField("foo")
       .setOperator(Protos.Constraint.Operator.CLUSTER)
       .setValue("1")
@@ -27,14 +28,14 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       constraints = Set(constraint),
       fetch = Seq(state.FetchUri("http://test.this")),
       backoffStrategy = state.BackoffStrategy(),
-      container = Some(state.Container.Docker(
-        volumes = Seq(state.VolumeWithMount(
-          volume = state.HostVolume(None, "/host"),
-          mount = state.VolumeMount(None, "/container"))),
-        image = "foo/bla",
-        portMappings = Seq(state.Container.PortMapping(12, name = Some("http-api"), hostPort = Some(23), servicePort = 123)),
-        privileged = true
-      )),
+      container = Some(
+        state.Container.Docker(
+          volumes = Seq(state.VolumeWithMount(volume = state.HostVolume(None, "/host"), mount = state.VolumeMount(None, "/container"))),
+          image = "foo/bla",
+          portMappings = Seq(state.Container.PortMapping(12, name = Some("http-api"), hostPort = Some(23), servicePort = 123)),
+          privileged = true
+        )
+      ),
       networks = Seq(BridgeNetwork()),
       healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference.ByIndex(0)))),
       readinessChecks = Seq(core.readiness.ReadinessCheck()),
@@ -74,12 +75,16 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
     id = AbsolutePathId("/mesos-with-linux-info"),
     role = "*",
     cmd = Option("whatever"),
-
-    container = Some(state.Container.Mesos(
-      linuxInfo = Some(state.LinuxInfo(
-        seccomp = Some(state.Seccomp(Some("default"), false)),
-        ipcInfo = Some(state.IPCInfo(state.IpcMode.Private, Some(64)))
-      ))))
+    container = Some(
+      state.Container.Mesos(
+        linuxInfo = Some(
+          state.LinuxInfo(
+            seccomp = Some(state.Seccomp(Some("default"), false)),
+            ipcInfo = Some(state.IPCInfo(state.IpcMode.Private, Some(64)))
+          )
+        )
+      )
+    )
   )
 
   def convertToRamlAndBack(app: AppDefinition): Unit = {
@@ -91,8 +96,12 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val features = Set(Features.SECRETS)
       val readApp: AppDefinition = withValidationClue {
         Raml.fromRaml(
-          AppHelpers.appNormalization(
-            AppNormalization.Configuration(None, "bridge-name", features, state.ResourceRole.Unreserved, true), Set(state.ResourceRole.Unreserved)).normalized(ramlApp)
+          AppHelpers
+            .appNormalization(
+              AppNormalization.Configuration(None, "bridge-name", features, state.ResourceRole.Unreserved, true),
+              Set(state.ResourceRole.Unreserved)
+            )
+            .normalized(ramlApp)
         )
       }
       Then("The app is identical")
@@ -110,8 +119,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
 
       Then("The direct and indirect RAML conversions are identical")
       val config = AppNormalization.Configuration(None, "bridge-name", Set(), state.ResourceRole.Unreserved, true)
-      val normalizedProtoRamlApp = AppNormalization(
-        config).normalized(AppNormalization.forDeprecated(config).normalized(protoRamlApp))
+      val normalizedProtoRamlApp = AppNormalization(config).normalized(AppNormalization.forDeprecated(config).normalized(protoRamlApp))
       normalizedProtoRamlApp should be(ramlApp)
     }
   }
@@ -136,22 +144,29 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
     behave like convertToProtobufThenToRAML(dockerWithArgsApp)
 
     "convert legacy service definitions to RAML" in {
-      val legacy = Protos.ServiceDefinition.newBuilder()
+      val legacy = Protos.ServiceDefinition
+        .newBuilder()
         .setId("/legacy")
         .setCmd(Mesos.CommandInfo.newBuilder().setValue("sleep 60"))
-        .setOBSOLETEIpAddress(Protos.ObsoleteIpAddress.newBuilder()
-          .setNetworkName("fubar")
-          .addLabels(Mesos.Label.newBuilder().setKey("try").setValue("me"))
-          .addGroups("group1").addGroups("group2")
-          .setDiscoveryInfo(Protos.ObsoleteDiscoveryInfo.newBuilder()
-            .addPorts(Mesos.Port.newBuilder()
-              .setNumber(234)
-              .setName("port1")
-              .setProtocol("udp")
-              .setLabels(
-                Mesos.Labels.newBuilder.addLabels(Mesos.Label.newBuilder.setKey("VIP_0").setValue("named:234")))
+        .setOBSOLETEIpAddress(
+          Protos.ObsoleteIpAddress
+            .newBuilder()
+            .setNetworkName("fubar")
+            .addLabels(Mesos.Label.newBuilder().setKey("try").setValue("me"))
+            .addGroups("group1")
+            .addGroups("group2")
+            .setDiscoveryInfo(
+              Protos.ObsoleteDiscoveryInfo
+                .newBuilder()
+                .addPorts(
+                  Mesos.Port
+                    .newBuilder()
+                    .setNumber(234)
+                    .setName("port1")
+                    .setProtocol("udp")
+                    .setLabels(Mesos.Labels.newBuilder.addLabels(Mesos.Label.newBuilder.setKey("VIP_0").setValue("named:234")))
+                )
             )
-          )
         )
         .setLastScalingAt(0)
         .setLastConfigChangeAt(0)
@@ -163,20 +178,26 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
         cmd = Option("sleep 60"),
         executor = "//cmd",
         instances = 2,
-        ipAddress = Option(IpAddress(
-          discovery = Option(IpDiscovery(
-            ports = Seq(
-              IpDiscoveryPort(234, "port1", NetworkProtocol.Udp, Map("VIP_0" -> "named:234"))
-            )
-          )),
-          groups = Set("group1", "group2"),
-          labels = Map("try" -> "me"),
-          networkName = Option("fubar")
-        )),
-        versionInfo = Option(VersionInfo(
-          lastScalingAt = Timestamp.zero.toOffsetDateTime,
-          lastConfigChangeAt = Timestamp.zero.toOffsetDateTime
-        )),
+        ipAddress = Option(
+          IpAddress(
+            discovery = Option(
+              IpDiscovery(
+                ports = Seq(
+                  IpDiscoveryPort(234, "port1", NetworkProtocol.Udp, Map("VIP_0" -> "named:234"))
+                )
+              )
+            ),
+            groups = Set("group1", "group2"),
+            labels = Map("try" -> "me"),
+            networkName = Option("fubar")
+          )
+        ),
+        versionInfo = Option(
+          VersionInfo(
+            lastScalingAt = Timestamp.zero.toOffsetDateTime,
+            lastConfigChangeAt = Timestamp.zero.toOffsetDateTime
+          )
+        ),
         portDefinitions = None
       )
       legacy.toRaml[App] should be(expectedRaml)

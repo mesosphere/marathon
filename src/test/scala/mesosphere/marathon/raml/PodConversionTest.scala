@@ -12,7 +12,9 @@ class PodConversionTest extends UnitTest {
   import PodConversionTest._
 
   "PodConversion" should {
-    val pod = basicOneContainerPod.copy(linuxInfo = Some(state.LinuxInfo(seccomp = None, ipcInfo = Some(state.IPCInfo(ipcMode = state.IpcMode.Private, shmSize = Some(32))))))
+    val pod = basicOneContainerPod.copy(linuxInfo =
+      Some(state.LinuxInfo(seccomp = None, ipcInfo = Some(state.IPCInfo(ipcMode = state.IpcMode.Private, shmSize = Some(32)))))
+    )
 
     "converting raml to internal model" should {
       "keep linux info on executor" in {
@@ -51,11 +53,12 @@ class PodConversionTest extends UnitTest {
     }
   }
 
-  def withValidationClue[T](f: => T): T = scala.util.Try { f }.recover {
-    // handle RAML validation errors
-    case vfe: ValidationFailedException => fail(vfe.failure.violations.toString())
-    case th => throw th
-  }.get
+  def withValidationClue[T](f: => T): T =
+    scala.util.Try { f }.recover {
+      // handle RAML validation errors
+      case vfe: ValidationFailedException => fail(vfe.failure.violations.toString())
+      case th => throw th
+    }.get
 }
 
 object PodConversionTest {

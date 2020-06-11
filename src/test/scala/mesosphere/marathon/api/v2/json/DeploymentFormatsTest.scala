@@ -30,14 +30,13 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
       |  "scaleBy": 23.0,
       |  "version": "2015-06-03T13:00:52.928Z"
       |}
-      |""".
-          stripMargin
+      |""".stripMargin
       val update = Json.parse(json).as[GroupUpdate]
       update.id should be(Some("a"))
-      update.apps should be ('defined)
+      update.apps should be('defined)
       update.apps.get should have size 1
       update.apps.get.head.id should be("b")
-      update.groups should be ('defined)
+      update.groups should be('defined)
       update.groups.get should have size 1
       update.groups.get.head.id should be(Some("c"))
       update.dependencies should be('defined)
@@ -96,7 +95,7 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
   def marshalUnmarshal[T](original: T)(implicit format: Format[T]): JsValue = {
     val json = Json.toJson(original)
     val read = json.as[T]
-    read should be (original)
+    read should be(original)
     json
   }
 
@@ -109,23 +108,39 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
 
   def genApp = AppDefinition(id = genAbsoluteId, role = "*", cmd = Some("sleep"))
 
-  def genStep = DeploymentStep(actions = Seq(
-    StartApplication(genApp),
-    ScaleApplication(genApp, genInt),
-    StopApplication(genApp),
-    RestartApplication(genApp)
-  ))
+  def genStep =
+    DeploymentStep(actions =
+      Seq(
+        StartApplication(genApp),
+        ScaleApplication(genApp, genInt),
+        StopApplication(genApp),
+        RestartApplication(genApp)
+      )
+    )
 
   def genGroup(children: Set[Group] = Set.empty) = {
     val app1 = genApp
     val app2 = genApp
-    createGroup(genAbsoluteId, apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genAbsoluteId), version = genTimestamp, validate = false)
+    createGroup(
+      genAbsoluteId,
+      apps = Map(app1.id -> app1, app2.id -> app2),
+      groups = children,
+      dependencies = Set(genAbsoluteId),
+      version = genTimestamp,
+      validate = false
+    )
   }
 
   def genRootGroup(children: Set[Group] = Set.empty) = {
     val app1 = genApp
     val app2 = genApp
-    createRootGroup(apps = Map(app1.id -> app1, app2.id -> app2), groups = children, dependencies = Set(genAbsoluteId), version = genTimestamp, validate = false)
+    createRootGroup(
+      apps = Map(app1.id -> app1, app2.id -> app2),
+      groups = children,
+      dependencies = Set(genAbsoluteId),
+      version = genTimestamp,
+      validate = false
+    )
   }
 
   def genGroupUpdate(children: Set[GroupUpdate] = Set.empty) =

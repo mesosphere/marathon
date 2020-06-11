@@ -10,11 +10,11 @@ import scala.concurrent.duration._
 
 class LeadershipCoordinatorActorTest extends AkkaUnitTest {
 
-  case class Fixture(
-      whenLeader1Probe: TestProbe = TestProbe(),
-      whenLeader2Probe: TestProbe = TestProbe()) {
+  case class Fixture(whenLeader1Probe: TestProbe = TestProbe(), whenLeader2Probe: TestProbe = TestProbe()) {
 
-    val coordinatorRef: TestActorRef[LeadershipCoordinatorActor] = TestActorRef(LeadershipCoordinatorActor.props(Set(whenLeader1Probe.ref, whenLeader2Probe.ref)))
+    val coordinatorRef: TestActorRef[LeadershipCoordinatorActor] = TestActorRef(
+      LeadershipCoordinatorActor.props(Set(whenLeader1Probe.ref, whenLeader2Probe.ref))
+    )
     coordinatorRef.start()
   }
 
@@ -31,8 +31,7 @@ class LeadershipCoordinatorActorTest extends AkkaUnitTest {
     "in preparingForStart, Stop is send to all whenLeaderActors and preparation is aborted" in new Fixture {
       val probe = TestProbe()
 
-      coordinatorRef.underlying.become(
-        coordinatorRef.underlyingActor.preparingForStart(Set(probe.ref), Set(whenLeader1Probe.ref)))
+      coordinatorRef.underlying.become(coordinatorRef.underlyingActor.preparingForStart(Set(probe.ref), Set(whenLeader1Probe.ref)))
 
       probe.send(coordinatorRef, WhenLeaderActor.Stop)
 
@@ -69,8 +68,7 @@ class LeadershipCoordinatorActorTest extends AkkaUnitTest {
     "in prepareToStart, remove terminated whenLeaderActors" in new Fixture {
       val probe = TestProbe()
 
-      coordinatorRef.underlying.become(
-        coordinatorRef.underlyingActor.preparingForStart(Set(probe.ref), Set(whenLeader1Probe.ref)))
+      coordinatorRef.underlying.become(coordinatorRef.underlyingActor.preparingForStart(Set(probe.ref), Set(whenLeader1Probe.ref)))
       probe.send(whenLeader1Probe.ref, PoisonPill)
 
       assert(coordinatorRef.underlyingActor.whenLeaderActors == Set(whenLeader2Probe.ref))
@@ -111,9 +109,7 @@ class LeadershipCoordinatorActorTest extends AkkaUnitTest {
       val requester1 = TestProbe()
       val requester2 = TestProbe()
 
-      coordinatorRef.underlying.become(
-        coordinatorRef.underlyingActor.preparingForStart(
-          Set(requester1.ref), Set(whenLeader1Probe.ref)))
+      coordinatorRef.underlying.become(coordinatorRef.underlyingActor.preparingForStart(Set(requester1.ref), Set(whenLeader1Probe.ref)))
 
       requester2.send(coordinatorRef, PreparationMessages.PrepareForStart)
 

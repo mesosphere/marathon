@@ -28,17 +28,8 @@ class PortDefinitionTest extends UnitTest {
   }
 
   object Fixture {
-    val validPortDefinition = PortDefinition(
-      port = 80,
-      protocol = "tcp",
-      name = Some("http-port"),
-      labels = Map("foo" -> "bar"))
+    val validPortDefinition = PortDefinition(port = 80, protocol = "tcp", name = Some("http-port"), labels = Map("foo" -> "bar"))
 
-    val tcpUdpPortDefinition = PortDefinition(
-      port = 80,
-      protocol = "udp,tcp",
-      name = Some("http-port"),
-      labels = Map("foo" -> "bar"))
+    val tcpUdpPortDefinition = PortDefinition(port = 80, protocol = "udp,tcp", name = Some("http-port"), labels = Map("foo" -> "bar"))
   }
 }
-

@@ -32,7 +32,8 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
       val instance3 = Instance.scheduled(webApp)
 
       Given("A suppress/revive flow with suppression enabled and 200 millis revive interval")
-      val suppressReviveFlow = ReviveOffersStreamLogic.suppressAndReviveFlow(minReviveOffersInterval = 200.millis, enableSuppress = true, defaultRole = "web")
+      val suppressReviveFlow =
+        ReviveOffersStreamLogic.suppressAndReviveFlow(minReviveOffersInterval = 200.millis, enableSuppress = true, defaultRole = "web")
 
       val (input, output) = inputSourceQueue.via(suppressReviveFlow).toMat(outputSinkQueue)(Keep.both).run
 
@@ -48,9 +49,11 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
       }
 
       And("3 instance updates are sent for the role 'web'")
-      Future.sequence(Seq(instance1, instance2, instance3).map { i =>
-        input.offer(Left(InstanceUpdated(i, None, Nil)))
-      }).futureValue
+      Future
+        .sequence(Seq(instance1, instance2, instance3).map { i =>
+          input.offer(Left(InstanceUpdated(i, None, Nil)))
+        })
+        .futureValue
 
       Then("The revives from the instances get combined in to a single update framework call")
       inside(output.pull().futureValue) {
@@ -74,7 +77,8 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
     }
 
     "does not send suppress if enableSuppress is disabled" in {
-      val suppressReviveFlow = ReviveOffersStreamLogic.suppressAndReviveFlow(minReviveOffersInterval = 200.millis, enableSuppress = false, defaultRole = "web")
+      val suppressReviveFlow =
+        ReviveOffersStreamLogic.suppressAndReviveFlow(minReviveOffersInterval = 200.millis, enableSuppress = false, defaultRole = "web")
 
       val result = Source(List(Left(InstancesSnapshot(List(launchedInstance)))))
         .via(suppressReviveFlow)
@@ -178,8 +182,9 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
         List(
           Left(InstancesSnapshot(List(launchedInstance))),
           Left(InstanceUpdated(instance1, None, Nil)),
-          Left(InstanceUpdated(instance2, None, Nil))))
-        .via(suppressReviveFlow)
+          Left(InstanceUpdated(instance2, None, Nil))
+        )
+      ).via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
 
@@ -201,8 +206,9 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
         List(
           Left(InstancesSnapshot(List(launchedInstance))),
           Left(InstanceUpdated(instance1, None, Nil)),
-          Left(InstanceUpdated(instance1, None, Nil))))
-        .via(suppressReviveFlow)
+          Left(InstanceUpdated(instance1, None, Nil))
+        )
+      ).via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
 
@@ -218,14 +224,11 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
     "does not revive if an instance is backed off" in {
       val instance1 = Instance.scheduled(webApp)
 
-      val results = Source(
-        List(
-          Left(InstancesSnapshot(Nil)),
-          Right(Delayed(webApp.configRef)),
-          Left(InstanceUpdated(instance1, None, Nil))))
-        .via(suppressReviveFlow)
-        .runWith(Sink.seq)
-        .futureValue
+      val results =
+        Source(List(Left(InstancesSnapshot(Nil)), Right(Delayed(webApp.configRef)), Left(InstanceUpdated(instance1, None, Nil))))
+          .via(suppressReviveFlow)
+          .runWith(Sink.seq)
+          .futureValue
 
       inside(results) {
         case Seq(UpdateFramework(roleState, newlyRevived, newlySuppressed)) =>
@@ -241,8 +244,9 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
           Left(InstancesSnapshot(Nil)),
           Left(InstanceUpdated(instance1, None, Nil)),
           Right(Delayed(webApp.configRef)),
-          Right(NotDelayed(webApp.configRef))))
-        .via(suppressReviveFlow)
+          Right(NotDelayed(webApp.configRef))
+        )
+      ).via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
 
@@ -259,23 +263,16 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest with Inside {
       val webInstance = Instance.scheduled(webApp)
       val monitoringInstance = Instance.scheduled(monitoringApp)
 
-      val results = Source(
-        List(
-          Left(InstancesSnapshot(Seq(webInstance, monitoringInstance))),
-          Right(Delayed(webApp.configRef))))
+      val results = Source(List(Left(InstancesSnapshot(Seq(webInstance, monitoringInstance))), Right(Delayed(webApp.configRef))))
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
 
       inside(results) {
         case Seq(update1: UpdateFramework, update2: UpdateFramework) =>
-          update1.roleState shouldBe Map(
-            "monitoring" -> OffersWanted,
-            "web" -> OffersWanted)
+          update1.roleState shouldBe Map("monitoring" -> OffersWanted, "web" -> OffersWanted)
 
-          update2.roleState shouldBe Map(
-            "monitoring" -> OffersWanted,
-            "web" -> OffersNotWanted)
+          update2.roleState shouldBe Map("monitoring" -> OffersWanted, "web" -> OffersNotWanted)
       }
     }
   }

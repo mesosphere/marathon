@@ -8,7 +8,8 @@ import mesosphere.marathon.test.GroupCreation
 class GroupVersioningUtilTest extends UnitTest with GroupCreation {
   val emptyGroup = createRootGroup(version = Timestamp(1))
 
-  val app = AppDefinition(AbsolutePathId("/nested/app"), role = "*", cmd = Some("sleep 123"), versionInfo = VersionInfo.OnlyVersion(Timestamp.zero))
+  val app =
+    AppDefinition(AbsolutePathId("/nested/app"), role = "*", cmd = Some("sleep 123"), versionInfo = VersionInfo.OnlyVersion(Timestamp.zero))
 
   val nestedApp = createRootGroup(
     groups = Set(
@@ -21,8 +22,13 @@ class GroupVersioningUtilTest extends UnitTest with GroupCreation {
     version = Timestamp(2)
   )
 
-  val scaledApp = AppDefinition(AbsolutePathId("/nested/app"), role = "*", cmd = Some("sleep 123"), instances = 2,
-    versionInfo = VersionInfo.OnlyVersion(Timestamp.zero))
+  val scaledApp = AppDefinition(
+    AbsolutePathId("/nested/app"),
+    role = "*",
+    cmd = Some("sleep 123"),
+    instances = 2,
+    versionInfo = VersionInfo.OnlyVersion(Timestamp.zero)
+  )
 
   val nestedAppScaled = createRootGroup(
     groups = Set(
@@ -69,11 +75,13 @@ class GroupVersioningUtilTest extends UnitTest with GroupCreation {
       Then("The timestamp of the app and groups are updated appropriately")
       def update(maybeApp: Option[AppDefinition]): AppDefinition =
         maybeApp.map(_.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(10)))).get
-      updated should be(nestedApp.updateApp(
-        AbsolutePathId("/nested/app"),
-        update,
-        Timestamp(10)
-      ))
+      updated should be(
+        nestedApp.updateApp(
+          AbsolutePathId("/nested/app"),
+          update,
+          Timestamp(10)
+        )
+      )
     }
 
     "A scaled app should get proper versionInfo" in {
@@ -82,11 +90,13 @@ class GroupVersioningUtilTest extends UnitTest with GroupCreation {
       Then("The timestamp of the app and groups are updated appropriately")
       def update(maybeApp: Option[AppDefinition]): AppDefinition =
         maybeApp.map(_.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(0)).withScaleOrRestartChange(Timestamp(10)))).get
-      updated should equal(nestedAppScaled.updateApp(
-        AbsolutePathId("/nested/app"),
-        update,
-        Timestamp(10)
-      ))
+      updated should equal(
+        nestedAppScaled.updateApp(
+          AbsolutePathId("/nested/app"),
+          update,
+          Timestamp(10)
+        )
+      )
     }
 
     "A updated app should get proper versionInfo" in {
@@ -95,11 +105,15 @@ class GroupVersioningUtilTest extends UnitTest with GroupCreation {
       Then("The timestamp of the app and groups are updated appropriately")
       def update(maybeApp: Option[AppDefinition]): AppDefinition =
         maybeApp.map(_.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(10)))).get
-      updated.toString should be(nestedAppUpdated.updateApp(
-        AbsolutePathId("/nested/app"),
-        update,
-        Timestamp(10)
-      ).toString)
+      updated.toString should be(
+        nestedAppUpdated
+          .updateApp(
+            AbsolutePathId("/nested/app"),
+            update,
+            Timestamp(10)
+          )
+          .toString
+      )
     }
   }
 }

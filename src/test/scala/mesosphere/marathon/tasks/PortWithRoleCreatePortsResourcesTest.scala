@@ -25,43 +25,60 @@ class PortWithRoleCreatePortsResourcesTest extends UnitTest {
     }
 
     "one ranges resource for multiple ports of the same role" in {
-      val result = PortWithRole.createPortsResources(Seq(PortWithRole(ResourceRole.Unreserved, 2), PortWithRole(ResourceRole.Unreserved, 10)))
+      val result =
+        PortWithRole.createPortsResources(Seq(PortWithRole(ResourceRole.Unreserved, 2), PortWithRole(ResourceRole.Unreserved, 10)))
       assert(result == Seq(rangesResource(Seq(Range(2, 2), Range(10, 10)), role = ResourceRole.Unreserved)))
     }
 
     "one ranges resource for consecutive multiple ports of the same role" in {
-      val result = PortWithRole.createPortsResources(Seq(
-        PortWithRole(ResourceRole.Unreserved, 2), PortWithRole(ResourceRole.Unreserved, 10),
-        PortWithRole("marathon", 11),
-        PortWithRole(ResourceRole.Unreserved, 12)
-      ))
-      assert(result == Seq(
-        rangesResource(Seq(Range(2, 2), Range(10, 10)), role = ResourceRole.Unreserved),
-        rangesResource(Seq(Range(11, 11)), role = "marathon"),
-        rangesResource(Seq(Range(12, 12)), role = ResourceRole.Unreserved)
-      ))
+      val result = PortWithRole.createPortsResources(
+        Seq(
+          PortWithRole(ResourceRole.Unreserved, 2),
+          PortWithRole(ResourceRole.Unreserved, 10),
+          PortWithRole("marathon", 11),
+          PortWithRole(ResourceRole.Unreserved, 12)
+        )
+      )
+      assert(
+        result == Seq(
+          rangesResource(Seq(Range(2, 2), Range(10, 10)), role = ResourceRole.Unreserved),
+          rangesResource(Seq(Range(11, 11)), role = "marathon"),
+          rangesResource(Seq(Range(12, 12)), role = ResourceRole.Unreserved)
+        )
+      )
     }
 
     "combined consecutive ports of same role into one range" in {
-      val result = PortWithRole.createPortsResources(Seq(
-        PortWithRole(ResourceRole.Unreserved, 2), PortWithRole(ResourceRole.Unreserved, 3)
-      ))
-      assert(result == Seq(
-        rangesResource(Seq(Range(2, 3)), role = ResourceRole.Unreserved)
-      ))
+      val result = PortWithRole.createPortsResources(
+        Seq(
+          PortWithRole(ResourceRole.Unreserved, 2),
+          PortWithRole(ResourceRole.Unreserved, 3)
+        )
+      )
+      assert(
+        result == Seq(
+          rangesResource(Seq(Range(2, 3)), role = ResourceRole.Unreserved)
+        )
+      )
     }
 
     "complex example" in {
-      val result = PortWithRole.createPortsResources(Seq(
-        PortWithRole(ResourceRole.Unreserved, 2), PortWithRole(ResourceRole.Unreserved, 3), PortWithRole(ResourceRole.Unreserved, 10),
-        PortWithRole("marathon", 11),
-        PortWithRole(ResourceRole.Unreserved, 12)
-      ))
-      assert(result == Seq(
-        rangesResource(Seq(Range(2, 3), Range(10, 10)), role = ResourceRole.Unreserved),
-        rangesResource(Seq(Range(11, 11)), role = "marathon"),
-        rangesResource(Seq(Range(12, 12)), role = ResourceRole.Unreserved)
-      ))
+      val result = PortWithRole.createPortsResources(
+        Seq(
+          PortWithRole(ResourceRole.Unreserved, 2),
+          PortWithRole(ResourceRole.Unreserved, 3),
+          PortWithRole(ResourceRole.Unreserved, 10),
+          PortWithRole("marathon", 11),
+          PortWithRole(ResourceRole.Unreserved, 12)
+        )
+      )
+      assert(
+        result == Seq(
+          rangesResource(Seq(Range(2, 3), Range(10, 10)), role = ResourceRole.Unreserved),
+          rangesResource(Seq(Range(11, 11)), role = "marathon"),
+          rangesResource(Seq(Range(12, 12)), role = ResourceRole.Unreserved)
+        )
+      )
     }
   }
 

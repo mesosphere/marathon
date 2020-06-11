@@ -27,10 +27,12 @@ object ModelValidationTest {
       id,
       role = "*",
       networks = Seq(BridgeNetwork()),
-      container = Some(Docker(
-        image = "demothing",
-        portMappings = Seq(PortMapping(2000, Some(0), servicePort = servicePort))
-      ))
+      container = Some(
+        Docker(
+          image = "demothing",
+          portMappings = Seq(PortMapping(2000, Some(0), servicePort = servicePort))
+        )
+      )
     )
 }
 
@@ -42,7 +44,8 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
 
   "ModelValidation" should {
     "An empty group update should pass validation" in {
-      implicit val groupUpdateValidator: Validator[GroupUpdate] = Group.validNestedGroupUpdateWithBase(PathId.root, RootGroup.empty(), false)
+      implicit val groupUpdateValidator: Validator[GroupUpdate] =
+        Group.validNestedGroupUpdateWithBase(PathId.root, RootGroup.empty(), false)
       val update = GroupUpdate(id = Some("/a/b/c"))
 
       validate(update).isSuccess should be(true)
@@ -76,14 +79,16 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
       val validApp = AppDefinition(AbsolutePathId("/test/group1/valid"), cmd = Some("foo"), role = "*")
       val invalidApp = AppDefinition(AbsolutePathId("/test/group1/invalid"), role = "*")
       val rootGroup = createRootGroup(
-        groups = Set(createGroup(AbsolutePathId("/test"), groups = Set(
-          createGroup(AbsolutePathId("/test/group1"), Map(
-            validApp.id -> validApp,
-            invalidApp.id -> invalidApp),
+        groups = Set(
+          createGroup(
+            AbsolutePathId("/test"),
+            groups = Set(
+              createGroup(AbsolutePathId("/test/group1"), Map(validApp.id -> validApp, invalidApp.id -> invalidApp), validate = false),
+              createGroup(AbsolutePathId("/test/group2"), validate = false)
+            ),
             validate = false
-          ),
-          createGroup(AbsolutePathId("/test/group2"), validate = false)),
-          validate = false)),
+          )
+        ),
         validate = false
       )
 
@@ -93,7 +98,12 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
     }
 
     "PortDefinition should be allowed to contain tcp and udp as protocol." in {
-      val validApp = AppDefinition(AbsolutePathId("/test/app"), cmd = Some("foo"), portDefinitions = Seq(PortDefinition(port = 80, protocol = "udp,tcp")), role = "*")
+      val validApp = AppDefinition(
+        AbsolutePathId("/test/app"),
+        cmd = Some("foo"),
+        portDefinitions = Seq(PortDefinition(port = 80, protocol = "udp,tcp")),
+        role = "*"
+      )
 
       val rootGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/test"), apps = Map(validApp.id -> validApp))))
 

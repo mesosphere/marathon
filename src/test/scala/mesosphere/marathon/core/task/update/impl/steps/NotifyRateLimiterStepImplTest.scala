@@ -11,24 +11,24 @@ import org.scalatest.prop.TableDrivenPropertyChecks
 class NotifyRateLimiterStepImplTest extends UnitTest with TableDrivenPropertyChecks {
 
   "NotifyRateLimiterStepImpl" when {
-    val updateCombinations = Table (
-      ("test case",                 "expected action",  "instanceChange"),
-      ("killed(draining)",          ResetDelay,         TaskStatusUpdateTestHelper.killed(draining = true).wrapped),
-      ("goneByOperator(draining)",  ResetDelay,         TaskStatusUpdateTestHelper.goneByOperator(draining = true).wrapped),
-      ("dropped",                   AddDelay,           TaskStatusUpdateTestHelper.dropped().wrapped),
-      ("error",                     AddDelay,           TaskStatusUpdateTestHelper.error().wrapped),
-      ("failed",                    AddDelay,           TaskStatusUpdateTestHelper.failed().wrapped),
-      ("gone",                      AddDelay,           TaskStatusUpdateTestHelper.gone().wrapped),
-      ("finished",                  AddDelay,           TaskStatusUpdateTestHelper.finished().wrapped),
-      ("starting",                  AdvanceDelay,       TaskStatusUpdateTestHelper.starting().wrapped),
-      ("running",                   AdvanceDelay,       TaskStatusUpdateTestHelper.running().wrapped),
-      ("unknown",                   Noop,               TaskStatusUpdateTestHelper.unknown().wrapped),
-      ("killed",                    Noop,               TaskStatusUpdateTestHelper.killed().wrapped),
-      ("unreachable",               Noop,               TaskStatusUpdateTestHelper.unreachable().wrapped),
+    val updateCombinations = Table(
+      ("test case", "expected action", "instanceChange"),
+      ("killed(draining)", ResetDelay, TaskStatusUpdateTestHelper.killed(draining = true).wrapped),
+      ("goneByOperator(draining)", ResetDelay, TaskStatusUpdateTestHelper.goneByOperator(draining = true).wrapped),
+      ("dropped", AddDelay, TaskStatusUpdateTestHelper.dropped().wrapped),
+      ("error", AddDelay, TaskStatusUpdateTestHelper.error().wrapped),
+      ("failed", AddDelay, TaskStatusUpdateTestHelper.failed().wrapped),
+      ("gone", AddDelay, TaskStatusUpdateTestHelper.gone().wrapped),
+      ("finished", AddDelay, TaskStatusUpdateTestHelper.finished().wrapped),
+      ("starting", AdvanceDelay, TaskStatusUpdateTestHelper.starting().wrapped),
+      ("running", AdvanceDelay, TaskStatusUpdateTestHelper.running().wrapped),
+      ("unknown", Noop, TaskStatusUpdateTestHelper.unknown().wrapped),
+      ("killed", Noop, TaskStatusUpdateTestHelper.killed().wrapped),
+      ("unreachable", Noop, TaskStatusUpdateTestHelper.unreachable().wrapped)
     )
 
     "processing update" when {
-      forAll (updateCombinations) { (testCase: String, expectedAction: ExpectedAction, instanceChange: InstanceChange) =>
+      forAll(updateCombinations) { (testCase: String, expectedAction: ExpectedAction, instanceChange: InstanceChange) =>
         s"$testCase should $expectedAction" in {
           val f = new Fixture
           f.step.process(instanceChange).futureValue

@@ -67,8 +67,6 @@ class TaskStatusUpdateProcessorImpl @Inject() (
       (status.getReason) match {
         case MesosProtos.TaskStatus.Reason.REASON_CONTAINER_LIMITATION_MEMORY =>
           oomKilledTasksExceededLimits.increment()
-        case MesosProtos.TaskStatus.Reason.REASON_CONTAINER_MEMORY_REQUEST_EXCEEDED =>
-          oomKilledTasksWithinLimits.increment()
         case _ =>
       }
 

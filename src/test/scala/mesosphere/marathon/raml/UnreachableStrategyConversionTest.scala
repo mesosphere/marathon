@@ -28,15 +28,10 @@ class UnreachableStrategyConversionTest extends UnitTest {
   it should {
     val strategy = state.UnreachableEnabled(inactiveAfter = 10.minutes, expungeAfter = 20.minutes)
 
-    val raml = UnreachableStrategyConversion.ramlUnreachableStrategyWrite(strategy).
-      asInstanceOf[UnreachableEnabled]
+    val raml = UnreachableStrategyConversion.ramlUnreachableStrategyWrite(strategy).asInstanceOf[UnreachableEnabled]
 
-    behave like convertToProtobufThenToRAML(
-      "unreachable enabled",
-      strategy, raml)
-    behave like convertToProtobufThenToRAML(
-      "unreachable disabled",
-      state.UnreachableDisabled, UnreachableDisabled.DefaultValue)
+    behave like convertToProtobufThenToRAML("unreachable enabled", strategy, raml)
+    behave like convertToProtobufThenToRAML("unreachable disabled", state.UnreachableDisabled, UnreachableDisabled.DefaultValue)
 
     "write to RAML" in {
       raml.inactiveAfterSeconds should be(600)

@@ -24,11 +24,18 @@ class MigrationTo18200Test extends AkkaUnitTest {
       val instanceId3 = Instance.Id.forRunSpec(AbsolutePathId("/app3"))
 
       val taskId = Task.Id(instanceId2)
-      val instances = Source(List(
-        f.legacyInstanceJson(instanceId1),
-        f.legacyResidentInstanceJson(instanceId2, taskId.idString, f.task(taskId, MesosProtos.TaskState.TASK_RUNNING), None),
-        f.legacyResidentInstanceJson(instanceId3, taskId.idString, f.task(taskId, MesosProtos.TaskState.TASK_RUNNING), Some("reservation-id"))
-      ))
+      val instances = Source(
+        List(
+          f.legacyInstanceJson(instanceId1),
+          f.legacyResidentInstanceJson(instanceId2, taskId.idString, f.task(taskId, MesosProtos.TaskState.TASK_RUNNING), None),
+          f.legacyResidentInstanceJson(
+            instanceId3,
+            taskId.idString,
+            f.task(taskId, MesosProtos.TaskState.TASK_RUNNING),
+            Some("reservation-id")
+          )
+        )
+      )
 
       When("they are run through the migration flow")
       val updatedInstances = instances.via(MigrationTo18200.migrationFlow).runWith(Sink.seq).futureValue
@@ -47,8 +54,7 @@ class MigrationTo18200Test extends AkkaUnitTest {
       * @param i The id of the instance.
       * @return The JSON of the instance.
       */
-    def legacyInstanceJson(i: Instance.Id): JsObject = Json.parse(
-      s"""
+    def legacyInstanceJson(i: Instance.Id): JsObject = Json.parse(s"""
          |{
          |  "instanceId": { "idString": "${i.idString}" },
          |  "tasksMap": {},
@@ -65,12 +71,16 @@ class MigrationTo18200Test extends AkkaUnitTest {
     def legacyResidentInstanceJson(id: Instance.Id, taskId: String, task: JsValue, reservationId: Option[String]): JsValue = {
 
       val maybReservationJsObject = JsObject(reservationId.toSeq.map("id" -> JsString(_)))
-      val reservation = Json.obj("reservation" -> (
-        Json.obj("volumeIds" -> Json.arr(), "state" -> Json.obj("name" -> "suspended")) ++ maybReservationJsObject
-      ))
+      val reservation = Json.obj(
+        "reservation" -> (
+          Json.obj("volumeIds" -> Json.arr(), "state" -> Json.obj("name" -> "suspended")) ++ maybReservationJsObject
+        )
+      )
 
       legacyInstanceJson(id) ++
-        Json.obj("state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Reserved"), "goal" -> "Running")) ++
+        Json.obj(
+          "state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Reserved"), "goal" -> "Running")
+        ) ++
         reservation ++
         Json.obj("tasksMap" -> Json.obj(taskId -> task))
     }
@@ -82,11 +92,12 @@ class MigrationTo18200Test extends AkkaUnitTest {
       * @return The JSON object of the task.
       */
     def task(taskId: Task.Id, state: MesosProtos.TaskState): JsValue = task(taskId, taskStatus(taskId.idString, state))
-    def task(taskId: Task.Id, status: JsValue): JsValue = Json.obj(
-      "taskId" -> taskId.idString,
-      "runSpecVersion" -> "2015-01-01T12:00:00.000Z",
-      "status" -> status
-    )
+    def task(taskId: Task.Id, status: JsValue): JsValue =
+      Json.obj(
+        "taskId" -> taskId.idString,
+        "runSpecVersion" -> "2015-01-01T12:00:00.000Z",
+        "status" -> status
+      )
 
     /**
       * Construct a task status in 1.8.0 JSON format.
@@ -95,7 +106,8 @@ class MigrationTo18200Test extends AkkaUnitTest {
       * @return The JSON object of the task status.
       */
     def taskStatus(taskId: String, state: MesosProtos.TaskState): JsValue = {
-      val mesosTaskStatus: MesosProtos.TaskStatus = MesosProtos.TaskStatus.newBuilder()
+      val mesosTaskStatus: MesosProtos.TaskStatus = MesosProtos.TaskStatus
+        .newBuilder()
         .setState(state)
         .setTaskId(MesosProtos.TaskID.newBuilder().setValue(taskId).build())
         .build()

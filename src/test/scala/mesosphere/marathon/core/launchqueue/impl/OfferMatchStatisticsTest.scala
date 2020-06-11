@@ -24,14 +24,16 @@ class OfferMatchStatisticsActorTest extends AkkaUnitTest with Eventually with In
       Given("Statistics actor with empty statistics")
       val f = new Fixture
       When("The sinks receive 5 events regarding 3 different apps")
-      val (runSpecStatisticsFold, noMatchStatisticsFold) = Source(List[OfferMatchUpdate](
-        f.matchedA,
-        f.matchedB,
-        f.noMatchA,
-        f.noMatchB,
-        f.noMatchBSecond,
-        f.matchedC
-      )).runWith(sinks)
+      val (runSpecStatisticsFold, noMatchStatisticsFold) = Source(
+        List[OfferMatchUpdate](
+          f.matchedA,
+          f.matchedB,
+          f.noMatchA,
+          f.noMatchB,
+          f.noMatchBSecond,
+          f.matchedC
+        )
+      ).runWith(sinks)
 
       val (runSpecStatistics, noMatchStatistics) =
         (runSpecStatisticsFold.finalResult.futureValue, noMatchStatisticsFold.finalResult.futureValue)
@@ -66,7 +68,8 @@ class OfferMatchStatisticsActorTest extends AkkaUnitTest with Eventually with In
     "If the launch attempt is finished, the statistics will be reset" in {
       Given("Statistics actor with some statistics for app A and C")
       val f = new Fixture
-      val (input, (runSpecStatisticsFold, noMatchStatisticsFold)) = Source.queue[OfferMatchUpdate](16, OverflowStrategy.fail)
+      val (input, (runSpecStatisticsFold, noMatchStatisticsFold)) = Source
+        .queue[OfferMatchUpdate](16, OverflowStrategy.fail)
         .toMat(sinks)(Keep.both)
         .run
 
@@ -98,11 +101,8 @@ class OfferMatchStatisticsActorTest extends AkkaUnitTest with Eventually with In
     "Statistics can be queried" in {
       Given("Statistics actor with some statistics for app A and C")
       val f = new Fixture
-      val (runSpecStatisticsFold, noMatchStatisticsFold) = Source(List[OfferMatchUpdate](
-        f.matchedA,
-        f.noMatchA,
-        f.noMatchA,
-        f.matchedC)).runWith(sinks)
+      val (runSpecStatisticsFold, noMatchStatisticsFold) =
+        Source(List[OfferMatchUpdate](f.matchedA, f.noMatchA, f.noMatchA, f.matchedC)).runWith(sinks)
 
       val (runSpecStatistics, noMatchStatistics) =
         (runSpecStatisticsFold.finalResult.futureValue, noMatchStatisticsFold.finalResult.futureValue)
@@ -120,15 +120,17 @@ class OfferMatchStatisticsActorTest extends AkkaUnitTest with Eventually with In
     }
   }
 
-  def sinks = Flow[OfferMatchUpdate]
-    .alsoToMat(OfferMatchStatistics.runSpecStatisticsSink)(Keep.right)
-    .toMat(OfferMatchStatistics.noMatchStatisticsSink)(Keep.both)
+  def sinks =
+    Flow[OfferMatchUpdate]
+      .alsoToMat(OfferMatchStatistics.runSpecStatisticsSink)(Keep.right)
+      .toMat(OfferMatchStatistics.noMatchStatisticsSink)(Keep.both)
 
   class Fixture {
     val runSpecA = AppDefinition(AbsolutePathId("/a"), role = "*")
     val runSpecB = AppDefinition(AbsolutePathId("/b"), role = "*")
     val runSpecC = AppDefinition(AbsolutePathId("/c"), role = "*")
-    def offerFrom(agent: String, cpus: Double = 4) = MarathonTestHelper.makeBasicOffer(cpus = cpus).setSlaveId(Mesos.SlaveID.newBuilder().setValue(agent)).build()
+    def offerFrom(agent: String, cpus: Double = 4) =
+      MarathonTestHelper.makeBasicOffer(cpus = cpus).setSlaveId(Mesos.SlaveID.newBuilder().setValue(agent)).build()
     val instanceOp = mock[InstanceOp]
     import mesosphere.mesos.NoOfferMatchReason._
     val reasonA = Seq(InsufficientCpus, InsufficientPorts, InsufficientMemory)

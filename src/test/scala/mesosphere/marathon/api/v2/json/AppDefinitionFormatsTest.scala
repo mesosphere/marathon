@@ -16,10 +16,7 @@ import play.api.libs.json._
 import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
-class AppDefinitionFormatsTest extends UnitTest
-  with HealthCheckFormats
-  with Matchers
-  with ValidationTestLike {
+class AppDefinitionFormatsTest extends UnitTest with HealthCheckFormats with Matchers with ValidationTestLike {
 
   import Formats.{PathIdReads, PathIdWrites}
 
@@ -46,11 +43,12 @@ class AppDefinitionFormatsTest extends UnitTest
       // this is roughly the equivalent of how the original Formats behaved, which is notable because Formats
       // (like this code) reverses the order of validation and normalization
       Validation.validateOrThrow(
-        AppNormalization.apply(config)
-          .normalized(Validation.validateOrThrow(
-            AppNormalization.forDeprecated(config).normalized(app))(AppValidation.validateOldAppAPI)))(
-          AppValidation.validateCanonicalAppAPI(Set.empty, () => None, Set(ResourceRole.Unreserved, "production"))
-        )
+        AppNormalization
+          .apply(config)
+          .normalized(Validation.validateOrThrow(AppNormalization.forDeprecated(config).normalized(app))(AppValidation.validateOldAppAPI))
+      )(
+        AppValidation.validateCanonicalAppAPI(Set.empty, () => None, Set(ResourceRole.Unreserved, "production"))
+      )
     )
   }
 
@@ -62,45 +60,51 @@ class AppDefinitionFormatsTest extends UnitTest
 
       val r1 = Json.toJson(Raml.toRaml(a1))
       // check supplied values
-      (r1 \ "id").get should equal (JsString("/app1"))
-      (r1 \ "cmd").get should equal (JsString("sleep 10"))
-      (r1 \ "version").get should equal (JsString("1970-01-01T00:00:00.001Z"))
+      (r1 \ "id").get should equal(JsString("/app1"))
+      (r1 \ "cmd").get should equal(JsString("sleep 10"))
+      (r1 \ "version").get should equal(JsString("1970-01-01T00:00:00.001Z"))
       (r1 \ "versionInfo").asOpt[JsObject] should equal(None)
 
       // check default values
-      (r1 \ "args").asOpt[Seq[String]] should be (empty)
-      (r1 \ "user").asOpt[String] should equal (None)
-      (r1 \ "env").asOpt[Map[String, String]] should be (empty)
-      (r1 \ "instances").as[Long] should equal (App.DefaultInstances)
-      (r1 \ "cpus").as[Double] should equal (App.DefaultCpus)
-      (r1 \ "mem").as[Double] should equal (App.DefaultMem)
-      (r1 \ "disk").as[Double] should equal (App.DefaultDisk)
-      (r1 \ "gpus").as[Int] should equal (App.DefaultGpus)
-      (r1 \ "executor").as[String] should equal (App.DefaultExecutor)
-      (r1 \ "constraints").asOpt[Set[Seq[String]]] should be (empty)
-      (r1 \ "fetch").asOpt[Seq[Artifact]] should be (empty)
-      (r1 \ "portDefinitions").asOpt[Seq[PortDefinition]] should equal (Option(Seq.empty))
-      (r1 \ "requirePorts").as[Boolean] should equal (App.DefaultRequirePorts)
-      (r1 \ "backoffSeconds").as[Long] should equal (App.DefaultBackoffSeconds)
-      (r1 \ "backoffFactor").as[Double] should equal (App.DefaultBackoffFactor)
-      (r1 \ "maxLaunchDelaySeconds").as[Long] should equal (App.DefaultMaxLaunchDelaySeconds)
-      (r1 \ "container").asOpt[String] should equal (None)
-      (r1 \ "healthChecks").asOpt[Seq[AppHealthCheck]] should be (empty)
-      (r1 \ "dependencies").asOpt[Set[PathId]] should be (empty)
-      (r1 \ "upgradeStrategy").as[UpgradeStrategy] should equal (DefaultUpgradeStrategy.toRaml)
-      (r1 \ "residency").asOpt[String] should equal (None)
-      (r1 \ "secrets").asOpt[Map[String, SecretDef]] should be (empty)
-      (r1 \ "taskKillGracePeriodSeconds").asOpt[Long] should equal (DefaultTaskKillGracePeriod)
+      (r1 \ "args").asOpt[Seq[String]] should be(empty)
+      (r1 \ "user").asOpt[String] should equal(None)
+      (r1 \ "env").asOpt[Map[String, String]] should be(empty)
+      (r1 \ "instances").as[Long] should equal(App.DefaultInstances)
+      (r1 \ "cpus").as[Double] should equal(App.DefaultCpus)
+      (r1 \ "mem").as[Double] should equal(App.DefaultMem)
+      (r1 \ "disk").as[Double] should equal(App.DefaultDisk)
+      (r1 \ "gpus").as[Int] should equal(App.DefaultGpus)
+      (r1 \ "executor").as[String] should equal(App.DefaultExecutor)
+      (r1 \ "constraints").asOpt[Set[Seq[String]]] should be(empty)
+      (r1 \ "fetch").asOpt[Seq[Artifact]] should be(empty)
+      (r1 \ "portDefinitions").asOpt[Seq[PortDefinition]] should equal(Option(Seq.empty))
+      (r1 \ "requirePorts").as[Boolean] should equal(App.DefaultRequirePorts)
+      (r1 \ "backoffSeconds").as[Long] should equal(App.DefaultBackoffSeconds)
+      (r1 \ "backoffFactor").as[Double] should equal(App.DefaultBackoffFactor)
+      (r1 \ "maxLaunchDelaySeconds").as[Long] should equal(App.DefaultMaxLaunchDelaySeconds)
+      (r1 \ "container").asOpt[String] should equal(None)
+      (r1 \ "healthChecks").asOpt[Seq[AppHealthCheck]] should be(empty)
+      (r1 \ "dependencies").asOpt[Set[PathId]] should be(empty)
+      (r1 \ "upgradeStrategy").as[UpgradeStrategy] should equal(DefaultUpgradeStrategy.toRaml)
+      (r1 \ "residency").asOpt[String] should equal(None)
+      (r1 \ "secrets").asOpt[Map[String, SecretDef]] should be(empty)
+      (r1 \ "taskKillGracePeriodSeconds").asOpt[Long] should equal(DefaultTaskKillGracePeriod)
     }
 
     "ToJson should serialize full version info" in {
       import Fixture._
 
-      val r1 = Json.toJson(Raml.toRaml(a1.copy(versionInfo = VersionInfo.FullVersionInfo(
-        version = Timestamp(3),
-        lastScalingAt = Timestamp(2),
-        lastConfigChangeAt = Timestamp(1)
-      ))))
+      val r1 = Json.toJson(
+        Raml.toRaml(
+          a1.copy(versionInfo =
+            VersionInfo.FullVersionInfo(
+              version = Timestamp(3),
+              lastScalingAt = Timestamp(2),
+              lastConfigChangeAt = Timestamp(1)
+            )
+          )
+        )
+      )
       (r1 \ "version").as[String] should equal("1970-01-01T00:00:00.003Z")
       (r1 \ "versionInfo" \ "lastScalingAt").as[String] should equal("1970-01-01T00:00:00.002Z")
       (r1 \ "versionInfo" \ "lastConfigChangeAt").as[String] should equal("1970-01-01T00:00:00.001Z")
@@ -115,40 +119,39 @@ class AppDefinitionFormatsTest extends UnitTest
       val r1 = normalizeAndConvert(raw)
 
       // check supplied values
-      r1.id should equal (a1.id)
-      r1.cmd should equal (a1.cmd)
-      r1.version should equal (Timestamp(1))
+      r1.id should equal(a1.id)
+      r1.cmd should equal(a1.cmd)
+      r1.version should equal(Timestamp(1))
       r1.versionInfo shouldBe a[VersionInfo.OnlyVersion]
       // check default values
-      r1.args should equal (App.DefaultArgs)
-      r1.user should equal (App.DefaultUser)
-      r1.env should equal (DefaultEnv)
-      r1.instances should equal (App.DefaultInstances)
-      r1.resources.cpus should equal (App.DefaultCpus)
-      r1.resources.mem should equal (App.DefaultMem)
-      r1.resources.disk should equal (App.DefaultDisk)
-      r1.resources.gpus should equal (App.DefaultGpus)
-      r1.executor should equal (App.DefaultExecutor)
-      r1.constraints should equal (DefaultConstraints)
-      r1.fetch should equal (DefaultFetch)
-      r1.portDefinitions should equal (Seq(PortDefinition(port = 0, name = Some("default"))))
-      r1.requirePorts should equal (App.DefaultRequirePorts)
-      r1.backoffStrategy.backoff should equal (App.DefaultBackoffSeconds.seconds)
-      r1.backoffStrategy.factor should equal (App.DefaultBackoffFactor)
-      r1.backoffStrategy.maxLaunchDelay should equal (App.DefaultMaxLaunchDelaySeconds.seconds)
-      r1.container should equal (DefaultContainer)
-      r1.healthChecks should equal (DefaultHealthChecks)
-      r1.dependencies should equal (DefaultDependencies)
-      r1.upgradeStrategy should equal (DefaultUpgradeStrategy)
-      r1.acceptedResourceRoles should be ('empty)
-      r1.secrets should equal (DefaultSecrets)
-      r1.taskKillGracePeriod should equal (DefaultTaskKillGracePeriod)
-      r1.unreachableStrategy should equal (DefaultUnreachableStrategy)
+      r1.args should equal(App.DefaultArgs)
+      r1.user should equal(App.DefaultUser)
+      r1.env should equal(DefaultEnv)
+      r1.instances should equal(App.DefaultInstances)
+      r1.resources.cpus should equal(App.DefaultCpus)
+      r1.resources.mem should equal(App.DefaultMem)
+      r1.resources.disk should equal(App.DefaultDisk)
+      r1.resources.gpus should equal(App.DefaultGpus)
+      r1.executor should equal(App.DefaultExecutor)
+      r1.constraints should equal(DefaultConstraints)
+      r1.fetch should equal(DefaultFetch)
+      r1.portDefinitions should equal(Seq(PortDefinition(port = 0, name = Some("default"))))
+      r1.requirePorts should equal(App.DefaultRequirePorts)
+      r1.backoffStrategy.backoff should equal(App.DefaultBackoffSeconds.seconds)
+      r1.backoffStrategy.factor should equal(App.DefaultBackoffFactor)
+      r1.backoffStrategy.maxLaunchDelay should equal(App.DefaultMaxLaunchDelaySeconds.seconds)
+      r1.container should equal(DefaultContainer)
+      r1.healthChecks should equal(DefaultHealthChecks)
+      r1.dependencies should equal(DefaultDependencies)
+      r1.upgradeStrategy should equal(DefaultUpgradeStrategy)
+      r1.acceptedResourceRoles should be('empty)
+      r1.secrets should equal(DefaultSecrets)
+      r1.taskKillGracePeriod should equal(DefaultTaskKillGracePeriod)
+      r1.unreachableStrategy should equal(DefaultUnreachableStrategy)
     }
 
     "FromJSON should ignore VersionInfo" in {
-      val app = Json.parse(
-        """{
+      val app = Json.parse("""{
         |  "id": "test",
         |  "cmd": "foo",
         |  "version": "1970-01-01T00:00:00.002Z",
@@ -264,8 +267,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should parse ipAddress.networkName" in {
-      val appDef = normalizeAndConvert(Json.parse(
-        """{
+      val appDef = normalizeAndConvert(Json.parse("""{
         |  "id": "test",
         |  "cmd": "foo",
         |  "ipAddress": {
@@ -277,8 +279,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should parse ipAddress.networkName with MESOS container" in {
-      val appDef = normalizeAndConvert(Json.parse(
-        """{
+      val appDef = normalizeAndConvert(Json.parse("""{
         |  "id": "test",
         |  "cmd": "foo",
         |  "ipAddress": {
@@ -295,8 +296,7 @@ class AppDefinitionFormatsTest extends UnitTest
 
     "FromJSON should parse ipAddress.networkName with DOCKER container w/o port mappings" in {
       withValidationClue {
-        val appDef = normalizeAndConvert(Json.parse(
-          """{
+        val appDef = normalizeAndConvert(Json.parse("""{
         |  "id": "test",
         |  "ipAddress": {
         |    "networkName": "foo"
@@ -316,8 +316,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should parse ipAddress.networkName with DOCKER container w/ port mappings" in {
-      val appDef = normalizeAndConvert(Json.parse(
-        """{
+      val appDef = normalizeAndConvert(Json.parse("""{
         |  "id": "test",
         |  "ipAddress": {
         |    "networkName": "foo"
@@ -335,18 +334,21 @@ class AppDefinitionFormatsTest extends UnitTest
         |}""".stripMargin).as[raml.App])
 
       appDef.networks should be(Seq(ContainerNetwork(name = "foo")))
-      appDef.container should be(Some(Container.Docker(
-        image = "busybox",
-        portMappings = Seq(
-          Container.PortMapping(containerPort = 123, servicePort = 80, name = Some("foobar"))
+      appDef.container should be(
+        Some(
+          Container.Docker(
+            image = "busybox",
+            portMappings = Seq(
+              Container.PortMapping(containerPort = 123, servicePort = 80, name = Some("foobar"))
+            )
+          )
         )
-      )))
+      )
     }
 
     "FromJSON should throw a validation exception while parsing a Docker container with unsupported parameter" in {
       // credential is currently not supported
-      val app = Json.parse(
-        """{
+      val app = Json.parse("""{
           |  "id": "test",
           |  "container": {
           |    "type": "DOCKER",
@@ -363,8 +365,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should parse Mesos Docker container" in {
-      val appDef = normalizeAndConvert(Json.parse(
-        """{
+      val appDef = normalizeAndConvert(Json.parse("""{
         |  "id": "test",
         |  "ipAddress": {
         |    "networkName": "foo"
@@ -378,16 +379,19 @@ class AppDefinitionFormatsTest extends UnitTest
         |}""".stripMargin).as[raml.App])
 
       appDef.networks should be(Seq(core.pod.ContainerNetwork("foo")))
-      appDef.container should be(Some(state.Container.MesosDocker(
-        image = "busybox",
-        portMappings = Seq(state.Container.PortMapping.defaultInstance)
-      )))
+      appDef.container should be(
+        Some(
+          state.Container.MesosDocker(
+            image = "busybox",
+            portMappings = Seq(state.Container.PortMapping.defaultInstance)
+          )
+        )
+      )
     }
 
     "FromJSON should throw a validation exception while parsing a Mesos Docker container with unsupported parameter" in {
       // port mappings is currently not supported
-      val app = Json.parse(
-        """{
+      val app = Json.parse("""{
           |  "id": "/test",
           |  "container": {
           |    "type": "MESOS",
@@ -401,8 +405,7 @@ class AppDefinitionFormatsTest extends UnitTest
       AppValidation.validateOldAppAPI(app) should haveViolations("/container/docker/portMappings" -> "must be empty")
 
       // network is currently not supported
-      val app2 = Json.parse(
-        """{
+      val app2 = Json.parse("""{
           |  "id": "test",
           |  "container": {
           |    "type": "MESOS",
@@ -415,8 +418,7 @@ class AppDefinitionFormatsTest extends UnitTest
       AppValidation.validateOldAppAPI(app2) should haveViolations("/container/docker/network" -> "must be empty")
 
       // parameters are currently not supported
-      val app3 = Json.parse(
-        """{
+      val app3 = Json.parse("""{
         |  "id": "test",
         |  "container": {
         |    "type": "MESOS",
@@ -430,8 +432,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should parse ipAddress without networkName" in {
-      val app = Json.parse(
-        """{
+      val app = Json.parse("""{
         |  "id": "test",
         |  "ipAddress": { }
         |}""".stripMargin).as[raml.App]
@@ -440,8 +441,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should parse secrets" in {
-      val app = Json.parse(
-        """{
+      val app = Json.parse("""{
         |  "id": "test",
         |  "secrets": {
         |     "secret1": { "source": "/foo" },
@@ -457,8 +457,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should parse all different kinds of environment variables and secrets" in {
-      val app = Json.parse(
-        """{
+      val app = Json.parse("""{
           |  "id": "test",
           |  "secrets": {
           |     "secret1": { "source": "/foo" }
@@ -480,19 +479,24 @@ class AppDefinitionFormatsTest extends UnitTest
     "ToJSON should serialize secrets" in {
       import Fixture._
 
-      val json = Json.toJson(Raml.toRaml(a1.copy(secrets = Map(
-        "secret1" -> Secret("/foo"),
-        "secret2" -> Secret("/foo"),
-        "secret3" -> Secret("/foo2")
-      ))))
+      val json = Json.toJson(
+        Raml.toRaml(
+          a1.copy(secrets =
+            Map(
+              "secret1" -> Secret("/foo"),
+              "secret2" -> Secret("/foo"),
+              "secret3" -> Secret("/foo2")
+            )
+          )
+        )
+      )
       (json \ "secrets" \ "secret1" \ "source").as[String] should equal("/foo")
       (json \ "secrets" \ "secret2" \ "source").as[String] should equal("/foo")
       (json \ "secrets" \ "secret3" \ "source").as[String] should equal("/foo2")
     }
 
     "FromJSON should parse unreachable disabled instance strategy" in {
-      val appDef = normalizeAndConvert(Json.parse(
-        """{
+      val appDef = normalizeAndConvert(Json.parse("""{
         |  "id": "test",
         |  "cmd": "foo",
         |  "unreachableStrategy": "disabled"
@@ -502,8 +506,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should parse unreachable enabled instance strategy" in {
-      val appDef = normalizeAndConvert(Json.parse(
-        """{
+      val appDef = normalizeAndConvert(Json.parse("""{
         |  "id": "test",
         |  "cmd": "foo",
         |  "unreachableStrategy": {
@@ -526,8 +529,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should parse kill selection" in {
-      val appDef = normalizeAndConvert(Json.parse(
-        """{
+      val appDef = normalizeAndConvert(Json.parse("""{
         |  "id": "test",
         |  "cmd": "foo",
         |  "killSelection": "YOUNGEST_FIRST"
@@ -537,8 +539,7 @@ class AppDefinitionFormatsTest extends UnitTest
     }
 
     "FromJSON should fail for invalid kill selection" in {
-      val json = Json.parse(
-        """{
+      val json = Json.parse("""{
         |  "id": "test",
         |  "cmd": "foo",
         |  "killSelection": "unknown"
@@ -576,8 +577,7 @@ class AppDefinitionFormatsTest extends UnitTest
 
     "FromJSON should fail for empty container (#4978)" in {
       val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved, true)
-      val json = Json.parse(
-        """{
+      val json = Json.parse("""{
           |  "id": "/docker-compose-demo",
           |  "cmd": "echo hello world",
           |  "container": {}
@@ -589,8 +589,7 @@ class AppDefinitionFormatsTest extends UnitTest
 
     "FromJSON should throw a validation exception if ports and portDefinitions are both specified and not equal" in {
       // port mappings is currently not supported
-      val app = Json.parse(
-        """{
+      val app = Json.parse("""{
           |  "id": "/test",
           |  "container": {
           |    "type": "MESOS",

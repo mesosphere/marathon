@@ -41,7 +41,8 @@ class TaskIdTest extends UnitTest with Inside {
     }
 
     "TaskIds with encoded InstanceIds could be encoded even with crucial path ids" in {
-      val taskId = Task.Id.parse(TaskID.newBuilder().setValue("test_foo.instance-_bla_rest.instance-62d0f03f-79aa-11e6-a1a0-660c139c5e15._app").build)
+      val taskId =
+        Task.Id.parse(TaskID.newBuilder().setValue("test_foo.instance-_bla_rest.instance-62d0f03f-79aa-11e6-a1a0-660c139c5e15._app").build)
       taskId.runSpecId should equal("/test/foo.instance-/bla/rest".toAbsolutePath)
       taskId.instanceId.idString should equal("test_foo.instance-_bla_rest.instance-62d0f03f-79aa-11e6-a1a0-660c139c5e15")
     }

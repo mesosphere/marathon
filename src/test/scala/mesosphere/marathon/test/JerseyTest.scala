@@ -37,21 +37,21 @@ trait JerseyTest extends ScalaFutures with StrictLogging {
     */
   def asyncRequest(fn: AsyncResponse => Unit)(implicit ec: ExecutionContext): Response = {
     val ar = new JerseyTest.TestAsyncResponse()
-    Try(fn(ar)).
-      flatMap { _ =>
-        Await.result(ar.response.transform({ t => Success(t) }), Duration.Inf)
-      } match {
-        case Success(r) => r
-        case Failure(e: RejectionException) => mapException(e)
-        case Failure(e: JavaException) =>
-          logger.error("Exception while processing request", e)
-          mapException(e)
-        case Failure(e) => throw new TestFailedException(e, 1)
-      }
+    Try(fn(ar)).flatMap { _ =>
+      Await.result(ar.response.transform({ t => Success(t) }), Duration.Inf)
+    } match {
+      case Success(r) => r
+      case Failure(e: RejectionException) => mapException(e)
+      case Failure(e: JavaException) =>
+        logger.error("Exception while processing request", e)
+        mapException(e)
+      case Failure(e) => throw new TestFailedException(e, 1)
+    }
   }
 }
 
 object JerseyTest {
+
   /**
     * Stub AsyncResource used for testing asynchronous Jersey controller methods.
     */
@@ -61,11 +61,12 @@ object JerseyTest {
 
     private val _result = Promise[Object]
 
-    def response: Future[Response] = _result.future.transform {
-      case Success(r: Response) => Success(r)
-      case Success(o) => Failure(new RuntimeException("did not complete with a response"))
-      case Failure(ex) => Failure(ex)
-    }
+    def response: Future[Response] =
+      _result.future.transform {
+        case Success(r: Response) => Success(r)
+        case Success(o) => Failure(new RuntimeException("did not complete with a response"))
+        case Failure(ex) => Failure(ex)
+      }
 
     override def resume(response: Object): Boolean = {
       _result.success(response)

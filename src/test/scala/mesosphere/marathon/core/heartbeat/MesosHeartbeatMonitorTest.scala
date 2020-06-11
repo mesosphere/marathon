@@ -68,23 +68,27 @@ class MesosHeartbeatMonitorTest extends AkkaUnitTest {
       val registeredDriver = mock[SchedulerDriver]
       monitor.activate(registeredDriver)
       factory.heartbeatActor.expectMsgType[Heartbeat.Message] should be(
-        Heartbeat.MessageActivate(factory.reactor, MesosHeartbeatMonitor.sessionOf(registeredDriver)))
+        Heartbeat.MessageActivate(factory.reactor, MesosHeartbeatMonitor.sessionOf(registeredDriver))
+      )
 
       val reregisteredDriver = mock[SchedulerDriver]
       monitor.reregistered(reregisteredDriver, null)
       factory.heartbeatActor.expectMsgType[Heartbeat.Message] should be(
-        Heartbeat.MessageActivate(factory.reactor, MesosHeartbeatMonitor.sessionOf(reregisteredDriver)))
+        Heartbeat.MessageActivate(factory.reactor, MesosHeartbeatMonitor.sessionOf(reregisteredDriver))
+      )
 
       // deactivation messages
       val disconnectedDriver = mock[SchedulerDriver]
       monitor.disconnected(disconnectedDriver)
       factory.heartbeatActor.expectMsgType[Heartbeat.Message] should be(
-        Heartbeat.MessageDeactivate(MesosHeartbeatMonitor.sessionOf(disconnectedDriver)))
+        Heartbeat.MessageDeactivate(MesosHeartbeatMonitor.sessionOf(disconnectedDriver))
+      )
 
       val errorDriver = mock[SchedulerDriver]
       monitor.error(errorDriver, null)
       factory.heartbeatActor.expectMsgType[Heartbeat.Message] should be(
-        Heartbeat.MessageDeactivate(MesosHeartbeatMonitor.sessionOf(errorDriver)))
+        Heartbeat.MessageDeactivate(MesosHeartbeatMonitor.sessionOf(errorDriver))
+      )
 
       // pulse messages
       monitor.resourceOffers(null, null)
@@ -132,17 +136,19 @@ object MesosHeartbeatMonitorTest {
 
   import MesosHeartbeatMonitor._
 
-  def FakeStatus(unknown: Boolean = false) = TaskStatus.newBuilder
-    .setTaskId(TaskID.newBuilder.setValue(UUID.randomUUID().toString))
-    .setState(if (unknown) TaskState.TASK_UNKNOWN else TaskState.TASK_LOST)
-    .setSlaveId(SlaveID.newBuilder.setValue(UUID.randomUUID().toString))
-    .build
+  def FakeStatus(unknown: Boolean = false) =
+    TaskStatus.newBuilder
+      .setTaskId(TaskID.newBuilder.setValue(UUID.randomUUID().toString))
+      .setState(if (unknown) TaskState.TASK_UNKNOWN else TaskState.TASK_LOST)
+      .setSlaveId(SlaveID.newBuilder.setValue(UUID.randomUUID().toString))
+      .build
 
-  def FakeHeartbeatStatus(unknown: Boolean = false) = TaskStatus.newBuilder
-    .setTaskId(TaskID.newBuilder.setValue(FAKE_TASK_PREFIX + UUID.randomUUID().toString))
-    .setState(if (unknown) TaskState.TASK_UNKNOWN else TaskState.TASK_LOST)
-    .setSlaveId(SlaveID.newBuilder.setValue(FAKE_AGENT_PREFIX + UUID.randomUUID().toString))
-    .setSource(TaskStatus.Source.SOURCE_MASTER)
-    .setReason(TaskStatus.Reason.REASON_RECONCILIATION)
-    .build
+  def FakeHeartbeatStatus(unknown: Boolean = false) =
+    TaskStatus.newBuilder
+      .setTaskId(TaskID.newBuilder.setValue(FAKE_TASK_PREFIX + UUID.randomUUID().toString))
+      .setState(if (unknown) TaskState.TASK_UNKNOWN else TaskState.TASK_LOST)
+      .setSlaveId(SlaveID.newBuilder.setValue(FAKE_AGENT_PREFIX + UUID.randomUUID().toString))
+      .setSource(TaskStatus.Source.SOURCE_MASTER)
+      .setReason(TaskStatus.Reason.REASON_RECONCILIATION)
+      .build
 }

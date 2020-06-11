@@ -12,7 +12,8 @@ class OfferMatcherLaunchTokensActorTest extends AkkaUnitTest {
 
   case class Fixture(
       conf: LaunchTokenConfig = new LaunchTokenConfig { verify() },
-      offerMatcherManager: OfferMatcherManager = mock[OfferMatcherManager]) {
+      offerMatcherManager: OfferMatcherManager = mock[OfferMatcherManager]
+  ) {
 
     val actorRef: TestActorRef[OfferMatcherLaunchTokensActor] = TestActorRef[OfferMatcherLaunchTokensActor](
       OfferMatcherLaunchTokensActor.props(conf, offerMatcherManager)
