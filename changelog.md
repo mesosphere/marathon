@@ -1,4 +1,61 @@
-## Changes from 1.9.73 to 1.9.xxx
+## Changes from 1.9.136 to 1.10.xxx
+
+### Vertical container bursting support and shared cgroups
+
+Marathon 1.10 brings support for Mesos resource-limits, allowing containers to formally allocate and consume more CPU or memory than are consumed from an offer. For example, the following app definition would allow a Marathon app to consume as many CPU cycles are available, and also consume more than the 4gb of memory requested.
+
+```
+{
+  "id": "/dev/bigbusiness",
+  "cpus": 1,
+  "mem": 4096,
+  "resourceLimits": {
+    "cpus": "unlimited",
+    "mem": 8192
+  },
+  ...
+}
+```
+
+Also, newly created pods will no longer allow containers to steal resources from eachother. Previously, if a container in a pod was configured with less memory than it actually needs, the pod would still run successfully if the container could borrow steal the amount needed from another container. Pods created prior to upgrading Marathon to 1.10 will automatically have the flag `legacySharedCgroups` set to allow them to continue to run with the same configuration as they were initially launched. Pods cannot specify resource limits when `legacySharedCgroups` is enabled.
+
+For more information, see [resource-limits.md](https://github.com/mesosphere/marathon/blob/master/docs/docs/resource-limits.md)
+
+## Changes from 1.9.100 to 1.9.136
+
+### Fixed issues
+
+* [MARATHON-8711](https://jira.mesosphere.com/browse/MARATHON-8711) - Fix pod status for `Scheduled` instances with a
+  goal `Stopped`, which was causing scaled-down, terminal resident instances to not show up anywhere in the list.
+* [MARATHON-8712](https://jira.mesosphere.com/browse/MARATHON-8712) - Fix an issue where the upgrade migration would
+  fail if there were any persisted instances in state "scheduled" (IE ongoing deployment) during the upgrade attempt.
+* [MARATHON-8713](https://jira.mesosphere.com/browse/MARATHON-8713) - Fixed issue where defaultRole for groups with
+  enforceRole: false did not match the documentation and defaulted to the group-role, regardless.
+* [MARATHON-8710](https://jira.mesosphere.com/browse/MARATHON-8710) - Marathon would not include failed and re-scheduled
+  instances in `/v2/pods/::status` calls. This has been fixed. Note: freshly scheduled instances won't be shown.
+* [MARATHON-8719](https://jira.mesosphere.com/browse/MARATHON-8719) - With UnreachableStrategy, setting
+  expungeAfterSeconds and inactiveAfterSeconds to the same value will cause the instance to be expunged immediately;
+  this helps with `GROUP_BY` or `UNIQUE` constraints.
+* [MARATHON-8719](https://jira.mesosphere.com/browse/MARATHON-8719) - Marathon `/v2/tasks` text formatted output no
+  longer includes endpoints without host-port mappings at the agent hostname and port 0.
+
+### `/v2/tasks` `text/plain` output
+
+#### Addition of `containerNetworks` parameter
+
+Marathon outputs a terse, text-formatted list of instances with corresponding port-mappings with a request to `/v2/tasks` with content-type: `text/plain`. Usage of this endpoint is generally discouraged, but some older tools continue to rely on it.
+
+As of Marathon 1.5, the output would include user container network endpoint without a host port mapping, but in a form that was completely unusable (the agent's hostname as the address, even though the endpoint is fundamentally unreachable at that address, and the port 0). This behavior has been removed, and such results are not included by `/v2/tasks` application/text output, by default.
+
+A parameter `containerNetworks` has been added to filter and include port mappings pertaining to a comma-delimited list of user container network names. Setting this flag does not affect the output for port mappings that are bound to a host port in some way (either directly, in the case of host networking, or through a bridge-network port mapping). To see all container ips and endpoints for all user container networks, pass `?containerNetworks=*`.
+
+#### Deprecation ####
+
+The `text/plain` output is deprecated. It will be soft removed with Marathon 1.10. Any request will
+result in an `HTTP 406 Not Accetable` if the accept header is `test/plain` unless `--deprecated_features text_plain_tasks`
+is enabled. It will be hard removed with Marathon 1.11.
+
+## Changes from 1.9.73 to 1.9.100
 
 ### Faster serialization
 

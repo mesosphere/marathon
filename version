@@ -5,8 +5,8 @@
 # Change MINOR to x+1 and BRANCH_POINT to commit hash of common ancestor of master and releases/1.x
 # after a releases/1.x was cut
 MAJOR=1
-MINOR=9
-BRANCH_POINT=8228cea
+MINOR=10
+BRANCH_POINT=c0e59f4ca70a86653b25de0c2c953ce302b00239
 PREVIOUS_BRANCH=origin/releases/1.$(($MINOR - 1))
 REF=HEAD
 

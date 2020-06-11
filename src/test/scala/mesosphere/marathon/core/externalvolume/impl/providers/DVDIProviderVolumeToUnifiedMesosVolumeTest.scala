@@ -3,7 +3,7 @@ package core.externalvolume.impl.providers
 
 import mesosphere.UnitTest
 import mesosphere.marathon.state.{ExternalVolume, ExternalVolumeInfo, VolumeMount}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import org.apache.mesos.Protos.{Parameter, Parameters, Volume}
 
 class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
@@ -131,9 +131,9 @@ object DVDIProviderVolumeToUnifiedMesosVolumeTest {
     override def apply(v: Volume.Builder): Opt = {
       val old: Map[String, String] = {
         if (v.hasSource && v.getSource.hasDockerVolume && v.getSource.getDockerVolume.hasDriverOptions) {
-          Map[String, String](v.getSource.getDockerVolume.getDriverOptions.getParameterList.map { p =>
+          Map[String, String](v.getSource.getDockerVolume.getDriverOptions.getParameterList.asScala.iterator.map { p =>
             p.getKey -> p.getValue
-          }(collection.breakOut): _*)
+          }.toSeq: _*)
         } else Map.empty[String, String]
       }
       val sb: Volume.Source.Builder =

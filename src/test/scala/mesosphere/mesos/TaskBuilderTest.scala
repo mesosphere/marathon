@@ -14,7 +14,7 @@ import mesosphere.marathon.raml.{App, Resources}
 import mesosphere.marathon.state.Container.{Docker, Mesos, PortMapping}
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
 import mesosphere.marathon.state.{AppDefinition, Container, AbsolutePathId, Timestamp, _}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import mesosphere.marathon.{Protos, _}
 import mesosphere.mesos.protos.{Resource, _}
@@ -31,6 +31,25 @@ class TaskBuilderTest extends UnitTest {
   implicit val clock = new SettableClock()
   val labels = Map("foo" -> "bar", "test" -> "test")
   val uuid = UUID.fromString("b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6")
+
+  class FixtureWithInstanceAndMatchedOffer(resourceLimits: Option[ResourceLimits] = None, taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod) {
+    val app = MarathonTestHelper.makeBasicApp().copy(
+      resourceLimits = resourceLimits,
+      taskKillGracePeriod = taskKillGracePeriod
+    )
+
+    val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
+    val config = MarathonTestHelper.defaultConfig()
+    val instanceId = Instance.Id.forRunSpec(app.id)
+    val taskId = Task.Id(instanceId)
+    val builder = new TaskBuilder(app, taskId, config)
+    val runningInstances = Set.empty[Instance]
+
+    val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
+      config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
+    assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
+    val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
+  }
 
   "TaskBuilder" should {
     "BuildIfMatches" in {
@@ -345,13 +364,13 @@ class TaskBuilderTest extends UnitTest {
 
       val Some((taskInfo: TaskInfo, _)) = task
 
-      def resource(name: String): Resource = taskInfo.getResourcesList.find(_.getName == name).get
+      def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
 
       assert(resource("cpus") == ScalarResource("cpus", 1))
       assert(resource("mem") == ScalarResource("mem", 64))
       assert(resource("disk") == ScalarResource("disk", 1))
       val portsResource: Resource = resource("ports")
-      assert(portsResource.getRanges.getRangeList.map(range => range.getEnd - range.getBegin + 1).sum == 2)
+      assert(portsResource.getRanges.getRangeList.asScala.map(range => range.getEnd - range.getBegin + 1).sum == 2)
       assert(portsResource.getRole == ResourceRole.Unreserved: @silent)
     }
 
@@ -371,7 +390,7 @@ class TaskBuilderTest extends UnitTest {
 
       val Some((taskInfo: TaskInfo, _)) = task
 
-      def resourceOpt(name: String) = taskInfo.getResourcesList.find(_.getName == name)
+      def resourceOpt(name: String) = taskInfo.getResourcesList.asScala.find(_.getName == name)
 
       assert(resourceOpt("disk").isEmpty)
     }
@@ -397,13 +416,13 @@ class TaskBuilderTest extends UnitTest {
 
       val Some((taskInfo: TaskInfo, _)) = task
 
-      def resource(name: String): Resource = taskInfo.getResourcesList.find(_.getName == name).get
+      def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
 
       assert(resource("cpus") == ScalarResource("cpus", 1, "marathon"))
       assert(resource("mem") == ScalarResource("mem", 64, "marathon"))
       assert(resource("disk") == ScalarResource("disk", 1, "marathon"))
       val portsResource: Resource = resource("ports")
-      assert(portsResource.getRanges.getRangeList.map(range => range.getEnd - range.getBegin + 1).sum == 2)
+      assert(portsResource.getRanges.getRangeList.asScala.map(range => range.getEnd - range.getBegin + 1).sum == 2)
       assert(portsResource.getRole == "marathon": @silent)
     }
 
@@ -428,14 +447,14 @@ class TaskBuilderTest extends UnitTest {
 
       val Some((taskInfo: TaskInfo, _)) = task
 
-      def resource(name: String): Resource = taskInfo.getResourcesList.find(_.getName == name).get
+      def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
 
       assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
 
       // check protobuf construction, should be a ContainerInfo w/ volumes
       def vol(path: String): Option[MesosProtos.Volume] = {
         if (taskInfo.hasContainer) {
-          taskInfo.getContainer.getVolumesList.find(_.getHostPath == path)
+          taskInfo.getContainer.getVolumesList.asScala.find(_.getHostPath == path)
         } else None
       }
 
@@ -474,14 +493,14 @@ class TaskBuilderTest extends UnitTest {
 
       val Some((taskInfo: TaskInfo, _)) = task
 
-      def resource(name: String): Resource = taskInfo.getResourcesList.find(_.getName == name).get
+      def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
 
       assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
 
       // check protobuf construction, should be a ContainerInfo w/ volumes
       def vol(name: String): Option[MesosProtos.Volume] = {
         if (taskInfo.hasContainer) {
-          taskInfo.getContainer.getVolumesList.find(_.getHostPath == name)
+          taskInfo.getContainer.getVolumesList.asScala.find(_.getHostPath == name)
         } else None
       }
 
@@ -537,7 +556,7 @@ class TaskBuilderTest extends UnitTest {
 
       val Some((taskInfo: TaskInfo, _)) = task
 
-      def resource(name: String): Resource = taskInfo.getResourcesList.find(_.getName == name).get
+      def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
 
       assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
 
@@ -600,7 +619,7 @@ class TaskBuilderTest extends UnitTest {
 
       val Some((taskInfo: TaskInfo, _)) = task
 
-      def resource(name: String): Resource = taskInfo.getResourcesList.find(_.getName == name).get
+      def resource(name: String): Resource = taskInfo.getResourcesList.asScala.find(_.getName == name).get
 
       assert(resource("cpus") == ScalarResource("cpus", 1)) // sanity, we DID match the offer, right?
 
@@ -718,8 +737,8 @@ class TaskBuilderTest extends UnitTest {
       assert(task.isDefined)
 
       val (taskInfo, networkInfo) = task.get
-      val rangeResourceOpt = taskInfo.getResourcesList.find(r => r.getName == Resource.PORTS)
-      val ranges = rangeResourceOpt.fold(Seq.empty[MesosProtos.Value.Range])(_.getRanges.getRangeList.to[Seq])
+      val rangeResourceOpt = taskInfo.getResourcesList.asScala.find(r => r.getName == Resource.PORTS)
+      val ranges = rangeResourceOpt.fold(Seq.empty[MesosProtos.Value.Range])(_.getRanges.getRangeList.asScala.to(Seq))
       val rangePorts = ranges.flatMap(r => r.getBegin to r.getEnd).toSet
       assert(2 == rangePorts.size)
       assert(2 == networkInfo.hostPorts.size)
@@ -732,7 +751,7 @@ class TaskBuilderTest extends UnitTest {
       assert(cmd.hasValue)
       cmd.getArgumentsList should contain theSameElementsInOrderAs Seq("a", "b", "c")
 
-      for (r <- taskInfo.getResourcesList) {
+      for (r <- taskInfo.getResourcesList.asScala) {
         assert(ResourceRole.Unreserved == r.getRole: @silent)
       }
 
@@ -760,7 +779,7 @@ class TaskBuilderTest extends UnitTest {
       assert(networkInfo.hostPorts.isEmpty)
 
       val envVariables = taskInfo.getCommand.getEnvironment.getVariablesList
-      assert(!envVariables.exists(v => v.getName.startsWith("PORT")))
+      assert(!envVariables.asScala.exists(v => v.getName.startsWith("PORT")))
     }
 
     def buildIfMatchesWithIpAddress(
@@ -798,7 +817,7 @@ class TaskBuilderTest extends UnitTest {
       taskInfo.hasExecutor should be(false)
       taskInfo.hasContainer should be(true)
 
-      val networkInfos = taskInfo.getContainer.getNetworkInfosList
+      val networkInfos = taskInfo.getContainer.getNetworkInfosList.asScala
       networkInfos.size should be(1)
 
       val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
@@ -824,7 +843,7 @@ class TaskBuilderTest extends UnitTest {
       taskInfo.hasExecutor should be(true)
       taskInfo.getExecutor.hasContainer should be(true)
 
-      val networkInfos = taskInfo.getExecutor.getContainer.getNetworkInfosList
+      val networkInfos = taskInfo.getExecutor.getContainer.getNetworkInfosList.asScala
       networkInfos.size should be(1)
 
       val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
@@ -852,7 +871,7 @@ class TaskBuilderTest extends UnitTest {
       taskInfo.hasExecutor should be(false)
       taskInfo.hasContainer should be(true)
 
-      val networkInfos = taskInfo.getContainer.getNetworkInfosList
+      val networkInfos = taskInfo.getContainer.getNetworkInfosList.asScala
       networkInfos.size should be(1)
 
       val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
@@ -881,7 +900,7 @@ class TaskBuilderTest extends UnitTest {
       taskInfo.hasExecutor should be(false)
       taskInfo.hasContainer should be(true)
 
-      val networkInfos = taskInfo.getContainer.getNetworkInfosList
+      val networkInfos = taskInfo.getContainer.getNetworkInfosList.asScala
       networkInfos.size should be(1)
 
       val networkInfoProto = MesosProtos.NetworkInfo.newBuilder
@@ -993,11 +1012,11 @@ class TaskBuilderTest extends UnitTest {
       val (taskInfo: TaskInfo, _) = task.get
 
       assert(taskInfo.hasExecutor)
-      assert(taskInfo.getExecutor.getResourcesList == Seq(
+      assert(taskInfo.getExecutor.getResourcesList.asScala == Seq(
         ScalarResource.cpus(0.1),
         ScalarResource.memory(32.0),
         ScalarResource.disk(10.0)
-      ).map(resourceToProto).asJava)
+      ).map(resourceToProto))
     }
 
     "BuildIfMatchesWithRole" in {
@@ -1028,12 +1047,13 @@ class TaskBuilderTest extends UnitTest {
 
       val (taskInfo, networkInfo) = task.get
       val ports = taskInfo.getResourcesList
+          .asScala
         .find(r => r.getName == Resource.PORTS)
-        .map(r => r.getRanges.getRangeList.flatMap(range => range.getBegin to range.getEnd))
+        .map(r => r.getRanges.getRangeList.asScala.flatMap(range => range.getBegin to range.getEnd))
         .getOrElse(Seq.empty)
       assert(ports == networkInfo.hostPorts) // linter:ignore:UnlikelyEquality
 
-      for (r <- taskInfo.getResourcesList) {
+      for (r <- taskInfo.getResourcesList.asScala) {
         assert("marathon" == r.getRole: @silent)
       }
 
@@ -1066,13 +1086,14 @@ class TaskBuilderTest extends UnitTest {
 
       val (taskInfo, networkInfo) = task.get
       val ports = taskInfo.getResourcesList
+          .asScala
         .find(r => r.getName == Resource.PORTS)
-        .map(r => r.getRanges.getRangeList.flatMap(range => range.getBegin to range.getEnd))
+        .map(r => r.getRanges.getRangeList.asScala.flatMap(range => range.getBegin to range.getEnd))
         .getOrElse(Seq.empty)
       assert(ports == networkInfo.hostPorts) // linter:ignore:UnlikelyEquality
 
       // In this case, the first roles are sufficient so we'll use those first.
-      for (r <- taskInfo.getResourcesList) {
+      for (r <- taskInfo.getResourcesList.asScala) {
         assert(ResourceRole.Unreserved == r.getRole: @silent)
       }
 
@@ -1134,7 +1155,7 @@ class TaskBuilderTest extends UnitTest {
       val (taskInfo: MesosProtos.TaskInfo, _) = task.get
       assert(taskInfo.getContainer.getDocker.getPortMappingsList.size == 0)
 
-      val envVariables = taskInfo.getCommand.getEnvironment.getVariablesList
+      val envVariables = taskInfo.getCommand.getEnvironment.getVariablesList.asScala
       assert(envVariables.exists(v => v.getName == "PORT"))
       assert(envVariables.exists(v => v.getName == "PORT0"))
       assert(envVariables.exists(v => v.getName == "PORTS"))
@@ -1300,7 +1321,7 @@ class TaskBuilderTest extends UnitTest {
           agentId = Some(offer.getSlaveId.getValue),
           region = None,
           zone = None,
-          attributes = offer.getAttributesList.toIndexedSeq
+          attributes = offer.getAttributesList.asScala.toIndexedSeq
         )
         val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10))
           .withAgentInfo(agentInfo)
@@ -1367,7 +1388,7 @@ class TaskBuilderTest extends UnitTest {
           agentId = Some(offer.getSlaveId.getValue),
           region = None,
           zone = None,
-          attributes = offer.getAttributesList.toIndexedSeq
+          attributes = offer.getAttributesList.asScala.toIndexedSeq
         )
         val marathonInstance = TestInstanceBuilder.newBuilder(app.id, version = Timestamp(10))
           .addTaskWithBuilder().taskFromTaskInfo(taskInfo, offer).withNetworkInfo(networkInfo)
@@ -1489,14 +1510,14 @@ class TaskBuilderTest extends UnitTest {
       )
 
       val env4 = TaskBuilder.taskContextEnv(runSpec = runSpec, Some(Task.LegacyId(runSpec.id, ".", uuid)), enforceRole = None)
-        .filterKeys(_.startsWith("MARATHON_APP_LABEL"))
+        .collect { case (k, v) if k.startsWith("MARATHON_APP_LABEL") => k -> v.split(" ").toSet }
 
       assert(
         env4 == Map(
-          "MARATHON_APP_LABELS" -> "OTHER_LABEL_A LABEL LABEL_WITH_INVALID_CHARS",
-          "MARATHON_APP_LABEL_LABEL" -> "VALUE1",
-          "MARATHON_APP_LABEL_LABEL_WITH_INVALID_CHARS" -> "VALUE2",
-          "MARATHON_APP_LABEL_OTHER_LABEL_A" -> "VALUE3"
+          "MARATHON_APP_LABELS" -> Set("OTHER_LABEL_A", "LABEL", "LABEL_WITH_INVALID_CHARS"),
+          "MARATHON_APP_LABEL_LABEL" -> Set("VALUE1"),
+          "MARATHON_APP_LABEL_LABEL_WITH_INVALID_CHARS" -> Set("VALUE2"),
+          "MARATHON_APP_LABEL_OTHER_LABEL_A" -> Set("VALUE3")
         )
       )
     }
@@ -1520,7 +1541,7 @@ class TaskBuilderTest extends UnitTest {
           enforceRole = None
         )
       val env: Map[String, String] =
-        command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
+        command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
 
       assert("test.b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6" == env("MESOS_TASK_ID"))
       assert("/test" == env("MARATHON_APP_ID"))
@@ -1555,7 +1576,7 @@ class TaskBuilderTest extends UnitTest {
           enforceRole = None
         )
       val env: Map[String, String] =
-        command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
+        command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
 
       assert("1" == env("PORT"))
       assert("ports" == env("PORTS"))
@@ -1581,7 +1602,7 @@ class TaskBuilderTest extends UnitTest {
             enforceRole = None
         )
       val env: Map[String, String] =
-        command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
+        command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
 
       assert("1000" == env("PORT_8080"))
       assert("1001" == env("PORT_8081"))
@@ -1603,7 +1624,7 @@ class TaskBuilderTest extends UnitTest {
             enforceRole = None
         )
       val env: Map[String, String] =
-        command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
+        command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
 
       assert("1000,1001" == env("CUSTOM_PREFIX_PORTS"))
 
@@ -1638,7 +1659,7 @@ class TaskBuilderTest extends UnitTest {
           enforceRole = None
         )
       val env: Map[String, String] =
-        command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
+        command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
 
       val nonPrefixedEnvVars = env.filterKeys(!_.startsWith("P_"))
 
@@ -1670,7 +1691,7 @@ class TaskBuilderTest extends UnitTest {
           enforceRole = None
         )
       val env: Map[String, String] =
-        command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
+        command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
 
       assert("1000" == env("PORT_8080"))
       assert("1001" == env("PORT_8081"))
@@ -1701,7 +1722,7 @@ class TaskBuilderTest extends UnitTest {
         )
 
       val env: Map[String, String] =
-        command.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
+        command.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
 
       assert("8080" == env("PORT_8080"))
       assert("8080" == env("PORT_HTTP"))
@@ -1785,7 +1806,7 @@ class TaskBuilderTest extends UnitTest {
       val Some((taskInfo: MesosProtos.TaskInfo, _)) = task
 
       val env: Map[String, String] =
-        taskInfo.getCommand.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
+        taskInfo.getCommand.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
 
       assert("25552" == env("PORT0"))
       assert("25552" == env("PORT_25552"))
@@ -1794,8 +1815,8 @@ class TaskBuilderTest extends UnitTest {
 
       val portsFromTaskInfo = {
         val asScalaRanges = for {
-          resource <- taskInfo.getResourcesList if resource.getName == Resource.PORTS
-          range <- resource.getRanges.getRangeList
+          resource <- taskInfo.getResourcesList.asScala if resource.getName == Resource.PORTS
+          range <- resource.getRanges.getRangeList.asScala
         } yield range.getBegin to range.getEnd
         asScalaRanges.flatMap(_.iterator).toList
       }
@@ -1832,7 +1853,7 @@ class TaskBuilderTest extends UnitTest {
       val Some((taskInfo: MesosProtos.TaskInfo, _)) = task
 
       val env: Map[String, String] =
-        taskInfo.getCommand.getEnvironment.getVariablesList.toList.map(v => v.getName -> v.getValue).toMap
+        taskInfo.getCommand.getEnvironment.getVariablesList.asScala.toList.map(v => v.getName -> v.getValue).toMap
 
       // port0 is not allocated from the offer since it's container-only, but it should also not
       // overlap with other (fixed or dynamic) container ports
@@ -1875,8 +1896,8 @@ class TaskBuilderTest extends UnitTest {
 
       val portsFromTaskInfo = {
         val asScalaRanges = for {
-          resource <- taskInfo.getResourcesList if resource.getName == Resource.PORTS
-          range <- resource.getRanges.getRangeList
+          resource <- taskInfo.getResourcesList.asScala if resource.getName == Resource.PORTS
+          range <- resource.getRanges.getRangeList.asScala
         } yield range.getBegin to range.getEnd
         asScalaRanges.flatMap(_.iterator).toList
       }
@@ -1887,23 +1908,7 @@ class TaskBuilderTest extends UnitTest {
       assert(portsFromTaskInfo.exists(_.toString == env("PORT5")))
     }
 
-    "taskKillGracePeriod specified in app definition is passed through to TaskInfo" in {
-      val seconds = 12345.seconds
-      val app = MarathonTestHelper.makeBasicApp().copy(
-        taskKillGracePeriod = Some(seconds)
-      )
-
-      val offer = MarathonTestHelper.makeBasicOffer(1.0, 128.0, 31000, 32000).build
-      val config = MarathonTestHelper.defaultConfig()
-      val instanceId = Instance.Id.forRunSpec(app.id)
-      val taskId = Task.Id(instanceId)
-      val builder = new TaskBuilder(app, taskId, config)
-      val runningInstances = Set.empty[Instance]
-
-      val resourceMatch = RunSpecOfferMatcher.matchOffer(app, offer, runningInstances.toIndexedSeq,
-        config.defaultAcceptedResourceRolesSet(app.role), config, Seq.empty)
-      assert(resourceMatch.isInstanceOf[ResourceMatchResponse.Match])
-      val matches = resourceMatch.asInstanceOf[ResourceMatchResponse.Match]
+    "taskKillGracePeriod specified in app definition is passed through to TaskInfo" in new FixtureWithInstanceAndMatchedOffer(taskKillGracePeriod = Some(12345.seconds)) {
       val (taskInfo, _) = builder.build(offer, matches.resourceMatch, None, enforceRole = true)
 
       assert(taskInfo.hasKillPolicy)
@@ -1912,7 +1917,7 @@ class TaskBuilderTest extends UnitTest {
       val gracePeriod = killPolicy.getGracePeriod
       assert(gracePeriod.hasNanoseconds)
       val nanoSeconds = gracePeriod.getNanoseconds
-      assert(nanoSeconds == seconds.toNanos)
+      assert(nanoSeconds == app.taskKillGracePeriod.get.toNanos)
     }
 
     "tty defined in an app will render ContainerInfo correctly" in {
@@ -1976,6 +1981,14 @@ class TaskBuilderTest extends UnitTest {
       containerInfo.get.getLinuxInfo.getShmSize should be (64)
     }
 
+    "limits are propagated to the TaskInfo" in new FixtureWithInstanceAndMatchedOffer(resourceLimits = Some(ResourceLimits(cpus = Some(Double.PositiveInfinity), mem = Some(1024.0)))) {
+      val (taskInfo, _) = builder.build(offer, matches.resourceMatch, None, enforceRole = true)
+      val limits = taskInfo.getLimitsMap.asScala
+      limits.keySet shouldBe Set(Resource.CPUS, Resource.MEM)
+
+      limits(Resource.CPUS).getValue shouldBe Double.PositiveInfinity
+      limits(Resource.MEM).getValue shouldBe 1024.0
+    }
   }
 
   def buildIfMatches(
@@ -1991,7 +2004,6 @@ class TaskBuilderTest extends UnitTest {
       taskId,
       MarathonTestHelper.defaultConfig(
         mesosRole = mesosRole,
-        acceptedResourceRoles = acceptedResourceRoles,
         envVarsPrefix = envVarsPrefix))
 
     val config = MarathonTestHelper.defaultConfig()
@@ -2015,8 +2027,8 @@ class TaskBuilderTest extends UnitTest {
   private def assertTaskInfo(taskInfo: MesosProtos.TaskInfo, hostPorts: Seq[Int], offer: Offer): Unit = {
     val portsFromTaskInfo = {
       val asScalaRanges = for {
-        resource <- taskInfo.getResourcesList if resource.getName == Resource.PORTS
-        range <- resource.getRanges.getRangeList
+        resource <- taskInfo.getResourcesList.asScala if resource.getName == Resource.PORTS
+        range <- resource.getRanges.getRangeList.asScala
       } yield range.getBegin to range.getEnd
       asScalaRanges.flatMap(_.iterator).toSet
     }
@@ -2034,7 +2046,7 @@ class TaskBuilderTest extends UnitTest {
     assert(cmd.getValue == "foo")
 
     assert(cmd.hasEnvironment)
-    val envVars = cmd.getEnvironment.getVariablesList
+    val envVars = cmd.getEnvironment.getVariablesList.asScala
     assert(envVars.exists(v => v.getName == "HOST" && v.getValue == offer.getHostname))
     assert(envVars.exists(v => v.getName == "PORT0" && v.getValue.nonEmpty))
     assert(envVars.exists(v => v.getName == "PORT1" && v.getValue.nonEmpty))
@@ -2048,7 +2060,7 @@ class TaskBuilderTest extends UnitTest {
       envVars.find(v => v.getName == "PORT1").get.getValue == envVars.find(v => v.getName == "PORT_8081").get.getValue
     assert(exposesSecondPort)
 
-    for (r <- taskInfo.getResourcesList) {
+    for (r <- taskInfo.getResourcesList.asScala) {
       assert(ResourceRole.Unreserved == r.getRole: @silent)
     }
 

@@ -17,6 +17,7 @@ import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state._
 
 import scala.collection.SortedMap
+import scala.jdk.CollectionConverters._
 
 sealed trait DeploymentAction {
   def runSpec: RunSpec
@@ -92,7 +93,7 @@ case class DeploymentStepInfo(
     stepIndex: Int,
     readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {
   lazy val readinessChecksByApp: Map[AbsolutePathId, Seq[ReadinessCheckResult]] = {
-    readinessChecks.values.groupBy(_.taskId.runSpecId).map { case (k, v) => k -> v.to[Seq] }.withDefaultValue(Seq.empty)
+    readinessChecks.values.groupBy(_.taskId.runSpecId).map { case (k, v) => k -> v.to(Seq) }.withDefaultValue(Seq.empty)
   }
 }
 
@@ -123,10 +124,10 @@ case class DeploymentPlan(
 
   lazy val nonEmpty: Boolean = !isEmpty
 
-  lazy val affectedRunSpecs: Set[RunSpec] = steps.flatMap(_.actions.map(_.runSpec))(collection.breakOut)
+  lazy val affectedRunSpecs: Set[RunSpec] = steps.iterator.flatMap(_.actions.map(_.runSpec)).toSet
 
   /** @return all ids of apps which are referenced in any deployment actions */
-  lazy val affectedRunSpecIds: Set[AbsolutePathId] = steps.flatMap(_.actions.map(_.runSpec.id))(collection.breakOut)
+  lazy val affectedRunSpecIds: Set[AbsolutePathId] = steps.iterator.flatMap(_.actions.map(_.runSpec.id)).toSet
 
   def affectedAppIds: Set[AbsolutePathId] = affectedRunSpecs.collect{ case app: AppDefinition => app.id }
   def affectedPodIds: Set[AbsolutePathId] = affectedRunSpecs.collect{ case pod: PodDefinition => pod.id }
@@ -136,8 +137,7 @@ case class DeploymentPlan(
     affectedRunSpecIds.intersect(other.affectedRunSpecIds).nonEmpty
 
   lazy val createdOrUpdatedApps: Seq[AppDefinition] = {
-    import mesosphere.marathon.stream.Implicits.toRichTraversableLike
-    target.transitiveApps.filterAs(app => affectedRunSpecIds(app.id))(collection.breakOut)
+    target.transitiveApps.iterator.filter(app => affectedRunSpecIds(app.id)).toSeq
   }
 
   lazy val deletedApps: Seq[AbsolutePathId] = {
@@ -219,10 +219,9 @@ object DeploymentPlan {
     import org.jgrapht.graph.DefaultEdge
 
     def longestPathFromVertex[V](g: DirectedGraph[V, DefaultEdge], vertex: V): Seq[V] = {
-      import mesosphere.marathon.stream.Implicits.RichSet
 
       val outgoingEdges: Set[DefaultEdge] =
-        if (g.containsVertex(vertex)) g.outgoingEdgesOf(vertex)
+        if (g.containsVertex(vertex)) g.outgoingEdgesOf(vertex).asScala.toSet
         else Set.empty[DefaultEdge]
 
       if (outgoingEdges.isEmpty)
@@ -251,7 +250,7 @@ object DeploymentPlan {
 
     val runsByLongestPath: SortedMap[Int, Iterable[RunSpec]] = runSpecsGroupedByLongestPath(affectedIds, target)
 
-    runsByLongestPath.values.map { equivalenceClass: Iterable[RunSpec] =>
+    runsByLongestPath.values.iterator.map { equivalenceClass: Iterable[RunSpec] =>
       val actions: Iterable[DeploymentAction] = equivalenceClass.flatMap { newSpec: RunSpec =>
         original.runSpec(newSpec.id) match {
           // New run spec.
@@ -272,8 +271,8 @@ object DeploymentPlan {
         }
       }
 
-      DeploymentStep(actions.to[Seq])
-    }(collection.breakOut)
+      DeploymentStep(actions.to(Seq))
+    }.toSeq
   }
 
   /**
@@ -295,18 +294,18 @@ object DeploymentPlan {
 
     // 1. Destroy run specs that do not exist in the target.
     steps += DeploymentStep(
-      original.transitiveRunSpecs.filter(oldRun => !target.exists(oldRun.id)).map { oldRun =>
+      original.transitiveRunSpecs.filter(oldRun => !target.exists(oldRun.id)).iterator.map { oldRun =>
         StopApplication(oldRun)
-      }(collection.breakOut)
+      }.toSeq
     )
 
     // 2. Start run specs that do not exist in the original, requiring only 0
     //    instances.  These are scaled as needed in the dependency-ordered
     //    steps that follow.
     steps += DeploymentStep(
-      target.transitiveRunSpecs.filter(run => !original.exists(run.id)).map { newRun =>
+      target.transitiveRunSpecs.filter(run => !original.exists(run.id)).iterator.map { newRun =>
         StartApplication(newRun)
-      }(collection.breakOut)
+      }.toSeq
     )
 
     // applications that are either new or the specs are different should be considered for the dependency graph

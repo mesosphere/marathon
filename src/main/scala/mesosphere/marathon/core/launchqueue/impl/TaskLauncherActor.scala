@@ -19,7 +19,7 @@ import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOp
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.util.CancellableOnce
 import org.apache.mesos.{Protos => Mesos}
 
@@ -217,8 +217,9 @@ private class TaskLauncherActor(
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
       logger.info(s"Matching offer ${offer.getId.getValue} and need to launch $instancesToLaunch tasks.")
-      val reachableInstances = instanceMap.filterNotAs{
-        case (_, instance) => instance.state.condition.isLost || instance.isScheduled
+      val reachableInstances = instanceMap.filterNot {
+        case (_, instance) =>
+          instance.state.condition.isLost || instance.isScheduled
       }
       val candidateInstances = scheduledInstances.iterator
         .filter { instance => offer.getAllocationInfo.getRole == instance.role }

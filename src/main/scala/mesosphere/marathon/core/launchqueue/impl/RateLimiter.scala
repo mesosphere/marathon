@@ -28,20 +28,20 @@ private[launchqueue] class RateLimiter(clock: Clock) extends StrictLogging {
     */
   def cleanUpOverdueDelays(): Seq[RunSpecConfigRef] = {
     val now = clock.now()
-    val overdue: List[RunSpecConfigRef] = taskLaunchDelays.collect {
+    val overdue: List[RunSpecConfigRef] = taskLaunchDelays.iterator.collect {
       case (ref, delay) if now > (delay.referenceTimestamp + delay.maxLaunchDelay) =>
         ref
-    }(collection.breakOut)
+    }.toList
 
     taskLaunchDelays = taskLaunchDelays -- overdue
     overdue
   }
 
   def currentDelays: Seq[DelayUpdate] =
-    taskLaunchDelays.map {
+    taskLaunchDelays.iterator.map {
       case (ref, delay) =>
         DelayUpdate(ref, Some(delay))
-    }(collection.breakOut)
+    }.toSeq
 
   def getDelay(ref: RunSpecConfigRef): Option[Delay] = taskLaunchDelays.get(ref)
 

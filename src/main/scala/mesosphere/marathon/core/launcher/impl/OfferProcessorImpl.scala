@@ -131,7 +131,7 @@ private[launcher] class OfferProcessorImpl(
     } else {
       logger.warn(s"Offer [${offerId.getValue}]. Task launch rejected")
       taskOpsWithSource.foreach(_.reject("driver unavailable"))
-      revertTaskOps(taskOpsWithSource.map(_.op)(collection.breakOut))
+      revertTaskOps(taskOpsWithSource.iterator.map(_.op).toSeq)
     }
   }
 

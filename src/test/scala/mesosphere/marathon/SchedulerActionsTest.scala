@@ -12,7 +12,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, RootGroup, Timestamp}
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verifyNoMoreInteractions
@@ -71,7 +71,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
       val orphanedInstance = TestInstanceBuilder.newBuilder(orphanedApp.id).addTaskRunning().getInstance()
 
-      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(instance, orphanedInstance))
+      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(Seq(instance, orphanedInstance)))
       val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
       f.groupRepo.root() returns Future.successful(rootGroup)
 

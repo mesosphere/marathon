@@ -7,7 +7,6 @@ import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.pod.{PodDefinition, PodManager}
 import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
-import mesosphere.marathon.stream.Implicits._
 
 import scala.collection.immutable.Seq
 import scala.concurrent.Future
@@ -24,7 +23,7 @@ case class PodManagerImpl(groupManager: GroupManager) extends PodManager {
   }
 
   def findAll(filter: (PodDefinition) => Boolean): Seq[PodDefinition] = {
-    groupManager.rootGroup().transitivePods.filterAs(filter)(collection.breakOut)
+    groupManager.rootGroup().transitivePods.iterator.filter(filter).toSeq
   }
 
   def find(id: AbsolutePathId): Option[PodDefinition] = groupManager.pod(id)

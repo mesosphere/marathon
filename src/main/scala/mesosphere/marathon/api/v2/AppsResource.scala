@@ -22,13 +22,13 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.RoleSettings
 import org.glassfish.jersey.server.ManagedAsync
 import play.api.libs.json.{JsObject, Json}
 
 import scala.async.Async._
 import scala.concurrent.{ExecutionContext, Future}
+import scala.jdk.CollectionConverters._
 
 @Path("v2/apps")
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -81,7 +81,7 @@ class AppsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       val selector = selectAuthorized(search(Option(cmd), Option(id), Option(label)))
       // additional embeds are deprecated!
-      val resolvedEmbed = InfoEmbedResolver.resolveApp(embed) +
+      val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.asScala.toSet) +
         AppInfo.Embed.Counts + AppInfo.Embed.Deployments
       val mapped = await(appInfoService.selectAppsBy(selector, resolvedEmbed))
       ok(raml.AppList(mapped))
@@ -143,7 +143,7 @@ class AppsResource @Inject() (
     @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val resolvedEmbed = InfoEmbedResolver.resolveApp(embed) ++ Set(
+      val resolvedEmbed = InfoEmbedResolver.resolveApp(embed.asScala.toSet) ++ Set(
         // deprecated. For compatibility.
         AppInfo.Embed.Counts, AppInfo.Embed.Tasks, AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments
       )

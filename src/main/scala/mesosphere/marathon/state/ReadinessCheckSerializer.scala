@@ -2,7 +2,7 @@ package mesosphere.marathon
 package state
 
 import mesosphere.marathon.core.readiness.ReadinessCheck
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 
 import scala.concurrent.duration._
 
@@ -26,7 +26,7 @@ object ReadinessCheckSerializer {
       httpStatusCodesForReady =
         opt(
           _.getHttpStatusCodeForReadyCount > 0,
-          _.getHttpStatusCodeForReadyList.map(_.intValue()).to[Set]
+          _.getHttpStatusCodeForReadyList.asScala.map(_.intValue()).to(Set)
         ).getOrElse(ReadinessCheck.DefaultHttpStatusCodesForReady),
       preserveLastResponse =
         opt(_.hasPreserveLastResponse, _.getPreserveLastResponse).getOrElse(ReadinessCheck.DefaultPreserveLastResponse)

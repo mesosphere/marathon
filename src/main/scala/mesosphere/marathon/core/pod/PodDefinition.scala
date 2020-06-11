@@ -34,7 +34,8 @@ case class PodDefinition(
     override val volumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
-    role: Role
+    role: Role,
+    legacySharedCgroups: Option[Boolean] = None
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
   /**
@@ -57,9 +58,9 @@ case class PodDefinition(
   override val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   def aggregateResources(filter: MesosContainer => Boolean = _ => true) = Resources(
-    cpus = (BigDecimal(executorResources.cpus) + containers.withFilter(filter).map(r => BigDecimal(r.resources.cpus)).sum).doubleValue(),
-    mem = (BigDecimal(executorResources.mem) + containers.withFilter(filter).map(r => BigDecimal(r.resources.mem)).sum).doubleValue(),
-    disk = (BigDecimal(executorResources.disk) + containers.withFilter(filter).map(r => BigDecimal(r.resources.disk)).sum).doubleValue(),
+    cpus = (BigDecimal(executorResources.cpus) + containers.withFilter(filter).map(r => BigDecimal(r.resources.cpus)).sum).doubleValue,
+    mem = (BigDecimal(executorResources.mem) + containers.withFilter(filter).map(r => BigDecimal(r.resources.mem)).sum).doubleValue,
+    disk = (BigDecimal(executorResources.disk) + containers.withFilter(filter).map(r => BigDecimal(r.resources.disk)).sum).doubleValue,
     gpus = executorResources.gpus + containers.withFilter(filter).map(_.resources.gpus).sum
   )
 

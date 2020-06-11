@@ -44,9 +44,9 @@ object FindDeterioratedMetrics {
     def printSlope(metrics: Map[Metric, Metric]): Unit = {
       import DisplayHelpers._
       val header = Vector("Metric", "Base", "Sample", "Increase in %")
-      val rows: Seq[IndexedSeq[String]] = metrics.map {
+      val rows: Seq[IndexedSeq[String]] = metrics.iterator.map {
         case (a, b) => IndexedSeq(a.name, a.mean, b.mean, (b.mean / a.mean * 100).toInt - 100).map(_.toString)
-      }(collection.breakOut)
+      }.toSeq
       printTable(Seq(left, right, right, right), withUnderline(header) ++ rows)
     }
 

@@ -29,6 +29,7 @@ import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades._
 import mesosphere.marathon.raml.{App, AppCheck, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
 import mesosphere.marathon.state.{AbsolutePathId, PathId, PersistentVolume, VolumeMount}
+import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.util.{Lock, Retry, Timeout}
 import mesosphere.{AkkaUnitTestLike, WaitTestSupport}
 import org.apache.commons.io.FileUtils
@@ -100,14 +101,14 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
     "offer_matching_timeout" -> 10.seconds.toMillis.toString // see https://github.com/mesosphere/marathon/issues/4920
   ) ++ conf
 
-  val args = config.flatMap {
+  val args = config.iterator.flatMap {
     case (k, v) =>
       if (v.nonEmpty) {
         Seq(s"--$k", v)
       } else {
         Seq(s"--$k")
       }
-  }(collection.breakOut)
+  }.toSeq
 
   @volatile var marathonProcess = Option.empty[Process]
 
@@ -146,9 +147,9 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
 
   def activePids: Seq[String] = {
     val PIDRE = """^\s*(\d+)\s+\s*(.*)$""".r
-    Process("jps -lv").!!.split("\n").collect {
+    Process("jps -lv").!!.split("\n").iterator.collect {
       case PIDRE(pid, jvmArgs) if jvmArgs.contains(uuid) => pid
-    }(collection.breakOut)
+    }.toSeq
   }
 
   def stop(): Future[Done] = {
@@ -224,7 +225,11 @@ case class LocalMarathon(
 
     // Get JVM arguments, such as -javaagent:some.jar
     val runtimeMxBean = ManagementFactory.getRuntimeMXBean
-    val runtimeArguments = JavaConverters.collectionAsScalaIterable(runtimeMxBean.getInputArguments).toSeq
+    val runtimeArguments = JavaConverters.collectionAsScalaIterable(runtimeMxBean.getInputArguments)
+      .filterNot(_.contains("debugger-agent"))
+      .filterNot(_.startsWith("-javaagent"))
+      .filterNot(_.startsWith("-agentlib"))
+      .toSeq
 
     val cmd = Seq(java, "-Xmx1024m", "-Xms256m", "-XX:+UseConcMarkSweepGC", "-XX:ConcGCThreads=2") ++
       runtimeArguments ++ akkaJvmArgs ++
@@ -234,9 +239,9 @@ case class LocalMarathon(
 
   override def activePids: Seq[String] = {
     val PIDRE = """^\s*(\d+)\s+(\S*)\s*(.*)$""".r
-    Process("jps -lv").!!.split("\n").collect {
+    Process("jps -lv").!!.split("\n").iterator.collect {
       case PIDRE(pid, main, jvmArgs) if main.contains(mainClass) && jvmArgs.contains(uuid) => pid
-    }(collection.breakOut)
+    }.toSeq
   }
 }
 
@@ -366,14 +371,14 @@ trait MarathonAppFixtures {
     s"http://$$HOST:$healthCheckPort/$encodedAppId/$versionId"
   }
 
-  def appMockCmd(appId: PathId, versionId: String): String = {
+  def appMockCmd(appId: PathId, versionId: String, port: String = "$PORT0"): String = {
     val projectDir = sys.props.getOrElse("user.dir", ".")
-    val appMock: File = new File(projectDir, "src/test/resources/python/app_mock.py")
+    val appMock: File = MarathonTestHelper.resourcePath("python/app_mock.py")
     if (!appMock.exists()) {
       throw new IllegalStateException("Failed to locate app_mock.py (" + appMock.getAbsolutePath + ")")
     }
     s"""echo APP PROXY $$MESOS_TASK_ID RUNNING; ${appMock.getAbsolutePath} """ +
-      s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}"""
+      s"""${port} $appId $versionId ${healthEndpointFor(appId, versionId)}"""
   }
 
   def appProxyHealthCheck(
@@ -652,7 +657,7 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
       "status_update_event",
       _.taskStatus == kind,
       s"event status_update_event (${kinds.mkString(",")}) to arrive")
-  }.to[Seq]
+  }.to(Seq)
 
   def waitForEvent(
     kind: String,
@@ -971,7 +976,6 @@ trait LocalMarathonTest extends MarathonTest with ScalaFutures
 
   val testBasePath: AbsolutePathId = AbsolutePathId("/")
   lazy val marathon = marathonServer.client
-  lazy val appMock: AppMockFacade = new AppMockFacade()
 
   /**
     * Return the current leading Marathon

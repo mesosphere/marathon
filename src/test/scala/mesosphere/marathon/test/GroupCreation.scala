@@ -6,6 +6,7 @@ import mesosphere.marathon.state._
 import com.wix.accord
 
 trait GroupCreation {
+  @deprecated("Prefer Builders.newRootGroup instead", since = "1.9")
   def createRootGroup(
     apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
     pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
@@ -15,7 +16,7 @@ trait GroupCreation {
     validate: Boolean = true,
     enabledFeatures: Set[String] = Set.empty,
     newGroupEnforceRole: NewGroupEnforceRoleBehavior = NewGroupEnforceRoleBehavior.Off): RootGroup = {
-    val group = RootGroup(apps, pods, groups.map(group => group.id -> group)(collection.breakOut), dependencies, RootGroup.NewGroupStrategy.fromConfig(newGroupEnforceRole), version)
+    val group = RootGroup(apps, pods, groups.iterator.map(group => group.id -> group).toMap, dependencies, RootGroup.NewGroupStrategy.fromConfig(newGroupEnforceRole), version)
 
     if (validate) {
       val conf = if (enabledFeatures.isEmpty) AllConf.withTestConfig() else AllConf.withTestConfig("--enable_features", enabledFeatures.mkString(","))
@@ -37,7 +38,7 @@ trait GroupCreation {
     validate: Boolean = true,
     enabledFeatures: Set[String] = Set.empty,
     enforceRole: Boolean = false): Group = {
-    val groupsById: Map[AbsolutePathId, Group] = groups.map(group => group.id -> group)(collection.breakOut)
+    val groupsById: Map[AbsolutePathId, Group] = groups.iterator.map(group => group.id -> group).toMap
     val group = Group(
       id,
       apps,

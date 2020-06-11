@@ -8,7 +8,7 @@ import akka.Done
 import akka.util.ByteString
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.base.{LifecycleState, _}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import org.apache.curator.framework.api.{ACLProvider, BackgroundPathable, Backgroundable, Pathable}
 import org.apache.curator.framework.imps.{CuratorFrameworkState, GzipCompressionProvider}
 import org.apache.curator.framework.state.{ConnectionState, ConnectionStateListener}

@@ -62,5 +62,5 @@ trait ConstraintConversion {
 }
 
 object ConstraintConversion extends ConstraintConversion {
-  val ValidOperators: Set[String] = Protos.Constraint.Operator.values().map(_.toString)(collection.breakOut)
+  val ValidOperators: Set[String] = Protos.Constraint.Operator.values().iterator.map(_.toString).toSet
 }

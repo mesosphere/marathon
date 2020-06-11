@@ -8,6 +8,7 @@ import socket
 import sys
 import subprocess
 import re
+import json
 
 # Ensure compatibility with Python 2 and 3.
 # See https://github.com/JioCloud/python-six/blob/master/six.py for details.
@@ -34,6 +35,38 @@ else:
 
     def response_status(response):
         return response.getcode()
+
+
+def cgroup_name(resource_type):
+    logging.info("Looking for my cgroup for resource type %s", resource_type)
+    with open("/proc/self/cgroup", "r") as file:
+        lines = file.readlines()
+        for line in lines:
+            logging.info("/proc/self/cgroup: %s", line)
+            [idx, resource_types, cgroup_name] = line.strip().split(":")
+            for t in resource_types.split(","):
+                if t == resource_type:
+                    logging.info("My cgroup: %s", cgroup_name)
+                    return cgroup_name
+
+
+# reads all the files in a folder that are readable, return them in a map of filename: contents
+def read_cgroup_values(resource_type):
+    name = cgroup_name(resource_type)
+    if name is None:
+        return {}
+    folder = os.path.join("/sys/fs/cgroup", resource_type) + name
+    result = {}
+    for filename in os.listdir(folder):
+        path = os.path.join(folder, filename)
+        print(path)
+        with open(path, 'r') as file:
+            try:
+                result[filename] = file.read().strip()
+            except IOError:
+                ()
+                # ignore
+    return result
 
 
 def make_handler(app_id, version, task_id, base_url):
@@ -129,6 +162,20 @@ def make_handler(app_id, version, task_id, base_url):
             logging.debug("Done reporting IPC ns info.")
             return
 
+        def handle_cgroup_info(self):
+            cgroup_info = {
+                "memory": read_cgroup_values("memory"),
+                "cpu": read_cgroup_values("cpu")
+            }
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+
+            self.wfile.write(json.dumps(cgroup_info))
+
+            logging.debug("Done reporting cgroup info.")
+            return
+
         def handle_suicide(self):
 
             logging.info("Received a suicide request. Sending a SIGTERM to myself.")
@@ -152,6 +199,8 @@ def make_handler(app_id, version, task_id, base_url):
                     return self.handle_ipc_shm_info()
                 elif self.path == '/ipcns':
                     return self.handle_ipc_ns_info()
+                elif self.path == "/cgroup":
+                    return self.handle_cgroup_info()
                 else:
                     return SimpleHTTPRequestHandler.do_GET(self)
             except Exception:

@@ -12,8 +12,6 @@ import mesosphere.marathon.core.pod.PodDefinition
 import org.openjdk.jmh.annotations.{Group => _, _}
 import org.openjdk.jmh.infra.Blackhole
 
-import scala.collection.breakOut
-
 @State(Scope.Benchmark)
 object FlatDependencyBenchmark {
 
@@ -52,21 +50,21 @@ object FlatDependencyBenchmark {
 
   val ids = 0 to 900
 
-  val podPaths: Vector[AbsolutePathId] = ids.map { podId =>
+  val podPaths: Vector[AbsolutePathId] = ids.iterator.map { podId =>
     AbsolutePathId(s"/pod-${podId}")
-  }(breakOut)
+  }.toVector
 
-  val appPaths: Vector[AbsolutePathId] = ids.map { appId =>
+  val appPaths: Vector[AbsolutePathId] = ids.iterator.map { appId =>
     AbsolutePathId(s"/app-${appId}")
-  }(breakOut)
+  }.toVector
 
-  val appDefs: Map[AbsolutePathId, AppDefinition] = appPaths.map { path =>
+  val appDefs: Map[AbsolutePathId, AppDefinition] = appPaths.iterator.map { path =>
     path -> makeApp(path)
-  }(breakOut)
+  }.toMap
 
-  val podDefs: Map[AbsolutePathId, PodDefinition] = podPaths.map { path =>
+  val podDefs: Map[AbsolutePathId, PodDefinition] = podPaths.iterator.map { path =>
     path -> makePod(path)
-  }(breakOut)
+  }.toMap
 
   val rootGroup = RootGroup(apps = appDefs, pods = podDefs)
   def upgraded = {

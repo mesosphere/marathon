@@ -20,19 +20,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
       Given("a root group with two apps and conflicting volumes")
       val app1 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/foo1"), volumeName = "vol1")
       val app2 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/foo2"), volumeName = "vol2")
-      val rootGroup = createRootGroup(
-        groups = Set(
-          createGroup(
-            id = AbsolutePathId("/nested"),
-            apps = Map(
-              app1.id -> app1,
-              app2.id -> app2
-            ),
-            validate = false
-          )
-        ),
-        validate = false
-      )
+      val rootGroup = Builders.newRootGroup(apps = Seq(app1, app2))
 
       f.checkResult(
         rootGroup,
@@ -45,19 +33,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
       Given("a root group with two apps and conflicting volumes")
       val app1 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app1"), volumeName = "vol")
       val app2 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app2"), volumeName = "vol")
-      val rootGroup = createRootGroup(
-        groups = Set(
-          createGroup(
-            id = AbsolutePathId("/nested"),
-            apps = Map(
-              app1.id -> app1,
-              app2.id -> app2
-            ),
-            validate = false
-          )
-        ),
-        validate = false
-      )
+      val rootGroup = Builders.newRootGroup(apps = Seq(app1, app2))
 
       f.checkResult(
         rootGroup,
@@ -79,19 +55,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
       Given("a root group with two apps and conflicting volumes")
       val app1 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app1"), volumeName = "vol", shared = true)
       val app2 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app2"), volumeName = "vol", shared = true)
-      val rootGroup = createRootGroup(
-        groups = Set(
-          createGroup(
-            id = AbsolutePathId("/nested"),
-            apps = Map(
-              app1.id -> app1,
-              app2.id -> app2
-            ),
-            validate = false
-          )
-        ),
-        validate = false
-      )
+      val rootGroup = Builders.newRootGroup(apps = Seq(app1, app2))
 
       f.checkResult(
         rootGroup,
@@ -104,19 +68,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
       Given("a root group with two apps and conflicting volumes")
       val app1 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app1"), volumeName = "vol", shared = true)
       val app2 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app2"), volumeName = "vol", shared = false)
-      val rootGroup = createRootGroup(
-        groups = Set(
-          createGroup(
-            id = AbsolutePathId("/nested"),
-            apps = Map(
-              app1.id -> app1,
-              app2.id -> app2
-            ),
-            validate = false
-          )
-        ),
-        validate = false
-      )
+      val rootGroup = Builders.newRootGroup(apps = Seq(app1, app2))
 
       f.checkResult(
         rootGroup,
@@ -133,18 +85,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
       val f = new Fixture
       Given("a root group with two apps and conflicting volumes")
       val app1 = f.appWithDVDIVolume(appId = AbsolutePathId("/nested/app1"), volumeName = "name=teamvolumename,secret_key=volume-secret-key-team,secure=true,size=5,repl=1,shared=true")
-      val rootGroup = createRootGroup(
-        groups = Set(
-          createGroup(
-            id = AbsolutePathId("/nested"),
-            apps = Map(
-              app1.id -> app1
-            ),
-            validate = false
-          )
-        ),
-        validate = false
-      )
+      val rootGroup = Builders.newRootGroup(apps = Seq(app1))
 
       f.checkResult(
         rootGroup,

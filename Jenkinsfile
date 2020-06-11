@@ -11,7 +11,7 @@ ansiColor('xterm') {
       user_is_authorized(master_branches, '8b793652-f26a-422f-a9ba-0d1e47eb9d89', '#marathon-dev')
     }
   }
-  node('JenkinsMarathonCI-Debian9-2019-06-19') {
+  node('JenkinsMarathonCI-Debian9-2020-01-14') {
     stage("Run Pipeline") {
       try {
         checkout scm
@@ -34,11 +34,12 @@ ansiColor('xterm') {
       }
     }
 
-    stage('Release unstable MoM EE Docker Image') {
-      if (env.BRANCH_NAME == 'master') {
+    stage('Release MoM EE Docker Image') {
+      if (env.BRANCH_NAME == 'master' || env.BRANCH_NAME ==~ /releases\/.*/) {
+        version = sh(script: "./version docker", returnStdout: true).trim()
         build(
              job: '/marathon-dcos-plugins/release-mom-ee-docker-image/master',
-             parameters: [string(name: 'from_image_tag', value: 'unstable'), string(name: 'target_tag', value: 'unstable')],
+             parameters: [string(name: 'from_image_tag', value: version)],
              propagate: true
         )
       }

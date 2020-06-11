@@ -19,7 +19,7 @@ import mesosphere.marathon.raml.{App, AppPersistentVolume, AppSecretVolume, AppU
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.test.{GroupCreation, JerseyTest, SettableClock}
+import mesosphere.marathon.test.{JerseyTest, SettableClock}
 import org.mockito.Matchers
 import play.api.libs.json._
 
@@ -29,7 +29,7 @@ import scala.concurrent.duration._
 import scala.language.postfixOps
 import scala.util.Try
 
-class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
+class AppsResourceTest extends AkkaUnitTest with JerseyTest {
 
   case class Fixture(
       clock: SettableClock = new SettableClock(),
@@ -68,10 +68,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       AppNormalization(normalizationConfig).normalized(migrated)
     }
 
-    def prepareApp(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
+    def prepareApp(app: App, groupManager: GroupManager): (Array[Byte], DeploymentPlan) = {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
-      val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures, newGroupEnforceRole = config.newGroupEnforceRole())
+      val rootGroup = Builders.newRootGroup(apps = Seq(appDef), newGroupEnforceRoleBehavior = config.newGroupEnforceRole())
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(normed)).getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -80,26 +80,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       (body, plan)
     }
 
-    def prepareAppInGroup(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
+    def prepareAppInGroup(app: App, groupManager: GroupManager): (Array[Byte], DeploymentPlan) = {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
 
-      def buildParentGroup(path: AbsolutePathId, childGroup: Group): Group = {
-        val group = createGroup(path, groups = Set(childGroup))
-        groupManager.group(path) returns Some(group)
-        if (path.parent.isRoot) group else buildParentGroup(path.parent, group)
-      }
-
-      def buildGroupWithApp(path: AbsolutePathId): Group = {
-        val group = createGroup(path, apps = Map(appDef.id -> appDef))
-        groupManager.group(path) returns Some(group)
-        if (path.parent.isRoot) group else buildParentGroup(path.parent, group)
-      }
-
-      val appPath = AbsolutePathId(app.id)
-      val group = buildGroupWithApp(appPath.parent)
-
-      val rootGroup = createRootGroup(groups = Set(group), validate = validate, enabledFeatures = enabledFeatures)
+      val rootGroup = Builders.newRootGroup(apps = Seq(appDef), newGroupEnforceRoleBehavior = config.newGroupEnforceRole())
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(normed)).getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -108,23 +93,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       (body, plan)
     }
 
-    def prepareGroup(groupId: String, groupManager: GroupManager) = {
-      def buildParentGroup(path: AbsolutePathId, childGroup: Group): Group = {
-        val group = createGroup(path, groups = Set(childGroup))
-        groupManager.group(path) returns Some(group)
-        if (path.parent.isRoot) group else buildParentGroup(path.parent, group)
-      }
-
-      def buildGroup(path: AbsolutePathId): Group = {
-        val group = createGroup(path)
-        groupManager.group(path) returns Some(group)
-        if (path.parent.isRoot) group else buildParentGroup(path.parent, group)
-      }
-
+    def prepareGroup(groupId: String, groupManager: GroupManager, newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior = NewGroupEnforceRoleBehavior.Off) = {
       val groupPath = AbsolutePathId(groupId)
-      val group = buildGroup(groupPath)
 
-      val rootGroup = createRootGroup(groups = Set(group), validate = false, enabledFeatures = Set.empty)
+      val rootGroup = Builders.newRootGroup(groupIds = Set(groupPath), newGroupEnforceRoleBehavior = newGroupEnforceRoleBehavior)
       val plan = DeploymentPlan(rootGroup, rootGroup)
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
       groupManager.rootGroup() returns rootGroup
@@ -235,7 +207,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Some(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
-      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -258,7 +230,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app", cmd = Some("cmd"), container = Some(container),
         secrets = Map("pullConfigSecret" -> SecretDef("/config")))
-      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -659,9 +631,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     }
 
     "Create a new app with IP/CT on virtual network foo, then update it to nothing" in new FixtureWithRealGroupManager(
-      initialRoot = createRootGroup(apps = Map(
-        "/app".toAbsolutePath -> AppDefinition("/app".toAbsolutePath, cmd = Some("cmd"), networks = Seq(ContainerNetwork("foo")), role = "*")
-      ))
+      initialRoot = Builders.newRootGroup(apps = Seq(Builders.newAppDefinition.command("/app".toAbsolutePath, networks = Seq(ContainerNetwork("foo")))))
     ) {
       Given("An app and group")
       val updatedApp = App(
@@ -832,7 +802,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       )
 
       val appDef = Raml.fromRaml(normalize(app))
-      val rootGroup = createRootGroup(Map(appDef.id -> appDef))
+      val rootGroup = Builders.newRootGroup(apps = Seq(appDef))
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(app).as[JsObject]).getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -937,7 +907,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
         env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -965,7 +935,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("An app with an envvar secret-ref that does not point to an undefined secret")
       val app = App(id = "/app", cmd = Some("cmd"),
         env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, _) = prepareApp(app, groupManager, validate = false)
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -986,7 +956,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
         container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo")))))
-      val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -1017,7 +987,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(id = "/app", cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
         env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
-      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -1042,7 +1012,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         container = Some(containers),
         secrets = Map("bar" -> SecretDef("foo"))
       )
-      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -1061,7 +1031,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       {
         val app = App(id = "/app", cmd = Some("cmd"),
           mem = -128)
-        val (body, plan) = prepareApp(app, groupManager, validate = false)
+        val (body, plan @ _) = prepareApp(app, groupManager)
 
         Then("A constraint violation exception is thrown")
         val response = asyncRequest { r =>
@@ -1073,7 +1043,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       {
         val app = App(id = "/app", cmd = Some("cmd"),
           cpus = -1)
-        val (body, _) = prepareApp(app, groupManager, validate = false)
+        val (body, _) = prepareApp(app, groupManager)
 
         val response = asyncRequest { r =>
           appsResource.create(body, force = false, auth.request, r)
@@ -1084,7 +1054,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       {
         val app = App(id = "/app", cmd = Some("cmd"),
           instances = -1)
-        val (body, _) = prepareApp(app, groupManager, validate = false)
+        val (body, _) = prepareApp(app, groupManager)
 
         val response = asyncRequest { r =>
           appsResource.create(body, force = false, auth.request, r)
@@ -1127,7 +1097,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new app fails with Validation errors" in new Fixture {
       Given("An app with validation errors")
       val app = App(id = "/app")
-      val (body, _) = prepareApp(app, groupManager, validate = false)
+      val (body, _) = prepareApp(app, groupManager)
 
       Then("A constraint violation exception is thrown")
       val response = asyncRequest { r =>
@@ -1139,7 +1109,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new app with float instance count fails" in new Fixture {
       Given("The json of an invalid application")
       val invalidAppJson = Json.stringify(Json.obj("id" -> "/foo", "cmd" -> "cmd", "instances" -> 0.1))
-      val rootGroup = createRootGroup()
+      val rootGroup = Builders.newRootGroup()
       val plan = DeploymentPlan(rootGroup, rootGroup)
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
       groupManager.rootGroup() returns rootGroup
@@ -1155,7 +1125,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Replace an existing application" in new Fixture {
       Given("An app and group")
       val app = AppDefinition(id = AbsolutePathId("/app"), cmd = Some("foo"), role = "*")
-      val rootGroup = createRootGroup(Map(app.id -> app))
+      val rootGroup = Builders.newRootGroup(apps = Seq(app))
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = """{ "cmd": "bla" }""".getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -1607,7 +1577,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     "Restart an existing app" in new Fixture {
       val app = AppDefinition(id = AbsolutePathId("/app"), cmd = Some("sleep"), role = "*")
-      val rootGroup = createRootGroup(Map(app.id -> app))
+      val rootGroup = Builders.newRootGroup(apps = Seq(app))
       val plan = DeploymentPlan(rootGroup, rootGroup)
       service.deploy(any, any) returns Future.successful(Done)
       groupManager.app(AbsolutePathId("/app")) returns Some(app)
@@ -1707,7 +1677,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val req = auth.request
       val embed = new util.HashSet[String]()
       val app = """{"id":"/a/b/c","cmd":"foo","ports":[]}"""
-      groupManager.rootGroup() returns createRootGroup()
+      groupManager.rootGroup() returns Builders.newRootGroup()
 
       When("we try to fetch the list of apps")
       val index = asyncRequest { r =>
@@ -1763,7 +1733,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       restart.getStatus should be(auth.NotAuthenticatedStatus)
     }
 
-    "access without authorization is denied" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toAbsolutePath -> AppDefinition("/a".toAbsolutePath, cmd = Some("sleep"), role = "*")))) {
+    "access without authorization is denied" in new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup(apps = Seq(Builders.newAppDefinition.command("/a".toAbsolutePath)))) {
       Given("An unauthorized request")
       auth.authenticated = true
       auth.authorized = false
@@ -1948,7 +1918,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Allow editing a env configuration without sending secrets" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
       Given("An app with a secret")
       val app = App(id = "/app", cmd = Some("cmd"), env = Map("DATABASE_PW" -> EnvVarSecret("database")), secrets = Map("database" -> SecretDef("dbpassword")))
-      val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -2022,7 +1992,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new top-level app with a custom role defined should reject " in new Fixture() {
       Given("An app with non-default role")
       val app = App(id = "/app", cmd = Some("cmd"), role = Some("NotTheDefaultRole"))
-      val (body, _) = prepareApp(app, groupManager, validate = false)
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -2041,7 +2011,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new top-level app with the mesos_role role defined should accept " in new Fixture(configArgs = Seq("--mesos_role", "customMesosRole")) {
       Given("An app with the mesos_role role")
       val app = App(id = "/app", cmd = Some("cmd"), role = Some("customMesosRole"))
-      val (body, _) = prepareApp(app, groupManager, validate = false)
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -2062,7 +2032,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       prepareGroup("/dev", groupManager)
 
       val body = Json.stringify(Json.toJson(normalize(app))).getBytes("UTF-8")
-      //      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -2078,13 +2047,13 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
     }
 
-    "Update an app inside a group with a custom role defined should accept if custom role is the same " in new Fixture() {
+    "Update an app inside a group with a custom role defined should accept if custom role is the same" in new Fixture() {
       Given("An app with non-default role")
       val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("NotTheDefaultRole"))
 
       prepareGroup("/dev", groupManager)
 
-      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
+      val (body, _) = prepareAppInGroup(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -2098,13 +2067,13 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
     }
 
-    "Update an app inside a group with a different custom role should reject " in new Fixture() {
+    "Update an app inside a group with a different custom role should reject" in new Fixture() {
       Given("An app with non-default role")
       val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("NotTheDefaultRole"))
 
       prepareGroup("/dev", groupManager)
 
-      prepareAppInGroup(app, groupManager, validate = false)
+      prepareAppInGroup(app, groupManager)
       val appWithDifferentCustomRole = app.copy(role = Some("differentCustomRole"))
       val body = Json.stringify(Json.toJson(normalize(appWithDifferentCustomRole))).getBytes("UTF-8")
 
@@ -2125,7 +2094,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new app inside a group with the mesos_role role defined should accept " in new Fixture(configArgs = Seq("--mesos_role", "customMesosRole")) {
       Given("An app with the mesos_role role")
       val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("customMesosRole"))
-      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
+      val (body, _) = prepareAppInGroup(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -2142,7 +2111,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new app inside a group with the top-group role defined should accept " in new Fixture() {
       Given("An app with the dev role inside a group dev")
       val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("dev"))
-      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
+      val (body, _) = prepareAppInGroup(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -2163,7 +2132,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val body = Json.stringify(Json.toJson(normalize(app))).getBytes("UTF-8")
 
       prepareGroup("/dev/sub/something", groupManager)
-      //      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -2182,7 +2150,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Create a new app inside a sub group with the top-group role defined should accept " in new Fixture() {
       Given("An app with the dev role inside a group dev")
       val app = App(id = "/dev/sub/something/app", cmd = Some("cmd"), role = Some("dev"))
-      val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
+      val (body, _) = prepareAppInGroup(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -2231,7 +2199,40 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       midGroup.enforceRole shouldBe false
     }
 
-    "Create a new app inside a top-group with enforceRole applies the proper group-role default" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/dev".toAbsolutePath, enforceRole = true)))) {
+    "Create a new app inside a top-level group with enforceRole disabled but --new_group_enforce_role=top" in new FixtureWithRealGroupManager(
+      configArgs = Seq("--new_group_enforce_role", "top"),
+      initialRoot = Group(id = "/".toAbsolutePath, groupsById = Map("/dev".toAbsolutePath -> Group("/dev".toAbsolutePath, enforceRole = false)))) {
+
+      service.deploy(any, any) returns Future.successful(Done)
+
+      Given("group /dev with enforceRole: false")
+      And("Marathon is configured with --new_group_enforce_role=top")
+
+      When("I post a sleeper app definition to /dev/sleeper without specifying the role")
+      val response = asyncRequest { r =>
+        val body =
+          """
+            |{
+            |  "id": "/dev/sleeper",
+            |  "cmd": "sleep 3600",
+            |  "instances": 1,
+            |  "cpus": 0.05,
+            |  "mem": 128
+            |}
+          """.stripMargin
+        appsResource.create(body.getBytes, force = false, auth.request, r)
+      }
+
+      Then("the request should succeed")
+      response.getStatus should be(201)
+
+      val Some(app) = groupManager.rootGroup().app(AbsolutePathId("/dev/sleeper"))
+
+      And("the role should default to the default mesos_role '*'")
+      app.role shouldBe "*"
+    }
+
+    "Create a new app inside a top-level group with enforceRole applies the proper group-role default" in new FixtureWithRealGroupManager(initialRoot = Group("/".toAbsolutePath, groupsById = Map("/dev".toAbsolutePath -> Group("/dev".toAbsolutePath, enforceRole = true)))) {
       service.deploy(any, any) returns Future.successful(Done)
 
       Given("group /dev with enforceRole: true")
@@ -2265,7 +2266,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         cmd = Some("cmd"),
         acceptedResourceRoles = Some(Set("customMesosRole")))
 
-      val (body, _) = prepareApp(app, groupManager, validate = false)
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -2289,7 +2290,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         cmd = Some("cmd"),
         acceptedResourceRoles = Some(Set("customMesosRole")))
 
-      val (body, _) = prepareApp(app, groupManager, validate = false)
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -2316,7 +2317,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         cmd = Some("cmd"),
         acceptedResourceRoles = Some(Set("customMesosRole")))
 
-      val (body, _) = prepareApp(app, groupManager, validate = false)
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)
@@ -2431,7 +2432,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val appJs = Json.parse(appWithExtVol)
       val app = appJs.as[raml.App]
 
-      val (body, _) = prepareApp(app, groupManager, validate = false)
+      val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
       clock.advanceBy(5.seconds)

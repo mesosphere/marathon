@@ -36,6 +36,8 @@ private[health] class HealthCheckActor(
 
   val healthByInstanceId = TrieMap.empty[Instance.Id, Health]
 
+  private case class HealthCheckStreamStopped(thisInstance: this.type)
+
   override def preStart(): Unit = {
     healthCheck match {
       case marathonHealthCheck: MarathonHealthCheck =>
@@ -60,10 +62,11 @@ private[health] class HealthCheckActor(
             done.onComplete {
               case Success(_) =>
                 logger.info(s"HealthCheck stream for app ${app.id} version ${app.version} and healthCheck $healthCheck was stopped")
+                self ! HealthCheckStreamStopped(this)
 
               case Failure(ex) =>
                 logger.warn(s"HealthCheck stream for app ${app.id} version ${app.version} and healthCheck $healthCheck crashed due to:", ex)
-                self ! 'restart
+                self ! HealthCheckStreamStopped(this)
             }
           }
           .runWith(healthCheckHub)
@@ -74,7 +77,7 @@ private[health] class HealthCheckActor(
   def purgeStatusOfDoneInstances(instances: Seq[Instance]): Unit = {
     logger.debug(s"Purging health status of inactive instances for app ${app.id} version ${app.version} and healthCheck ${healthCheck}")
 
-    val inactiveInstanceIds: Set[Instance.Id] = instances.filterNot(_.isActive).map(_.instanceId)(collection.breakOut)
+    val inactiveInstanceIds: Set[Instance.Id] = instances.filterNot(_.isActive).iterator.map(_.instanceId).toSet
     inactiveInstanceIds.foreach { inactiveId =>
       healthByInstanceId.remove(inactiveId)
     }
@@ -184,7 +187,7 @@ private[health] class HealthCheckActor(
     case GetInstanceHealth(instanceId) => sender() ! healthByInstanceId.getOrElse(instanceId, Health(instanceId))
 
     case GetAppHealth =>
-      sender() ! AppHealth(healthByInstanceId.values.to[Seq])
+      sender() ! AppHealth(healthByInstanceId.values.to(Seq))
 
     case result: HealthResult if result.version == app.version =>
       handleHealthResult(result)
@@ -192,8 +195,11 @@ private[health] class HealthCheckActor(
     case instanceHealth: InstanceHealth =>
       updateInstanceHealth(instanceHealth)
 
-    case 'restart =>
-      throw new RuntimeException("HealthCheckActor stream stopped, restarting")
+    case HealthCheckStreamStopped(thisInstance) =>
+      if (thisInstance == this)
+        throw new RuntimeException("HealthCheckActor stream stopped, restarting")
+      else
+        logger.info("Stream pertaining to previous instance of actor stopped; ignoring.")
   }
 }
 

@@ -23,7 +23,6 @@ import scala.util.{Failure, Success}
 trait RestResource extends JaxResource {
   import RestResource.RestStreamingBody
   implicit val executionContext: ExecutionContext
-  protected val config: MarathonConf
   case class FailureResponse(response: Response) extends Throwable
 
   /**
@@ -72,6 +71,7 @@ trait RestResource extends JaxResource {
   }
 
   protected def status(code: Status) = Response.status(code).build()
+  protected def status(code: Status, entity: String) = Response.status(code).entity(new RestStreamingBody(entity)).build()
   protected def ok(): Response = Response.ok().build()
   protected def ok(entity: String): Response = Response.ok(entity).build()
   protected def ok(entity: String, mediaType: MediaType): Response = Response.ok(entity).`type`(mediaType).build()

@@ -4,11 +4,10 @@ package raml
 import java.time.OffsetDateTime
 
 import mesosphere.marathon.state.{PathId, Timestamp}
-import mesosphere.marathon.stream.Implicits._
 import org.apache.mesos.{Protos => mesos}
 import play.api.libs.json.JsString
 
-import scala.collection.breakOut
+import scala.jdk.CollectionConverters._
 
 /**
   * All conversions for standard scala types.
@@ -32,7 +31,7 @@ trait DefaultConversions {
   }
 
   implicit def javaListToSeqConversion[A, B](implicit writer: Writes[A, B]): Writes[java.util.List[A], Seq[B]] = Writes { list =>
-    list.map(writer.write)(breakOut)
+    list.iterator.asScala.map(writer.write).toSeq
   }
 
   implicit def setConversion[A, B](implicit writer: Writes[A, B]): Writes[Set[A], Set[B]] = Writes { set =>

@@ -129,7 +129,10 @@ class Group(
 
   /** @return a copy of this group with the removed `enforceRole` field. */
   def withoutEnforceRole(): Group =
-    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, false)
+    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, enforceRole = false)
+
+  def withDependencies(dependencies: Set[AbsolutePathId]): Group =
+    new Group(this.id, this.apps, this.pods, this.groupsById, dependencies, this.version, this.enforceRole)
 
   /**
     * Builds a pretty tree of the group

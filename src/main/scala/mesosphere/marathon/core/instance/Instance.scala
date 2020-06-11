@@ -6,10 +6,11 @@ import java.util.{Base64, UUID}
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Role
 import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy, _}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.tasks.OfferUtil
 import mesosphere.mesos.Placed
 import org.apache._
@@ -45,7 +46,9 @@ case class Instance(
     role: Role) extends Placed {
 
   def runSpecId: AbsolutePathId = runSpec.id
+
   def runSpecVersion: Timestamp = runSpec.version
+
   def unreachableStrategy = runSpec.unreachableStrategy
 
   /**
@@ -61,10 +64,15 @@ case class Instance(
   val isProvisioned: Boolean = state.condition == Condition.Provisioned && state.goal == Goal.Running
 
   def isKilling: Boolean = state.condition == Condition.Killing
+
   def isRunning: Boolean = state.condition == Condition.Running
+
   def isUnreachable: Boolean = state.condition == Condition.Unreachable
+
   def isUnreachableInactive: Boolean = state.condition == Condition.UnreachableInactive
+
   def isActive: Boolean = state.condition.isActive
+
   def hasReservation: Boolean = reservation.isDefined
 
   override def hostname: Option[String] = agentInfo.map(_.host)
@@ -77,6 +85,7 @@ case class Instance(
 
   /**
     * Factory method for creating provisioned instance from Scheduled instance
+    *
     * @return new instance in a provisioned state
     */
   def provisioned(agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Map[Task.Id, Task], now: Timestamp): Instance = {
@@ -98,6 +107,21 @@ case class Instance(
       reservation = Some(reservation),
       agentInfo = Some(agentInfo))
   }
+
+  /**
+    * Allow to know if instance should be healthy or if it has no health check
+    *
+    * @return true if runSpec has some health checks defined. false if there is not any health check defined on this app/pod
+    */
+  def hasConfiguredHealthChecks: Boolean = this.runSpec match {
+    case app: AppDefinition => {
+      app.healthChecks.nonEmpty || app.check.nonEmpty || app.readinessChecks.nonEmpty
+    }
+    case pod: PodDefinition => pod.containers.exists(!_.healthCheck.isEmpty)
+    case _ => false // non-app/pod RunSpecs don't have health checks
+  }
+
+  def consideredHealthy: Boolean = !hasConfiguredHealthChecks || state.healthy.getOrElse(false)
 }
 
 object Instance {
@@ -105,7 +129,7 @@ object Instance {
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
   def instancesById(instances: Seq[Instance]): Map[Instance.Id, Instance] =
-    instances.map(instance => instance.instanceId -> instance)(collection.breakOut)
+    instances.iterator.map(instance => instance.instanceId -> instance).toMap
 
   object Running {
     def unapply(instance: Instance): Option[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]] = instance match {
@@ -179,7 +203,7 @@ object Instance {
       * @param now           Timestamp of update.
       * @return new InstanceState
       */
-    def apply(
+    def transitionTo(
       maybeOldInstanceState: Option[InstanceState],
       newTaskMap: Map[Task.Id, Task],
       now: Timestamp,
@@ -356,7 +380,7 @@ object Instance {
       agentId = Some(offer.getSlaveId.getValue),
       region = OfferUtil.region(offer),
       zone = OfferUtil.zone(offer),
-      attributes = offer.getAttributesList.toIndexedSeq
+      attributes = offer.getAttributesList.asScala.to(IndexedSeq)
     )
   }
 

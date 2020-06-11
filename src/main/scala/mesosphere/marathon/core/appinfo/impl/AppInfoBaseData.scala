@@ -142,7 +142,7 @@ class AppInfoBaseData(
       logger.debug(s"assembling rich tasks for app [${app.id}]")
       def statusesToEnrichedTasks(instances: Seq[Instance], statuses: Map[Instance.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
         instances.flatMap { instance =>
-          EnrichedTask.singleFromInstance(instance, healthCheckResults = statuses.getOrElse(instance.instanceId, Nil).to[Seq])
+          EnrichedTask.singleFromInstance(instance, healthCheckResults = statuses.getOrElse(instance.instanceId, Nil).to(Seq))
         }
       }
 
@@ -166,7 +166,10 @@ class AppInfoBaseData(
     val now = clock.now().toOffsetDateTime
     val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
     val instanceStatus = instances
-      .filter(!_.isScheduled)
+      .filter { instance =>
+        // Ignore all freshly scheduled instances but include the re-scheduled ones.
+        !(instance.isScheduled && instance.agentInfo.isEmpty)
+      }
       .flatMap { inst => podInstanceStatus(inst) }
     val statusSince = if (instanceStatus.isEmpty) now else instanceStatus.map(_.statusSince).max
     val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))

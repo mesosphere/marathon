@@ -196,7 +196,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         val root = StoredGroup("/".toAbsolutePath, Map("a".toAbsolutePath -> now), Map.empty, Nil, Set.empty, now, None)
         f.actor ! StoreRoot(root, rootPromise)
         rootPromise.future.isCompleted should be(true)
-        f.actor.stateData should equal(UpdatedEntities(appVersionsStored = root.appIds.mapValues(Set(_)), rootsStored = Set(now)))
+        f.actor.stateData should equal(UpdatedEntities(appVersionsStored = root.appIds.map { case (k, v) => k -> Set(v) }, rootsStored = Set(now)))
       }
       "track deploy stores" in {
         val f = Fixture(5)()()
@@ -411,7 +411,7 @@ class GcActorTest extends AkkaUnitTest with TestKitBase with GivenWhenThen with 
         promise.future.isCompleted should be(false)
         val stateData = f.actor.stateData.asInstanceOf[BlockedEntities]
         stateData.rootsDeleting should equal(Set(root1.version.toOffsetDateTime))
-        stateData.promises should not be 'empty
+        stateData.promises should not be Symbol("empty")
         f.actor ! CompactDone
         eventually(f.actor.stateName shouldEqual ReadyForGc)
         promise.future.futureValue should be(Done)

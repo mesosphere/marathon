@@ -4,7 +4,6 @@ import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.RunSpec
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.OfferUtil
 import org.apache.mesos.Protos.{Attribute, Offer, Value}
 
@@ -13,6 +12,7 @@ import scala.util.Try
 import java.text.DecimalFormat
 
 import com.typesafe.scalalogging.StrictLogging
+import scala.jdk.CollectionConverters._
 
 object Int {
   def unapply(s: String): Option[Int] = Try(s.toInt).toOption
@@ -53,13 +53,13 @@ object Constraints extends StrictLogging {
     case Value.Type.TEXT =>
       attribute.getText.getValue
     case Value.Type.RANGES =>
-      val s = attribute.getRanges.getRangeList.to[Seq]
+      val s = attribute.getRanges.getRangeList.asScala.to(Seq)
         .sortWith(_.getBegin < _.getBegin)
         .map(r => s"${r.getBegin.toString}-${r.getEnd.toString}")
         .mkString(",")
       s"[$s]"
     case Value.Type.SET =>
-      val s = attribute.getSet.getItemList.to[Seq].sorted.mkString(",")
+      val s = attribute.getSet.getItemList.asScala.to(Seq).sorted.mkString(",")
       s"{$s}"
   }
 
@@ -68,7 +68,7 @@ object Constraints extends StrictLogging {
   private val regionReader: FieldReader = (OfferUtil.region(_), _.region)
   private val zoneReader: FieldReader = (OfferUtil.zone(_), _.zone)
   private def attributeReader(field: String): FieldReader = (
-    { offer => offer.getAttributesList.find(_.getName == field).map(getValueString) },
+    { offer => offer.getAttributesList.asScala.find(_.getName == field).map(getValueString) },
     { p => p.attributes.find(_.getName == field).map(getValueString) })
 
   val hostnameField = "@hostname"
@@ -206,7 +206,7 @@ object Constraints extends StrictLogging {
     val distributions = runSpec.constraints.withFilter(_.getOperator == Operator.GROUP_BY).map { constraint =>
       val (_, placed) = readerForField(constraint.getField)
       val instanceGroups: Seq[Map[Instance.Id, Instance]] =
-        runningInstances.groupBy(placed).values.map(Instance.instancesById)(collection.breakOut)
+        runningInstances.groupBy(placed).values.iterator.map(Instance.instancesById).toSeq
       GroupByDistribution(constraint, instanceGroups)
     }
 
@@ -245,7 +245,7 @@ object Constraints extends StrictLogging {
     }.mkString("Selected Constraint diff changed:\n", "\n", "\n")
     logger.info(s"$instanceDesc$distDesc")
 
-    toKillInstances.values.to[Seq]
+    toKillInstances.values.to(Seq)
   }
 
   /**
@@ -264,7 +264,7 @@ object Constraints extends StrictLogging {
         /* even distributed */
         Seq.empty
       } else {
-        updated.maxBy(_._1)._2.flatMap(_.map { case (_, instance) => instance })(collection.breakOut)
+        updated.maxBy(_._1)._2.iterator.flatMap(_.map { case (_, instance) => instance }).toSeq
       }
     }
 

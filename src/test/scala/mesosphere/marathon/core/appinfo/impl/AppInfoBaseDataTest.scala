@@ -12,6 +12,7 @@ import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheckResult
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.{Raml, Resources, TaskConversion}
@@ -56,7 +57,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
     def fakeInstance(pod: PodDefinition): Instance = {
       val instanceId = Instance.Id.forRunSpec(pod.id)
-      val tasks: Map[Task.Id, Task] = pod.containers.map { ct =>
+      val tasks: Map[Task.Id, Task] = pod.containers.iterator.map { ct =>
         val taskId = Task.Id(instanceId, Some(ct))
         taskId -> Task(
           taskId = taskId,
@@ -67,12 +68,12 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
             mesosStatus = None,
             condition = Condition.Running,
             networkInfo = NetworkInfoPlaceholder()))
-      }(collection.breakOut)
+      }.toMap
 
       Instance(
         instanceId = instanceId,
         agentInfo = Some(Instance.AgentInfo("", None, None, None, Nil)),
-        state = InstanceState(None, tasks, clock.now(), UnreachableStrategy.default(), Goal.Running),
+        state = InstanceState.transitionTo(None, tasks, clock.now(), UnreachableStrategy.default(), Goal.Running),
         tasksMap = tasks,
         runSpec = pod,
         None, "*"
@@ -125,7 +126,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1, instance2)))
       f.healthCheckManager.statuses(app.id) returns Future.successful(Map.empty[Instance.Id, Seq[Health]])
 
       When("requesting AppInfos with tasks")
@@ -155,7 +156,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances(builder1.getInstance(), builder2.getInstance(), builder3.getInstance()))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(builder1.getInstance(), builder2.getInstance(), builder3.getInstance())))
 
       val alive = Health(running2.instanceId, lastSuccess = Some(Timestamp(1)))
       val unhealthy = Health(running3.instanceId, lastFailure = Some(Timestamp(1)))
@@ -204,7 +205,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances())
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Nil))
 
       f.healthCheckManager.statuses(app.id) returns Future.successful(Map())
 
@@ -229,7 +230,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance()))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance())))
 
       f.healthCheckManager.statuses(app.id) returns Future.successful(
         Map(
@@ -489,16 +490,59 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
+        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1)))
 
       And("with no instances in the repo")
       f.groupManager.podVersion(any, any) returns Future.successful(None)
       f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq.empty)
 
-      When("requesting pod status")
-      f.baseData.podStatus(pod).futureValue
+      Then("requesting pod status should not throw an exception")
+      noException should be thrownBy {
+        f.baseData.podStatus(pod).futureValue
+      }
+    }
 
-      Then("no exception was thrown so status was successfully fetched")
+    "show a pod status with a task in TASK_UNKNOWN state" in {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      val f = new Fixture
+      Given("A pod instance")
+      val taskFailure = TaskFailureTestHelper.taskFailure
+      f.taskFailureRepository.get(pod.id) returns Future.successful(Some(taskFailure))
+      val instance1 = {
+        val instanceId = Instance.Id.forRunSpec(pod.id)
+        val tasks: Map[Task.Id, Task] = pod.containers.iterator.map { ct =>
+          val taskId = Task.Id(instanceId, Some(ct))
+          taskId -> Task(
+            taskId = taskId,
+            runSpecVersion = pod.version,
+            status = Task.Status.apply(
+              stagedAt = f.clock.now(),
+              startedAt = Some(f.clock.now()),
+              mesosStatus = Some(MesosTaskStatusTestHelper.unknown(taskId)),
+              condition = Condition.Unknown,
+              networkInfo = NetworkInfoPlaceholder()))
+        }.toMap
+
+        Instance(
+          instanceId = instanceId,
+          agentInfo = Some(Instance.AgentInfo("", None, None, None, Nil)),
+          state = InstanceState.transitionTo(None, tasks, f.clock.now(), UnreachableStrategy.default(), Goal.Running),
+          tasksMap = tasks,
+          runSpec = pod,
+          None, "*"
+        )
+      }
+      f.instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1)))
+
+      And("an instance in the repo")
+      f.groupManager.podVersion(any, any) returns Future.successful(Some(pod))
+      f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq.empty)
+
+      When("Getting pod status with last task failures")
+      val podStatus = f.baseData.podStatus(pod).futureValue
+
+      Then("we get the failure in the app info")
+      podStatus.instances should have size (pod.instances)
     }
 
     "requesting Pod lastTaskFailure when one exists" in {
@@ -513,7 +557,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
         val failedTask = task.copy(taskId = Task.Id.parse(taskFailure.taskId))
         instance.copy(tasksMap = instance.tasksMap + (failedTask.taskId -> failedTask))
       }
-      f.instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
+      f.instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1)))
 
       And("an instance in the repo")
       f.groupManager.podVersion(any, any) returns Future.successful(Some(pod))

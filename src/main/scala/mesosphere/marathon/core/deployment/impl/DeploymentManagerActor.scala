@@ -176,7 +176,7 @@ class DeploymentManagerActor(
     }
 
     case ListRunningDeployments =>
-      sender() ! Future.successful(deploymentStatus.values.to[Seq])
+      sender() ! Future.successful(deploymentStatus.values.to(Seq))
 
     case StartDeployment(plan, origSender, force) =>
       val conflicts = conflictingDeployments(plan)
@@ -376,7 +376,7 @@ class DeploymentManagerActor(
     def intersectsWith(thatPlan: DeploymentPlan): Boolean = {
       thatPlan.affectedRunSpecIds.intersect(thisPlan.affectedRunSpecIds).nonEmpty
     }
-    runningDeployments.values.filter(info => intersectsWith(info.plan)).to[Seq]
+    runningDeployments.values.filter(info => intersectsWith(info.plan)).to(Seq)
   }
 }
 

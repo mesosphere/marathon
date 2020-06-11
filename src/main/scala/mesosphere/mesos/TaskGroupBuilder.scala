@@ -13,13 +13,13 @@ import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.raml
 import mesosphere.marathon.raml.Endpoint
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.tasks.PortsMatch
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.Protos.{DurationInfo, KillPolicy, TTYInfo}
 import org.apache.mesos.{Protos => mesos}
 
 import scala.collection.immutable.Seq
+import scala.jdk.CollectionConverters._
 
 object TaskGroupBuilder extends StrictLogging {
 
@@ -350,6 +350,7 @@ object TaskGroupBuilder extends StrictLogging {
       .setName(container.name)
       .setTaskId(mesos.TaskID.newBuilder.setValue(taskId.idString))
       .setSlaveId(offer.getSlaveId)
+      .putAllLimits(TaskBuilder.limitsAsJavaMap(container.resourceLimits))
 
     val consumer = new ResourceConsumer(matchedResources)
     consumer.consumeCpus(container.resources.cpus).foreach(builder.addResources)
@@ -415,29 +416,27 @@ object TaskGroupBuilder extends StrictLogging {
     consumer.consumeGpus(podDefinition.executorResources.gpus.toDouble).foreach(executorInfo.addResources)
     executorInfo.addAllResources(portsMatch.resources.asJava)
 
+    val containerInfo = mesos.ContainerInfo.newBuilder
+      .setType(mesos.ContainerInfo.Type.MESOS)
+    val linuxInfoBuilder = mesos.LinuxInfo.newBuilder
+    linuxInfoBuilder.setShareCgroups(podDefinition.legacySharedCgroups.getOrElse(false))
+
     if (podDefinition.networks.nonEmpty || podDefinition.volumes.nonEmpty || podDefinition.linuxInfo.nonEmpty) {
-      val containerInfo = mesos.ContainerInfo.newBuilder
-        .setType(mesos.ContainerInfo.Type.MESOS)
 
       mesosNetworks.foreach(containerInfo.addNetworkInfos)
       volumeMatchOption.foreach(_.persistentVolumeResources.foreach(executorInfo.addResources))
 
       podDefinition.linuxInfo.foreach({ linuxInfo =>
-        val linuxInfoBuilder = mesos.LinuxInfo.newBuilder
-
         linuxInfo.ipcInfo.foreach({ ipcInfo =>
           ipcInfo.shmSize.foreach(linuxInfoBuilder.setShmSize)
           linuxInfoBuilder.setIpcMode(ipcInfo.ipcMode.toMesos)
         })
-
-        containerInfo.setLinuxInfo(linuxInfoBuilder)
       })
-
-      executorInfo.setContainer(containerInfo)
     }
 
+    containerInfo.setLinuxInfo(linuxInfoBuilder)
+    executorInfo.setContainer(containerInfo)
     executorInfo.setLabels(podDefinition.labels.toMesosLabels)
-
     executorInfo
   }
 
@@ -591,9 +590,10 @@ object TaskGroupBuilder extends StrictLogging {
       containerInfo.setTtyInfo(TTYInfo.newBuilder().build())
     }
 
+    val linuxBuilder = mesos.LinuxInfo.newBuilder
+    linuxBuilder.setShareCgroups(podDefinition.legacySharedCgroups.getOrElse(false))
     // setup linux info
     container.linuxInfo.foreach { linuxInfo =>
-      val linuxBuilder = mesos.LinuxInfo.newBuilder
       linuxInfo.seccomp.foreach { seccomp =>
         val seccompBuilder = mesos.SeccompInfo.newBuilder
 
@@ -608,8 +608,8 @@ object TaskGroupBuilder extends StrictLogging {
         linuxBuilder.setIpcMode(ipcInfo.ipcMode.toMesos)
       }
 
-      containerInfo.setLinuxInfo(linuxBuilder.build)
     }
+    containerInfo.setLinuxInfo(linuxBuilder.build)
 
     // Only create a 'ContainerInfo' when some of it's fields are set.
     // If no fields other than the type have been set, then we shouldn't pass the container info
@@ -732,18 +732,18 @@ object TaskGroupBuilder extends StrictLogging {
 
     require(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
 
-    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).collect {
+    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).iterator.collect {
       case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
-    }(collection.breakOut)
+    }.toSeq
 
-    taskIDs.map { taskId =>
+    taskIDs.iterator.map { taskId =>
       // the task level host ports are needed for fine-grained status/reporting later on
       val taskHostPorts: Seq[Int] = taskId.containerName.map { ctName =>
-        allocPortsByCTName.withFilter { case (name, port) => name == ctName }.map(_._2)
+        allocPortsByCTName.withFilter { case (name, _) => name == ctName }.map(_._2)
       }.getOrElse(Seq.empty[Int])
 
       val networkInfo = NetworkInfo(host, taskHostPorts, ipAddresses = Nil)
       taskId -> networkInfo
-    }(collection.breakOut)
+    }.toMap
   }
 }

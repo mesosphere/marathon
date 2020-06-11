@@ -105,7 +105,7 @@ class GroupManagerImpl(
 
   override def app(id: AbsolutePathId): Option[AppDefinition] = rootGroup().app(id)
 
-  override def apps(ids: Set[AbsolutePathId]) = ids.map(appId => appId -> app(appId))(collection.breakOut)
+  override def apps(ids: Set[AbsolutePathId]) = ids.iterator.map(appId => appId -> app(appId)).toMap
 
   override def pod(id: AbsolutePathId): Option[PodDefinition] = rootGroup().pod(id)
 

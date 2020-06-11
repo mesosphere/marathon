@@ -17,7 +17,7 @@ fi
   # Cleanup marathon
   cd $MARATHON_DIR;
   rm -rf target;
-  sbt clean;
-
-  sbt docker:publishLocal
+  cd tools/packager
+  make clean
+  make all tag-docker
 )

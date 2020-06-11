@@ -10,7 +10,7 @@ import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.AnyToRaml
 import mesosphere.marathon.raml.TaskConversion._
 import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import org.apache.mesos.{Protos => MesosProtos}
 
 class EnrichedTaskWritesTest extends UnitTest {

@@ -19,7 +19,6 @@ import org.mockito.Mockito._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
 class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyTest {
 
@@ -29,7 +28,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       taskKiller: TaskKiller = mock[TaskKiller],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
-      config: MarathonConf = mock[MarathonConf],
+      config: MarathonConf = AllConf.withTestConfig("--deprecated_features", "text_plain_tasks"),
       groupManager: GroupManager = mock[GroupManager]) {
     val identity = auth.identity
     val appsTaskResource = new AppTasksResource(
@@ -41,15 +40,13 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       auth.auth,
       auth.auth
     )
-
-    config.zkTimeoutDuration returns 1.second
   }
 
   case class FixtureWithRealTaskKiller(
       auth: TestAuthFixture = new TestAuthFixture,
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
-      config: MarathonConf = mock[MarathonConf],
+      config: MarathonConf = AllConf.withTestConfig("--deprecated_features", "text_plain_tasks"),
       groupManager: GroupManager = mock[GroupManager]) {
     val identity = auth.identity
     val killService = mock[KillService]
@@ -57,7 +54,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
     def materializerSettings = ActorMaterializerSettings(system)
     implicit val mat = ActorMaterializer(materializerSettings)
     val taskKiller = new TaskKiller(
-      instanceTracker, groupManager, config, auth.auth, auth.auth, killService)
+      instanceTracker, groupManager, auth.auth, auth.auth, killService)
     val appsTaskResource = new AppTasksResource(
       instanceTracker,
       taskKiller,
@@ -67,8 +64,6 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       auth.auth,
       auth.auth
     )
-
-    config.zkTimeoutDuration returns 1.second
   }
 
   "SpecInstancesResource" should {
@@ -80,7 +75,6 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).addTaskStaged().getInstance()
       val toKill = Seq(instance1, instance2)
 
-      config.zkTimeoutDuration returns 5.seconds
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
       groupManager.runSpec(appId) returns Some(AppDefinition(appId, role = "*"))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
@@ -160,7 +154,6 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val toKill = Seq(instance1)
 
-      config.zkTimeoutDuration returns 5.seconds
       instanceTracker.specInstances(appId) returns Future.successful(Seq(instance1, instance2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
       groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
@@ -220,7 +213,6 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).getInstance()
       val toKill = Seq(instance1)
 
-      config.zkTimeoutDuration returns 5.seconds
       instanceTracker.specInstances(appId) returns Future.successful(Seq(instance1, instance2))
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
       groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
@@ -265,8 +257,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, clock.now()).getInstance()
       val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, clock.now()).getInstance()
 
-      config.zkTimeoutDuration returns 5.seconds
-      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1, instance2)))
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
       groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
 
@@ -325,7 +316,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       indexJson.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("the index as txt is fetched")
-      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("", req, r) }
+      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("", req = req, asyncResponse = r) }
       Then("we receive a NotAuthenticated response")
       indexTxt.getStatus should be(auth.NotAuthenticatedStatus)
 
@@ -420,7 +411,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
-      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("/app", req, r) }
+      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("/app", req = req, asyncResponse = r) }
       Then("we receive a not authorized response")
       indexTxt.getStatus should be(auth.UnauthorizedStatus)
     }
@@ -436,7 +427,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 
       When("the index as txt is fetched")
-      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("/app", req, r) }
+      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("/app", req = req, asyncResponse = r) }
       Then("we receive a not authorized response")
       indexTxt.getStatus should be(404)
     }

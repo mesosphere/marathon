@@ -16,7 +16,7 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManagerConfig
 import mesosphere.marathon.core.matcher.manager.impl.OfferMatcherManagerActor.{CleanUpOverdueOffers, MatchOfferData, UnprocessedOffer}
 import mesosphere.marathon.metrics.{Metrics, SettableGauge}
 import mesosphere.marathon.state.{PathId, Timestamp}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.tasks.ResourceUtil
 import org.apache.mesos.Protos.{Offer, OfferID}
 
@@ -169,7 +169,7 @@ private[impl] class OfferMatcherManagerActor private (
   def offerMatchers(offer: Offer): Queue[OfferMatcher] = {
     // the persistence id of a volume encodes the app id
     // we use this information as filter criteria
-    val reservations: Set[PathId] = offer.getResourcesList.view
+    val reservations: Set[PathId] = offer.getResourcesList.asScala.view
       .filter(r => r.hasDisk && r.getDisk.hasPersistence && r.getDisk.getPersistence.hasId)
       .map(_.getDisk.getPersistence.getId)
       .collect { case LocalVolumeId(volumeId) => volumeId.runSpecId }
@@ -178,7 +178,7 @@ private[impl] class OfferMatcherManagerActor private (
     // 1. give the offer to the matcher waiting for a reservation
     // 2. give the offer to anybody else
     // 3. randomize both lists to be fair
-    (random.shuffle(reserved) ++ random.shuffle(normal)).to[Queue]
+    (random.shuffle(reserved) ++ random.shuffle(normal)).to(Queue)
   }
 
   def receiveProcessOffer: Receive = {
@@ -349,8 +349,8 @@ private[impl] class OfferMatcherManagerActor private (
     metrics.currentOffersMetric.setValue(offerQueues.size.toLong)
     logger.info(s"Finished processing ${data.offer.getId.getValue} from ${data.offer.getHostname}. " +
       s"Matched ${data.ops.size} ops after ${data.matchPasses} passes. " +
-      s"First 10: ${ResourceUtil.displayResources(data.offer.getResourcesList.to[Seq], 10)}")
-    logger.debug(s"First 1000 offers: ${ResourceUtil.displayResources(data.offer.getResourcesList.to[Seq], 1000)}.")
+      s"First 10: ${ResourceUtil.displayResources(data.offer.getResourcesList.asScala.to(Seq), 10)}")
+    logger.debug(s"First 1000 offers: ${ResourceUtil.displayResources(data.offer.getResourcesList.asScala.to(Seq), 1000)}.")
   }
 
   def completeWithNoMatch(reason: String, offer: Offer, promise: Promise[MatchedInstanceOps], resendThisOffer: Boolean): Unit = {

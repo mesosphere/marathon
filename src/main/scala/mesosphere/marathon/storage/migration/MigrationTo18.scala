@@ -106,9 +106,9 @@ object MigrationTo18 extends StrictLogging {
     }
       .map { taskMap =>
         if (taskMap.values.exists(_.isModified)) {
-          ParsedValue(taskMap.mapValues(_.value), Modified)
+          ParsedValue(taskMap.map { case (k, v) => k -> v.value }, Modified)
         } else {
-          ParsedValue(taskMap.mapValues(_.value), NotModified)
+          ParsedValue(taskMap.map { case (k, v) => k -> v.value }, NotModified)
         }
       }
   }

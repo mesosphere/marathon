@@ -2,7 +2,7 @@ package mesosphere.marathon
 package raml
 
 import org.apache.mesos.{Protos => Mesos}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 
 trait OfferConversion {
 
@@ -20,7 +20,7 @@ trait OfferConversion {
     resource.getType match {
       case Mesos.Value.Type.SCALAR => create(Some(resource.getScalar.getValue), None, None)
       case Mesos.Value.Type.RANGES => create(None, Some(resource.getRanges.getRangeList.toRaml), None)
-      case Mesos.Value.Type.SET => create(None, None, Some(resource.getSet.getItemList.toSeq))
+      case Mesos.Value.Type.SET => create(None, None, Some(resource.getSet.getItemList.asScala.toSeq))
       case _ => create(None, None, None)
     }
   }
@@ -31,7 +31,7 @@ trait OfferConversion {
     attribute.getType match {
       case Mesos.Value.Type.SCALAR => create(Some(attribute.getScalar.getValue), None, None, None)
       case Mesos.Value.Type.RANGES => create(None, Some(attribute.getRanges.getRangeList.toRaml), None, None)
-      case Mesos.Value.Type.SET => create(None, None, Some(attribute.getSet.getItemList.toSeq), None)
+      case Mesos.Value.Type.SET => create(None, None, Some(attribute.getSet.getItemList.asScala.toSeq), None)
       case Mesos.Value.Type.TEXT => create(None, None, None, Option(attribute.getText.getValue))
     }
   }

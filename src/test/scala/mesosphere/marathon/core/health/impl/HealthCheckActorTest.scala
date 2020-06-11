@@ -75,7 +75,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
     "should not dispatch health checks for staging tasks" in new Fixture {
       instanceTracker.specInstances(any, anyBoolean)(any) returns Future.successful(Seq(instance))
 
-      val _ = healthCheckActor()
+      healthCheckActor()
 
       appHealthCheckActor.expectMsgAllClassOf(classOf[PurgeHealthCheckStatuses])
     }
@@ -83,7 +83,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
     "should not dispatch health checks for lost tasks" in new Fixture {
       instanceTracker.specInstances(any, anyBoolean)(any) returns Future.successful(Seq(lostInstance))
 
-      val _ = healthCheckActor()
+      healthCheckActor()
 
       appHealthCheckActor.expectMsgAllClassOf(classOf[PurgeHealthCheckStatuses])
     }
@@ -91,7 +91,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
     "should not dispatch health checks for unreachable tasks" in new Fixture {
       instanceTracker.specInstances(any, anyBoolean)(any) returns Future.successful(Seq(unreachableInstance))
 
-      val _ = healthCheckActor()
+      healthCheckActor()
 
       appHealthCheckActor.expectMsgAllClassOf(classOf[PurgeHealthCheckStatuses])
     }

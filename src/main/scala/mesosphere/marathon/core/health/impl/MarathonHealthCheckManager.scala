@@ -185,7 +185,7 @@ class MarathonHealthCheckManager(
       val instancesByVersion = instances.groupBy(_.runSpecVersion)
 
       val activeAppVersions: Set[Timestamp] = {
-        val versions: Set[Timestamp] = instances.map(_.runSpecVersion)(collection.breakOut)
+        val versions: Set[Timestamp] = instances.iterator.map(_.runSpecVersion).toSet
         versions + app.version
       }
 
@@ -244,9 +244,9 @@ class MarathonHealthCheckManager(
         }
 
       // collect health check actors for the associated app's Mesos checks.
-      val healthCheckActors: Seq[ActorRef] = listActive(instanceId.runSpecId, version).collect {
+      val healthCheckActors: Seq[ActorRef] = listActive(instanceId.runSpecId, version).iterator.collect {
         case ActiveHealthCheck(hc: MesosHealthCheck, ref) => ref
-      }(collection.breakOut)
+      }.toSeq
 
       // send the result to each health check actor
       for {
@@ -269,10 +269,10 @@ class MarathonHealthCheckManager(
       case None => Future.successful(Nil)
       case Some(appVersion) =>
         Future.sequence(
-          listActive(appId, appVersion).collect {
+          listActive(appId, appVersion).iterator.collect {
             case ActiveHealthCheck(_, actor) =>
               (actor ? GetInstanceHealth(instanceId)).mapTo[Health]
-          }(collection.breakOut)
+          }.toSeq
         )
     }
   }
@@ -280,11 +280,11 @@ class MarathonHealthCheckManager(
   override def statuses(appId: AbsolutePathId): Future[Map[Instance.Id, Seq[Health]]] = {
     appHealthChecks.readLock { ahcs =>
       implicit val timeout: Timeout = Timeout(2, SECONDS)
-      val futureHealths: Seq[Future[HealthCheckActor.AppHealth]] = ahcs(appId).values.flatMap { checks =>
+      val futureHealths: Seq[Future[HealthCheckActor.AppHealth]] = ahcs(appId).values.iterator.flatMap { checks =>
         checks.map {
           case ActiveHealthCheck(_, actor) => (actor ? GetAppHealth).mapTo[AppHealth]
         }
-      }(collection.breakOut)
+      }.toSeq
 
       Future.sequence(futureHealths).map { healths =>
         healths.flatMap(_.health).groupBy(_.instanceId).withDefaultValue(Nil)

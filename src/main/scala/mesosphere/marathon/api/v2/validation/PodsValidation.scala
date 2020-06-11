@@ -150,6 +150,7 @@ trait PodsValidation extends GeneralPurposeCombinators {
     validator[PodContainer] { container =>
       container.name is notEqualTo(Task.Id.Names.anonymousContainer)
       container.resources is resourceValidator
+      container.resourceLimits is optional(AppValidation.validResourceLimits(container.resources.cpus, container.resources.mem))
       container.endpoints is every(endpointValidator(pod.networks))
       container.image is optional(imageValidator(enabledFeatures, pod.secrets))
       container.environment is envValidator(strictNameValidation = false, pod.secrets, enabledFeatures)
@@ -157,6 +158,11 @@ trait PodsValidation extends GeneralPurposeCombinators {
       container.volumeMounts is every(volumeMountValidator(pod.volumes))
       container.artifacts is every(artifactValidator)
       container.linuxInfo is optional(state.LinuxInfo.validLinuxInfoForContainerRaml)
+      if (pod.legacySharedCgroups.exists(identity)) {
+        container.resourceLimits is isTrue("resourceLimits cannot be defined if legacySharedCgroups is enabled") { limits =>
+          limits.isEmpty
+        }
+      }
     }
 
   private def volumeValidator(containers: Seq[PodContainer]): Validator[PodVolume] =

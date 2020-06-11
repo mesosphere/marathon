@@ -83,7 +83,7 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
       val facade = AppMockFacade(host, port)
 
-      val shmSize = facade.get("/ipcshm").futureValue
+      val shmSize = facade.get("/ipcshm").futureValue.entityString
 
       shmSize
     }
@@ -181,11 +181,11 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val facade1 = AppMockFacade(host, port1)
       val facade2 = AppMockFacade(host, port2)
 
-      val shmSize1 = facade1.get(s"/ipcshm").futureValue
-      val shmSize2 = facade2.get(s"/ipcshm").futureValue
+      val shmSize1 = facade1.get(s"/ipcshm").futureValue.entityString
+      val shmSize2 = facade2.get(s"/ipcshm").futureValue.entityString
 
-      val ipcNs1 = facade1.get(s"/ipcns").futureValue
-      val ipcNs2 = facade2.get(s"/ipcns").futureValue
+      val ipcNs1 = facade1.get(s"/ipcns").futureValue.entityString
+      val ipcNs2 = facade2.get(s"/ipcns").futureValue.entityString
 
       (shmSize1, shmSize2, ipcNs1, ipcNs2)
     }

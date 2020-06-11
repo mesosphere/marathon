@@ -7,33 +7,35 @@ import akka.actor.ActorSystem
 import akka.stream.{ActorMaterializer, ActorMaterializerSettings}
 import mesosphere.UnitTest
 import mesosphere.marathon.api.{RestResource, TaskKiller, TestAuthFixture}
-import mesosphere.marathon.test.JerseyTest
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
+import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.plugin.auth.Identity
+import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state.PathId.StringPathId
 import mesosphere.marathon.state._
-import mesosphere.marathon.test.GroupCreation
+import mesosphere.marathon.test.{GroupCreation, JerseyTest}
+import org.apache.mesos
 import org.mockito.Matchers
 import org.mockito.Mockito._
+import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration._
 
-class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
+class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with Inside {
   case class Fixture(
       auth: TestAuthFixture = new TestAuthFixture,
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       taskKiller: TaskKiller = mock[TaskKiller],
-      config: MarathonConf = mock[MarathonConf],
+      config: MarathonConf = AllConf.withTestConfig("--deprecated_features", "text_plain_tasks"),
       groupManager: GroupManager = mock[GroupManager],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
       implicit val identity: Identity = mock[Identity]) {
@@ -57,9 +59,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
 
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
-      config.zkTimeoutDuration returns 5.seconds
-
-      val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(instance)
+      val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(Seq(instance))
       instanceTracker.instancesBySpec returns Future.successful(tasksByApp)
 
       val rootGroup = createRootGroup(apps = Map(app.id -> app))
@@ -68,16 +68,68 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       assert(app.servicePorts.size > instance.appTask.status.networkInfo.hostPorts.size)
 
       When("Getting the txt tasks index")
-      val response = asyncRequest { r => taskResource.indexTxt(auth.request, r) }
+      val response = asyncRequest { r => taskResource.indexTxt(req = auth.request, asyncResponse = r) }
 
       Then("The status should be 200")
       response.getStatus shouldEqual 200
     }
 
+    def parseTxtResponse(response: String): List[List[String]] =
+      response.trim.split("\n").iterator.map(_.split("\t").toList).toList
+
+    "list (txt) tasks with  mode outputs container network ips and ports" in new Fixture {
+      Given("a running instance of an app using container networks")
+      val app = AppDefinition(
+        "/foo".toAbsolutePath,
+        role = "*",
+        networks = Seq(ContainerNetwork("weave")),
+        container = Some(Container.Docker(
+          image = "alpine",
+          portMappings = Seq(
+            PortMapping(
+              name = Some("http"),
+              containerPort = 22,
+              hostPort = None,
+              servicePort = 20163),
+            PortMapping(
+              name = Some("https"),
+              containerPort = 6090,
+              hostPort = None,
+              servicePort = 13032)))))
+
+      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskWithBuilder()
+        .taskRunning()
+        .withNetworkInfo(
+          NetworkInfo(
+            hostName = "hostname",
+            hostPorts = Nil,
+            ipAddresses = Seq(mesos.Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress("10.11.12.13").build())))
+        .build()
+        .getInstance()
+
+      val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(Seq(instance))
+      instanceTracker.instancesBySpec returns Future.successful(tasksByApp)
+
+      val rootGroup = createRootGroup(apps = Map(app.id -> app))
+      groupManager.rootGroup() returns rootGroup
+
+      When("Getting the txt tasks index and including containerNetworks")
+      val responseLatest = asyncRequest { r => taskResource.indexTxt(containerNetworks = "*", req = auth.request, asyncResponse = r) }
+
+      Then("The status should be 200")
+      responseLatest.getStatus shouldEqual 200
+
+      And("the output should return the container ports used in container networks")
+      inside(parseTxtResponse(responseLatest.getEntity.toString)) {
+        case line1 :: line2 :: Nil =>
+          line1 shouldBe List("foo", "20163", "10.11.12.13:22")
+          line2 shouldBe List("foo", "13032", "10.11.12.13:6090")
+      }
+    }
+
     "list apps when there are no apps" in new Fixture {
       // Regression test for #4932
       Given("no apps")
-      config.zkTimeoutDuration returns 5.seconds
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
       groupManager.apps(any) returns Map.empty
 
@@ -104,8 +156,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val body = s"""{"ids": ["${taskId1.idString}", "${taskId2.idString}"]}"""
       val bodyBytes = body.toCharArray.map(_.toByte)
 
-      config.zkTimeoutDuration returns 5.seconds
-      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1, instance2)))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
       groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))
       groupManager.app(app2) returns Some(AppDefinition(app2, role = "*"))
@@ -140,8 +191,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val body = s"""{"ids": ["${container.idString}"]}"""
       val bodyBytes = body.toCharArray.map(_.toByte)
 
-      config.zkTimeoutDuration returns 5.seconds
-      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance)))
       taskKiller.kill(any, any, any)(any) returns Future.successful(Seq.empty[Instance])
       groupManager.app(any) returns None
 
@@ -171,8 +221,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val bodyBytes = body.toCharArray.map(_.toByte)
       val deploymentPlan = new DeploymentPlan("plan", createRootGroup(), createRootGroup(), Seq.empty[DeploymentStep], Timestamp.zero)
 
-      config.zkTimeoutDuration returns 5.seconds
-      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1, instance2))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1, instance2)))
       taskKiller.killAndScale(any, any)(any) returns Future.successful(deploymentPlan)
       groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))
       groupManager.app(app2) returns Some(AppDefinition(app2, role = "*"))
@@ -221,8 +270,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       val body = s"""{"ids": ["${taskId1.idString}"]}"""
       val bodyBytes = body.toCharArray.map(_.toByte)
 
-      config.zkTimeoutDuration returns 5.seconds
-      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instance1))
+      instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1)))
       instanceTracker.specInstances(app1) returns Future.successful(Seq(instance1))
       taskKiller.kill(Matchers.eq(app1), any, Matchers.eq(true))(any) returns Future.successful(List(instance1))
       groupManager.app(app1) returns Some(AppDefinition(app1, role = "*"))
@@ -297,7 +345,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       running.getStatus should be(auth.NotAuthenticatedStatus)
 
       When("one index as txt is fetched")
-      val cancel = asyncRequest { r => taskResource.indexTxt(req, r) }
+      val cancel = asyncRequest { r => taskResource.indexTxt(req = auth.request, asyncResponse = r) }
       Then("we receive a NotAuthenticated response")
       cancel.getStatus should be(auth.NotAuthenticatedStatus)
     }
@@ -320,7 +368,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       def materializerSettings = ActorMaterializerSettings(system)
       implicit val mat = ActorMaterializer(materializerSettings)
       override val taskKiller = new TaskKiller(
-        instanceTracker, groupManager, config, auth.auth, auth.auth, killService)
+        instanceTracker, groupManager, auth.auth, auth.auth, killService)
       override val taskResource = new TasksResource(
         instanceTracker,
         taskKiller,
@@ -332,7 +380,6 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest {
       )
 
       Given("the app exists")
-      config.zkTimeoutDuration returns 5.seconds
       groupManager.app(appId) returns Some(AppDefinition(appId, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
 

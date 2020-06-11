@@ -4,7 +4,7 @@ import treehugger.forest._
 import definitions._
 import mesosphere.raml.backend._
 import mesosphere.raml.backend.treehugger.{GeneratedFile, GeneratedObject, Visitor}
-import mesosphere.raml.ir.{ConstraintT, EnumT, FieldT, GeneratedClass, ObjectT, StringT, UnionT}
+import mesosphere.raml.ir.{ConstraintT, EnumT, FieldT, GeneratedClass, ObjectT, StringT, NumberT, UnionT}
 import org.raml.v2.api.RamlModelResult
 import org.raml.v2.api.model.v10.api.Library
 import org.raml.v2.api.model.v10.datamodel._
@@ -252,6 +252,8 @@ object RamlTypeGenerator {
                     ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()), serializeOnly = pragmaSerializeOnly(o))
                   case s: StringTypeDeclaration =>
                     StringT(s.name, Option(s.defaultValue()))
+                  case n: NumberTypeDeclaration =>
+                    NumberT(n.name, Option(n.defaultValue()).map(_.toDouble))
                   case t =>
                     sys.error(s"Unable to generate union types of non-object/string subtypes: ${u.name()} ${t.name()} ${t.`type`()}")
                 }

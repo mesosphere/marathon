@@ -11,7 +11,7 @@ import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.test.GroupCreation
 import org.eclipse.jetty.servlets.EventSource.Emitter
 import org.mockito.ArgumentCaptor

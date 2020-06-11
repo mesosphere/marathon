@@ -6,6 +6,7 @@ import akka.actor.ActorSystem
 import com.google.common.util.concurrent.{Service, ServiceManager}
 import com.google.inject.{Guice, Module}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.ZookeeperConf.ZkUrl
 import mesosphere.marathon.api.LeaderProxyFilterModule
 import org.eclipse.jetty.servlets.EventSourceServlet
 
@@ -15,12 +16,12 @@ import mesosphere.marathon.api.MarathonRestModule
 import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.core.CoreGuiceModule
 import mesosphere.marathon.core.base.{CrashStrategy, toRichRuntime}
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.LibMesos
 import org.slf4j.bridge.SLF4JBridgeHandler
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
+import scala.jdk.CollectionConverters._
 
 class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
   private var running = false
@@ -42,7 +43,15 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     System.exit(CrashStrategy.IncompatibleLibMesos.code)
   }
 
-  val cliConf = new AllConf(args)
+  val cliConf: AllConf = try {
+    new AllConf(args)
+  } catch {
+    case e: Throwable =>
+      logger.error("Invalid command line flag", e)
+      Runtime.getRuntime.exit(CrashStrategy.InvalidCommandLineFlag.code)
+      ???
+  }
+
   val actorSystem = ActorSystem("marathon")
 
   val marathonRestModule = new MarathonRestModule()
@@ -69,7 +78,8 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     setConcurrentContextDefaults()
     Formats.configureJacksonSerializer()
 
-    logger.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref} with ${args.mkString(" ")}")
+    logger.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref}")
+    logger.info(Main.configToLogLines(cliConf))
 
     api.HttpBindings.apply(
       httpModule.servletContextHandler,
@@ -180,6 +190,23 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
 
 object Main {
   /**
+    * Serialize configuration in form that can be presented in a log
+    */
+  def configToLogLines(conf: AllConf): String = {
+    val s = new StringBuilder
+    s.append("Marathon configuration: (* suffix means value was explicitly supplied, and not defaulted)\n")
+    ScallopHelper.scallopOptions(conf).filter(_.isDefined).map { opt =>
+      val wasSupplied = if (opt.isSupplied) " (*)" else ""
+      val redactedValue = opt() match {
+        case z: ZkUrl => z.redactedConnectionString
+        case o => o.toString
+      }
+      s.append(s" - ${opt.name}${wasSupplied} = ${redactedValue}\n")
+    }
+    s.result()
+  }
+
+  /**
     * Given environment variables starting with MARATHON_, convert to a series of arguments.
     *
     * If environment variable specifies an empty string, treat to boolean flag (no argument)
@@ -187,7 +214,7 @@ object Main {
     * @returns A list of args intended to be arg-parsed
     */
   def envToArgs(env: Map[String, String]): Seq[String] = {
-    env.flatMap {
+    env.iterator.flatMap {
       case (k, v) if k.startsWith("MARATHON_APP_") =>
         /* Marathon sets passes several environment variables, prefixed with MARATHON_APP_, to Marathon instances. We
          * need to explicitly ignore these and not treat them as parameters in the case of Marathon launching other
@@ -200,7 +227,7 @@ object Main {
         else
           Seq(argName, v)
       case _ => Nil
-    }(collection.breakOut)
+    }.to(Seq)
   }
 
   def main(args: Array[String]): Unit = {

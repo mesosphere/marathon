@@ -81,7 +81,7 @@ class DeploymentFormatsTest extends UnitTest with GroupCreation {
       fieldMap.keySet should be(Set("id", "steps", "version"))
 
       val action = ((json \ "steps")(0) \ "actions")(0)
-      val actionFields: Set[String] = action.as[JsObject].fields.map(_._1)(collection.breakOut)
+      val actionFields: Set[String] = action.as[JsObject].fields.iterator.map(_._1).toSet
       actionFields should be(Set("action", "app"))
     }
 

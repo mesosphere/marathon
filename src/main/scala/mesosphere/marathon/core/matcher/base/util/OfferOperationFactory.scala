@@ -5,7 +5,7 @@ import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.ReservationLabels
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.VolumeMount
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.mesos.protos.ResourceProviderID
 import org.apache.mesos.Protos.Resource.ReservationInfo
 import org.apache.mesos.{Protos => Mesos}
@@ -78,7 +78,7 @@ class OfferOperationFactory(
         .setType(Mesos.Offer.Operation.Type.RESERVE)
         .setReserve(reserve)
         .build()
-    }.to[Seq]
+    }.to(Seq)
   }
 
   def createVolumes(
@@ -140,6 +140,6 @@ class OfferOperationFactory(
         .setType(Mesos.Offer.Operation.Type.CREATE)
         .setCreate(create)
         .build()
-    }.to[Seq]
+    }.to(Seq)
   }
 }

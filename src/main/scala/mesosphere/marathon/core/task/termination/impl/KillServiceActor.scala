@@ -138,7 +138,7 @@ private[impl] class KillServiceActor(
       .filterNot(instance => inFlight.keySet.contains(instance.instanceId) || instance.tasksMap.isEmpty)
       .foreach { instance =>
         logger.info(s"Process kill for ${instance.instanceId}:{${instance.state.condition}, ${instance.state.goal}} with tasks ${instance.tasksMap.values.map(_.taskId).toSeq}")
-        val taskIds: IndexedSeq[Id] = instance.tasksMap.values.withFilter(!_.isTerminal).map(_.taskId)(collection.breakOut)
+        val taskIds: IndexedSeq[Id] = instance.tasksMap.values.iterator.filter(!_.isTerminal).map(_.taskId).to(IndexedSeq)
 
         if (taskIds.nonEmpty) {
           instancesToKill.update(

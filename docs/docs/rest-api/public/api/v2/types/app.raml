@@ -278,6 +278,11 @@ types:
         type: AppResidency
         description:
           This property is deprecated and it has no effect.
+      resourceLimits?:
+        type: resources.ResourceLimits
+        description: |
+          Specify optional resource limits for a container, allowing the task to consume more cpu and memory resources
+          than requested, if available.
       requirePorts?:
         type: boolean
         description: |

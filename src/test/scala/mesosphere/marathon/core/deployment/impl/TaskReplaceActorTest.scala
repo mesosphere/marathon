@@ -23,6 +23,7 @@ import mesosphere.marathon.state._
 import mesosphere.marathon.util.CancellableOnce
 import org.mockito.Mockito._
 import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Millis, Span}
 
 import scala.concurrent.{Future, Promise}
 
@@ -156,11 +157,13 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       eventually {
         verify(f.tracker, once).setGoal(any, any, any)
+        ()
       }
 
       ref ! f.instanceChanged(newApp, Running)
       eventually {
         verify(f.tracker, times(2)).setGoal(any, any, any)
+        ()
       }
 
       ref ! f.instanceChanged(newApp, Running)
@@ -170,6 +173,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       eventually {
         verify(f.tracker, times(3)).setGoal(any, any, any)
+        ()
       }
       verify(f.queue).resetDelay(newApp)
 
@@ -208,18 +212,21 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // ceiling(minimumHealthCapacity * 3) = 2 are left running
       eventually{
         verify(f.tracker, once).setGoal(any, any, any)
+        ()
       }
 
       // first new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(2)).setGoal(any, any, any)
+        ()
       }
 
       // second new task becomes healthy and the last old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(3)).setGoal(any, any, any)
+        ()
       }
 
       // third new task becomes healthy
@@ -233,6 +240,54 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       verify(f.tracker).setGoal(instanceC.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
 
       expectTerminated(ref)
+    }
+
+    "respect upgrade strategy" in {
+      Given("An app with health checks, 1 task of new version already started but not passing health checks yet")
+      val f = new Fixture
+
+      val app = AppDefinition(
+        id = AbsolutePathId("/myApp"),
+        role = "*",
+        instances = 2,
+        versionInfo = VersionInfo.forNewConfig(Timestamp(0)),
+        healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))),
+        upgradeStrategy = UpgradeStrategy(0.50, 0)
+      )
+      val newApp = app.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(1)))
+
+      val instanceA = f.healthyInstance(app)
+      // instance B was already started during deployment started by a previous leader but is not healthy yet
+      val instanceB = f.healthyInstance(newApp, healthy = false)
+
+      f.tracker.specInstancesSync(app.id, readAfterWrite = true) returns Seq(instanceA, instanceB)
+      f.tracker.get(instanceA.instanceId) returns Future.successful(Some(instanceA))
+      f.tracker.get(instanceB.instanceId) returns Future.successful(Some(instanceB))
+
+      val promise = Promise[Unit]()
+
+      f.queue.add(newApp, 1) returns Future.successful(Done)
+      val ref = f.replaceActor(newApp, promise)
+      watch(ref)
+
+      // deployment should not complete within 1s, that's also a good way to wait for 1s to check for next assertion
+      assert(promise.future.isReadyWithin(timeout = Span(1000, Millis)) == false)
+      // that's the core of this test: we haven't replaced task yet, see MARATHON-8716
+      verify(f.tracker, never).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+
+      // we can now make this new instance healthy
+      ref ! f.healthChanged(newApp, healthy = true)
+      // and we can check deployment continue as usual
+      eventually {
+        verify(f.tracker, times(1)).setGoal(any, any, any)
+        ()
+      }
+      eventually {
+        verify(f.queue, times(1)).add(newApp, 1)
+        ()
+      }
+
+      // and we don't need to wait for end of deployment
     }
 
     "replace tasks during rolling upgrade *without* over-capacity" in {
@@ -270,12 +325,14 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       // ceiling(minimumHealthCapacity * 3) = 2 are left running
       eventually {
         verify(f.tracker, once).setGoal(any, any, any)
+        ()
       }
 
       // first new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(2)).setGoal(any, any, any)
+        ()
       }
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
@@ -285,6 +342,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(3)).setGoal(any, any, any)
+        ()
       }
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
@@ -340,6 +398,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, once).setGoal(any, any, any)
+        ()
       }
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
@@ -349,6 +408,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(2)).setGoal(any, any, any)
+        ()
       }
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
@@ -358,6 +418,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(3)).setGoal(any, any, any)
+        ()
       }
       queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
 
@@ -407,6 +468,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, once).setGoal(any, any, any)
+        ()
       }
       eventually {
         queueOrder.verify(f.queue).add(_: AppDefinition, 1)
@@ -416,6 +478,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(2)).setGoal(any, any, any)
+        ()
       }
       queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
 
@@ -423,6 +486,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(3)).setGoal(any, any, any)
+        ()
       }
       queueOrder.verify(f.queue, never).add(_: AppDefinition, 1)
 
@@ -467,7 +531,8 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
 
       // one task is killed directly because we are over capacity
       eventually {
-        verify(f.tracker).setGoal(instanceA.instanceId, Goal.Decommissioned, GoalChangeReason.Upgrading)
+        verify(f.tracker).setGoal(any, eq(Goal.Decommissioned), eq(GoalChangeReason.Upgrading))
+        ()
       }
 
       // the kill is confirmed (see answer above) and the first new task is queued
@@ -479,24 +544,29 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(2)).setGoal(any, any, any)
+        ()
       }
       eventually {
         verify(f.queue, times(2)).add(newApp, 1)
+        ()
       }
 
       // second new task becomes healthy and another old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(3)).setGoal(any, any, any)
+        ()
       }
       eventually {
         verify(f.queue, times(3)).add(newApp, 1)
+        ()
       }
 
       // third new task becomes healthy and last old task is killed
       ref ! f.healthChanged(newApp, healthy = true)
       eventually {
         verify(f.tracker, times(4)).setGoal(any, any, any)
+        ()
       }
 
       promise.future.futureValue
@@ -651,24 +721,28 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
       ref ! InstanceHealthChanged(newInstanceId, newApp.version, newApp.id, healthy = Some(false))
       eventually {
         verify(f.tracker, never).setGoal(any, any, any)
+        ()
       }
 
       //unready
       ref ! ReadinessCheckResult(ReadinessCheck.DefaultName, newTaskId, ready = false, None)
       eventually {
         verify(f.tracker, never).setGoal(any, any, any)
+        ()
       }
 
       //healthy
       ref ! InstanceHealthChanged(newInstanceId, newApp.version, newApp.id, healthy = Some(true))
       eventually {
         verify(f.tracker, never).setGoal(any, any, any)
+        ()
       }
 
       //ready
       ref ! ReadinessCheckResult(ReadinessCheck.DefaultName, newTaskId, ready = true, None)
       eventually {
         verify(f.tracker, once).setGoal(any, any, any)
+        ()
       }
 
       promise.future.futureValue
@@ -741,6 +815,12 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
         .getInstance()
     }
 
+    def healthyInstance(app: AppDefinition, healthy: Boolean = true): Instance = {
+      TestInstanceBuilder.newBuilderForRunSpec(app, now = app.version)
+        .addTaskWithBuilder().taskRunning().asHealthyTask(healthy).withNetworkInfo(hostName = Some(hostName), hostPorts = hostPorts).build()
+        .getInstance()
+    }
+
     def readinessResults(instance: Instance, checkName: String, ready: Boolean): (Cancellable, Source[ReadinessCheckResult, Cancellable]) = {
       val cancellable = new CancellableOnce(() => ())
       val source = Source(instance.tasksMap.values.map(task => ReadinessCheckResult(checkName, task.taskId, ready, None)).toList).
@@ -759,6 +839,7 @@ class TaskReplaceActorTest extends AkkaUnitTest with Eventually {
     def healthChanged(app: AppDefinition, healthy: Boolean): InstanceHealthChanged = {
       InstanceHealthChanged(Instance.Id.forRunSpec(app.id), app.version, app.id, healthy = Some(healthy))
     }
+
     def replaceActor(app: AppDefinition, promise: Promise[Unit]): ActorRef = system.actorOf(
       TaskReplaceActor.props(deploymentsManager, deploymentStatus, queue,
         tracker, system.eventStream, readinessCheckExecutor, app, promise)

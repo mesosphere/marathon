@@ -20,12 +20,12 @@ import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
 import play.api.libs.json.Json
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 import scala.async.Async._
+import scala.jdk.CollectionConverters._
 
 @Path("v2/groups")
 @Produces(Array(MediaType.APPLICATION_JSON))
@@ -80,7 +80,7 @@ class GroupsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
 
-      val embeds: Set[String] = if (embed.isEmpty) defaultEmbeds else embed
+      val embeds: Set[String] = if (embed.isEmpty) defaultEmbeds else embed.asScala.toSet
       val (appEmbed, groupEmbed) = resolveAppGroup(embeds)
 
       //format:off

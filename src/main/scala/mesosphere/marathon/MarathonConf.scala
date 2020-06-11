@@ -154,22 +154,8 @@ trait MarathonConf
     str.split(',').map(_.trim).toSet
 
   private[this] def validateDefaultAcceptedResourceRoles(str: String): Boolean = {
-    def expectedResourceRoles: Set[String] = mesosRole.toOption match {
-      case Some(role) => Set(role, ResourceRole.Unreserved)
-      case None => Set(ResourceRole.Unreserved)
-    }
-
-    val parsed = parseDefaultAcceptedResourceRoles(str)
-    require(BuildInfo.version.minor < 10, "This flag has been removed in Marathon 1.10.0; use --accepted_resource_roles_default_behavior, instead.")
-
-    // throw exceptions for better error messages
-    require(parsed.nonEmpty, "--default_accepted_resource_roles must not be empty")
-    require(
-      parsed.forall(expectedResourceRoles),
-      "--default_accepted_resource_roles contains roles for which we will not receive offers: " +
-        (parsed -- expectedResourceRoles).mkString(", "))
-
-    true
+    require(BuildInfo.version.minor < 10, "The flag '--default_accepted_resource_roles' has been removed in Marathon 1.10.0; use --accepted_resource_roles_default_behavior, instead.")
+    false
   }
 
   @silent("deprecated")
@@ -194,10 +180,6 @@ trait MarathonConf
     name = "accepted_resource_roles_default_behavior",
     descr = "Default behavior for acceptedResourceRoles if not explicitly set on a service." +
       "This defaults to 'any', which allows either unreserved or reserved resources",
-    validate = { _ =>
-      require(!(defaultAcceptedResourceRoles.isSupplied && acceptedResourceRolesDefaultBehavior.isSupplied), "You may not specify both --default_accepted_resource_roles and --accepted_resource_roles_default_behavior")
-      true
-    },
     default = deriveDefaultAcceptedResourceRolesDefaultBehavior)(acceptedResourceRolesDefaultBehaviorConverter)
 
   lazy val gracefulShutdownTimeout = opt[Long] (
@@ -355,7 +337,7 @@ trait MarathonConf
   //  we must set gc actor threshold to not trigger it too early, 2 * max deployments looks like a good default
   validate(maxRunningDeployments, groupVersionsCacheSize) { (maxDeployments, versionsCacheSize) =>
     if (versionsCacheSize > 2 * maxDeployments) {
-      Right(Unit)
+      Right(())
     } else {
       Left(s"${groupVersionsCacheSize.name} must be more than 2 times higher than ${maxRunningDeployments.name}")
     }

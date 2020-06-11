@@ -3,7 +3,7 @@ package api.v2.validation
 
 import com.wix.accord.{Failure, Result, Validator}
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.raml.{Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, Image, ImageType, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodEphemeralVolume, PodPersistentVolume, PodPlacementPolicy, PodSchedulingPolicy, PodSecretVolume, PodUpgradeStrategy, Resources, SecretDef, UnreachableDisabled, UnreachableEnabled, VolumeMount}
+import mesosphere.marathon.raml.{Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, Image, ImageType, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodEphemeralVolume, PodPersistentVolume, PodPlacementPolicy, PodSchedulingPolicy, PodSecretVolume, PodUpgradeStrategy, ResourceLimitNumber, ResourceLimitUnlimited, ResourceLimits, Resources, SecretDef, UnreachableDisabled, UnreachableEnabled, VolumeMount}
 import mesosphere.marathon.state.PersistentVolume
 import mesosphere.marathon.util.{RoleSettings, SemanticVersion}
 import mesosphere.{UnitTest, ValidationTestLike}
@@ -453,6 +453,43 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       validator(networkedPod(Seq(
         podContainer(endpoints = Seq(Endpoint("ep")))
       ), hostNetwork)) should be(aSuccess)
+    }
+  }
+
+  "resourceLimits validation" should {
+    def withResourceLimits(pod: Pod, cpus: Option[Double] = None, mem: Option[Double] = None): Pod = {
+      def doubleToResourceLimit(d: Double) = if (d.isInfinite()) {
+        ResourceLimitUnlimited("unlimited")
+      } else {
+        ResourceLimitNumber(d)
+      }
+
+      pod.copy(containers = pod.containers.map { container =>
+        container.copy(resourceLimits = Some(ResourceLimits(cpus = cpus.map(doubleToResourceLimit), mem = mem.map(doubleToResourceLimit))))
+      })
+    }
+
+    "succeed when resource limits are >= requested resources" in new Fixture {
+      validator(withResourceLimits(validPod, mem = Some(256.0))) should be(aSuccess)
+      validator(withResourceLimits(validPod, mem = Some(300.0))) should be(aSuccess)
+      validator(withResourceLimits(validPod, mem = Some(Double.PositiveInfinity))) should be(aSuccess)
+
+      validator(withResourceLimits(validPod, cpus = Some(2.0))) should be(aSuccess)
+      validator(withResourceLimits(validPod, cpus = Some(10.0))) should be(aSuccess)
+      validator(withResourceLimits(validPod, cpus = Some(Double.PositiveInfinity))) should be(aSuccess)
+    }
+
+    "fail when resource limits are less than requested resources" in new Fixture {
+      validator(withResourceLimits(validPod, mem = Some(100))) should haveViolations(
+        "/containers(0)/resourceLimits/mem" -> "resource limit must be greater than or equal to requested resource (128.0)")
+      validator(withResourceLimits(validPod, cpus = Some(0.5))) should haveViolations(
+        "/containers(0)/resourceLimits/cpus" -> "resource limit must be greater than or equal to requested resource (1.0)")
+    }
+
+    "fail when resource limits are specified and sharedCgroups is enabled" in new Fixture {
+      val podWithSharedCgroups = validPod.copy(legacySharedCgroups = Some(true))
+      validator(withResourceLimits(podWithSharedCgroups, cpus = Some(Double.PositiveInfinity))) should haveViolations(
+        "/containers(0)/resourceLimits" -> "resourceLimits cannot be defined if legacySharedCgroups is enabled")
     }
   }
 }

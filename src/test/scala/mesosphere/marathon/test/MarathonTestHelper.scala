@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package test
 
+import java.io.{File, FileNotFoundException}
 import java.time.Clock
 
 import akka.stream.Materializer
@@ -20,7 +21,7 @@ import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state.Container.PortMapping
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.{AppRepository, GroupRepository, InstanceRepository, PodRepository}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.mesos.protos
 import mesosphere.mesos.protos.{FrameworkID, OfferID, Range, RangesResource, Resource, ScalarResource, SlaveID}
 import mesosphere.mesos.protos.Implicits._
@@ -53,7 +54,6 @@ object MarathonTestHelper {
     maxInstancesPerOffer: Int = 1,
     minReviveOffersInterval: Long = 100,
     mesosRole: Option[String] = None,
-    acceptedResourceRoles: Option[Set[String]] = None,
     envVarsPrefix: Option[String] = None,
     maxZkNodeSize: Option[Int] = None,
     internalStorageBackend: Option[String] = None): AllConf = {
@@ -66,7 +66,6 @@ object MarathonTestHelper {
     )
 
     mesosRole.foreach(args ++= Seq("--mesos_role", _))
-    acceptedResourceRoles.foreach(v => args ++= Seq("--default_accepted_resource_roles", v.mkString(",")))
     maxZkNodeSize.foreach(size => args ++= Seq("--zk_max_node_size", size.toString))
     envVarsPrefix.foreach(args ++= Seq("--env_vars_prefix", _))
     internalStorageBackend.foreach(backend => args ++= Seq("--internal_store_backend", backend))
@@ -131,7 +130,7 @@ object MarathonTestHelper {
     val unavailableOfferBuilder = Unavailability.newBuilder()
       .setStart(TimeInfo.newBuilder().setNanoseconds(startTime.nanos))
 
-    if (duration.isFinite()) {
+    if (duration.isFinite) {
       unavailableOfferBuilder.setDuration(DurationInfo.newBuilder().setNanoseconds(duration.toNanos))
     }
 
@@ -483,7 +482,7 @@ object MarathonTestHelper {
           case _ => Docker(image = "busybox")
         }
 
-        app.copy(container = Some(docker), networks = networks.to[Seq])
+        app.copy(container = Some(docker), networks = networks.to(Seq))
       }
 
       def withPortMappings(newPortMappings: Seq[PortMapping]): AppDefinition = {
@@ -519,7 +518,7 @@ object MarathonTestHelper {
             .build)
         }
         val taskStatus = mesosStatus(task.taskId, task.status.mesosStatus, networkInfos)
-        val ipAddresses: Seq[Mesos.NetworkInfo.IPAddress] = networkInfos.flatMap(_.getIpAddressesList)(collection.breakOut)
+        val ipAddresses: Seq[Mesos.NetworkInfo.IPAddress] = networkInfos.iterator.flatMap(_.getIpAddressesList.asScala).toSeq
         val initialNetworkInfo = core.task.state.NetworkInfo(
           hostName.getOrElse("host.some"),
           hostPorts = hostPorts,
@@ -532,4 +531,14 @@ object MarathonTestHelper {
     }
   }
 
+  def resourcePath(resourceName: String): File = {
+    val classLoader = getClass.getClassLoader
+
+    Option(classLoader.getResource(resourceName)) match {
+      case Some(fileName) =>
+        new File(fileName.getFile)
+      case None =>
+        throw new FileNotFoundException(s"Could not find resource ${resourceName}")
+    }
+  }
 }

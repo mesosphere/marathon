@@ -91,12 +91,12 @@ def detectLogFormat(logFiles: Seq[Path])(implicit mat: Materializer): Option[Log
         val linesSample = await(
           FileIO.fromPath(input.toNIO)
             .via(warningLineSplitter(input, 128000))
-            .take(100)
+            .take(1000)
             .map(_.utf8String)
             .runWith(Sink.seq))
 
         val maybeFormat = (for {
-          line <- linesSample.take(100)
+          line <- linesSample.take(1000)
           format <- LogFormat.tryMatch(line)
         } yield format).headOption
 
@@ -145,7 +145,7 @@ def generateLogstashConfig(inputPath: Path, targetPath: Path, logFormat: LogForm
   writeFiles(
     printing / "10-input.conf" -> tcpReader,
     printing / "15-filters-format.conf" -> logFormat.unframe,
-    printing / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
+    printing / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon.conf")),
     printing / "30-output.conf" -> (read!(pwd / "conf" / "output-console.conf")))
 
   for {
@@ -158,7 +158,7 @@ def generateLogstashConfig(inputPath: Path, targetPath: Path, logFormat: LogForm
       "FILE" -> util.escapeString(logPath.toString),
       "SINCEDB" -> util.escapeString((targetPath / s"since-db-${host}.db").toString),
       "CODEC" -> logFormat.codec,
-      "EXTRA" -> s"""|"add_field" => {
+      "EXTRA" -> s"""|add_field => {
                      |  "file_host" => ${util.escapeString(host)}
                      |}
                      |""".stripMargin
@@ -169,14 +169,14 @@ def generateLogstashConfig(inputPath: Path, targetPath: Path, logFormat: LogForm
   writeFiles(
     loading / "11-filters-host.conf" -> (read!(pwd / "conf" / "filter-overwrite-host-with-file-host.conf")),
     loading / "15-filters-format.conf" -> logFormat.unframe,
-    loading / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
+    loading / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon.conf")),
     loading / "30-output.conf" -> (read!(pwd / "conf" / "output-elasticsearch.conf")),
     target / "data-path.txt" -> inputPath.toString)
 
   writeFiles(
     json / "11-filters-host.conf" -> (read!(pwd / "conf" / "filter-overwrite-host-with-file-host.conf")),
     json / "15-filters-format.conf" -> logFormat.unframe,
-    json / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
+    json / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon.conf")),
     json / "30-output.conf" -> renderTemplate(
       pwd / "conf" / "output-json-ld.conf.template",
       "FILE" ->  util.escapeString((target / "output.json.ld").toString)))

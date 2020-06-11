@@ -157,12 +157,12 @@ object ReviveOffersStreamLogic extends StrictLogging {
         val newlyWanted = newState
           .iterator
           .collect { case (role, v) if v.roleState.isWanted && !lastState.get(role).exists(_.roleState.isWanted) => role }
-          .to[Set]
+          .to(Set)
 
         val newlyNotWanted = newState
           .iterator
           .collect { case (role, v) if !v.roleState.isWanted && lastState.get(role).exists(_.roleState.isWanted) => role }
-          .to[Set]
+          .to(Set)
         directives += UpdateFramework(roleState, newlyRevived = newlyWanted, newlySuppressed = newlyNotWanted)
       }
 
@@ -234,7 +234,6 @@ object ReviveOffersStreamLogic extends StrictLogging {
       repeatIn = newRepeatIn
 
       if (rolesForReviveRepetition.isEmpty) {
-        logger.info(s"Found no roles suitable for revive repetition.")
         Nil
       } else {
         logger.info(s"Repeat revive for roles $rolesForReviveRepetition.")

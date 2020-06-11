@@ -4,6 +4,7 @@ package core.task
 import java.util.{Base64, UUID}
 
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.condition.Condition.Terminal
 import mesosphere.marathon.core.instance.Instance
@@ -15,10 +16,9 @@ import org.apache.mesos
 import org.apache.mesos.Protos.TaskState._
 import org.apache.mesos.Protos.{TaskState, TaskStatus}
 import org.apache.mesos.{Protos => MesosProtos}
+import play.api.libs.json._
 
 import scala.concurrent.duration.FiniteDuration
-import mesosphere.marathon.api.v2.json.Formats._
-import play.api.libs.json._
 
 /**
   * The state for launching a task. This might be a launched task or a reservation for launching a task or both.
@@ -470,7 +470,7 @@ object Tasks {
     * @return new tasks with condition Provisioned
     */
   def provisioned(taskIds: Seq[Task.Id], taskNetworkInfos: Map[Task.Id, NetworkInfo], version: Timestamp, now: Timestamp): Map[Task.Id, Task] = {
-    taskIds.map { taskId =>
+    taskIds.iterator.map { taskId =>
       val networkInfo = taskNetworkInfos.getOrElse(
         taskId,
         throw new IllegalStateException("failed to retrieve a task network info"))
@@ -479,7 +479,7 @@ object Tasks {
         runSpecVersion = version,
         status = Task.Status(stagedAt = now, condition = Condition.Provisioned, networkInfo = networkInfo)
       )
-    }(collection.breakOut)
+    }.toMap
   }
   def provisioned(taskId: Task.Id, networkInfo: NetworkInfo, version: Timestamp, now: Timestamp): Map[Task.Id, Task] =
     provisioned(Seq(taskId), Map(taskId -> networkInfo), version, now)
@@ -490,7 +490,7 @@ object Tasks {
     * See [[mesosphere.marathon.core.appinfo.EnrichedTask.singleFromInstance()]] for an example.
     */
   def unapplySeq(iter: Map[Task.Id, Task]): Option[Seq[Task]] = {
-    if (iter.nonEmpty) Some(iter.values.to[Seq])
+    if (iter.nonEmpty) Some(iter.values.to(Seq))
     else None
   }
 }

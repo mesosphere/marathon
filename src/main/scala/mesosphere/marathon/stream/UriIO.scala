@@ -1,6 +1,8 @@
 package mesosphere.marathon
 package stream
 
+import java.io.FileNotFoundException
+
 import com.amazonaws.auth.{AWSCredentials, AWSStaticCredentialsProvider, BasicAWSCredentials}
 import java.net.URI
 import java.nio.file.Paths
@@ -8,14 +10,14 @@ import java.nio.file.Paths
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.ContentTypes
 import akka.stream.Materializer
-import akka.stream.alpakka.s3.S3Settings
-import akka.stream.alpakka.s3.acl.CannedAcl
-import akka.stream.alpakka.s3.impl.MetaHeaders
-import akka.stream.alpakka.s3.scaladsl.S3Client
+import akka.stream.alpakka.s3.{MetaHeaders, S3Attributes, S3Ext, S3Settings}
+import akka.stream.alpakka.s3.scaladsl.S3
 import akka.stream.scaladsl.{FileIO, Source, Sink => ScalaSink}
 import akka.util.ByteString
 import akka.Done
+import akka.stream.alpakka.s3.headers.CannedAcl
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import com.amazonaws.regions.AwsRegionProvider
 import com.typesafe.scalalogging.StrictLogging
 import com.wix.accord.Validator
 import com.wix.accord.dsl._
@@ -54,8 +56,14 @@ object UriIO extends StrictLogging {
           .fromPath(Paths.get(uri.getPath))
           .mapMaterializedValue(_.map(res => res.status.getOrElse(throw res.getError)))
       case "s3" =>
-        s3Client(uri)
-          .download(uri.getHost, uri.getPath.substring(1))
+        S3.download(uri.getHost, uri.getPath.substring(1))
+          .withAttributes(S3Attributes.settings(s3SettingsFromUri(uri)))
+          .flatMapConcat {
+            case Some((data, _)) =>
+              data
+            case None =>
+              throw new FileNotFoundException(s"Object ${uri.getPath} was not found")
+          }
           .mapMaterializedValue(_ => Future.successful(Done))
       case unknown => throw new RuntimeException(s"Scheme not supported: $unknown")
     }
@@ -75,13 +83,13 @@ object UriIO extends StrictLogging {
       case "s3" =>
         logger.info(s"s3location: bucket:${uri.getHost}, path:${uri.getPath}")
 
-        s3Client(uri)
-          .multipartUpload(
-            bucket = uri.getHost,
-            key = uri.getPath.substring(1),
-            metaHeaders = MetaHeaders(Map.empty),
-            contentType = ContentTypes.`application/octet-stream`,
-            cannedAcl = CannedAcl.BucketOwnerRead)
+        S3.multipartUpload(
+          bucket = uri.getHost,
+          key = uri.getPath.substring(1),
+          metaHeaders = MetaHeaders(Map.empty),
+          contentType = ContentTypes.`application/octet-stream`,
+          cannedAcl = CannedAcl.BucketOwnerRead
+        ).withAttributes(S3Attributes.settings(s3SettingsFromUri(uri)))
           .mapMaterializedValue(_.map(_ => Done))
       case unknown => throw new RuntimeException(s"Scheme not supported: $unknown")
     }
@@ -114,7 +122,7 @@ object UriIO extends StrictLogging {
     * - use credential defined via system configuration in akka.stream.alpakka.s3
     * @return The S3Client for the defined URI.
     */
-  private[this] def s3Client(uri: URI)(implicit actorSystem: ActorSystem, materializer: Materializer): S3Client = {
+  private[this] def s3SettingsFromUri(uri: URI)(implicit actorSystem: ActorSystem, materializer: Materializer): S3Settings = {
     val params = parseParams(uri)
     val region = params.getOrElse("region", "us-east-1")
     val credentials: AWSCredentials = {
@@ -131,11 +139,17 @@ object UriIO extends StrictLogging {
         S3Settings().credentialsProvider.getCredentials
       }
     }
-    S3Client(new AWSStaticCredentialsProvider(credentials), region)
+    S3Ext.get(actorSystem).settings
+      .withCredentialsProvider(new AWSStaticCredentialsProvider(credentials))
+      .withS3RegionProvider(new StaticRegionProvider(region))
+  }
+
+  private class StaticRegionProvider(region: String) extends AwsRegionProvider {
+    override def getRegion: String = region
   }
 
   private[this] def parseParams(uri: URI): Map[String, String] = {
-    Option(uri.getQuery).getOrElse("").split("&").collect { case QueryParam(k, v) => k -> v }(collection.breakOut)
+    Option(uri.getQuery).getOrElse("").split("&").iterator.collect { case QueryParam(k, v) => k -> v }.toMap
   }
 
   private[this] object QueryParam {

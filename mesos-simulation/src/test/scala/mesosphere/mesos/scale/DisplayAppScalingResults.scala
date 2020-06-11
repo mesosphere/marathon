@@ -34,9 +34,9 @@ object DisplayAppScalingResults {
     val allMetrics: Seq[JsObject] = ScalingTestResultFiles.readJson[Seq[JsObject]](fileName)
 
     def subMetric(name: String): Map[String, JsObject] = {
-      (allMetrics.last \ name).as[JsObject].value.map {
+      (allMetrics.last \ name).as[JsObject].value.iterator.map {
         case (name, value) => name -> value.as[JsObject]
-      }(collection.breakOut)
+      }.toMap
     }
 
     println()

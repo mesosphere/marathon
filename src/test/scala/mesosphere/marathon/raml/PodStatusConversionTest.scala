@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.Reservation
 import mesosphere.marathon.core.pod.{ContainerNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task.state.NetworkInfoPlaceholder
 import mesosphere.marathon.state.{AbsolutePathId, PathId, Timestamp}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import org.apache.mesos.Protos
 
 import scala.concurrent.duration._
@@ -17,49 +17,16 @@ class PodStatusConversionTest extends UnitTest {
 
   import PodStatusConversionTest._
 
-  "PodConversion" should {
-    val pod = basicOneContainerPod.copy(linuxInfo = Some(state.LinuxInfo(seccomp = None, ipcInfo = Some(state.IPCInfo(ipcMode = state.IpcMode.Private, shmSize = Some(32))))))
-
-    "keep linux info on executor" in {
-      val ramlPod = pod.toRaml
-      val ramlLinuxInfo = Some(LinuxInfo(seccomp = None, ipcInfo = Some(IPCInfo(mode = IPCMode.Private, shmSize = Some(32)))))
-      ramlPod.linuxInfo should be(ramlLinuxInfo)
-    }
-
-    behave like convertToRamlAndBack(pod)
-
-  }
-
-  def convertToRamlAndBack(pod: PodDefinition): Unit = {
-    s"pod ${pod.id.toString} is written to json and can be read again via formats" in {
-      Given("An pod")
-      val ramlPod = pod.toRaml[Pod]
-
-      When("The pod is translated to json and read back from formats")
-      val readPod: PodDefinition = withValidationClue {
-        Raml.fromRaml(ramlPod)
-      }
-      Then("The pod is identical")
-      readPod should be(pod)
-    }
-  }
-
-  def withValidationClue[T](f: => T): T = scala.util.Try { f }.recover {
-    // handle RAML validation errors
-    case vfe: ValidationFailedException => fail(vfe.failure.violations.toString())
-    case th => throw th
-  }.get
-
   "PodStatusConversion" should {
     "multiple tasks with multiple container networks convert to proper network status" in {
 
-      def fakeContainerNetworks(netmap: Map[String, String]): Seq[Protos.NetworkInfo] = netmap.map { entry =>
+      def fakeContainerNetworks(netmap: Map[String, String]): Seq[Protos.NetworkInfo] = netmap.iterator.map { entry =>
         val (name, ip) = entry
         Protos.NetworkInfo.newBuilder()
           .setName(name)
           .addIpAddresses(Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ip))
           .build()
-      }(collection.breakOut)
+      }.toSeq
 
       val tasksWithNetworks: Seq[core.task.Task] = Seq(
         fakeTask(fakeContainerNetworks(Map("abc" -> "1.2.3.4", "def" -> "5.6.7.8"))),
@@ -76,11 +43,11 @@ class PodStatusConversionTest extends UnitTest {
 
     "multiple tasks with multiple host networks convert to proper network status" in {
 
-      def fakeHostNetworks(ips: Seq[String]): Seq[Protos.NetworkInfo] = ips.map { ip =>
+      def fakeHostNetworks(ips: Seq[String]): Seq[Protos.NetworkInfo] = ips.iterator.map { ip =>
         Protos.NetworkInfo.newBuilder()
           .addIpAddresses(Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ip))
           .build()
-      }(collection.breakOut)
+      }.toSeq
 
       val tasksWithNetworks: Seq[core.task.Task] = Seq(
         fakeTask(fakeHostNetworks(Seq("1.2.3.4", "5.6.7.8"))),
@@ -460,6 +427,7 @@ class PodStatusConversionTest extends UnitTest {
 object PodStatusConversionTest {
 
   val containerResources = Resources(cpus = 0.01, mem = 100)
+  val containerResourceLimits = state.ResourceLimits(cpus = Some(Double.MaxValue), mem = Some(4096))
 
   val basicOneContainerPod = PodDefinition(
     id = AbsolutePathId("/foo"),
@@ -468,6 +436,7 @@ object PodStatusConversionTest {
       MesosContainer(
         name = "ct1",
         resources = containerResources,
+        resourceLimits = Some(containerResourceLimits),
         image = Some(Image(kind = ImageType.Docker, id = "busybox")),
         endpoints = Seq(
           Endpoint(name = "web", containerPort = Some(80)),
@@ -573,7 +542,7 @@ object PodStatusConversionTest {
             networkInfo = NetworkInfoPlaceholder(hostPorts = Seq(1001))
           )
         )
-      ).map(t => t.taskId -> t)(collection.breakOut),
+      ).iterator.map(t => t.taskId -> t).toMap,
       runSpec = pod,
       reservation = maybeReservation,
       role = "test"

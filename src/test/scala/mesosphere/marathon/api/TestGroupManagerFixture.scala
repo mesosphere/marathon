@@ -11,7 +11,7 @@ import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.RootGroup
-import mesosphere.marathon.storage.repository.{AppRepository, GroupRepository, PodRepository}
+import mesosphere.marathon.storage.repository.{AppRepository, GroupRepository, InstanceRepository, PodRepository}
 import mesosphere.marathon.test.Mockito
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -33,6 +33,7 @@ class TestGroupManagerFixture(
   val appRepository = AppRepository.inMemRepository(store)
   val podRepository = PodRepository.inMemRepository(store)
   val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository, maxVersionsCacheSize, initialRoot.newGroupStrategy)
+  val instanceRepository = InstanceRepository.inMemRepository(store)
   groupRepository.storeRoot(initialRoot, Nil, Nil, Nil, Nil)
   val eventBus = mock[EventStream]
 

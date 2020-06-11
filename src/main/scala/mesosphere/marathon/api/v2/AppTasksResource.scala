@@ -83,13 +83,21 @@ class AppTasksResource @Inject() (
   @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   def indexTxt(
     @PathParam("appId") appId: String,
+    @DefaultValue("")@QueryParam("containerNetworks") containerNetworks: String = "",
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
-      implicit val identity = await(authenticatedAsync(req))
-      val id = appId.toAbsolutePath
-      val instancesBySpec = await(instanceTracker.instancesBySpec)
-      withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
-        ok(EndpointsHelper.appsToEndpointString(ListTasks(instancesBySpec, Seq(app))))
+      if (config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.textPlainTasks)) {
+        implicit val identity = await(authenticatedAsync(req))
+        val id = appId.toAbsolutePath
+        val instancesBySpec = await(instanceTracker.instancesBySpec)
+        withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
+          val data = ListTasks(instancesBySpec, Seq(app))
+          ok(EndpointsHelper.appsToEndpointString(data, containerNetworks.split(",").toSet))
+        }
+      } else {
+        status(
+          Response.Status.NOT_ACCEPTABLE,
+          s"The text/plain output is deprecated. It can be enabled via ${DeprecatedFeatures.textPlainTasks.key}.")
       }
     }
   }

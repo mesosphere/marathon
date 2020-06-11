@@ -16,15 +16,15 @@ import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.raml.{ExecutorResources, Resources}
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import mesosphere.mesos.TaskBuilderConstants
 import mesosphere.mesos.protos.Implicits.slaveIDToProto
 import mesosphere.mesos.protos.SlaveID
 import org.scalatest.Inside
 
-import scala.collection.JavaConverters._
 import scala.collection.immutable.Seq
+
+import scala.jdk.CollectionConverters._
 
 class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
@@ -164,7 +164,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
       And("the taskInfo contains the correct persistent volume")
       val taskInfoResources = matched.instanceOp.offerOperations.head.getLaunch.getTaskInfos(0).getResourcesList
-      val found = taskInfoResources.find { resource =>
+      val found = taskInfoResources.asScala.find { resource =>
         resource.hasDisk && resource.getDisk.hasPersistence &&
           resource.getDisk.getPersistence.getId == localVolumeIdMatch.idString
       }
