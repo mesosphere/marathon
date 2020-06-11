@@ -138,7 +138,7 @@ private class TaskLauncherActor(
       val readable = instanceMap.values
         .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, goal: ${i.state.goal}, version: ${i.runSpecVersion}, reservation: ${i.reservation}}")
         .mkString(", ")
-      logger.info(s"Synced instance map to $readable")
+      logger.info(s"Loaded instance map: instances=$readable")
       logger.info(s"Started instanceLaunchActor for ${runSpecId} with initial count $instancesToLaunch")
       scheduledVersions.foreach { configRef =>
         rateLimiterActor ! RateLimiterActor.GetDelay(configRef)
@@ -313,8 +313,9 @@ private class TaskLauncherActor(
   }
 
   def syncInstance(instanceId: Instance.Id): Unit = {
+    logger.debug(s"Synchronizing $instanceId")
     context.become(syncing(instanceId))
-    instanceTracker.instancesBySpec.map(_.instance(instanceId)).pipeTo(self)
+    instanceTracker.instancesBySpec.map(bySpec => SynchronizedInstance(bySpec.instance(instanceId))).pipeTo(self)
   }
 
   def removeInstanceFromInternalState(instanceId: Instance.Id): Unit = {

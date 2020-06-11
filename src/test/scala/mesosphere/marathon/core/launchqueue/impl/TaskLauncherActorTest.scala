@@ -156,7 +156,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
     "re-register the offerMatcher when adding an instance with a new app version" in new Fixture {
       Given("an entry for an app")
       val instances = Seq(f.provisionedInstance, Instance.scheduled(f.app))
-      instanceTracker.instancesBySpec()(any) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(newInstances))
+      instanceTracker.instancesBySpec()(any) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(instances))
       val launcherRef = createLauncherRef()
       rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
       rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, None))
@@ -246,7 +246,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
       promise.future.futureValue
 
-      Mockito.verify(instanceTracker).instancesBySpec
+      Mockito.verify(instanceTracker).instancesBySpec()(m.any)
       Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
       assert(captor.getValue.instanceMap.isEmpty)
       verifyClean()
@@ -277,7 +277,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
       promise.future.futureValue
 
-      Mockito.verify(instanceTracker).instancesBySpec
+      Mockito.verify(instanceTracker).instancesBySpec()(m.any())
       Mockito.verify(instanceOpFactory).matchOfferRequest(m.any())
       // The unreachable inactive is not considered lost.
       assert(captor.getValue.instanceMap.size == 1)
@@ -297,7 +297,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       val matchedTasks = promise.future.futureValue
       matchedTasks.opsWithSource.foreach(_.reject("stuff"))
 
-      assert(launcherRef.underlyingActor.instancesToLaunch == 1)
+      eventually {
+        launcherRef.underlyingActor.instancesToLaunch should be(1)
+      }
 
       assert(inProgress(launcherRef))
       assert(activeCount(launcherRef) == 0)
@@ -317,7 +319,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       instanceTracker.instancesBySpec()(any) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(updatedInstance)))
       launcherRef ! update
 
-      assert(launcherRef.underlyingActor.instancesToLaunch == 0)
+      eventually {
+        launcherRef.underlyingActor.instancesToLaunch should be(0)
+      }
       assert(activeCount(launcherRef) == 0)
     }
 
@@ -387,7 +391,7 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
       Then("the instance is reset to InstanceTracker state")
       eventually {
-        verify(instanceTracker, atLeastOnce).instancesBySpec
+        verify(instanceTracker, atLeastOnce).instancesBySpec()(m.any())
       }
     }
 
@@ -413,7 +417,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       launcherRef ! TaskStatusUpdateTestHelper.failed(f.provisionedInstance.copy(state = f.provisionedInstance.state.copy(condition = Condition.Scheduled))).wrapped
 
       Then("the provisioning timeout is removed")
-      launcherRef.underlyingActor.offerOperationAcceptTimeout.isEmpty should be(true)
+      eventually {
+        launcherRef.underlyingActor.offerOperationAcceptTimeout.isEmpty should be(true)
+      }
     }
   }
 }
