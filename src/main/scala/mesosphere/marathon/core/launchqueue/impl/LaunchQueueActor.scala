@@ -91,7 +91,6 @@ private[impl] class LaunchQueueActor(
 
   def initializing: Receive = {
     case instances: InstanceTracker.InstancesBySpec =>
-      println(s"###### Loaded: $instances")
 
       instances.allInstances
         .filter(_.isScheduled)

@@ -40,6 +40,10 @@ class TaskReplaceActor(
   override def preStart(): Unit = {
     super.preStart()
 
+    // subscribe to all needed events
+    eventBus.subscribe(self, classOf[InstanceChanged])
+    eventBus.subscribe(self, classOf[InstanceHealthChanged])
+
     instanceTracker.specInstances(runSpec.id, readAfterWrite = true)
       .map(instances => TaskReplaceActor.State(runSpec, instances)).pipeTo(self)
   }
@@ -54,10 +58,6 @@ class TaskReplaceActor(
   private def initializing: Receive = {
     case loadedState: TaskReplaceActor.State =>
       state = loadedState
-
-      // subscribe to all needed events
-      eventBus.subscribe(self, classOf[InstanceChanged])
-      eventBus.subscribe(self, classOf[InstanceHealthChanged])
 
       // reconcile the state from a possible previous run
       reconcileAlreadyStartedInstances()
