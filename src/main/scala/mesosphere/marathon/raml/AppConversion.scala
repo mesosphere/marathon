@@ -332,6 +332,8 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       }
     } else App.DefaultResidency
 
+    val tty: Option[Boolean] = if (service.hasTty()) Some(true) else App.DefaultTty
+
     val app = App(
       id = service.getId,
       acceptedResourceRoles = if (service.hasAcceptedResourceRoles && service.getAcceptedResourceRoles.getRoleCount > 0) Option(service.getAcceptedResourceRoles.getRoleList.asScala.to(Set)) else App.DefaultAcceptedResourceRoles,
@@ -371,7 +373,7 @@ trait AppConversion extends DefaultConversions with CheckConversion with Constra
       versionInfo = versionInfo, // we restore this but App-to-AppDefinition conversion drops it...
       killSelection = service.whenOrElse(_.hasKillSelection, _.getKillSelection.toRaml, App.DefaultKillSelection),
       unreachableStrategy = unreachableStrategy,
-      tty = service.when(_.hasTty, _.getTty: Boolean).orElse(App.DefaultTty),
+      tty = tty,
       role = service.when(_.hasRole, _.getRole).orElse(App.DefaultRole),
       resourceLimits = service.when(_.hasResourceLimits, _.getResourceLimits.toRaml)
     )

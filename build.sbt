@@ -78,7 +78,7 @@ val pbSettings = ProtobufPlugin.projectSettings ++ Seq(
 lazy val commonSettings = Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
-  scalaVersion := "2.13.1",
+  scalaVersion := "2.13.2",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
     "-encoding", "UTF-8",
@@ -88,6 +88,7 @@ lazy val commonSettings = Seq(
     "-unchecked",
     "-Xlint",
     "-Xfatal-warnings",
+    "-Wconf:cat=unused:info",
     "-Yrangepos",
     "-Ywarn-numeric-widen",
     "-Ywarn-unused"
