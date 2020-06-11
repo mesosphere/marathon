@@ -1,14 +1,14 @@
 package mesosphere.marathon
 package core.readiness.impl
 
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, StatusCodes, HttpResponse => AkkaHttpResponse}
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.PathId
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpHeader, StatusCodes, HttpResponse => AkkaHttpResponse}
+import mesosphere.marathon.state.AbsolutePathId
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -109,7 +109,7 @@ class ReadinessCheckExecutorImplTest extends AkkaUnitTest {
   }
 
   class Fixture {
-    val instanceId = Instance.Id.forRunSpec(PathId("/test"))
+    val instanceId = Instance.Id.forRunSpec(AbsolutePathId("/test"))
     lazy val check = ReadinessCheckSpec(
       taskId = Task.Id(instanceId),
       checkName = "testCheck",

@@ -5,15 +5,16 @@ import java.util.UUID
 
 import akka.Done
 import akka.stream.scaladsl.Sink
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.base.JvmExitsCrashStrategy
 import mesosphere.marathon.core.storage.repository.{Repository, RepositoryConstants, VersionedRepository}
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
+import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkPersistenceStore}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.util.ZookeeperServerTest
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId, Timestamp, VersionInfo}
 import mesosphere.marathon.stream.EnrichedSink
 import org.scalatest.GivenWhenThen
 import org.scalatest.time.{Seconds, Span}
@@ -21,14 +22,14 @@ import org.scalatest.time.{Seconds, Span}
 class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhenThen {
   import PathId._
 
-  def randomAppId = UUID.randomUUID().toString.toRootPath
+  def randomAppId = UUID.randomUUID().toString.toAbsolutePath
   def randomApp = AppDefinition(randomAppId, role = "*", versionInfo = VersionInfo.OnlyVersion(Timestamp.now()))
 
   override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(30, Seconds))
 
   val metrics: Metrics = DummyMetrics
 
-  def basic(name: String, createRepo: () => Repository[PathId, AppDefinition]): Unit = {
+  def basic(name: String, createRepo: () => Repository[AbsolutePathId, AppDefinition]): Unit = {
     s"$name:unversioned" should {
       "get of a non-existent value should return nothing" in {
         val repo = createRepo()
@@ -90,7 +91,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
     }
   }
 
-  def versioned(name: String, createRepo: () => VersionedRepository[PathId, AppDefinition]): Unit = {
+  def versioned(name: String, createRepo: () => VersionedRepository[AbsolutePathId, AppDefinition]): Unit = {
     s"$name:versioned" should {
       "list no versions when empty" in {
         val repo = createRepo()
@@ -166,7 +167,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
 
   def createZKRepo(): AppRepository = {
     val root = UUID.randomUUID().toString
-    val rootClient = zkClient(namespace = Some(root))
+    val rootClient = RichCuratorFramework(zkClient(namespace = Some(root)), JvmExitsCrashStrategy)
     val store = new ZkPersistenceStore(metrics, rootClient)
     store.markOpen()
     AppRepository.zkRepository(store)

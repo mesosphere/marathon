@@ -2,9 +2,9 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.core.pod
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.Protos.ContainerInfo.DockerInfo.{Network => DockerNetworkMode}
+import scala.jdk.CollectionConverters._
 
 trait NetworkConversion {
 
@@ -91,11 +91,11 @@ trait NetworkConversion {
     ContainerPortMapping(
       containerPort = mapping.whenOrElse(_.hasContainerPort, _.getContainerPort, ContainerPortMapping.DefaultContainerPort),
       hostPort = mapping.when(_.hasHostPort, _.getHostPort).orElse(ContainerPortMapping.DefaultHostPort),
-      labels = mapping.whenOrElse(_.getLabelsCount > 0, _.getLabelsList.flatMap(_.fromProto)(collection.breakOut), ContainerPortMapping.DefaultLabels),
+      labels = mapping.whenOrElse(_.getLabelsCount > 0, _.getLabelsList.asScala.iterator.flatMap(_.fromProto).toMap, ContainerPortMapping.DefaultLabels),
       name = mapping.when(_.hasName, _.getName).orElse(ContainerPortMapping.DefaultName),
       protocol = mapping.when(_.hasProtocol, _.getProtocol).flatMap(NetworkProtocol.fromString).getOrElse(ContainerPortMapping.DefaultProtocol),
       servicePort = mapping.whenOrElse(_.hasServicePort, _.getServicePort, ContainerPortMapping.DefaultServicePort),
-      networkNames = mapping.whenOrElse(_.getNetworkNamesList.size > 0, _.getNetworkNamesList.toList, ContainerPortMapping.DefaultNetworkNames)
+      networkNames = mapping.whenOrElse(_.getNetworkNamesList.size > 0, _.getNetworkNamesList.asScala.toList, ContainerPortMapping.DefaultNetworkNames)
     )
   }
 
@@ -103,7 +103,7 @@ trait NetworkConversion {
     ContainerPortMapping(
       containerPort = mapping.whenOrElse(_.hasContainerPort, _.getContainerPort, ContainerPortMapping.DefaultContainerPort),
       hostPort = mapping.when(_.hasHostPort, _.getHostPort).orElse(ContainerPortMapping.DefaultHostPort),
-      labels = mapping.whenOrElse(_.getLabelsCount > 0, _.getLabelsList.flatMap(_.fromProto)(collection.breakOut), ContainerPortMapping.DefaultLabels),
+      labels = mapping.whenOrElse(_.getLabelsCount > 0, _.getLabelsList.asScala.iterator.flatMap(_.fromProto).toMap, ContainerPortMapping.DefaultLabels),
       name = mapping.when(_.hasName, _.getName).orElse(ContainerPortMapping.DefaultName),
       protocol = mapping.whenOrElse(_.hasProtocol, _.getProtocol.toRaml[NetworkProtocol], ContainerPortMapping.DefaultProtocol),
       servicePort = mapping.whenOrElse(_.hasServicePort, _.getServicePort, ContainerPortMapping.DefaultServicePort)
@@ -128,7 +128,7 @@ trait NetworkConversion {
     Network(
       name = if (net.hasName) Option(net.getName) else Network.DefaultName,
       mode = mode,
-      labels = if (net.getLabelsCount > 0) net.getLabelsList.to[Seq].fromProto else Network.DefaultLabels
+      labels = if (net.getLabelsCount > 0) net.getLabelsList.asScala.to(Seq).fromProto else Network.DefaultLabels
     )
   }
 }

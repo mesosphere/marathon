@@ -109,7 +109,7 @@ object HealthCheckWorker extends StrictLogging {
     instance: Instance,
     check: MarathonTcpHealthCheck,
     host: String,
-    port: Int)(implicit mat: ActorMaterializer): Future[HealthResult] = {
+    port: Int): Future[HealthResult] = {
 
     val address = s"$host:$port"
     val timeoutMillis = check.timeout.toMillis.toInt

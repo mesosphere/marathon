@@ -5,6 +5,7 @@ import akka.actor.ActorSystem
 import ch.qos.logback.classic.{Level, Logger}
 import javax.ws.rs.core.{MediaType, Request, Variant}
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.api.RestResource.RestStreamingBody
 import mesosphere.marathon.test.JerseyTest
 import org.slf4j.LoggerFactory
 import org.mockito.Matchers
@@ -101,7 +102,7 @@ class SystemResourceTest extends AkkaUnitTest with JerseyTest {
       response.getStatus shouldBe 200
       Option(response.getMetadata.getFirst("Content-Type")).value.toString should be("application/json")
 
-      val metricsJson = Json.parse(response.getEntity.asInstanceOf[String])
+      val metricsJson = Json.parse(response.getEntity.asInstanceOf[RestStreamingBody[_]].toString)
       metricsJson \ "version" shouldBe a[JsDefined]
       metricsJson \ "counters" shouldBe a[JsDefined]
       metricsJson \ "gauges" shouldBe a[JsDefined]

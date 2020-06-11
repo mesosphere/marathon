@@ -81,6 +81,7 @@ types:
       resources:
         type: resources.Resources
         description: The resources to allocate to the container.
+      resourceLimits?: resources.ResourceLimits
       endpoints?:
         type: network.Endpoint[]
         (pragma.omitEmpty):

@@ -8,7 +8,7 @@ import mesosphere.marathon.core.instance.update._
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.{Task, TaskCondition}
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import org.apache.mesos
 import org.apache.mesos.Protos.TaskStatus.Reason
 import org.apache.mesos.Protos.{TaskState, TaskStatus}
@@ -47,7 +47,7 @@ object TaskStatusUpdateTestHelper {
   def apply(operation: InstanceUpdateOperation, effect: InstanceUpdateEffect): TaskStatusUpdateTestHelper =
     new TaskStatusUpdateTestHelper(operation, effect)
 
-  lazy val defaultInstance = TestInstanceBuilder.newBuilder(PathId("/app")).addTaskStaged().getInstance()
+  lazy val defaultInstance = TestInstanceBuilder.newBuilder(AbsolutePathId("/app")).addTaskStaged().getInstance()
   lazy val defaultTimestamp = Timestamp(OffsetDateTime.of(2015, 2, 3, 12, 30, 0, 0, ZoneOffset.UTC))
 
   def provision(instance: Instance = defaultInstance, timestamp: Timestamp = defaultTimestamp) = {

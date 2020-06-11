@@ -10,7 +10,7 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.jobs.TaskJobsConfig
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.SpecInstances
-import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, UnreachableEnabled}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp, UnreachableDisabled, UnreachableEnabled}
 
 /**
   * Business logic of overdue tasks actor.
@@ -32,7 +32,7 @@ trait ExpungeOverdueLostTasksActorLogic extends StrictLogging {
   /**
     * @return instances that should be expunged according to the RunSpec definition.
     */
-  def filterUnreachableForExpunge(instances: Map[PathId, SpecInstances], now: Timestamp) =
+  def filterUnreachableForExpunge(instances: Map[AbsolutePathId, SpecInstances], now: Timestamp) =
     instances.values.
       flatMap(_.instances).
       withFilter { i => shouldExpunge(i, now) }
@@ -41,6 +41,7 @@ trait ExpungeOverdueLostTasksActorLogic extends StrictLogging {
     case UnreachableDisabled =>
       false
     case unreachableEnabled: UnreachableEnabled =>
+      // Instances configured to expunge immediately will be expunged in response to the Mesos TASK_UNREACHABLE
       instance.isUnreachableInactive &&
         instance.tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, unreachableEnabled.expungeAfter))
   }

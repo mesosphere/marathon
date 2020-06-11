@@ -22,13 +22,12 @@ import scala.util.control.NonFatal
 class TaskKiller @Inject() (
     instanceTracker: InstanceTracker,
     groupManager: GroupManager,
-    val config: MarathonConf,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
     killService: KillService)(implicit val executionContext: ExecutionContext, implicit val materializer: Materializer) extends AuthResource with StrictLogging {
 
   def kill(
-    runSpecId: PathId,
+    runSpecId: AbsolutePathId,
     findToKill: (Seq[Instance] => Seq[Instance]),
     wipe: Boolean = false)(implicit identity: Identity): Future[Seq[Instance]] = {
 
@@ -81,7 +80,7 @@ class TaskKiller @Inject() (
   }
 
   def killAndScale(
-    appId: PathId,
+    appId: AbsolutePathId,
     findToKill: (Seq[Instance] => Seq[Instance]),
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = async {
     val instances = await(instanceTracker.specInstances(appId))
@@ -91,11 +90,11 @@ class TaskKiller @Inject() (
   }
 
   def killAndScale(
-    appInstances: Map[PathId, Seq[Instance]],
+    appInstances: Map[AbsolutePathId, Seq[Instance]],
     force: Boolean)(implicit identity: Identity): Future[DeploymentPlan] = {
     def scaleApp(app: AppDefinition): AppDefinition = {
-      checkAuthorization(UpdateRunSpec, app)
       appInstances.get(app.id).fold(app) { instances =>
+        checkAuthorization(UpdateRunSpec, app)
         // only count active instances that did not already receive a kill request.
         val toKillCount = instances.count(i => i.isActive && !i.isKilling)
         // make sure we never scale below zero instances.
@@ -106,8 +105,8 @@ class TaskKiller @Inject() (
     val version = Timestamp.now()
 
     def killDeployment = groupManager.updateRoot(
-      PathId.empty,
-      _.updateTransitiveApps(PathId.empty, scaleApp, version),
+      PathId.root,
+      _.updateTransitiveApps(PathId.root, scaleApp, version),
       version = version,
       force = force,
       toKill = appInstances

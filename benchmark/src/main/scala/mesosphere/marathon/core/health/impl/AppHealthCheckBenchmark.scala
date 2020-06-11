@@ -3,13 +3,12 @@ package core.health.impl
 
 import java.util.concurrent.TimeUnit
 
-import mesosphere.marathon.core.health.{Health, MarathonHttpHealthCheck, PortReference, impl}
 import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{ApplicationKey, InstanceKey}
+import mesosphere.marathon.core.health.{Health, MarathonHttpHealthCheck, PortReference, impl}
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.PathId
-import org.openjdk.jmh.annotations.{Mode, OutputTimeUnit, Scope, State, BenchmarkMode, Fork, Benchmark}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
+import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
-import mesosphere.marathon.state.Timestamp
 
 object AppHealthCheckBenchmark {
   private final val NB_APPLICATIONS = 1000
@@ -30,7 +29,7 @@ object AppHealthCheckBenchmark {
   )
   val applicationKeys = 0.to(NB_APPLICATIONS).flatMap(appId => {
     0.to(NB_VERSIONS_PER_APPLICATION).map(version => Timestamp(version.toLong))
-      .map(version => ApplicationKey(PathId(s"$appId"), version))
+      .map(version => ApplicationKey(AbsolutePathId(s"/$appId"), version))
   })
 
   val shuffledApplicationKeys = scala.util.Random.shuffle(applicationKeys)

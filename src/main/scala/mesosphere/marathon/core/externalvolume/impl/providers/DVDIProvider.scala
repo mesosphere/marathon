@@ -8,7 +8,7 @@ import mesosphere.marathon.core.externalvolume.impl.providers.OptionSupport._
 import mesosphere.marathon.core.externalvolume.impl.{ExternalVolumeProvider, ExternalVolumeValidations}
 import mesosphere.marathon.raml.{App, AppExternalVolume, EngineType, ReadMode, Container => AppContainer}
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import org.apache.mesos.Protos.{Parameter, Parameters, Volume => MesosVolume}
 
 /**
@@ -39,12 +39,12 @@ private[externalvolume] case object DVDIProvider extends ExternalVolumeProvider 
       // and trimming the values
       opts.filterKeys{ k =>
         k.startsWith(prefix) && !ignore.contains(k.toLowerCase)
-      }.map {
+      }.iterator.map {
         case (k, v) => Parameter.newBuilder
           .setKey(k.substring(prefix.length))
           .setValue(v.trim())
           .build
-      }(collection.breakOut)
+      }.toSeq
     }
 
     def applyOptions(dv: MesosVolume.Source.DockerVolume.Builder, opts: Seq[Parameter]): Unit = {
@@ -83,6 +83,9 @@ private[externalvolume] case object DVDIProvider extends ExternalVolumeProvider 
 
   val driverOption = "dvdi/driver"
   val quotedDriverOption = '"' + driverOption + '"'
+
+  val driverValueRexRay = "rexray"
+
 }
 
 private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
@@ -148,7 +151,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       /** @return a count of volume references-by-name within an app spec */
       def volumeNameCounts(app: App): Map[String, Int] =
-        namesOfMatchingVolumes(app).groupBy(identity).map { case (name, names) => name -> names.size }(collection.breakOut)
+        namesOfMatchingVolumes(app).groupBy(identity).iterator.map { case (name, names) => name -> names.size }.toMap
     }
 
     val validContainer = {
@@ -211,7 +214,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       /** @return a count of volume references-by-name within an app spec */
       def volumeNameCounts(app: AppDefinition): Map[String, Int] =
-        namesOfMatchingVolumes(app).groupBy(identity).map { case (name, names) => name -> names.size }(collection.breakOut)
+        namesOfMatchingVolumes(app).groupBy(identity).iterator.map { case (name, names) => name -> names.size }.toMap
     }
 
     val validContainer = {
@@ -283,7 +286,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       v.external.options.get(driverOption) as s""""external/options($quotedDriverOption)"""" is
         definedAnd(validLabel)
       v.external.options as "external/options" is
-        conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions)
+        conditional[Map[String, String]](_.get(driverOption).contains(driverValueRexRay))(validRexRayOptions)
     }
   }
 
@@ -308,7 +311,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       v.name is definedAnd(notEmpty)
       v.provider is definedAnd(equalTo(name))
       v.options.get(driverOption) as s"options($quotedDriverOption)" is definedAnd(validLabel)
-      v.options is conditional[Map[String, String]](_.get(driverOption).contains("rexray"))(validRexRayOptions)
+      v.options is conditional[Map[String, String]](_.get(driverOption).contains(driverValueRexRay))(validRexRayOptions)
     }
     forAll(
       validator[AppExternalVolume] { v =>
@@ -325,10 +328,20 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
   private[this] def matchesProvider(volume: ExternalVolume): Boolean = volume.external.provider == name
   private[this] def matchesProviderRaml(volume: AppExternalVolume): Boolean = volume.external.provider.contains(name)
 
+  private[this] def isForUniquenessCheck(volume: ExternalVolume): Boolean = !volume.external.shared
+  private[this] def isForUniquenessCheckRaml(volume: AppExternalVolume): Boolean = !volume.external.shared
+
   private[this] def namesOfMatchingVolumes(app: AppDefinition): Seq[String] =
-    app.externalVolumes.withFilter(matchesProvider).map(_.external.name)
+    app
+      .externalVolumes
+      .withFilter(matchesProvider)
+      .withFilter(isForUniquenessCheck)
+      .map(_.external.name)
 
   private[this] def namesOfMatchingVolumes(app: App): Seq[String] =
-    app.container.fold(Seq.empty[AppExternalVolume])(_.volumes.collect{ case v: AppExternalVolume => v })
-      .withFilter(matchesProviderRaml).flatMap(_.external.name)
+    app.container
+      .fold(Seq.empty[AppExternalVolume])(_.volumes.collect{ case v: AppExternalVolume => v })
+      .withFilter(matchesProviderRaml)
+      .withFilter(isForUniquenessCheckRaml)
+      .flatMap(_.external.name)
 }

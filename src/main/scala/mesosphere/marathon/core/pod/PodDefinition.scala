@@ -5,6 +5,7 @@ package core.pod
 import mesosphere.marathon.api.v2.PodNormalization
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.raml.{Endpoint, ExecutorResources, Pod, Raml, Resources}
+import mesosphere.marathon.state.Role
 import mesosphere.marathon.state._
 import play.api.libs.json.Json
 
@@ -15,7 +16,7 @@ import scala.collection.immutable.Seq
   * A definition for Pods.
   */
 case class PodDefinition(
-    id: PathId = PodDefinition.DefaultId,
+    id: AbsolutePathId = PodDefinition.DefaultId,
     user: Option[String] = PodDefinition.DefaultUser,
     env: Map[String, EnvVarValue] = PodDefinition.DefaultEnv,
     labels: Map[String, String] = PodDefinition.DefaultLabels,
@@ -33,7 +34,8 @@ case class PodDefinition(
     override val volumes: Seq[Volume] = PodDefinition.DefaultVolumes,
     override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
-    role: String
+    role: Role,
+    legacySharedCgroups: Option[Boolean] = None
 ) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
 
   /**
@@ -56,9 +58,9 @@ case class PodDefinition(
   override val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   def aggregateResources(filter: MesosContainer => Boolean = _ => true) = Resources(
-    cpus = (BigDecimal(executorResources.cpus) + containers.withFilter(filter).map(r => BigDecimal(r.resources.cpus)).sum).doubleValue(),
-    mem = (BigDecimal(executorResources.mem) + containers.withFilter(filter).map(r => BigDecimal(r.resources.mem)).sum).doubleValue(),
-    disk = (BigDecimal(executorResources.disk) + containers.withFilter(filter).map(r => BigDecimal(r.resources.disk)).sum).doubleValue(),
+    cpus = (BigDecimal(executorResources.cpus) + containers.withFilter(filter).map(r => BigDecimal(r.resources.cpus)).sum).doubleValue,
+    mem = (BigDecimal(executorResources.mem) + containers.withFilter(filter).map(r => BigDecimal(r.resources.mem)).sum).doubleValue,
+    disk = (BigDecimal(executorResources.disk) + containers.withFilter(filter).map(r => BigDecimal(r.resources.disk)).sum).doubleValue,
     gpus = executorResources.gpus + containers.withFilter(filter).map(_.resources.gpus).sum
   )
 
@@ -118,13 +120,14 @@ case class PodDefinition(
 }
 
 object PodDefinition {
+
   def fromProto(proto: Protos.Json): PodDefinition = {
     Raml.fromRaml(Json.parse(proto.getJson).as[Pod])
   }
 
   val DefaultExecutorResources: Resources = ExecutorResources().fromRaml
   val DefaultLinuxInfo = Option.empty[LinuxInfo]
-  val DefaultId = PathId.empty
+  val DefaultId = PathId.root
   val DefaultUser = Option.empty[String]
   val DefaultEnv = Map.empty[String, EnvVarValue]
   val DefaultLabels = Map.empty[String, String]

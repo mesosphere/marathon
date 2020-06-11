@@ -3,6 +3,7 @@ package core.launcher
 
 import java.time.Clock
 
+import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.launcher.impl.{InstanceOpFactoryImpl, OfferProcessorImpl, TaskLauncherImpl}
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.plugin.PluginManager
@@ -19,7 +20,8 @@ class LauncherModule(
     instanceTracker: InstanceTracker,
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     offerMatcher: OfferMatcher,
-    pluginManager: PluginManager)(implicit clock: Clock) {
+    pluginManager: PluginManager,
+    enforceRoleSettingProvider: GroupManager.EnforceRoleSettingProvider)(implicit clock: Clock) {
 
   lazy val offerProcessor: OfferProcessor =
     new OfferProcessorImpl(
@@ -31,5 +33,5 @@ class LauncherModule(
     metrics,
     marathonSchedulerDriverHolder)
 
-  lazy val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(metrics, conf, pluginManager)
+  lazy val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(metrics, conf, pluginManager, enforceRoleSettingProvider)
 }

@@ -12,11 +12,10 @@ import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.store.IdResolver
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
-import mesosphere.marathon.raml.{Pod, Raml}
-import mesosphere.marathon.state.{AppDefinition, Instance, PathId, TaskFailure}
+import mesosphere.marathon.raml.{Pod, Raml, RuntimeConfiguration}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Instance, TaskFailure}
 import mesosphere.marathon.storage.repository.{StoredGroup, StoredGroupRepositoryImpl, StoredPlan}
 import mesosphere.util.state.FrameworkId
-import mesosphere.marathon.raml.RuntimeConfiguration
 import play.api.libs.json.Json
 
 trait ZkStoreSerialization {
@@ -25,14 +24,14 @@ trait ZkStoreSerialization {
       val category: String,
       val hasVersions: Boolean,
       getVersion: (T) => OffsetDateTime)
-    extends IdResolver[PathId, T, String, ZkId] {
-    override def toStorageId(id: PathId, version: Option[OffsetDateTime]): ZkId =
+    extends IdResolver[AbsolutePathId, T, String, ZkId] {
+    override def toStorageId(id: AbsolutePathId, version: Option[OffsetDateTime]): ZkId =
       ZkId(category, id.path.mkString("_"), version)
-    override def fromStorageId(key: ZkId): PathId = PathId(key.id.split("_").toList, absolute = true)
+    override def fromStorageId(key: ZkId): AbsolutePathId = AbsolutePathId(key.id.split("_").toList)
     override def version(v: T): OffsetDateTime = getVersion(v)
   }
 
-  implicit val appDefResolver: IdResolver[PathId, AppDefinition, String, ZkId] =
+  implicit val appDefResolver: IdResolver[AbsolutePathId, AppDefinition, String, ZkId] =
     new ZkPathIdResolver[AppDefinition]("apps", true, _.version.toOffsetDateTime)
 
   implicit val appDefMarshaller: Marshaller[AppDefinition, ZkSerialized] =
@@ -45,7 +44,7 @@ trait ZkStoreSerialization {
         AppDefinition.fromProto(proto)
     }
 
-  implicit val podDefResolver: IdResolver[PathId, PodDefinition, String, ZkId] =
+  implicit val podDefResolver: IdResolver[AbsolutePathId, PodDefinition, String, ZkId] =
     new ZkPathIdResolver[PodDefinition]("pods", true, _.version.toOffsetDateTime)
 
   implicit val podDefMarshaller: Marshaller[PodDefinition, ZkSerialized] =
@@ -99,7 +98,7 @@ trait ZkStoreSerialization {
         StoredPlan(DeploymentPlanDefinition.parseFrom(byteString.toArray))
     }
 
-  implicit val taskFailureResolver: IdResolver[PathId, TaskFailure, String, ZkId] =
+  implicit val taskFailureResolver: IdResolver[AbsolutePathId, TaskFailure, String, ZkId] =
     new ZkPathIdResolver[TaskFailure]("taskFailures", true, _.version.toOffsetDateTime)
 
   implicit val taskFailureMarshaller: Marshaller[TaskFailure, ZkSerialized] =
@@ -111,14 +110,14 @@ trait ZkStoreSerialization {
         TaskFailure(Protos.TaskFailure.parseFrom(byteString.toArray))
     }
 
-  implicit val groupIdResolver: IdResolver[PathId, StoredGroup, String, ZkId] =
-    new IdResolver[PathId, StoredGroup, String, ZkId] {
-      override def toStorageId(id: PathId, version: Option[OffsetDateTime]): ZkId = {
+  implicit val groupIdResolver: IdResolver[AbsolutePathId, StoredGroup, String, ZkId] =
+    new IdResolver[AbsolutePathId, StoredGroup, String, ZkId] {
+      override def toStorageId(id: AbsolutePathId, version: Option[OffsetDateTime]): ZkId = {
         require(id == StoredGroupRepositoryImpl.RootId)
         ZkId(category, "root", version)
       }
       override val category: String = "group"
-      override def fromStorageId(key: ZkId): PathId = StoredGroupRepositoryImpl.RootId
+      override def fromStorageId(key: ZkId): AbsolutePathId = StoredGroupRepositoryImpl.RootId
       override val hasVersions = true
       override def version(v: StoredGroup): OffsetDateTime = v.version
     }

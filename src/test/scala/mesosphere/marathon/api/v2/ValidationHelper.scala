@@ -13,7 +13,7 @@ object ValidationHelper {
 
   def getAllRuleConstraints(r: JsResult[_]): Set[ConstraintViolation] = {
     r match {
-      case f: JsError => f.errors.flatMap {
+      case f: JsError => f.errors.iterator.flatMap {
         case (path, errors) =>
           errors.flatMap { err =>
             val messages = err.messages
@@ -21,10 +21,11 @@ object ValidationHelper {
               ConstraintViolation(path.toString, msg)
             }
           }
-      }(collection.breakOut)
+      }.toSet
       case _ => Set.empty
     }
   }
 
-  def roleSettings = RoleSettings(validRoles = Set(ResourceRole.Unreserved), defaultRole = ResourceRole.Unreserved)
+  def roleSettings(role: String = ResourceRole.Unreserved) =
+    RoleSettings(validRoles = Set(role, ResourceRole.Unreserved), defaultRole = role)
 }

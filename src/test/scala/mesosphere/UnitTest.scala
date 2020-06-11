@@ -7,8 +7,10 @@ import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.{ActorMaterializer, Materializer}
 import akka.testkit.{TestActor, TestActorRef, TestKitBase}
 import akka.util.Timeout
+import com.mesosphere.utils.mesos.MesosTest
 import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
+import mesosphere.marathon.api.v2.json.Formats
 import mesosphere.marathon.test.Mockito
 import org.scalactic.source.Position
 import org.scalatest._
@@ -31,6 +33,13 @@ case class KnownIssue(jira: String) extends Tag(s"mesosphere.marathon.KnownIssue
   * }}}
   */
 case class WhenEnvSet(envVarName: String, default: String = "false") extends Tag(if (sys.env.getOrElse(envVarName, default) == "true") "" else classOf[Ignore].getName)
+
+/**
+  * Tag that will conditionally enable a specific test case if the operating system is Linux
+  *
+  * Used to skip tests when running on platforms where the test is known to fail due to capabilities unsupported by the OS
+  */
+case object WhenLinux extends Tag(if (MesosTest.isLinux) "" else classOf[Ignore].getName)
 
 trait CancelFailedTestWithKnownIssue extends TestSuite {
 
@@ -95,7 +104,9 @@ trait UnitTestLike extends WordSpecLike
   override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(5, Seconds))
 }
 
-abstract class UnitTest extends WordSpec with UnitTestLike
+abstract class UnitTest extends WordSpec with UnitTestLike {
+  Formats.configureJacksonSerializer()
+}
 
 trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
   protected lazy val akkaConfig: Config = ConfigFactory.parseString(

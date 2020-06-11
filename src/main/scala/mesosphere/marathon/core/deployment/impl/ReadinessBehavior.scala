@@ -13,7 +13,7 @@ import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.readiness.{ReadinessCheckExecutor, ReadinessCheckResult}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AppDefinition, PathId, RunSpec, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, RunSpec, Timestamp}
 
 /**
   * ReadinessBehavior makes sure all tasks are healthy and ready depending on an app definition.
@@ -36,7 +36,7 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
   def status: DeploymentStatus
 
   //computed values to have stable identifier in pattern matcher
-  val pathId: PathId = runSpec.id
+  val pathId: AbsolutePathId = runSpec.id
   val version: Timestamp = runSpec.version
   val versionString: String = version.toString
 

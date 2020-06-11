@@ -6,9 +6,11 @@ import java.util.{Base64, UUID}
 import com.fasterxml.uuid.{EthernetAddress, Generators}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.{AgentInfo, InstanceState}
+import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.Role
 import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy, _}
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.tasks.OfferUtil
 import mesosphere.mesos.Placed
 import org.apache._
@@ -22,16 +24,31 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 import scala.util.matching.Regex
 
+/**
+  * Internal state of a instantiated [[RunSpec]], ie instance of an [[AppDefinition]]
+  * or [[mesosphere.marathon.core.pod.PodDefinition]].
+  *
+  * Also has an [[mesosphere.marathon.state.Instance]] which is the storage model and an
+  * [[mesosphere.marathon.raml.Instance]] for the API
+  *
+  * @param role The Mesos role for the resources allocated to this instance. It isn't possible to change a
+  *             reservation's role. In the case of resident services, we allow the operator to change the
+  *             service role without deleting existing instances reserved to the former role. Because of this,
+  *             the instance role can differ from the service role, and must be persisted separately.
+  */
 case class Instance(
     instanceId: Instance.Id,
     agentInfo: Option[Instance.AgentInfo],
     state: InstanceState,
     tasksMap: Map[Task.Id, Task],
     runSpec: RunSpec,
-    reservation: Option[Reservation]) extends Placed {
+    reservation: Option[Reservation],
+    role: Role) extends Placed {
 
-  def runSpecId: PathId = runSpec.id
+  def runSpecId: AbsolutePathId = runSpec.id
+
   def runSpecVersion: Timestamp = runSpec.version
+
   def unreachableStrategy = runSpec.unreachableStrategy
 
   /**
@@ -47,10 +64,15 @@ case class Instance(
   val isProvisioned: Boolean = state.condition == Condition.Provisioned && state.goal == Goal.Running
 
   def isKilling: Boolean = state.condition == Condition.Killing
+
   def isRunning: Boolean = state.condition == Condition.Running
+
   def isUnreachable: Boolean = state.condition == Condition.Unreachable
+
   def isUnreachableInactive: Boolean = state.condition == Condition.UnreachableInactive
+
   def isActive: Boolean = state.condition.isActive
+
   def hasReservation: Boolean = reservation.isDefined
 
   override def hostname: Option[String] = agentInfo.map(_.host)
@@ -63,6 +85,7 @@ case class Instance(
 
   /**
     * Factory method for creating provisioned instance from Scheduled instance
+    *
     * @return new instance in a provisioned state
     */
   def provisioned(agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Map[Task.Id, Task], now: Timestamp): Instance = {
@@ -84,6 +107,21 @@ case class Instance(
       reservation = Some(reservation),
       agentInfo = Some(agentInfo))
   }
+
+  /**
+    * Allow to know if instance should be healthy or if it has no health check
+    *
+    * @return true if runSpec has some health checks defined. false if there is not any health check defined on this app/pod
+    */
+  def hasConfiguredHealthChecks: Boolean = this.runSpec match {
+    case app: AppDefinition => {
+      app.healthChecks.nonEmpty || app.check.nonEmpty || app.readinessChecks.nonEmpty
+    }
+    case pod: PodDefinition => pod.containers.exists(!_.healthCheck.isEmpty)
+    case _ => false // non-app/pod RunSpecs don't have health checks
+  }
+
+  def consideredHealthy: Boolean = !hasConfiguredHealthChecks || state.healthy.getOrElse(false)
 }
 
 object Instance {
@@ -91,11 +129,11 @@ object Instance {
   import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
 
   def instancesById(instances: Seq[Instance]): Map[Instance.Id, Instance] =
-    instances.map(instance => instance.instanceId -> instance)(collection.breakOut)
+    instances.iterator.map(instance => instance.instanceId -> instance).toMap
 
   object Running {
     def unapply(instance: Instance): Option[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]] = instance match {
-      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _) =>
+      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _, _) =>
         Some((instanceId, agentInfo, tasksMap))
       case _ =>
         Option.empty[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]]
@@ -111,7 +149,8 @@ object Instance {
     */
   def scheduled(runSpec: RunSpec, instanceId: Instance.Id): Instance = {
     val state = InstanceState(Condition.Scheduled, Timestamp.now(), None, None, Goal.Running)
-    Instance(instanceId, None, state, Map.empty, runSpec, None)
+
+    Instance(instanceId, None, state, Map.empty, runSpec, None, runSpec.role)
   }
 
   /*
@@ -164,7 +203,7 @@ object Instance {
       * @param now           Timestamp of update.
       * @return new InstanceState
       */
-    def apply(
+    def transitionTo(
       maybeOldInstanceState: Option[InstanceState],
       newTaskMap: Map[Task.Id, Task],
       now: Timestamp,
@@ -284,13 +323,13 @@ object Instance {
     }
   }
 
-  case class Id(val runSpecId: PathId, val prefix: Prefix, uuid: UUID) extends Ordered[Id] {
-    lazy val safeRunSpecId = runSpecId.safePath
+  case class Id(runSpecId: AbsolutePathId, prefix: Prefix, uuid: UUID) extends Ordered[Id] {
+    lazy val safeRunSpecId: String = runSpecId.safePath
     lazy val executorIdString: String = prefix + safeRunSpecId + "." + uuid
 
     // Must match Id.InstanceIdRegex
     // TODO: Unit test against regex
-    lazy val idString = safeRunSpecId + "." + prefix + uuid
+    lazy val idString: String = safeRunSpecId + "." + prefix + uuid
 
     /**
       * String representation used for logging and debugging. Should *not* be used for Mesos task ids. Use `idString`
@@ -313,7 +352,7 @@ object Instance {
 
     private val uuidGenerator = Generators.timeBasedGenerator(EthernetAddress.fromInterface())
 
-    def forRunSpec(id: PathId): Id = Instance.Id(id, PrefixInstance, uuidGenerator.generate())
+    def forRunSpec(id: AbsolutePathId): Id = Instance.Id(id, PrefixInstance, uuidGenerator.generate())
 
     def fromIdString(idString: String): Instance.Id = {
       idString match {
@@ -341,7 +380,7 @@ object Instance {
       agentId = Some(offer.getSlaveId.getValue),
       region = OfferUtil.region(offer),
       zone = OfferUtil.zone(offer),
-      attributes = offer.getAttributesList.toIndexedSeq
+      attributes = offer.getAttributesList.asScala.to(IndexedSeq)
     )
   }
 
@@ -418,4 +457,5 @@ object Instance {
       Json.toJson(stringToTask)
     }
   )
+
 }

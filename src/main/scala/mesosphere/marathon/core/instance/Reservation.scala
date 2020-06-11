@@ -5,7 +5,7 @@ import java.util.UUID
 
 import mesosphere.marathon.api.v2.json.Formats._
 import mesosphere.marathon.core.instance.Instance.Prefix
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, PathId, Timestamp}
 import play.api.libs.json._
 
 /**
@@ -31,7 +31,7 @@ object Reservation {
     * @param separator The separator of run spec id and uuid.
     * @param uuid The unique id of the reservation. It is the same id of the instance.
     */
-  case class LegacyId(runSpecId: PathId, separator: String, uuid: UUID) extends Id {
+  case class LegacyId(runSpecId: AbsolutePathId, separator: String, uuid: UUID) extends Id {
     override lazy val label: String = runSpecId.safePath + separator + uuid
 
     /**
@@ -45,7 +45,7 @@ object Reservation {
     *
     * @param instanceId The identifier for the instance this reservation belongs to.
     */
-  case class SimplifiedId(val instanceId: Instance.Id) extends Id {
+  case class SimplifiedId(instanceId: Instance.Id) extends Id {
     val label: String = instanceId.idString
   }
 
@@ -120,11 +120,9 @@ object Reservation {
       override def timeout: Option[Timeout] = None
     }
     /** A resident instance that has been running before but terminated and can be relaunched */
-    case class Suspended(timeout: Option[Timeout]) extends State
-    /** A resident instance whose reservation and persistent volumes are being destroyed */
-    case class Garbage(timeout: Option[Timeout]) extends State
-    /** An unknown resident instance created because of unknown reservations/persistent volumes */
-    case class Unknown(timeout: Option[Timeout]) extends State
+    case object Suspended extends State {
+      override def timeout: Option[Timeout] = None
+    }
 
     implicit object StateFormat extends Format[State] {
       override def reads(json: JsValue): JsResult[State] = {
@@ -133,9 +131,7 @@ object Reservation {
           (json \ "name").validate[String].map {
             case "new" => New(timeout)
             case "launched" => Launched
-            case "suspended" => Suspended(timeout)
-            case "garbage" => Garbage(timeout)
-            case _ => Unknown(timeout)
+            case "suspended" => Suspended
           }
         }
       }
@@ -145,9 +141,7 @@ object Reservation {
         o match {
           case _: New => JsObject(Seq("name" -> JsString("new"), "timeout" -> timeout))
           case Launched => JsObject(Seq("name" -> JsString("launched"), "timeout" -> timeout))
-          case _: Suspended => JsObject(Seq("name" -> JsString("suspended"), "timeout" -> timeout))
-          case _: Garbage => JsObject(Seq("name" -> JsString("garbage"), "timeout" -> timeout))
-          case _: Unknown => JsObject(Seq("name" -> JsString("unknown"), "timeout" -> timeout))
+          case Suspended => JsObject(Seq("name" -> JsString("suspended"), "timeout" -> timeout))
         }
       }
     }

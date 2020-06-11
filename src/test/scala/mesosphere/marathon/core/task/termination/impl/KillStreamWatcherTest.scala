@@ -9,7 +9,7 @@ import mesosphere.marathon.core.instance.update.{InstanceDeleted, InstanceUpdate
 import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.util.StreamHelpers
 
 class KillStreamWatcherTest extends AkkaUnitTest {
@@ -35,7 +35,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
     }
 
     "completes immediately if provided instances are already terminal and no updates arrive" in {
-      val terminalInstance = TestInstanceBuilder.newBuilder(PathId("/test")).addTaskKilled().instance
+      val terminalInstance = TestInstanceBuilder.newBuilder(AbsolutePathId("/test")).addTaskKilled().instance
       val emptyUpdates: InstanceTracker.InstanceUpdates = Source.single((InstancesSnapshot(Seq(terminalInstance)), StreamHelpers.sourceNever))
 
       val result = KillStreamWatcher
@@ -47,7 +47,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
     }
 
     "recognizes instances that are already terminal in the initial snapshot" in {
-      val unreachableInstance = TestInstanceBuilder.newBuilder(PathId("/test")).addTaskUnreachable().instance
+      val unreachableInstance = TestInstanceBuilder.newBuilder(AbsolutePathId("/test")).addTaskUnreachable().instance
       val instanceUpdates = Source.single(InstancesSnapshot(Seq(unreachableInstance)) -> StreamHelpers.sourceNever)
       val result = KillStreamWatcher
         .watchForKilledTasks(instanceUpdates, Seq(unreachableInstance))
@@ -58,8 +58,8 @@ class KillStreamWatcherTest extends AkkaUnitTest {
     }
 
     "completes with Set.empty when all instance Ids are seen" in {
-      val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(PathId(appId)).addTaskRunning().instance)
-      val otherInstance = List("/e", "/g", "/f").map(appId => TestInstanceBuilder.newBuilder(PathId(appId)).addTaskRunning().instance)
+      val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(AbsolutePathId(appId)).addTaskRunning().instance)
+      val otherInstance = List("/e", "/g", "/f").map(appId => TestInstanceBuilder.newBuilder(AbsolutePathId(appId)).addTaskRunning().instance)
 
       val instanceUpdates = Source.single(InstancesSnapshot(instances ++ otherInstance) -> Source(instances).via(instancesTerminalFlow))
 
@@ -72,26 +72,26 @@ class KillStreamWatcherTest extends AkkaUnitTest {
     }
 
     "emitPendingTerminal does not yield Set.empty when not all instance Ids are seen" in {
-      val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(PathId(appId)).addTaskRunning().instance)
+      val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(AbsolutePathId(appId)).addTaskRunning().instance)
 
       val instanceUpdates = Source.single(InstancesSnapshot(instances) -> Source(instances.tail).via(instancesTerminalFlow))
 
       val result = KillStreamWatcher.watchForKilledTasks(instanceUpdates, instances).runWith(Sink.last)
 
-      result.futureValue.map(_.runSpecId) shouldBe Set(PathId("/a"))
+      result.futureValue.map(_.runSpecId) shouldBe Set(AbsolutePathId("/a"))
     }
 
     "emits the original instances if nothing is terminal" in {
-      val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(PathId(appId)).addTaskRunning().instance)
+      val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(AbsolutePathId(appId)).addTaskRunning().instance)
       val instanceUpdates = Source.single(InstancesSnapshot(instances) -> Source.empty)
 
       val Seq(result) = KillStreamWatcher.watchForKilledTasks(instanceUpdates, instances).runWith(Sink.seq).futureValue
 
-      result.map(_.runSpecId) shouldBe Set(PathId("/a"), PathId("/b"), PathId("/c"))
+      result.map(_.runSpecId) shouldBe Set(AbsolutePathId("/a"), AbsolutePathId("/b"), AbsolutePathId("/c"))
     }
 
     "treats instances with taskIds with later incarnations as terminal" in {
-      val instanceWithIncarnation1 = TestInstanceBuilder.newBuilder(PathId("/a")).addTaskRunning().instance
+      val instanceWithIncarnation1 = TestInstanceBuilder.newBuilder(AbsolutePathId("/a")).addTaskRunning().instance
       val instanceWithIncarnation2 = instanceWithIncarnation1.copy(tasksMap = instanceWithIncarnation1.tasksMap.map {
         case (taskId, task) =>
           val nextTaskId = Task.Id.nextIncarnationFor(taskId)
@@ -117,7 +117,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
 
   "watchForDecommissionedInstances" should {
     "not treat instances as terminal until they are both decommissioned and expunged" in {
-      val instance = TestInstanceBuilder.newBuilder(PathId("/a")).addTaskRunning().instance
+      val instance = TestInstanceBuilder.newBuilder(AbsolutePathId("/a")).addTaskRunning().instance
 
       val instanceUpdatesTerminalNonDecomissioned = Source.single(
         InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesTerminalFlow))
@@ -127,7 +127,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
         .runWith(Sink.last)
         .futureValue
 
-      result1.map(_.runSpecId) shouldBe Set(PathId("/a"))
+      result1.map(_.runSpecId) shouldBe Set(AbsolutePathId("/a"))
 
       val instanceUpdatesTerminalAndDecommissioned = Source.single(
         InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesExpungedFlow))
@@ -141,7 +141,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
     }
 
     "treats unreachable instances with goal decommissioned as terminal" in {
-      val instance = TestInstanceBuilder.newBuilder(PathId("/a")).addTaskUnreachable().instance
+      val instance = TestInstanceBuilder.newBuilder(AbsolutePathId("/a")).addTaskUnreachable().instance
 
       val instanceUpdates = Source.single(
         InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesDecommissionedFlow))
@@ -155,7 +155,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
     }
 
     "treats instances as terminal if they went directly from scheduled to expunged" in {
-      val scheduledInstance = TestInstanceBuilder.newBuilder(PathId("/a")).withInstanceCondition(Condition.Scheduled).instance
+      val scheduledInstance = TestInstanceBuilder.newBuilder(AbsolutePathId("/a")).withInstanceCondition(Condition.Scheduled).instance
 
       val instanceUpdates = Source.single(
         InstancesSnapshot(Seq(scheduledInstance)) ->

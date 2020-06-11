@@ -6,20 +6,20 @@ import java.util.concurrent.TimeUnit
 import akka.Done
 import akka.actor.{ActorSystem, Scheduler}
 import akka.stream.{ActorMaterializer, Materializer}
-
-import scala.concurrent.ExecutionContext.Implicits.global
 import mesosphere.marathon.core.base.{JvmExitsCrashStrategy, LifecycleState}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.storage.{CuratorZk, StorageConf, StorageConfig}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
 import mesosphere.marathon.storage.repository.StoredGroup
 import mesosphere.marathon.storage.store.ZkStoreSerialization
+import mesosphere.marathon.storage.{CuratorZk, StorageConf, StorageConfig}
 import mesosphere.marathon.upgrade.DependencyGraphBenchmark
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.async.Async._
-import scala.concurrent.{Await, Future, Promise}
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future, Promise}
 
 object ZkPersistenceStoreBenchmark {
 
@@ -53,8 +53,8 @@ class ZkPersistenceStoreBenchmark {
   def storeAndRemoveGroup(hole: Blackhole): Unit = {
     val done = Promise[Done]
     val pipeline: Future[Done] = async {
-      await(zkStore.store(storedGroup.id, storedGroup))
-      val delete = Future.sequence(rootGroup.groupsById.keys.map { id => zkStore.deleteAll(id)(appDefResolver) })
+      await(zkStore.store[AbsolutePathId, StoredGroup](storedGroup.id, storedGroup))
+      val delete = Future.sequence(rootGroup.groupsById.keys.map { id => zkStore.deleteAll[AbsolutePathId, AppDefinition](id)(appDefResolver) })
       await(delete)
       Done
     }

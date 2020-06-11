@@ -5,7 +5,7 @@ import mesosphere.marathon._
 import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, Reservation, TestInstanceBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.AppDefinition
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.test.MarathonTestHelper
 
 class PersistentVolumeMatcherTest extends UnitTest {

@@ -78,7 +78,7 @@ gpasswd -a admin docker
 
 # Install Nodejs: add the NodeSource APT repository for Debian-based distributions repository AND the PGP key for verifying packages
 echo -e "\n=== Install Nodejs ==="
-curl -sL https://deb.nodesource.com/setup_6.x | bash -
+curl -sL https://deb.nodesource.com/setup_10.x | bash -
 apt-get install -y nodejs
 
 # Setup system
@@ -93,7 +93,8 @@ curl -L -o /usr/local/bin/jq https://github.com/stedolan/jq/releases/download/jq
 
 # Install Ammonite
 echo -e "\n=== Install Ammonite ==="
-curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/1.5.0/2.12-1.5.0 && sudo chmod +x /usr/local/bin/amm
+curl -L -o /usr/local/bin/amm https://github.com/lihaoyi/Ammonite/releases/download/2.0.1/2.12-2.0.1 && sudo chmod +x /usr/local/bin/amm
+sudo cp /usr/local/bin/amm /usr/local/bin/amm-2.12
 
 # Warmup ivy2 cache. Note: `sbt` is later executed with `sudo` and Debian `sudo` modifies $HOME
 # so we need ivy2 cache in `/root`
@@ -101,6 +102,9 @@ echo -e "\n=== Warmup SBT and Ammonite for master ==="
 git clone https://github.com/mesosphere/marathon.git /home/admin/marathon
 cd /home/admin/marathon
 sbt update
+
+echo -e "\n=== Install Utils ==="
+apt-get install strace
 
 # This throws an error without a parameter, but still fetches all required dependencies
 ci/pipeline || true

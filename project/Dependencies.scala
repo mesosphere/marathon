@@ -9,6 +9,7 @@ object Dependencies {
     akkaActor % "compile",
     akkaStream % "compile",
     akkaHttp % "compile",
+    akkaHttpXml % "compile",
     playJson % "compile",
     scalaLogging % "compile",
     logback % "compile",
@@ -34,32 +35,34 @@ object Dependencies {
   val marathon = (Seq(
     // runtime
     akkaActor % "compile",
+    akkaHttp % "compile",
+    akkaHttpPlayJson % "compile",
+    akkaHttpXml % "compile",
     akkaSlf4j % "compile",
     akkaStream % "compile",
-    akkaHttp % "compile",
+    alpakkaCodes % "compile",
+    alpakkaS3 % "compile",
     asyncAwait % "compile",
     aws % "compile",
-    mesos % "compile",
-    jerseyServlet % "compile",
-    jerseyMultiPart % "compile",
-    jettyEventSource % "compile",
-    uuidGenerator % "compile",
-    jGraphT % "compile",
     beanUtils % "compile",
-    playJson % "compile",
-    marathonUI % "compile",
-    marathonApiConsole % "compile",
-    wixAccord % "compile",
-    java8Compat % "compile",
-    scalaLogging % "compile",
-    logback % "compile",
-    logstash % "compile",
-    raven % "compile",
-    akkaHttpPlayJson % "compile",
-    alpakkaS3 % "compile",
     commonsCompress % "compile", // used for tar flow
     commonsIO % "compile",
-    alpakkaCodes % "compile",
+    jGraphT % "compile",
+    java8Compat % "compile",
+    jerseyMultiPart % "compile",
+    jerseyServlet % "compile",
+    jettyEventSource % "compile",
+    logback % "compile",
+    logstash % "compile",
+    marathonApiConsole % "compile",
+    marathonUI % "compile",
+    mesos % "compile",
+    playJson % "compile",
+    raven % "compile",
+    scalaCollectionCompat % "compile",
+    scalaLogging % "compile",
+    uuidGenerator % "compile",
+    wixAccord % "compile",
 
     // old Chaos deps
     guava % "compile",
@@ -70,6 +73,7 @@ object Dependencies {
     jerseyCore % "compile",
     jerseyServer % "compile",
     jerseyServlet % "compile",
+    jacksonAfterBurner % "compile",
     jacksonScala % "compile",
     jacksonJaxrs % "compile",
 
@@ -84,9 +88,10 @@ object Dependencies {
     Test.scalatest % "test",
     Test.mockito % "test",
     Test.akkaTestKit % "test",
+    Test.akkaStreamTestKit % "test",
     Test.akkaHttpTestKit % "test",
-    Test.junit % "test",
-    Test.scalacheck % "test"
+    Test.scalacheck % "test",
+    Test.usiTestUtils % "test"
   ) ++ Curator.all
     ++ DropwizardMetrics.all
     ++ Java9Compatibility.all
@@ -105,18 +110,18 @@ object Dependencies {
 object Dependency {
   object V {
     // runtime deps versions
-    val Akka = "2.5.23"
-    val AkkaHttp = "10.0.15"
-    val Alpakka  = "0.14"
+    val Akka = "2.6.3"
+    val AkkaHttp = "10.1.11"
+    val Alpakka  = "1.1.2"
     val ApacheCommonsCompress = "1.13"
     val ApacheCommonsIO = "2.6"
-    val AsyncAwait = "0.9.7"
+    val AsyncAwait = "0.10.0"
     val Aws = "1.11.243"
-    val Diffson = "2.2.2"
+    val Diffson = "4.0.2"
     val Guava = "20.0"
     val Guice = "4.1.0"
     val JGraphT = "0.9.3"
-    val Jackson = "2.9.5"
+    val Jackson = "2.10.2"
     val Java8Compat = "0.9.0"
     val Jersey = "2.27"
     val Jetty = "9.4.8.v20171121"
@@ -124,29 +129,29 @@ object Dependency {
     val Logback = "1.2.3"
     val Logstash = "4.9"
     val MarathonApiConsole = "3.0.8-accept"
-    val MarathonUI = "1.3.1"
-    val Mesos = "1.9.0-SNAPSHOT"
+    val MarathonUI = "1.3.2"
+    val Mesos = "1.10.0"
     val Mustache = "0.9.0"
-    val PlayJson = "2.6.7"
+    val PlayJson = "2.8.1"
     val Raven = "8.0.3"
-    val ScalaLogging = "3.7.2"
+    val ScalaCheck = "1.14.3"
+    val ScalaLogging = "3.9.2"
     val ScalaPb = "0.6.6"
-    val Scallop = "3.1.2"
+    val Scallop = "3.3.2"
     val ServletApi = "2.5"
     val Slf4j = "1.7.21"
     val UUIDGenerator = "3.1.4"
-    val WixAccord = "0.7.1"
+    val WixAccord = "0.7.6"
 
-    // Version of Mesos to use in Dockerfile.
-    val MesosDebian = "1.8.0-2.0.6"
+    // Version of Mesos to use when building docker image or testing packages
+    val MesosDebian = "1.10.0-0.1.1225.pre.20200327gitbeaf0cd84"
 
     // test deps versions
     val JMH = "1.19"
-    val JUnit = "4.12"
     val JUnitBenchmarks = "0.7.2"
     val Mockito = "1.10.19"
-    val ScalaCheck = "1.13.5"
-    val ScalaTest = "3.0.4"
+    val ScalaTest = "3.0.8"
+    val UsiTestUtil = "0.1.38"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
@@ -154,7 +159,8 @@ object Dependency {
 
   val akkaActor = "com.typesafe.akka" %% "akka-actor" % V.Akka
   val akkaHttp = "com.typesafe.akka" %% "akka-http" % V.AkkaHttp
-  val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.18.1"
+  val akkaHttpXml = "com.typesafe.akka" %% "akka-http-xml" % V.AkkaHttp
+  val akkaHttpPlayJson = "de.heikoseeberger" %% "akka-http-play-json" % "1.31.0"
   val akkaSlf4j = "com.typesafe.akka" %% "akka-slf4j" % V.Akka
   val akkaStream = "com.typesafe.akka" %% "akka-stream" % V.Akka
   val alpakkaCodes = "com.lightbend.akka" %% "akka-stream-alpakka-simple-codecs" % V.Alpakka
@@ -168,6 +174,7 @@ object Dependency {
   val guice = "com.google.inject" % "guice" % V.Guice
   val jGraphT = "org.javabits.jgrapht" % "jgrapht-core" % V.JGraphT
   val jacksonJaxrs = "com.fasterxml.jackson.jaxrs" % "jackson-jaxrs-json-provider" % V.Jackson
+  val jacksonAfterBurner = "com.fasterxml.jackson.module" % "jackson-module-afterburner" % V.Jackson
   val jacksonScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % V.Jackson
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
 
@@ -191,6 +198,7 @@ object Dependency {
   val mesos = "org.apache.mesos" % "mesos" % V.Mesos
   val playJson = "com.typesafe.play" %% "play-json" % V.PlayJson
   val raven = "com.getsentry.raven" % "raven-logback" % V.Raven
+  val scalaCollectionCompat = "org.scala-lang.modules" %% "scala-collection-compat" % "2.1.4"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % V.ScalaLogging
   val scalaPb = "com.trueaccord.scalapb" %% "compilerplugin" % V.ScalaPb
   val scallop = "org.rogach" %% "scallop" % V.Scallop
@@ -210,6 +218,8 @@ object Dependency {
     )
   }
 
+  val excludeZk35 = ExclusionRule(organization = "org.apache.zookeeper", name = "zookeeper")
+
   object Curator {
     /**
       * According to Curator's Zookeeper Compatibility Docs [http://curator.apache.org/zk-compatibility.html], 4.0.0
@@ -218,9 +228,7 @@ object Dependency {
       */
     val Version = "4.0.1"
 
-    val TestVersion = "2.12.0"
-
-    val excludeZk35 = ExclusionRule(organization = "org.apache.zookeeper", name = "zookeeper")
+    val TestVersion = "2.13.0"
 
     val curator = Seq(
       "org.apache.curator" % "curator-recipes" % Version % "compile",
@@ -252,9 +260,10 @@ object Dependency {
     val scalatest = "org.scalatest" %% "scalatest" % V.ScalaTest
     val mockito = "org.mockito" % "mockito-all" % V.Mockito
     val akkaTestKit = "com.typesafe.akka" %% "akka-testkit" % V.Akka
+    val akkaStreamTestKit = "com.typesafe.akka" %% "akka-stream-testkit" % V.Akka
     val akkaHttpTestKit = "com.typesafe.akka" %% "akka-http-testkit" % V.AkkaHttp
     val diffson = "org.gnieh" %% "diffson-play-json" % V.Diffson
-    val junit = "junit" % "junit" % V.JUnit
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
+    val usiTestUtils = ("com.mesosphere.usi" %% "test-utils" % V.UsiTestUtil).excludeAll(excludeZk35)
   }
 }

@@ -17,9 +17,9 @@ private[tracker] class InstanceTrackerUpdateStepProcessorImpl(
     metrics: Metrics,
     steps: Seq[InstanceChangeHandler]) extends InstanceTrackerUpdateStepProcessor with StrictLogging {
 
-  private[this] val stepTimeMetrics: Map[String, Timer] = steps.map { step =>
+  private[this] val stepTimeMetrics: Map[String, Timer] = steps.iterator.map { step =>
     step.metricName -> metrics.timer(s"debug.instance-tracker.update-steps.${step.metricName}.duration")
-  }(collection.breakOut)
+  }.toMap
 
   logger.info(
     "Started TaskTrackerUpdateStepsProcessorImpl with steps:\n{}",

@@ -1,4 +1,110 @@
-## Changes from 1.8.194 to 1.9.xxx
+## Changes from 1.9.136 to 1.10.xxx
+
+### Vertical container bursting support and shared cgroups
+
+Marathon 1.10 brings support for Mesos resource-limits, allowing containers to formally allocate and consume more CPU or memory than are consumed from an offer. For example, the following app definition would allow a Marathon app to consume as many CPU cycles are available, and also consume more than the 4gb of memory requested.
+
+```
+{
+  "id": "/dev/bigbusiness",
+  "cpus": 1,
+  "mem": 4096,
+  "resourceLimits": {
+    "cpus": "unlimited",
+    "mem": 8192
+  },
+  ...
+}
+```
+
+Also, newly created pods will no longer allow containers to steal resources from eachother. Previously, if a container in a pod was configured with less memory than it actually needs, the pod would still run successfully if the container could borrow steal the amount needed from another container. Pods created prior to upgrading Marathon to 1.10 will automatically have the flag `legacySharedCgroups` set to allow them to continue to run with the same configuration as they were initially launched. Pods cannot specify resource limits when `legacySharedCgroups` is enabled.
+
+For more information, see [resource-limits.md](https://github.com/mesosphere/marathon/blob/master/docs/docs/resource-limits.md)
+
+## Changes from 1.9.100 to 1.9.136
+
+### Fixed issues
+
+* [MARATHON-8711](https://jira.mesosphere.com/browse/MARATHON-8711) - Fix pod status for `Scheduled` instances with a
+  goal `Stopped`, which was causing scaled-down, terminal resident instances to not show up anywhere in the list.
+* [MARATHON-8712](https://jira.mesosphere.com/browse/MARATHON-8712) - Fix an issue where the upgrade migration would
+  fail if there were any persisted instances in state "scheduled" (IE ongoing deployment) during the upgrade attempt.
+* [MARATHON-8713](https://jira.mesosphere.com/browse/MARATHON-8713) - Fixed issue where defaultRole for groups with
+  enforceRole: false did not match the documentation and defaulted to the group-role, regardless.
+* [MARATHON-8710](https://jira.mesosphere.com/browse/MARATHON-8710) - Marathon would not include failed and re-scheduled
+  instances in `/v2/pods/::status` calls. This has been fixed. Note: freshly scheduled instances won't be shown.
+* [MARATHON-8719](https://jira.mesosphere.com/browse/MARATHON-8719) - With UnreachableStrategy, setting
+  expungeAfterSeconds and inactiveAfterSeconds to the same value will cause the instance to be expunged immediately;
+  this helps with `GROUP_BY` or `UNIQUE` constraints.
+* [MARATHON-8719](https://jira.mesosphere.com/browse/MARATHON-8719) - Marathon `/v2/tasks` text formatted output no
+  longer includes endpoints without host-port mappings at the agent hostname and port 0.
+
+### `/v2/tasks` `text/plain` output
+
+#### Addition of `containerNetworks` parameter
+
+Marathon outputs a terse, text-formatted list of instances with corresponding port-mappings with a request to `/v2/tasks` with content-type: `text/plain`. Usage of this endpoint is generally discouraged, but some older tools continue to rely on it.
+
+As of Marathon 1.5, the output would include user container network endpoint without a host port mapping, but in a form that was completely unusable (the agent's hostname as the address, even though the endpoint is fundamentally unreachable at that address, and the port 0). This behavior has been removed, and such results are not included by `/v2/tasks` application/text output, by default.
+
+A parameter `containerNetworks` has been added to filter and include port mappings pertaining to a comma-delimited list of user container network names. Setting this flag does not affect the output for port mappings that are bound to a host port in some way (either directly, in the case of host networking, or through a bridge-network port mapping). To see all container ips and endpoints for all user container networks, pass `?containerNetworks=*`.
+
+#### Deprecation ####
+
+The `text/plain` output is deprecated. It will be soft removed with Marathon 1.10. Any request will
+result in an `HTTP 406 Not Accetable` if the accept header is `test/plain` unless `--deprecated_features text_plain_tasks`
+is enabled. It will be hard removed with Marathon 1.11.
+
+## Changes from 1.9.73 to 1.9.100
+
+### Faster serialization
+
+The serialization speed in Marathon has been dramatically improved by switching to a more efficient serialization library for Marathon's auto-generated code. Marathon can generate JSON 50% faster; further, GC allocation cycles are reduced by 50%. This will help to alleviate performance issues resulting from many services frequently querying the API of a large Marathon instance.
+
+[MARATHON-8567](https://jira.mesosphere.com/browse/MARATHON-8706)
+
+### Fixed issues
+
+- [MARATHON-8706](https://jira.mesosphere.com/browse/MARATHON-8706) - Fixed an issue where `--new_group_enforce_role top` was not abided when auto-creating groups for services posted in not-yet-existing groups.
+- [MARATHON-8697](https://jira.mesosphere.com/browse/MARATHON-8697) - Removed (another) external volume name validation that prevented the use of configuration parameters for some volume providers.
+
+## Changes from 1.8.212 to 1.9.73
+
+### Multi-role support
+
+Marathon 1.9 brings support for multi-role, enabling you to launch services for different roles (against different Mesos quotas) with the same Marathon instance. This feature is described in greater detail in the [Multi-role docs](https://mesosphere.github.io/marathon/docs/multirole.html).
+
+#### Role field added to services
+
+The role field can now be optionally specified for a service. However, the value of this field may only be sent to one of two values:
+
+* The default role as specified by `--mesos_role` command line parameter
+* The name of the top-level group (this is referred to as the group-role)
+
+#### Changes in `acceptedResourceRoles` behavior
+
+`acceptedResourceRole` field defines what *reserved* resources would be used by the service. Previously, a Marathon instance started with `--mesos_role *` would accept following service definition:
+```json
+{
+   "id": "/sleep",
+   "cmd": "sleep 3600"
+   "acceptedResourceRoles": ["foo"]
+}
+``` 
+
+... but wouldn't be able to start the task since it is not subscribed for the role `foo`.
+
+This behavior has been changed with the addition of multi-role support. In Marathon 1.9, Marathon will sanitize the `acceptedResourceRoles` value, removing all invalid roles and leaving `*` (unreserved) by default. Using the example above, the service definition will be still accepted, however, `foo` will be removed and `"acceptedResourceRoles": ["*"]` will be used instead so that the task *will start*.
+
+Starting with Marathon 1.10, Marathon will reject the above service definition as invalid. However, the `sanitize_accepted_resource_roles` feature can be enabled with `--deprecated_features sanitize_accepted_resource_roles`, causing Marathon to continue to auto-sanitize this field value for one more version.
+
+In Marathon 1.11, the `sanitize_accepted_resource_roles` deprecated feature will be removed.
+
+#### Command-line flag `--default_accepted_resource_roles` has been replaced with `--accepted_resource_roles_default_behavior`
+
+The command-line flag `--default_accepted_resource_roles` does not work in a multi-role context. A new command-line parameter, `--accepted_resource_roles_default_behavior`, has been introduced, to replace it. See the [command-line-flags](https://mesosphere.github.io/marathon/docs/command-line-flags.html) docs.
+
+The command-line flag `--default_accepted_resource_roles` is deprecated and will be removed in Marathon 1.10.0.
 
 ### Introduce SharedMemory/IPC configuration to Marathon Apps and Pods
 
@@ -34,7 +140,82 @@ is removed with `1.9.x`.
 
 When Marathon receives a `TASK_GONE_BY_OPERATOR` or `TASK_KILLED` status update with a reason indicating that the agent is being drained, any delay for the related run spec will be deleted. This is to speed up the process of replacing tasks from drained agents.
 
-## Changes from 1.8.194 to 1.8.xxx
+### Deprecated features
+
+#### Deprecation and eventual removal of the command line flags `--revive_offer_repetitions` and `--revive_offers_for_new_apps`
+
+The command line options `--revive_offers_port_new_apps` and `--revive_offers_repetitions` have been deprecated in Marathon 1.9. Specifying these command-line arguments no longer has any effect. These command-line options will be completely removed in Marathon 1.10, where specifying them will be considered an error.
+
+Instead of specifying `--revive_offers_port_new_apps`, one can achieve similar effects by specifying a larger `--min_revive_offers_interval`, which will reduce the burden and offer starvation in clusters with lots of frameworks.
+
+Revive offers repetitions functionality no longer optional; after the duration specified by ```min_revive_offers_interval` since the last revive for role, offers are still wanted, a revive is repeated once (and only once).
+
+For more detailed information, see the JIRA ticket [MARATHON-8663](https://jira.mesosphere.com/browse/MARATHON-8663)
+
+### Fixed issues
+- [MARATHON-8711](https://jira.mesosphere.com/browse/MARATHON-8711) - Fixed a rare issue where Marathon would fail to render a status for a resident scheduled pod instance with a goal `Stopped` 
+
+## Changes from 1.8.218 to 1.8.222
+
+### External Volume Validation changes
+
+#### Relaxed name validation
+
+As there are some external volume providers which require options in the volume name, the strict validation of the name on the external volume is now removed.
+
+As the uniqueness check is based on the volume name, this may lead to some inconsistencies, for the sake of uniqueness, the following volumes are distinct:
+
+```json
+"volumes": [
+      {
+        "external": {
+          "name": "name=volumename,option1=value",
+        },
+      }
+    ],
+```
+
+```json
+"volumes": [
+      {
+        "external": {
+          "name": "option1=value,name=volumename",
+        },
+      }
+    ],
+```
+
+#### Optional uniqueness check
+
+Previously, Marathon would validate that an external volume with the same name is only used once across all apps. This was due to the initial implementation being focused on Rexray+EBS. However, multiple external volume providers now
+allow shared access to mounted volumes, so we introduced a way to disable the uniqueness check:
+
+A new field, `container.volumes[n].external.shared` which defaults to `false`. If set to true, the same volume name can be used
+by multiple containers. The `shared` flag has to be set to `true` on all external volumes with the same name, otherwise a conflict is reported on the volume without the `shared=true` flag.
+
+```json
+  "container": {
+    "type": "MESOS",
+    "volumes": [
+      {
+        "external": {
+          "size": 5,
+          "name": "volumename",
+          "provider": "dvdi",
+          "shared": "true",
+          "options": {
+            "dvdi/driver": "pxd",
+            "dvdi/shared": "true"
+          }
+        },
+        "mode": "RW",
+        "containerPath": "/mnt/nginx"
+      }
+    ],
+  }
+```
+
+## Changes from 1.8.194 to 1.8.218
 
 ### Revive and Suppress Refactoring
 
@@ -69,6 +250,20 @@ when Marathon fails to clean up reservation which requires offers being sent.
 - [MARATHON-8422](https://jira.mesosphere.com/browse/MARATHON-8422) - Kill unreachable tasks that came back. Marathon could get stuck waiting for terminal events but not issue a kill.
 
 ## Changes from 1.7.xxx to 1.8.180
+
+### Aligning Ephemeral with Stateful Task Handling
+
+Marathon 1.8 introduces handling ephemeral instances similar to how it handled stateful instances since version 1.0. Until now, Marathon expunged ephemeral instances once all of their tasks ended up in a terminal state, and eventually launched replacements as a result of those instances being expunged. Instances will now only be expunged from the state once their goal is set to `Decommissioned` and all their tasks are in a terminal state. If their goal is still `Running`, they will be considered for scheduling and used to launch replacement tasks. This change not only merges two previously different code paths; this also simplifies debugging since users will be able to follow the task incarnations for a given instance throughout Marathons logs.
+
+This means that instance Ids are now stable for as long as an instance shall be kept running. New instances will be created only when replacing unreachable instances, and when replacing instances with new versions. Similar to the way we handle task Ids for stateful services, tasks of stateless services will now also provide an incarnation count, appended to the task Id. The first task created for an instance will be the .1, and subsequent replacements will increment that incarnation counter, e.g.
+
+```
+service-name.instance-c0caec0a-863a-11e9-915b-c610fee06dff._app.42
+```
+
+The above example denotes the 42nd incaration of instance `c0caec0a-863a-11e9-915b-c610fee06dff`.
+
+When killing an instance using the `wipe=true` flag, its goal will be set to `Decommission` and it will eventually be expunged when all tasks are terminal. Note that as long as its tasks are e.g. unreachable, it will not be expunged until they are reported terminal (in case they stay unreachable: `GONE`, `GONE_BY_OPERATOR`, or `UNKNOWN`). When killing instances without the `wipe=true` flag, Marathon will only issue kill requests to Mesos, but keep the current goal and will, therefore, launch replacements that are still associated with the existing instance.
 
 ### AppC is now deprecated
 AppC is now deprecated and will be removed in Marathon 1.9

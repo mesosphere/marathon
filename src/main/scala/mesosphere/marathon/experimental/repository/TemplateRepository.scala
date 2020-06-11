@@ -170,7 +170,7 @@ class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)
 
   def children(pathId: PathId): Try[Seq[String]] = {
     if (exists(pathId)) {
-      Try(trie.getChildren(storePath(pathId), false).asScala.to[Seq])
+      Try(trie.getChildren(storePath(pathId), false).asScala.to(Seq))
     } else {
       Failure(new NoNodeException(s"No contents for path $pathId found"))
     }

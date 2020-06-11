@@ -23,12 +23,12 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
   val enabledFeatures = Set("secrets")
   val enforcedrole = "*"
 
-  val validator = AppDefinition.validAppDefinition(enabledFeatures, ValidationHelper.roleSettings)(PluginManager.None)
+  val validator = AppDefinition.validAppDefinition(enabledFeatures, ValidationHelper.roleSettings())(PluginManager.None)
 
   val validatorWithRole = AppDefinition.validAppDefinition(enabledFeatures, RoleSettings(validRoles = Set("someRole"), defaultRole = "someRole"))(PluginManager.None)
 
   private[this] def appNormalization(app: raml.App): raml.App =
-    AppHelpers.appNormalization(AppNormalization.Configuration(None, "mesos-bridge-name", enabledFeatures, ValidationHelper.roleSettings)).normalized(app)
+    AppHelpers.appNormalization(AppNormalization.Configuration(None, "mesos-bridge-name", enabledFeatures, ResourceRole.Unreserved, true), Set(ResourceRole.Unreserved)).normalized(app)
 
   private[this] def fromJson(json: String): AppDefinition = {
     val raw: raml.App = Json.parse(json).as[raml.App]
@@ -37,23 +37,23 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
   "AppDefinition" should {
     "Validation" in {
-      var app = AppDefinition(id = "a b".toRootPath, role = "*")
+      var app = AppDefinition(id = "a b".toAbsolutePath, role = "*")
       val idError = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'"
       validator(app) should haveViolations("/id" -> idError)
 
-      app = app.copy(id = "a#$%^&*b".toRootPath)
+      app = app.copy(id = "a#$%^&*b".toAbsolutePath)
       validator(app) should haveViolations("/id" -> idError)
 
-      app = app.copy(id = "-dash-disallowed-at-start".toRootPath)
+      app = app.copy(id = "-dash-disallowed-at-start".toAbsolutePath)
       validator(app) should haveViolations("/id" -> idError)
 
-      app = app.copy(id = "dash-disallowed-at-end-".toRootPath)
+      app = app.copy(id = "dash-disallowed-at-end-".toAbsolutePath)
       validator(app) should haveViolations("/id" -> idError)
 
-      app = app.copy(id = "uppercaseLettersNoGood".toRootPath)
+      app = app.copy(id = "uppercaseLettersNoGood".toAbsolutePath)
       validator(app) should haveViolations("/id" -> idError)
 
-      val correct = AppDefinition(id = "test".toRootPath, role = "*")
+      val correct = AppDefinition(id = "test".toAbsolutePath, role = "*")
 
       app = correct.copy(
         role = "aRole",
@@ -196,7 +196,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       validator(app.copy(resources = Resources(gpus = 1))) should haveViolations("/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
 
       {
-        val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"), ValidationHelper.roleSettings)(PluginManager.None)
+        val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"), ValidationHelper.roleSettings())(PluginManager.None)
         appValidator(app.copy(resources = Resources(gpus = 1))) shouldNot haveViolations(
           "/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
       }
@@ -248,6 +248,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       val app1 = raml.App(id = "/test", cmd = Some("foo"))
       assert(app1.args.isEmpty)
       JsonTestHelper.assertSerializationRoundtripWorks(app1, appNormalization)
+      JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(app1, appNormalization)
     }
 
     "Reading app definition with command health check" in {
@@ -327,6 +328,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       )
       withValidationClue {
         JsonTestHelper.assertSerializationRoundtripWorks(app3, appNormalization)
+        JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(app3, appNormalization)
       }
     }
 
@@ -338,37 +340,36 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         healthChecks = Set(raml.AppHealthCheck(protocol = raml.AppHealthCheckProtocol.Http, portIndex = Some(1)))
       )
       JsonTestHelper.assertSerializationRoundtripWorks(app3, appNormalization)
+      JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(app3, appNormalization)
     }
 
     "Reading AppDefinition adds portIndex to a Marathon HTTP health check if the app has ports" in {
-      import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = PortDefinitions(9001, 9002),
         healthChecks = Set(MarathonHttpHealthCheck())
       )
 
-      val json = Json.toJson(app).toString()
+      val json = Json.toJson(Raml.toRaml(app)).toString()
       val reread = fromJson(json)
 
       assert(reread.healthChecks.headOption.contains(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))), json)
     }
 
     "Reading AppDefinition does not add portIndex to a Marathon HTTP health check if the app doesn't have ports" in {
-      import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
         healthChecks = Set(MarathonHttpHealthCheck())
       )
 
-      val json = Json.toJson(app).toString()
+      val json = Json.toJson(Raml.toRaml(app)).toString()
       val ex = intercept[ValidationFailedException] {
         fromJson(json)
       }
@@ -376,10 +377,9 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     }
 
     "Reading AppDefinition adds portIndex to a Marathon HTTP health check if it has at least one portMapping" in {
-      import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -392,16 +392,15 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         healthChecks = Set(MarathonHttpHealthCheck())
       )
 
-      val json = Json.toJson(app)
+      val json = Json.toJson(Raml.toRaml(app))
       val reread = fromJson(json.toString)
       reread.healthChecks.headOption should be(Some(MarathonHttpHealthCheck(portIndex = Some(PortReference(0)))))
     }
 
     "Reading AppDefinition does not add portIndex to a Marathon HTTP health check if it has no ports nor portMappings" in {
-      import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -409,7 +408,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         healthChecks = Set(MarathonHttpHealthCheck())
       )
 
-      val json = Json.toJson(app)
+      val json = Json.toJson(Raml.toRaml(app))
       val ex = intercept[ValidationFailedException] {
         fromJson(json.toString) withClue (json)
       }
@@ -417,27 +416,25 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     }
 
     "Reading AppDefinition does not add portIndex to a Mesos HTTP health check if the app doesn't have ports" in {
-      import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
         healthChecks = Set(MesosHttpHealthCheck())
       )
 
-      val json = Json.toJson(app)
+      val json = Json.toJson(Raml.toRaml(app))
       val reread = fromJson(json.toString)
 
       reread.healthChecks.headOption should be(Some(MesosHttpHealthCheck(portIndex = None)))
     }
 
     "Reading AppDefinition adds portIndex to a Mesos HTTP health check if it has at least one portMapping" in {
-      import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -451,7 +448,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       )
 
       withValidationClue {
-        val json = Json.toJson(app)
+        val json = Json.toJson(Raml.toRaml(app))
         val reread = fromJson(json.toString)
 
         reread.healthChecks.headOption should be(Some(MesosHttpHealthCheck(portIndex = Some(PortReference(0)))))
@@ -459,10 +456,9 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     }
 
     "Reading AppDefinition does not add portIndex to a Mesos HTTP health check if it has no ports nor portMappings" in {
-      import Formats._
 
       val app = AppDefinition(
-        id = PathId("/prod/product/frontend/my-app"),
+        id = AbsolutePathId("/prod/product/frontend/my-app"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
@@ -470,7 +466,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         healthChecks = Set(MesosHttpHealthCheck())
       )
 
-      val json = Json.toJson(app)
+      val json = Json.toJson(Raml.toRaml(app))
       val reread = fromJson(json.toString)
 
       reread.healthChecks.headOption should be(Some(MesosHttpHealthCheck(portIndex = None)))
@@ -479,7 +475,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Read app with container definition and port mappings" in {
 
       val app4 = AppDefinition(
-        id = "bridged-webapp".toRootPath,
+        id = "bridged-webapp".toAbsolutePath,
         role = "*",
         cmd = Some("python3 -m http.server 8080"),
         networks = Seq(BridgeNetwork()), container = Some(Docker(
@@ -516,7 +512,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     "Read app with fetch definition" in {
 
       val app = AppDefinition(
-        id = "app-with-fetch".toRootPath,
+        id = "app-with-fetch".toAbsolutePath,
         role = "*",
         cmd = Some("brew update"),
         fetch = Seq(
@@ -594,7 +590,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
     "Serialize deserialize path with fetch" in {
       val app = AppDefinition(
-        id = "app-with-fetch".toPath,
+        id = AbsolutePathId("/app-with-fetch"),
         role = "*",
         cmd = Some("brew update"),
         fetch = Seq(
@@ -622,7 +618,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
     "Read app with labeled virtual network and discovery info" in {
       val app = AppDefinition(
-        id = "app-with-ip-address".toRootPath,
+        id = "app-with-ip-address".toAbsolutePath,
         role = "*",
         cmd = Some("python3 -m http.server 8080"),
         networks = Seq(ContainerNetwork(
@@ -668,7 +664,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
     "Read app with ip address without discovery info" in {
       val app = AppDefinition(
-        id = "app-with-ip-address".toRootPath,
+        id = "app-with-ip-address".toAbsolutePath,
         role = "*",
         cmd = Some("python3 -m http.server 8080"),
         container = Some(state.Container.Mesos(portMappings = Seq(Container.PortMapping.defaultInstance))), portDefinitions = Nil,
@@ -705,7 +701,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
     "Read app with ip address and an empty ports list" in {
       val app = AppDefinition(
-        id = "app-with-network-isolation".toRootPath,
+        id = "app-with-network-isolation".toAbsolutePath,
         role = "*",
         cmd = Some("python3 -m http.server 8080"),
         container = Some(state.Container.Mesos(portMappings = Seq(Container.PortMapping.defaultInstance))),
@@ -774,6 +770,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         secrets = Map("james" -> SecretDef("somesource"))
       )
       JsonTestHelper.assertSerializationRoundtripWorks(app3, appNormalization)
+      JsonTestHelper.assertSerializationRoundtripWithJacksonWorks(app3, appNormalization)
     }
 
     "environment variables with secrets should parse" in {
@@ -798,7 +795,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
     }
 
     "container port mappings when empty stays empty" in {
-      val appDef = AppDefinition(id = PathId("/test"), container = Some(Docker()), role = "*")
+      val appDef = AppDefinition(id = AbsolutePathId("/test"), container = Some(Docker()), role = "*")
       val roundTripped = AppDefinition.fromProto(appDef.toProto)
       roundTripped should equal(appDef)
       roundTripped.container.map(_.portMappings) should equal(appDef.container.map(_.portMappings))

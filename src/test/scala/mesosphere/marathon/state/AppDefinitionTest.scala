@@ -4,10 +4,10 @@ package state
 import mesosphere.UnitTest
 import mesosphere.marathon.Protos.ServiceDefinition
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork}
-import mesosphere.marathon.raml.Resources
+import mesosphere.marathon.raml.{ResourceLimitUnlimited, Resources}
 import mesosphere.marathon.state.EnvVarValue._
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.stream.Implicits._
+
+import scala.jdk.CollectionConverters._
 import org.apache.mesos.{Protos => mesos}
 
 import scala.concurrent.duration._
@@ -15,12 +15,12 @@ import scala.concurrent.duration._
 class AppDefinitionTest extends UnitTest {
 
   val fullVersion = VersionInfo.forNewConfig(Timestamp(1))
-  val runSpecId = PathId("/test")
+  val runSpecId = AbsolutePathId("/test")
 
   "AppDefinition" should {
     "ToProto with port definitions" in {
       val app1 = AppDefinition(
-        id = "play".toPath,
+        id = AbsolutePathId("/play"),
         role = "*",
         cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
         resources = Resources(cpus = 4.0, mem = 256.0),
@@ -31,12 +31,12 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val proto1 = app1.toProto
-      assert("play" == proto1.getId)
+      assert("/play" == proto1.getId)
       assert(proto1.getCmd.hasValue)
       assert(proto1.getCmd.getShell)
       assert("bash foo-*/start -Dhttp.port=$PORT" == proto1.getCmd.getValue)
       assert(5 == proto1.getInstances)
-      assert(Seq(8080, 8081) == proto1.getPortDefinitionsList.map(_.getNumber))
+      assert(Seq(8080, 8081) == proto1.getPortDefinitionsList.asScala.map(_.getNumber))
       assert("//cmd" == proto1.getExecutor)
       assert(4 == getScalarResourceValue(proto1, "cpus"), 1e-6)
       assert(256 == getScalarResourceValue(proto1, "mem"), 1e-6)
@@ -48,7 +48,7 @@ class AppDefinitionTest extends UnitTest {
       assert(proto1.getAcceptedResourceRoles == Protos.ResourceRoles.newBuilder().addRole("a").addRole("b").build())
 
       val app2 = AppDefinition(
-        id = "play".toPath,
+        id = AbsolutePathId("/play"),
         role = "*",
         cmd = None,
         args = Seq("a", "b", "c"),
@@ -61,12 +61,12 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val proto2 = app2.toProto
-      assert("play" == proto2.getId)
+      assert("/play" == proto2.getId)
       assert(!proto2.getCmd.hasValue)
       assert(!proto2.getCmd.getShell)
       proto2.getCmd.getArgumentsList should contain theSameElementsInOrderAs Seq("a", "b", "c")
       assert(5 == proto2.getInstances)
-      assert(Seq(8080, 8081) == proto2.getPortDefinitionsList.map(_.getNumber))
+      assert(Seq(8080, 8081) == proto2.getPortDefinitionsList.asScala.map(_.getNumber))
       assert("//cmd" == proto2.getExecutor)
       assert(4 == getScalarResourceValue(proto2, "cpus"), 1e-6)
       assert(256 == getScalarResourceValue(proto2, "mem"), 1e-6)
@@ -78,14 +78,14 @@ class AppDefinitionTest extends UnitTest {
 
     "CMD to proto and back again" in {
       val app = AppDefinition(
-        id = "play".toPath,
+        id = AbsolutePathId("/play"),
         role = "*",
         cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
         versionInfo = fullVersion
       )
 
       val proto = app.toProto
-      proto.getId should be("play")
+      proto.getId should be("/play")
       proto.getCmd.hasValue should be(true)
       proto.getCmd.getShell should be(true)
       proto.getCmd.getValue should be("bash foo-*/start -Dhttp.port=$PORT")
@@ -96,14 +96,14 @@ class AppDefinitionTest extends UnitTest {
 
     "ARGS to proto and back again" in {
       val app = AppDefinition(
-        id = "play".toPath,
+        id = AbsolutePathId("/play"),
         role = "*",
         args = Seq("bash", "foo-*/start", "-Dhttp.port=$PORT"),
         versionInfo = fullVersion
       )
 
       val proto = app.toProto
-      proto.getId should be("play")
+      proto.getId should be("/play")
       proto.getCmd.hasValue should be(true)
       proto.getCmd.getShell should be(false)
       proto.getCmd.getValue should be("bash")
@@ -115,7 +115,7 @@ class AppDefinitionTest extends UnitTest {
 
     "app w/ basic container network to proto and back again" in {
       val app = AppDefinition(
-        id = "app-with-ip-address".toPath,
+        id = AbsolutePathId("/app-with-ip-address"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
@@ -131,7 +131,7 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val proto = app.toProto
-      proto.getId should be("app-with-ip-address")
+      proto.getId should be("/app-with-ip-address")
       assert(proto.getNetworksCount > 0)
 
       val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto)
@@ -140,7 +140,7 @@ class AppDefinitionTest extends UnitTest {
 
     "app to proto and back again w/ Docker container w/ virtual networking" in {
       val app = AppDefinition(
-        id = "app-with-port-mappings".toPath,
+        id = AbsolutePathId("/app-with-port-mappings"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
@@ -166,7 +166,7 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val proto = app.toProto
-      proto.getId should be("app-with-port-mappings")
+      proto.getId should be("/app-with-port-mappings")
       assert(proto.getNetworksCount > 0)
 
       val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto)
@@ -175,7 +175,7 @@ class AppDefinitionTest extends UnitTest {
 
     "ipAddress to proto and back again w/ Docker container w/ bridge" in {
       val app = AppDefinition(
-        id = "app-with-ip-address".toPath,
+        id = AbsolutePathId("/app-with-ip-address"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
@@ -191,7 +191,7 @@ class AppDefinitionTest extends UnitTest {
       )
 
       val proto = app.toProto
-      proto.getId should be("app-with-ip-address")
+      proto.getId should be("/app-with-ip-address")
 
       val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto)
       read should be(app)
@@ -199,7 +199,7 @@ class AppDefinitionTest extends UnitTest {
 
     "ipAddress discovery to proto and back again" in {
       val app = AppDefinition(
-        id = "app-with-ip-address".toPath,
+        id = AbsolutePathId("/app-with-ip-address"),
         role = "*",
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
@@ -233,7 +233,7 @@ class AppDefinitionTest extends UnitTest {
         .setValue("bash foo-*/start -Dhttp.port=$PORT")
 
       val proto1 = ServiceDefinition.newBuilder
-        .setId("play")
+        .setId("/play")
         .setCmd(cmd)
         .setInstances(3)
         .setExecutor("//cmd")
@@ -242,7 +242,7 @@ class AppDefinitionTest extends UnitTest {
 
       val app1 = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto1)
 
-      assert("play" == app1.id.toString)
+      assert("/play" == app1.id.toString)
       assert(3 == app1.instances)
       assert("//cmd" == app1.executor)
       assert(app1.cmd.contains("bash foo-*/start -Dhttp.port=$PORT"))
@@ -268,7 +268,7 @@ class AppDefinitionTest extends UnitTest {
 
     "ProtoRoundtrip" in {
       val app1 = AppDefinition(
-        id = "play".toPath,
+        id = AbsolutePathId("/play"),
         role = "*",
         cmd = Some("bash foo-*/start -Dhttp.port=$PORT"),
         resources = Resources(cpus = 4.0, mem = 256.0),
@@ -372,10 +372,19 @@ class AppDefinitionTest extends UnitTest {
       val result = app.mergeFromProto(update.toProto)
       assert(result == update, s"expected $update instead of $result")
     }
+
+    "isUpgrade" should {
+      "recognizes a change to resourceLimits as an upgrade" in {
+        val original = Builders.newAppDefinition.command(resourceLimits = None)
+        val updated = original.copy(resourceLimits = Some(ResourceLimits(cpus = Some(Double.PositiveInfinity), mem = None)))
+        original.isUpgrade(updated) shouldBe true
+      }
+    }
   }
 
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {
     proto.getResourcesList
+      .asScala
       .find(_.getName == name)
       .get.getScalar.getValue
   }

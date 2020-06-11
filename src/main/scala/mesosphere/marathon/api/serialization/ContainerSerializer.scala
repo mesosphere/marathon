@@ -5,7 +5,7 @@ import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork, HostNetwork, Network}
 import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos
 
@@ -18,8 +18,8 @@ object ContainerSerializer {
     } else {
       val pms = proto.getPortMappingsList
       Container.Mesos(
-        volumes = proto.getVolumesList.map(VolumeWithMount(None, _))(collection.breakOut),
-        portMappings = pms.map(PortMappingSerializer.fromProto)(collection.breakOut),
+        volumes = proto.getVolumesList.asScala.iterator.map(VolumeWithMount(None, _)).toSeq,
+        portMappings = pms.asScala.iterator.map(PortMappingSerializer.fromProto).toSeq,
         linuxInfo = if (proto.hasLinuxInfo) LinuxInfoSerializer.fromProto(proto.getLinuxInfo) else None
       )
     }
@@ -99,7 +99,7 @@ object ContainerSerializer {
     container match {
       case _: Docker => ()
       case _ =>
-        networks.toIterator
+        networks.iterator
           .filter(_ != HostNetwork)
           .map { network =>
             val (networkName, networkLabels) = network match {
@@ -197,6 +197,7 @@ object ExternalVolumeInfoSerializer {
     val builder = Protos.Volume.ExternalVolumeInfo.newBuilder()
       .setName(info.name)
       .setProvider(info.provider)
+      .setShared(info.shared)
 
     info.size.foreach(builder.setSize)
     info.options.map{
@@ -212,11 +213,11 @@ object DockerSerializer {
     val d = proto.getDocker
     val pms = proto.getPortMappingsList
     Container.Docker(
-      volumes = proto.getVolumesList.map(VolumeWithMount(None, _))(collection.breakOut),
+      volumes = proto.getVolumesList.asScala.iterator.map(VolumeWithMount(None, _)).toSeq,
       image = d.getImage,
-      portMappings = pms.map(PortMappingSerializer.fromProto)(collection.breakOut),
+      portMappings = pms.asScala.iterator.map(PortMappingSerializer.fromProto).toSeq,
       privileged = d.getPrivileged,
-      parameters = d.getParametersList.map(Parameter(_))(collection.breakOut),
+      parameters = d.getParametersList.asScala.iterator.map(Parameter(_)).toSeq,
       forcePullImage = if (d.hasForcePullImage) d.getForcePullImage else false
     )
   }
@@ -271,8 +272,8 @@ object PortMappingSerializer {
       proto.getServicePort,
       proto.getProtocol,
       if (proto.hasName) Some(proto.getName) else None,
-      proto.getLabelsList.map { p => p.getKey -> p.getValue }(collection.breakOut),
-      proto.getNetworkNamesList.toList
+      proto.getLabelsList.asScala.iterator.map { p => p.getKey -> p.getValue }.toMap,
+      proto.getNetworkNamesList.asScala.toList
     )
 
   def toMesos(mapping: Container.PortMapping): Seq[mesos.Protos.ContainerInfo.DockerInfo.PortMapping] = {
@@ -382,8 +383,8 @@ object MesosDockerSerializer {
     val linuxInfo = if (proto.hasLinuxInfo) LinuxInfoSerializer.fromProto(proto.getLinuxInfo) else None
 
     Container.MesosDocker(
-      volumes = proto.getVolumesList.map(VolumeWithMount(None, _))(collection.breakOut),
-      portMappings = pms.map(PortMappingSerializer.fromProto)(collection.breakOut),
+      volumes = proto.getVolumesList.asScala.iterator.map(VolumeWithMount(None, _)).toSeq,
+      portMappings = pms.asScala.iterator.map(PortMappingSerializer.fromProto).toSeq,
       image = d.getImage,
       credential = if (d.hasDeprecatedCredential) Some(CredentialSerializer.fromMesos(d.getDeprecatedCredential)) else None,
       pullConfig = if (d.hasPullConfig) Some(DockerPullConfigSerializer.fromProto(d.getPullConfig)) else None,

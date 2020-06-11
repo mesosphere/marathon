@@ -3,8 +3,8 @@ package core.launcher.impl
 
 import mesosphere.UnitTest
 import mesosphere.marathon.core.instance.{Instance, Reservation}
-import mesosphere.marathon.state.PathId
-import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.state.AbsolutePathId
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.{Protos => MesosProtos}
@@ -45,13 +45,13 @@ class TaskLabelsTest extends UnitTest {
     }
   }
   class Fixture {
-    val appId = PathId("/test")
+    val appId = AbsolutePathId("/test")
     val instanceId = Instance.Id.forRunSpec(appId)
     val reservationId = Reservation.SimplifiedId(instanceId)
     val frameworkId = MarathonTestHelper.frameworkId
     val otherFrameworkId = FrameworkId("very other different framework id")
 
-    val unlabeledResources = MarathonTestHelper.makeBasicOffer().getResourcesList
+    val unlabeledResources = MarathonTestHelper.makeBasicOffer().getResourcesList.asScala
     require(unlabeledResources.nonEmpty)
     require(unlabeledResources.forall(!_.hasReservation))
 
@@ -59,7 +59,7 @@ class TaskLabelsTest extends UnitTest {
       MarathonTestHelper.makeBasicOffer(
         reservation = Some(TaskLabels.labelsForTask(frameworkId, reservationId)),
         role = "test"
-      ).getResourcesList.to[Seq]
+      ).getResourcesList.asScala.to(Seq)
     }
 
     val labeledResources = labelResourcesFor(frameworkId)

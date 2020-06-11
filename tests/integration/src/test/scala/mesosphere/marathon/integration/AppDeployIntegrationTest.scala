@@ -4,20 +4,19 @@ package integration
 import java.util.UUID
 
 import akka.util.ByteString
+import com.mesosphere.utils.http.RestResult
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.facades.{ITDeployment, ITEnrichedTask, ITQueueItem}
+import mesosphere.marathon.integration.facades.{AppMockFacade, ITDeployment, ITEnrichedTask, ITQueueItem}
 import mesosphere.marathon.integration.setup._
 import mesosphere.marathon.raml.{App, AppCommandCheck, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, UpgradeStrategy}
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
-import org.scalactic.source.Position
 
 import scala.concurrent.duration._
 
 class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
 
-  def appId(suffix: Option[String] = None): PathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
+  def appId(suffix: Option[String] = None): AbsolutePathId = testBasePath / s"app-${suffix.getOrElse(UUID.randomUUID)}"
 
   "AppDeploy" should {
     "create a simple app without health checks" in {
@@ -31,7 +30,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1) //make sure, the app has really started
+      waitForTasks(AbsolutePathId(app.id), 1) //make sure, the app has really started
     }
 
     "redeploying an app without changes should not cause restarts" in {
@@ -41,12 +40,12 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      val taskBeforeRedeployment = waitForTasks(app.id.toPath, 1) //make sure, the app has really started
+      val taskBeforeRedeployment = waitForTasks(AbsolutePathId(app.id), 1) //make sure, the app has really started
 
       When("redeploying the app without changes")
-      val update = marathon.updateApp(app.id.toPath, AppUpdate(id = Some(app.id), cmd = app.cmd))
+      val update = marathon.updateApp(AbsolutePathId(app.id), AppUpdate(id = Some(app.id), cmd = app.cmd))
       waitForDeployment(update)
-      val tasksAfterRedeployment = waitForTasks(app.id.toPath, 1) //make sure, the app has really started
+      val tasksAfterRedeployment = waitForTasks(AbsolutePathId(app.id), 1) //make sure, the app has really started
 
       Then("no tasks should have been restarted")
       taskBeforeRedeployment should be(tasksAfterRedeployment)
@@ -58,14 +57,14 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val app: App = backedOffApp(pathId)
 
       When("we force deploy a working configuration")
-      val deployment2 = marathon.updateApp(app.id.toPath, AppUpdate(cmd = Some("sleep 120; true")), force = true)
+      val deployment2 = marathon.updateApp(AbsolutePathId(app.id), AppUpdate(cmd = Some("sleep 120; true")), force = true)
 
       Then("The app deployment is created")
       deployment2 should be(OK)
 
       And("and the app gets deployed immediately")
       waitForDeployment(deployment2)
-      waitForTasks(app.id.toPath, 1)
+      waitForTasks(AbsolutePathId(app.id), 1)
     }
 
     "backoff delays are NOT reset on scaling changes" in {
@@ -74,13 +73,13 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val app: App = backedOffApp(pathId)
 
       When("we force deploy a scale change")
-      val deployment2 = marathon.updateApp(app.id.toPath, AppUpdate(instances = Some(3)), force = true)
+      val deployment2 = marathon.updateApp(AbsolutePathId(app.id), AppUpdate(instances = Some(3)), force = true)
 
       Then("The app deployment is created")
       deployment2 should be(OK)
 
       And("BUT our app still has a backoff delay")
-      val queueAfterScaling: List[ITQueueItem] = marathon.launchQueueForAppId(app.id.toPath).value
+      val queueAfterScaling: List[ITQueueItem] = marathon.launchQueueForAppId(AbsolutePathId(app.id)).value
       queueAfterScaling should have size 1
       queueAfterScaling.map(_.delay.overdue) should contain(false)
     }
@@ -131,7 +130,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val app: App = backedOffApp(pathId)
 
       When("we force a restart")
-      val deployment2 = marathon.restartApp(app.id.toPath, force = true)
+      val deployment2 = marathon.restartApp(AbsolutePathId(app.id), force = true)
 
       Then("The app deployment is created")
       deployment2 should be(OK)
@@ -140,10 +139,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForStatusUpdates("TASK_RUNNING", "TASK_FAILED")
     }
 
-    def backedOffApp(id: PathId): App = {
+    def backedOffApp(id: AbsolutePathId): App = {
       val app = createAFailingApp(id, Some("false"), 1.hour, 1.hour)
       eventually {
-        val queue: List[ITQueueItem] = marathon.launchQueueForAppId(app.id.toPath).value
+        val queue: List[ITQueueItem] = marathon.launchQueueForAppId(id).value
         queue should have size 1
         queue.map(_.delay.overdue) should contain(false)
       }
@@ -151,7 +150,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     def createAFailingApp(
-      id: PathId,
+      id: AbsolutePathId,
       failingCmd: Option[String],
       backoffSeconds: FiniteDuration,
       maxLaunchDelaySeconds: FiniteDuration): App = {
@@ -197,14 +196,14 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1) //make sure, the app has really started
+      waitForTasks(AbsolutePathId(app.id), 1) //make sure, the app has really started
     }
 
     "create a simple app with a Marathon HTTP health check" in {
       Given("a new app")
       val app = appProxy(appId(Some("with-marathon-http-health-check")), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(ramlHealthCheck))
-      val check = registerAppProxyHealthCheck(PathId(app.id), "v1", state = true)
+      val check = registerAppProxyHealthCheck(AbsolutePathId(app.id), "v1", state = true)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -223,7 +222,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       Given("a new app")
       val app = appProxy(appId(Some("with-mesos-http-health-check")), "v1", instances = 1, healthCheck = None).
         copy(healthChecks = Set(ramlHealthCheck.copy(protocol = AppHealthCheckProtocol.MesosHttp)))
-      val check = registerAppProxyHealthCheck(app.id.toPath, "v1", state = true)
+      val check = registerAppProxyHealthCheck(AbsolutePathId(app.id), "v1", state = true)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -250,7 +249,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
           requirePorts = true,
           healthChecks = Set(ramlHealthCheck.copy(port = Some(port), portIndex = None))
         )
-      val check = registerAppProxyHealthCheck(app.id.toPath, "v1", state = true)
+      val check = registerAppProxyHealthCheck(AbsolutePathId(app.id), "v1", state = true)
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -320,10 +319,10 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(create)
 
       Then("the list of running app tasks can be fetched")
-      val apps = marathon.listAppsInBaseGroupForAppId(app.id.toPath).value
+      val apps = marathon.listAppsInBaseGroupForAppId(AbsolutePathId(app.id)).value
       apps should have size 1
 
-      val tasksResult: RestResult[List[ITEnrichedTask]] = marathon.tasks(app.id.toPath)
+      val tasksResult: RestResult[List[ITEnrichedTask]] = marathon.tasks(AbsolutePathId(app.id))
       tasksResult should be(OK)
 
       val tasks = tasksResult.value
@@ -404,7 +403,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       When("The app is updated")
       val check = registerAppProxyHealthCheck(id, "v2", state = true)
-      val update = marathon.updateApp(PathId(v1.id), AppUpdate(cmd = appProxy(id, "v2", 1).cmd))
+      val update = marathon.updateApp(AbsolutePathId(v1.id), AppUpdate(cmd = appProxy(id, "v2", 1).cmd))
 
       Then("The app gets updated")
       update should be(OK)
@@ -427,7 +426,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       When("The app is updated")
       val check = registerAppProxyHealthCheck(id, "v2", state = true)
-      val update = marathon.patchApp(v1.id.toPath, AppUpdate(cmd = appProxy(id, "v2", 1).cmd))
+      val update = marathon.patchApp(AbsolutePathId(v1.id), AppUpdate(cmd = appProxy(id, "v2", 1).cmd))
 
       Then("The app gets updated")
       update should be(OK)
@@ -452,20 +451,20 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(create)
 
       When("The app gets an update to be scaled up")
-      val scaleUp = marathon.updateApp(PathId(app.id), AppUpdate(instances = Some(2)))
+      val scaleUp = marathon.updateApp(AbsolutePathId(app.id), AppUpdate(instances = Some(2)))
 
       Then("New tasks are launched")
       scaleUp should be(OK)
       waitForDeployment(scaleUp)
-      waitForTasks(app.id.toPath, 2)
+      waitForTasks(AbsolutePathId(app.id), 2)
 
       When("The app gets an update to be scaled down")
-      val scaleDown = marathon.updateApp(PathId(app.id), AppUpdate(instances = Some(1)))
+      val scaleDown = marathon.updateApp(AbsolutePathId(app.id), AppUpdate(instances = Some(1)))
 
       Then("Tasks are killed")
       scaleDown should be(OK)
       waitForStatusUpdates("TASK_KILLED")
-      waitForTasks(app.id.toPath, 1)
+      waitForTasks(AbsolutePathId(app.id), 1)
     }
 
     "restart an app" in {
@@ -478,7 +477,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val before = marathon.tasks(id)
 
       When("The app is restarted")
-      val restart = marathon.restartApp(PathId(v1.id))
+      val restart = marathon.restartApp(AbsolutePathId(v1.id))
 
       Then("All instances of the app get restarted")
       restart should be(OK)
@@ -496,7 +495,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(createResponse)
 
       When("The list of versions is fetched")
-      val list = marathon.listAppVersions(v1.id.toPath)
+      val list = marathon.listAppVersions(AbsolutePathId(v1.id))
 
       Then("The response should contain all the versions")
       list should be(OK)
@@ -515,17 +514,17 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       When("A resource specification is updated")
       val updatedDisk: Double = v1.disk + 1.0
       val appUpdate = AppUpdate(Option(v1.id), disk = Option(updatedDisk))
-      val updateResponse = marathon.updateApp(PathId(v1.id), appUpdate)
+      val updateResponse = marathon.updateApp(AbsolutePathId(v1.id), appUpdate)
       updateResponse should be(OK)
       waitForDeployment(updateResponse)
 
       Then("It should create a new version with the right data")
-      val responseOriginalVersion = marathon.appVersion(v1.id.toPath, Timestamp(originalVersion.get))
+      val responseOriginalVersion = marathon.appVersion(AbsolutePathId(v1.id), Timestamp(originalVersion.get))
       responseOriginalVersion should be(OK)
       responseOriginalVersion.value.disk should be(v1.disk)
 
       val updatedVersion = updateResponse.value.version
-      val responseUpdatedVersion = marathon.appVersion(PathId(v1.id), updatedVersion)
+      val responseUpdatedVersion = marathon.appVersion(AbsolutePathId(v1.id), updatedVersion)
       responseUpdatedVersion should be(OK)
       responseUpdatedVersion.value.disk should be(updatedDisk)
     }
@@ -536,17 +535,17 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val create = marathon.createAppV2(app)
       create should be(Created)
       waitForDeployment(create)
-      val taskId = marathon.tasks(app.id.toPath).value.head.id
+      val taskId = marathon.tasks(AbsolutePathId(app.id)).value.head.id
 
       When("a task of an app is killed")
-      val response = marathon.killTask(PathId(app.id), taskId)
+      val response = marathon.killTask(AbsolutePathId(app.id), taskId)
       response should be(OK)
 
       waitForStatusUpdates("TASK_KILLED")
 
       Then("All instances of the app get restarted")
-      waitForTasks(app.id.toPath, 1)
-      marathon.tasks(app.id.toPath).value.head should not be taskId
+      waitForTasks(AbsolutePathId(app.id), 1)
+      marathon.tasks(AbsolutePathId(app.id)).value.head should not be taskId
     }
 
     "kill a task of an App with scaling" in {
@@ -555,15 +554,15 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val create = marathon.createAppV2(app)
       create should be(Created)
       waitForDeployment(create)
-      val taskId = marathon.tasks(app.id.toPath).value.head.id
+      val taskId = marathon.tasks(AbsolutePathId(app.id)).value.head.id
 
       When("a task of an app is killed and scaled")
-      marathon.killTask(app.id.toPath, taskId, scale = true) should be(OK)
+      marathon.killTask(AbsolutePathId(app.id), taskId, scale = true) should be(OK)
       waitForStatusUpdates("TASK_KILLED")
 
       Then("All instances of the app get restarted")
-      waitForTasks(app.id.toPath, 1)
-      marathon.app(app.id.toPath).value.app.instances should be(1)
+      waitForTasks(AbsolutePathId(app.id), 1)
+      marathon.app(AbsolutePathId(app.id)).value.app.instances should be(1)
     }
 
     "kill all tasks of an App" in {
@@ -574,13 +573,13 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(create)
 
       When("all task of an app are killed")
-      val response = marathon.killAllTasks(PathId(app.id))
+      val response = marathon.killAllTasks(AbsolutePathId(app.id))
       response should be(OK)
       waitForStatusUpdates("TASK_KILLED")
       waitForStatusUpdates("TASK_KILLED")
 
       Then("All instances of the app get restarted")
-      waitForTasks(app.id.toPath, 2)
+      waitForTasks(AbsolutePathId(app.id), 2)
     }
 
     "kill all tasks of an App with scaling" in {
@@ -589,17 +588,17 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val create = marathon.createAppV2(app)
       create should be(Created)
       waitForDeployment(create)
-      marathon.app(app.id.toPath).value.app.instances should be(2)
+      marathon.app(AbsolutePathId(app.id)).value.app.instances should be(2)
 
       When("all task of an app are killed")
-      val result = marathon.killAllTasksAndScale(app.id.toPath)
+      val result = marathon.killAllTasksAndScale(AbsolutePathId(app.id))
       result should be(OK)
       result.value.version should not be empty
 
       Then("All instances of the app get restarted")
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 0)
-      marathon.app(app.id.toPath).value.app.instances should be(0)
+      waitForTasks(AbsolutePathId(app.id), 0)
+      marathon.app(AbsolutePathId(app.id)).value.app.instances should be(0)
     }
 
     "delete an application" in {
@@ -610,17 +609,17 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(create)
 
       When("the app is deleted")
-      val delete = marathon.deleteApp(PathId(app.id))
+      val delete = marathon.deleteApp(AbsolutePathId(app.id))
       delete should be(OK)
       waitForDeployment(delete)
 
       Then("All instances of the app get restarted")
-      marathon.listAppsInBaseGroupForAppId(app.id.toPath).value should have size 0
+      marathon.listAppsInBaseGroupForAppId(AbsolutePathId(app.id)).value should have size 0
     }
 
     "create and deploy an app with two tasks" in {
       Given("a new app")
-      val appIdPath: PathId = appId(Some("create-and-deploy-an-app-with-two-tasks"))
+      val appIdPath: AbsolutePathId = appId(Some("create-and-deploy-an-app-with-two-tasks"))
       val app = appProxy(appIdPath, "v1", instances = 2, healthCheck = None)
 
       When("the app gets posted")
@@ -652,7 +651,9 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       eventually {
         val tasks = marathon.tasks(appIdPath).value
         tasks.size shouldBe 2
-        tasks.foreach(et => appMock.ping(et.host, et.ports.get.head))
+        tasks.foreach {
+          et => AppMockFacade(et).ping()
+        }
       }
     }
 
@@ -727,7 +728,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     // Regression for MARATHON-8537
     "manage yet another deployment rollback" in {
       Given("an existing app")
-      val id: PathId = appId(Some("yet-another-deployment-rollback"))
+      val id: AbsolutePathId = appId(Some("yet-another-deployment-rollback"))
       val app = App(
         id = id.toString,
         cmd = Some("sleep 12345"),
@@ -748,7 +749,13 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       // waitForEventWith("instance_changed_event", ev => ev.info("goal") == "Scheduled", s"event instance_changed_event with goal = Scheduled to arrive")
       // But since we don't have this event now, we just simply try to wait for 5s which seems to work too ¯\_(ツ)_/¯
       val start = System.currentTimeMillis()
-      eventually(System.currentTimeMillis() should be >= (start + 5000))(config = PatienceConfig(10.seconds, 100.millis), pos = Position.here)
+
+      {
+        implicit val patienceConfig = PatienceConfig(10.seconds, 100.millis)
+        eventually {
+          System.currentTimeMillis() should be >= (start + 5000)
+        }
+      }
 
       And("cancel previous update")
       val canceled = marathon.deleteDeployment(deploymentId)
@@ -762,7 +769,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     // Regression for MARATHON-8537
     "rollback deployment with default deployment strategy" in {
       Given("an existing app")
-      val id: PathId = appId(Some("deployment-rollback-default-version"))
+      val id: AbsolutePathId = appId(Some("deployment-rollback-default-version"))
       val app = App(
         id = id.toString,
         cmd = Some("sleep 12345"),
@@ -781,7 +788,13 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       // waitForEventWith("instance_changed_event", ev => ev.info("goal") == "Scheduled", s"event instance_changed_event with goal = Scheduled to arrive")
       // But since we don't have this event now, we just simply try to wait for 5s which seems to work too ¯\_(ツ)_/¯
       val start = System.currentTimeMillis()
-      eventually(System.currentTimeMillis() should be >= (start + 5000))(config = PatienceConfig(10.seconds, 100.millis), pos = Position.here)
+
+      {
+        implicit val patienceConfig = PatienceConfig(10.seconds, 100.millis)
+        eventually {
+          System.currentTimeMillis() should be >= (start + 5000)
+        }
+      }
 
       And("cancel previous update")
       val canceled = marathon.deleteDeployment(deploymentId)
@@ -879,7 +892,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
         ))
       )))
 
-      val updateResult = marathon.updateApp(app.id.toPath, appUpdate, force = true)
+      val updateResult = marathon.updateApp(id, appUpdate, force = true)
 
       And("The app is updated")
       updateResult should be(OK)
@@ -921,21 +934,22 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "update an app and make sure ports are set correctly" in {
       Given("an app update app")
-      val applicationId = PathId("/tomcat")
+      val applicationId = AbsolutePathId("/tomcat")
 
-      val appUpdateJson = """{
-                            |  "id":"tomcat",
-                            |  "mem":512,
-                            |  "cpus":1.0,
-                            |  "instances":1,
-                            |  "container": {
-                            |    "type":"DOCKER",
-                            |    "docker": {
-                            |      "image":"tomcat:8.0",
-                            |      "network":"HOST"
-                            |    }
-                            |  }
-                            |}""".stripMargin
+      val appUpdateJson =
+        """{
+          |  "id":"tomcat",
+          |  "mem":512,
+          |  "cpus":1.0,
+          |  "instances":1,
+          |  "container": {
+          |    "type":"DOCKER",
+          |    "docker": {
+          |      "image":"tomcat:8.0",
+          |      "network":"HOST"
+          |    }
+          |  }
+          |}""".stripMargin
 
       When("creating an app using PUT")
       marathon.putAppByteString(applicationId, ByteString.fromString(appUpdateJson))
@@ -946,6 +960,7 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       port should be >= 10000
       port should be <= 20000
     }
+
   }
 
   private val ramlHealthCheck = AppHealthCheck(

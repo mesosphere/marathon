@@ -1,6 +1,7 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.MesosAgentConfig
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.Protos.Constraint.Operator.UNIQUE
 import mesosphere.marathon.api.RestResource
@@ -9,10 +10,9 @@ import mesosphere.marathon.core.pod._
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.integration.facades.AppMockFacade
 import mesosphere.marathon.integration.facades.MarathonFacade._
-import mesosphere.marathon.integration.setup.{EmbeddedMarathonTest, MesosConfig}
+import mesosphere.marathon.integration.setup.EmbeddedMarathonTest
 import mesosphere.marathon.raml.{App, Container, DockerContainer, EngineType}
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{HostVolume, PersistentVolume, VolumeMount}
+import mesosphere.marathon.state.{AbsolutePathId, HostVolume, PersistentVolume, VolumeMount}
 import mesosphere.mesos.Constraints.hostnameField
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport, WhenEnvSet}
 import org.scalatest.Inside
@@ -23,7 +23,7 @@ import scala.concurrent.duration._
 
 class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
-  override lazy val mesosConfig = MesosConfig(
+  override lazy val agentConfig = MesosAgentConfig(
     launcher = "linux",
     isolation = Some("filesystem/linux,docker/runtime"),
     imageProviders = Some("docker"))
@@ -47,7 +47,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1) // The app has really started
+      waitForTasks(AbsolutePathId(app.id), 1) // The app has really started
     }
 
     "deploy a simple Docker app that uses Entrypoint/Cmd using the Mesos containerizer" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
@@ -67,9 +67,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       result should be(Created)
       extractDeploymentIds(result) should have size 1
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1) // The app has really started
+      waitForTasks(AbsolutePathId(app.id), 1) // The app has really started
 
-      marathon.deleteApp(app.id.toPath) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
+      marathon.deleteApp(AbsolutePathId(app.id)) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
     }
 
     "deploy a simple pod" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
@@ -167,7 +167,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         val ports = status.instances.flatMap(_.containers.flatMap(_.endpoints.flatMap(_.allocatedHostPort)))
         ports should have size (1)
         val facade = AppMockFacade(hosts.head, ports.head)
-        facade.get(s"/$containerDir/data/test").futureValue should be("hello\n")
+        facade.get(s"/$containerDir/data/test").futureValue.entityString should be("hello\n")
         facade
       }
 
@@ -177,7 +177,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       Then("failed pod recovers")
       eventually {
         marathon.status(pod.id) should be(Stable)
-        runningPod.get(s"/$containerDir/data/test").futureValue should be("hello\nhello\n")
+        runningPod.get(s"/$containerDir/data/test").futureValue.entityString should be("hello\nhello\n")
       }
     }
 

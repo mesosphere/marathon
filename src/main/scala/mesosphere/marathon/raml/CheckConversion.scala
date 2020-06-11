@@ -113,45 +113,42 @@ trait CheckConversion {
     CheckStatus(httpCheckStatus, tcpCheckStatus, commandCheckStatus)
   }
 
-  implicit val checkRamlWriter: Writes[CoreCheck, AppCheck] = Writes { check =>
+  implicit val checkRamlWriter: Writes[CoreCheck, AppCheck] = Writes {
+    case httpCheck: MesosHttpCheck =>
+      val portIndex = httpCheck.portIndex.collect { case index: PortReference.ByIndex => index.value }
 
-    check match {
-      case httpCheck: MesosHttpCheck =>
-        val portIndex = httpCheck.portIndex.collect { case index: PortReference.ByIndex => index.value }
+      AppCheck(
+        intervalSeconds = httpCheck.interval.toSeconds.toInt,
+        timeoutSeconds = httpCheck.timeout.toSeconds.toInt,
+        delaySeconds = httpCheck.delay.toSeconds.toInt,
+        http = Some(AppHttpCheck(
+          path = httpCheck.path,
+          scheme = Raml.toRaml(httpCheck.protocol),
+          port = httpCheck.port,
+          portIndex = portIndex)),
+        tcp = None,
+        exec = None)
+    case tcpCheck: MesosTcpCheck =>
+      val portIndex = tcpCheck.portIndex.collect { case index: PortReference.ByIndex => index.value }
 
-        AppCheck(
-          intervalSeconds = check.interval.toSeconds.toInt,
-          timeoutSeconds = check.timeout.toSeconds.toInt,
-          delaySeconds = check.delay.toSeconds.toInt,
-          http = Some(AppHttpCheck(
-            path = httpCheck.path,
-            scheme = Raml.toRaml(httpCheck.protocol),
-            port = httpCheck.port,
-            portIndex = portIndex)),
-          tcp = None,
-          exec = None)
-      case tcpCheck: MesosTcpCheck =>
-        val portIndex = tcpCheck.portIndex.collect { case index: PortReference.ByIndex => index.value }
-
-        AppCheck(
-          intervalSeconds = check.interval.toSeconds.toInt,
-          timeoutSeconds = check.timeout.toSeconds.toInt,
-          delaySeconds = check.delay.toSeconds.toInt,
-          http = None,
-          tcp = Some(AppTcpCheck(
-            port = tcpCheck.port,
-            portIndex = portIndex)),
-          exec = None)
-      case cmdCheck: MesosCommandCheck =>
-        AppCheck(
-          intervalSeconds = check.interval.toSeconds.toInt,
-          timeoutSeconds = check.timeout.toSeconds.toInt,
-          delaySeconds = check.delay.toSeconds.toInt,
-          http = None,
-          tcp = None,
-          exec = Some(Raml.toRaml(cmdCheck.command))
-        )
-    }
+      AppCheck(
+        intervalSeconds = tcpCheck.interval.toSeconds.toInt,
+        timeoutSeconds = tcpCheck.timeout.toSeconds.toInt,
+        delaySeconds = tcpCheck.delay.toSeconds.toInt,
+        http = None,
+        tcp = Some(AppTcpCheck(
+          port = tcpCheck.port,
+          portIndex = portIndex)),
+        exec = None)
+    case cmdCheck: MesosCommandCheck =>
+      AppCheck(
+        intervalSeconds = cmdCheck.interval.toSeconds.toInt,
+        timeoutSeconds = cmdCheck.timeout.toSeconds.toInt,
+        delaySeconds = cmdCheck.delay.toSeconds.toInt,
+        http = None,
+        tcp = None,
+        exec = Some(Raml.toRaml(cmdCheck.command))
+      )
   }
 
   implicit val checkProtoRamlWriter: Writes[Protos.CheckDefinition, AppCheck] = Writes { check =>

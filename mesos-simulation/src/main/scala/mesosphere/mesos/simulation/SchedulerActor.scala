@@ -3,7 +3,7 @@ package mesosphere.mesos.simulation
 import akka.actor.{Actor, Stash}
 import akka.event.LoggingReceive
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import org.apache.mesos.Protos.{FrameworkID, MasterInfo, Offer, TaskStatus}
 import org.apache.mesos.{Scheduler, SchedulerDriver}
 

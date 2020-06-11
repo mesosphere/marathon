@@ -2,9 +2,9 @@ package mesosphere.marathon
 package raml
 
 import mesosphere.marathon.state.{DiskType, Volume}
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.{Protos => Mesos}
+import scala.jdk.CollectionConverters._
 
 trait VolumeConversion extends ConstraintConversion with DefaultConversions {
 
@@ -92,7 +92,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   implicit val volumeWrites: Writes[state.VolumeWithMount[Volume], AppVolume] = Writes { volumeWithMount =>
 
     implicit val externalVolumeWrites: Writes[state.ExternalVolumeInfo, ExternalVolumeInfo] = Writes { ev =>
-      ExternalVolumeInfo(size = ev.size, name = Some(ev.name), provider = Some(ev.provider), options = ev.options)
+      ExternalVolumeInfo(size = ev.size, name = Some(ev.name), provider = Some(ev.provider), options = ev.options, shared = ev.shared)
     }
 
     val volume = volumeWithMount.volume
@@ -132,7 +132,8 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         throw SerializationFailedException("external volume requires a name")),
       provider = volumeRaml.external.provider.getOrElse(
         throw SerializationFailedException("external volume requires a provider")),
-      options = volumeRaml.external.options
+      options = volumeRaml.external.options,
+      shared = volumeRaml.external.shared
     )
     val volume = state.ExternalVolume(name = None, external = info)
     val mount = state.VolumeMount(
@@ -140,13 +141,12 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     state.VolumeWithMount[Volume](volume = volume, mount = mount)
   }
 
-  implicit val volumeTypeReads: Reads[Option[PersistentVolumeType], Option[DiskType]] = Reads {
-    case Some(definedType) => definedType match {
+  implicit val volumeTypeReads: Reads[Option[PersistentVolumeType], Option[DiskType]] = Reads { maybeType =>
+    maybeType.flatMap {
       case PersistentVolumeType.Root => Some(DiskType.Root)
       case PersistentVolumeType.Mount => Some(DiskType.Mount)
       case PersistentVolumeType.Path => Some(DiskType.Path)
     }
-    case None => None
   }
 
   implicit val volumeConstraintsReads: Reads[Set[Seq[String]], Set[Protos.Constraint]] = Reads { constraints =>
@@ -161,7 +161,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         case _ =>
           throw SerializationFailedException(s"illegal volume constraint ${constraint.mkString(",")}")
       }
-    }(collection.breakOut)
+    }
   }
 
   implicit val volumePersistentReads: Reads[AppPersistentVolume, state.VolumeWithMount[Volume]] = Reads { volumeRaml =>
@@ -200,8 +200,9 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         provider = volume.when(_.hasProvider, _.getProvider).orElse(ExternalVolumeInfo.DefaultProvider),
         options = volume.whenOrElse(
           _.getOptionsCount > 0,
-          _.getOptionsList.map { x => x.getKey -> x.getValue }(collection.breakOut),
-          ExternalVolumeInfo.DefaultOptions)
+          _.getOptionsList.asScala.iterator.map { x => x.getKey -> x.getValue }.toMap,
+          ExternalVolumeInfo.DefaultOptions),
+        shared = volume.when(_.hasShared, _.getShared).getOrElse(ExternalVolumeInfo.DefaultShared)
       )
     }
 
@@ -224,7 +225,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         profileName = volume.when(_.hasProfileName, _.getProfileName).orElse(PersistentVolumeInfo.DefaultProfileName),
         constraints = volume.whenOrElse(
           _.getConstraintsCount > 0,
-          _.getConstraintsList.map(_.toRaml[Seq[String]])(collection.breakOut),
+          _.getConstraintsList.asScala.iterator.map(_.toRaml[Seq[String]]).toSet,
           PersistentVolumeInfo.DefaultConstraints)
       )
     }

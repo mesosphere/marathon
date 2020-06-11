@@ -2,10 +2,10 @@ package mesosphere.marathon
 package api.v2
 
 import mesosphere.UnitTest
-import mesosphere.marathon.api.TestAuthFixture
+import mesosphere.marathon.api.{JsonTestHelper, TestAuthFixture}
 import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep, DeploymentStepInfo}
 import mesosphere.marathon.core.group.GroupManager
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
 import mesosphere.marathon.test.{GroupCreation, JerseyTest}
 
 import scala.collection.immutable.Seq
@@ -27,7 +27,7 @@ class DeploymentsResourceTest extends UnitTest with GroupCreation with JerseyTes
       Given("An unauthenticated request")
       auth.authenticated = false
       val req = auth.request
-      val app = AppDefinition(PathId("/test"), cmd = Some("sleep"), role = "*")
+      val app = AppDefinition(AbsolutePathId("/test"), cmd = Some("sleep"), role = "*")
       val targetGroup = createRootGroup(apps = Map(app.id -> app))
       val deployment = DeploymentStepInfo(DeploymentPlan(createRootGroup(), targetGroup), DeploymentStep(Seq.empty), 1)
       service.listRunningDeployments() returns Future.successful(Seq(deployment))
@@ -48,7 +48,7 @@ class DeploymentsResourceTest extends UnitTest with GroupCreation with JerseyTes
       auth.authenticated = true
       auth.authorized = false
       val req = auth.request
-      val app = AppDefinition(PathId("/test"), cmd = Some("sleep"), role = "*")
+      val app = AppDefinition(AbsolutePathId("/test"), cmd = Some("sleep"), role = "*")
       val targetGroup = createRootGroup(apps = Map(app.id -> app))
       val deployment = DeploymentStepInfo(DeploymentPlan(createRootGroup(), targetGroup), DeploymentStep(Seq.empty), 1)
       service.listRunningDeployments() returns Future.successful(Seq(deployment))
@@ -57,6 +57,67 @@ class DeploymentsResourceTest extends UnitTest with GroupCreation with JerseyTes
       val cancel = asyncRequest { r => deploymentsResource.cancel(deployment.plan.id, false, req, r) }
       Then("we receive a not authorized response")
       cancel.getStatus should be(auth.UnauthorizedStatus)
+    }
+
+    "get a simple deployment" in new Fixture {
+      Given("a simple request")
+      auth.authenticated = true
+      auth.authorized = true
+
+      val req = auth.request
+      val app = AppDefinition(AbsolutePathId("/test"), cmd = Some("sleep"), role = "*")
+      val targetGroup = createRootGroup(apps = Map(app.id -> app))
+      val deployment = DeploymentStepInfo(
+        DeploymentPlan(
+          original = createRootGroup(),
+          target = targetGroup,
+          id = Some("af5afbe7-bf2c-490c-af8a-00d36bcb0b07"),
+          version = Timestamp("2019-10-14T13:00:52.928Z")),
+        step = DeploymentStep(Seq.empty),
+        stepIndex = 1)
+      service.listRunningDeployments() returns Future.successful(Seq(deployment))
+
+      When("running deployments are fetched")
+      val running = asyncRequest { r => deploymentsResource.running(req, r) }
+
+      val responseString = running.getEntity.toString
+
+      val expected =
+        """
+          |[
+          |  {
+          |    "id": "af5afbe7-bf2c-490c-af8a-00d36bcb0b07",
+          |    "version": "2019-10-14T13:00:52.928Z",
+          |    "affectedApps": [
+          |      "/test"
+          |    ],
+          |    "affectedPods": [],
+          |    "steps": [
+          |      {
+          |        "actions": [
+          |          {
+          |            "action": "StartApplication",
+          |            "app": "/test"
+          |          }
+          |        ]
+          |      },
+          |      {
+          |        "actions": [
+          |          {
+          |            "action": "ScaleApplication",
+          |            "app": "/test"
+          |          }
+          |        ]
+          |      }
+          |    ],
+          |    "currentActions": [],
+          |    "currentStep": 1,
+          |    "totalSteps": 2
+          |  }
+          |]
+        """.stripMargin
+
+      JsonTestHelper.assertThatJsonString(responseString).correspondsToJsonString(expected)
     }
   }
 

@@ -13,7 +13,8 @@
       "version": "2015-04-17T04:00:14.171Z",
       "state" : "TASK_STAGING",
       "region": "primary",
-      "zone" : "a"
+      "zone" : "a",
+      "role" : "*"
     }
   ]
 }

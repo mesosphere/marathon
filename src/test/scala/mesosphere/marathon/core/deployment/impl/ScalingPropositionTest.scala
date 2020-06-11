@@ -5,7 +5,7 @@ import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.deployment.ScalingProposition
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
-import mesosphere.marathon.state.{KillSelection, PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, KillSelection, Timestamp}
 
 import scala.concurrent.duration._
 
@@ -283,7 +283,7 @@ class ScalingPropositionTest extends UnitTest {
   }
 
   class Fixture {
-    val appId = PathId("/test")
+    val appId = AbsolutePathId("/test")
 
     def createInstance(index: Long) = {
       val instance = TestInstanceBuilder.newBuilder(appId, version = Timestamp(index)).addTaskRunning(startedAt = Timestamp.now().+(index.hours)).getInstance()
@@ -313,7 +313,7 @@ class ScalingPropositionTest extends UnitTest {
       Seq.empty[Instance]
 
     def killToMeetConstraints(tasks: Instance*): (Seq[Instance], Int) => Seq[Instance] =
-      (running: Seq[Instance], killCount: Int) => tasks.to[Seq]
+      (running: Seq[Instance], killCount: Int) => tasks.to(Seq)
 
     def noTasks = Seq.empty[Instance]
   }

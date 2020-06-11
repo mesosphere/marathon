@@ -1,11 +1,11 @@
 package mesosphere.marathon
 package stream
 
-import java.io.{File, IOException}
+import java.io.File
 import java.net.URI
 import java.nio.charset.Charset
 
-import akka.stream.scaladsl.{Source, Sink}
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import mesosphere.AkkaUnitTest
 import org.apache.commons.io.FileUtils
@@ -60,7 +60,7 @@ class UriIOTest extends AkkaUnitTest {
       val tmpDir = new File(sys.props("java.io.tmpdir"))
       val content = s"Hello World ${System.currentTimeMillis()}"
       val future = Source.single(ByteString(content)).runWith(UriIO.writer(new URI(s"file://${tmpDir.getAbsolutePath}")))
-      future.failed.futureValue shouldBe a[IOException]
+      future.failed.futureValue shouldBe a[akka.stream.IOOperationIncompleteException]
     }
   }
 }

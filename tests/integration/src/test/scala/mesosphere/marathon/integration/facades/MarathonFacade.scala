@@ -17,18 +17,19 @@ import akka.util.ByteString
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.mesosphere.utils.http.RestResult
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
-import mesosphere.marathon
+import mesosphere.marathon.api.RestResource
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.integration.setup.{AkkaHttpResponse, RestResult}
-import mesosphere.marathon.raml.{App, AppUpdate, GroupInfo, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
+import mesosphere.marathon.integration.raml18.PodStatus18
+import mesosphere.marathon.raml.{App, AppUpdate, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
+import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.marathon.util.Retry
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
-import mesosphere.marathon.state.PathId._
+
 import scala.collection.immutable.Seq
 import scala.concurrent.Await.result
 import scala.concurrent.Future
@@ -45,7 +46,11 @@ case class ITAppVersions(versions: Seq[Timestamp])
 case class ITListTasks(tasks: Seq[ITEnrichedTask])
 case class ITDeploymentPlan(version: String, deploymentId: String)
 case class ITHealthCheckResult(firstSuccess: Option[String], lastSuccess: Option[String], lastFailure: Option[String], consecutiveFailures: Int, alive: Boolean)
+case class ITCheckResult(http: Option[ITHttpCheckStatus] = None, tcp: Option[ITTCPCheckStatus] = None, command: Option[ITCommandCheckStatus] = None)
 case class ITDeploymentResult(version: Timestamp, deploymentId: String)
+case class ITHttpCheckStatus(statusCode: Int)
+case class ITTCPCheckStatus(succeeded: Boolean)
+case class ITCommandCheckStatus(exitCode: Int)
 case class ITEnrichedTask(
     appId: String,
     id: String,
@@ -58,6 +63,8 @@ case class ITEnrichedTask(
     version: Option[String],
     region: Option[String],
     zone: Option[String],
+    check: Option[ITCheckResult],
+    role: Option[String],
     healthCheckResults: Seq[ITHealthCheckResult]) {
 
   def launched: Boolean = startedAt.nonEmpty
@@ -89,19 +96,20 @@ case class ITEvent(eventType: String, info: Map[String, Any]) extends ITSSEEvent
   * @param url the url of the remote marathon instance
   */
 class MarathonFacade(
-    val url: String, baseGroup: PathId, implicit val waitTime: FiniteDuration = 30.seconds)(
+    val url: String, baseGroup: AbsolutePathId, implicit val waitTime: FiniteDuration = 30.seconds)(
     implicit
     val system: ActorSystem, mat: Materializer)
   extends PodConversion with StrictLogging {
   implicit val scheduler = system.scheduler
-  import AkkaHttpResponse._
+  import com.mesosphere.utils.http.AkkaHttpResponse._
+
   import scala.concurrent.ExecutionContext.Implicits.global
 
   require(baseGroup.absolute)
 
+  import PlayJsonSupport.marshaller
   import mesosphere.marathon.api.v2.json.Formats._
   import play.api.libs.json._
-  import PlayJsonSupport.marshaller
 
   implicit lazy val itAppDefinitionFormat = Json.format[ITAppDefinition]
   implicit lazy val itListAppsResultFormat = Json.format[ITListAppsResult]
@@ -117,6 +125,15 @@ class MarathonFacade(
   implicit lazy val itQueueItemFormat = Json.format[ITQueueItem]
   implicit lazy val itLaunchQueueFormat = Json.format[ITLaunchQueue]
 
+  implicit lazy val itHttpCheckStatus = Json.format[ITHttpCheckStatus]
+  implicit lazy val itTCPCheckStatus = Json.format[ITTCPCheckStatus]
+  implicit lazy val itCommandCheckStatus = Json.format[ITCommandCheckStatus]
+  implicit lazy val itCheckResultFormat: Format[ITCheckResult] = (
+    (__ \ "http").formatNullable[ITHttpCheckStatus] ~
+    (__ \ "tcp").formatNullable[ITTCPCheckStatus] ~
+    (__ \ "command").formatNullable[ITCommandCheckStatus]
+  )(ITCheckResult(_, _, _), unlift(ITCheckResult.unapply))
+
   implicit lazy val itEnrichedTaskFormat: Format[ITEnrichedTask] = (
     (__ \ "appId").format[String] ~
     (__ \ "id").format[String] ~
@@ -129,8 +146,10 @@ class MarathonFacade(
     (__ \ "version").formatNullable[String] ~
     (__ \ "region").formatNullable[String] ~
     (__ \ "zone").formatNullable[String] ~
+    (__ \ "checkResult").formatNullable[ITCheckResult] ~
+    (__ \ "role").formatNullable[String] ~
     (__ \ "healthCheckResults").formatWithDefault[Seq[ITHealthCheckResult]](Nil)
-  )(ITEnrichedTask(_, _, _, _, _, _, _, _, _, _, _, _), unlift(ITEnrichedTask.unapply))
+  )(ITEnrichedTask, unlift(ITEnrichedTask.unapply))
 
   def isInBaseGroup(pathId: PathId): Boolean = {
     pathId.path.startsWith(baseGroup.path)
@@ -151,8 +170,7 @@ class MarathonFacade(
     * streamed via the materializable-once Source.
     */
   def events(eventsType: Seq[String] = Seq.empty): Future[Source[ITEvent, NotUsed]] = {
-
-    import EventUnmarshalling.fromEventStream
+    import EventUnmarshalling._
     val mapper = new ObjectMapper() with ScalaObjectMapper
     mapper.registerModule(DefaultScalaModule)
 
@@ -161,11 +179,14 @@ class MarathonFacade(
     Http().singleRequest(Get(akka.http.scaladsl.model.Uri(s"$url/v2/events").withQuery(eventsFilter))
       .withHeaders(Accept(MediaType.text("event-stream"))))
       .flatMap { response =>
+        logger.info(s"Unmarshall SSE response from $url")
         AkkaUnmarshal(response).to[Source[ServerSentEvent, NotUsed]]
       }
       .map { stream =>
+        logger.info(s"Mapping SSE stream from $url")
         stream
           .map { event =>
+            logger.info(s"Parsing JSON from $url")
             val json = mapper.readValue[Map[String, Any]](event.data) // linter:ignore
             ITEvent(event.eventType.getOrElse("unknown"), json)
           }
@@ -176,15 +197,15 @@ class MarathonFacade(
 
   def listAppsInBaseGroup: RestResult[List[App]] = {
     val res = result(requestFor[ITListAppsResult](Get(s"$url/v2/apps")), waitTime)
-    res.map(_.apps.filterAs(app => isInBaseGroup(app.id.toPath))(collection.breakOut))
+    res.map(_.apps.iterator.filter(app => isInBaseGroup(app.id.toPath)).toList)
   }
 
-  def listAppsInBaseGroupForAppId(appId: PathId): RestResult[List[App]] = {
+  def listAppsInBaseGroupForAppId(appId: AbsolutePathId): RestResult[List[App]] = {
     val res = result(requestFor[ITListAppsResult](Get(s"$url/v2/apps")), waitTime)
-    res.map(_.apps.filterAs(app => isInBaseGroup(app.id.toPath) && app.id.toPath == appId)(collection.breakOut))
+    res.map(_.apps.iterator.filter(app => isInBaseGroup(app.id.toPath) && app.id.toPath == appId).toList)
   }
 
-  def app(id: PathId): RestResult[ITAppDefinition] = {
+  def app(id: AbsolutePathId): RestResult[ITAppDefinition] = {
     requireInBaseGroup(id)
     val getUrl: String = s"$url/v2/apps$id"
     logger.info(s"get url = $getUrl")
@@ -196,12 +217,12 @@ class MarathonFacade(
     result(requestFor[App](Post(s"$url/v2/apps", app)), waitTime)
   }
 
-  def deleteApp(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def deleteApp(id: AbsolutePathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     result(requestFor[ITDeploymentResult](Delete(s"$url/v2/apps$id?force=$force")), waitTime)
   }
 
-  def updateApp(id: PathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def updateApp(id: AbsolutePathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     val putUrl: String = s"$url/v2/apps$id?force=$force"
     logger.info(s"put url = $putUrl")
@@ -209,13 +230,13 @@ class MarathonFacade(
     result(requestFor[ITDeploymentResult](Put(putUrl, app)), waitTime)
   }
 
-  def putAppByteString(id: PathId, app: ByteString): RestResult[ITDeploymentResult] = {
+  def putAppByteString(id: AbsolutePathId, app: ByteString): RestResult[ITDeploymentResult] = {
     val putUrl: String = s"$url/v2/apps$id"
     logger.info(s"put url = $putUrl")
     result(requestFor[ITDeploymentResult](Put(putUrl, HttpEntity.Strict(ContentTypes.`application/json`, app))), waitTime)
   }
 
-  def patchApp(id: PathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def patchApp(id: AbsolutePathId, app: AppUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     val putUrl: String = s"$url/v2/apps$id?force=$force"
     logger.info(s"put url = $putUrl")
@@ -223,17 +244,17 @@ class MarathonFacade(
     result(requestFor[ITDeploymentResult](Patch(putUrl, app)), waitTime)
   }
 
-  def restartApp(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def restartApp(id: AbsolutePathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     result(requestFor[ITDeploymentResult](Post(s"$url/v2/apps$id/restart?force=$force")), waitTime)
   }
 
-  def listAppVersions(id: PathId): RestResult[ITAppVersions] = {
+  def listAppVersions(id: AbsolutePathId): RestResult[ITAppVersions] = {
     requireInBaseGroup(id)
     result(requestFor[ITAppVersions](Get(s"$url/v2/apps$id/versions")), waitTime)
   }
 
-  def appVersion(id: PathId, version: Timestamp): RestResult[App] = {
+  def appVersion(id: AbsolutePathId, version: Timestamp): RestResult[App] = {
     requireInBaseGroup(id)
     result(requestFor[App](Get(s"$url/v2/apps$id/versions/$version")), waitTime)
   }
@@ -245,100 +266,122 @@ class MarathonFacade(
     res.map(_.map(Raml.fromRaml(_))).map(_.filter(pod => isInBaseGroup(pod.id)))
   }
 
-  def listPodsInBaseGroupByPodId(podId: PathId): RestResult[Seq[PodDefinition]] = {
+  def listPodsInBaseGroupByPodId(podId: AbsolutePathId): RestResult[Seq[PodDefinition]] = {
     val res = result(requestFor[Seq[Pod]](Get(s"$url/v2/pods")), waitTime)
     res.map(_.map(Raml.fromRaml(_))).map(_.filter(_.id == podId))
   }
 
-  def pod(id: PathId): RestResult[PodDefinition] = {
+  def pod(id: AbsolutePathId): RestResult[PodDefinition] = {
     requireInBaseGroup(id)
     val res = result(requestFor[Pod](Get(s"$url/v2/pods$id")), waitTime)
     res.map(Raml.fromRaml(_))
   }
 
-  def podTasksIds(podId: PathId): Seq[String] = status(podId).value.instances.flatMap(_.containers.flatMap(_.containerId))
+  def podTasksIds(podId: AbsolutePathId): Seq[String] = status(podId).value.instances.flatMap(_.containers.flatMap(_.containerId))
 
-  def createPodV2(pod: PodDefinition): RestResult[PodDefinition] = {
-    requireInBaseGroup(pod.id)
-    val res = result(requestFor[Pod](Post(s"$url/v2/pods", Raml.toRaml(pod))), waitTime)
+  def createPodV2(pod: Pod): RestResult[PodDefinition] = {
+    requireInBaseGroup(pod.id.toPath)
+    val res = result(requestFor[Pod](Post(s"$url/v2/pods", pod)), waitTime)
     res.map(Raml.fromRaml(_))
   }
 
-  def deletePod(id: PathId, force: Boolean = false): RestResult[HttpResponse] = {
+  def createPodV2(pod: PodDefinition): RestResult[PodDefinition] = {
+    createPodV2(Raml.toRaml(pod))
+  }
+
+  def deletePod(id: AbsolutePathId, force: Boolean = false): RestResult[HttpResponse] = {
     requireInBaseGroup(id)
     result(request(Delete(s"$url/v2/pods$id?force=$force")), waitTime)
   }
 
-  def updatePod(id: PathId, pod: PodDefinition, force: Boolean = false): RestResult[PodDefinition] = {
+  def updatePod(id: AbsolutePathId, pod: PodDefinition, force: Boolean = false): RestResult[PodDefinition] = {
     requireInBaseGroup(id)
-    val res = result(requestFor[Pod](Put(s"$url/v2/pods$id?force=$force", pod)), waitTime)
+    val res = result(requestFor[Pod](Put(s"$url/v2/pods$id?force=$force", Raml.toRaml(pod))), waitTime)
     res.map(Raml.fromRaml(_))
   }
 
-  def status(podId: PathId): RestResult[PodStatus] = {
+  def status(podId: AbsolutePathId): RestResult[PodStatus] = {
     requireInBaseGroup(podId)
     result(requestFor[PodStatus](Get(s"$url/v2/pods$podId::status")), waitTime)
   }
 
-  def listPodVersions(podId: PathId): RestResult[Seq[Timestamp]] = {
+  /**
+    * ================================= NOTE =================================
+    * This is a copy of [[status()]] method which uses [[PodStatus18]] class that doesn't have `role` field for the pod
+    * instances. This is ONLY used in [[mesosphere.marathon.integration.UpgradeIntegrationTest]] where we query old
+    * Marathon instances.
+    * ========================================================================
+    */
+  def status18(podId: PathId): RestResult[PodStatus18] = {
+    requireInBaseGroup(podId)
+    result(requestFor[PodStatus18](Get(s"$url/v2/pods$podId::status")), waitTime)
+  }
+
+  def listPodVersions(podId: AbsolutePathId): RestResult[Seq[Timestamp]] = {
     requireInBaseGroup(podId)
     result(requestFor[Seq[Timestamp]](Get(s"$url/v2/pods$podId::versions")), waitTime)
   }
 
-  def podVersion(podId: PathId, version: Timestamp): RestResult[PodDefinition] = {
+  def podVersion(podId: AbsolutePathId, version: Timestamp): RestResult[PodDefinition] = {
     requireInBaseGroup(podId)
     val res = result(requestFor[Pod](Get(s"$url/v2/pods$podId::versions/$version")), waitTime)
     res.map(Raml.fromRaml(_))
   }
 
-  def deleteAllInstances(podId: PathId): RestResult[List[PodInstanceStatus]] = {
+  def deleteAllInstances(podId: AbsolutePathId): RestResult[List[PodInstanceStatus]] = {
     requireInBaseGroup(podId)
     result(requestFor[List[PodInstanceStatus]](Delete(s"$url/v2/pods$podId::instances")), waitTime)
   }
 
-  def deleteInstance(podId: PathId, instance: String, wipe: Boolean = false): RestResult[PodInstanceStatus] = {
+  def deleteInstance(podId: AbsolutePathId, instance: String, wipe: Boolean = false): RestResult[PodInstanceStatus] = {
     requireInBaseGroup(podId)
     result(requestFor[PodInstanceStatus](Delete(s"$url/v2/pods$podId::instances/$instance?wipe=$wipe")), waitTime)
   }
 
   //apps tasks resource --------------------------------------
-  def tasks(appId: PathId): RestResult[List[ITEnrichedTask]] = {
+  def tasks(appId: AbsolutePathId): RestResult[List[ITEnrichedTask]] = {
     requireInBaseGroup(appId)
     val res = result(requestFor[ITListTasks](Get(s"$url/v2/apps$appId/tasks")), waitTime)
     res.map(_.tasks.toList)
   }
 
-  def killAllTasks(appId: PathId, scale: Boolean = false): RestResult[ITListTasks] = {
+  def killAllTasks(appId: AbsolutePathId, scale: Boolean = false): RestResult[ITListTasks] = {
     requireInBaseGroup(appId)
     result(requestFor[ITListTasks](Delete(s"$url/v2/apps$appId/tasks?scale=$scale")), waitTime)
   }
 
-  def killAllTasksAndScale(appId: PathId): RestResult[ITDeploymentPlan] = {
+  def killAllTasksAndScale(appId: AbsolutePathId): RestResult[ITDeploymentPlan] = {
     requireInBaseGroup(appId)
     result(requestFor[ITDeploymentPlan](Delete(s"$url/v2/apps$appId/tasks?scale=true")), waitTime)
   }
 
-  def killTask(appId: PathId, taskId: String, scale: Boolean = false, wipe: Boolean = false): RestResult[HttpResponse] = {
+  def killTask(appId: AbsolutePathId, taskId: String, scale: Boolean = false, wipe: Boolean = false): RestResult[HttpResponse] = {
     requireInBaseGroup(appId)
     result(request(Delete(s"$url/v2/apps$appId/tasks/$taskId?scale=$scale&wipe=$wipe")), waitTime)
   }
 
   //group resource -------------------------------------------
 
-  def listGroupsInBaseGroup: RestResult[Set[GroupInfo]] = {
-    import PathId._
-    val root = result(requestFor[GroupInfo](Get(s"$url/v2/groups")), waitTime)
-    root.map(_.groups.filter(group => isInBaseGroup(group.id.toPath)))
+  def listGroupIdsInBaseGroup: RestResult[Set[String]] = {
+    // This actually returns GroupInfo, not GroupUpdate, but it maps mostly the same and we don't have a
+    // deserializer for GroupInfo at the moment
+    val root = result(requestFor[raml.GroupUpdate](Get(s"$url/v2/groups")), waitTime)
+
+    root.map(_.groups.getOrElse(Set.empty).filter(subGroup => isInBaseGroup(PathId(subGroup.id.get))).map(_.id.get))
   }
 
-  def listGroupVersions(id: PathId): RestResult[List[String]] = {
+  def listGroupVersions(id: AbsolutePathId): RestResult[List[String]] = {
     requireInBaseGroup(id)
     result(requestFor[List[String]](Get(s"$url/v2/groups$id/versions")), waitTime)
   }
 
-  def group(id: PathId): RestResult[GroupInfo] = {
+  /**
+    * This should actually return a raml.GroupInfo, but we dont' have deserialization for that. GroupUpdate is only missing the
+    * pods, sooo, close enough
+    */
+  def group(id: AbsolutePathId): RestResult[raml.GroupUpdate] = {
     requireInBaseGroup(id)
-    result(requestFor[GroupInfo](Get(s"$url/v2/groups$id")), waitTime)
+    result(requestFor[raml.GroupUpdate](Get(s"$url/v2/groups$id")), waitTime)
   }
 
   def createGroup(group: GroupUpdate): RestResult[ITDeploymentResult] = {
@@ -346,7 +389,7 @@ class MarathonFacade(
     result(requestFor[ITDeploymentResult](Post(s"$url/v2/groups", group)), waitTime)
   }
 
-  def deleteGroup(id: PathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def deleteGroup(id: AbsolutePathId, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     result(requestFor[ITDeploymentResult](Delete(s"$url/v2/groups$id?force=$force")), waitTime)
   }
@@ -355,12 +398,16 @@ class MarathonFacade(
     result(requestFor[ITDeploymentResult](Delete(s"$url/v2/groups?force=$force")), waitTime)
   }
 
-  def updateGroup(id: PathId, group: GroupUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def updateGroup(id: AbsolutePathId, group: GroupUpdate, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(id)
     result(requestFor[ITDeploymentResult](Put(s"$url/v2/groups$id?force=$force", group)), waitTime)
   }
 
-  def rollbackGroup(groupId: PathId, version: Timestamp, force: Boolean = false): RestResult[ITDeploymentResult] = {
+  def patchGroup(id: AbsolutePathId, update: GroupPartialUpdate): RestResult[String] = {
+    result(requestFor[String](Patch(s"$url/v2/groups$id", update)), waitTime)
+  }
+
+  def rollbackGroup(groupId: AbsolutePathId, version: Timestamp, force: Boolean = false): RestResult[ITDeploymentResult] = {
     requireInBaseGroup(groupId)
     updateGroup(groupId, GroupUpdate(None, version = Some(version.toOffsetDateTime)), force)
   }
@@ -376,7 +423,7 @@ class MarathonFacade(
     }
   }
 
-  def listDeploymentsForPathId(pathId: PathId): RestResult[List[ITDeployment]] = {
+  def listDeploymentsForPathId(pathId: AbsolutePathId): RestResult[List[ITDeployment]] = {
     result(requestFor[List[ITDeployment]](Get(s"$url/v2/deployments")), waitTime).map { deployments =>
       deployments.filter { deployment =>
         deployment.affectedApps.map(PathId(_)).contains(pathId) ||
@@ -434,12 +481,12 @@ class MarathonFacade(
     result(requestFor[ITLaunchQueue](Get(s"$url/v2/queue")), waitTime)
   }
 
-  def launchQueueForAppId(appId: PathId): RestResult[List[ITQueueItem]] = {
+  def launchQueueForAppId(appId: AbsolutePathId): RestResult[List[ITQueueItem]] = {
     val res = result(requestFor[ITLaunchQueue](Get(s"$url/v2/queue")), waitTime)
-    res.map(_.queue.filterAs(q => q.app.id.toPath == appId)(collection.breakOut))
+    res.map(_.queue.iterator.filter(q => q.app.id.toPath == appId).toList)
   }
 
-  def launchQueueDelayReset(appId: PathId): RestResult[HttpResponse] =
+  def launchQueueDelayReset(appId: AbsolutePathId): RestResult[HttpResponse] =
     result(request(Delete(s"$url/v2/queue/$appId/delay")), waitTime)
 
   //resources -------------------------------------------
@@ -458,5 +505,17 @@ object MarathonFacade {
       case NonFatal(e) =>
         throw new RuntimeException(s"while parsing:\n${app.entityPrettyJsonString}", e)
     }
-  }.to[marathon.IndexedSeq]
+  }.to(IndexedSeq)
+
+  /**
+    * Enables easy access to a deployment ID in the header of an [[HttpResponse]] in a [[RestResult]].
+    * @param response The result of an HTTP request.
+    */
+  implicit class DeploymentId(response: RestResult[_]) {
+    /**
+      * @return Deployment ID from headers, if any
+      */
+    def deploymentId: Option[String] =
+      response.originalResponse.headers.collectFirst { case header if header.name == RestResource.DeploymentHeader => header.value }
+  }
 }

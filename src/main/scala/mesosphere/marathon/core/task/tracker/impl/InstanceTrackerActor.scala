@@ -9,16 +9,17 @@ import akka.actor.SupervisorStrategy.Escalate
 import akka.actor._
 import akka.event.LoggingReceive
 import akka.pattern.pipe
+import akka.stream.Materializer
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.appinfo.TaskCounts
 import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdated, InstancesSnapshot}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceChangeHandler, InstanceDeleted, InstanceUpdateEffect, InstanceUpdateOpResolver, InstanceUpdateOperation, InstanceUpdated, InstancesSnapshot}
 import mesosphere.marathon.core.leadership.LeaderDeferrable
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{RepositoryStateUpdated, UpdateContext}
-import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
+import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerConfig, InstanceTrackerUpdateStepProcessor}
 import mesosphere.marathon.metrics.{Metrics, SettableGauge}
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import mesosphere.marathon.storage.repository.InstanceView
 
 import scala.concurrent.Future
@@ -27,21 +28,24 @@ import scala.util.{Failure, Success}
 
 object InstanceTrackerActor {
   def props(
-    metrics: ActorMetrics,
-    taskLoader: InstancesLoader,
-    updateStepProcessor: InstanceTrackerUpdateStepProcessor,
-    stateOpResolver: InstanceUpdateOpResolver,
+    metrics: Metrics,
+    config: InstanceTrackerConfig,
+    steps: Seq[InstanceChangeHandler],
     repository: InstanceView,
     clock: Clock,
-    crashStrategy: CrashStrategy): Props = {
-    Props(new InstanceTrackerActor(metrics, taskLoader, updateStepProcessor, stateOpResolver, repository, clock, crashStrategy))
+    crashStrategy: CrashStrategy)(implicit mat: Materializer): Props = {
+    val instancesLoader = new InstancesLoaderImpl(repository, config)(mat)
+    val updateStepProcessor = new InstanceTrackerUpdateStepProcessorImpl(metrics, steps)
+    val stateOpResolver: InstanceUpdateOpResolver = new InstanceUpdateOpResolver(clock)
+
+    Props(new InstanceTrackerActor(new ActorMetrics(metrics), instancesLoader, updateStepProcessor, stateOpResolver, repository, clock, crashStrategy))
   }
 
   /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]]. */
-  private[impl] case object List
+  @LeaderDeferrable private[impl] case object List
 
-  /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]] by RunSpec [[PathId]]. */
-  private[impl] case class ListBySpec(appId: PathId)
+  /** Query the current [[InstanceTracker.SpecInstances]] from the [[InstanceTrackerActor]] by RunSpec [[AbsolutePathId]]. */
+  private[impl] case class ListBySpec(appId: AbsolutePathId)
 
   private[impl] case class Get(instanceId: Instance.Id)
 
@@ -50,7 +54,7 @@ object InstanceTrackerActor {
   private[impl] case object Unsubscribe
 
   private[impl] case class UpdateContext(deadline: Timestamp, operation: InstanceUpdateOperation) {
-    def appId: PathId = operation.instanceId.runSpecId
+    def appId: AbsolutePathId = operation.instanceId.runSpecId
     def instanceId: Instance.Id = operation.instanceId
   }
 
@@ -157,7 +161,7 @@ private[impl] class InstanceTrackerActor(
       case InstanceTrackerActor.List =>
         sender() ! instancesBySpec
 
-      case InstanceTrackerActor.ListBySpec(appId: PathId) =>
+      case InstanceTrackerActor.ListBySpec(appId: AbsolutePathId) =>
         sender() ! instancesBySpec.specInstances(appId)
 
       case InstanceTrackerActor.Get(instanceId) =>
@@ -169,7 +173,7 @@ private[impl] class InstanceTrackerActor(
         val originalSender = sender
         val updateEffect = try {
           resolveUpdateEffect(update)
-        } catch { case ex => InstanceUpdateEffect.Failure(ex) }
+        } catch { case ex: Throwable => InstanceUpdateEffect.Failure(ex) }
         import scala.concurrent.ExecutionContext.Implicits.global
 
         updateEffect match {
@@ -251,7 +255,7 @@ private[impl] class InstanceTrackerActor(
     * @param instanceId The identifier of the instance that is removed, added or updated.
     * @param newInstance A new or updated instance, or none if it is expunged.
     */
-  def updateApp(appId: PathId, instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
+  def updateApp(appId: AbsolutePathId, instanceId: Instance.Id, newInstance: Option[Instance]): Unit = {
     val updatedAppInstances = newInstance match {
       case None =>
         logger.debug(s"Expunging $instanceId from the in-memory state")
@@ -264,8 +268,8 @@ private[impl] class InstanceTrackerActor(
     val updatedCounts = {
       val oldInstance = instancesBySpec.instance(instanceId)
       // we do ignore health counts
-      val oldTaskCount = TaskCounts(oldInstance.to[Seq], healthStatuses = Map.empty)
-      val newTaskCount = TaskCounts(newInstance.to[Seq], healthStatuses = Map.empty)
+      val oldTaskCount = TaskCounts(oldInstance.to(Seq), healthStatuses = Map.empty)
+      val newTaskCount = TaskCounts(newInstance.to(Seq), healthStatuses = Map.empty)
       counts + newTaskCount - oldTaskCount
     }
 

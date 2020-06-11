@@ -69,24 +69,27 @@ class AppInfoBaseData(
     instanceTracker.instancesBySpec()
   }
 
-  def appInfoFuture(app: AppDefinition, embeds: Set[AppInfo.Embed]): Future[AppInfo] = async {
+  def appInfoFuture(app: AppDefinition, embeds: Set[AppInfo.Embed]): Future[raml.AppInfo] = async {
     val appData = new AppData(app)
 
     val taskCountsOpt: Option[TaskCounts] = if (embeds.contains(AppInfo.Embed.Counts)) Some(await(appData.taskCountsFuture)) else None
-    val readinessChecksByAppOpt: Option[Map[PathId, Seq[ReadinessCheckResult]]] = if (embeds.contains(AppInfo.Embed.Readiness)) Some(await(readinessChecksByAppFuture)) else None
+    val readinessChecksByAppOpt: Option[Seq[ReadinessCheckResult]] = if (embeds.contains(AppInfo.Embed.Readiness)) await(readinessChecksByAppFuture).get(app.id) else None
     val runningDeploymentsByAppOpt: Option[Map[PathId, Seq[Identifiable]]] = if (embeds.contains(AppInfo.Embed.Deployments)) Some(await(runningDeploymentsByAppFuture)) else None
     val lastTaskFailureOpt: Option[TaskFailure] = if (embeds.contains(AppInfo.Embed.LastTaskFailure)) await(appData.maybeLastTaskFailureFuture) else None
     val enrichedTasksOpt: Option[Seq[EnrichedTask]] = if (embeds.contains(AppInfo.Embed.Tasks)) Some(await(appData.enrichedTasksFuture)) else None
-    val taskStatsOpt: Option[TaskStatsByVersion] = if (embeds.contains(AppInfo.Embed.TaskStats)) Some(await(appData.taskStatsFuture)) else None
+    val taskStatsOpt: Option[raml.TaskStatsByVersion] = if (embeds.contains(AppInfo.Embed.TaskStats)) Some(await(appData.taskStatsFuture)) else None
 
-    val appInfo = AppInfo(
-      app = app,
-      maybeTasks = enrichedTasksOpt,
-      maybeCounts = taskCountsOpt,
-      maybeDeployments = runningDeploymentsByAppOpt.map(_.apply(app.id)),
-      maybeReadinessCheckResults = readinessChecksByAppOpt.map(_.apply(app.id)),
-      maybeLastTaskFailure = lastTaskFailureOpt,
-      maybeTaskStats = taskStatsOpt
+    val appInfo = raml.AppInfo.fromParent(
+      parent = Raml.toRaml(app),
+      readinessCheckResults = if (embeds.contains(AppInfo.Embed.Readiness)) Some(readinessChecksByAppOpt.map(Raml.toRaml(_)).getOrElse(Seq.empty)) else None,
+      tasks = if (embeds.contains(AppInfo.Embed.Tasks)) Some(enrichedTasksOpt.getOrElse(Seq.empty).map(Raml.toRaml(_)(raml.TaskConversion.enrichedTaskRamlWrite))) else None,
+      tasksStaged = taskCountsOpt.map(_.tasksStaged),
+      tasksRunning = taskCountsOpt.map(_.tasksRunning),
+      tasksHealthy = taskCountsOpt.map(_.tasksHealthy),
+      tasksUnhealthy = taskCountsOpt.map(_.tasksUnhealthy),
+      deployments = if (embeds.contains(AppInfo.Embed.Deployments)) Some(runningDeploymentsByAppOpt.fold(Seq.empty[raml.Identifiable])(_.apply(app.id).map{ i => raml.Identifiable(i.id) })) else None,
+      lastTaskFailure = lastTaskFailureOpt.map(Raml.toRaml(_)(raml.TaskConversion.taskFailureRamlWrite)),
+      tasksStats = taskStatsOpt
     )
     appInfo
   }
@@ -128,7 +131,7 @@ class AppInfoBaseData(
       case NonFatal(e) => throw new RuntimeException(s"while calculating task counts for app [${app.id}]", e)
     }
 
-    lazy val taskStatsFuture: Future[TaskStatsByVersion] = {
+    lazy val taskStatsFuture: Future[raml.TaskStatsByVersion] = {
       logger.debug(s"calculating task stats for app [${app.id}]")
       for {
         tasks <- tasksForStats
@@ -139,7 +142,7 @@ class AppInfoBaseData(
       logger.debug(s"assembling rich tasks for app [${app.id}]")
       def statusesToEnrichedTasks(instances: Seq[Instance], statuses: Map[Instance.Id, collection.Seq[Health]]): Seq[EnrichedTask] = {
         instances.flatMap { instance =>
-          EnrichedTask.singleFromInstance(instance, healthCheckResults = statuses.getOrElse(instance.instanceId, Nil).to[Seq])
+          EnrichedTask.singleFromInstance(instance, healthCheckResults = statuses.getOrElse(instance.instanceId, Nil).to(Seq))
         }
       }
 
@@ -163,7 +166,10 @@ class AppInfoBaseData(
     val now = clock.now().toOffsetDateTime
     val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
     val instanceStatus = instances
-      .filter(!_.isScheduled)
+      .filter { instance =>
+        // Ignore all freshly scheduled instances but include the re-scheduled ones.
+        !(instance.isScheduled && instance.agentInfo.isEmpty)
+      }
       .flatMap { inst => podInstanceStatus(inst) }
     val statusSince = if (instanceStatus.isEmpty) now else instanceStatus.map(_.statusSince).max
     val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
@@ -230,7 +236,7 @@ class AppInfoBaseData(
     maybePodSpec.map { pod => Raml.toRaml(pod -> instance) }
   }
 
-  protected def isPodTerminating(id: PathId): Future[Boolean] =
+  protected def isPodTerminating(id: AbsolutePathId): Future[Boolean] =
     runningDeployments.map { infos =>
       infos.exists(_.plan.deletedPods.contains(id))
     }

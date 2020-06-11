@@ -1,12 +1,13 @@
 package mesosphere.marathon
 package integration
 
+import com.mesosphere.utils.mesos.{FaultDomain, Zone, MesosConfig, Region}
 import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{FaultDomain, PathId, Region, Zone}
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.mesos.Constraints
 import org.scalatest.Inside
+import org.scalatest.Inspectors.forAll
 
 class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
 
@@ -32,7 +33,19 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
 
   )
 
-  def appId(suffix: String): PathId = testBasePath / s"app-${suffix}"
+  // This hook is also defined in TaskUnreachableIntegrationTest. We should probably move it into MesosClusterTest.
+  override def afterAll(): Unit = {
+    // We need to start all the agents for the teardown to be able to kill all the (UNREACHABLE) executors/tasks
+    mesosCluster.agents.foreach(_.start())
+    eventually {
+      val state = mesosFacade.state.value
+      state.agents.size shouldBe mesosCluster.agents.size
+      forAll(state.frameworks) { _.unreachable_tasks should be('empty) }
+    }
+    super.afterAll()
+  }
+
+  def appId(suffix: String): AbsolutePathId = testBasePath / s"app-${suffix}"
 
   "Region Aware marathon" must {
     "Launch an instance of the app in the default region if region is not specified" in {
@@ -46,7 +59,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       result should be(Created)
 
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1)
+      waitForTasks(applicationId, 1)
       val task = marathon.tasks(applicationId).value.head
       task.region shouldBe Some(f.homeRegion.value)
     }
@@ -62,7 +75,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       Then("The app is created in the specified region")
       result should be(Created)
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1)
+      waitForTasks(applicationId, 1)
       val task = marathon.tasks(applicationId).value.head
       task.region shouldBe Some(f.remoteRegion.value)
     }
@@ -80,11 +93,53 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       Then("The app is created in the proper region and a proper zone")
       result should be(Created)
       waitForDeployment(result)
-      waitForTasks(app.id.toPath, 1)
+      waitForTasks(applicationId, 1)
       val task = marathon.tasks(applicationId).value.head
       task.region shouldBe Some(f.remoteRegion.value)
       task.zone shouldBe Some(f.remoteZone2.value)
     }
-  }
 
+    "Replace an unreachable instance in the same region" in {
+      val applicationId = appId("unreachable-instance-is-placed-in-same-region")
+      val strategy = raml.UnreachableEnabled(inactiveAfterSeconds = 0, expungeAfterSeconds = 0)
+      val app = appProxy(applicationId, "v1", instances = 4, healthCheck = None).copy(constraints = Set(
+        Constraints.regionField :: "GROUP_BY" :: "2" :: Nil
+      ), unreachableStrategy = Some(strategy))
+
+      Given("an app grouped by two regions")
+      val result = marathon.createAppV2(app)
+      result should be(Created)
+      waitForDeployment(result)
+      val tasks = eventually {
+        val tasks = marathon.tasks(applicationId).value
+        tasks.filter(_.slaveId.nonEmpty) should have size (4)
+        tasks
+      }
+      val originalAgentIds = tasks.map(_.slaveId).flatten.toSet
+      tasks.groupBy(_.region.value).keySet should be(Set("home_region", "remote_region"))
+      tasks.groupBy(_.region.value).get("home_region").value should have size (2)
+      tasks.groupBy(_.region.value).get("remote_region").value should have size (2)
+
+      When("an agent in the remote region with running tasks becomes unreachable")
+      val Some(agent) = mesosCluster.agents.filter { agent =>
+        (originalAgentIds contains mesosCluster.agentIdFor(agent)) &&
+          agent.extraArgs.exists(_.contains("remote_region"))
+      }.headOption
+
+      agent.stop()
+      eventually {
+        marathon.tasks(applicationId).value.flatMap(_.slaveId).toSet shouldNot be(originalAgentIds)
+      }
+
+      Then("a replacement is launched in the remote region, and the constraints are still honored")
+      eventually {
+        val tasks = marathon.tasks(applicationId).value
+        tasks should have size (4)
+        tasks.groupBy(_.region.value).keySet should be(Set("home_region", "remote_region"))
+
+        tasks.groupBy(_.region.value).get("home_region").value should have size (2)
+        tasks.groupBy(_.region.value).get("remote_region").value should have size (2)
+      }
+    }
+  }
 }

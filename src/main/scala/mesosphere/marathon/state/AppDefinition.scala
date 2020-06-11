@@ -18,7 +18,7 @@ import mesosphere.marathon.plugin.validation.RunSpecValidator
 import mesosphere.marathon.raml.{App, Apps, ExecutorResources, Resources}
 import mesosphere.marathon.state.Container.{Docker, MesosDocker}
 import mesosphere.marathon.state.VersionInfo._
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.mesos.TaskBuilder
 import mesosphere.mesos.protos.{Resource, ScalarResource}
 import org.apache.mesos.{Protos => mesos}
@@ -30,7 +30,7 @@ import scala.concurrent.duration._
 
 case class AppDefinition(
 
-    id: PathId,
+    id: AbsolutePathId,
 
     override val cmd: Option[String] = App.DefaultCmd,
 
@@ -68,7 +68,7 @@ case class AppDefinition(
 
     taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
 
-    dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
+    dependencies: Set[AbsolutePathId] = AppDefinition.DefaultDependencies,
 
     upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
 
@@ -88,8 +88,12 @@ case class AppDefinition(
 
     tty: Option[Boolean] = AppDefinition.DefaultTTY,
 
-    role: String) extends RunSpec
-  with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
+    role: Role,
+
+    resourceLimits: Option[ResourceLimits] = None,
+
+    // Adding a new property? Make sure to update the method isUpgrade appropriately
+  ) extends RunSpec with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
     * As an optimization, we precompute and cache the hash of this object
@@ -152,7 +156,8 @@ case class AppDefinition(
       taskId = None,
       host = None,
       hostPorts = Seq.empty,
-      envPrefix = None
+      envPrefix = None,
+      enforceRole = None
     )
     val cpusResource = ScalarResource(Resource.CPUS, resources.cpus)
     val memResource = ScalarResource(Resource.MEM, resources.mem)
@@ -191,6 +196,9 @@ case class AppDefinition(
       .setKillSelection(killSelection.toProto)
       .setRole(role)
 
+    resourceLimits.foreach { limits =>
+      builder.setResourceLimits(ResourceLimits.resourceLimitsToProto(limits))
+    }
     check.foreach { c => builder.setCheck(c.toProto) }
 
     executorResources.foreach(r => {
@@ -226,24 +234,24 @@ case class AppDefinition(
 
   def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
     val envMap: Map[String, EnvVarValue] = EnvVarValue(
-      proto.getCmd.getEnvironment.getVariablesList.map {
+      proto.getCmd.getEnvironment.getVariablesList.asScala.iterator.map {
         v => v.getName -> v.getValue
-      }(collection.breakOut))
+      }.toMap)
 
     val envRefs: Map[String, EnvVarValue] =
-      proto.getEnvVarReferencesList.flatMap(EnvVarRefSerializer.fromProto)(collection.breakOut)
+      proto.getEnvVarReferencesList.asScala.iterator.flatMap(EnvVarRefSerializer.fromProto).toMap
 
     val resourcesMap: Map[String, Double] =
-      proto.getResourcesList.map {
+      proto.getResourcesList.asScala.iterator.map {
         r => r.getName -> (r.getScalar.getValue: Double)
-      }(collection.breakOut)
+      }.toMap
 
     val executorResourcesMap: Map[String, Double] =
-      proto.getExecutorResourcesList.map {
+      proto.getExecutorResourcesList.asScala.iterator.map {
         r => r.getName -> (r.getScalar.getValue: Double)
-      }(collection.breakOut)
+      }.toMap
 
-    val argsOption = proto.getCmd.getArgumentsList.toSeq
+    val argsOption = proto.getCmd.getArgumentsList.asScala.toSeq
 
     //Precondition: either args or command is defined
     val commandOption =
@@ -253,21 +261,21 @@ case class AppDefinition(
 
     val containerOption = if (proto.hasContainer) Some(ContainerSerializer.fromProto(proto.getContainer)) else None
 
-    val acceptedResourceRoles = proto.getAcceptedResourceRoles.getRoleList.toSet
+    val acceptedResourceRoles = proto.getAcceptedResourceRoles.getRoleList.asScala.toSet
 
     val versionInfoFromProto = AppDefinition.versionInfoFrom(proto)
 
-    val networks: Seq[Network] = proto.getNetworksList.flatMap(Network.fromProto)(collection.breakOut)
+    val networks: Seq[Network] = proto.getNetworksList.asScala.iterator.flatMap(Network.fromProto).toSeq
 
     val tty: Option[Boolean] = if (proto.hasTty) Some(proto.getTty) else AppDefinition.DefaultTTY
 
-    val role: String = proto.getRole()
+    val role: Role = proto.getRole()
 
     // TODO (gkleiman): we have to be able to read the ports from the deprecated field in order to perform migrations
     // until the deprecation cycle is complete.
     val portDefinitions =
-      if (proto.getPortsCount > 0) PortDefinitions(proto.getPortsList.map(_.intValue)(collection.breakOut): _*)
-      else proto.getPortDefinitionsList.map(PortDefinitionSerializer.fromProto).to[Seq]
+      if (proto.getPortsCount > 0) PortDefinitions(proto.getPortsList.asScala.iterator.map(_.intValue).toSeq: _*)
+      else proto.getPortDefinitionsList.asScala.iterator.map(PortDefinitionSerializer.fromProto).to(Seq)
 
     val unreachableStrategy =
       if (proto.hasUnreachableStrategy)
@@ -287,7 +295,7 @@ case class AppDefinition(
     }
 
     AppDefinition(
-      id = PathId(proto.getId),
+      id = AbsolutePathId(proto.getId),
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
       cmd = commandOption,
       args = argsOption,
@@ -300,7 +308,7 @@ case class AppDefinition(
         backoff = proto.getBackoff.milliseconds,
         factor = proto.getBackoffFactor,
         maxLaunchDelay = proto.getMaxLaunchDelay.milliseconds),
-      constraints = proto.getConstraintsList.toSet,
+      constraints = proto.getConstraintsList.asScala.toSet,
       acceptedResourceRoles = acceptedResourceRoles,
       resources = Resources(
         cpus = resourcesMap.getOrElse(Resource.CPUS, this.resources.cpus),
@@ -309,22 +317,23 @@ case class AppDefinition(
         gpus = resourcesMap.getOrElse(Resource.GPUS, this.resources.gpus.toDouble).toInt
       ),
       env = envMap ++ envRefs,
-      fetch = proto.getCmd.getUrisList.map(FetchUri.fromProto)(collection.breakOut),
+      fetch = proto.getCmd.getUrisList.asScala.iterator.map(FetchUri.fromProto).toSeq,
       container = containerOption,
-      healthChecks = proto.getHealthChecksList.map(HealthCheck.fromProto).toSet,
+      healthChecks = proto.getHealthChecksList.asScala.map(HealthCheck.fromProto).toSet,
       check = if (proto.hasCheck) Some(Check.fromProto(proto.getCheck)) else None,
       readinessChecks =
-        proto.getReadinessCheckDefinitionList.map(ReadinessCheckSerializer.fromProto)(collection.breakOut),
+        proto.getReadinessCheckDefinitionList.asScala.iterator.map(ReadinessCheckSerializer.fromProto).toSeq,
       taskKillGracePeriod = if (proto.hasTaskKillGracePeriod) Some(proto.getTaskKillGracePeriod.milliseconds)
       else None,
-      labels = proto.getLabelsList.map { p => p.getKey -> p.getValue }(collection.breakOut),
+      labels = proto.getLabelsList.asScala.iterator.map { p => p.getKey -> p.getValue }.toMap,
       versionInfo = versionInfoFromProto,
       upgradeStrategy =
         if (proto.hasUpgradeStrategy) UpgradeStrategy.fromProto(proto.getUpgradeStrategy)
         else UpgradeStrategy.empty,
-      dependencies = proto.getDependenciesList.map(PathId(_))(collection.breakOut),
+      // TODO AN: Do we store dependencies as relative pathes????
+      dependencies = proto.getDependenciesList.asScala.iterator.map(AbsolutePathId(_)).toSet,
       networks = if (networks.isEmpty) AppDefinition.DefaultNetworks else networks,
-      secrets = proto.getSecretsList.map(SecretsSerializer.fromProto)(collection.breakOut),
+      secrets = proto.getSecretsList.asScala.iterator.map(SecretsSerializer.fromProto).toMap,
       unreachableStrategy = unreachableStrategy,
       killSelection = KillSelection.fromProto(proto.getKillSelection),
       tty = tty,
@@ -385,7 +394,8 @@ case class AppDefinition(
           unreachableStrategy != to.unreachableStrategy ||
           killSelection != to.killSelection ||
           tty != to.tty ||
-          role != to.role
+          role != to.role ||
+          resourceLimits != to.resourceLimits
       }
     case _ =>
       // A validation rule will ensure, this can not happen
@@ -415,13 +425,11 @@ case class AppDefinition(
 
 object AppDefinition extends GeneralPurposeCombinators {
 
-  type AppKey = PathId
-
   val RandomPortValue: Int = 0
   val RandomPortDefinition: PortDefinition = PortDefinition(RandomPortValue, "tcp", None, Map.empty[String, String])
 
   // App defaults
-  val DefaultId = PathId.empty
+  val DefaultId = PathId.root
 
   val DefaultEnv = Map.empty[String, EnvVarValue]
 
@@ -444,7 +452,7 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultTaskKillGracePeriod = Option.empty[FiniteDuration]
 
-  val DefaultDependencies = Set.empty[PathId]
+  val DefaultDependencies = Set.empty[AbsolutePathId]
 
   val DefaultUpgradeStrategy: UpgradeStrategy = UpgradeStrategy.empty
 
@@ -505,6 +513,17 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   def validWithRoleEnforcement(roleEnforcement: RoleSettings): Validator[AppDefinition] = validator[AppDefinition] { app =>
     app.role is in(roleEnforcement.validRoles)
+    // DO NOT MERGE THESE TWO similar if blocks! Wix Accord macros does weird stuff otherwise.
+    if (app.isResident) {
+      app.role is isTrue(s"Resident apps cannot have the role ${ResourceRole.Unreserved}") { role: String =>
+        !role.equals(ResourceRole.Unreserved)
+      }
+    }
+    if (app.isResident) {
+      app.role is isTrue((role: Role) => RoleSettings.residentRoleChangeWarningMessage(roleEnforcement.previousRole.get, role)) { role: String =>
+        roleEnforcement.previousRole.map(_.equals(role) || roleEnforcement.forceRoleUpdate).getOrElse(true)
+      }
+    }
     app.acceptedResourceRoles is ResourceRole.validForRole(app.role)
   }
 

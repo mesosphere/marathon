@@ -6,7 +6,7 @@ import java.util
 import mesosphere.UnitTest
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.state.Container.{Docker, PortMapping}
-import mesosphere.marathon.state.{AppDefinition, PathId, PortDefinitions, ResourceRole}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PortDefinitions, ResourceRole}
 import mesosphere.marathon.tasks.PortsMatcher.PortWithRole
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.ResourceMatcher.ResourceSelector
@@ -21,7 +21,7 @@ class PortsMatcherTest extends UnitTest {
 
   import mesosphere.mesos.protos.Implicits._
 
-  val runSpecId = PathId("/test")
+  val runSpecId = AbsolutePathId("/test")
   private val containerNetworking = Seq(ContainerNetwork("dcos"))
 
   "PortsMatcher" should {
@@ -110,7 +110,7 @@ class PortsMatcherTest extends UnitTest {
 
       assert(matcher.portsMatch.isDefined)
       assert(5 == matcher.portsMatch.get.hostPorts.size)
-      assert(matcher.portsMatch.get.resources.map(_.getRole: @silent).to[Set] == Set(ResourceRole.Unreserved, "marathon"))
+      assert(matcher.portsMatch.get.resources.map(_.getRole: @silent).to(Set) == Set(ResourceRole.Unreserved, "marathon"))
     }
 
     "get ports from multiple ranges, ignore ranges with unwanted roles" in {

@@ -9,6 +9,8 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 import scala.util.Try
+import java.time.format.DateTimeFormatter
+import java.time.LocalDateTime
 
 import $file.awsClient
 import $file.dataDogClient
@@ -29,6 +31,9 @@ import utils.BranchType._
 val PACKAGE_DIR: Path = pwd / 'target / 'universal
 val PACKAGE_DOCS_DIR: Path = pwd / 'target / "universal-docs"
 
+final case class ScalafixException(message: String, cause: Throwable) extends Exception(message, cause)
+
+
 /**
  * Compile Marathon and run unit, integration tests.
  *
@@ -45,8 +50,6 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   run("sbt", "clean", "integration/clean", "compile", "test:compile", "integration/test:compile")
 
-  checkUnusedImports(logFileName)
-
   run("sbt", "test", "integration/test")
 
   // Check leaked processes after integration tests
@@ -59,6 +62,8 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
 
   // Check system integration tests.
   checkSystemIntegrationTests(logFileName)
+
+  checkScalafix()
 }
 
 /**
@@ -71,12 +76,13 @@ def checkLeakedProcesses(): Unit = {
 }
 
 @main
-def checkUnusedImports(logFileName: String): Unit = {
-  val logs = read! pwd / logFileName
-  val unusedImportMatch = """.*\.scala:\d+:\d+: Unused import.*\n.*import.*\n.*\^""".r
-  val unusedImports = unusedImportMatch.findAllIn(logs).toVector
-
-  assert(unusedImports.isEmpty, s"Found unused imports:\n${unusedImports.mkString("\n")}")
+def checkScalafix(): Unit = {
+  try {
+    %('sbt, "compile:scalafix --check")
+  } catch {
+    case e: InteractiveShelloutException =>
+      throw ScalafixException("Scalafix failed. Run sbt compile:scalafix before checking in.", e)
+  }
 }
 
 @main
@@ -106,7 +112,6 @@ def zipLogs(logFileName: String = "ci.log", sandboxFileName: String = "sandboxes
  * @return Artifact description if it was uploaded.
  */
 def uploadTarballPackagesToS3(version: SemVer, buildLocation: String): Option[awsClient.Artifact] = utils.stage("Upload Tarball Packages") {
-  import scala.collection.breakOut
 
   // Upload docs
   PACKAGE_DOCS_DIR.toIO.listFiles.filter(f => f.getName.endsWith(".tgz"))
@@ -165,6 +170,10 @@ def provisionHost(): Unit = utils.stage("Provision") {
   // Set port range for random port 0 allocation.
   %('sudo, "ci/set_port_range.sh")
 
+  // First call to `docker --version` can take up to 30s. This sometimes leads to Mesos agent
+  // failing to start when checking for the docker version. So we do it here (successive calls will be faster).
+  %('sudo, "docker", "--version")
+
   provision.killStaleTestProcesses()
   provision.installMesos()
   provision.installDcosCli()
@@ -194,24 +203,47 @@ def build(runTests: Boolean = true, buildName: String = "run"): SemVer = {
 
 /**
   * Builds docker and linux native packages, then runs the tests in tests/package/test.sc
+  *
+  * @return Tag of Docker image
   */
 @main
-def buildDockerAndLinuxPackages(): Unit = {
+def buildDockerAndLinuxPackages(): String = {
   utils.stage("Package Docker Image, Debian and RedHat Packages") {
-    %('sbt, "docker:publishLocal")
-
     val toolPath = pwd/'tools/'packager
     %('make, "clean")(toolPath)
     %('make, "all", "-j")(toolPath)
+
+    %%("./version", "docker").out.string.trim
   }
 }
 
 def testDockerAndLinuxPackages(): Unit = {
-  utils.stage("Testing Docker Image, Debian and RedHat Packages") {
-    // create test-bed docker images and run the package tests
-    val testPath = pwd/'tests/'package
-    %('make, "clean")(testPath)
-    %('make, "test", "-j")(testPath)
+  provision.maybeVersion match {
+    case Some(version) if version.contains(".pre.") =>
+      println("Skipping docker image testing as it does not work with pre-release Mesos versions")
+    case _ =>
+      utils.stage("Testing Docker Image, Debian and RedHat Packages") {
+        // create test-bed docker images and run the package tests
+        val testPath = pwd/'tests/'package
+        %('make, "clean")(testPath)
+        %('make, "test", "-j")(testPath)
+      }
+  }
+}
+
+/**
+  * Builds the Marathon storage tool, just to check that compatibility isn't broken
+  *
+  * @return Tag of Docker image
+  */
+@main
+def buildStorageTool(): String = {
+  utils.stage("Building the Marathon storage tool") {
+    val toolPath = pwd/'tools/'storage
+    %('make, "clean")(toolPath)
+    %('make, "compile")(toolPath)
+
+    %%("./version", "docker").out.string.trim
   }
 }
 
@@ -225,7 +257,6 @@ def testDockerAndLinuxPackages(): Unit = {
 @main
 def updateDcosImage(version: SemVer, artifactUrl: String, sha1: String): Unit = utils.stage("Patch DC/OS Branch") {
   upgrade.updateMarathon(artifactUrl, sha1, s"Update Marathon to $version")
-  upgrade.updateMarathonEE(artifactUrl, sha1, s"Update Marathon to $version")
 }
 
 /*******************************************************************************
@@ -241,15 +272,21 @@ def buildMaster(): Unit = {
 
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"master-$buildNumber")
-  buildDockerAndLinuxPackages()
+  val dockerTag = buildDockerAndLinuxPackages()
   testDockerAndLinuxPackages()
   // dcos.buildRegistry(version) The packaging is broken on master https://jira.mesosphere.com/browse/MARATHON-8442.
+
+  // Verify that storage tool works
+  buildStorageTool()
 
   // Uploads
   val maybeArtifact = uploadTarballPackagesToS3(version, s"builds/$version")
   maybeArtifact.foreach { artifact =>
     updateDcosImage(version, artifact.downloadUrl, artifact.sha1)
   }
+
+  // Publish Docker image
+  %('docker, "push", s"mesosphere/marathon:${dockerTag}")
 }
 
 /**
@@ -276,6 +313,9 @@ def buildPr(pullId: String): Unit = asPullRequest(pullId) {
   provisionHost()
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   val version = build(buildName = s"PR-$pullId-$buildNumber")
+
+  // Verify that storage tool works
+  buildStorageTool()
 
   // Uploads
   val artifact = uploadTarballPackagesToS3(version, s"builds/$version")

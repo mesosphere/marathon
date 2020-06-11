@@ -1,14 +1,13 @@
 package mesosphere.marathon
 package core.task.tracker
 
-import akka.{Done, NotUsed}
 import akka.stream.scaladsl.Source
+import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.core.instance.update.{InstanceChange, InstancesSnapshot}
+import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation, InstancesSnapshot}
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
-import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import org.apache.mesos
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -44,10 +43,10 @@ trait InstanceTracker extends StrictLogging {
     * @param readAfterWrite If true waits until all pending updates are written before returning instance.
     * @return A future sequence of all instances.
     */
-  def specInstances(pathId: PathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]]
+  def specInstances(pathId: AbsolutePathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]]
 
   /** Synchronous blocking version of [[InstanceTracker.specInstances()]]. */
-  def specInstancesSync(pathId: PathId, readAfterWrite: Boolean = false): Seq[Instance]
+  def specInstancesSync(pathId: AbsolutePathId, readAfterWrite: Boolean = false): Seq[Instance]
 
   /**
     * Look up a specific instance by id.
@@ -68,22 +67,20 @@ trait InstanceTracker extends StrictLogging {
   def instancesBySpecSync: InstanceTracker.InstancesBySpec
   def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec]
 
-  def countActiveSpecInstances(appId: PathId): Future[Int]
+  def countActiveSpecInstances(appId: AbsolutePathId): Future[Int]
 
-  def hasSpecInstancesSync(appId: PathId): Boolean
-  def hasSpecInstances(appId: PathId)(implicit ec: ExecutionContext): Future[Boolean]
+  def hasSpecInstancesSync(appId: AbsolutePathId): Boolean
+  def hasSpecInstances(appId: AbsolutePathId)(implicit ec: ExecutionContext): Future[Boolean]
 
   /** Process an InstanceUpdateOperation and propagate its result. */
   def process(stateOp: InstanceUpdateOperation): Future[InstanceUpdateEffect]
 
   def schedule(instance: Instance): Future[Done]
 
-  def schedule(instances: Instance*)(implicit ec: ExecutionContext): Future[Done] = {
+  def schedule(instances: Seq[Instance])(implicit ec: ExecutionContext): Future[Done] = {
     logger.info(s"Scheduling instances ${instances.mkString(",\n")}")
     Future.sequence(instances.map(schedule)).map { _ => Done }
   }
-
-  def schedule(instances: Seq[Instance])(implicit ec: ExecutionContext): Future[Done] = schedule(instances: _*)
 
   def revert(instance: Instance): Future[Done]
 
@@ -106,13 +103,13 @@ object InstanceTracker {
   /**
     * Contains all tasks grouped by app ID.
     */
-  case class InstancesBySpec private (instancesMap: Map[PathId, InstanceTracker.SpecInstances]) extends StrictLogging {
+  case class InstancesBySpec private (instancesMap: Map[AbsolutePathId, InstanceTracker.SpecInstances]) extends StrictLogging {
 
-    def allSpecIdsWithInstances: Set[PathId] = instancesMap.keySet
+    def allSpecIdsWithInstances: Set[AbsolutePathId] = instancesMap.keySet
 
-    def hasSpecInstances(appId: PathId): Boolean = instancesMap.contains(appId)
+    def hasSpecInstances(appId: AbsolutePathId): Boolean = instancesMap.contains(appId)
 
-    def specInstances(pathId: PathId): Seq[Instance] = {
+    def specInstances(pathId: AbsolutePathId): Seq[Instance] = {
       instancesMap.get(pathId).map(_.instances).getOrElse(Seq.empty)
     }
 
@@ -127,9 +124,9 @@ object InstanceTracker {
       instances.flatMap(_.tasksMap.get(id))
     }
 
-    def allInstances: Seq[Instance] = instancesMap.values.flatMap(_.instances)(collection.breakOut)
+    def allInstances: Seq[Instance] = instancesMap.values.iterator.flatMap(_.instances).toSeq
 
-    private[tracker] def updateApp(appId: PathId)(
+    private[tracker] def updateApp(appId: AbsolutePathId)(
       update: InstanceTracker.SpecInstances => InstanceTracker.SpecInstances): InstancesBySpec = {
       val updated = update(instancesMap(appId))
       if (updated.isEmpty) {
@@ -144,22 +141,21 @@ object InstanceTracker {
 
   object InstancesBySpec {
 
-    def of(specInstances: collection.immutable.Map[PathId, InstanceTracker.SpecInstances]): InstancesBySpec = {
+    def of(specInstances: collection.immutable.Map[AbsolutePathId, InstanceTracker.SpecInstances]): InstancesBySpec = {
       new InstancesBySpec(specInstances.withDefault(appId => InstanceTracker.SpecInstances()))
     }
 
-    def forInstances(instances: Seq[Instance]): InstancesBySpec = forInstances(instances: _*)
-    def forInstances(instances: Instance*): InstancesBySpec = of(
+    def forInstances(instances: Iterable[Instance]): InstancesBySpec = of(
       instances
         .groupBy(_.runSpecId)
         .map {
           case (appId, appInstances) =>
-            val instancesById: Map[Instance.Id, Instance] = appInstances.map(instance => instance.instanceId -> instance)(collection.breakOut)
+            val instancesById: Map[Instance.Id, Instance] = appInstances.iterator.map(instance => instance.instanceId -> instance).toMap
             appId -> SpecInstances(instancesById)
         }
     )
 
-    def empty: InstancesBySpec = of(collection.immutable.Map.empty[PathId, InstanceTracker.SpecInstances])
+    def empty: InstancesBySpec = of(collection.immutable.Map.empty[AbsolutePathId, InstanceTracker.SpecInstances])
   }
   /**
     * Contains only the instances of a specific run spec.
@@ -170,7 +166,7 @@ object InstanceTracker {
 
     def isEmpty: Boolean = instanceMap.isEmpty
     def contains(instanceId: Instance.Id): Boolean = instanceMap.contains(instanceId)
-    def instances: Seq[Instance] = instanceMap.values.to[Seq]
+    def instances: Seq[Instance] = instanceMap.values.to(Seq)
 
     private[tracker] def withInstance(instance: Instance): SpecInstances =
       copy(instanceMap = instanceMap + (instance.instanceId -> instance))

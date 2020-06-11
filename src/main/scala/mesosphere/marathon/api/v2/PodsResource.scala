@@ -15,6 +15,7 @@ import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.Response.Status
 import javax.ws.rs.core.{Context, MediaType, Response}
 import mesosphere.marathon.Normalization._
+import mesosphere.marathon.api.RestResource.RestStreamingBody
 import mesosphere.marathon.api.v2.Validation.validateOrThrow
 import mesosphere.marathon.api.v2.validation.PodsValidation
 import mesosphere.marathon.api.{AuthResource, RestResource, TaskKiller}
@@ -37,19 +38,20 @@ import scala.concurrent.ExecutionContext
 @Consumes(Array(MediaType.APPLICATION_JSON))
 @Produces(Array(MediaType.APPLICATION_JSON))
 class PodsResource @Inject() (
-    val config: MarathonConf)(
-    implicit
-    val authenticator: Authenticator,
-    val authorizer: Authorizer,
+    val config: MarathonConf,
+    clock: Clock,
     taskKiller: TaskKiller,
     podSystem: PodManager,
     podStatusService: PodStatusService,
+    groupManager: GroupManager,
+    scheduler: MarathonScheduler,
+    pluginManager: PluginManager
+)(
+    implicit
+    val authenticator: Authenticator,
+    val authorizer: Authorizer,
     eventBus: EventStream,
     mat: Materializer,
-    clock: Clock,
-    scheduler: MarathonScheduler,
-    groupManager: GroupManager,
-    pluginManager: PluginManager,
     val executionContext: ExecutionContext) extends RestResource with AuthResource {
 
   import PodsResource._
@@ -57,10 +59,6 @@ class PodsResource @Inject() (
   // If we can normalize using the internal model, do that instead.
   // The version of the pod is changed here to make sure, the user has not send a version.
   private def normalize(pod: PodDefinition): PodDefinition = pod.copy(versionInfo = VersionInfo.OnlyVersion(clock.now()))
-
-  private def marshal(pod: Pod): String = Json.stringify(Json.toJson(pod))
-
-  private def marshal(pod: PodDefinition): String = marshal(Raml.toRaml(pod))
 
   private def unmarshal(bytes: Array[Byte]): Pod = {
     // no normalization or validation here, that happens elsewhere and in a precise order
@@ -93,9 +91,9 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       val podRaml = unmarshal(body)
 
-      val roleSettings = RoleSettings.forService(config, PathId(podRaml.id), groupManager.rootGroup())
+      val roleSettings = RoleSettings.forService(config, PathId(podRaml.id).canonicalPath(PathId.root), groupManager.rootGroup(), false)
       implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
-      implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
+      implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion())
       implicit val podDefValidator: Validator[PodDefinition] = PodsValidation.podDefValidator(pluginManager, roleSettings)
 
       validateOrThrow(podRaml)
@@ -108,12 +106,13 @@ class PodsResource @Inject() (
 
       Response.created(new URI(podDef.id.toString))
         .header(RestResource.DeploymentHeader, deployment.id)
-        .entity(marshal(podDef))
+        .entity(new RestStreamingBody[raml.Pod](Raml.toRaml(podDef)))
         .build()
     }
   }
 
-  @PUT @Path("""{id:.+}""")
+  @PUT
+  @Path("""{id:.+}""")
   def update(
     @PathParam("id") id: String,
     body: Array[Byte],
@@ -124,19 +123,19 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       import PathId._
 
-      val podId = id.toRootPath
+      val podId = id.toAbsolutePath
       val podRaml = unmarshal(body)
 
-      val roleSettings = RoleSettings.forService(config, PathId(podRaml.id), groupManager.rootGroup())
+      val roleSettings = RoleSettings.forService(config, podId, groupManager.rootGroup(), force)
       implicit val normalizer: Normalization[Pod] = PodNormalization(PodNormalization.Configuration(config, roleSettings))
-      implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion(), roleSettings)
+      implicit val podValidator: Validator[Pod] = PodsValidation.podValidator(config, scheduler.mesosMasterVersion())
       implicit val podDefValidator: Validator[PodDefinition] = PodsValidation.podDefValidator(pluginManager, roleSettings)
 
       validateOrThrow(podRaml)
-      if (podId != podRaml.id.toRootPath) {
+      if (podId != podRaml.id.toAbsolutePath) {
         Response.status(Status.BAD_REQUEST).entity(
           s"""
-            |{"message": "'$podId' does not match definition's id ('${podRaml.id}')" }
+             |{"message": "'$podId' does not match definition's id ('${podRaml.id}')" }
           """.stripMargin
         ).build()
       } else {
@@ -149,7 +148,7 @@ class PodsResource @Inject() (
 
         val builder = Response
           .ok(new URI(podDef.id.toString))
-          .entity(marshal(podDef))
+          .entity(new RestStreamingBody(Raml.toRaml(podDef)))
           .header(RestResource.DeploymentHeader, deployment.id)
         builder.build()
       }
@@ -161,11 +160,12 @@ class PodsResource @Inject() (
     async {
       implicit val identity = await(authenticatedAsync(req))
       val pods = podSystem.findAll(isAuthorized(ViewRunSpec, _))
-      ok(Json.stringify(Json.toJson(pods.map(Raml.toRaml(_)))))
+      ok(pods.map(Raml.toRaml(_)))
     }
   }
 
-  @GET @Path("""{id:.+}""")
+  @GET
+  @Path("""{id:.+}""")
   def find(
     @PathParam("id") id: String,
     @Context req: HttpServletRequest,
@@ -175,17 +175,18 @@ class PodsResource @Inject() (
 
       import PathId._
 
-      withValid(id.toRootPath) { id =>
+      withValid(id.toAbsolutePath) { id =>
         podSystem.find(id).fold(notFound(s"""{"message": "pod with $id does not exist"}""")) { pod =>
           withAuthorization(ViewRunSpec, pod) {
-            ok(marshal(pod))
+            ok(Raml.toRaml(pod))
           }
         }
       }
     }
   }
 
-  @DELETE @Path("""{id:.+}""")
+  @DELETE
+  @Path("""{id:.+}""")
   def remove(
     @PathParam("id") idOrig: String,
     @DefaultValue("false")@QueryParam("force") force: Boolean,
@@ -196,7 +197,7 @@ class PodsResource @Inject() (
 
       import PathId._
 
-      val id = idOrig.toRootPath
+      val id = idOrig.toAbsolutePath
       validateOrThrow(id)
       podSystem.find(id) match {
         case Some(pod) =>
@@ -225,7 +226,7 @@ class PodsResource @Inject() (
 
       import PathId._
 
-      await(withValidF(id.toRootPath) { id =>
+      await(withValidF(id.toAbsolutePath) { id =>
         podStatusService.selectPodStatus(id, authzSelector).map {
           case None => notFound(id)
           case Some(status) => ok(Json.stringify(Json.toJson(status)))
@@ -244,7 +245,7 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       import PathId._
       import mesosphere.marathon.api.v2.json.Formats.TimestampFormat
-      await(withValidF(id.toRootPath) { id =>
+      await(withValidF(id.toAbsolutePath) { id =>
         async {
           val versions = await(podSystem.versions(id).runWith(Sink.seq))
           podSystem.find(id).fold(notFound(id)) { pod =>
@@ -266,11 +267,11 @@ class PodsResource @Inject() (
       implicit val identity = await(authenticatedAsync(req))
       import PathId._
       val version = Timestamp(versionString)
-      await(withValidF(id.toRootPath) { id =>
+      await(withValidF(id.toAbsolutePath) { id =>
         async {
           await(podSystem.version(id, version)).fold(notFound(id)) { pod =>
             withAuthorization(ViewRunSpec, pod) {
-              ok(marshal(pod))
+              ok(Raml.toRaml(pod))
             }
           }
         }
@@ -306,7 +307,7 @@ class PodsResource @Inject() (
         ids should matchRegexFully(Instance.Id.InstanceIdRegex)
       }
       // don't need to authorize as taskKiller will do so.
-      val id = idOrig.toRootPath
+      val id = idOrig.toAbsolutePath
       validateOrThrow(id)
       validateOrThrow(instanceId)
       val parsedInstanceId = Instance.Id.fromIdString(instanceId)
@@ -340,16 +341,18 @@ class PodsResource @Inject() (
       }
 
       // don't need to authorize as taskKiller will do so.
-      val id = idOrig.toRootPath
+      val id = idOrig.toAbsolutePath
       validateOrThrow(id)
       val instancesToKill = Json.parse(body).as[Set[String]]
       validateOrThrow(instancesToKill)
       val instancesDesired = instancesToKill.map(Instance.Id.fromIdString(_))
+
       def toKill(instances: Seq[Instance]): Seq[Instance] = {
         instances.filter(instance => instancesDesired.contains(instance.instanceId))
       }
+
       val instances = await(taskKiller.kill(id, toKill, wipe)).map { instance => Raml.toRaml(instance) }
-      ok(Json.toJson(instances))
+      ok(instances)
     }
   }
 

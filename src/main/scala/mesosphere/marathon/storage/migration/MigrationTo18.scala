@@ -106,9 +106,9 @@ object MigrationTo18 extends StrictLogging {
     }
       .map { taskMap =>
         if (taskMap.values.exists(_.isModified)) {
-          ParsedValue(taskMap.mapValues(_.value), Modified)
+          ParsedValue(taskMap.map { case (k, v) => k -> v.value }, Modified)
         } else {
-          ParsedValue(taskMap.mapValues(_.value), NotModified)
+          ParsedValue(taskMap.map { case (k, v) => k -> v.value }, NotModified)
         }
       }
   }
@@ -131,10 +131,10 @@ object MigrationTo18 extends StrictLogging {
         }
 
         if (List(state, tasksMap).exists(_.isModified)) {
-          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation)
+          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation, None)
           ParsedValue(instance, Modified)
         } else {
-          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation)
+          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation, None)
           ParsedValue(instance, NotModified)
         }
 

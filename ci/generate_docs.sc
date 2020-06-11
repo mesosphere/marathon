@@ -57,15 +57,19 @@ def main(release_commits_override: Map[String, String] = Map.empty,
 
   val possiblyChangedLines: Vector[String] = %%('git, "status", "--porcelain")(pwd).out.lines.take(5)
   if (possiblyChangedLines.nonEmpty) {
-    val msg = s"Git repository isn't clean, aborting docs generation. Changed files:\n${possiblyChangedLines.mkString("\n")}"
-    println(msg)
-    exit()
+    if (sys.env.get("IGNORE_DIRTY").isEmpty) {
+      val msg = s"Git repository isn't clean, aborting docs generation. You can ignore this by setting the environment variable IGNORE_DIRTY. Changed files:\n${possiblyChangedLines.mkString("\n")}"
+      println(msg)
+      exit()
+    }
   }
 
   val docsBuildDir = makeTmpDir()
   val marathonDir = copyMarathon(docsBuildDir)
 
   val docsSourceDir = marathonDir/"docs"
+
+  prepareDockerImage()
 
   val siteDir = buildDocs(docsBuildDir, docsSourceDir, marathonDir)
   if (preview) {
@@ -82,14 +86,6 @@ def makeTmpDir(): Path = {
   val path = root/"tmp"/s"marathon-docs-build-$timestamp"
   mkdir! path
   path
-}
-
-/**
-  * Builds a docker image with Jekyll based on dockerfile in the docs path
-  * @param docsPath
-  */
-def buildJekyllInDocker(docsPath: Path): Unit = {
-  %("docker", "build", ".", "-t", "jekyll")(docsPath)
 }
 
 /**
@@ -132,17 +128,17 @@ def docsTargetVersions(repoPath: Path): List[(String, GitCheckoutable)] = {
 }
 
 /**
-  * launches a docer container with jekyll and generates docs located in folder docsPath
+  * Launches a docker container with jekyll and generates docs located in folder docsPath
   * @param docsPath path with docs
   * @param maybeVersion versioned docs to be generated (if any)
   */
 def generateDocsByDocker(docsPath: Path, maybeVersion: Option[String]): Unit = {
   maybeVersion match {
     case Some(version) => //generating versioned docs
-      %("docker", "run", "-e", s"MARATHON_DOCS_VERSION=$version", "--rm", "-it", "-v", s"$docsPath:/site-docs", "jekyll")(docsPath)
+      %("docker", "run", "-e", s"MARATHON_DOCS_VERSION=$version", "--rm", "-it", "-v", s"$docsPath:/site-docs", "jekyll:latest")(docsPath)
 
     case None => //generating top-level docs
-      %("docker", "run", "--rm", "-it", "-v", s"$docsPath:/site-docs", "jekyll")(docsPath)
+      %("docker", "run", "--rm", "-it", "-v", s"$docsPath:/site-docs", "jekyll:latest")(docsPath)
   }
 }
 
@@ -162,14 +158,10 @@ def checkoutDocsToTempFolder(buildDir: Path, docsDir: Path, checkedRepoDir: Path
   }
 }
 
-def prepareDockerImage(buildDir: Path, docsDir: Path): Unit = {
-  val imagePreparationWorkingDir = buildDir / 'docs
-  println(s"Preparing docker image in $imagePreparationWorkingDir")
-  cp.into(docsDir, buildDir)
-  buildJekyllInDocker(buildDir / 'docs)
+def prepareDockerImage(): Unit = {
+  %("docker", "build", ".", "-t", "jekyll")(utils.marathonRoot / 'docs)
 
-  println("Docker image preparation is done. Cleaning after preparation ...")
-  rm ! imagePreparationWorkingDir
+  println("Docker image preparation is done")
 }
 
 /**
@@ -262,14 +254,16 @@ def launchPreview(siteDir: Path): Unit = {
 }
 
 def copyMarathon(buildDir: Path): Path = {
-  println(s"Copying marathon folder into $buildDir")
-  cp.into(pwd/up, buildDir)
+  println(s"Creating fresh checkout of Marathon folder into $buildDir using local .git")
+  val target = buildDir / 'marathon
+  mkdir(target)
+  cp.into(utils.marathonRoot / ".git", target)
+  %("git", "reset", "--hard")(target)
   println("Done.")
   buildDir / 'marathon
 }
 
 def buildDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path): Path = {
-  prepareDockerImage(buildDir, docsDir)
   val versionedDocsDirs = checkoutDocsToTempFolder(buildDir, docsDir, checkedRepoDir)
   generateTopLevelDocs(buildDir, docsDir, checkedRepoDir)
   generateVersionedDocs(buildDir, versionedDocsDirs)

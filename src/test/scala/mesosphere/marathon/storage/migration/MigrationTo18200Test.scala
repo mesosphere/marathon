@@ -7,7 +7,7 @@ import akka.stream.scaladsl.{Sink, Source}
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.{Instance, Reservation}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import org.apache.mesos.{Protos => MesosProtos}
 import play.api.libs.json.{JsObject, JsString, JsValue, Json}
 
@@ -19,9 +19,9 @@ class MigrationTo18200Test extends AkkaUnitTest {
 
       Given("an ephemeral and two resident instances")
       val f = new Fixture()
-      val instanceId1 = Instance.Id.forRunSpec(PathId("/app"))
-      val instanceId2 = Instance.Id.forRunSpec(PathId("/app2"))
-      val instanceId3 = Instance.Id.forRunSpec(PathId("/app3"))
+      val instanceId1 = Instance.Id.forRunSpec(AbsolutePathId("/app"))
+      val instanceId2 = Instance.Id.forRunSpec(AbsolutePathId("/app2"))
+      val instanceId3 = Instance.Id.forRunSpec(AbsolutePathId("/app3"))
 
       val taskId = Task.Id(instanceId2)
       val instances = Source(List(

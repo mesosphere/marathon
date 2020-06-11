@@ -5,6 +5,20 @@ import mesosphere.marathon.core.condition
 import mesosphere.marathon.raml.LocalVolumeConversion.localVolumeIdWrites
 
 object TaskConversion extends HealthConversion with DefaultConversions {
+
+  implicit val taskFailureRamlWrite: Writes[state.TaskFailure, raml.TaskFailure] = Writes{ failure =>
+    raml.TaskFailure(
+      appId = failure.appId.toString,
+      host = failure.host,
+      message = failure.message,
+      state = failure.state.name(),
+      taskId = failure.taskId.getValue,
+      timestamp = failure.timestamp.toOffsetDateTime,
+      version = failure.version.toOffsetDateTime,
+      slaveId = failure.slaveId.map(_.getValue)
+    )
+  }
+
   implicit val enrichedTaskRamlWrite: Writes[core.appinfo.EnrichedTask, Task] = Writes { enrichedTask =>
     val task: core.task.Task = enrichedTask.task
 
@@ -45,7 +59,8 @@ object TaskConversion extends HealthConversion with DefaultConversions {
       version = version.toRaml,
       localVolumes = localVolumes,
       region = enrichedTask.agentInfo.region,
-      zone = enrichedTask.agentInfo.zone
+      zone = enrichedTask.agentInfo.zone,
+      role = enrichedTask.role
     )
   }
 }

@@ -18,14 +18,15 @@ import scala.reflect.ClassTag
 
 class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
-  val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings)
-  private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set(), () => config.defaultNetworkName)
-  private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), config.roleSettings)(PluginManager.None)
+  val config =
+    AppNormalization.Configuration(None, "mesos-bridge-name", Set(), "foo", true)
+  private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set(), () => config.defaultNetworkName, Set("foo"))
+  private implicit lazy val validAppDefinition = AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings("foo"))(PluginManager.None)
   private def validContainer(networks: Seq[Network] = Nil) = Container.validContainer(networks, Set())
 
   private[this] def testValidId(id: String): Unit = {
     val app = AppDefinition(
-      id = PathId(id),
+      id = AbsolutePathId(id),
       role = "*",
       cmd = Some("true"))
 
@@ -34,20 +35,19 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
   private[this] def testInvalid(id: String): Unit = {
     val app = AppDefinition(
-      id = PathId(id),
+      id = AbsolutePathId(id),
       role = "*",
       cmd = Some("true")
     )
 
     val result = validate(app)
     result.isFailure should be(true)
-
   }
 
   "RunSpecValidator" should {
     "only cmd" in {
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("true"))
 
@@ -91,33 +91,48 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       testValidId("/trailing/")
     }
 
-    "single dots in id '/test/.' pass schema and validation" in {
-      testInvalid("/test/.")
+    "single dots in id '/test/.' fails in validation" in {
+      val app = App(
+        id = "/test/.",
+        cmd = Some("true"))
+
+      validApp(app) should haveViolations("/id" -> "must not end with any of the following reserved keywords: restart, tasks, versions, ., ..")
     }
 
     "single dots in id '/./not.point.less' pass schema and validation" in {
-      testInvalid("/./not.point.less")
+      val app = App(
+        id = "/./not.point.less",
+        cmd = Some("true"))
+
+      validApp(app) should haveViolations("/id" -> "Identifier is not child of '/.'")
+    }
+
+    "parent of root in id '/../someid' fails in validation" in {
+      val app = App(
+        id = "/../someid",
+        cmd = Some("true"))
+
+      validApp(app) should haveViolations("/id" -> "Identifier is not child of '/..'")
     }
 
     // non-absolute paths (could be allowed in some contexts)
     "relative id 'relative/asd' passes schema but not validation" in {
-      val app = AppDefinition(
-        id = PathId("relative/asd"),
-        role = "*",
+      val app = App(
+        id = "relative/asd",
+        role = Some("*"),
         cmd = Some("true"))
 
-      validAppDefinition(app) should haveViolations("/id" -> "Path needs to be absolute")
-
+      validApp(app) should haveViolations("/id" -> "Path needs to be absolute")
     }
 
     // non-absolute paths (could be allowed in some contexts)
     "relative id '../relative' passes schema but not validation" in {
-      val app = AppDefinition(
-        id = PathId("../relative"),
-        role = "*",
+      val app = App(
+        id = "../relative",
+        role = Some("*"),
         cmd = Some("true"))
 
-      validAppDefinition(app) should haveViolations("/id" -> "Path needs to be absolute")
+      validApp(app) should haveViolations("/id" -> "Path needs to be absolute")
     }
 
     "id '/.../asd' is INVALID" in {
@@ -154,7 +169,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
     "only cmd + command health check" in {
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("true"),
         healthChecks = Set(
@@ -168,7 +183,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
     "only cmd + acceptedResourceRoles" in {
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("true"),
         acceptedResourceRoles = Set(ResourceRole.Unreserved))
@@ -177,7 +192,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
     "only args" in {
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         args = "test" :: Nil)
       assert(validate(app).isSuccess)
@@ -186,7 +201,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "only container" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         container = Some(f.validDockerContainer))
       assert(validate(app).isSuccess)
@@ -194,7 +209,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
     "empty container is invalid" in {
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         container = Some(Container.Mesos()))
       assert(validate(app).isFailure)
@@ -203,7 +218,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "docker container and cmd" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("true"),
         container = Some(f.validDockerContainer))
@@ -213,7 +228,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "docker container and args" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         args = "test" :: Nil,
         container = Some(f.validDockerContainer))
@@ -223,7 +238,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "mesos container only" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         container = Some(f.validMesosDockerContainer))
       assert(validate(app).isSuccess)
@@ -232,7 +247,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "mesos container and cmd" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("true"),
         container = Some(f.validMesosDockerContainer))
@@ -242,7 +257,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "mesos container and args" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         args = "test" :: Nil,
         container = Some(f.validMesosDockerContainer))
@@ -252,7 +267,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "container, cmd and args is not valid" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("true"),
         args = "test" :: Nil,
@@ -263,7 +278,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "container with type MESOS and empty docker field is valid" in {
       val f = new Fixture
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("true"),
         container = Some(f.validMesosContainer))
@@ -448,7 +463,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "A application with label MARATHON_SINGLE_INSTANCE_APP may not have an instance count > 1" in {
       Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an instance count of 0")
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("sleep 1000"),
         instances = 0,
@@ -474,7 +489,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,0) is invalid" in {
       Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(1,0)")
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("sleep 1000"),
         upgradeStrategy = UpgradeStrategy(1, 0),
@@ -489,7 +504,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(1,1) is invalid" in {
       Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(1,1)")
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("sleep 1000"),
         upgradeStrategy = UpgradeStrategy(1, 1),
@@ -504,7 +519,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,1) is invalid" in {
       Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(0,1)")
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("sleep 1000"),
         upgradeStrategy = UpgradeStrategy(0, 1),
@@ -519,7 +534,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "For an application with label MARATHON_SINGLE_INSTANCE_APP UpgradeStrategy(0,0) is valid" in {
       Given("an app with label MARATHON_SINGLE_INSTANCE_APP and an UpgradeStrategy(0,0)")
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("sleep 1000"),
         upgradeStrategy = UpgradeStrategy(0, 0),
@@ -534,7 +549,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "readinessChecks are invalid for normal apps" in {
       Given("a normal app with a defined readinessCheck")
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("true"),
         readinessChecks = Seq(ReadinessCheck()))
@@ -568,7 +583,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       Given("A docker app with no portDefinitions and HTTP health checks")
 
       val app1 = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         networks = Seq(HostNetwork), container = Some(Container.Docker(
           image = "group/image"
@@ -591,7 +606,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
       val f = new Fixture
       val app = Json.parse(f.cassandraWithoutResidency).as[App]
-      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings)
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved, true)
       val result = validAppDefinition(Raml.fromRaml(
         AppNormalization(config).normalized(
           validateOrThrow(
@@ -604,7 +619,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       val f = new Fixture
       val base = Json.parse(f.cassandraWithoutResidency).as[App]
       val app = base.copy(upgradeStrategy = Some(raml.UpgradeStrategy(0, 0)))
-      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings)
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved, true)
       val result = validAppDefinition(Raml.fromRaml(
         AppNormalization(config).normalized(
           validateOrThrow(
@@ -617,7 +632,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     "Validation plugins can invalidate apps" in {
       Given("An app with an invalid label")
       val app = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("sleep 1000"),
         upgradeStrategy = UpgradeStrategy(0, 0),
@@ -638,11 +653,11 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         }
         def definitions: PluginDefinitions = PluginDefinitions.None
       }
-      AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings)(pm)(app).isFailure shouldBe true
+      AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings())(pm)(app).isFailure shouldBe true
 
       Given("An app without an invalid label")
       val app2 = AppDefinition(
-        id = PathId("/test"),
+        id = AbsolutePathId("/test"),
         role = "*",
         cmd = Some("sleep 1000"),
         upgradeStrategy = UpgradeStrategy(0, 0),
@@ -651,7 +666,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         ))
       )
       Then("the validation succeeds")
-      AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings)(pm)(app2).isSuccess shouldBe true
+      AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings())(pm)(app2).isSuccess shouldBe true
     }
 
     class Fixture {
@@ -685,8 +700,8 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
       def residentApp(id: String, volumes: Seq[VolumeWithMount[PersistentVolume]]): AppDefinition = {
         AppDefinition(
-          id = PathId(id),
-          role = "*",
+          id = AbsolutePathId(id),
+          role = "foo",
           cmd = Some("test"),
           container = Some(Container.Mesos(volumes)),
           portDefinitions = Seq(PortDefinition(0)),
@@ -702,6 +717,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         """
         |{
         |  "id": "/cassandra",
+        |  "role": "foo",
         |  "cpus": 2,
         |  "mem": 2048,
         |  "instances": 1,

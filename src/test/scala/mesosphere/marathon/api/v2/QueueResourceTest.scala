@@ -12,11 +12,12 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.raml.{App, Raml}
 import mesosphere.marathon.state.AppDefinition
 import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.test.{JerseyTest, MarathonTestHelper, SettableClock}
 import mesosphere.mesos.NoOfferMatchReason
 import org.mockito.Matchers
 import play.api.libs.json._
+
 import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -52,7 +53,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
   "QueueResource" should {
     "return well formatted JSON" in new Fixture {
       //given
-      val app = AppDefinition(id = "app".toRootPath, acceptedResourceRoles = Set("*"), role = "*")
+      val app = AppDefinition(id = "app".toAbsolutePath, acceptedResourceRoles = Set("*"), role = "*")
       val noMatch = OfferMatchResult.NoMatch(
         app,
         MarathonTestHelper.makeBasicOffer().build(),
@@ -60,7 +61,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
         clock.now())
       stats.getStatistics() returns Future.successful(Seq(
         QueuedInstanceInfoWithStatistics(
-          app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
+          app, "*", inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
           backOffUntil = Some(clock.now() + 100.seconds), startedAt = clock.now(),
           rejectSummaryLastOffers = Map(NoOfferMatchReason.InsufficientCpus -> 1, NoOfferMatchReason.DeclinedScarceResources -> 2),
           rejectSummaryLaunchAttempt = Map(NoOfferMatchReason.InsufficientCpus -> 3, NoOfferMatchReason.DeclinedScarceResources -> 2),
@@ -77,7 +78,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
 
       //then
       response.getStatus should be(200)
-      val json = Json.parse(response.getEntity.asInstanceOf[String])
+      val json = Json.parse(response.getEntity.toString)
       val queuedApps = (json \ "queue").as[Seq[JsObject]]
       val jsonApp1 = queuedApps.find { apps => (apps \ "app" \ "id").as[String] == "/app" }.get
 
@@ -101,10 +102,10 @@ class QueueResourceTest extends UnitTest with JerseyTest {
 
     "the generated info from the queue contains 0 if there is no delay" in new Fixture {
       //given
-      val app = AppDefinition(id = "app".toRootPath, role = "*")
+      val app = AppDefinition(id = "app".toAbsolutePath, role = "*")
       stats.getStatistics() returns Future.successful(Seq(
         QueuedInstanceInfoWithStatistics(
-          app, inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
+          app, "*", inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
           backOffUntil = Some(clock.now() - 100.seconds), startedAt = clock.now(), rejectSummaryLastOffers = Map.empty,
           rejectSummaryLaunchAttempt = Map.empty, processedOffersCount = 3, unusedOffersCount = 1, lastMatch = None,
           lastNoMatch = None, lastNoMatches = Seq.empty
@@ -115,7 +116,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
 
       //then
       response.getStatus should be(200)
-      val json = Json.parse(response.getEntity.asInstanceOf[String])
+      val json = Json.parse(response.getEntity.toString)
       val queuedApps = (json \ "queue").as[Seq[JsObject]]
       val jsonApp1 = queuedApps.find { apps => (apps \ "app" \ "id").get == JsString("/app") }.get
 
@@ -138,7 +139,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
 
     "application backoff can be removed from the launch queue" in new Fixture {
       //given
-      val app = AppDefinition(id = "app".toRootPath, role = "*")
+      val app = AppDefinition(id = "app".toAbsolutePath, role = "*")
       val instances = Seq.fill(23)(Instance.scheduled(app))
       instanceTracker.specInstances(any, Matchers.eq(false))(any) returns Future.successful(instances)
       groupManager.runSpec(app.id) returns Some(app)
@@ -174,7 +175,7 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       val req = auth.request
 
       When("one delay is reset")
-      val app = AppDefinition(id = "app".toRootPath, role = "*")
+      val app = AppDefinition(id = "app".toAbsolutePath, role = "*")
       val instances = Seq.fill(23)(Instance.scheduled(app))
       instanceTracker.specInstances(any, Matchers.eq(false))(any) returns Future.successful(instances)
       groupManager.runSpec(app.id) returns Some(app)

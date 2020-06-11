@@ -6,8 +6,8 @@ package raml
   */
 object Environment {
   def apply(kv: (String, String)*): Map[String, EnvVarValueOrSecret] =
-    kv.map { case (k, v) => k -> EnvVarValue(v) }(collection.breakOut)
-  def apply(env: Map[String, String]): Map[String, EnvVarValueOrSecret] = env.mapValues(EnvVarValue(_))
+    kv.iterator.map { case (k, v) => k -> EnvVarValue(v) }.toMap
+  def apply(env: Map[String, String]): Map[String, EnvVarValueOrSecret] = env.map { case (k, v) => k -> (EnvVarValue(v)) }
 
   object Implicits {
     implicit class WithSecrets(val env: Map[String, EnvVarValueOrSecret]) extends AnyVal {
@@ -19,7 +19,7 @@ object Environment {
       }
 
       def withSecrets(namesToSecretRefs: Map[String, String]): Map[String, EnvVarValueOrSecret] = {
-        env ++ namesToSecretRefs.mapValues(secret => EnvVarSecret(secret))
+        env ++ namesToSecretRefs.map { case (k, secret) => k -> EnvVarSecret(secret) }
       }
     }
   }

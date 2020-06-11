@@ -8,7 +8,7 @@ import mesosphere.marathon.core.launcher.impl.TaskLabels
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.mesos.protos.ResourceProviderID
 import org.apache.mesos.{Protos => Mesos}
@@ -20,7 +20,7 @@ class OfferOperationFactoryTest extends UnitTest {
       val f = new Fixture
 
       Given("a factory without principal or role")
-      val factory = new OfferOperationFactory(f.metrics, None, None)
+      val factory = new OfferOperationFactory(f.metrics, None)
       val taskInfo = MarathonTestHelper.makeOneCPUTask(f.taskId).build()
 
       When("We create a launch operation")
@@ -31,30 +31,15 @@ class OfferOperationFactoryTest extends UnitTest {
       operation.getLaunch.getTaskInfos(0) shouldEqual taskInfo
     }
 
-    "Reserve operation fails when role is not set" in {
-      val f = new Fixture
-
-      Given("a factory without role")
-      val factory = new OfferOperationFactory(f.metrics, Some("principal"), None)
-
-      When("We create a reserve operation")
-      val error = intercept[WrongConfigurationException] {
-        factory.reserve(f.reservationLabels, Seq(Mesos.Resource.getDefaultInstance))
-      }
-
-      Then("A meaningful exception is thrown")
-      error.getMessage should startWith("No role set")
-    }
-
     "Reserve operation succeeds" in {
       val f = new Fixture
 
       Given("A simple task")
-      val factory = new OfferOperationFactory(f.metrics, Some("principal"), Some("role"))
+      val factory = new OfferOperationFactory(f.metrics, Some("principal"))
       val task = MarathonTestHelper.makeOneCPUTask(f.taskId)
 
       When("We create a reserve operation")
-      val operations = factory.reserve(f.reservationLabels, task.getResourcesList.to[Seq])
+      val operations = factory.reserve("role", f.reservationLabels, task.getResourcesList.asScala.to(Seq))
 
       Then("The operation is as expected")
       operations.length shouldEqual 1
@@ -77,7 +62,7 @@ class OfferOperationFactoryTest extends UnitTest {
       val f = new Fixture
 
       Given("a factory without principal")
-      val factory = new OfferOperationFactory(f.metrics, Some("principal"), Some("role"))
+      val factory = new OfferOperationFactory(f.metrics, Some("principal"))
       val volume1 = f.localVolume("mount1")
       val volume2 = f.localVolume("mount2")
 
@@ -86,13 +71,13 @@ class OfferOperationFactoryTest extends UnitTest {
       val offeredVolume2 =
         InstanceOpFactory.OfferedVolume(Some(ResourceProviderID("pID")), DiskSource.root, volume2)
       val offeredVolumes = Seq(offeredVolume1, offeredVolume2)
-      val operations = factory.createVolumes(f.reservationLabels, offeredVolumes)
+      val operations = factory.createVolumes("role", f.reservationLabels, offeredVolumes)
 
       Then("The operation is as expected")
       operations.length shouldEqual 2
 
       val (operationWithProviderId, operationWithoutProviderId) =
-        if (operations.head.getCreate.getVolumesList.exists(_.hasProviderId)) {
+        if (operations.head.getCreate.getVolumesList.asScala.exists(_.hasProviderId)) {
           (operations.head, operations.last)
         } else {
           (operations.last, operations.head)
@@ -101,12 +86,12 @@ class OfferOperationFactoryTest extends UnitTest {
       operationWithProviderId.getType shouldEqual Mesos.Offer.Operation.Type.CREATE
       operationWithProviderId.hasCreate shouldEqual true
       operationWithProviderId.getCreate.getVolumesCount shouldEqual 1
-      operationWithProviderId.getCreate.getVolumesList.exists(_.hasProviderId) shouldEqual true
+      operationWithProviderId.getCreate.getVolumesList.asScala.exists(_.hasProviderId) shouldEqual true
 
       operationWithoutProviderId.getType shouldEqual Mesos.Offer.Operation.Type.CREATE
       operationWithoutProviderId.hasCreate shouldEqual true
       operationWithoutProviderId.getCreate.getVolumesCount shouldEqual 1
-      operationWithoutProviderId.getCreate.getVolumesList.exists(_.hasProviderId) shouldEqual false
+      operationWithoutProviderId.getCreate.getVolumesList.asScala.exists(_.hasProviderId) shouldEqual false
 
       And("The volumes are correct")
       val volumeWithProviderId = operationWithProviderId.getCreate.getVolumes(0)
@@ -137,16 +122,15 @@ class OfferOperationFactoryTest extends UnitTest {
     }
   }
   class Fixture {
-    val runSpecId = PathId("/my-app")
+    val runSpecId = AbsolutePathId("/my-app")
     val instanceId = Instance.Id.forRunSpec(runSpecId)
     val taskId = Task.Id(instanceId)
     val reservationId = Reservation.SimplifiedId(instanceId)
     val frameworkId = MarathonTestHelper.frameworkId
     val reservationLabels = TaskLabels.labelsForTask(frameworkId, reservationId)
     val principal = Some("principal")
-    val role = Some("role")
     val metrics = DummyMetrics
-    val factory = new OfferOperationFactory(metrics, principal, role)
+    val factory = new OfferOperationFactory(metrics, principal)
 
     def localVolume(mountPath: String): LocalVolume = {
       val pv = PersistentVolume(None, PersistentVolumeInfo(size = 10))

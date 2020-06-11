@@ -13,8 +13,7 @@ import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.PathId._
-import mesosphere.marathon.state.{AppDefinition, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
 import org.mockito.Mockito.verifyNoMoreInteractions
 
 import scala.concurrent.Future
@@ -26,7 +25,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
 
     val instanceTracker = mock[InstanceTracker]
 
-    val appId = "/test".toPath
+    val appId = AbsolutePathId("/test")
     val appVersion = Timestamp(1)
     val app = AppDefinition(id = appId, role = "*")
     val killService: KillService = mock[KillService]
@@ -76,7 +75,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
     "should not dispatch health checks for staging tasks" in new Fixture {
       instanceTracker.specInstances(any, anyBoolean)(any) returns Future.successful(Seq(instance))
 
-      val actor = healthCheckActor()
+      healthCheckActor()
 
       appHealthCheckActor.expectMsgAllClassOf(classOf[PurgeHealthCheckStatuses])
     }
@@ -84,7 +83,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
     "should not dispatch health checks for lost tasks" in new Fixture {
       instanceTracker.specInstances(any, anyBoolean)(any) returns Future.successful(Seq(lostInstance))
 
-      val actor = healthCheckActor()
+      healthCheckActor()
 
       appHealthCheckActor.expectMsgAllClassOf(classOf[PurgeHealthCheckStatuses])
     }
@@ -92,7 +91,7 @@ class HealthCheckActorTest extends AkkaUnitTest {
     "should not dispatch health checks for unreachable tasks" in new Fixture {
       instanceTracker.specInstances(any, anyBoolean)(any) returns Future.successful(Seq(unreachableInstance))
 
-      val actor = healthCheckActor()
+      healthCheckActor()
 
       appHealthCheckActor.expectMsgAllClassOf(classOf[PurgeHealthCheckStatuses])
     }

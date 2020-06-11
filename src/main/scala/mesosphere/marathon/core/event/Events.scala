@@ -5,13 +5,13 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import mesosphere.marathon.api.v2.json.Formats.eventToJson
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.health.HealthCheck
+import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceChange
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
-import mesosphere.marathon.core.deployment.{DeploymentPlan, DeploymentStep}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
 import org.apache.mesos.{Protos => Mesos}
 import play.api.libs.json.Json
+
 import scala.collection.immutable.Seq
 
 sealed trait MarathonEvent {
@@ -106,11 +106,11 @@ case class EventStreamDetached(
 // health checks
 
 sealed trait MarathonHealthCheckEvent extends MarathonEvent {
-  def appId(): PathId
+  def appId(): AbsolutePathId
 }
 
 case class AddHealthCheck(
-    appId: PathId,
+    appId: AbsolutePathId,
     version: Timestamp,
     healthCheck: HealthCheck,
     eventType: String = "add_health_check_event",
@@ -118,13 +118,13 @@ case class AddHealthCheck(
   extends MarathonHealthCheckEvent
 
 case class RemoveHealthCheck(
-    appId: PathId,
+    appId: AbsolutePathId,
     eventType: String = "remove_health_check_event",
     timestamp: String = Timestamp.now().toString)
   extends MarathonHealthCheckEvent
 
 case class FailedHealthCheck(
-    appId: PathId,
+    appId: AbsolutePathId,
     instanceId: Instance.Id,
     healthCheck: HealthCheck,
     eventType: String = "failed_health_check_event",
@@ -132,7 +132,7 @@ case class FailedHealthCheck(
   extends MarathonHealthCheckEvent
 
 case class HealthStatusChanged(
-    appId: PathId,
+    appId: AbsolutePathId,
     instanceId: Instance.Id,
     version: Timestamp,
     alive: Boolean,
@@ -146,7 +146,7 @@ case class HealthStatusChanged(
   * health checks for pods.
   */
 case class UnhealthyInstanceKillEvent(
-    appId: PathId,
+    appId: AbsolutePathId,
     taskId: Task.Id,
     instanceId: Instance.Id,
     version: Timestamp,
@@ -161,13 +161,13 @@ case class UnhealthyInstanceKillEvent(
 sealed trait UpgradeEvent extends MarathonEvent
 
 case class GroupChangeSuccess(
-    groupId: PathId,
+    groupId: AbsolutePathId,
     version: String,
     eventType: String = "group_change_success",
     timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class GroupChangeFailed(
-    groupId: PathId,
+    groupId: AbsolutePathId,
     version: String,
     reason: String,
     eventType: String = "group_change_failed",
@@ -175,32 +175,32 @@ case class GroupChangeFailed(
 
 case class DeploymentSuccess(
     id: String,
-    plan: DeploymentPlan,
+    plan: raml.DeploymentPlan,
     eventType: String = "deployment_success",
     timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentFailed(
     id: String,
-    plan: DeploymentPlan,
+    plan: raml.DeploymentPlan,
     eventType: String = "deployment_failed",
     timestamp: String = Timestamp.now().toString,
     reason: Option[String] = None) extends UpgradeEvent
 
 case class DeploymentStatus(
-    plan: DeploymentPlan,
-    currentStep: DeploymentStep,
+    plan: raml.DeploymentPlan,
+    currentStep: raml.DeploymentStep,
     eventType: String = "deployment_info",
     timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentStepSuccess(
-    plan: DeploymentPlan,
-    currentStep: DeploymentStep,
+    plan: raml.DeploymentPlan,
+    currentStep: raml.DeploymentStep,
     eventType: String = "deployment_step_success",
     timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
 case class DeploymentStepFailure(
-    plan: DeploymentPlan,
-    currentStep: DeploymentStep,
+    plan: raml.DeploymentPlan,
+    currentStep: raml.DeploymentStep,
     eventType: String = "deployment_step_failure",
     timestamp: String = Timestamp.now().toString) extends UpgradeEvent
 
@@ -208,7 +208,7 @@ case class DeploymentStepFailure(
 
 // TODO(jdef) rename this RunSpecTerminatedEvent since that's how it's actually used
 case class AppTerminatedEvent(
-    appId: PathId,
+    appId: AbsolutePathId,
     eventType: String = "app_terminated_event",
     timestamp: String = Timestamp.now().toString) extends MarathonEvent
 
@@ -217,7 +217,7 @@ case class MesosStatusUpdateEvent(
     taskId: Task.Id,
     taskStatus: Mesos.TaskState,
     message: String,
-    appId: PathId,
+    appId: AbsolutePathId,
     host: String,
     ipAddresses: Seq[org.apache.mesos.Protos.NetworkInfo.IPAddress],
     ports: Seq[Int],
@@ -229,7 +229,7 @@ case class MesosStatusUpdateEvent(
 case class InstanceChanged(
     id: Instance.Id,
     runSpecVersion: Timestamp,
-    runSpecId: PathId,
+    runSpecId: AbsolutePathId,
     condition: Condition,
     instance: Instance) extends MarathonEvent {
   override val eventType: String = "instance_changed_event"
@@ -245,7 +245,7 @@ object InstanceChanged {
 /** Event indicating an unknown instance is terminal */
 case class UnknownInstanceTerminated(
     id: Instance.Id,
-    runSpecId: PathId,
+    runSpecId: AbsolutePathId,
     condition: Condition) extends MarathonEvent {
   override val eventType: String = "unknown_instance_terminated_event"
   override val timestamp: String = Timestamp.now().toString
@@ -254,7 +254,7 @@ case class UnknownInstanceTerminated(
 case class InstanceHealthChanged(
     id: Instance.Id,
     runSpecVersion: Timestamp,
-    runSpecId: PathId,
+    runSpecId: AbsolutePathId,
     healthy: Option[Boolean]) extends MarathonEvent {
   override val eventType: String = "instance_health_changed_event"
   override val timestamp: String = Timestamp.now().toString

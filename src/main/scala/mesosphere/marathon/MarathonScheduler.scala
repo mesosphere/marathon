@@ -8,7 +8,7 @@ import mesosphere.marathon.core.launcher.OfferProcessor
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.state.{FaultDomain, Region, Zone}
 import mesosphere.marathon.storage.repository.FrameworkIdRepository
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.util.SemanticVersion
 import mesosphere.mesos.LibMesos
 import mesosphere.util.state.{FrameworkId, MesosLeaderInfo}
@@ -25,7 +25,8 @@ class MarathonScheduler(
     frameworkIdRepository: FrameworkIdRepository,
     mesosLeaderInfo: MesosLeaderInfo,
     config: MarathonConf,
-    crashStrategy: CrashStrategy) extends Scheduler with StrictLogging {
+    crashStrategy: CrashStrategy,
+    frameworkIdPromise: Promise[FrameworkID]) extends Scheduler with StrictLogging {
 
   private var lastMesosMasterVersion: Option[SemanticVersion] = Option.empty
   @volatile private[this] var localFaultDomain: Option[FaultDomain] = Option.empty
@@ -44,6 +45,7 @@ class MarathonScheduler(
     Await.result(frameworkIdRepository.store(FrameworkId.fromProto(frameworkId)), zkTimeout)
     mesosLeaderInfo.onNewMasterInfo(master)
     eventBus.publish(SchedulerRegisteredEvent(frameworkId.getValue, master.getHostname))
+    frameworkIdPromise.trySuccess(frameworkId)
   }
 
   override def reregistered(driver: SchedulerDriver, master: MasterInfo): Unit = {
@@ -55,7 +57,7 @@ class MarathonScheduler(
   }
 
   override def resourceOffers(driver: SchedulerDriver, offers: java.util.List[Offer]): Unit = {
-    offers.foreach { offer =>
+    offers.asScala.foreach { offer =>
       val processFuture = offerProcessor.processOffer(offer)
       processFuture.onComplete {
         case scala.util.Success(_) => logger.debug(s"Finished processing offer '${offer.getId.getValue}'")
@@ -72,7 +74,16 @@ class MarathonScheduler(
     logger.info(s"Received status update for task ${status.getTaskId.getValue}: " +
       s"${status.getState} (${status.getMessage}, healthy: ${status.getHealthy})")
 
-    taskStatusProcessor.publish(status).failed.foreach {
+    // Mesos may produce a status update with really long messages on some cases. We need to restrict
+    // the message length to something we can actually store in a ZK node
+    val newStatus = if (status.hasMessage && status.getMessage.length > MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH) {
+      logger.warn(s"Status update had length of ${status.getMessage.length}, longer than allowed ${MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH} characters. Using only substring")
+      status.toBuilder.setMessage(status.getMessage.substring(0, MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH)).build()
+    } else {
+      status
+    }
+
+    taskStatusProcessor.publish(newStatus).failed.foreach {
       case NonFatal(e) =>
         logger.error(s"while processing task status update $status", e)
     }
@@ -161,4 +172,8 @@ class MarathonScheduler(
     * @return region if it's available, None otherwise
     */
   def getLocalRegion: Option[Region] = localFaultDomain.map(_.region)
+}
+
+object MarathonScheduler {
+  val MAX_STATUS_MESSAGE_LENGTH = 10000
 }

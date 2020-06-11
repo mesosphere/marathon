@@ -1,7 +1,9 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import akka.stream.ActorMaterializer
+import java.util.concurrent.atomic.AtomicLong
+
+import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import akka.{Done, NotUsed}
 import akka.actor.SupervisorStrategy.Stop
@@ -31,10 +33,10 @@ private[launchqueue] object LaunchQueueActor {
   def props(
     config: LaunchQueueConfig,
     instanceTracker: InstanceTracker,
-    groupManager: GroupManager,
+    runSpecProvider: GroupManager.RunSpecProvider,
     runSpecActorProps: RunSpec => Props,
     delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]): Props = {
-    Props(new LaunchQueueActor(config, instanceTracker, groupManager, runSpecActorProps, delayUpdates))
+    Props(new LaunchQueueActor(config, instanceTracker, runSpecProvider, runSpecActorProps, delayUpdates))
   }
 
   case class FullCount(appId: PathId)
@@ -50,7 +52,7 @@ private[launchqueue] object LaunchQueueActor {
 private[impl] class LaunchQueueActor(
     launchQueueConfig: LaunchQueueConfig,
     instanceTracker: InstanceTracker,
-    groupManager: GroupManager,
+    runSpecProvider: GroupManager.RunSpecProvider,
     runSpecActorProps: RunSpec => Props,
     delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]
 ) extends Actor with Stash with StrictLogging {
@@ -81,8 +83,8 @@ private[impl] class LaunchQueueActor(
     import context.dispatcher
     instanceTracker.instancesBySpec().pipeTo(self)
 
-    // Using an actorMaterializer that encompasses this context will cause the stream to auto-terminate when this actor does
-    implicit val materializer = ActorMaterializer()(context)
+    // Using an Materializer that encompasses this context will cause the stream to auto-terminate when this actor does
+    implicit val materializer = Materializer(context)
     delayUpdates.runWith(
       Sink.actorRef(
         self,
@@ -96,7 +98,7 @@ private[impl] class LaunchQueueActor(
 
       instances.instancesMap.collect {
         case (id, specInstances) if specInstances.instances.exists(_.isScheduled) =>
-          groupManager.runSpec(id)
+          runSpecProvider.runSpec(id)
       }
         .flatten
         .foreach { scheduledRunSpec =>
@@ -107,6 +109,8 @@ private[impl] class LaunchQueueActor(
 
       unstashAll()
 
+    case Status.Failure(cause: akka.stream.AbruptStageTerminationException) =>
+      logger.info(s"Ignoring AbruptStageTerminationException; was likely emitted from crash of former actor instance", cause)
     case Status.Failure(cause) =>
       // escalate this failure
       throw new IllegalStateException("while loading instances", cause)
@@ -130,7 +134,7 @@ private[impl] class LaunchQueueActor(
     launchers.get(instance.runSpecId).orElse {
       if (instance.isScheduled) {
         logger.info(s"No active taskLauncherActor for scheduled ${instance.instanceId}, will create one.")
-        groupManager.runSpec(instance.runSpecId).map(createAppTaskLauncher)
+        runSpecProvider.runSpec(instance.runSpecId).map(createAppTaskLauncher)
       } else None
     }
   }

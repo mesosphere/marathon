@@ -1,7 +1,7 @@
 package mesosphere
 
+import com.mesosphere.utils.http.RestResult
 import com.typesafe.config.{Config, ConfigFactory}
-import mesosphere.marathon.integration.setup.RestResult
 import mesosphere.marathon.raml.{PodState, PodStatus}
 import org.scalatest._
 import org.scalatest.matchers.{BeMatcher, MatchResult}
@@ -36,6 +36,7 @@ trait IntegrationTestLike extends UnitTestLike {
   val Redirect = new RestResultMatcher(302)
   val NotFound = new RestResultMatcher(404)
   val Conflict = new RestResultMatcher(409)
+  val UnprocessableEntity = new RestResultMatcher(422)
   val ServerError = new RestResultMatcher(500)
   val BadGateway = new RestResultMatcher(502)
 

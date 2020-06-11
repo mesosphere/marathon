@@ -10,9 +10,9 @@ import mesosphere.marathon.core.launchqueue.LaunchQueue
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
-import mesosphere.marathon.state.{AppDefinition, PathId, RootGroup, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, RootGroup, Timestamp}
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.apache.mesos.SchedulerDriver
 import org.mockito.Mockito.verifyNoMoreInteractions
@@ -27,7 +27,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
     "Task reconciliation sends known running and staged tasks and empty list" in {
       val f = new Fixture
-      val app = AppDefinition(id = PathId("/myapp"), role = "*")
+      val app = AppDefinition(id = AbsolutePathId("/myapp"), role = "*")
       val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
       val runningInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
       val stagedInstance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()
@@ -66,12 +66,12 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
     "Kill orphaned task" in {
       val f = new Fixture
-      val app = AppDefinition(id = PathId("/myapp"), role = "*")
-      val orphanedApp = AppDefinition(id = PathId("/orphan"), role = "*")
+      val app = AppDefinition(id = AbsolutePathId("/myapp"), role = "*")
+      val orphanedApp = AppDefinition(id = AbsolutePathId("/orphan"), role = "*")
       val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
       val orphanedInstance = TestInstanceBuilder.newBuilder(orphanedApp.id).addTaskRunning().getInstance()
 
-      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(instance, orphanedInstance))
+      f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(Seq(instance, orphanedInstance)))
       val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
       f.groupRepo.root() returns Future.successful(rootGroup)
 

@@ -10,7 +10,6 @@ import mesosphere.marathon.api.v2.Validation.{featureEnabled, _}
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{AppDefinition, PathId, ResourceRole}
-import mesosphere.marathon.stream.Implicits._
 
 import scala.util.Try
 
@@ -18,7 +17,7 @@ trait AppValidation {
   import ArtifactValidation._
   import EnvVarValidation._
   import NetworkValidation._
-  import PathId.{empty => _, _}
+  import PathId.{root => _, _}
   import SchedulingValidation._
   import SecretValidation._
 
@@ -114,7 +113,7 @@ trait AppValidation {
   def validContainer(enabledFeatures: Set[String], networks: Seq[Network], secrets: Map[String, SecretDef]): Validator[Container] = {
     // When https://github.com/wix/accord/issues/120 is resolved, we can inline this expression again
     def secretVolumes(container: Container) =
-      container.volumes.filterPF { case _: AppSecretVolume => true }
+      container.volumes.collect { case vol: AppSecretVolume => vol }
 
     def volumesValidator(container: Container): Validator[Seq[AppVolume]] =
       isTrue("Volume names must be unique") { (vols: Seq[AppVolume]) =>
@@ -211,7 +210,7 @@ trait AppValidation {
         option.keys.each should matchRegex(OptionKeyRegex)
       }
       val validExternalInfo: Validator[ExternalVolumeInfo] = validator[ExternalVolumeInfo] { info =>
-        info.name is definedAnd(matchRegex(LabelRegex))
+        info.name is notEmpty
         info.provider is definedAnd(matchRegex(LabelRegex))
         info.options is validOptions
       }
@@ -242,8 +241,8 @@ trait AppValidation {
 
   def readinessCheckValidator(app: App): Validator[ReadinessCheck] = {
     // we expect that the deprecated API has already been translated into canonical form
-    def namesFromDefinitions = app.portDefinitions.fold(Set.empty[String])(_.flatMap(_.name)(collection.breakOut))
-    def portNames = app.container.flatMap(_.portMappings).fold(namesFromDefinitions)(_.flatMap(_.name)(collection.breakOut))
+    def namesFromDefinitions = app.portDefinitions.fold(Set.empty[String])(_.iterator.flatMap(_.name).toSet)
+    def portNames = app.container.flatMap(_.portMappings).fold(namesFromDefinitions){ l => l.iterator.flatMap(_.name).toSet }
     def portNameExists = isTrue[String]{ name: String => s"No port definition reference for portName $name" } { name =>
       portNames.contains(name)
     }
@@ -287,8 +286,8 @@ trait AppValidation {
     }
   )
 
-  def validateCanonicalAppAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String]): Validator[App] = forAll(
-    validBasicAppDefinition(enabledFeatures),
+  def validateCanonicalAppAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String], validRoles: Set[String]): Validator[App] = forAll(
+    validBasicAppDefinition(enabledFeatures, validRoles),
     validator[App] { app =>
       PathId(app.id) as "id" is (PathId.pathIdValidator and PathId.absolutePathValidator and PathId.nonEmptyPath)
       app.dependencies.map(PathId(_)) as "dependencies" is every(valid)
@@ -325,8 +324,31 @@ trait AppValidation {
       .flatMap(_.portMappings).orElse(app.portDefinitions).getOrElse(Nil).indices
   }
 
+  def validResourceLimit(requestResource: Double): Validator[ResourceLimit] = new Validator[ResourceLimit] {
+    override def apply(resourceLimit: ResourceLimit): Result = {
+      resourceLimit match {
+        case ResourceLimitUnlimited(value) =>
+          if (value != "unlimited")
+            Failure(Set(RuleViolation(value, s"'$value' is an invalid resource limit. It must be 'unlimited' or a number")))
+          else
+            Success
+        case ResourceLimitNumber(value) =>
+          if (value < requestResource)
+            Failure(Set(RuleViolation(value, s"resource limit must be greater than or equal to requested resource (${requestResource})")))
+          else
+            Success
+      }
+    }
+  }
+
+  def validResourceLimits(requestCpus: Double, requestMem: Double): Validator[ResourceLimits] = validator[ResourceLimits] { resourceLimits =>
+    resourceLimits.cpus is optional(validResourceLimit(requestCpus))
+    resourceLimits.mem is
+      optional(validResourceLimit(requestMem))
+  }
+
   /** validate most canonical API fields */
-  private def validBasicAppDefinition(enabledFeatures: Set[String]): Validator[App] = validator[App] { app =>
+  private def validBasicAppDefinition(enabledFeatures: Set[String], validRoles: Set[String]): Validator[App] = validator[App] { app =>
     app.container is optional(validContainer(enabledFeatures, app.networks, app.secrets))
     app.portDefinitions is optional(portDefinitionsValidator)
     app is containsCmdArgsOrContainer
@@ -334,6 +356,7 @@ trait AppValidation {
     app.healthChecks is every(complyWithIpProtocolRules(app.container))
     app must haveAtMostOneMesosHealthCheck
     app.fetch is every(valid)
+    app.resourceLimits is optional(validResourceLimits(app.cpus, app.mem))
     app.secrets is { secrets: Map[String, SecretDef] =>
       secrets.nonEmpty
     } -> (featureEnabled(enabledFeatures, Features.SECRETS))
@@ -349,7 +372,13 @@ trait AppValidation {
     app must requireUnreachableDisabledForResidentTasks
     app.constraints.each must complyWithAppConstraintRules
     app.networks is ramlNetworksValidator
-  } and ExternalVolumes.validAppRaml
+    app is validWithRoleEnforcement(validRoles)
+  } and ExternalVolumes.validAppRaml()
+
+  def validWithRoleEnforcement(validRoles: Set[String]): Validator[App] = validator[App] { app =>
+    app.role is optional(in(validRoles))
+    app.acceptedResourceRoles is optional(ResourceRole.validForRole(app.role))
+  }
 
   val requireUnreachableDisabledForResidentTasks =
     conditional((app: App) => app.residency.isDefined && app.unreachableStrategy.isDefined)(

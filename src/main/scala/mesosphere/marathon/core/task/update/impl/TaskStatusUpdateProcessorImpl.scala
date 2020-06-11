@@ -37,11 +37,15 @@ class TaskStatusUpdateProcessorImpl @Inject() (
     metrics.timer("debug.publishing-task-status-update-duration")
   private[this] val killUnknownTaskTimeMetric: Timer =
     metrics.timer("debug.killing-unknown-task-duration")
+  private[this] val oomKilledTasksWithinLimits: Counter =
+    metrics.counter("mesos.task.oom.memory-limit-unfulfillable")
+  private[this] val oomKilledTasksExceededLimits: Counter =
+    metrics.counter("mesos.task.oom.memory-limit-exceeded")
 
   private[this] val taskStateCounterMetrics: collection.concurrent.Map[Int, Counter] =
     new java.util.concurrent.ConcurrentHashMap[Int, Counter]().asScala
 
-  private[this] def getTaskStateCounterMetric(taskState: MesosProtos.TaskState): Counter = {
+  private[this] def getTaskStateCounterMetric(taskState: MesosProtos.TaskState): Counter = synchronized {
     def createCounter() = {
       val stateName = taskState.name().toLowerCase(Locale.US).replace('_', '-')
       val metricName = s"mesos.task-updates.$stateName"
@@ -55,6 +59,12 @@ class TaskStatusUpdateProcessorImpl @Inject() (
   override def publish(status: MesosProtos.TaskStatus): Future[Unit] = publishTimeMetric {
     logger.debug(s"Received status update\n$status")
     getTaskStateCounterMetric(status.getState).increment()
+
+    (status.getReason) match {
+      case MesosProtos.TaskStatus.Reason.REASON_CONTAINER_LIMITATION_MEMORY =>
+        oomKilledTasksExceededLimits.increment()
+      case _ =>
+    }
 
     import TaskStatusUpdateProcessorImpl._
 

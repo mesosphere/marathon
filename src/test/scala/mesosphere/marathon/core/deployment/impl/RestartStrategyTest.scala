@@ -2,6 +2,8 @@ package mesosphere.marathon
 package core.deployment.impl
 
 import mesosphere.UnitTest
+import mesosphere.marathon.core.instance.Goal
+import mesosphere.marathon.core.instance.Instance.InstanceState
 import mesosphere.marathon.state._
 
 class RestartStrategyTest extends UnitTest {
@@ -12,19 +14,32 @@ class RestartStrategyTest extends UnitTest {
   ))
   ))
 
+  def mockInstances(instanceCount: Int, healthy: (Int) => Boolean = _ => true): Seq[mesosphere.marathon.core.instance.Instance] = {
+    val instances: Seq[mesosphere.marathon.core.instance.Instance] = List.tabulate(instanceCount)(f = i => {
+      val instance = mock[mesosphere.marathon.core.instance.Instance]
+      instance.consideredHealthy returns healthy(i)
+      val goal = mock[InstanceState]
+      instance.state returns goal
+      instance.state.goal returns Goal.Running
+      instance
+    })
+    instances
+  }
+
   import mesosphere.marathon.core.deployment.impl.TaskReplaceActor._
   "RestartStrategy" should {
     "strategy for resident app with 1 instance" in {
       Given("A resident app")
       val app = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         instances = 1,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
         container = container)
 
       When("the ignition strategy is computed")
-      val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances)
+
+      val strategy = computeRestartStrategy(app, mockInstances(1))
 
       Then("the app instance count is not exceeded")
       strategy.maxCapacity shouldBe 1
@@ -36,14 +51,14 @@ class RestartStrategyTest extends UnitTest {
     "strategy for starting resident app with 1 instance and no tasks running" in {
       Given("A resident app")
       val app = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         instances = 1,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
         container = container)
 
       When("the ignition strategy is computed")
-      val strategy = computeRestartStrategy(app, runningInstancesCount = 0)
+      val strategy = computeRestartStrategy(app, mockInstances(1, _ => false))
 
       Then("the app instance count is not exceeded")
       strategy.maxCapacity shouldBe 1
@@ -55,14 +70,14 @@ class RestartStrategyTest extends UnitTest {
     "strategy for resident app with 5 instances" in {
       Given("A resident app")
       val app = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         instances = 5,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
         container = container)
 
       When("the ignition strategy is computed")
-      val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances)
+      val strategy = computeRestartStrategy(app, mockInstances(app.instances))
 
       Then("the app instance count is not exceeded")
       strategy.maxCapacity shouldBe 5
@@ -74,14 +89,14 @@ class RestartStrategyTest extends UnitTest {
     "strategy for resident app with 5 instances, already over capacity, maxHealthCapacity = 1" in {
       Given("A resident app")
       val app = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
         container = container)
 
       When("the ignition strategy is computed")
-      val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances + 2)
+      val strategy = computeRestartStrategy(app, mockInstances(app.instances + 2))
 
       Then("the app instance count is not exceeded")
       strategy.maxCapacity shouldBe 5
@@ -93,14 +108,14 @@ class RestartStrategyTest extends UnitTest {
     "strategy for resident app with 5 instances, already under capacity, maxHealthCapacity = 1" in {
       Given("A resident app")
       val app = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
         container = container)
 
       When("the ignition strategy is computed")
-      val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances - 2)
+      val strategy = computeRestartStrategy(app, mockInstances(app.instances, i => (i < app.instances - 2)))
 
       Then("the app instance count is not exceeded")
       strategy.maxCapacity shouldBe 5
@@ -112,14 +127,14 @@ class RestartStrategyTest extends UnitTest {
     "strategy for resident app with 5 instances, already at capacity, maxHealthCapacity = 1" in {
       Given("A resident app")
       val app = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
         container = container)
 
       When("the ignition strategy is computed")
-      val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances)
+      val strategy = computeRestartStrategy(app, mockInstances(app.instances))
 
       Then("the app instance count is not exceeded")
       strategy.maxCapacity shouldBe 5
@@ -131,13 +146,13 @@ class RestartStrategyTest extends UnitTest {
     "strategy for normal app with 1 instance" in {
       Given("A normal app")
       val app = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         instances = 1,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
 
       When("the ignition strategy is computed")
-      val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances)
+      val strategy = computeRestartStrategy(app, mockInstances(app.instances))
 
       Then("the app instance count is exceeded by one")
       strategy.maxCapacity shouldBe 2
@@ -149,13 +164,13 @@ class RestartStrategyTest extends UnitTest {
     "strategy for normal app with 1 instance and no tasks running" in {
       Given("A normal app")
       val app = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         instances = 1,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
 
       When("the ignition strategy is computed")
-      val strategy = computeRestartStrategy(app, runningInstancesCount = 0)
+      val strategy = computeRestartStrategy(app, mockInstances(0))
 
       Then("the app instance count does not need to be exceeded (since we can start a task without kills)")
       strategy.maxCapacity shouldBe 1
@@ -167,13 +182,13 @@ class RestartStrategyTest extends UnitTest {
     "maxCapacity strategy for normal app is not exceeded when a task can be killed immediately" in {
       Given("A normal app")
       val app = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         instances = 2,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
 
       When("the ignition strategy is computed")
-      val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances)
+      val strategy = computeRestartStrategy(app, mockInstances(app.instances))
 
       Then("the app instance count is exceeded by one")
       strategy.maxCapacity shouldBe 2
@@ -185,13 +200,13 @@ class RestartStrategyTest extends UnitTest {
     "less running tasks than actual instance count and less than min health capacity" in {
       Given("A normal app")
       val app = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         instances = 10,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.1, maximumOverCapacity = 0))
 
       When("the ignition strategy is computed")
-      val strategy = computeRestartStrategy(app, runningInstancesCount = 1)
+      val strategy = computeRestartStrategy(app, mockInstances(1))
 
       Then("the maxCapacity equals the app.instance count")
       strategy.maxCapacity shouldBe 10
@@ -203,13 +218,13 @@ class RestartStrategyTest extends UnitTest {
     "max over capacity 1" in {
       Given("A normal app")
       val app = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         instances = 10,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.1, maximumOverCapacity = 1.0))
 
       When("the ignition strategy is computed")
-      val strategy = computeRestartStrategy(app, runningInstancesCount = 10)
+      val strategy = computeRestartStrategy(app, mockInstances(app.instances))
 
       Then("the maxCapacity is double the app.instance count")
       strategy.maxCapacity shouldBe 20
@@ -221,13 +236,13 @@ class RestartStrategyTest extends UnitTest {
     "maxOverCapacity 1 and minHealth 1" in {
       Given("A normal app")
       val app = AppDefinition(
-        id = PathId("/app"),
+        id = AbsolutePathId("/app"),
         role = "*",
         instances = 10,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 1.0))
 
       When("the ignition strategy is computed")
-      val strategy = computeRestartStrategy(app, runningInstancesCount = 10)
+      val strategy = computeRestartStrategy(app, mockInstances(app.instances))
 
       Then("the maxCapacity is double the app.instance count")
       strategy.maxCapacity shouldBe 20

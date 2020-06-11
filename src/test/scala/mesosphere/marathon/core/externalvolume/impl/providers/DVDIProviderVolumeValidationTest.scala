@@ -177,6 +177,14 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
             options = Map("dvdi/driver" -> "bar"
             )
           )
+        ),
+        ExternalVolume(
+          name = Some("name=teamvolumename,secret_key=volume-secret-key-team,secure=true,size=5,repl=1,shared=true"),
+          external = ExternalVolumeInfo(
+            size = None, name = "f", provider = "dvdi",
+            options = Map("dvdi/driver" -> "bar"
+            )
+          )
         )
       ),
       wantsValid = true

@@ -5,15 +5,14 @@ import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launcher.impl.ReservationLabels
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.VolumeMount
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.mesos.protos.ResourceProviderID
 import org.apache.mesos.Protos.Resource.ReservationInfo
 import org.apache.mesos.{Protos => Mesos}
 
 class OfferOperationFactory(
     metrics: Metrics,
-    private val principalOpt: Option[String],
-    private val roleOpt: Option[String]) {
+    private val principalOpt: Option[String]) {
 
   private[this] val launchOperationCountMetric =
     metrics.counter("mesos.offer-operations.launch")
@@ -21,12 +20,6 @@ class OfferOperationFactory(
     metrics.counter("mesos.offer-operations.launch-group")
   private[this] val reserveOperationCountMetric =
     metrics.counter("mesos.offer-operations.reserve")
-
-  private[this] lazy val role: String = roleOpt match {
-    case Some(value) => value
-    case _ => throw WrongConfigurationException(
-      "No role set. Set --mesos_role to enable using local volumes in Marathon.")
-  }
 
   private[this] lazy val principal: String = principalOpt match {
     case Some(value) => value
@@ -60,7 +53,7 @@ class OfferOperationFactory(
       .build()
   }
 
-  def reserve(reservationLabels: ReservationLabels, resources: Seq[Mesos.Resource]): Seq[Mesos.Offer.Operation] = {
+  def reserve(role: String, reservationLabels: ReservationLabels, resources: Seq[Mesos.Resource]): Seq[Mesos.Offer.Operation] = {
 
     // Mesos requires that there is an operation per each resource provider ID
     resources.groupBy(ResourceProviderID.fromResourceProto).values.map { resources =>
@@ -85,10 +78,11 @@ class OfferOperationFactory(
         .setType(Mesos.Offer.Operation.Type.RESERVE)
         .setReserve(reserve)
         .build()
-    }.to[Seq]
+    }.to(Seq)
   }
 
   def createVolumes(
+    role: String,
     reservationLabels: ReservationLabels,
     localVolumes: Seq[InstanceOpFactory.OfferedVolume]): Seq[Mesos.Offer.Operation] = {
 
@@ -146,6 +140,6 @@ class OfferOperationFactory(
         .setType(Mesos.Offer.Operation.Type.CREATE)
         .setCreate(create)
         .build()
-    }.to[Seq]
+    }.to(Seq)
   }
 }

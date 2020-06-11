@@ -6,14 +6,15 @@ import java.util.UUID
 
 import akka.Done
 import akka.stream.scaladsl.Sink
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaUnitTest
+import mesosphere.marathon.core.base.JvmExitsCrashStrategy
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LoadTimeCachingPersistenceStore}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.storage.store.impl.zk.ZkPersistenceStore
+import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkPersistenceStore}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.util.ZookeeperServerTest
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp}
+import mesosphere.marathon.state.{AppDefinition, PathId, RootGroup, Timestamp}
 import mesosphere.marathon.test.Mockito
 
 import scala.collection.immutable.Seq
@@ -51,10 +52,10 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
       "store new apps when storing the root" in {
         val appRepo = mock[AppRepository]
         val repo = createRepo(appRepo, mock[PodRepository], 1)
-        val apps = Seq(AppDefinition("app1".toRootPath, role = "*"), AppDefinition("app2".toRootPath, role = "*"))
+        val apps = Seq(AppDefinition("app1".toAbsolutePath, role = "*"), AppDefinition("app2".toAbsolutePath, role = "*"))
         val root = repo.root().futureValue
 
-        val newRoot = root.updateApps(PathId.empty, _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
+        val newRoot = root.updateApps(PathId.root, _ => apps.iterator.map(app => app.id -> app).toMap, root.version)
 
         appRepo.store(any) returns Future.successful(Done)
 
@@ -69,11 +70,11 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
       "not store the group if updating apps fails" in {
         val appRepo = mock[AppRepository]
         val repo = createRepo(appRepo, mock[PodRepository], 1)
-        val apps = Seq(AppDefinition("app1".toRootPath, role = "*"), AppDefinition("app2".toRootPath, role = "*"))
+        val apps = Seq(AppDefinition("app1".toAbsolutePath, role = "*"), AppDefinition("app2".toAbsolutePath, role = "*"))
         val root = repo.root().futureValue
         repo.storeRoot(root, Nil, Nil, Nil, Nil).futureValue
 
-        val newRoot = root.updateApps(PathId.empty, apps = _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
+        val newRoot = root.updateApps(PathId.root, apps = _ => apps.iterator.map(app => app.id -> app).toMap, root.version)
 
         val exception = new Exception("App Store Failed")
         appRepo.store(any) returns Future.failed(exception)
@@ -93,14 +94,14 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
       "store the group if deleting apps fails" in {
         val appRepo = mock[AppRepository]
         val repo = createRepo(appRepo, mock[PodRepository], 1)
-        val app1 = AppDefinition("app1".toRootPath, role = "*")
-        val app2 = AppDefinition("app2".toRootPath, role = "*")
+        val app1 = AppDefinition("app1".toAbsolutePath, role = "*")
+        val app2 = AppDefinition("app2".toAbsolutePath, role = "*")
         val apps = Seq(app1, app2)
         val root = repo.root().futureValue
         repo.storeRoot(root, Nil, Nil, Nil, Nil).futureValue
-        val deleted = "deleteMe".toRootPath
+        val deleted = "deleteMe".toAbsolutePath
 
-        val newRoot = root.updateApps(PathId.empty, _ => apps.map(app => app.id -> app)(collection.breakOut), root.version)
+        val newRoot = root.updateApps(PathId.root, _ => apps.iterator.map(app => app.id -> app).toMap, root.version)
 
         val exception = new Exception("App Delete Failed")
         appRepo.store(any) returns Future.successful(Done)
@@ -129,14 +130,14 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
         val appRepo = AppRepository.inMemRepository(store)
         val repo = createRepo(appRepo, mock[PodRepository], 2)
 
-        val app1 = AppDefinition("app1".toRootPath, role = "*")
-        val app2 = AppDefinition("app2".toRootPath, role = "*")
+        val app1 = AppDefinition("app1".toAbsolutePath, role = "*")
+        val app2 = AppDefinition("app2".toAbsolutePath, role = "*")
 
         val initialRoot = repo.root().futureValue
-        val firstRoot = initialRoot.updateApps(PathId.empty, _ => Map(app1.id -> app1), initialRoot.version)
+        val firstRoot = initialRoot.updateApps(PathId.root, _ => Map(app1.id -> app1), initialRoot.version)
         repo.storeRoot(firstRoot, Seq(app1), Nil, Nil, Nil).futureValue
 
-        val nextRoot = initialRoot.updateApps(PathId.empty, _ => Map(app2.id -> app2), version = Timestamp(1))
+        val nextRoot = initialRoot.updateApps(PathId.root, _ => Map(app2.id -> app2), version = Timestamp(1))
         repo.storeRoot(nextRoot, Seq(app2), Seq(app1.id), Nil, Nil).futureValue
 
         repo.rootVersion(firstRoot.version.toOffsetDateTime).futureValue.value should equal(firstRoot)
@@ -154,32 +155,32 @@ class GroupRepositoryTest extends AkkaUnitTest with Mockito with ZookeeperServer
   def createInMemRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     val store = new InMemoryPersistenceStore(metrics)
     store.markOpen()
-    GroupRepository.inMemRepository(store, appRepository, podRepository, versionCacheMaxSize)
+    GroupRepository.inMemRepository(store, appRepository, podRepository, versionCacheMaxSize, RootGroup.NewGroupStrategy.Fail)
   }
 
   private def zkStore: ZkPersistenceStore = {
     val root = UUID.randomUUID().toString
-    val rootClient = zkClient(namespace = Some(root))
+    val rootClient = RichCuratorFramework(zkClient(namespace = Some(root)), JvmExitsCrashStrategy)
     new ZkPersistenceStore(metrics, rootClient)
   }
 
   def createZkRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     val store = zkStore
     store.markOpen()
-    GroupRepository.zkRepository(store, appRepository, podRepository, versionCacheMaxSize)
+    GroupRepository.zkRepository(store, appRepository, podRepository, versionCacheMaxSize, RootGroup.NewGroupStrategy.Fail)
   }
 
   def createLazyCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     val store = LazyCachingPersistenceStore(metrics, new InMemoryPersistenceStore(metrics))
     store.markOpen()
-    GroupRepository.inMemRepository(store, appRepository, podRepository, versionCacheMaxSize)
+    GroupRepository.inMemRepository(store, appRepository, podRepository, versionCacheMaxSize, RootGroup.NewGroupStrategy.Fail)
   }
 
   def createLoadCachingRepos(appRepository: AppRepository, podRepository: PodRepository, maxVersions: Int): GroupRepository = { // linter:ignore:UnusedParameter
     val store = new LoadTimeCachingPersistenceStore(new InMemoryPersistenceStore(metrics))
     store.markOpen()
     store.preDriverStarts.futureValue
-    GroupRepository.inMemRepository(store, appRepository, podRepository, versionCacheMaxSize)
+    GroupRepository.inMemRepository(store, appRepository, podRepository, versionCacheMaxSize, RootGroup.NewGroupStrategy.Fail)
   }
 
   behave like basicGroupRepository("InMemory", createInMemRepos)

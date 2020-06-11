@@ -4,13 +4,16 @@ package test
 import com.typesafe.scalalogging.StrictLogging
 import java.lang.{Exception => JavaException}
 import java.util.concurrent.TimeUnit
+
 import javax.ws.rs.container.AsyncResponse
 import javax.ws.rs.core.Response
 import mesosphere.marathon.api.{MarathonExceptionMapper, RejectionException}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.exceptions.TestFailedException
-import scala.concurrent.{ExecutionContext, Future, Promise}
-import scala.util.{Try, Success, Failure}
+
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.util.{Failure, Success, Try}
 
 trait JerseyTest extends ScalaFutures with StrictLogging {
   def mapException(e: JavaException): Response = {
@@ -36,7 +39,7 @@ trait JerseyTest extends ScalaFutures with StrictLogging {
     val ar = new JerseyTest.TestAsyncResponse()
     Try(fn(ar)).
       flatMap { _ =>
-        ar.response.transform({ t => Success(t) }).futureValue
+        Await.result(ar.response.transform({ t => Success(t) }), Duration.Inf)
       } match {
         case Success(r) => r
         case Failure(e: RejectionException) => mapException(e)

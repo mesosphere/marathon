@@ -1,9 +1,9 @@
-FROM buildpack-deps:stretch-curl
+FROM buildpack-deps:buster-curl
 
 COPY Gemfile Gemfile.lock /jekyll/
 
 RUN apt-get update && \
-  curl -sL https://deb.nodesource.com/setup_6.x | bash - && \
+  curl -sL https://deb.nodesource.com/setup_12.x | bash - && \
   apt-get install -y gcc g++ git libxml2 zlib1g-dev libxml2-dev ruby ruby-dev make autoconf nodejs python python-dev && \
   gem install bundler && \
   cd /jekyll && bundle install && \

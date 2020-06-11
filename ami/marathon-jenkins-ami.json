@@ -5,15 +5,17 @@
     "ami_name": "",
     "conduit_token": "",
     "packer_version": "0.10.2",
-    "mesos_version": ""
+    "mesos_version": "",
+    "vpc_id": "",
+    "subnet_id": ""
   },
   "builders": [{
     "type": "amazon-ebs",
     "region": "us-east-1",
-    "source_ami": "ami-0bd9223868b4778d7",
+    "source_ami": "ami-0bf9ef4c7f3e35044",
     "instance_type": "m5.2xlarge",
-    "vpc_id": "vpc-0ed8d3d48747450d1",
-    "subnet_id": "subnet-0a320076f701e1066",
+    "vpc_id": "{{user `vpc_id`}}",
+    "subnet_id": "{{user `subnet_id`}}",
     "associate_public_ip_address": true,
     "ssh_username": "admin",
     "run_tags": {"created_by": "jenkins"},

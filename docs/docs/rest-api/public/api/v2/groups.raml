@@ -39,7 +39,6 @@
         description: The group with all transitive dependencies.
         body:
           application/json:
-            example: !include examples/group.json
             schema: group.GroupInfo
 
   ###
@@ -96,7 +95,7 @@
     body:
       application/json:
         example: !include examples/group.json
-        schema: group.Group
+        schema: group.GroupUpdate
     responses:
       200:
         description:
@@ -209,3 +208,13 @@
             application/json:
               example: |
                 [ "2015-09-25T15:13:48.343Z", "2015-09-11T11:11:22.692Z", "2015-09-11T10:47:21.241Z" ]
+  patch:
+    description:
+      Updates group settings without restarting applications. This operation is only allowed for top-level groups.
+    is: [ secured, deployable ]
+    body:
+      application/json:
+        schema: group.GroupPartialUpdate
+    responses:
+      400:
+        description: The group update provided in the body is not valid.

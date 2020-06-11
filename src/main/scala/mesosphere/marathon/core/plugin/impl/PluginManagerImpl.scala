@@ -11,7 +11,7 @@ import mesosphere.marathon.core.plugin.impl.PluginManagerImpl.{PluginHolder, Plu
 import mesosphere.marathon.core.plugin.{PluginDefinition, PluginDefinitions, PluginManager}
 import mesosphere.marathon.io.IO
 import mesosphere.marathon.plugin.plugin.PluginConfiguration
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{JsObject, JsString, Json}
 
@@ -53,13 +53,13 @@ private[plugin] class PluginManagerImpl(
       case _ => plugin
     }
     val serviceLoader = ServiceLoader.load(ct.runtimeClass.asInstanceOf[Class[T]], classLoader)
-    val providers = serviceLoader.iterator().toSeq
+    val providers = serviceLoader.iterator().asScala.toSeq
     val plugins = definitions.plugins.withFilter(_.plugin == ct.runtimeClass.getName).map { definition =>
       providers
         .find(_.getClass.getName == definition.implementation)
         .map(plugin => PluginReference(configure(plugin, definition), definition))
         .getOrElse(throw WrongConfigurationException(s"Plugin not found: $definition"))
-    }(collection.breakOut)
+    }
     logger.info(s"Found ${plugins.size} plugins.")
     PluginHolder(ct, plugins)
   }
@@ -94,10 +94,10 @@ object PluginManagerImpl extends StrictLogging {
     val confJson: JsObject = Json.parse(FileUtils.readFileToByteArray(new File(fileName).getCanonicalFile)).as[JsObject]
     logger.info(s"Found plugin configuration: ${Json.prettyPrint(confJson)}")
 
-    val plugins: Seq[PluginDefinition] = confJson.\("plugins").as[JsObject].fields.map {
+    val plugins: Seq[PluginDefinition] = confJson.\("plugins").as[JsObject].fields.iterator.map {
       case (id, value) =>
         JsObject(value.as[JsObject].fields :+ ("id" -> JsString(id))).as[PluginDefinition]
-    }(collection.breakOut)
+    }.toSeq
       .filter(_.enabled.getOrElse(true))
     PluginDefinitions(plugins)
   }
@@ -112,7 +112,7 @@ object PluginManagerImpl extends StrictLogging {
       val descriptor = parse(confName)
       logger.info(s"Looking for plugins in ${dirFile}. Found following files: ${sources.map(_.getName)}")
 
-      new PluginManagerImpl(conf, descriptor, sources.map(_.toURI.toURL)(collection.breakOut), crashStrategy: CrashStrategy)
+      new PluginManagerImpl(conf, descriptor, sources.iterator.map(_.toURI.toURL).toSeq, crashStrategy: CrashStrategy)
     }
 
     configuredPluginManager.getOrElse(new PluginManagerImpl(conf, PluginDefinitions(Seq.empty), Seq.empty, crashStrategy: CrashStrategy))

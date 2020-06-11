@@ -1,10 +1,10 @@
 package mesosphere.marathon
 package raml
 
-import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization, ValidationHelper}
+import mesosphere.marathon.api.v2.{AppHelpers, AppNormalization}
 import mesosphere.marathon.core.health.{MarathonHttpHealthCheck, PortReference}
 import mesosphere.marathon.core.pod.{BridgeNetwork, HostNetwork}
-import mesosphere.marathon.state._
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp}
 import mesosphere.{UnitTest, ValidationTestLike}
 import org.apache.mesos.{Protos => Mesos}
 
@@ -17,7 +17,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       .build()
 
     AppDefinition(
-      id = PathId("/docker-bridge-app"),
+      id = AbsolutePathId("/docker-bridge-app"),
       cmd = Some("test"),
       user = Some("user"),
       env = Map("A" -> state.EnvVarString("test"), "password" -> state.EnvVarSecretRef("secret0")),
@@ -25,8 +25,8 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       resources = Resources(),
       executor = "executor",
       constraints = Set(constraint),
-      fetch = Seq(FetchUri("http://test.this")),
-      backoffStrategy = BackoffStrategy(),
+      fetch = Seq(state.FetchUri("http://test.this")),
+      backoffStrategy = state.BackoffStrategy(),
       container = Some(state.Container.Docker(
         volumes = Seq(state.VolumeWithMount(
           volume = state.HostVolume(None, "/host"),
@@ -41,11 +41,12 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       acceptedResourceRoles = Set("*"),
       killSelection = state.KillSelection.OldestFirst,
       secrets = Map("secret0" -> state.Secret("/path/to/secret")),
-      role = "*"
+      role = "*",
+      resourceLimits = Some(state.ResourceLimits(cpus = Some(Double.PositiveInfinity), mem = Some(4096)))
     )
   }
   private lazy val hostApp = AppDefinition(
-    id = PathId("/host-app"),
+    id = AbsolutePathId("/host-app"),
     role = "*",
     networks = Seq(HostNetwork),
     cmd = Option("whatever"),
@@ -54,23 +55,23 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
     unreachableStrategy = state.UnreachableDisabled
   )
   private lazy val argsOnlyApp = AppDefinition(
-    id = PathId("/args-only-app"),
+    id = AbsolutePathId("/args-only-app"),
     role = "*",
     args = Seq("whatever", "one", "two", "three")
   )
   private lazy val simpleDockerApp = AppDefinition(
-    id = PathId("/simple-docker-app"),
+    id = AbsolutePathId("/simple-docker-app"),
     role = "*",
     container = Some(state.Container.Docker(image = "foo/bla"))
   )
   private lazy val dockerWithArgsApp = AppDefinition(
-    id = PathId("/docker-with-args-app"),
+    id = AbsolutePathId("/docker-with-args-app"),
     role = "*",
     args = Seq("whatever", "one", "two", "three"),
     container = Some(state.Container.Docker(image = "foo/bla"))
   )
   private lazy val mesosWithLinuxInfo = AppDefinition(
-    id = PathId("/mesos-with-linux-info"),
+    id = AbsolutePathId("/mesos-with-linux-info"),
     role = "*",
     cmd = Option("whatever"),
 
@@ -91,7 +92,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val readApp: AppDefinition = withValidationClue {
         Raml.fromRaml(
           AppHelpers.appNormalization(
-            AppNormalization.Configuration(None, "bridge-name", features, ValidationHelper.roleSettings)).normalized(ramlApp)
+            AppNormalization.Configuration(None, "bridge-name", features, state.ResourceRole.Unreserved, true), Set(state.ResourceRole.Unreserved)).normalized(ramlApp)
         )
       }
       Then("The app is identical")
@@ -108,7 +109,7 @@ class AppConversionTest extends UnitTest with ValidationTestLike {
       val protoRamlApp = app.toProto.toRaml[App]
 
       Then("The direct and indirect RAML conversions are identical")
-      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ValidationHelper.roleSettings)
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), state.ResourceRole.Unreserved, true)
       val normalizedProtoRamlApp = AppNormalization(
         config).normalized(AppNormalization.forDeprecated(config).normalized(protoRamlApp))
       normalizedProtoRamlApp should be(ramlApp)

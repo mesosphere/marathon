@@ -19,7 +19,7 @@ import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOp
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.util.CancellableOnce
 import org.apache.mesos.{Protos => Mesos}
 
@@ -37,7 +37,7 @@ private[launchqueue] object TaskLauncherActor {
     rateLimiterActor: ActorRef,
     offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
     localRegion: () => Option[Region])(
-    runSpecId: PathId): Props = {
+    runSpecId: AbsolutePathId): Props = {
     Props(new TaskLauncherActor(
       config,
       offerMatcherManager,
@@ -69,7 +69,7 @@ private class TaskLauncherActor(
     instanceTracker: InstanceTracker,
     rateLimiterActor: ActorRef,
     offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
-    runSpecId: PathId,
+    runSpecId: AbsolutePathId,
     localRegion: () => Option[Region]) extends Actor with StrictLogging with Stash {
   // scalastyle:on parameter.number
 
@@ -217,10 +217,16 @@ private class TaskLauncherActor(
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
       logger.info(s"Matching offer ${offer.getId.getValue} and need to launch $instancesToLaunch tasks.")
-      val reachableInstances = instanceMap.filterNotAs{
-        case (_, instance) => instance.state.condition.isLost || instance.isScheduled
+      val reachableInstances = instanceMap.filterNot {
+        case (_, instance) =>
+          instance.state.condition.isLost || instance.isScheduled
       }
-      scheduledInstances.filter(i => launchAllowed(clock.now(), i.runSpec.configRef)) match {
+      val candidateInstances = scheduledInstances.iterator
+        .filter { instance => offer.getAllocationInfo.getRole == instance.role }
+        .filter { instance => launchAllowed(clock.now(), instance.runSpec.configRef) }
+        .toSeq
+
+      candidateInstances match {
         case NonEmptyIterable(scheduledInstancesWithoutBackoff) =>
           val matchRequest = InstanceOpFactory.Request(offer, reachableInstances, scheduledInstancesWithoutBackoff, localRegion())
           instanceOpFactory.matchOfferRequest(matchRequest) match {
@@ -229,7 +235,7 @@ private class TaskLauncherActor(
               offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(matched))
               handleInstanceOp(matched.instanceOp, offer, promise)
             case notMatched: OfferMatchResult.NoMatch =>
-              logger.info(s"Did not match offer ${offer.getId.getValue} for run spec ${runSpecId}.")
+              logger.info(s"Did not match offer ${offer.getId.getValue} for run spec ${runSpecId}. Reasons: ${notMatched.reasons}")
               offerMatchStatistics.offer(OfferMatchStatistics.MatchResult(notMatched))
               promise.trySuccess(MatchedInstanceOps.noMatch(offer.getId))
           }

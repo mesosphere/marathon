@@ -5,12 +5,10 @@ import javax.inject.Inject
 import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
-import javax.ws.rs.core.{Context, MediaType}
+import javax.ws.rs.core.{Context, MediaType, Response}
 import mesosphere.marathon.api.EndpointsHelper.ListTasks
 import mesosphere.marathon.api._
 import mesosphere.marathon.core.appinfo.EnrichedTask
-
-import scala.concurrent.ExecutionContext
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.instance.Instance
@@ -19,14 +17,13 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.plugin.auth._
 import mesosphere.marathon.raml.AnyToRaml
-import mesosphere.marathon.raml.Task._
 import mesosphere.marathon.raml.TaskConversion._
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.util.toRichFuture
 
 import scala.async.Async._
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 @Consumes(Array(MediaType.APPLICATION_JSON))
@@ -51,26 +48,26 @@ class AppTasksResource @Inject() (
       val instancesBySpec = await(instanceTracker.instancesBySpec)
       id match {
         case GroupTasks(gid) =>
-          val groupPath = gid.toRootPath
+          val groupPath = gid.toAbsolutePath
           val maybeGroup = groupManager.group(groupPath)
           await(withAuthorization(ViewGroup, maybeGroup, Future.successful(unknownGroup(groupPath))) { group =>
             async {
               val tasks = await(runningTasks(group.transitiveAppIds, instancesBySpec)).toRaml
-              ok(jsonObjString("tasks" -> tasks))
+              ok(raml.TaskList(tasks))
             }
           })
         case _ =>
-          val appId = id.toRootPath
+          val appId = id.toAbsolutePath
           val maybeApp = groupManager.app(appId)
           val tasks = await(runningTasks(Set(appId), instancesBySpec)).toRaml
           withAuthorization(ViewRunSpec, maybeApp, unknownApp(appId)) { _ =>
-            ok(jsonObjString("tasks" -> tasks))
+            ok(raml.TaskList(tasks))
           }
       }
     }
   }
 
-  def runningTasks(appIds: Iterable[PathId], instancesBySpec: InstancesBySpec): Future[Vector[EnrichedTask]] = {
+  def runningTasks(appIds: Iterable[AbsolutePathId], instancesBySpec: InstancesBySpec): Future[Vector[EnrichedTask]] = {
     Future.sequence(appIds.withFilter(instancesBySpec.hasSpecInstances).map { id =>
       async {
         val health = await(healthCheckManager.statuses(id))
@@ -85,13 +82,21 @@ class AppTasksResource @Inject() (
   @Produces(Array(RestResource.TEXT_PLAIN_LOW))
   def indexTxt(
     @PathParam("appId") appId: String,
+    @DefaultValue("")@QueryParam("containerNetworks") containerNetworks: String = "",
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
-      implicit val identity = await(authenticatedAsync(req))
-      val id = appId.toRootPath
-      val instancesBySpec = await(instanceTracker.instancesBySpec)
-      withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
-        ok(EndpointsHelper.appsToEndpointString(ListTasks(instancesBySpec, Seq(app))))
+      if (config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.textPlainTasks)) {
+        implicit val identity = await(authenticatedAsync(req))
+        val id = appId.toAbsolutePath
+        val instancesBySpec = await(instanceTracker.instancesBySpec)
+        withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { app =>
+          val data = ListTasks(instancesBySpec, Seq(app))
+          ok(EndpointsHelper.appsToEndpointString(data, containerNetworks.split(",").toSet))
+        }
+      } else {
+        status(
+          Response.Status.NOT_ACCEPTABLE,
+          s"The text/plain output is deprecated. It can be enabled via ${DeprecatedFeatures.textPlainTasks.key}.")
       }
     }
   }
@@ -106,7 +111,7 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val pathId = appId.toRootPath
+      val pathId = appId.toAbsolutePath
 
       def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
         Option(host).fold(appTasks) { hostname =>
@@ -126,7 +131,7 @@ class AppTasksResource @Inject() (
             val enrichedTasks: Seq[EnrichedTask] = instances.flatMap { i =>
               EnrichedTask.singleFromInstance(i, healthCheckResults = healthStatuses.getOrElse(i.instanceId, Nil))
             }
-            ok(jsonObjString("tasks" -> enrichedTasks.toRaml))
+            ok(raml.TaskList(enrichedTasks.toRaml))
           case Failure(PathNotFoundException(appId, version)) => unknownApp(appId, version)
         }
       }
@@ -144,7 +149,7 @@ class AppTasksResource @Inject() (
     @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
     async {
       implicit val identity = await(authenticatedAsync(req))
-      val pathId = appId.toRootPath
+      val pathId = appId.toAbsolutePath
 
       def findToKill(appTasks: Seq[Instance]): Seq[Instance] = {
         try {
@@ -171,7 +176,7 @@ class AppTasksResource @Inject() (
               case Some(i) =>
                 val killedTask = EnrichedTask.singleFromInstance(i).get
                 val enrichedTask = killedTask.copy(healthCheckResults = healthStatuses.getOrElse(i.instanceId, Nil))
-                ok(jsonObjString("task" -> enrichedTask.toRaml))
+                ok(raml.TaskSingle(enrichedTask.toRaml))
             }
           case Failure(PathNotFoundException(appId, version)) => unknownApp(appId, version)
         }

@@ -6,7 +6,7 @@ import java.util
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.AbsolutePathId
 import org.apache.zookeeper.ZooDefs.Perms
 import org.apache.zookeeper.data.{ACL, Id}
 import org.apache.zookeeper.{WatchedEvent, Watcher, ZooDefs, ZooKeeper}
@@ -17,7 +17,7 @@ class ZooKeeperTest extends AkkaIntegrationTest with EmbeddedMarathonTest {
     "/marathon has OPEN_ACL_UNSAFE acls" in {
       Given("a leader has been elected")
       val watcher = new Watcher { override def process(event: WatchedEvent): Unit = {} }
-      val zooKeeper = new ZooKeeper(zkServer.connectUri, 30 * 1000, watcher)
+      val zooKeeper = new ZooKeeper(zkserver.connectUrl, 30 * 1000, watcher)
       try {
         WaitTestSupport.waitUntil("a leader has been elected") {
           marathon.leader().code == 200
@@ -45,12 +45,12 @@ class AuthorizedZooKeeperTest extends AkkaIntegrationTest with EmbeddedMarathonT
   lazy val credentials = "user:secret"
   lazy val digest = org.apache.zookeeper.server.auth.DigestAuthenticationProvider.generateDigest(credentials)
 
-  override val marathonArgs = Map("zk" -> s"zk://$credentials@${zkServer.connectUri}/marathon")
+  override val marathonArgs = Map("zk" -> s"zk://$credentials@${zkserver.connectUrl}/marathon")
 
   "AuthorizedZookeeper" should {
     "/marathon has OPEN_ACL_UNSAFE acls" in {
       val watcher = new Watcher { override def process(event: WatchedEvent): Unit = {} }
-      val zooKeeper = new ZooKeeper(zkServer.connectUri, 30 * 1000, watcher)
+      val zooKeeper = new ZooKeeper(zkserver.connectUrl, 30 * 1000, watcher)
       zooKeeper.addAuthInfo("digest", digest.getBytes("UTF-8"))
 
       try {
@@ -90,7 +90,7 @@ class AuthorizedZooKeeperTest extends AkkaIntegrationTest with EmbeddedMarathonT
         result.code should be (201) //Created
         extractDeploymentIds(result) should have size 1
         waitForDeployment(result)
-        waitForTasks(app.id.toPath, 1) //make sure, the app has really started
+        waitForTasks(AbsolutePathId(app.id), 1) //make sure, the app has really started
       } finally {
         zooKeeper.close()
       }

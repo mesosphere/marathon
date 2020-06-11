@@ -4,6 +4,7 @@ package core.appinfo.impl
 import mesosphere.UnitTest
 import mesosphere.marathon.core.appinfo.{AppInfo, GroupInfo, _}
 import mesosphere.marathon.core.group.GroupManager
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 
@@ -16,14 +17,14 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val f = new Fixture
       f.groupManager.app(app1.id) returns Some(app1)
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo.fromParent(parent = Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
 
       When("querying for one App")
       val appInfo = f.infoService.selectApp(id = app1.id, embed = Set.empty, selector = Selector.all).futureValue
 
       Then("we get an appInfo for the app from the appRepo/baseAppData")
-      appInfo.map(_.app.id).toSet should be(Set(app1.id))
+      appInfo.map(_.id).toSet should be(Set(app1.id.toString))
 
       verify(f.groupManager, times(1)).app(app1.id)
       for (app <- Set(app1)) {
@@ -39,7 +40,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val f = new Fixture
       f.groupManager.app(app1.id) returns Some(app1)
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo.fromParent(parent = Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
 
       When("querying for one App")
@@ -58,14 +59,14 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val someGroup = createRootGroup(apps = someApps)
       f.groupManager.rootGroup() returns someGroup
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo.fromParent(parent = Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
 
       When("querying all apps")
       val appInfos = f.infoService.selectAppsBy(Selector.all, embed = Set.empty).futureValue
 
       Then("we get appInfos for each app from the appRepo/baseAppData")
-      appInfos.map(_.app.id).toSet should be(someApps.keys)
+      appInfos.map(_.id).toSet should be(someApps.keys.map(_.toString))
 
       verify(f.groupManager, times(1)).rootGroup()
       for (app <- someApps.values) {
@@ -82,7 +83,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val someGroup = createRootGroup(apps = someApps)
       f.groupManager.rootGroup() returns someGroup
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo.fromParent(parent = Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
 
       When("querying all apps")
@@ -105,7 +106,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val appInfos = f.infoService.selectAppsBy(Selector.none, embed = Set.empty).futureValue
 
       Then("we get appInfos for no app from the appRepo/baseAppData")
-      appInfos.map(_.app.id).toSet should be(Set.empty)
+      appInfos.map(_.id).toSet should be(Set.empty)
 
       verify(f.groupManager, times(1)).rootGroup()
 
@@ -116,18 +117,18 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     "queryForGroupId" in {
       Given("a group repo with some apps below the queried group id")
       val f = new Fixture
-      f.groupManager.group(PathId("/nested")) returns someGroupWithNested.group(PathId("/nested"))
+      f.groupManager.group(AbsolutePathId("/nested")) returns someGroupWithNested.group(AbsolutePathId("/nested"))
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo.fromParent(parent = Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
 
       When("querying all apps in that group")
-      val appInfos = f.infoService.selectAppsInGroup(PathId("/nested"), Selector.all, Set.empty).futureValue
+      val appInfos = f.infoService.selectAppsInGroup(AbsolutePathId("/nested"), Selector.all, Set.empty).futureValue
 
       Then("we get appInfos for each app from the groupRepo/baseAppData")
-      appInfos.map(_.app.id).toSet should be(someNestedApps.keys)
+      appInfos.map(_.id).toSet should be(someNestedApps.keys.map(_.toString))
 
-      verify(f.groupManager, times(1)).group(PathId("/nested"))
+      verify(f.groupManager, times(1)).group(AbsolutePathId("/nested"))
       for (app <- someNestedApps.values) {
         verify(f.baseData, times(1)).appInfoFuture(app, Set.empty)
       }
@@ -139,14 +140,14 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     "queryForGroupId passes embed infos along" in {
       Given("a group repo with some apps below the queried group id")
       val f = new Fixture
-      f.groupManager.group(PathId("/nested")) returns someGroupWithNested.group(PathId("/nested"))
+      f.groupManager.group(AbsolutePathId("/nested")) returns someGroupWithNested.group(AbsolutePathId("/nested"))
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo.fromParent(parent = Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
 
       When("querying all apps in that group")
       val embed: Set[AppInfo.Embed] = Set(AppInfo.Embed.Tasks, AppInfo.Embed.Counts)
-      f.infoService.selectAppsInGroup(PathId("/nested"), Selector.all, embed).futureValue
+      f.infoService.selectAppsInGroup(AbsolutePathId("/nested"), Selector.all, embed).futureValue
 
       Then("baseData was called with the correct embed options")
       for (app <- someNestedApps.values) {
@@ -159,7 +160,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val f = new Fixture
       val rootGroup = someGroupWithNested
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo.fromParent(parent = Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
       f.groupManager.group(rootGroup.id) returns Some(rootGroup)
 
@@ -168,25 +169,24 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
         Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
 
       Then("The group info contains apps and groups")
-      result.futureValue.get.maybeGroups should be(defined)
-      result.futureValue.get.maybeApps should be(defined)
-      result.futureValue.get.transitiveApps.get should have size 5
-      result.futureValue.get.maybeGroups.get should have size 1
+      result.futureValue.value.apps should have size 3
+      result.futureValue.value.groups should have size 1
+      result.futureValue.value.groups.head.apps should have size 2
 
       When("querying extending group information without apps")
       val result2 = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty,
         Set(GroupInfo.Embed.Groups))
 
       Then("The group info contains no apps but groups")
-      result2.futureValue.get.maybeGroups should be(defined)
-      result2.futureValue.get.maybeApps should be(empty)
+      result2.futureValue.value.groups should be('nonEmpty)
+      result2.futureValue.value.apps should be(empty)
 
       When("querying extending group information without apps and groups")
       val result3 = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty, Set.empty)
 
       Then("The group info contains no apps nor groups")
-      result3.futureValue.get.maybeGroups should be(empty)
-      result3.futureValue.get.maybeApps should be(empty)
+      result3.futureValue.value.groups should be(empty)
+      result3.futureValue.value.apps should be(empty)
     }
 
     "Selecting with Group Selector filters the result" in {
@@ -194,7 +194,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val f = new Fixture
       val rootGroup = nestedGroup
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo.fromParent(parent = Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
       f.groupManager.group(rootGroup.id) returns Some(rootGroup)
       val selector = GroupInfoService.Selectors(
@@ -207,24 +207,25 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val result = f.infoService.selectGroup(rootGroup.id, selector, Set.empty, Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
 
       Then("The result is filtered by the selector")
-      result.futureValue.get.maybeGroups should be(defined)
-      result.futureValue.get.maybeApps should be(defined)
-      result.futureValue.get.transitiveApps.get should have size 2
-      result.futureValue.get.transitiveGroups.get should have size 2
+      val res = result.futureValue.value
+      res.groups should have size 1
+      res.groups.head.apps should have size 1
+      res.groups.head.groups should have size 1
+      res.groups.head.apps should have size 1
     }
 
     "Selecting with App Selector implicitly gives access to parent groups" in {
       Given("a nested group with access to only nested app /group/app1")
       val f = new Fixture
-      val rootId = PathId.empty
-      val rootApp = AppDefinition(PathId("/app"), cmd = Some("sleep"), role = "*")
-      val nestedApp1 = AppDefinition(PathId("/group/app1"), cmd = Some("sleep"), role = "*")
-      val nestedApp2 = AppDefinition(PathId("/group/app2"), cmd = Some("sleep"), role = "*")
-      val nestedGroup = createGroup(PathId("/group"), Map(nestedApp1.id -> nestedApp1, nestedApp2.id -> nestedApp2))
+      val rootId = PathId.root
+      val rootApp = AppDefinition(AbsolutePathId("/app"), cmd = Some("sleep"), role = "*")
+      val nestedApp1 = AppDefinition(AbsolutePathId("/group/app1"), cmd = Some("sleep"), role = "*")
+      val nestedApp2 = AppDefinition(AbsolutePathId("/group/app2"), cmd = Some("sleep"), role = "*")
+      val nestedGroup = createGroup(AbsolutePathId("/group"), Map(nestedApp1.id -> nestedApp1, nestedApp2.id -> nestedApp2))
       val rootGroup = createRootGroup(Map(rootApp.id -> rootApp), groups = Set(nestedGroup))
 
       f.baseData.appInfoFuture(any, any) answers { args =>
-        Future.successful(AppInfo(args.head.asInstanceOf[AppDefinition]))
+        Future.successful(raml.AppInfo.fromParent(parent = Raml.toRaml(args.head.asInstanceOf[AppDefinition])))
       }
       f.groupManager.group(rootId) returns Some(rootGroup)
       val selector = GroupInfoService.Selectors(
@@ -237,10 +238,22 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       val result = f.infoService.selectGroup(rootId, selector, Set.empty, Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
 
       Then("The result is filtered by the selector")
-      result.futureValue.get.transitiveGroups.get should have size 1
-      result.futureValue.get.transitiveGroups.get.head.group should be(nestedGroup)
-      result.futureValue.get.transitiveApps.get should have size 1
-      result.futureValue.get.transitiveApps.get.head.app should be(nestedApp1)
+      result.futureValue.value.groups should have size 1
+
+      val apps: Set[AppDefinition] = Set(nestedApp1)
+      val expectedApps = apps.map(app => raml.AppInfo.fromParent(Raml.toRaml(app)))
+
+      val expectedGroupInfo = raml.GroupInfo(
+        id = nestedGroup.id.toString,
+        apps = expectedApps,
+        pods = Set(),
+        groups = Set(),
+        version = Some(nestedGroup.version.toOffsetDateTime),
+        enforceRole = Some(nestedGroup.enforceRole))
+
+      result.futureValue.value.groups should have size 1
+      result.futureValue.value.groups.head should be(expectedGroupInfo)
+      result.futureValue.value.groups.head.apps should have size 1
     }
   }
 
@@ -257,10 +270,10 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     }
   }
 
-  private val app1: AppDefinition = AppDefinition(PathId("/test1"), cmd = Some("sleep"), role = "*")
+  private val app1: AppDefinition = AppDefinition(AbsolutePathId("/test1"), cmd = Some("sleep"), role = "*")
   val someApps = {
-    val app2 = AppDefinition(PathId("/test2"), cmd = Some("sleep"), role = "*")
-    val app3 = AppDefinition(PathId("/test3"), cmd = Some("sleep"), role = "*")
+    val app2 = AppDefinition(AbsolutePathId("/test2"), cmd = Some("sleep"), role = "*")
+    val app3 = AppDefinition(AbsolutePathId("/test3"), cmd = Some("sleep"), role = "*")
     Map(
       app1.id -> app1,
       app2.id -> app2,
@@ -269,8 +282,8 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
   }
 
   val someNestedApps = {
-    val nestedApp1 = AppDefinition(PathId("/nested/test1"), cmd = Some("sleep"), role = "*")
-    val nestedApp2 = AppDefinition(PathId("/nested/test2"), cmd = Some("sleep"), role = "*")
+    val nestedApp1 = AppDefinition(AbsolutePathId("/nested/test1"), cmd = Some("sleep"), role = "*")
+    val nestedApp2 = AppDefinition(AbsolutePathId("/nested/test2"), cmd = Some("sleep"), role = "*")
     Map(
       (nestedApp1.id, nestedApp1),
       (nestedApp2.id, nestedApp2)
@@ -281,29 +294,29 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     apps = someApps,
     groups = Set(
       createGroup(
-        id = PathId("/nested"),
+        id = AbsolutePathId("/nested"),
         apps = someNestedApps
       )
     ))
 
   val nestedGroup = {
-    val app1 = AppDefinition(PathId("/app1"), cmd = Some("sleep"), role = "*")
-    val visibleApp1 = AppDefinition(PathId("/visible/app1"), cmd = Some("sleep"), role = "*")
-    val visibleGroupApp1 = AppDefinition(PathId("/visible/group/app1"), cmd = Some("sleep"), role = "*")
-    val secureApp1 = AppDefinition(PathId("/secure/app1"), cmd = Some("sleep"), role = "*")
-    val secureGroupApp1 = AppDefinition(PathId("/secure/group/app1"), cmd = Some("sleep"), role = "*")
-    val otherApp1 = AppDefinition(PathId("/other/app1"), cmd = Some("sleep"), role = "*")
-    val otherGroupApp1 = AppDefinition(PathId("/other/group/app1"), cmd = Some("sleep"), role = "*")
+    val app1 = AppDefinition(AbsolutePathId("/app1"), cmd = Some("sleep"), role = "*")
+    val visibleApp1 = AppDefinition(AbsolutePathId("/visible/app1"), cmd = Some("sleep"), role = "*")
+    val visibleGroupApp1 = AppDefinition(AbsolutePathId("/visible/group/app1"), cmd = Some("sleep"), role = "*")
+    val secureApp1 = AppDefinition(AbsolutePathId("/secure/app1"), cmd = Some("sleep"), role = "*")
+    val secureGroupApp1 = AppDefinition(AbsolutePathId("/secure/group/app1"), cmd = Some("sleep"), role = "*")
+    val otherApp1 = AppDefinition(AbsolutePathId("/other/app1"), cmd = Some("sleep"), role = "*")
+    val otherGroupApp1 = AppDefinition(AbsolutePathId("/other/group/app1"), cmd = Some("sleep"), role = "*")
 
     createRootGroup(Map(app1.id -> app1), groups = Set(
-      createGroup(PathId("/visible"), Map(visibleApp1.id -> visibleApp1), groups = Set(
-        createGroup(PathId("/visible/group"), Map(visibleGroupApp1.id -> visibleGroupApp1))
+      createGroup(AbsolutePathId("/visible"), Map(visibleApp1.id -> visibleApp1), groups = Set(
+        createGroup(AbsolutePathId("/visible/group"), Map(visibleGroupApp1.id -> visibleGroupApp1))
       )),
-      createGroup(PathId("/secure"), Map(secureApp1.id -> secureApp1), groups = Set(
-        createGroup(PathId("/secure/group"), Map(secureGroupApp1.id -> secureGroupApp1))
+      createGroup(AbsolutePathId("/secure"), Map(secureApp1.id -> secureApp1), groups = Set(
+        createGroup(AbsolutePathId("/secure/group"), Map(secureGroupApp1.id -> secureGroupApp1))
       )),
-      createGroup(PathId("/other"), Map(otherApp1.id -> otherApp1), groups = Set(
-        createGroup(PathId("/other/group"), Map(otherGroupApp1.id -> otherGroupApp1)
+      createGroup(AbsolutePathId("/other"), Map(otherApp1.id -> otherApp1), groups = Set(
+        createGroup(AbsolutePathId("/other/group"), Map(otherGroupApp1.id -> otherGroupApp1)
         ))
       )))
   }

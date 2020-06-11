@@ -3,7 +3,7 @@ package core.pod
 
 import mesosphere.marathon.plugin.ContainerSpec
 import mesosphere.marathon.raml.{Artifact, Endpoint, Image, Lifecycle, MesosExec, Resources}
-import mesosphere.marathon.state.{LinuxInfo, VolumeMount}
+import mesosphere.marathon.state.{LinuxInfo, ResourceLimits, VolumeMount}
 
 import scala.collection.immutable.Map
 
@@ -21,4 +21,5 @@ case class MesosContainer(
     labels: Map[String, String] = Map.empty,
     lifecycle: Option[Lifecycle] = None,
     tty: Option[Boolean] = None,
-    linuxInfo: Option[LinuxInfo] = None) extends ContainerSpec
+    linuxInfo: Option[LinuxInfo] = None,
+    resourceLimits: Option[ResourceLimits] = None) extends ContainerSpec

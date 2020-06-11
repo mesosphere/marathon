@@ -1,6 +1,7 @@
 #!/usr/bin/env amm
 
 import java.time.Instant
+import $ivy.`org.scalaj::scalaj-http:2.4.2`
 import scalaj.http._
 import ujson._
 

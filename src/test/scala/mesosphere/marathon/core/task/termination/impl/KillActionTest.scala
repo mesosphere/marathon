@@ -2,15 +2,15 @@ package mesosphere.marathon
 package core.task.termination.impl
 
 import mesosphere.UnitTest
-import mesosphere.marathon.test.SettableClock
 import mesosphere.marathon.core.instance.{Instance, LocalVolumeId, TestInstanceBuilder}
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.AbsolutePathId
+import mesosphere.marathon.test.SettableClock
 import org.scalatest.prop.TableDrivenPropertyChecks
 
 class KillActionTest extends UnitTest with TableDrivenPropertyChecks {
 
   val clock = new SettableClock()
-  val appId = PathId("/test")
+  val appId = AbsolutePathId("/test")
 
   lazy val localVolumeId = LocalVolumeId(appId, "unwanted-persistent-volume", "uuid1")
   lazy val residentLaunchedInstance: Instance = TestInstanceBuilder.newBuilder(appId).

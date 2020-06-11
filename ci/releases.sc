@@ -89,50 +89,9 @@ def copyTarballBuildsToReleases(version: SemVer): Unit = {
 }
 
 /**
- * Publish ative Linx packages to package server.
+ * Publish native Linx packages to package server.
  */
-def uploadLinuxPackagesToRepos(tagName: String): Unit = {
-  val pkgserverUser = sys.env.getOrElse("PKG_SSH_USER", {
-    throw new IllegalStateException("PKG_SSH_USER environment variable must be set")
-  })
-  val pkgserverHost = sys.env.getOrElse("PKG_SSH_HOST", {
-    throw new IllegalStateException("PKG_SSH_HOST environment variable must be set")
-  })
-
-  // Note - the key is expected to be provided via an SSH agent
-  utils.printStageTitle(s"Uploading native packages")
-  %("rsync", "-avz",
-    (pwd / 'tools / 'packager) + "/",
-    s"${pkgserverUser}@${pkgserverHost}:repo/incoming/marathon-${tagName}/",
-    "--include", "*.deb",
-    "--include", "*.rpm",
-    "--exclude", "*")
-
-  val pkgType = if (tagName.toLowerCase contains "rc")
-    "-testing"
-  else
-    ""
-
-  val mappings = Seq(
-    "debian8" -> s"debian/jessie${pkgType}",
-    "debian9" -> s"debian/stretch${pkgType}",
-    "ubuntu1604" -> s"ubuntu/xenial${pkgType}",
-    "ubuntu1404" -> s"ubuntu/trusty${pkgType}",
-    "ubuntu1804" -> s"ubuntu/bionic${pkgType}",
-    "el6" -> s"el${pkgType}/6",
-    "el7" -> s"el${pkgType}/7")
-
-  val copyCommands = mappings.map { case (packageType, path) =>
-    s"cp $$HOME/repo/incoming/marathon-${tagName}/marathon*.${packageType}* " +
-    s"$$HOME/repo/incoming/${path}/"
-  }.mkString(";")
-
-  utils.printStageTitle("Distributing packages to distros")
-  %("ssh", s"${pkgserverUser}@${pkgserverHost}", "bash",
-    "-e", "-x", "-c",
-    utils.escapeCmdArg(List(
-      copyCommands,
-      s"rm -rf $$HOME/repo/incoming/marathon-${tagName}").mkString("\n")))
-
-  utils.printStageTitle("All done")
+def uploadLinuxPackagesToRepos(packageVersion: String): Unit = {
+  val toolPath = pwd/'tools/'packager
+  %('make, "upload-packages")(toolPath)
 }

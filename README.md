@@ -70,7 +70,7 @@ Instructions on how to install prepackaged releases of Mesos are available [in t
 ##### Building Mesos from source
 **NOTE:** *Choose this option only if building Marathon from source, else there might be version incompatibility between pre-packaged releases of Marathon and Mesos built from source.*
 
-You can find the instructions for compiling Mesos from source in the [Apache Mesos getting started docs](http://mesos.apache.org/gettingstarted/). If you want Mesos to install libraries and executables in a non-default location use the --prefix option during configuration as follows:
+You can find the instructions for compiling Mesos from source in the [Apache Mesos getting started docs](http://mesos.apache.org/getting-started/). If you want Mesos to install libraries and executables in a non-default location use the --prefix option during configuration as follows:
 
 ```console
 ./configure --prefix=<path to Mesos installation>
@@ -151,7 +151,7 @@ Instructions on how to install prepackaged releases are available [in the Marath
 1.  Run `sbt universal:packageZipTarball` to package Marathon as an txz file
     containing bin/marathon fully packaged.
 
-1. Run `sbt docker:publishLocal` for a local marathon docker image.
+1. Run `cd tools/packager; make tag-docker` for a local Marathon docker image.
 
 ### Running in Development Mode
 
@@ -169,62 +169,7 @@ options, see [the Marathon docs](https://mesosphere.github.io/marathon/docs/).
 
 ## Developing Marathon
 
-See [the documentation](https://mesosphere.github.io/marathon/docs/developing-vm.html) on how to run Marathon locally inside a virtual machine.
-
-### Running in Development Mode on Docker
-
-* Note: Currently the Docker container fails due to strange behavior from the latest Mesos version.  There will be an error about `work_dir` that is still unresolved, much like this:
-
-        Failed to start a local cluster while loading agent flags from the environment: Flag 'work_dir' is required, but it was not provided
-
-Build it:
-
-    sbt docker:publishLocal
-
-Note the version, e.g: `[info] Built image mesosphere/marathon:1.5.0-SNAPSHOT-461-gf1cc63e` => `1.5.0-SNAPSHOT-461-gf1cc63e`
-
-
-A running zookeeper instance is required, if there isn't one already available, there is a docker image available for this:
-
-    docker run --name some-zookeeper --restart always -d zookeeper
-
-Run it with zookeeper container:
-
-    docker run --link some-zookeeper:zookeeper marathon-head --master local --zk zk://zookeeper:2181/marathon
-
-Or run it without zookeeper container:
-
-    docker run marathon:{version} --master local --zk zk://localhost:2181/marathon
-
-If you want to inspect the contents of the Docker container:
-
-    docker run -it --entrypoint=/bin/bash marathon:{version} -s
-
-### Testing
-
-The tests and integration tests a run with:
-
-    sbt test integration/test
-
-You have to set the Mesos test IP and disable Docker tests on Mac:
-
-    MESOSTEST_IP_ADDRESS="127.0.0.1" \
-    RUN_DOCKER_INTEGRATION_TESTS=false \
-    RUN_MESOS_INTEGRATION_TESTS=false \
-    sbt test integration/test
-
-The Docker integration tests are not supported on Mac. The tests start and stop
-local Mesos clusters and Marathon instances. Sometimes processes leak after
-failed test runs. You can check them with `ps aux | grep "python|java|mesos"`
-and kill all `app_mock.py` processes and Mesos and Marathon instances unless
-they do not belong to a production environment of course.
-
-Also see the [CI instructions](ci/README.md) on running specfic build pipeline
-targets.
-
-### Marathon UI
-
-To develop on the web UI look into the instructions of the [Marathon UI](https://github.com/mesosphere/marathon-ui) repository.
+See [developing Marathon](./docs/docs/developing.md) in the docs.
 
 ## Marathon Clients
 
@@ -371,3 +316,4 @@ and <a href="https://www.yourkit.com/.net/profiler/index.jsp">YourKit
 .NET Profiler</a>,
 innovative and intelligent tools for profiling Java and .NET
 applications.
+

@@ -21,4 +21,16 @@ class MainTest extends UnitTest {
       Main.envToArgs(Map("MARATHON_APP_VERSION" -> "1.5")) shouldBe Seq()
     }
   }
+
+  "configToLogLines" should {
+    val conf = AllConf("--master", "zk://super:secret@127.0.0.1:2181/master", "--zk", "zk://also:special@localhost:2181/marathon", "--mesos_role", "super")
+    "redact credentials from Zookeeper" in {
+      val lines = Main.configToLogLines(conf).split("\n")
+      val Some(masterLine) = lines.find(_.startsWith(" - master "))
+      masterLine shouldBe " - master (*) = zk://xxxxxxxx:xxxxxxxx@127.0.0.1:2181/master"
+
+      val Some(zkLine) = lines.find(_.startsWith(" - zk "))
+      zkLine shouldBe " - zk (*) = zk://xxxxxxxx:xxxxxxxx@localhost:2181/marathon"
+    }
+  }
 }

@@ -60,7 +60,21 @@ object DeprecatedFeatures {
     softRemoveVersion = SemVer(1, 7, 0),
     hardRemoveVersion = SemVer(1, 8, 0))
 
-  def all = Seq(syncProxy, jsonSchemasResource, apiHeavyEvents, proxyEvents, kamonMetrics, appC)
+  val sanitizeAcceptedResourceRoles = DeprecatedFeature(
+    "sanitize_accepted_resource_roles",
+    description = "Enables sanitization of accepted resource roles in app and pod definitions.",
+    softRemoveVersion = SemVer(1, 10, 0),
+    hardRemoveVersion = SemVer(1, 11, 0))
+
+  val textPlainTasks = DeprecatedFeature(
+    "text_plain_tasks",
+    description = "Enables the v2/tasks and v2/apps/<id>/tasks endpoints to accept text/plain as response format.",
+    softRemoveVersion = SemVer(1, 10, 0),
+    hardRemoveVersion = SemVer(1, 11, 0)
+  )
+
+  def all = Seq(syncProxy, jsonSchemasResource, apiHeavyEvents, proxyEvents, kamonMetrics, appC,
+    sanitizeAcceptedResourceRoles, textPlainTasks)
 
   def description: String = {
     "  - " + all.map { df =>

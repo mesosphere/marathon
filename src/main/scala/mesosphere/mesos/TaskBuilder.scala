@@ -10,14 +10,14 @@ import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.plugin.task.RunSpecTaskProcessor
 import mesosphere.marathon.state.Container.Docker
 import mesosphere.marathon.state._
-import mesosphere.marathon.stream.Implicits._
 import mesosphere.mesos.ResourceMatcher.ResourceMatch
 import mesosphere.mesos.protos.Implicits._
-import mesosphere.mesos.protos.ScalarResource
+import mesosphere.mesos.protos.{Resource, ScalarResource}
 import org.apache.mesos.Protos.Environment._
 import org.apache.mesos.Protos._
 
 import scala.collection.immutable.Seq
+import scala.jdk.CollectionConverters._
 
 class TaskBuilder(
     runSpec: AppDefinition,
@@ -28,7 +28,8 @@ class TaskBuilder(
   def build(
     offer: Offer,
     resourceMatch: ResourceMatch,
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): (TaskInfo, task.state.NetworkInfo) = {
+    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch],
+    enforceRole: Boolean): (TaskInfo, task.state.NetworkInfo) = {
 
     val executor: Executor = if (runSpec.executor == "") {
       config.executor
@@ -43,6 +44,7 @@ class TaskBuilder(
       .setTaskId(taskId.mesosTaskId)
       .setSlaveId(offer.getSlaveId)
       .addAllResources(resourceMatch.resources.asJava)
+      .putAllLimits(TaskBuilder.limitsAsJavaMap(runSpec.resourceLimits))
 
     builder.setDiscovery(computeDiscoveryInfo(runSpec, resourceMatch.hostPorts))
 
@@ -57,7 +59,7 @@ class TaskBuilder(
     executor match {
       case CommandExecutor =>
         containerProto.foreach(builder.setContainer)
-        val command = TaskBuilder.commandInfo(runSpec, Some(taskId), host, resourceMatch.hostPorts, envPrefix)
+        val command = TaskBuilder.commandInfo(runSpec, Some(taskId), host, resourceMatch.hostPorts, envPrefix, Some(enforceRole))
         builder.setCommand(command.build)
 
       case PathExecutor(path) =>
@@ -78,7 +80,7 @@ class TaskBuilder(
         ).map(resourceToProto).asJava))
 
         val command =
-          TaskBuilder.commandInfo(runSpec, Some(taskId), host, resourceMatch.hostPorts, envPrefix).setValue(shell)
+          TaskBuilder.commandInfo(runSpec, Some(taskId), host, resourceMatch.hostPorts, envPrefix, Some(enforceRole)).setValue(shell)
         info.setCommand(command.build)
         builder.setExecutor(info)
     }
@@ -197,13 +199,24 @@ class TaskBuilder(
 }
 
 object TaskBuilder {
+  def limitsAsJavaMap(maybeLimits: Option[ResourceLimits]): java.util.Map[String, Value.Scalar] = {
+    maybeLimits.iterator.flatMap { limits =>
+      limits.cpus.iterator.map { cpus =>
+        Resource.CPUS -> Value.Scalar.newBuilder().setValue(cpus).build
+      } ++
+        limits.mem.iterator.map { mem =>
+          Resource.MEM -> Value.Scalar.newBuilder().setValue(mem).build
+        }
+    }.toMap.asJava
+  }
 
   def commandInfo(
     runSpec: AppDefinition,
     taskId: Option[Task.Id],
     host: Option[String],
     hostPorts: Seq[Option[Int]],
-    envPrefix: Option[String]): CommandInfo.Builder = {
+    envPrefix: Option[String],
+    enforceRole: Option[Boolean]): CommandInfo.Builder = {
 
     val declaredPorts = runSpec.container.withFilter(_.portMappings.nonEmpty).map(
       _.portMappings.map(pm => EnvironmentHelper.PortRequest(pm.name, pm.containerPort))
@@ -212,7 +225,7 @@ object TaskBuilder {
       )
 
     val envMap: Map[String, String] =
-      taskContextEnv(runSpec, taskId) ++
+      taskContextEnv(runSpec, taskId, enforceRole) ++
         addPrefix(envPrefix, EnvironmentHelper.portsEnv(declaredPorts, hostPorts) ++
           host.map("HOST" -> _).toMap) ++
         runSpec.env.collect{ case (k: String, v: EnvVarString) => k -> v.value }
@@ -264,23 +277,25 @@ object TaskBuilder {
     }
   }
 
-  def taskContextEnv(runSpec: AppDefinition, taskId: Option[Task.Id]): Map[String, String] = {
+  def taskContextEnv(runSpec: AppDefinition, taskId: Option[Task.Id], enforceRole: Option[Boolean]): Map[String, String] = {
+    import TaskBuilderConstants._
     if (taskId.isEmpty) {
       // This branch is taken during serialization. Do not add environment variables in this case.
       Map.empty
     } else {
       val envVars: Map[String, String] = Seq(
-        "MESOS_TASK_ID" -> taskId.map(_.idString),
-        "MARATHON_APP_ID" -> Some(runSpec.id.toString),
-        "MARATHON_APP_VERSION" -> Some(runSpec.version.toString),
-        "MARATHON_APP_DOCKER_IMAGE" -> runSpec.container.collect { case c: Docker => c.image },
-        "MARATHON_APP_RESOURCE_CPUS" -> Some(runSpec.resources.cpus.toString),
-        "MARATHON_APP_RESOURCE_MEM" -> Some(runSpec.resources.mem.toString),
-        "MARATHON_APP_RESOURCE_DISK" -> Some(runSpec.resources.disk.toString),
-        "MARATHON_APP_RESOURCE_GPUS" -> Some(runSpec.resources.gpus.toString)
-      ).collect {
+        MESOS_TASK_ID -> taskId.map(_.idString),
+        MARATHON_APP_ID -> Some(runSpec.id.toString),
+        MARATHON_APP_VERSION -> Some(runSpec.version.toString),
+        MARATHON_APP_DOCKER_IMAGE -> runSpec.container.collect { case c: Docker => c.image },
+        MARATHON_APP_RESOURCE_CPUS -> Some(runSpec.resources.cpus.toString),
+        MARATHON_APP_RESOURCE_MEM -> Some(runSpec.resources.mem.toString),
+        MARATHON_APP_RESOURCE_DISK -> Some(runSpec.resources.disk.toString),
+        MARATHON_APP_RESOURCE_GPUS -> Some(runSpec.resources.gpus.toString),
+        MARATHON_APP_ENFORCE_GROUP_ROLE -> enforceRole.map(_.toString.toUpperCase())
+      ).iterator.collect {
           case (key, Some(value)) => key -> value
-        }(collection.breakOut)
+        }.toMap
       envVars ++ EnvironmentHelper.labelsToEnvVars(runSpec.labels)
     }
   }

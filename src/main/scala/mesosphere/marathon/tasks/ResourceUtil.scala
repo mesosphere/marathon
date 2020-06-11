@@ -2,7 +2,7 @@ package mesosphere.marathon
 package tasks
 
 import com.typesafe.scalalogging.StrictLogging
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.state.DiskSource
 import mesosphere.mesos.protos
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
@@ -105,8 +105,8 @@ object ResourceUtil extends StrictLogging {
       val baseRanges = resource.getRanges.getRangeList
 
       // FIXME: too expensive?
-      val diminished = baseRanges.flatMap { baseRange =>
-        usedRanges.foldLeft(Seq(baseRange)) {
+      val diminished = baseRanges.asScala.flatMap { baseRange =>
+        usedRanges.asScala.foldLeft(Seq(baseRange)) {
           case (result, used) =>
             result.flatMap(deductRange(_, used))
         }
@@ -127,8 +127,8 @@ object ResourceUtil extends StrictLogging {
     }
 
     def consumeSetResource: Option[MesosProtos.Resource] = {
-      val baseSet: Set[String] = resource.getSet.getItemList.toSet
-      val consumedSet: Set[String] = usedResource.getSet.getItemList.toSet
+      val baseSet: Set[String] = resource.getSet.getItemList.asScala.toSet
+      val consumedSet: Set[String] = usedResource.getSet.getItemList.asScala.toSet
       require(consumedSet subsetOf baseSet, s"$consumedSet must be subset of $baseSet")
 
       val resultSet: Set[String] = baseSet -- consumedSet
@@ -197,7 +197,7 @@ object ResourceUtil extends StrictLogging {
   def consumeResourcesFromOffer(
     offer: MesosProtos.Offer,
     usedResources: Seq[MesosProtos.Resource]): MesosProtos.Offer = {
-    val offerResources: Seq[MesosProtos.Resource] = offer.getResourcesList.toSeq
+    val offerResources: Seq[MesosProtos.Resource] = offer.getResourcesList.asScala.toSeq
     val leftOverResources = ResourceUtil.consumeResources(offerResources, usedResources)
     offer.toBuilder.clearResources().addAllResources(leftOverResources.asJava).build()
   }
@@ -224,7 +224,7 @@ object ResourceUtil extends StrictLogging {
       case MesosProtos.Value.Type.SCALAR => s"$resourceName ${resource.getScalar.getValue}"
       case MesosProtos.Value.Type.RANGES =>
         s"$resourceName ${
-          val ranges = resource.getRanges.getRangeList.to[Seq]
+          val ranges = resource.getRanges.getRangeList.asScala.to(Seq)
           if (ranges.size > maxRanges)
             s"${rangesToString(ranges.take(maxRanges))} ... (${ranges.size - maxRanges} more)"
           else

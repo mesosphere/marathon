@@ -6,18 +6,21 @@ import mesosphere.marathon.state._
 import com.wix.accord
 
 trait GroupCreation {
+  @deprecated("Prefer Builders.newRootGroup instead", since = "1.9")
   def createRootGroup(
-    apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PathId, PodDefinition] = Group.defaultPods,
+    apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
+    pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
     groups: Set[Group] = Set.empty,
-    dependencies: Set[PathId] = Group.defaultDependencies,
+    dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
     validate: Boolean = true,
-    enabledFeatures: Set[String] = Set.empty): RootGroup = {
-    val group = RootGroup(apps, pods, groups.map(group => group.id -> group)(collection.breakOut), dependencies, version)
+    enabledFeatures: Set[String] = Set.empty,
+    newGroupEnforceRole: NewGroupEnforceRoleBehavior = NewGroupEnforceRoleBehavior.Off): RootGroup = {
+    val group = RootGroup(apps, pods, groups.iterator.map(group => group.id -> group).toMap, dependencies, RootGroup.NewGroupStrategy.fromConfig(newGroupEnforceRole), version)
 
     if (validate) {
       val conf = if (enabledFeatures.isEmpty) AllConf.withTestConfig() else AllConf.withTestConfig("--enable_features", enabledFeatures.mkString(","))
+      conf.newGroupEnforceRole
       val validation = accord.validate(group)(RootGroup.validRootGroup(conf))
       assert(validation.isSuccess, s"Provided test root group was not valid: ${validation.toString}")
     }
@@ -26,22 +29,24 @@ trait GroupCreation {
   }
 
   def createGroup(
-    id: PathId,
-    apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PathId, PodDefinition] = Group.defaultPods,
+    id: AbsolutePathId,
+    apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
+    pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
     groups: Set[Group] = Set.empty,
-    dependencies: Set[PathId] = Group.defaultDependencies,
+    dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     version: Timestamp = Group.defaultVersion,
     validate: Boolean = true,
-    enabledFeatures: Set[String] = Set.empty): Group = {
-    val groupsById: Map[Group.GroupKey, Group] = groups.map(group => group.id -> group)(collection.breakOut)
+    enabledFeatures: Set[String] = Set.empty,
+    enforceRole: Boolean = false): Group = {
+    val groupsById: Map[AbsolutePathId, Group] = groups.iterator.map(group => group.id -> group).toMap
     val group = Group(
       id,
       apps,
       pods,
       groupsById,
       dependencies,
-      version)
+      version,
+      enforceRole)
 
     if (validate) {
       val conf = if (enabledFeatures.isEmpty) AllConf.withTestConfig() else AllConf.withTestConfig("--enable_features", enabledFeatures.mkString(","))

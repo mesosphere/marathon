@@ -12,7 +12,7 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.core.task.tracker.InstanceTracker.InstancesBySpec
 import mesosphere.marathon.state.RootGroup
 import mesosphere.marathon.storage.repository.GroupRepository
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.util.state.FrameworkId
 import org.apache.mesos.Protos.{Offer, OfferID, Resource}
 
@@ -42,8 +42,8 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
     val resourcesByInstanceId: Map[Instance.Id, Seq[Resource]] = {
       // TODO(PODS): don't use resident resources yet. Once they're needed it's not clear whether the labels
       // will continue to be task IDs, or pod instance IDs
-      offer.getResourcesList.groupBy(TaskLabels.instanceIdForResource(frameworkId, _)).collect {
-        case (Some(instanceId), resources) => instanceId -> resources.to[Seq]
+      offer.getResourcesList.asScala.groupBy(TaskLabels.instanceIdForResource(frameworkId, _)).collect {
+        case (Some(instanceId), resources) => instanceId -> resources.to(Seq)
       }
     }
 
@@ -71,7 +71,7 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
             instance.reservation.nonEmpty && instance.state.goal == Goal.Decommissioned && instance.state.condition.isTerminal
           }
 
-          val instanceOps: Seq[InstanceOpWithSource] = resourcesByInstanceId.collect {
+          val instanceOps: Seq[InstanceOpWithSource] = resourcesByInstanceId.iterator.collect {
             case (instanceId, spuriousResources) if spurious(instanceId) =>
               val unreserveAndDestroy =
                 InstanceOp.UnreserveAndDestroyVolumes(
@@ -91,7 +91,7 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
                 )
               logger.info(s"Freeing reservation for terminal $instanceId")
               InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
-          }(collection.breakOut)
+          }.toSeq
 
           MatchedInstanceOps(offer.getId, instanceOps, resendThisOffer = true)
         }

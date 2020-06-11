@@ -5,19 +5,11 @@ import akka.actor.{Actor, Props}
 import akka.event.EventStream
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event.InstanceHealthChanged
-import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{
-  AddHealthCheck,
-  RemoveHealthCheck,
-  PurgeHealthCheckStatuses,
-  HealthCheckStatusChanged,
-  AppHealthCheckProxy,
-  ApplicationKey
-}
+import mesosphere.marathon.core.health.impl.AppHealthCheckActor._
 import mesosphere.marathon.core.health.{Health, HealthCheck}
 import mesosphere.marathon.core.instance.Instance
-import mesosphere.marathon.state.{PathId, Timestamp}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 
-import scala.collection.generic.Subtractable
 import scala.collection.mutable
 
 /**
@@ -31,7 +23,7 @@ import scala.collection.mutable
   * - `Healthy` if all statuses of the instance are known and all are healthy
   */
 object AppHealthCheckActor {
-  case class ApplicationKey(appId: PathId, version: Timestamp)
+  case class ApplicationKey(appId: AbsolutePathId, version: Timestamp)
   case class InstanceKey(applicationKey: ApplicationKey, instanceId: Instance.Id)
 
   def props(eventBus: EventStream): Props = Props(new AppHealthCheckActor(eventBus))
@@ -135,13 +127,13 @@ object AppHealthCheckActor {
       * @param healthChecksContainers The container to purge
       * @param toPurge the health checks to purge from the container
       */
-    private def purgeHealthChecks[K, A, V <: Traversable[A] with Subtractable[HealthCheck, V]](
-      healthChecksContainers: mutable.Map[K, V], toPurge: Seq[(K, HealthCheck)]): Unit = {
+    private def purgeHealthChecks[K, A, V <: Iterable[A]](
+      healthChecksContainers: mutable.Map[K, V], toPurge: Seq[(K, HealthCheck)], remove: (V, HealthCheck) => V): Unit = {
       toPurge.foreach({
         case (key, healthCheck) =>
           healthChecksContainers.get(key) match {
             case Some(hcContainer) =>
-              val newHcContainer = hcContainer - healthCheck
+              val newHcContainer = remove(hcContainer, healthCheck)
 
               if (newHcContainer.isEmpty)
                 healthChecksContainers.remove(key)
@@ -158,7 +150,7 @@ object AppHealthCheckActor {
       * @param healthCheck The health check definition to purge
       */
     private def purgeHealthCheckDefinition(applicationKey: ApplicationKey, healthCheck: HealthCheck): Unit = {
-      purgeHealthChecks[ApplicationKey, HealthCheck, Set[HealthCheck]](healthChecks, Seq(applicationKey -> healthCheck))
+      purgeHealthChecks[ApplicationKey, HealthCheck, Set[HealthCheck]](healthChecks, Seq(applicationKey -> healthCheck), { _ - _ })
     }
 
     /**
@@ -166,7 +158,7 @@ object AppHealthCheckActor {
       * @param toPurge The list of health check statuses to purge.
       */
     private[impl] def purgeHealthChecksStatuses(toPurge: Seq[(InstanceKey, HealthCheck)]): Unit = {
-      purgeHealthChecks[InstanceKey, (HealthCheck, Option[Health]), Map[HealthCheck, Option[Health]]](healthCheckStates, toPurge)
+      purgeHealthChecks[InstanceKey, (HealthCheck, Option[Health]), Map[HealthCheck, Option[Health]]](healthCheckStates, toPurge, { _ - _ })
     }
 
     /**

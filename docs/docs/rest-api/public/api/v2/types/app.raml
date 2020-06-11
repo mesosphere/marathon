@@ -15,6 +15,7 @@ uses:
   readiness: readinessCheck.raml
   secrets: secrets.raml
   strings: stringTypes.raml
+  task: task.raml
   versionInfo: versionInfo.raml
   pragma: pragma.raml
   unreachableStrategy: unreachableStrategy.raml
@@ -277,6 +278,11 @@ types:
         type: AppResidency
         description:
           This property is deprecated and it has no effect.
+      resourceLimits?:
+        type: resources.ResourceLimits
+        description: |
+          Specify optional resource limits for a container, allowing the task to consume more cpu and memory resources
+          than requested, if available.
       requirePorts?:
         type: boolean
         description: |
@@ -334,10 +340,40 @@ types:
           At the moment, only the default role or the group role are allowed
   AppList:
     type: object
+    (pragma.serializeOnly): # Used only for serialization
     properties:
-      apps: App[]
+      apps: AppInfo[]
 
   VersionList:
     type: object
     properties:
       versions: datetime[]
+
+  AppInfo:
+    type: App
+    (pragma.serializeOnly): # Used only for serialization
+    properties:
+      tasksStaged?:
+        type: integer
+        format: int32
+      tasksRunning?:
+        type: integer
+        format: int32
+      tasksHealthy?:
+        type: integer
+        format: int32
+      tasksUnhealthy?:
+        type: integer
+        format: int32
+      deployments?:
+        type: strings.Identifiable[]
+        (pragma.forceOptional):
+      readinessCheckResults?:
+        type: readiness.TaskReadinessCheckResult[]
+        (pragma.forceOptional):
+      tasks?:
+        type: task.Task[]
+        (pragma.forceOptional):
+      lastTaskFailure?: task.TaskFailure
+      tasksStats?: task.TaskStatsByVersion
+

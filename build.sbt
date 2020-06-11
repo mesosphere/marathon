@@ -1,13 +1,9 @@
-import java.time.{LocalDate, ZoneOffset}
-import java.time.format.DateTimeFormatter
-
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
+import com.typesafe.sbt.SbtNativePackager.autoImport.NativePackagerHelper.directory
 import com.typesafe.sbt.SbtScalariform.ScalariformKeys
-import com.typesafe.sbt.packager.docker.Cmd
 import mesosphere.maven.MavenSettings.{loadM2Credentials, loadM2Resolvers}
 import mesosphere.raml.RamlGeneratorPlugin
-import NativePackagerHelper.directory
-
+import sbtprotobuf.ProtobufPlugin
 import scalariform.formatter.preferences._
 
 credentials ++= loadM2Credentials(streams.value.log)
@@ -15,11 +11,11 @@ resolvers ++= loadM2Resolvers(sLog.value)
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 
-addCompilerPlugin("org.psywerx.hairyfotr" %% "linter" % "0.1.17")
+addCompilerPlugin(scalafixSemanticdb)
 
-val silencerVersion = "1.1"
-addCompilerPlugin("com.github.ghik" %% "silencer-plugin" % silencerVersion)
-libraryDependencies += "com.github.ghik" %% "silencer-lib" % silencerVersion % Provided
+val silencerVersion = "1.6.0"
+addCompilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full)
+libraryDependencies += "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
 
 lazy val formatSettings = Seq(
   ScalariformKeys.preferences := FormattingPreferences()
@@ -68,10 +64,21 @@ lazy val integrationTestSettings = Seq(
   concurrentRestrictions in Test := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2)))
 )
 
+// Build Settings for Protobuf (https://github.com/sbt/sbt-protobuf)
+//
+// version => The version of the protobuf library to be used. An sbt dependency is added for the project
+// includeFilter => Specify which files to compile. We need this to exclude the mesos/mesos.proto to be compiled directly
+// protobufRunProtoc => Use ProtocJar to use a bundled protoc version, so we don't rely on a preinstalled version. "-v330" defines the protoc version
+val pbSettings = ProtobufPlugin.projectSettings ++ Seq(
+  (version in ProtobufConfig) := "3.3.0",
+  (includeFilter in ProtobufConfig) := "marathon.proto",
+  (protobufRunProtoc in ProtobufConfig) := (args => com.github.os72.protocjar.Protoc.runProtoc("-v330" +: args.toArray))
+)
+
 lazy val commonSettings = Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
-  scalaVersion := "2.12.7",
+  scalaVersion := "2.13.1",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
     "-encoding", "UTF-8",
@@ -79,32 +86,26 @@ lazy val commonSettings = Seq(
     "-deprecation",
     "-feature",
     "-unchecked",
-    "-Xfuture",
     "-Xlint",
-    //FIXME: CORE-977 and MESOS-7368 are filed and need to be resolved to re-enable this
-    // "-Xfatal-warnings",
-    "-Yno-adapted-args",
+    "-Yrangepos",
     "-Ywarn-numeric-widen",
-    //"-Ywarn-dead-code", We should turn this one on soon
-    "-Ywarn-inaccessible",
-    "-Ywarn-infer-any",
-    "-Ywarn-nullary-override",
-    "-Ywarn-nullary-unit",
-    //"-Ywarn-unused", We should turn this one on soon
-    "-Ywarn-unused:-locals,imports",
-    //"-Ywarn-value-discard", We should turn this one on soon.
+    "-Ywarn-unused"
   ),
   // Don't need any linting, etc for docs, so gain a small amount of build time there.
   scalacOptions in (Compile, doc) := Seq("-encoding", "UTF-8", "-deprecation", "-feature", "-Xfuture"),
   javacOptions in Compile ++= Seq(
     "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
   ),
-  resolvers ++= Seq(
-    Resolver.JCenterRepository,
-    "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",
-    "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
-    "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven"
-  ),
+  resolvers := {
+    Seq(
+      "Mesosphere Snapshot Repo" at "https://downloads.mesosphere.com/maven-snapshot",
+      "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven",
+      "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",
+      "Apache Shapshots" at "https://repository.apache.org/content/repositories/snapshots/",
+      "Temporary Mesos releases" at "https://greg-artifacts.s3-us-west-2.amazonaws.com/", // this is needed until an Mesos 1.10 RC release is available in Maven central
+      Resolver.JCenterRepository
+    ) ++ resolvers.value
+  },
   cancelable in Global := true,
   publishTo := Some(s3resolver.value(
     "Mesosphere Public Repo (S3)",
@@ -145,63 +146,10 @@ lazy val packagingSettings = Seq(
   (topLevelDirectory in UniversalDocs) := { Some((packageName in UniversalDocs).value) },
   mappings in UniversalDocs ++= directory("docs/docs"),
 
-
-  /* Docker config (http://sbt-native-packager.readthedocs.io/en/latest/formats/docker.html)
-   */
-  dockerBaseImage := "debian:stretch-slim",
-  dockerRepository := Some("mesosphere"),
-  daemonUser in Docker := "nobody",
-  daemonGroup in Docker := "nogroup",
-  version in Docker := {
-    import sys.process._
-    ("./version docker" !!).trim
-  },
-  (defaultLinuxInstallLocation in Docker) := "/marathon",
-  maintainer := "Mesosphere Package Builder <support@mesosphere.io>",
-  dockerCommands := {
-    // kind of a work-around; we need our chown /marathon command to come after the WORKDIR command, and installation
-    // commands to preceed adding the Marthon artifact so that Docker can cache them
-    val (prefixCommands, restCommands) = dockerCommands.value.splitAt(dockerCommands.value.indexWhere(_.makeContent.startsWith("WORKDIR ")) + 1)
-
-    // Notes on the script below:
-    //
-    // 1) The `stretch-slim` does not contain `gnupg` and therefore `apt-key adv` will fail unless it's installed first
-    // 2) We are creating a dummy `systemctl` binary in order to satisfy mesos post-install script that tries to invoke
-    //   it for registering the systemd task.
-    //
-    prefixCommands ++
-      Seq(Cmd("RUN",
-        s"""apt-get update && apt-get install -my wget gnupg && \\
-          |apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv DF7D54CBE56151BF && \\
-          |apt-get update -y && \\
-          |apt-get upgrade -y && \\
-          |echo "deb http://ftp.debian.org/debian stretch-backports main" | tee -a /etc/apt/sources.list && \\
-          |echo "deb http://repos.mesosphere.com/debian stretch-testing main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
-          |echo "deb http://repos.mesosphere.com/debian stretch main" | tee -a /etc/apt/sources.list.d/mesosphere.list && \\
-          |apt-get update && \\
-          |# jdk setup
-          |mkdir -p /usr/share/man/man1 && \\
-          |apt-get install -y openjdk-8-jdk-headless openjdk-8-jre-headless ca-certificates-java && \\
-          |/var/lib/dpkg/info/ca-certificates-java.postinst configure && \\
-          |ln -svT "/usr/lib/jvm/java-8-openjdk-$$(dpkg --print-architecture)" /docker-java-home && \\
-          |# mesos setup
-          |echo exit 0 > /usr/bin/systemctl && chmod +x /usr/bin/systemctl && \\
-          |# Workaround required due to https://github.com/mesosphere/mesos-deb-packaging/issues/102
-          |# Remove after upgrading to Mesos 1.7.0
-          |apt-get install -y libcurl3-nss && \\
-          |apt-get install --no-install-recommends -y mesos=${Dependency.V.MesosDebian}.debian9 && \\
-          |rm /usr/bin/systemctl && \\
-          |apt-get clean && \\
-          |chown nobody:nogroup /marathon""".stripMargin)) ++
-      restCommands ++
-      Seq(
-        Cmd("ENV", "JAVA_HOME /docker-java-home"),
-        Cmd("RUN", s"""ln -sf /marathon/bin/marathon /marathon/bin/start && \\
-                      |chmod a+x /marathon/bin/marathon""".stripMargin))
-  })
+  maintainer := "Mesosphere Package Builder <support@mesosphere.io>")
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
-    .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
+    .enablePlugins(GitBranchPrompt)
     .settings(testSettings : _*)
     .settings(commonSettings : _*)
     .settings(formatSettings : _*)
@@ -215,9 +163,10 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
     )
 
 lazy val marathon = (project in file("."))
-  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, DockerPlugin,
-    RamlGeneratorPlugin, BasicLintingPlugin, GitVersioning)
+  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging,
+    RamlGeneratorPlugin, GitVersioning, ProtobufPlugin)
   .dependsOn(`plugin-interface`)
+  .settings(pbSettings)
   .settings(testSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
@@ -227,7 +176,7 @@ lazy val marathon = (project in file("."))
       import sys.process._
       ("./version" !!).trim
     },
-    unmanagedResourceDirectories in Compile += file("docs/docs/rest-api"),
+    unmanagedResourceDirectories in Compile += baseDirectory.value / "docs" / "docs" /  "rest-api",
     libraryDependencies ++= Dependencies.marathon,
     sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
     mainClass in Compile := Some("mesosphere.marathon.Main"),
@@ -243,12 +192,12 @@ lazy val ammonite = (project in file("./tools/repl-server"))
   .settings(formatSettings: _*)
   .settings(
     mainClass in Compile := Some("ammoniterepl.Main"),
-    libraryDependencies += "com.lihaoyi" % "ammonite-sshd" % "1.5.0" cross CrossVersion.full
+    libraryDependencies += "com.lihaoyi" % "ammonite-sshd" % "2.0.4" cross CrossVersion.full
   )
   .dependsOn(marathon)
 
 lazy val integration = (project in file("./tests/integration"))
-  .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
+  .enablePlugins(GitBranchPrompt)
   .settings(integrationTestSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
@@ -258,18 +207,20 @@ lazy val integration = (project in file("./tests/integration"))
   .dependsOn(marathon % "test->test")
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
-  .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
+  .enablePlugins(GitBranchPrompt)
   .settings(testSettings : _*)
   .settings(commonSettings: _*)
   .settings(formatSettings: _*)
-  .dependsOn(marathon % "compile->compile; test->test")
+  .dependsOn(marathon % "test->test")
+  .dependsOn(marathon)
+  .dependsOn(integration % "test->test")
   .settings(
     name := "mesos-simulation"
   )
 
 // see also, benchmark/README.md
 lazy val benchmark = (project in file("benchmark"))
-  .enablePlugins(JmhPlugin, GitBranchPrompt, BasicLintingPlugin)
+  .enablePlugins(JmhPlugin, GitBranchPrompt)
   .settings(testSettings : _*)
   .settings(commonSettings : _*)
   .settings(formatSettings: _*)

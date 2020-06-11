@@ -14,7 +14,7 @@ trait NetworkConf extends ScallopConf {
   validate (mesosBridgeName) { str =>
     import NetworkConf._
     if (NetworkNamePattern.pattern.matcher(str).matches())
-      Right(Unit)
+      Right(())
     else
       Left(NetworkNameFailedMessage)
   }

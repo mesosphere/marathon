@@ -3,7 +3,7 @@ package core.launcher
 
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation
-import mesosphere.marathon.stream.Implicits._
+import scala.jdk.CollectionConverters._
 import mesosphere.marathon.tasks.ResourceUtil
 import mesosphere.marathon.tasks.ResourceUtil.RichResource
 import mesosphere.mesos.protos.ResourceProviderID
@@ -34,7 +34,7 @@ object InstanceOp {
       offerOperations: Seq[MesosProtos.Offer.Operation]) extends InstanceOp {
 
     def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
-      ResourceUtil.consumeResourcesFromOffer(offer, taskInfo.getResourcesList.toSeq)
+      ResourceUtil.consumeResourcesFromOffer(offer, taskInfo.getResourcesList.asScala.toSeq)
     }
   }
 
@@ -47,8 +47,8 @@ object InstanceOp {
 
     override def applyToOffer(offer: MesosProtos.Offer): MesosProtos.Offer = {
       val taskResources: Seq[MesosProtos.Resource] =
-        groupInfo.getTasksList.flatMap(_.getResourcesList)(collection.breakOut)
-      val executorResources: Seq[MesosProtos.Resource] = executorInfo.getResourcesList.toSeq
+        groupInfo.getTasksList.asScala.iterator.flatMap(_.getResourcesList.asScala).toSeq
+      val executorResources: Seq[MesosProtos.Resource] = executorInfo.getResourcesList.asScala.toSeq
       ResourceUtil.consumeResourcesFromOffer(offer, taskResources ++ executorResources)
     }
   }
@@ -99,7 +99,7 @@ object InstanceOp {
             .setType(MesosProtos.Offer.Operation.Type.DESTROY)
             .setDestroy(destroyOp)
             .build()
-        }.to[Seq]
+        }.to(Seq)
       }
 
       val maybeUnreserve: Seq[MesosProtos.Offer.Operation] =
@@ -116,7 +116,7 @@ object InstanceOp {
               .setType(MesosProtos.Offer.Operation.Type.UNRESERVE)
               .setUnreserve(unreserveOp)
               .build()
-          }.to[Seq]
+          }.to(Seq)
         } else Seq.empty
 
       maybeDestroyVolumes ++ maybeUnreserve

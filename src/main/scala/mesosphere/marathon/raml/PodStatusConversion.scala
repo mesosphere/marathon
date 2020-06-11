@@ -8,7 +8,8 @@ import mesosphere.marathon.core.health.{MesosCommandHealthCheck, MesosHttpHealth
 import mesosphere.marathon.core.pod.{MesosContainer, PodDefinition}
 import mesosphere.marathon.core.task
 import mesosphere.marathon.raml.LocalVolumeConversion.localVolumeIdWrites
-import mesosphere.marathon.stream.Implicits._
+
+import scala.jdk.CollectionConverters._
 
 trait PodStatusConversion {
 
@@ -69,11 +70,11 @@ trait PodStatusConversion {
       s"pod id ${pod.id} should match spec id of the instance ${instance.instanceId.runSpecId}")
 
     val containerStatus: Seq[ContainerStatus] =
-      instance.tasksMap.values.map(taskToContainerStatus(pod, instance))(collection.breakOut)
+      instance.tasksMap.values.iterator.map(taskToContainerStatus(pod, instance)).toSeq
     val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
       instance, containerStatus)
 
-    val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasksMap.values.to[Seq])
+    val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasksMap.values.to(Seq))
     val resources: Resources = containerStatus.flatMap(_.resources).foldLeft(PodDefinition.DefaultExecutorResources) { (all, res) =>
       all.copy(cpus = all.cpus + res.cpus, mem = all.mem + res.mem, disk = all.disk + res.disk, gpus = all.gpus + res.gpus)
     }
@@ -99,27 +100,28 @@ trait PodStatusConversion {
       message = message,
       specReference = Some(s"/v2/pods${pod.id}::versions/${instance.runSpecVersion.toOffsetDateTime}"),
       lastUpdated = instance.state.since.toOffsetDateTime, // TODO(jdef) pods we don't actually track lastUpdated yet
-      lastChanged = instance.state.since.toOffsetDateTime
+      lastChanged = instance.state.since.toOffsetDateTime,
+      role = instance.role
     )
   }
 
   // TODO: Consider using a view here (since we flatMap and groupBy)
   def networkStatuses(tasks: Seq[task.Task]): Seq[NetworkStatus] = tasks.flatMap { task =>
     task.status.mesosStatus.filter(_.hasContainerStatus).fold(List.empty[NetworkStatus]) { mesosStatus =>
-      mesosStatus.getContainerStatus.getNetworkInfosList.map { networkInfo =>
+      mesosStatus.getContainerStatus.getNetworkInfosList.asScala.iterator.map { networkInfo =>
         NetworkStatus(
           name = if (networkInfo.hasName) Some(networkInfo.getName) else None,
-          addresses = networkInfo.getIpAddressesList
-            .withFilter(_.hasIpAddress).map(_.getIpAddress)(collection.breakOut)
+          addresses = networkInfo.getIpAddressesList.asScala
+            .iterator.filter(_.hasIpAddress).map(_.getIpAddress).toSeq
         )
-      }(collection.breakOut)
+      }.toList
     }
-  }.groupBy(_.name).values.map { toMerge =>
+  }.groupBy(_.name).values.iterator.map { toMerge =>
     val networkStatus: NetworkStatus = toMerge.reduceLeft { (merged, single) =>
       merged.copy(addresses = merged.addresses ++ single.addresses)
     }
     networkStatus.copy(addresses = networkStatus.addresses.distinct)
-  }(collection.breakOut)
+  }.toSeq
 
   def healthCheckEndpoint(spec: MesosContainer): Option[String] = {
     def invalidPortIndex[T](msg: String): T = throw new IllegalStateException(msg)
@@ -255,6 +257,12 @@ trait PodStatusConversion {
       PodInstanceState.Pending -> None
     } else {
       instance.state.condition match {
+        // In this rare case, an instance never ran (e.g. not enough resources) and was
+        // stopped (e.g. due to a scale down) but still exists because this is a resident
+        // app/pod with a state.condition == Scheduled/Provisioned
+        case condition.Condition.Scheduled |
+          condition.Condition.Provisioned =>
+          PodInstanceState.Terminal -> None
         case condition.Condition.Staging |
           condition.Condition.Starting =>
           PodInstanceState.Staging -> None

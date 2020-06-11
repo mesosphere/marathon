@@ -3,13 +3,13 @@ package core.task.bus
 
 import java.util.UUID
 
-import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
 import mesosphere.marathon.core.task.Task
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import org.apache.mesos.Protos.TaskStatus.Reason
-import org.apache.mesos.Protos.{TaskState, TaskStatus, TimeInfo, SlaveID}
+import org.apache.mesos.Protos.{SlaveID, TaskState, TaskStatus, TimeInfo}
 
 object MesosTaskStatusTestHelper {
   def mesosStatus(
@@ -52,7 +52,7 @@ object MesosTaskStatusTestHelper {
     }
   }
 
-  private def newInstanceId() = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
+  private def newInstanceId() = Instance.Id(AbsolutePathId("/my/app"), PrefixInstance, UUID.randomUUID())
 
   def running(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_RUNNING, taskId = taskId)
   def runningHealthy(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_RUNNING, maybeHealthy = Some(true), taskId = taskId)

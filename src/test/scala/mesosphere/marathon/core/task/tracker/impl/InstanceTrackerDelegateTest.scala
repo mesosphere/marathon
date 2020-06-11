@@ -1,18 +1,16 @@
 package mesosphere.marathon
 package core.task.tracker.impl
 
+import akka.Done
 import akka.actor.Status
 import akka.testkit.TestProbe
-import akka.Done
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.test.SettableClock
-import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.instance.TestInstanceBuilder._
 import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
+import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.Task
-import mesosphere.marathon.state.{AppDefinition, PathId}
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.PathId
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.apache.mesos.Protos.{TaskID, TaskStatus}
 
@@ -32,7 +30,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
   "InstanceTrackerDelegate" should {
     "Schedule succeeds" in {
       val f = new Fixture
-      val appId: PathId = PathId("/test")
+      val appId: AbsolutePathId = AbsolutePathId("/test")
       val scheduledInstance = Instance.scheduled(AppDefinition(appId, role = "*"))
       val stateOp = InstanceUpdateOperation.Schedule(scheduledInstance)
       val expectedStateChange = InstanceUpdateEffect.Update(scheduledInstance, None, events = Nil)
@@ -53,7 +51,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
 
     "schedule fails but the update stream keeps working" in {
       val f = new Fixture
-      val appId: PathId = PathId("/test")
+      val appId: AbsolutePathId = AbsolutePathId("/test")
       val scheduledInstance = Instance.scheduled(AppDefinition(appId, role = "*"))
       val stateOp = InstanceUpdateOperation.Schedule(scheduledInstance)
 
@@ -77,7 +75,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
 
     "Expunge succeeds" in {
       val f = new Fixture
-      val appId: PathId = PathId("/test")
+      val appId: AbsolutePathId = AbsolutePathId("/test")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
       val stateOp = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
       val expectedStateChange = InstanceUpdateEffect.Expunge(instance, events = Nil)
@@ -98,7 +96,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
 
     "Expunge fails" in {
       val f = new Fixture
-      val appId: PathId = PathId("/test")
+      val appId: AbsolutePathId = AbsolutePathId("/test")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
       val stateOp = InstanceUpdateOperation.ForceExpunge(instance.instanceId)
 
@@ -120,7 +118,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
 
     "StatusUpdate succeeds" in {
       val f = new Fixture
-      val appId: PathId = PathId("/test")
+      val appId: AbsolutePathId = AbsolutePathId("/test")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
       val task: Task = instance.appTask
       val taskIdString = task.taskId.idString
@@ -146,7 +144,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
 
     "StatusUpdate fails" in {
       val f = new Fixture
-      val appId: PathId = PathId("/test")
+      val appId: AbsolutePathId = AbsolutePathId("/test")
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance()
       val task: Task = instance.appTask
       val taskId = task.taskId
@@ -174,7 +172,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
     "Spec query fails" in {
       Given("the delegate is processing a request")
       val f = new Fixture
-      val appId: PathId = PathId("/test")
+      val appId: AbsolutePathId = AbsolutePathId("/test")
       val config = AllConf.withTestConfig(
         "--instance_tracker_update_queue_size", "1",
         "--instance_tracker_num_parallel_updates", "1")

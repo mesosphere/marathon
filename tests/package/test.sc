@@ -9,7 +9,10 @@ import ammonite.ops._
 import ammonite.ops.ImplicitWd._
 import scala.util.Try
 
-val MarathonVersion = %%("./version")(pwd / up / up).out.string.trim
+val REF = sys.env.getOrElse("REF", "HEAD")
+val SKIP_CLEANUP = sys.env.contains("SKIP_CLEANUP")
+val MarathonVersion = %%("./version", "--ref", REF)(pwd / up / up).out.string.trim
+val DOCKER_TAG = sys.env.getOrElse("DOCKER_TAG", %%(pwd/up/up/'version, "docker", "--ref", REF).out.string.trim)
 
 abstract class UnitTest extends FlatSpec with GivenWhenThen with Matchers with Eventually {
   val veryPatient = PatienceConfig(timeout = scaled(60.seconds), interval = scaled(1.second))
@@ -21,16 +24,20 @@ case class Container(containerId: String, ipAddress: String)
 trait FailureWatcher extends Suite {
   private var _resultPromise = Promise[Boolean]
   def result = _resultPromise.future
-  override def run(testName: Option[String], args: Args): Status = {
+  override def run(testName: Option[String], args: Args): Status = try {
     val status = super.run(testName, args)
     status.whenCompleted { r => _resultPromise.tryComplete(r) }
     status
+  } catch {
+    case ex: Throwable =>
+      _resultPromise.tryFailure(ex)
+      throw ex
   }
 }
 
 trait MesosTest extends UnitTest with BeforeAndAfterAll with FailureWatcher {
-  val packagePath = pwd / up / up / 'tools / 'packager
-  val PackageFile = s"^marathon[_-]${MarathonVersion}-.+\\.([a-z0-9]+)_all.(rpm|deb)$$".r
+  val packagePath = pwd / up / up / 'tools / 'packager / 'target / MarathonVersion
+  val PackageFile = s"^marathon[_-]${MarathonVersion}-.+\\.([a-z0-9]+)(?:.noarch|_all).(rpm|deb)$$".r
 
   def assertPackagesCleanlyBuilt(): Unit = {
     assert(packagePath.toIO.exists, "package path ${packagePath} does not exist! Did you build packages?")
@@ -94,7 +101,7 @@ trait MesosTest extends UnitTest with BeforeAndAfterAll with FailureWatcher {
 
   override def afterAll(): Unit = {
     try {
-      if (!sys.env.contains("SKIP_CLEANUP")) {
+      if (!SKIP_CLEANUP) {
         removeStaleDockerInstances()
       }
     } finally super.afterAll()
@@ -240,39 +247,6 @@ class Ubuntu1804Test extends SystemdSpec with Ubuntu1604Container with MesosTest
   "Marathon Ubuntu 18.04 package" should behave like systemdUnit(systemd, mesos)
 }
 
-class Ubuntu1404Test extends SystemvSpec with MesosTest {
-
-  var mesos: Container = _
-  var ubuntu: Container = _
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    mesos = startMesos()
-    ubuntu = runContainer("--name", "ubuntu1404", "-v", s"${packagePath}:/var/packages", "marathon-package-test:ubuntu1404")
-
-    System.err.println(s"Installing package...")
-    // install the package
-    execBashWithoutCapture(ubuntu.containerId, """
-      apt-get update
-      echo
-      echo "We expect this to fail, due to dependencies missing:"
-      echo
-      dpkg -i /var/packages/marathon_*.ubuntu1404_all.deb
-      apt-get install -f -y
-    """)
-    execBash(ubuntu.containerId, "[ -f /usr/share/marathon/bin/marathon ] && echo Installed || echo Not installed").trim shouldBe("Installed")
-
-    System.err.println(s"Configuring")
-    execBashWithoutCapture(ubuntu.containerId, s"""
-      echo "MARATHON_MASTER=zk://${mesos.ipAddress}:2181/mesos" >> /etc/default/marathon
-      echo "MARATHON_ZK=zk://${mesos.ipAddress}:2181/marathon" >> /etc/default/marathon
-      service marathon restart
-    """)
-  }
-
-  "Marathon Ubuntu 14.04 package" should behave like systemvService(ubuntu, mesos)
-}
-
 class Centos7Test extends SystemdSpec with MesosTest {
 
   var mesos: Container = _
@@ -345,8 +319,7 @@ EOF
 
 // Test the sbt-native-packager docker produced image
 class DockerImageTest extends MesosTest {
-  val tag = sys.env.getOrElse("DOCKER_TAG", %%(pwd/up/up/'version, "docker").out.string.trim)
-  val image = s"mesosphere/marathon:${tag}"
+  val image = s"mesosphere/marathon:${DOCKER_TAG}"
 
   var mesos: Container = _
   var dockerMarathon: Container = _
@@ -433,7 +406,6 @@ def main(args: String*): Unit = {
     new Debian9Test,
     new Centos7Test,
     new Centos6Test,
-    new Ubuntu1404Test,
     new Ubuntu1604Test,
     new Ubuntu1804Test,
     new DockerImageTest

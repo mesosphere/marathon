@@ -3,18 +3,18 @@ package core.pod
 
 import akka.NotUsed
 import akka.stream.scaladsl.Source
-import mesosphere.marathon.state.{PathId, Timestamp}
 import mesosphere.marathon.core.deployment.DeploymentPlan
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 
 import scala.concurrent.Future
 
 trait PodManager {
-  def ids(): Set[PathId]
+  def ids(): Set[AbsolutePathId]
   def create(p: PodDefinition, force: Boolean): Future[DeploymentPlan]
   def findAll(s: (PodDefinition) => Boolean): Seq[PodDefinition]
-  def find(id: PathId): Option[PodDefinition]
+  def find(id: AbsolutePathId): Option[PodDefinition]
   def update(p: PodDefinition, force: Boolean): Future[DeploymentPlan]
-  def delete(id: PathId, force: Boolean): Future[DeploymentPlan]
-  def versions(id: PathId): Source[Timestamp, NotUsed]
-  def version(id: PathId, version: Timestamp): Future[Option[PodDefinition]]
+  def delete(id: AbsolutePathId, force: Boolean): Future[DeploymentPlan]
+  def versions(id: AbsolutePathId): Source[Timestamp, NotUsed]
+  def version(id: AbsolutePathId, version: Timestamp): Future[Option[PodDefinition]]
 }

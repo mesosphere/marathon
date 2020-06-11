@@ -4,9 +4,10 @@ package core.storage.store.impl.zk
 import java.util.UUID
 
 import akka.util.ByteString
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.UnitTest
-import mesosphere.marathon.util.ZookeeperServerTest
-import mesosphere.marathon.stream.Implicits._
+import mesosphere.marathon.core.base.JvmExitsCrashStrategy
+import scala.jdk.CollectionConverters._
 import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.ZooDefs.Perms
 import org.apache.zookeeper.data.{ACL, Id}
@@ -20,13 +21,13 @@ class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
   val user = new Id("digest", DigestAuthenticationProvider.generateDigest("super:secret"))
 
   lazy val richClient: RichCuratorFramework = {
-    zkClient(namespace = Some(root))
+    RichCuratorFramework(zkClient(namespace = Some(root)), JvmExitsCrashStrategy)
   }
 
   lazy val client: CuratorFramework = richClient.client
 
   after {
-    client.getChildren.forPath("/").map { child =>
+    client.getChildren.forPath("/").asScala.map { child =>
       client.delete().deletingChildrenIfNeeded().forPath(s"/$child")
     }
   }
@@ -102,13 +103,13 @@ class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
     }
     "be able to get an ACL" in {
       val acl = new ACL(Perms.ALL, user)
-      val readAcl = ZooDefs.Ids.READ_ACL_UNSAFE.toIndexedSeq
+      val readAcl = ZooDefs.Ids.READ_ACL_UNSAFE.asScala.to(IndexedSeq)
       richClient.create("/acl", acls = acl +: readAcl).futureValue
       richClient.acl("/acl").futureValue should equal(acl +: readAcl)
     }
     "be able to set an ACL" in {
       val acls = Seq(new ACL(Perms.ALL, user))
-      richClient.create("/acl", acls = ZooDefs.Ids.OPEN_ACL_UNSAFE.toIndexedSeq).futureValue
+      richClient.create("/acl", acls = ZooDefs.Ids.OPEN_ACL_UNSAFE.asScala.to(IndexedSeq)).futureValue
       richClient.setAcl("/acl", acls).futureValue
       richClient.acl("/acl").futureValue should equal(acls)
     }

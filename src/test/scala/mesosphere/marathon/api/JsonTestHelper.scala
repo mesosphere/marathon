@@ -1,13 +1,18 @@
 package mesosphere.marathon
 package api
 
-import gnieh.diffson.playJson._
+import diffson.jsonpatch.lcsdiff._
+import diffson.jsonpatch.{Add, Copy, Operation}
+import diffson.lcs.Patience
+import diffson.playJson._
+import mesosphere.marathon.raml.RamlSerializer
 import org.scalatest.{Assertions, Matchers}
 import play.api.libs.json._
 
 import scala.collection.Map
 
 object JsonTestHelper extends Assertions with Matchers {
+  implicit val lcs = new Patience[JsValue]
   def assertSerializationRoundtripWorks[T](value: T, normalize: T => T = { t: T => t })(implicit format: Format[T]): Unit = {
     val normed = normalize(value)
     val json = Json.toJson(normed)
@@ -18,8 +23,32 @@ object JsonTestHelper extends Assertions with Matchers {
     }
   }
 
+  def assertSerializationRoundtripWithJacksonWorks[T](value: T, normalize: T => T = { t: T => t })(implicit format: Format[T]): Unit = {
+    val normed = normalize(value)
+    val json = RamlSerializer.serializer.writeValueAsString(normed)
+    val jsonObj = Json.parse(json)
+    val reread = Json.fromJson[T](jsonObj)
+    withClue(s"for json:\n${Json.prettyPrint(jsonObj)}\n") {
+      reread should be ('success)
+      normed should be (normalize(reread.get))
+    }
+  }
+
+  def assertSerializationIsSameForPlayAndJackson[T](value: T, normalize: T => T = { t: T => t })(implicit format: Format[T]): Unit = {
+    val normed = normalize(value)
+    val jsonJackson = RamlSerializer.serializer.writeValueAsString(normed)
+    val jsonPlay = Json.toJson(normed).toString()
+
+    jsonJackson should be (jsonPlay)
+  }
+
   def assertThatJsonOf[T](value: T)(implicit writes: Writes[T]): AssertThatJsonString = {
     AssertThatJsonString(Json.prettyPrint(Json.toJson(value)))
+  }
+
+  def assertThatJacksonJsonOf[T](value: T): AssertThatJsonString = {
+    val jsonJackson = RamlSerializer.serializer.writeValueAsString(value)
+    AssertThatJsonString(jsonJackson)
   }
 
   def assertThatJsonString(actual: String): AssertThatJsonString = {
@@ -41,13 +70,15 @@ object JsonTestHelper extends Assertions with Matchers {
   }
 
   case class AssertThatJsonString(actual: String) {
-    private[this] def isAddition(op: Operation): Boolean = op match {
-      case _: Add | _: Copy => true
-      case _: Operation => false
+    val actualJson = Json.parse(actual)
+    private[this] def isAddition(op: Operation[JsValue]): Boolean = op match {
+      case _: Add[_] | _: Copy[_] => true
+      case _ => false
     }
 
     def containsEverythingInJsonString(expected: String): Unit = {
-      val diff = JsonDiff.diff(expected, actual, remember = false)
+      val expectedJson = Json.parse(expected)
+      val diff = diffson.diff(expectedJson, actualJson)
       require(diff.ops.forall(isAddition), s"unexpected differences in actual json:\n$actual\nexpected:\n$expected\n${diff.ops.filter(!isAddition(_))}")
     }
 
@@ -56,7 +87,8 @@ object JsonTestHelper extends Assertions with Matchers {
     }
 
     def correspondsToJsonString(expected: String): Unit = {
-      val diff = JsonDiff.diff(expected, actual, remember = false)
+      val expectedJson = Json.parse(expected)
+      val diff = diffson.diff(expectedJson, actualJson)
       require(diff.ops.isEmpty, s"unexpected differences in actual json:\n$actual\nexpected:\n$expected\ndiff\n$diff")
     }
 

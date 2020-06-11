@@ -41,7 +41,7 @@ object ExternalVolumes {
   def validApp(): Validator[AppDefinition] = new Validator[AppDefinition] {
     override def apply(app: AppDefinition): Result = {
       val appProviders: Set[ExternalVolumeProvider] =
-        app.externalVolumes.flatMap(ev => providers.get(ev.external.provider))(collection.breakOut)
+        app.externalVolumes.iterator.flatMap(ev => providers.get(ev.external.provider)).toSet
       appProviders.map { provider =>
         validate(app)(provider.validations.app)
       }.fold(Success)(_ and _)
@@ -53,7 +53,7 @@ object ExternalVolumes {
     override def apply(app: raml.App): Result = {
       val appProviders: Set[ExternalVolumeProvider] = {
         val wantedProviders: Set[String] = app.container.fold(Set.empty[String]) {
-          _.volumes.collect{ case v: AppExternalVolume => v }.flatMap(_.external.provider)(collection.breakOut)
+          _.volumes.collect{ case v: AppExternalVolume => v }.iterator.flatMap(_.external.provider).toSet
         }
         wantedProviders.flatMap(wanted => providers.get(wanted))
       }

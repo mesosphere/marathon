@@ -11,7 +11,7 @@ import mesosphere.marathon.core.instance.{Goal, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.bus.{MesosTaskStatusTestHelper, TaskStatusUpdateTestHelper}
 import mesosphere.marathon.core.task.state.TaskConditionMapping
 import mesosphere.marathon.core.task.{Task, TaskCondition}
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp, UnreachableDisabled, UnreachableStrategy, VersionInfo}
 import mesosphere.marathon.test.SettableClock
 import org.apache.mesos
 import org.scalatest.Inside
@@ -257,7 +257,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     }
 
     "Processing a TASK_UNREACHABLE update for a staging task" in new Fixture {
-      val builder = TestInstanceBuilder.newBuilder(appId)
+      val builder = TestInstanceBuilder.newBuilderForRunSpec(app)
       val instance = builder.addTaskStaged().getInstance()
       val update = TaskStatusUpdateTestHelper.unreachable(instance)
       val stateChange = updateOpResolver.resolve(Some(instance), update.operation)
@@ -270,7 +270,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     }
 
     "Processing a TASK_UNREACHABLE update for a starting task" in new Fixture {
-      val builder = TestInstanceBuilder.newBuilder(appId)
+      val builder = TestInstanceBuilder.newBuilderForRunSpec(app)
       val instance = builder.addTaskStarting().getInstance()
       val update = TaskStatusUpdateTestHelper.unreachable(instance)
       val stateChange = updateOpResolver.resolve(Some(instance), update.operation)
@@ -284,7 +284,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     }
 
     "Processing a TASK_UNREACHABLE update for a running task" in new Fixture {
-      val builder = TestInstanceBuilder.newBuilder(appId)
+      val builder = TestInstanceBuilder.newBuilderForRunSpec(app)
       val instance = builder.addTaskRunning().getInstance()
       val update = TaskStatusUpdateTestHelper.unreachable(instance)
       val stateChange = updateOpResolver.resolve(Some(instance), update.operation)
@@ -308,7 +308,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
 
     "move instance to scheduled state when previously reserved" in new Fixture {
       val version = Timestamp(clock.instant())
-      val runSpec = AppDefinition(id = PathId("foo"), role = "*", versionInfo = VersionInfo.OnlyVersion(version))
+      val runSpec = AppDefinition(id = AbsolutePathId("/foo"), role = "*", versionInfo = VersionInfo.OnlyVersion(version))
       val stateChange = updateOpResolver.resolve(Some(reservedInstance), RescheduleReserved(reservedInstance.instanceId, runSpec))
 
       inside(stateChange) {
@@ -319,13 +319,14 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     }
   }
 
-  class Fixture {
+  class Fixture(unreachableStrategy: UnreachableStrategy = UnreachableDisabled) {
     val eventsGenerator = InstanceChangedEventsGenerator
     val clock = SettableClock.ofNow()
     val updateOpResolver = new InstanceUpdateOpResolver(clock)
 
-    lazy val appId = PathId("/app")
-    lazy val existingInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
+    lazy val appId = AbsolutePathId("/app")
+    lazy val app = AppDefinition(appId, unreachableStrategy = unreachableStrategy, role = "*")
+    lazy val existingInstance: Instance = TestInstanceBuilder.newBuilderForRunSpec(app).addTaskRunning().getInstance()
     val existingDecommissionedInstance = existingInstance.copy(state = existingInstance.state.copy(goal = Goal.Decommissioned))
     lazy val existingTask: Task = existingInstance.appTask
 

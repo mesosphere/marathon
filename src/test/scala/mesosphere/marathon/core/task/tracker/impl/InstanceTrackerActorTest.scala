@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.task.tracker.impl
 
 import akka.Done
-import akka.actor.{Status, Terminated}
+import akka.actor.{Props, Status, Terminated}
 import akka.testkit.{TestActorRef, TestProbe}
 import com.typesafe.config.ConfigFactory
 import mesosphere.AkkaUnitTest
@@ -12,7 +12,7 @@ import mesosphere.marathon.core.task.TaskCondition
 import mesosphere.marathon.core.task.bus.TaskStatusUpdateTestHelper
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.UpdateContext
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerUpdateStepProcessor}
-import mesosphere.marathon.state.{AppDefinition, PathId}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
 import mesosphere.marathon.storage.repository.InstanceView
 import mesosphere.marathon.test.{SettableClock, TestCrashStrategy}
 import org.scalatest.concurrent.Eventually
@@ -70,9 +70,9 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
       "answers with loaded data (some data)" in {
         val f = new Fixture
         Given("a task loader with one running instance")
-        val appId: PathId = PathId("/app")
+        val appId: AbsolutePathId = AbsolutePathId("/app")
         val instance = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(instance)
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(Seq(instance))
         f.instancesLoader.load() returns Future.successful(appDataMap)
 
         When("the task tracker actor gets a List query")
@@ -86,11 +86,11 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
       "correctly calculates metrics for loaded data" in {
         val f = new Fixture
         Given("an task loader with one staged and two running instances")
-        val appId: PathId = PathId("/app")
+        val appId: AbsolutePathId = AbsolutePathId("/app")
         val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
         val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
         val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo)
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(Seq(staged, runningOne, runningTwo))
         f.instancesLoader.load() returns Future.successful(appDataMap)
 
         When("the task tracker has started up")
@@ -106,11 +106,11 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
       "correctly updates metrics for staged task gets deleted" in {
         val f = new Fixture
         Given("an task loader with one staged and two running instances")
-        val appId: PathId = PathId("/app")
+        val appId: AbsolutePathId = AbsolutePathId("/app")
         val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
         val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
         val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo)
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(Seq(staged, runningOne, runningTwo))
         f.instancesLoader.load() returns Future.successful(appDataMap)
 
         When("staged task gets deleted")
@@ -129,11 +129,11 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
       "correctly updates metrics for running task gets deleted" in {
         val f = new Fixture
         Given("an task loader with one staged and two running instances")
-        val appId: PathId = PathId("/app")
+        val appId: AbsolutePathId = AbsolutePathId("/app")
         val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
         val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
         val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo)
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(Seq(staged, runningOne, runningTwo))
         f.instancesLoader.load() returns Future.successful(appDataMap)
 
         When("running task gets deleted")
@@ -155,11 +155,11 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
       "correctly updates metrics for updated tasks" in {
         val f = new Fixture
         Given("an task loader with one staged and two running instances")
-        val appId: PathId = PathId("/app")
+        val appId: AbsolutePathId = AbsolutePathId("/app")
         val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
         val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
         val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo)
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(Seq(staged, runningOne, runningTwo))
         f.instancesLoader.load() returns Future.successful(appDataMap)
 
         When("staged task transitions to running")
@@ -183,13 +183,13 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
       "correctly updates metrics for created tasks" in {
         val f = new Fixture
         Given("an task loader with one staged and two running instances")
-        val appId: PathId = PathId("/app")
+        val appId: AbsolutePathId = AbsolutePathId("/app")
         val appDef = AppDefinition(id = appId, role = "*")
         val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
         val scheduled = Instance.scheduled(appDef)
         val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
         val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo, scheduled)
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(Seq(staged, runningOne, runningTwo, scheduled))
         f.instancesLoader.load() returns Future.successful(appDataMap)
 
         When("a new staged task gets added")
@@ -212,13 +212,13 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
       "updates repository as well as internal state for instance update" in {
         Given("an task loader with one staged and two running instances")
         val f = new Fixture
-        val appId: PathId = PathId("/app")
+        val appId: AbsolutePathId = AbsolutePathId("/app")
         val appDef = AppDefinition(id = appId, role = "*")
         val staged = TestInstanceBuilder.newBuilder(appId).addTaskStaged().getInstance()
         val scheduled = Instance.scheduled(appDef)
         val runningOne = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
         val runningTwo = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo, scheduled)
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(Seq(staged, runningOne, runningTwo, scheduled))
         f.instancesLoader.load() returns Future.successful(appDataMap)
 
         val probe = TestProbe()
@@ -234,15 +234,15 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
 
         And("internal state is updated")
         probe.send(f.instanceTrackerActor, InstanceTrackerActor.List)
-        probe.expectMsg(InstanceTracker.InstancesBySpec.forInstances(staged, runningOne, runningTwo, helper.wrapped.instance))
+        probe.expectMsg(InstanceTracker.InstancesBySpec.forInstances(Seq(staged, runningOne, runningTwo, helper.wrapped.instance)))
       }
 
       "fails when repository call fails for update" in {
         val f = new Fixture
         Given("an task loader with one staged and two running instances")
-        val appId: PathId = PathId("/app")
+        val appId: AbsolutePathId = AbsolutePathId("/app")
         val scheduled = Instance.scheduled(AppDefinition(appId, role = "*"))
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(scheduled)
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(Seq(scheduled))
         f.instancesLoader.load() returns Future.successful(appDataMap)
 
         And("repository that returns error for store operation")
@@ -269,10 +269,10 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
       "updates repository as well as internal state for instance expunge" in {
         Given("a task loader with update operation received")
         val f = new Fixture
-        val appId: PathId = PathId("/app")
+        val appId: AbsolutePathId = AbsolutePathId("/app")
         val running = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
         val runningDecommissioned = running.copy(state = running.state.copy(goal = Goal.Decommissioned))
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(runningDecommissioned)
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(Seq(runningDecommissioned))
         f.instancesLoader.load() returns Future.successful(appDataMap)
 
         When("a running and decommissioned task is killed")
@@ -295,10 +295,10 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
       "fails after failure during repository call to expunge" in {
         val f = new Fixture
         Given("an task instance tracker with initial state")
-        val appId: PathId = PathId("/app")
+        val appId: AbsolutePathId = AbsolutePathId("/app")
         val running = TestInstanceBuilder.newBuilder(appId).addTaskRunning().getInstance()
         val runningDecommissioned = running.copy(state = running.state.copy(goal = Goal.Decommissioned))
-        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(runningDecommissioned)
+        val appDataMap = InstanceTracker.InstancesBySpec.forInstances(Seq(runningDecommissioned))
         f.instancesLoader.load() returns Future.successful(appDataMap)
 
         When("a task in decommissioned gets killed")
@@ -342,7 +342,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
 
       stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(Done)
 
-      lazy val instanceTrackerActor = TestActorRef[InstanceTrackerActor](InstanceTrackerActor.props(actorMetrics, instancesLoader, stepProcessor, updateResolver, repository, clock, crashStrategy))
+      lazy val instanceTrackerActor = TestActorRef[InstanceTrackerActor](Props(new InstanceTrackerActor(actorMetrics, instancesLoader, stepProcessor, updateResolver, repository, clock, crashStrategy)))
 
       def verifyNoMoreInteractions(): Unit = {
         noMoreInteractions(instancesLoader)

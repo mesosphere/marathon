@@ -5,14 +5,14 @@ import akka.Done
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
+import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.UnitTest
 import mesosphere.marathon.core.storage.zookeeper.{AsyncCuratorBuilderFactory, ZooKeeperPersistenceStore}
 import mesosphere.marathon.experimental.storage.PathTrieTest
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
-import mesosphere.marathon.state.{AppDefinition, PathId}
-import mesosphere.marathon.util.ZookeeperServerTest
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
 import org.apache.curator.framework.CuratorFramework
 import org.apache.zookeeper.KeeperException.{NoNodeException, NodeExistsException}
 
@@ -30,7 +30,7 @@ class TemplateRepositoryTest
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val ec: ExecutionContext = system.dispatcher
 
-  lazy val client: CuratorFramework = zkClient(namespace = Some("test")).client
+  lazy val client: CuratorFramework = zkClient(namespace = Some("test"))
 
   lazy val factory: AsyncCuratorBuilderFactory = AsyncCuratorBuilderFactory(client)
   lazy val metrics: Metrics = DummyMetrics
@@ -41,9 +41,9 @@ class TemplateRepositoryTest
 
   val rand = new Random()
 
-  def appDef(pathId: PathId): AppDefinition = AppDefinition(id = pathId, role = "*")
+  def appDef(pathId: AbsolutePathId): AppDefinition = AppDefinition(id = pathId, role = "*")
   def randomApp(): AppDefinition = appDef(randomPath())
-  def randomPath(prefix: String = "/test"): PathId = PathId(s"$prefix${rand.nextInt}")
+  def randomPath(prefix: String = "/test"): AbsolutePathId = AbsolutePathId(s"$prefix${rand.nextInt}")
 
   def prettyPrint(): Unit = PathTrieTest.prettyPrint(repo.trie)
 
@@ -82,7 +82,7 @@ class TemplateRepositoryTest
           "/eng/ui/jenkins/jobs/master"
         )
 
-        val apps: List[AppDefinition] = paths.map(p => appDef(PathId(p)))
+        val apps: List[AppDefinition] = paths.map(p => appDef(AbsolutePathId(p)))
         populate(apps).futureValue
 
         And("repository is initialized")

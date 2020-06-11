@@ -2,18 +2,21 @@ package mesosphere.marathon
 package api.v2.validation
 
 import com.wix.accord.Validator
-import mesosphere.marathon.api.v2.{AppNormalization, ValidationHelper}
+import mesosphere.marathon.api.v2.AppNormalization
 import mesosphere.marathon.raml._
+import mesosphere.marathon.state.ResourceRole
 import mesosphere.{UnitTest, ValidationTestLike}
 import org.scalatest.prop.TableDrivenPropertyChecks
 
 class AppValidationTest extends UnitTest with ValidationTestLike with TableDrivenPropertyChecks {
 
-  val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ValidationHelper.roleSettings)
-  val configWithDefaultNetworkName = AppNormalization.Configuration(Some("defaultNetworkName"), "mesos-bridge-name", Set(), ValidationHelper.roleSettings)
-  val basicValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName)
-  val withSecretsValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set("secrets"), () => config.defaultNetworkName)
-  val withDefaultNetworkNameValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => configWithDefaultNetworkName.defaultNetworkName)
+  val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved, true)
+  val configWithDefaultNetworkName =
+    AppNormalization.Configuration(Some("defaultNetworkName"), "mesos-bridge-name", Set(), ResourceRole.Unreserved, true)
+  val basicValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName, Set(ResourceRole.Unreserved))
+  val withSecretsValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set("secrets"), () => config.defaultNetworkName, Set(ResourceRole.Unreserved))
+  val withDefaultNetworkNameValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(Set.empty, () => configWithDefaultNetworkName.defaultNetworkName, Set(ResourceRole.Unreserved))
+  val withExternalVolValidator: Validator[App] = AppValidation.validateCanonicalAppAPI(enabledFeatures = Set(Features.EXTERNAL_VOLUMES), defaultNetworkName = () => config.defaultNetworkName, validRoles = Set.empty[String])
 
   "File based secrets validation" when {
     "file based secret is used when secret feature is not enabled" should {
@@ -163,6 +166,32 @@ class AppValidationTest extends UnitTest with ValidationTestLike with TableDrive
             hostPort = Option(0),
             networkNames = List("1"))), networkCount = 2)
         basicValidator(app) should be(aSuccess)
+      }
+    }
+
+    "external volume" should {
+
+      "consider an external volume with a complex name as valid" in {
+        val app = App(
+          id = "/foo",
+          cmd = Some("bar"),
+          container = Some(Container(
+            `type` = EngineType.Mesos,
+            docker = Some(DockerContainer(
+              image = "xyz")),
+            volumes = Seq(AppExternalVolume(
+              containerPath = "/some/path",
+              external = ExternalVolumeInfo(
+                provider = Some("dvdi"),
+                size = Some(1024),
+                name = Some("name=teamvolumename,secret_key=volume-secret-key-team,secure=true,size=5,repl=1,shared=true"),
+                options = Map("dvdi/driver" -> "pxd")
+              ),
+              mode = ReadMode.Rw
+            )))
+          ))
+
+        withExternalVolValidator(app) should be(aSuccess)
       }
     }
 
@@ -386,6 +415,35 @@ class AppValidationTest extends UnitTest with ValidationTestLike with TableDrive
           basicValidator(ucrAppWithHealthCheck) should be(aSuccess)
         }
       }
+    }
+  }
+
+  "resourceLimits validation" should {
+    val basicApp = App(id = "/foo", mem = 256, cpus = 2, cmd = Some("sleep 3600"))
+    basicValidator(basicApp) should be(aSuccess)
+
+    "succeed when resource limits are >= requested resources" in {
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(mem = Some(ResourceLimitNumber(256.0)))))) should be(aSuccess)
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(mem = Some(ResourceLimitNumber(300.0)))))) should be(aSuccess)
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(mem = Some(ResourceLimitUnlimited("unlimited")))))) should be(aSuccess)
+
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(cpus = Some(ResourceLimitNumber(2.0)))))) should be(aSuccess)
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(cpus = Some(ResourceLimitNumber(10.0)))))) should be(aSuccess)
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(cpus = Some(ResourceLimitUnlimited("unlimited")))))) should be(aSuccess)
+    }
+
+    "fail when resource limits are less than requested resources" in {
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(mem = Some(ResourceLimitNumber(200)))))) should haveViolations(
+        "/resourceLimits/mem" -> "resource limit must be greater than or equal to requested resource (256.0)")
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(cpus = Some(ResourceLimitNumber(1)))))) should haveViolations(
+        "/resourceLimits/cpus" -> "resource limit must be greater than or equal to requested resource (2.0)")
+    }
+
+    "fail when resource limits are an invalid enum value" in {
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(mem = Some(ResourceLimitUnlimited("Infinity")))))) should haveViolations(
+        "/resourceLimits/mem" -> "'Infinity' is an invalid resource limit. It must be 'unlimited' or a number")
+      basicValidator(basicApp.copy(resourceLimits = Some(ResourceLimits(cpus = Some(ResourceLimitUnlimited("Infinity")))))) should haveViolations(
+        "/resourceLimits/cpus" -> "'Infinity' is an invalid resource limit. It must be 'unlimited' or a number")
     }
   }
 }

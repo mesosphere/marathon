@@ -23,7 +23,6 @@ class LeaderProxyFilterModule extends AbstractModule {
   @Singleton
   def provideLeaderProxyFilter(
     httpConf: HttpConf,
-    deprecatedFeaturesSet: DeprecatedFeatureSet,
     electionService: ElectionService,
     leaderProxyConf: LeaderProxyConf,
     @Named(ModuleNames.HOST_PORT) myHostPort: String
@@ -85,8 +84,7 @@ class MarathonRestModule() extends AbstractModule {
     infoResource: v2.InfoResource,
     leaderResource: v2.LeaderResource,
     deploymentsResource: v2.DeploymentsResource,
-    pluginsResource: v2.PluginsResource,
-    deprecatedFeaturesSet: DeprecatedFeatureSet): RootApplication = {
+    pluginsResource: v2.PluginsResource): RootApplication = {
 
     new RootApplication(
       Seq(marathonExceptionMapper),

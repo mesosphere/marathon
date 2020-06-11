@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 ansiColor('xterm') {
-  node('JenkinsMarathonCI-Debian9-2019-06-19') {
+  node('JenkinsMarathonCI-Debian9-2020-01-14') {
 
     properties([
       parameters([
@@ -45,7 +45,9 @@ ansiColor('xterm') {
               if (params.dryRun == false)
                 targets = 'docker-tag linux-packages jar-artifact s3-package plugin-interface ' + (params.latest ? 'docker-latest' : '')
 
-              sh """sudo -E env ci/pipeline release --version $params.buildNumber --run-tests=$params.runTests $targets"""
+              sh """#!/bin/bash
+	        sudo -E env ci/pipeline release --version $params.buildNumber --run-tests=$params.runTests $targets
+	      """
             }
           }
         }

@@ -3,18 +3,18 @@ package tasks
 
 import akka.stream.scaladsl.Sink
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.update.InstanceUpdateOperation.Schedule
+import mesosphere.marathon.core.instance.update.{InstanceUpdateEffect, InstanceUpdateOperation}
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.leadership.AlwaysElectedLeadershipModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
-import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.core.task.state.{AgentInfoPlaceholder, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.tracker.{InstanceTracker, InstanceTrackerModule}
+import mesosphere.marathon.core.task.{Task, Tasks}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.PathId.StringPathId
-import mesosphere.marathon.state.{AppDefinition, PathId, Timestamp, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Timestamp, VersionInfo}
 import mesosphere.marathon.storage.repository.InstanceRepository
 import mesosphere.marathon.stream.EnrichedSink
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
@@ -31,7 +31,7 @@ import scala.concurrent.Future
 
 class InstanceTrackerImplTest extends AkkaUnitTest {
 
-  val TEST_APP_NAME = PathId("/foo")
+  val TEST_APP_NAME = AbsolutePathId("/foo")
 
   case class Fixture() {
     val metrics: Metrics = DummyMetrics
@@ -114,7 +114,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       testContains(_.hasSpecInstances(_).futureValue)
     }
 
-    def testContains(count: (InstanceTracker, PathId) => Boolean)(implicit instanceTracker: InstanceTracker): Unit = {
+    def testContains(count: (InstanceTracker, AbsolutePathId) => Boolean)(implicit instanceTracker: InstanceTracker): Unit = {
       val task1 = Instance.scheduled(AppDefinition(TEST_APP_NAME / "a", role = "*"))
       instanceTracker.process(Schedule(task1)).futureValue
 
@@ -212,9 +212,9 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     }
 
     "MultipleApps" in new Fixture {
-      val appName1 = "app1".toRootPath
-      val appName2 = "app2".toRootPath
-      val appName3 = "app3".toRootPath
+      val appName1 = "app1".toAbsolutePath
+      val appName2 = "app2".toAbsolutePath
+      val appName3 = "app3".toAbsolutePath
 
       val app1_instance1 = setupTrackerWithRunningInstance(appName1, Timestamp.now(), instanceTracker).futureValue
       val app1_instance2 = setupTrackerWithRunningInstance(appName1, Timestamp.now(), instanceTracker).futureValue
@@ -390,7 +390,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     }
   }
 
-  def makeSampleInstance(appId: PathId): Instance = {
+  def makeSampleInstance(appId: AbsolutePathId): Instance = {
     val hostName = "host"
     TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskStaged()
       .withNetworkInfo(hostName = Some(hostName), hostPorts = Seq(999))
@@ -399,7 +399,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       .getInstance()
   }
 
-  def setupTrackerWithProvisionedInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
+  def setupTrackerWithProvisionedInstance(appId: AbsolutePathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
     val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version), role = "*")
     val scheduledInstance = Instance.scheduled(app)
     // schedule
@@ -417,7 +417,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     updateEffect.instance
   }
 
-  def setupTrackerWithRunningInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
+  def setupTrackerWithRunningInstance(appId: AbsolutePathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
     val instance: Instance = await(setupTrackerWithProvisionedInstance(appId, version, instanceTracker))
     val (taskId, _) = instance.tasksMap.head
     // update to running

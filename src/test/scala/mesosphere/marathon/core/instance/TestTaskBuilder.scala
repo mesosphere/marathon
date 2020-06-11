@@ -7,9 +7,9 @@ import mesosphere.marathon.core.pod.MesosContainer
 import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.state.{NetworkInfo, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.{Task, TaskCondition}
-import mesosphere.marathon.state.{PathId, Timestamp}
-import mesosphere.marathon.test.{MarathonTestHelper, MesosProtoBuilders}
+import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import mesosphere.marathon.test.MarathonTestHelper.Implicits._
+import mesosphere.marathon.test.{MarathonTestHelper, MesosProtoBuilders}
 import org.apache.mesos
 
 case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuilder) {
@@ -196,11 +196,11 @@ case class TestTaskBuilder(task: Option[Task], instanceBuilder: TestInstanceBuil
     networkInfos: scala.collection.Seq[mesos.Protos.NetworkInfo] = Nil): TestTaskBuilder =
     copy(task = task.map(_.withNetworkInfo(hostName, hostPorts, networkInfos)))
 
-  def asHealthyTask(): TestTaskBuilder = {
+  def asHealthyTask(healthy: Boolean = true): TestTaskBuilder = {
     import mesosphere.marathon.test.MarathonTestHelper.Implicits._
     this.copy(task = task match {
       case Some(t: Task) => Some(t.withStatus(status =>
-        status.copy(mesosStatus = status.mesosStatus.map(_.toBuilder.setHealthy(true).build()))))
+        status.copy(mesosStatus = status.mesosStatus.map(_.toBuilder.setHealthy(healthy).build()))))
       case None => None
     })
   }
@@ -232,7 +232,7 @@ object TestTaskBuilder extends StrictLogging {
           networkInfo = NetworkInfo(hostName = "host.some", hostPorts = Seq(1, 2, 3), ipAddresses = Nil)))
     }
 
-    def minimalTask(appId: PathId): Task = minimalTask(Instance.Id.forRunSpec(appId), None, Timestamp.now())
+    def minimalTask(appId: AbsolutePathId): Task = minimalTask(Instance.Id.forRunSpec(appId), None, Timestamp.now())
 
     def minimalTask(instanceId: Instance.Id, container: Option[MesosContainer], now: Timestamp): Task =
       minimalTask(Task.Id(instanceId, container), now)
@@ -256,7 +256,7 @@ object TestTaskBuilder extends StrictLogging {
           networkInfo = NetworkInfo("host.some", hostPorts = Nil, ipAddresses = Nil)))
     }
 
-    def minimalLostTask(appId: PathId, taskCondition: Condition = Condition.Gone,
+    def minimalLostTask(appId: AbsolutePathId, taskCondition: Condition = Condition.Gone,
       since: Timestamp = Timestamp.now()): Task = {
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
@@ -270,7 +270,7 @@ object TestTaskBuilder extends StrictLogging {
       )
     }
 
-    def minimalUnreachableTask(appId: PathId, taskCondition: Condition = Condition.Unreachable,
+    def minimalUnreachableTask(appId: AbsolutePathId, taskCondition: Condition = Condition.Unreachable,
       since: Timestamp = Timestamp.now()): Task = {
       val lostTask = minimalLostTask(appId = appId, since = since)
       val mesosStatus = MesosTaskStatusTestHelper.unreachable(taskId = lostTask.taskId, since = since)
@@ -278,7 +278,7 @@ object TestTaskBuilder extends StrictLogging {
       lostTask.copy(status = status)
     }
 
-    def minimalRunning(appId: PathId, taskCondition: Condition = Condition.Running,
+    def minimalRunning(appId: AbsolutePathId, taskCondition: Condition = Condition.Running,
       since: Timestamp = Timestamp.now()): Task = {
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = Task.Id(instanceId)
@@ -292,7 +292,7 @@ object TestTaskBuilder extends StrictLogging {
       )
     }
 
-    def residentLaunchedTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {
+    def residentLaunchedTask(appId: AbsolutePathId, maybeTaskId: Option[Task.Id] = None): Task = {
       val now = Timestamp.now()
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = maybeTaskId.getOrElse(Task.Id(instanceId))
@@ -307,7 +307,7 @@ object TestTaskBuilder extends StrictLogging {
           networkInfo = NetworkInfoPlaceholder()))
     }
 
-    def unreachableTask(appId: PathId, maybeTaskId: Option[Task.Id] = None): Task = {
+    def unreachableTask(appId: AbsolutePathId, maybeTaskId: Option[Task.Id] = None): Task = {
       val now = Timestamp.now()
       val instanceId = Instance.Id.forRunSpec(appId)
       val taskId = maybeTaskId.getOrElse(Task.Id(instanceId))
@@ -341,7 +341,7 @@ object TestTaskBuilder extends StrictLogging {
           networkInfo = NetworkInfoPlaceholder()))
 
     def stagedTaskForApp(
-      appId: PathId = PathId("/test"), appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task = {
+      appId: AbsolutePathId = AbsolutePathId("/test"), appVersion: Timestamp = Timestamp(1), stagedAt: Long = 2): Task = {
       val instanceId = Instance.Id.forRunSpec(appId)
       stagedTask(instanceId, appVersion = appVersion, stagedAt = stagedAt)
     }
@@ -376,7 +376,7 @@ object TestTaskBuilder extends StrictLogging {
     }
 
     def runningTaskForApp(
-      appId: PathId = PathId("/test"),
+      appId: AbsolutePathId = AbsolutePathId("/test"),
       appVersion: Timestamp = Timestamp(1),
       stagedAt: Long = 2,
       startedAt: Long = 3): Task =
@@ -427,7 +427,7 @@ object TestTaskBuilder extends StrictLogging {
       }
     }
 
-    def unhealthyTask(appId: PathId): Task = unhealthyTask(Instance.Id.forRunSpec(appId))
+    def unhealthyTask(appId: AbsolutePathId): Task = unhealthyTask(Instance.Id.forRunSpec(appId))
 
     def unhealthyTask(instanceId: Instance.Id): Task = {
       import mesosphere.marathon.test.MarathonTestHelper.Implicits._

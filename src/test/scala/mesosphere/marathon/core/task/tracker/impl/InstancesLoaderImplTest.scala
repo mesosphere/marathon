@@ -6,7 +6,7 @@ import akka.stream.scaladsl.Source
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.instance.{Instance, TestInstanceBuilder}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
-import mesosphere.marathon.state.{AppDefinition, PathId, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, VersionInfo}
 import mesosphere.marathon.storage.repository.{GroupRepository, InstanceRepository, InstanceView}
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 
@@ -42,13 +42,13 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       val f = new Fixture
 
       Given("instances for multiple runSpecs")
-      val app1Id = PathId("/app1")
+      val app1Id = AbsolutePathId("/app1")
       val app1Instance1 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1Instance2 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1 = app1Instance1.runSpec
       f.groupRepository.runSpecVersion(eq(app1Id), eq(app1.version.toOffsetDateTime))(any) returns Future.successful(Some(app1))
 
-      val app2Id = PathId("/app2")
+      val app2Id = AbsolutePathId("/app2")
       val app2Instance1 = TestInstanceBuilder.newBuilder(app2Id).getInstance()
       val app2 = app2Instance1.runSpec
       f.groupRepository.runSpecVersion(eq(app2Id), eq(app2.version.toOffsetDateTime))(any) returns Future.successful(Some(app2))
@@ -59,7 +59,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
         state.Instance.fromCoreInstance(app2Instance1)
       )
 
-      f.instanceRepository.ids() returns Source(instances.map(_.instanceId)(collection.breakOut))
+      f.instanceRepository.ids() returns Source(instances.iterator.map(_.instanceId).toSeq)
       for (instance <- instances) {
         f.instanceRepository.get(instance.instanceId) returns Future.successful(Some(instance))
       }
@@ -69,7 +69,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
 
       Then("the resulting data is correct")
       // we do not need to verify the mocked calls because the only way to get the data is to perform the calls
-      val expectedData = InstanceTracker.InstancesBySpec.forInstances(app1Instance1, app1Instance2, app2Instance1)
+      val expectedData = InstanceTracker.InstancesBySpec.forInstances(Seq(app1Instance1, app1Instance2, app2Instance1))
       loaded.futureValue should equal(expectedData)
     }
 
@@ -77,14 +77,14 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       val f = new Fixture
 
       Given("instances for multiple runSpecs")
-      val app1Id = PathId("/app1")
+      val app1Id = AbsolutePathId("/app1")
       val app1Instance1 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1Instance2 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1 = app1Instance1.runSpec
       f.groupRepository.runSpecVersion(eq(app1Id), eq(app1.version.toOffsetDateTime))(any) returns Future.successful(Some(app1))
 
       And(s"no run spec for app 2 version ${f.clock.now()}")
-      val app2Id = PathId("/app2")
+      val app2Id = AbsolutePathId("/app2")
       val app2 = AppDefinition(id = app2Id, role = "*", versionInfo = VersionInfo.OnlyVersion(f.clock.now()))
       val app2Instance1 = TestInstanceBuilder.emptyInstance(instanceId = Instance.Id.forRunSpec(app2Id)).copy(runSpec = app2)
       f.groupRepository.runSpecVersion(eq(app2Id), eq(app2Instance1.runSpecVersion.toOffsetDateTime))(any) returns Future.successful(None)
@@ -100,7 +100,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
         state.Instance.fromCoreInstance(app2Instance1)
       )
 
-      f.instanceRepository.ids() returns Source(instances.map(_.instanceId)(collection.breakOut))
+      f.instanceRepository.ids() returns Source(instances.iterator.map(_.instanceId).toSeq)
       for (instance <- instances) {
         f.instanceRepository.get(instance.instanceId) returns Future.successful(Some(instance))
       }
@@ -110,7 +110,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
 
       Then("the resulting data includes an instance for app 2 with the latest run spec")
       // we do not need to verify the mocked calls because the only way to get the data is to perform the calls
-      val expectedData = InstanceTracker.InstancesBySpec.forInstances(app1Instance1, app1Instance2, app2Instance1.copy(runSpec = app2Newer))
+      val expectedData = InstanceTracker.InstancesBySpec.forInstances(Seq(app1Instance1, app1Instance2, app2Instance1.copy(runSpec = app2Newer)))
       loaded.futureValue should equal(expectedData)
     }
 
@@ -118,13 +118,13 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
       val f = new Fixture
 
       Given("instances for multiple runSpecs")
-      val app1Id = PathId("/app1")
+      val app1Id = AbsolutePathId("/app1")
       val app1Instance1 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1Instance2 = TestInstanceBuilder.newBuilder(app1Id).getInstance()
       val app1 = app1Instance1.runSpec
       f.groupRepository.runSpecVersion(eq(app1Id), eq(app1.version.toOffsetDateTime))(any) returns Future.successful(Some(app1))
 
-      val app2Id = PathId("/app2")
+      val app2Id = AbsolutePathId("/app2")
       val app2Instance1 = TestInstanceBuilder.newBuilder(app2Id).getInstance()
       f.groupRepository.runSpecVersion(eq(app2Id), eq(app2Instance1.runSpecVersion.toOffsetDateTime))(any) returns Future.successful(None)
       f.groupRepository.latestRunSpec(eq(app2Id))(any, any) returns Future.successful(None)
@@ -135,7 +135,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
         state.Instance.fromCoreInstance(app2Instance1)
       )
 
-      f.instanceRepository.ids() returns Source(instances.map(_.instanceId)(collection.breakOut))
+      f.instanceRepository.ids() returns Source(instances.iterator.map(_.instanceId).toSeq)
       for (instance <- instances) {
         f.instanceRepository.get(instance.instanceId) returns Future.successful(Some(instance))
       }
@@ -147,7 +147,7 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
 
       Then("the resulting data does not include instances from app2")
       // we do not need to verify the mocked calls because the only way to get the data is to perform the calls
-      val expectedData = InstanceTracker.InstancesBySpec.forInstances(app1Instance1, app1Instance2)
+      val expectedData = InstanceTracker.InstancesBySpec.forInstances(Seq(app1Instance1, app1Instance2))
       loaded.futureValue should equal(expectedData)
 
       And("the instance for app2 was expunged")

@@ -23,9 +23,9 @@ private[deployment] object DeploymentPlanReverter extends StrictLogging {
     */
   def revert(original: RootGroup, target: RootGroup, newVersion: Timestamp = Group.defaultVersion): RootGroup => RootGroup = {
 
-    def changesOnIds[T](originalById: Map[PathId, T], targetById: Map[PathId, T]): Seq[(Option[T], Option[T])] = {
+    def changesOnIds[T](originalById: Map[AbsolutePathId, T], targetById: Map[AbsolutePathId, T]): Seq[(Option[T], Option[T])] = {
       val ids = originalById.keys ++ targetById.keys
-      ids.map { id => originalById.get(id) -> targetById.get(id) }(collection.breakOut)
+      ids.iterator.map { id => originalById.get(id) -> targetById.get(id) }.toSeq
     }
 
     /* a sequence of tuples with the old and the new group definition (also for unchanged groups) */
@@ -55,12 +55,12 @@ private[deployment] object DeploymentPlanReverter extends StrictLogging {
     version: Timestamp,
     groupChanges: Seq[(Option[Group], Option[Group])])(rootGroup: RootGroup): RootGroup = {
 
-    def revertGroupRemoval(oldGroup: Group)(dependencies: Set[PathId]): Set[PathId] = {
+    def revertGroupRemoval(oldGroup: Group)(dependencies: Set[AbsolutePathId]): Set[AbsolutePathId] = {
       logger.debug("re-adding group {} with dependencies {}", Seq(oldGroup.id, oldGroup.dependencies): _*)
       if ((oldGroup.dependencies -- dependencies).nonEmpty) dependencies ++ oldGroup.dependencies else dependencies
     }
 
-    def revertDependencyChanges(oldGroup: Group, newGroup: Group)(dependencies: Set[PathId]): Set[PathId] = {
+    def revertDependencyChanges(oldGroup: Group, newGroup: Group)(dependencies: Set[AbsolutePathId]): Set[AbsolutePathId] = {
       val removedDependencies = oldGroup.dependencies -- newGroup.dependencies
       val addedDependencies = newGroup.dependencies -- oldGroup.dependencies
 
@@ -107,7 +107,7 @@ private[deployment] object DeploymentPlanReverter extends StrictLogging {
       case (change1, change2) =>
         // both groups are supposed to have the same path id (if there are any)
         def pathId(change: (Option[Group], Option[Group])): PathId = {
-          Seq(change._1, change._2).flatten.headOption.fold(PathId.empty)(_.id)
+          Seq(change._1, change._2).flatten.headOption.fold(PathId.root: PathId)(_.id)
         }
 
         pathId(change1) > pathId(change2)

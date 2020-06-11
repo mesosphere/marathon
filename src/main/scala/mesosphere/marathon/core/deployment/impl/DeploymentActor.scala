@@ -4,6 +4,7 @@ package core.deployment.impl
 import akka.Done
 import akka.actor._
 import akka.event.EventStream
+import akka.pattern.BackoffOpts
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Sink
 import com.typesafe.scalalogging.StrictLogging
@@ -19,6 +20,7 @@ import mesosphere.marathon.core.readiness.ReadinessCheckExecutor
 import mesosphere.marathon.core.task.termination.KillService
 import mesosphere.marathon.core.task.termination.impl.KillStreamWatcher
 import mesosphere.marathon.core.task.tracker.InstanceTracker
+import mesosphere.marathon.raml.Raml
 import mesosphere.marathon.state.{AppDefinition, RunSpec}
 import mesosphere.mesos.Constraints
 
@@ -50,13 +52,13 @@ private class DeploymentActor(
   // actors are built idempotent which should make restarting them possible.
   // Additionally a BackOffSupervisor is used to make sure child actor failures are not overloading other parts of the system
   // (like LaunchQueue and InstanceTracker) and are not filling the log with exceptions.
-  import akka.pattern.{Backoff, BackoffSupervisor}
+  import akka.pattern.BackoffSupervisor
 
   import scala.concurrent.duration._
 
   def childSupervisor(props: Props, name: String): Props = {
     BackoffSupervisor.props(
-      Backoff.onFailure(
+      BackoffOpts.onFailure(
         childProps = props,
         childName = name,
         minBackoff = 5.seconds,
@@ -108,7 +110,7 @@ private class DeploymentActor(
     if (step.actions.isEmpty) {
       Future.successful(Done)
     } else {
-      val status = DeploymentStatus(plan, step)
+      val status = DeploymentStatus(Raml.toRaml(plan), Raml.toRaml(step))
       eventBus.publish(status)
 
       val futures = step.actions.map { action =>
@@ -127,10 +129,10 @@ private class DeploymentActor(
       Future.sequence(futures).map(_ => Done).andThen {
         case Success(_) =>
           logger.debug(s"Deployment step successful: step=$step plandId=${plan.id}")
-          eventBus.publish(DeploymentStepSuccess(plan, step))
+          eventBus.publish(DeploymentStepSuccess(Raml.toRaml(plan), Raml.toRaml(step)))
         case Failure(e) =>
           logger.debug(s"Deployment step failed: step=$step plandId=${plan.id}", e)
-          eventBus.publish(DeploymentStepFailure(plan, step))
+          eventBus.publish(DeploymentStepFailure(Raml.toRaml(plan), Raml.toRaml(step)))
       }
     }
   }
