@@ -112,9 +112,11 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
 
-      launcherRef.underlyingActor.instancesToLaunch shouldBe 0
-      activeCount(launcherRef) shouldBe 1
-      inProgress(launcherRef) shouldBe false
+      eventually {
+        launcherRef.underlyingActor.instancesToLaunch shouldBe 0
+        activeCount(launcherRef) shouldBe 1
+        inProgress(launcherRef) shouldBe false
+      }
 
       Mockito.verify(instanceTracker).instancesBySpec()(any)
       verifyClean()
@@ -137,7 +139,9 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(mockedDelay.deadline).thenReturn(clock.now())
       rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, Some(mockedDelay)))
 
-      launcherRef.underlyingActor.instancesToLaunch shouldBe 3
+      eventually {
+        launcherRef.underlyingActor.instancesToLaunch shouldBe 3
+      }
       Mockito.verify(offerMatcherManager).addSubscription(mockito.Matchers.any())(mockito.Matchers.any())
       Mockito.reset(offerMatcherManager)
 
@@ -215,9 +219,11 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       launcherRef ! update
 
       Then("there are not instances left to launch")
-      activeCount(launcherRef) shouldBe 2
-      inProgress(launcherRef) shouldBe true
-      launcherRef.underlyingActor.instancesToLaunch shouldBe 0
+      eventually {
+        activeCount(launcherRef) shouldBe 2
+        inProgress(launcherRef) shouldBe true
+        launcherRef.underlyingActor.instancesToLaunch shouldBe 0
+      }
     }
 
     "not use unreachable instance when matching an offer if unreachable but not inactive" in new Fixture {
@@ -299,11 +305,10 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
       eventually {
         launcherRef.underlyingActor.instancesToLaunch should be(1)
+        assert(inProgress(launcherRef))
+        assert(activeCount(launcherRef) == 0)
+        assert(launcherRef.underlyingActor.instancesToLaunch == 1)
       }
-
-      assert(inProgress(launcherRef))
-      assert(activeCount(launcherRef) == 0)
-      assert(launcherRef.underlyingActor.instancesToLaunch == 1)
     }
 
     "decommissioned task is not counted in as active or to be launched" in new Fixture {
@@ -321,8 +326,8 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
 
       eventually {
         launcherRef.underlyingActor.instancesToLaunch should be(0)
+        assert(activeCount(launcherRef) == 0)
       }
-      assert(activeCount(launcherRef) == 0)
     }
 
     "unreachable task queue statistics return expected values" in new Fixture {
@@ -332,9 +337,11 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       val launcherRef = createLauncherRef()
       launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
 
-      launcherRef.underlyingActor.instancesToLaunch shouldBe 0
-      activeCount(launcherRef) shouldBe 1
-      inProgress(launcherRef) shouldBe (false)
+      eventually {
+        launcherRef.underlyingActor.instancesToLaunch shouldBe 0
+        activeCount(launcherRef) shouldBe 1
+        inProgress(launcherRef) shouldBe (false)
+      }
 
       verifyClean()
     }
