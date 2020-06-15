@@ -82,7 +82,7 @@ private class TaskLauncherActor(
   import TaskLauncherActor._
 
   /** instances that are in the tracker */
-  private[impl] var instanceMap: Map[Instance.Id, Instance] = _
+  private[impl] var instanceMap: Map[Instance.Id, Instance] = Map.empty
 
   private[impl] def inFlightInstanceOperations = instanceMap.values.filter(_.isProvisioned)
 
@@ -138,8 +138,8 @@ private class TaskLauncherActor(
       val readable = instanceMap.values
         .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, goal: ${i.state.goal}, version: ${i.runSpecVersion}, reservation: ${i.reservation}}")
         .mkString(", ")
-      logger.info(s"Loaded instance map: instances=$readable")
-      logger.info(s"Started instanceLaunchActor for ${runSpecId} with initial count $instancesToLaunch")
+      logger.info(s"Loaded instance map: instances=[$readable]")
+      logger.info(s"Started instanceLaunchActor for $runSpecId with initial count $instancesToLaunch")
       scheduledVersions.foreach { configRef =>
         rateLimiterActor ! RateLimiterActor.GetDelay(configRef)
       }
@@ -147,7 +147,12 @@ private class TaskLauncherActor(
       context.become(active)
       unstashAll()
 
+    case Status.Failure(cause) =>
+      // escalate this failure
+      throw new IllegalStateException("while loading tasks", cause)
+
     case other: AnyRef =>
+      logger.debug(s"Stashing $other")
       stash()
 
   }

@@ -34,7 +34,7 @@ class TaskReplaceActor(
 
   def deploymentId = status.plan.id
 
-  var state: TaskReplaceActor.State = _ // TODO: Avoid uninitialized var
+  var state: TaskReplaceActor.State = TaskReplaceActor.State(runSpec, Seq.empty)
 
   @SuppressWarnings(Array("all")) // async/await
   override def preStart(): Unit = {
@@ -83,6 +83,7 @@ class TaskReplaceActor(
       throw new IllegalStateException("while loading tasks", cause)
 
     case stashMe: AnyRef =>
+      logger.debug(s"Stashing $stashMe")
       stash()
   }
 

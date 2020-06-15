@@ -8,7 +8,7 @@
     </appender>
 
     <!-- Change to DEBUG for debugging test failures -->
-    <logger name="mesosphere.marathon" level="INFO"/>
+    <logger name="mesosphere.marathon" level="DEBUG"/>
     <logger name="mesosphere.marathon.integration.process" level="DEBUG"/>
     <logger name="akka" level="INFO"/>
     <logger name="native-zk-connector" level="WARN" />
