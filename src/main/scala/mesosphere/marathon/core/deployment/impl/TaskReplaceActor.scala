@@ -75,8 +75,8 @@ class TaskReplaceActor(
       // it might be possible, that we come here, but nothing is left to do
       checkFinished()
     case Done =>
-      context.become(initialized)
       unstashAll()
+      context.become(initialized)
 
     case Status.Failure(cause) =>
       // escalate this failure

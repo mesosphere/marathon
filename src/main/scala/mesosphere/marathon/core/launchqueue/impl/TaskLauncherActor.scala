@@ -76,7 +76,7 @@ private class TaskLauncherActor(
     rateLimiterActor: ActorRef,
     offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
     runSpecId: AbsolutePathId,
-    localRegion: () => Option[Region]) extends Actor with StrictLogging with Stash {
+    localRegion: () => Option[Region]) extends Actor with Stash with StrictLogging {
   // scalastyle:on parameter.number
 
   import TaskLauncherActor._
@@ -144,8 +144,9 @@ private class TaskLauncherActor(
         rateLimiterActor ! RateLimiterActor.GetDelay(configRef)
       }
 
-      context.become(active)
       unstashAll()
+      context.become(active)
+      logger.debug("Became active.")
 
     case Status.Failure(cause) =>
       // escalate this failure

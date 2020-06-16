@@ -246,7 +246,8 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       Mockito.when(instanceOpFactory.matchOfferRequest(captor.capture())).thenReturn(f.noMatchResult)
 
       val launcherRef = createLauncherRef(constraintApp.id)
-      launcherRef ! RateLimiter.DelayUpdate(constraintApp.configRef, None)
+      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
+      rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, None))
 
       val promise = Promise[MatchedInstanceOps]
       launcherRef ! ActorOfferMatcher.MatchOffer(offer, promise)
@@ -318,7 +319,6 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       instanceTracker.instancesBySpec()(any) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(f.provisionedInstance)))
 
       val launcherRef = createLauncherRef()
-      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
 
       // task status update
       instanceTracker.instancesBySpec()(any) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(updatedInstance)))
@@ -380,7 +380,8 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       instanceTracker.instancesBySpec()(any) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(f.scheduledInstance)))
 
       val launcherRef = createLauncherRef()
-      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
+      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
+      rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, None))
       instanceOpFactory.matchOfferRequest(m.any()) returns f.launchResult
 
       val promise = Promise[MatchedInstanceOps]
@@ -407,7 +408,8 @@ class TaskLauncherActorTest extends AkkaUnitTest with Eventually {
       instanceTracker.instancesBySpec()(any) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(f.scheduledInstance)))
 
       val launcherRef = createLauncherRef()
-      launcherRef ! RateLimiter.DelayUpdate(f.app.configRef, None)
+      rateLimiterActor.expectMsg(RateLimiterActor.GetDelay(f.app.configRef))
+      rateLimiterActor.reply(RateLimiter.DelayUpdate(f.app.configRef, None))
       Mockito.when(instanceOpFactory.matchOfferRequest(m.any())).thenReturn(f.launchResult)
 
       val promise = Promise[MatchedInstanceOps]
