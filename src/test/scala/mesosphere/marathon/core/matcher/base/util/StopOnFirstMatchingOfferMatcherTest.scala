@@ -95,11 +95,12 @@ class StopOnFirstMatchingOfferMatcherTest extends UnitTest {
       )
     }
 
-    def offerMatcher(matching: OfferMatcher.MatchedInstanceOps): OfferMatcher = new OfferMatcher {
-      override def matchOffer(offer: Offer): Future[MatchedInstanceOps] = {
-        Future.successful(matching)
+    def offerMatcher(matching: OfferMatcher.MatchedInstanceOps): OfferMatcher =
+      new OfferMatcher {
+        override def matchOffer(offer: Offer): Future[MatchedInstanceOps] = {
+          Future.successful(matching)
+        }
       }
-    }
 
     lazy val matchers: Seq[OfferMatcher] = Seq.empty
     lazy val stopOnFirstMatching = new StopOnFirstMatchingOfferMatcher(matchers: _*)

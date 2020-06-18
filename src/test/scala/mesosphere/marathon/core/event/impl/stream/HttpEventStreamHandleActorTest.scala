@@ -13,12 +13,12 @@ import mesosphere.marathon.core.event.{EventStreamAttached, EventStreamDetached,
 import scala.concurrent.duration._
 
 class HttpEventStreamHandleActorTest extends AkkaUnitTest with ImplicitSender {
-  case class Fixture(
-      handle: HttpEventStreamHandle = mock[HttpEventStreamHandle],
-      stream: EventStream = mock[EventStream]) {
-    val handleActor: TestActorRef[HttpEventStreamHandleActor] = TestActorRef(Props(
-      new HttpEventStreamHandleActor(handle, stream, 1)
-    ))
+  case class Fixture(handle: HttpEventStreamHandle = mock[HttpEventStreamHandle], stream: EventStream = mock[EventStream]) {
+    val handleActor: TestActorRef[HttpEventStreamHandleActor] = TestActorRef(
+      Props(
+        new HttpEventStreamHandleActor(handle, stream, 1)
+      )
+    )
   }
   "HttpEventStreamHandleActor" should {
     "A message send to the handle actor will be transferred to the stream handle" in new Fixture {
@@ -70,9 +70,11 @@ class HttpEventStreamHandleActorTest extends AkkaUnitTest with ImplicitSender {
       val handle = mock[HttpEventStreamHandle]
       val stream = mock[EventStream]
       handle.sendEvent(any[MarathonEvent]) answers { args => events ::= args(0).asInstanceOf[MarathonEvent].eventType; latch.await() }
-      val handleActor: TestActorRef[HttpEventStreamHandleActor] = TestActorRef(Props(
-        new HttpEventStreamHandleActor(handle, stream, 50)
-      ))
+      val handleActor: TestActorRef[HttpEventStreamHandleActor] = TestActorRef(
+        Props(
+          new HttpEventStreamHandleActor(handle, stream, 50)
+        )
+      )
       val attached = EventStreamAttached("remote")
       val detached = EventStreamDetached("remote")
       val subscribe = Subscribe("ip", "url")

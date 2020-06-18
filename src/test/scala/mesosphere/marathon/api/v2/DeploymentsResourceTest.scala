@@ -18,7 +18,8 @@ class DeploymentsResourceTest extends UnitTest with GroupCreation with JerseyTes
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
       groupManager: GroupManager = mock[GroupManager],
       config: MarathonConf = mock[MarathonConf],
-      auth: TestAuthFixture = new TestAuthFixture) {
+      auth: TestAuthFixture = new TestAuthFixture
+  ) {
     val deploymentsResource = new DeploymentsResource(service, groupManager, auth.auth, auth.auth, config)
   }
 
@@ -72,9 +73,11 @@ class DeploymentsResourceTest extends UnitTest with GroupCreation with JerseyTes
           original = createRootGroup(),
           target = targetGroup,
           id = Some("af5afbe7-bf2c-490c-af8a-00d36bcb0b07"),
-          version = Timestamp("2019-10-14T13:00:52.928Z")),
+          version = Timestamp("2019-10-14T13:00:52.928Z")
+        ),
         step = DeploymentStep(Seq.empty),
-        stepIndex = 1)
+        stepIndex = 1
+      )
       service.listRunningDeployments() returns Future.successful(Seq(deployment))
 
       When("running deployments are fetched")

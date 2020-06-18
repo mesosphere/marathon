@@ -56,8 +56,7 @@ trait ZkTestClass1Serialization {
     }
 }
 
-class ZkPersistenceStoreTest extends AkkaUnitTest
-  with PersistenceStoreTest with ZookeeperServerTest with ZkTestClass1Serialization {
+class ZkPersistenceStoreTest extends AkkaUnitTest with PersistenceStoreTest with ZookeeperServerTest with ZkTestClass1Serialization {
 
   lazy val rootClient = zkClient()
 
@@ -101,4 +100,3 @@ class ZkPersistenceStoreTest extends AkkaUnitTest
     trimmingTest(offsetDateTime)
   }
 }
-

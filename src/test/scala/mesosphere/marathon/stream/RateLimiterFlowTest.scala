@@ -28,7 +28,8 @@ class RateLimiterFlowTest extends AkkaUnitTest {
 
     Given("a stream connected to a rate limiter flow with a rate limit of 1/100ms")
     val (input, output) =
-      Source.queue[Int](16, OverflowStrategy.fail)
+      Source
+        .queue[Int](16, OverflowStrategy.fail)
         .via(RateLimiterFlow[Int](100.millis, clock))
         .toMat(Sink.queue())(Keep.both)
         .run

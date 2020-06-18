@@ -28,7 +28,8 @@ case class AsyncCuratorBuilderSettings(
     createMode: CreateMode = CreateMode.PERSISTENT,
     acl: Seq[ACL] = Seq.empty,
     nodeVersion: Int = -1,
-    compressedData: Boolean = true)
+    compressedData: Boolean = true
+)
 
 /**
   * A simple Factory that give an instance of the [[CuratorFramework]] provides
@@ -54,9 +55,10 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework, defaults: AsyncCurat
     * @return
     */
   def create(
-    mode: CreateMode = defaults.createMode,
-    acl: Seq[ACL] = defaults.acl,
-    options: Set[CreateOption] = defaults.createOptions): AsyncCreateBuilder = {
+      mode: CreateMode = defaults.createMode,
+      acl: Seq[ACL] = defaults.acl,
+      options: Set[CreateOption] = defaults.createOptions
+  ): AsyncCreateBuilder = {
 
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
@@ -194,9 +196,10 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework, defaults: AsyncCurat
     * @return
     */
   def transactionOpCreate(
-    mode: CreateMode = defaults.createMode,
-    acl: Seq[ACL] = defaults.acl,
-    compressed: Boolean = defaults.compressedData): AsyncTransactionCreateBuilder = {
+      mode: CreateMode = defaults.createMode,
+      acl: Seq[ACL] = defaults.acl,
+      compressed: Boolean = defaults.compressedData
+  ): AsyncTransactionCreateBuilder = {
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val op = async.transactionOp().create()
@@ -214,8 +217,9 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework, defaults: AsyncCurat
     * @return
     */
   def transactionOpSetData(
-    version: Int = defaults.nodeVersion,
-    compressed: Boolean = defaults.compressedData): AsyncTransactionSetDataBuilder = {
+      version: Int = defaults.nodeVersion,
+      compressed: Boolean = defaults.compressedData
+  ): AsyncTransactionSetDataBuilder = {
     assert(isStarted(), "Curator connection to ZK has been closed/not started yet")
 
     val op = async.transactionOp().setData()
@@ -255,11 +259,13 @@ class AsyncCuratorBuilderFactory(curator: CuratorFramework, defaults: AsyncCurat
 
 object AsyncCuratorBuilderFactory {
   def apply(
-    curator: CuratorFramework,
-    defaults: AsyncCuratorBuilderSettings = new AsyncCuratorBuilderSettings()): AsyncCuratorBuilderFactory = {
+      curator: CuratorFramework,
+      defaults: AsyncCuratorBuilderSettings = new AsyncCuratorBuilderSettings()
+  ): AsyncCuratorBuilderFactory = {
     assert(
       defaults.createOptions.contains(CreateOption.compress) == defaults.compressedData,
-      "Data compression should be enabled/disabled in createOptions and dataCompressed flag")
+      "Data compression should be enabled/disabled in createOptions and dataCompressed flag"
+    )
     new AsyncCuratorBuilderFactory(curator, defaults)
   }
 }

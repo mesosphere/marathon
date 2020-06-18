@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.util.control.NonFatal
 
 trait LifeCycledCloseableLike[T <: Closeable] extends Closeable {
+
   /**
     * The underlying closable object
     */
@@ -49,14 +50,16 @@ class LifeCycledCloseable[T <: Closeable](val closeable: T) extends LifeCycledCl
     closeable.close()
   }
 
-  override def beforeClose(fn: () => Unit): Unit = state.updateAndGet { state =>
-    if (state.closed)
-      throw new IllegalStateException("already closed")
-    else
-      state.copy(hooks = fn :: state.hooks)
-  }
+  override def beforeClose(fn: () => Unit): Unit =
+    state.updateAndGet { state =>
+      if (state.closed)
+        throw new IllegalStateException("already closed")
+      else
+        state.copy(hooks = fn :: state.hooks)
+    }
 
-  override def removeBeforeClose(fn: () => Unit): Unit = state.updateAndGet { state =>
-    state.copy(hooks = state.hooks.filterNot(_ == fn))
-  }
+  override def removeBeforeClose(fn: () => Unit): Unit =
+    state.updateAndGet { state =>
+      state.copy(hooks = state.hooks.filterNot(_ == fn))
+    }
 }

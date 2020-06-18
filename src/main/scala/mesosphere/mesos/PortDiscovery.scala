@@ -10,6 +10,7 @@ import mesosphere.marathon.core.pod.Network
 import scala.collection.immutable.Seq
 
 object PortDiscovery {
+
   /**
     * Generic interface to read either an EndPoint or a PortMapping. This allows us to write generically against these
     * two separate, but similar, data structures.
@@ -78,11 +79,8 @@ object PortDiscovery {
         (r.containerPort(mp), r.hostPort(mp)) match {
           case (Some(_), Some(hostPort)) =>
             r.protocols(mp).map { protocol =>
-              PortMappingSerializer.toMesosPort(
-                name = r.name(mp),
-                labels = r.labels(mp) ++ discoveryLabelsHost,
-                protocol = protocol,
-                effectivePort = hostPort)
+              PortMappingSerializer
+                .toMesosPort(name = r.name(mp), labels = r.labels(mp) ++ discoveryLabelsHost, protocol = protocol, effectivePort = hostPort)
             }
           case (Some(containerPort), None) =>
             for {
@@ -93,11 +91,13 @@ object PortDiscovery {
                 name = r.name(mp),
                 labels = r.labels(mp) ++ discoveryLabelsContainer(networkName),
                 protocol = protocol,
-                effectivePort = containerPort)
+                effectivePort = containerPort
+              )
             }
           case _ =>
             throw new IllegalStateException(
-              s"unexpected combination of network mode and endpoint ports for ${mp.getClass.getSimpleName} $mp")
+              s"unexpected combination of network mode and endpoint ports for ${mp.getClass.getSimpleName} $mp"
+            )
         }
       }.toSeq
     } else {
@@ -105,15 +105,11 @@ object PortDiscovery {
       for {
         ep <- mappings
 
-        hostPort: Int = r.hostPort(ep).getOrElse(throw new IllegalStateException(
-          "expected non-empty host port in conjunction with host networking"))
+        hostPort: Int =
+          r.hostPort(ep).getOrElse(throw new IllegalStateException("expected non-empty host port in conjunction with host networking"))
 
         protocol <- r.protocols(ep)
-      } yield PortMappingSerializer.toMesosPort(
-        name = r.name(ep),
-        labels = r.labels(ep),
-        protocol = protocol,
-        effectivePort = hostPort)
+      } yield PortMappingSerializer.toMesosPort(name = r.name(ep), labels = r.labels(ep), protocol = protocol, effectivePort = hostPort)
     }
   }
 
@@ -140,11 +136,11 @@ object PortDiscovery {
           .map {
             case (portMapping, assignment) =>
               if (portMapping.hostPort.isEmpty != assignment.isEmpty)
-                throw new IllegalStateException(
-                  s"unsupported combination of portMapping ${portMapping} and host port allocation")
+                throw new IllegalStateException(s"unsupported combination of portMapping ${portMapping} and host port allocation")
               else
                 portMapping.copy(hostPort = assignment)
-          })
+          }
+      )
     } else {
       // The port numbers are the allocated ports, we need to overwrite them the port numbers assigned to this particular task.
       generate(
@@ -153,9 +149,9 @@ object PortDiscovery {
           case (portDefinition, Some(assignment)) =>
             portDefinition.copy(port = assignment)
           case _ =>
-            throw new IllegalStateException(
-              "illegal portDefinition without host assignment")
-        })
+            throw new IllegalStateException("illegal portDefinition without host assignment")
+        }
+      )
 
     }
   val NetworkScopeHost = "host"
@@ -172,7 +168,5 @@ object PortDiscovery {
     Seq(NetworkScopeLabel -> NetworkScopeHost)
 
   private def discoveryLabelsContainer(networkName: String): Seq[(String, String)] =
-    Seq(
-      NetworkScopeLabel -> NetworkScopeContainer,
-      NetworkNameLabel -> networkName)
+    Seq(NetworkScopeLabel -> NetworkScopeContainer, NetworkNameLabel -> networkName)
 }

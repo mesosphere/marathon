@@ -33,8 +33,9 @@ class HttpEventStreamActorMetrics(metrics: Metrics) {
 class HttpEventStreamActor(
     leadershipTransitionEvents: Source[LeadershipTransition, Cancellable],
     metrics: HttpEventStreamActorMetrics,
-    handleStreamProps: HttpEventStreamHandle => Props)
-  extends Actor with StrictLogging {
+    handleStreamProps: HttpEventStreamHandle => Props
+) extends Actor
+    with StrictLogging {
   implicit val materializer = ActorMaterializer()
   //map from handle to actor
   private[impl] var streamHandleActors = Map.empty[HttpEventStreamHandle, ActorRef]
@@ -119,8 +120,10 @@ class HttpEventStreamActor(
       context.stop(actor)
       streamHandleActors -= handle
       metrics.numberOfStreamsMetric.setValue(streamHandleActors.size.toLong)
-      logger.info(s"Removed EventStream Handle as event listener: $handle. " +
-        s"Current nr of listeners: ${streamHandleActors.size}")
+      logger.info(
+        s"Removed EventStream Handle as event listener: $handle. " +
+          s"Current nr of listeners: ${streamHandleActors.size}"
+      )
     }
   }
 

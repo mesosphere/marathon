@@ -29,12 +29,14 @@ class LeaderProxyFilterTest extends AkkaUnitTest {
       forwarder: RequestForwarder = mock[RequestForwarder]("forwarder"),
       request: HttpServletRequest = mock[HttpServletRequest]("request"),
       response: HttpServletResponse = mock[HttpServletResponse]("response"),
-      chain: FilterChain = mock[FilterChain]("chain")) {
+      chain: FilterChain = mock[FilterChain]("chain")
+  ) {
     val filter = new LeaderProxyFilter(
       disableHttp = disableHttp,
       electionService = electionService,
       myHostPort = "host:10000",
-      forwarder = forwarder) {
+      forwarder = forwarder
+    ) {
       override def sleep() = {}
     }
 

@@ -54,38 +54,37 @@ class SimulatedScheduler(clock: SettableClock) extends Scheduler {
     }
   }
 
-  override def scheduleOnce(
-    delay: FiniteDuration,
-    runnable: Runnable)(implicit executor: ExecutionContext): Cancellable = synchronized {
-    val id = nextId.getAndIncrement
-    val cancellable = new ScheduledTaskCancellable(id)
-    scheduledTasks(id) = ScheduledTask(
-      id = id,
-      time = clock.instant.toEpochMilli + delay.toMillis,
-      repeat = None,
-      runnable = runnable,
-      executor = executor
-    )
-    poll()
-    cancellable
-  }
+  override def scheduleOnce(delay: FiniteDuration, runnable: Runnable)(implicit executor: ExecutionContext): Cancellable =
+    synchronized {
+      val id = nextId.getAndIncrement
+      val cancellable = new ScheduledTaskCancellable(id)
+      scheduledTasks(id) = ScheduledTask(
+        id = id,
+        time = clock.instant.toEpochMilli + delay.toMillis,
+        repeat = None,
+        runnable = runnable,
+        executor = executor
+      )
+      poll()
+      cancellable
+    }
 
-  def schedule(
-    initialDelay: FiniteDuration,
-    interval: FiniteDuration,
-    runnable: Runnable)(implicit executor: ExecutionContext): Cancellable = synchronized {
-    val id = nextId.getAndIncrement
-    val cancellable = new ScheduledTaskCancellable(id)
-    scheduledTasks(id) = ScheduledTask(
-      id = id,
-      time = clock.instant.toEpochMilli + initialDelay.toMillis,
-      repeat = Some(interval),
-      runnable = runnable,
-      executor = executor
-    )
-    poll()
-    cancellable
-  }
+  def schedule(initialDelay: FiniteDuration, interval: FiniteDuration, runnable: Runnable)(implicit
+      executor: ExecutionContext
+  ): Cancellable =
+    synchronized {
+      val id = nextId.getAndIncrement
+      val cancellable = new ScheduledTaskCancellable(id)
+      scheduledTasks(id) = ScheduledTask(
+        id = id,
+        time = clock.instant.toEpochMilli + initialDelay.toMillis,
+        repeat = Some(interval),
+        runnable = runnable,
+        executor = executor
+      )
+      poll()
+      cancellable
+    }
 
   def taskCount = synchronized { scheduledTasks.size }
 }

@@ -25,28 +25,24 @@ object TaskGroupBuilder extends StrictLogging {
 
   private val ephemeralVolumePathPrefix = "volumes/"
 
-  case class BuilderConfig(
-      acceptedResourceRoles: Set[String],
-      envVarsPrefix: Option[String],
-      mesosBridgeName: String)
+  case class BuilderConfig(acceptedResourceRoles: Set[String], envVarsPrefix: Option[String], mesosBridgeName: String)
 
   def build(
-    podDefinition: PodDefinition,
-    offer: mesos.Offer,
-    instanceId: Instance.Id,
-    taskIds: Seq[Task.Id],
-    config: BuilderConfig,
-    runSpecTaskProcessor: RunSpecTaskProcessor,
-    resourceMatch: ResourceMatcher.ResourceMatch,
-    volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch],
-    enforceRole: Boolean
+      podDefinition: PodDefinition,
+      offer: mesos.Offer,
+      instanceId: Instance.Id,
+      taskIds: Seq[Task.Id],
+      config: BuilderConfig,
+      runSpecTaskProcessor: RunSpecTaskProcessor,
+      resourceMatch: ResourceMatcher.ResourceMatch,
+      volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch],
+      enforceRole: Boolean
   ): (mesos.ExecutorInfo, mesos.TaskGroupInfo, Map[Task.Id, NetworkInfo]) = {
     val packedResources = binPackResources(podDefinition, resourceMatch.resources)
 
     val allEndpoints = podDefinition.containers.flatMap(_.endpoints)
 
-    val mesosNetworks = buildMesosNetworks(
-      podDefinition.networks, allEndpoints, resourceMatch.hostPorts, config.mesosBridgeName)
+    val mesosNetworks = buildMesosNetworks(podDefinition.networks, allEndpoints, resourceMatch.hostPorts, config.mesosBridgeName)
 
     val executorInfo = computeExecutorInfo(
       podDefinition,
@@ -55,7 +51,8 @@ object TaskGroupBuilder extends StrictLogging {
       mesosNetworks,
       volumeMatchOption,
       instanceId,
-      offer.getFrameworkId)
+      offer.getFrameworkId
+    )
 
     val endpointAllocationsPerContainer: Map[String, Seq[Endpoint]] =
       podDefinition.containers.flatMap { c =>
@@ -66,16 +63,28 @@ object TaskGroupBuilder extends StrictLogging {
       }
 
     val taskGroup = mesos.TaskGroupInfo.newBuilder.addAllTasks {
-      podDefinition.containers.zip(taskIds).map {
-        case (container, taskId) =>
-          val endpoints = endpointAllocationsPerContainer.getOrElse(container.name, Nil)
-          val portAssignments = computePortAssignments(podDefinition, endpoints)
+      podDefinition.containers
+        .zip(taskIds)
+        .map {
+          case (container, taskId) =>
+            val endpoints = endpointAllocationsPerContainer.getOrElse(container.name, Nil)
+            val portAssignments = computePortAssignments(podDefinition, endpoints)
 
-          val task = computeTaskInfo(container, podDefinition, offer, instanceId, taskId,
-            packedResources, resourceMatch.hostPorts, config, portAssignments, enforceRole)
-            .setDiscovery(taskDiscovery(podDefinition, endpoints))
-          task.build
-      }.asJava
+            val task = computeTaskInfo(
+              container,
+              podDefinition,
+              offer,
+              instanceId,
+              taskId,
+              packedResources,
+              resourceMatch.hostPorts,
+              config,
+              portAssignments,
+              enforceRole
+            ).setDiscovery(taskDiscovery(podDefinition, endpoints))
+            task.build
+        }
+        .asJava
     }
 
     // call all configured run spec customizers here (plugin)
@@ -110,7 +119,8 @@ object TaskGroupBuilder extends StrictLogging {
       cpus: List[(BigDecimal, mesos.Resource)],
       mem: List[(BigDecimal, mesos.Resource)],
       disk: List[(BigDecimal, mesos.Resource)],
-      gpus: List[(BigDecimal, mesos.Resource)])
+      gpus: List[(BigDecimal, mesos.Resource)]
+  )
 
   private class ResourceConsumer(initial: Resources) {
     private var cpus = initial.cpus
@@ -156,8 +166,9 @@ object TaskGroupBuilder extends StrictLogging {
 
     // Find a resource with exactly the given quantity among the provided resources.
     private def consume(
-      resources: List[(BigDecimal, mesos.Resource)],
-      quantity: BigDecimal): Option[(List[(BigDecimal, mesos.Resource)], mesos.Resource)] =
+        resources: List[(BigDecimal, mesos.Resource)],
+        quantity: BigDecimal
+    ): Option[(List[(BigDecimal, mesos.Resource)], mesos.Resource)] =
       if (quantity <= BigDecimal(0)) {
         None
       } else {
@@ -203,16 +214,17 @@ object TaskGroupBuilder extends StrictLogging {
     Resources(cpus = packedCpus, mem = packedMem, disk = packedDisk, gpus = packedGpus)
   }
 
-  private[this] def binPackResources(
-    quantities: List[BigDecimal],
-    resources: List[mesos.Resource]): List[(BigDecimal, mesos.Resource)] = {
+  private[this] def binPackResources(quantities: List[BigDecimal], resources: List[mesos.Resource]): List[(BigDecimal, mesos.Resource)] = {
 
     // The number of possible assignments that can be considered here,
     // is exponential to the number of quantities and the number of matched resources,
     // but since both numbers are not going to be large, it is fine not to do any
     // premature optimization at the moment.
-    def assignResourceQuantities(left: List[BigDecimal], residual: Map[Int, BigDecimal],
-      placed: Map[Int, List[BigDecimal]]): Option[Map[Int, List[BigDecimal]]] = {
+    def assignResourceQuantities(
+        left: List[BigDecimal],
+        residual: Map[Int, BigDecimal],
+        placed: Map[Int, List[BigDecimal]]
+    ): Option[Map[Int, List[BigDecimal]]] = {
       left match {
         case Nil =>
           Some(placed)
@@ -276,14 +288,13 @@ object TaskGroupBuilder extends StrictLogging {
   // Each port mapping corresponds to an item in that list.
   // We use that list to swap the dynamic ports (ports set to 0) with the matched ones.
   private[mesos] def buildMesosNetworks(
-    networks: Seq[Network],
-    endpoints: Seq[raml.Endpoint],
-    hostPorts: Seq[Option[Int]],
-    mesosBridgeName: String): Seq[mesos.NetworkInfo] = {
+      networks: Seq[Network],
+      endpoints: Seq[raml.Endpoint],
+      hostPorts: Seq[Option[Int]],
+      mesosBridgeName: String
+  ): Seq[mesos.NetworkInfo] = {
 
-    assume(
-      endpoints.size == hostPorts.size,
-      "expected total number of endpoints to match number of optional host ports")
+    assume(endpoints.size == hostPorts.size, "expected total number of endpoints to match number of optional host ports")
     val portMappings = endpoints.iterator
       .zip(hostPorts.iterator)
       .collect {
@@ -311,7 +322,7 @@ object TaskGroupBuilder extends StrictLogging {
       .flatten
       .toList
 
-    networks.collect{
+    networks.collect {
       case containerNetwork: ContainerNetwork =>
         val b = mesos.NetworkInfo.newBuilder
           .setName(containerNetwork.name)
@@ -327,22 +338,23 @@ object TaskGroupBuilder extends StrictLogging {
         val b = mesos.NetworkInfo.newBuilder
           .setName(mesosBridgeName)
           .setLabels(bridgeNetwork.labels.toMesosLabels)
-        portMappings.foreach{ case (_, pm) => b.addPortMappings(pm) }
+        portMappings.foreach { case (_, pm) => b.addPortMappings(pm) }
         b.build()
     }
   }
 
   private[this] def computeTaskInfo(
-    container: MesosContainer,
-    podDefinition: PodDefinition,
-    offer: mesos.Offer,
-    instanceId: Instance.Id,
-    taskId: Task.Id,
-    matchedResources: Resources,
-    hostPorts: Seq[Option[Int]],
-    config: BuilderConfig,
-    portAssignments: Seq[PortAssignment],
-    enforceRole: Boolean): mesos.TaskInfo.Builder = {
+      container: MesosContainer,
+      podDefinition: PodDefinition,
+      offer: mesos.Offer,
+      instanceId: Instance.Id,
+      taskId: Task.Id,
+      matchedResources: Resources,
+      hostPorts: Seq[Option[Int]],
+      config: BuilderConfig,
+      portAssignments: Seq[PortAssignment],
+      enforceRole: Boolean
+  ): mesos.TaskInfo.Builder = {
 
     val endpointVars = endpointEnvVars(podDefinition, hostPorts, config)
 
@@ -364,14 +376,7 @@ object TaskGroupBuilder extends StrictLogging {
           mesos.Label.newBuilder.setKey(key).setValue(value).build
       }.asJava))
 
-    val commandInfo = computeCommandInfo(
-      podDefinition,
-      instanceId,
-      taskId,
-      container,
-      offer.getHostname,
-      endpointVars,
-      enforceRole)
+    val commandInfo = computeCommandInfo(podDefinition, instanceId, taskId, container, offer.getHostname, endpointVars, enforceRole)
 
     builder.setCommand(commandInfo)
 
@@ -387,21 +392,21 @@ object TaskGroupBuilder extends StrictLogging {
       killGracePeriodSeconds <- lc.killGracePeriodSeconds
     } {
       val durationInfo = DurationInfo.newBuilder.setNanoseconds((killGracePeriodSeconds * SECONDS.toNanos(1)).toLong)
-      builder.setKillPolicy(
-        KillPolicy.newBuilder.setGracePeriod(durationInfo))
+      builder.setKillPolicy(KillPolicy.newBuilder.setGracePeriod(durationInfo))
     }
 
     builder
   }
 
   private[this] def computeExecutorInfo(
-    podDefinition: PodDefinition,
-    matchedResources: Resources,
-    portsMatch: PortsMatch,
-    mesosNetworks: Seq[mesos.NetworkInfo],
-    volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch],
-    instanceId: Instance.Id,
-    frameworkId: mesos.FrameworkID): mesos.ExecutorInfo.Builder = {
+      podDefinition: PodDefinition,
+      matchedResources: Resources,
+      portsMatch: PortsMatch,
+      mesosNetworks: Seq[mesos.NetworkInfo],
+      volumeMatchOption: Option[PersistentVolumeMatcher.VolumeMatch],
+      instanceId: Instance.Id,
+      frameworkId: mesos.FrameworkID
+  ): mesos.ExecutorInfo.Builder = {
     val executorID = mesos.ExecutorID.newBuilder.setValue(instanceId.executorIdString)
 
     val executorInfo = mesos.ExecutorInfo.newBuilder
@@ -441,13 +446,14 @@ object TaskGroupBuilder extends StrictLogging {
   }
 
   private[this] def computeCommandInfo(
-    podDefinition: PodDefinition,
-    instanceId: Instance.Id,
-    taskId: Task.Id,
-    container: MesosContainer,
-    host: String,
-    portsEnvVars: Map[String, String],
-    enforceRole: Boolean): mesos.CommandInfo.Builder = {
+      podDefinition: PodDefinition,
+      instanceId: Instance.Id,
+      taskId: Task.Id,
+      container: MesosContainer,
+      host: String,
+      portsEnvVars: Map[String, String],
+      enforceRole: Boolean
+  ): mesos.CommandInfo.Builder = {
     val commandInfo = mesos.CommandInfo.newBuilder
 
     // By default 'shell' is set to true which will result in an error if the user
@@ -456,7 +462,7 @@ object TaskGroupBuilder extends StrictLogging {
     // Setting it to false here will allow Entrypoint/Cmd values to work.
     commandInfo.setShell(false)
 
-    container.exec.foreach{ exec =>
+    container.exec.foreach { exec =>
       exec.command match {
         case raml.ShellCommand(shell) =>
           commandInfo.setShell(true)
@@ -488,9 +494,9 @@ object TaskGroupBuilder extends StrictLogging {
 
     commandInfo.addAllUris(uris.asJava)
 
-    val podEnvVars = podDefinition.env.collect{ case (k: String, v: EnvVarString) => k -> v.value }
+    val podEnvVars = podDefinition.env.collect { case (k: String, v: EnvVarString) => k -> v.value }
 
-    val taskEnvVars = container.env.collect{ case (k: String, v: EnvVarString) => k -> v.value }
+    val taskEnvVars = container.env.collect { case (k: String, v: EnvVarString) => k -> v.value }
 
     val hostEnvVar = Map("HOST" -> host)
 
@@ -507,30 +513,26 @@ object TaskGroupBuilder extends StrictLogging {
       hostEnvVar ++
       taskContextEnvVars ++
       labelEnvVars ++
-      portsEnvVars)
-      .map {
-        case (name, value) =>
-          mesos.Environment.Variable.newBuilder.setName(name).setValue(value).build
-      }
+      portsEnvVars).map {
+      case (name, value) =>
+        mesos.Environment.Variable.newBuilder.setName(name).setValue(value).build
+    }
 
     commandInfo.setEnvironment(mesos.Environment.newBuilder.addAllVariables(envVars.asJava))
   }
 
-  private[mesos] def computeContainerInfo(
-    podDefinition: PodDefinition,
-    container: MesosContainer): Option[mesos.ContainerInfo.Builder] = {
+  private[mesos] def computeContainerInfo(podDefinition: PodDefinition, container: MesosContainer): Option[mesos.ContainerInfo.Builder] = {
 
     val containerInfo = mesos.ContainerInfo.newBuilder.setType(mesos.ContainerInfo.Type.MESOS)
 
     container.volumeMounts.foreach { volumeMount =>
-
       // Read-write mode will be used when the "readOnly" option isn't set.
       val mode = VolumeMount.readOnlyToProto(volumeMount.readOnly)
-      val volumeName = volumeMount.volumeName.getOrElse(
-        throw new IllegalArgumentException("volumeName must be not empty"))
+      val volumeName = volumeMount.volumeName.getOrElse(throw new IllegalArgumentException("volumeName must be not empty"))
       podDefinition.volume(volumeName) match {
         case hostVolume: HostVolume =>
-          val volume = mesos.Volume.newBuilder()
+          val volume = mesos.Volume
+            .newBuilder()
             .setMode(mode)
             .setContainerPath(volumeMount.mountPath)
             // TODO(jdef) use source type HOST_PATH once it's available (this will soon be deprecated)
@@ -539,27 +541,40 @@ object TaskGroupBuilder extends StrictLogging {
           containerInfo.addVolumes(volume)
 
         case _: EphemeralVolume =>
-          val volume = mesos.Volume.newBuilder()
+          val volume = mesos.Volume
+            .newBuilder()
             .setMode(mode)
             .setContainerPath(volumeMount.mountPath)
-            .setSource(mesos.Volume.Source.newBuilder()
-              .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
-              .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
-                .setType(mesos.Volume.Source.SandboxPath.Type.PARENT)
-                .setPath(ephemeralVolumePathPrefix + volumeName)
-              ))
+            .setSource(
+              mesos.Volume.Source
+                .newBuilder()
+                .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
+                .setSandboxPath(
+                  mesos.Volume.Source.SandboxPath
+                    .newBuilder()
+                    .setType(mesos.Volume.Source.SandboxPath.Type.PARENT)
+                    .setPath(ephemeralVolumePathPrefix + volumeName)
+                )
+            )
 
           containerInfo.addVolumes(volume)
 
         case _: PersistentVolume =>
-          val volume = mesos.Volume.newBuilder()
+          val volume = mesos.Volume
+            .newBuilder()
             .setMode(mode)
             .setContainerPath(volumeMount.mountPath)
-            .setSource(mesos.Volume.Source.newBuilder()
-              .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
-              .setSandboxPath(mesos.Volume.Source.SandboxPath.newBuilder()
-                .setType(mesos.Volume.Source.SandboxPath.Type.PARENT)
-                .setPath(volumeName)))
+            .setSource(
+              mesos.Volume.Source
+                .newBuilder()
+                .setType(mesos.Volume.Source.Type.SANDBOX_PATH)
+                .setSandboxPath(
+                  mesos.Volume.Source.SandboxPath
+                    .newBuilder()
+                    .setType(mesos.Volume.Source.SandboxPath.Type.PARENT)
+                    .setPath(volumeName)
+                )
+            )
 
           containerInfo.addVolumes(volume)
 
@@ -622,9 +637,7 @@ object TaskGroupBuilder extends StrictLogging {
     * @param podDefinition is queried to determine networking mode
     * @param endpoints are assumed to have had all wildcard ports (e.g. 0) filled in with real values
     */
-  private[this] def computePortAssignments(
-    podDefinition: PodDefinition,
-    endpoints: Seq[Endpoint]): Seq[PortAssignment] = {
+  private[this] def computePortAssignments(podDefinition: PodDefinition, endpoints: Seq[Endpoint]): Seq[PortAssignment] = {
 
     val isHostModeNetworking = podDefinition.networks.contains(HostNetwork)
 
@@ -641,9 +654,7 @@ object TaskGroupBuilder extends StrictLogging {
     }
   }
 
-  private[this] def computeHealthCheck(
-    healthCheck: MesosHealthCheck,
-    portAssignments: Seq[PortAssignment]): Option[mesos.HealthCheck] = {
+  private[this] def computeHealthCheck(healthCheck: MesosHealthCheck, portAssignments: Seq[PortAssignment]): Option[mesos.HealthCheck] = {
 
     healthCheck match {
       case _: MesosCommandHealthCheck =>
@@ -658,32 +669,33 @@ object TaskGroupBuilder extends StrictLogging {
     * Form:
     * ENDPOINT_{ENDPOINT_NAME}=123
     */
-  private[this] def endpointEnvVars(
-    pod: PodDefinition,
-    hostPorts: Seq[Option[Int]],
-    builderConfig: BuilderConfig): Map[String, String] = {
+  private[this] def endpointEnvVars(pod: PodDefinition, hostPorts: Seq[Option[Int]], builderConfig: BuilderConfig): Map[String, String] = {
     val prefix = builderConfig.envVarsPrefix.getOrElse("").toUpperCase
     def escape(name: String): String = name.replaceAll("[^A-Z0-9_]+", "_").toUpperCase
 
     val hostNetwork = pod.networks.contains(HostNetwork)
     val hostPortByEndpoint = pod.containers.view.flatMap(_.endpoints).zip(hostPorts).toMap.withDefaultValue(None)
-    pod.containers.view.flatMap(_.endpoints).flatMap{ endpoint =>
-      val mayBePort = if (hostNetwork) hostPortByEndpoint(endpoint) else endpoint.containerPort
-      val envName = escape(endpoint.name.toUpperCase)
-      Seq(
-        mayBePort.map(p => s"${prefix}ENDPOINT_$envName" -> p.toString),
-        hostPortByEndpoint(endpoint).map(p => s"${prefix}EP_HOST_$envName" -> p.toString),
-        endpoint.containerPort.map(p => s"${prefix}EP_CONTAINER_$envName" -> p.toString)
-      ).flatten
-    }.toMap
+    pod.containers.view
+      .flatMap(_.endpoints)
+      .flatMap { endpoint =>
+        val mayBePort = if (hostNetwork) hostPortByEndpoint(endpoint) else endpoint.containerPort
+        val envName = escape(endpoint.name.toUpperCase)
+        Seq(
+          mayBePort.map(p => s"${prefix}ENDPOINT_$envName" -> p.toString),
+          hostPortByEndpoint(endpoint).map(p => s"${prefix}EP_HOST_$envName" -> p.toString),
+          endpoint.containerPort.map(p => s"${prefix}EP_CONTAINER_$envName" -> p.toString)
+        ).flatten
+      }
+      .toMap
   }
 
   private[this] def taskContextEnv(
-    container: MesosContainer,
-    version: Timestamp,
-    instanceId: Instance.Id,
-    taskId: Task.Id,
-    enforceRole: Boolean): Map[String, String] = {
+      container: MesosContainer,
+      version: Timestamp,
+      instanceId: Instance.Id,
+      taskId: Task.Id,
+      enforceRole: Boolean
+  ): Map[String, String] = {
     import TaskBuilderConstants._
     Map(
       MESOS_TASK_ID -> Some(taskId.idString),
@@ -697,23 +709,24 @@ object TaskGroupBuilder extends StrictLogging {
       MARATHON_CONTAINER_RESOURCE_DISK -> Some(container.resources.disk.toString),
       MARATHON_CONTAINER_RESOURCE_GPUS -> Some(container.resources.gpus.toString)
     ).collect {
-        case (key, Some(value)) => key -> value
-      }
+      case (key, Some(value)) => key -> value
+    }
   }
 
   private def taskDiscovery(pod: PodDefinition, endpoints: Seq[Endpoint]): mesos.DiscoveryInfo = {
     val ports = PortDiscovery.generateForPod(pod.networks, endpoints)
-    mesos.DiscoveryInfo.newBuilder.setPorts(mesos.Ports.newBuilder.addAllPorts(ports.asJava))
+    mesos.DiscoveryInfo.newBuilder
+      .setPorts(mesos.Ports.newBuilder.addAllPorts(ports.asJava))
       .setName(pod.id.toHostname)
       .setVisibility(org.apache.mesos.Protos.DiscoveryInfo.Visibility.FRAMEWORK)
       .build
   }
 
   def buildTaskNetworkInfos(
-    pod: PodDefinition,
-    host: String,
-    taskIDs: Seq[Task.Id],
-    hostPorts: Seq[Option[Int]]
+      pod: PodDefinition,
+      host: String,
+      taskIDs: Seq[Task.Id],
+      hostPorts: Seq[Option[Int]]
   ): Map[Task.Id, NetworkInfo] = {
 
     logger.debug(s"Building network info for tasks $taskIDs with ports $hostPorts")
@@ -725,14 +738,21 @@ object TaskGroupBuilder extends StrictLogging {
     }
 
     val totalRequestedPorts = reqPortsByCTName.size
-    require(totalRequestedPorts == hostPorts.size, s"expected that number of allocated ports ${hostPorts.size}" +
-      s" would equal the number of requested host ports $totalRequestedPorts")
+    require(
+      totalRequestedPorts == hostPorts.size,
+      s"expected that number of allocated ports ${hostPorts.size}" +
+        s" would equal the number of requested host ports $totalRequestedPorts"
+    )
 
     require(!hostPorts.flatten.contains(0), "expected that all dynamic host ports have been allocated")
 
-    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName.zip(hostPorts).iterator.collect {
-      case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
-    }.toSeq
+    val allocPortsByCTName: Seq[(String, Int)] = reqPortsByCTName
+      .zip(hostPorts)
+      .iterator
+      .collect {
+        case ((name, Some(_)), Some(allocatedPort)) => name -> allocatedPort
+      }
+      .toSeq
 
     taskIDs.iterator.map { taskId =>
       // the task level host ports are needed for fine-grained status/reporting later on

@@ -20,13 +20,15 @@ class PodStatusConversionTest extends UnitTest {
   "PodStatusConversion" should {
     "multiple tasks with multiple container networks convert to proper network status" in {
 
-      def fakeContainerNetworks(netmap: Map[String, String]): Seq[Protos.NetworkInfo] = netmap.iterator.map { entry =>
-        val (name, ip) = entry
-        Protos.NetworkInfo.newBuilder()
-          .setName(name)
-          .addIpAddresses(Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ip))
-          .build()
-      }.toSeq
+      def fakeContainerNetworks(netmap: Map[String, String]): Seq[Protos.NetworkInfo] =
+        netmap.iterator.map { entry =>
+          val (name, ip) = entry
+          Protos.NetworkInfo
+            .newBuilder()
+            .setName(name)
+            .addIpAddresses(Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ip))
+            .build()
+        }.toSeq
 
       val tasksWithNetworks: Seq[core.task.Task] = Seq(
         fakeTask(fakeContainerNetworks(Map("abc" -> "1.2.3.4", "def" -> "5.6.7.8"))),
@@ -43,11 +45,13 @@ class PodStatusConversionTest extends UnitTest {
 
     "multiple tasks with multiple host networks convert to proper network status" in {
 
-      def fakeHostNetworks(ips: Seq[String]): Seq[Protos.NetworkInfo] = ips.iterator.map { ip =>
-        Protos.NetworkInfo.newBuilder()
-          .addIpAddresses(Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ip))
-          .build()
-      }.toSeq
+      def fakeHostNetworks(ips: Seq[String]): Seq[Protos.NetworkInfo] =
+        ips.iterator.map { ip =>
+          Protos.NetworkInfo
+            .newBuilder()
+            .addIpAddresses(Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ip))
+            .build()
+        }.toSeq
 
       val tasksWithNetworks: Seq[core.task.Task] = Seq(
         fakeTask(fakeHostNetworks(Seq("1.2.3.4", "5.6.7.8"))),
@@ -73,23 +77,25 @@ class PodStatusConversionTest extends UnitTest {
       status.id should be(fixture.instance.instanceId.idString)
       status.specReference should be(Option(s"/v2/pods/foo::versions/${pod.version.toOffsetDateTime}"))
       status.agentHostname should be(Some("agent1"))
-      status.agentId should be (Some("agentId1"))
+      status.agentId should be(Some("agentId1"))
       status.status should be(PodInstanceState.Pending)
       status.resources should be(Some(PodDefinition.DefaultExecutorResources))
-      status.containers should be(Seq(
-        ContainerStatus(
-          name = "ct1",
-          status = "TASK_STAGING",
-          statusSince = fixture.since.toOffsetDateTime,
-          containerId = Some(fixture.taskIds.head.idString),
-          endpoints = Seq(
-            ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
-            ContainerEndpointStatus(name = "web")
-          ),
-          lastUpdated = fixture.since.toOffsetDateTime,
-          lastChanged = fixture.since.toOffsetDateTime
+      status.containers should be(
+        Seq(
+          ContainerStatus(
+            name = "ct1",
+            status = "TASK_STAGING",
+            statusSince = fixture.since.toOffsetDateTime,
+            containerId = Some(fixture.taskIds.head.idString),
+            endpoints = Seq(
+              ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
+              ContainerEndpointStatus(name = "web")
+            ),
+            lastUpdated = fixture.since.toOffsetDateTime,
+            lastChanged = fixture.since.toOffsetDateTime
+          )
         )
-      ))
+      )
     }
 
     "resident pod instance scheduled and Stopped before it could be launched" in {
@@ -113,24 +119,26 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
-      status.agentId should be (Some("agentId1"))
+      status.agentId should be(Some("agentId1"))
       status.status should be(PodInstanceState.Staging)
       status.resources should be(Some(pod.aggregateResources()))
-      status.containers should be(Seq(
-        ContainerStatus(
-          name = "ct1",
-          status = "TASK_STAGING",
-          statusSince = fixture.since.toOffsetDateTime,
-          containerId = Some(fixture.taskIds.head.idString),
-          endpoints = Seq(
-            ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
-            ContainerEndpointStatus(name = "web")
-          ),
-          resources = pod.container("ct1").map(_.resources),
-          lastUpdated = fixture.since.toOffsetDateTime,
-          lastChanged = fixture.since.toOffsetDateTime
+      status.containers should be(
+        Seq(
+          ContainerStatus(
+            name = "ct1",
+            status = "TASK_STAGING",
+            statusSince = fixture.since.toOffsetDateTime,
+            containerId = Some(fixture.taskIds.head.idString),
+            endpoints = Seq(
+              ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
+              ContainerEndpointStatus(name = "web")
+            ),
+            resources = pod.container("ct1").map(_.resources),
+            lastUpdated = fixture.since.toOffsetDateTime,
+            lastChanged = fixture.since.toOffsetDateTime
+          )
         )
-      ))
+      )
       status.networks should be('empty)
     }
 
@@ -144,28 +152,32 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
-      status.agentId should be (Some("agentId1"))
+      status.agentId should be(Some("agentId1"))
       status.status should be(PodInstanceState.Staging)
       status.resources should be(Some(pod.aggregateResources()))
-      status.containers should be(Seq(
-        ContainerStatus(
-          name = "ct1",
-          status = "TASK_STARTING",
-          statusSince = fixture.since.toOffsetDateTime,
-          containerId = Some(fixture.taskIds.head.idString),
-          endpoints = Seq(
-            ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
-            ContainerEndpointStatus(name = "web")
-          ),
-          resources = pod.container("ct1").map(_.resources),
-          lastUpdated = fixture.since.toOffsetDateTime,
-          lastChanged = fixture.since.toOffsetDateTime
+      status.containers should be(
+        Seq(
+          ContainerStatus(
+            name = "ct1",
+            status = "TASK_STARTING",
+            statusSince = fixture.since.toOffsetDateTime,
+            containerId = Some(fixture.taskIds.head.idString),
+            endpoints = Seq(
+              ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
+              ContainerEndpointStatus(name = "web")
+            ),
+            resources = pod.container("ct1").map(_.resources),
+            lastUpdated = fixture.since.toOffsetDateTime,
+            lastChanged = fixture.since.toOffsetDateTime
+          )
         )
-      ))
-      status.networks.toSet should be(Set(
-        NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
-        NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
-      ))
+      )
+      status.networks.toSet should be(
+        Set(
+          NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
+          NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
+        )
+      )
     }
 
     "ephemeral pod launched, received RUNNING status from Mesos, no task endpoint health info" in {
@@ -178,32 +190,41 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
-      status.agentId should be (Some("agentId1"))
+      status.agentId should be(Some("agentId1"))
       status.status should be(PodInstanceState.Degraded)
       status.resources should be(Some(pod.aggregateResources()))
-      status.containers should be(Seq(
-        ContainerStatus(
-          name = "ct1",
-          status = "TASK_RUNNING",
-          statusSince = fixture.since.toOffsetDateTime,
-          containerId = Some(fixture.taskIds.head.idString),
-          conditions = Seq(
-            StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "false",
-              Some(PodStatusConversion.HEALTH_UNREPORTED))
-          ),
-          endpoints = Seq(
-            ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
-            ContainerEndpointStatus(name = "web")
-          ),
-          resources = pod.container("ct1").map(_.resources),
-          lastUpdated = fixture.since.toOffsetDateTime,
-          lastChanged = fixture.since.toOffsetDateTime
+      status.containers should be(
+        Seq(
+          ContainerStatus(
+            name = "ct1",
+            status = "TASK_RUNNING",
+            statusSince = fixture.since.toOffsetDateTime,
+            containerId = Some(fixture.taskIds.head.idString),
+            conditions = Seq(
+              StatusCondition(
+                "healthy",
+                fixture.since.toOffsetDateTime,
+                fixture.since.toOffsetDateTime,
+                "false",
+                Some(PodStatusConversion.HEALTH_UNREPORTED)
+              )
+            ),
+            endpoints = Seq(
+              ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
+              ContainerEndpointStatus(name = "web")
+            ),
+            resources = pod.container("ct1").map(_.resources),
+            lastUpdated = fixture.since.toOffsetDateTime,
+            lastChanged = fixture.since.toOffsetDateTime
+          )
         )
-      ))
-      status.networks.toSet should be(Set(
-        NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
-        NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
-      ))
+      )
+      status.networks.toSet should be(
+        Set(
+          NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
+          NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
+        )
+      )
     }
 
     "ephemeral pod launched, received RUNNING status from Mesos, task endpoint health is failing" in {
@@ -216,32 +237,41 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
-      status.agentId should be (Some("agentId1"))
+      status.agentId should be(Some("agentId1"))
       status.status should be(PodInstanceState.Degraded)
       status.resources should be(Some(pod.aggregateResources()))
-      status.containers should be(Seq(
-        ContainerStatus(
-          name = "ct1",
-          status = "TASK_RUNNING",
-          statusSince = fixture.since.toOffsetDateTime,
-          containerId = Some(fixture.taskIds.head.idString),
-          conditions = Seq(
-            StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "false",
-              Some(PodStatusConversion.HEALTH_REPORTED))
-          ),
-          endpoints = Seq(
-            ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
-            ContainerEndpointStatus(name = "web", healthy = Some(false))
-          ),
-          resources = pod.container("ct1").map(_.resources),
-          lastUpdated = fixture.since.toOffsetDateTime,
-          lastChanged = fixture.since.toOffsetDateTime
+      status.containers should be(
+        Seq(
+          ContainerStatus(
+            name = "ct1",
+            status = "TASK_RUNNING",
+            statusSince = fixture.since.toOffsetDateTime,
+            containerId = Some(fixture.taskIds.head.idString),
+            conditions = Seq(
+              StatusCondition(
+                "healthy",
+                fixture.since.toOffsetDateTime,
+                fixture.since.toOffsetDateTime,
+                "false",
+                Some(PodStatusConversion.HEALTH_REPORTED)
+              )
+            ),
+            endpoints = Seq(
+              ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
+              ContainerEndpointStatus(name = "web", healthy = Some(false))
+            ),
+            resources = pod.container("ct1").map(_.resources),
+            lastUpdated = fixture.since.toOffsetDateTime,
+            lastChanged = fixture.since.toOffsetDateTime
+          )
         )
-      ))
-      status.networks.toSet should be(Set(
-        NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
-        NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
-      ))
+      )
+      status.networks.toSet should be(
+        Set(
+          NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
+          NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
+        )
+      )
     }
 
     "ephemeral pod launched, received RUNNING status from Mesos, task endpoint health looks great" in {
@@ -254,32 +284,41 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
-      status.agentId should be (Some("agentId1"))
+      status.agentId should be(Some("agentId1"))
       status.status should be(PodInstanceState.Stable)
       status.resources should be(Some(pod.aggregateResources()))
-      status.containers should be(Seq(
-        ContainerStatus(
-          name = "ct1",
-          status = "TASK_RUNNING",
-          statusSince = fixture.since.toOffsetDateTime,
-          containerId = Some(fixture.taskIds.head.idString),
-          conditions = Seq(
-            StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "true",
-              Some(PodStatusConversion.HEALTH_REPORTED))
-          ),
-          endpoints = Seq(
-            ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
-            ContainerEndpointStatus(name = "web", healthy = Some(true))
-          ),
-          resources = pod.container("ct1").map(_.resources),
-          lastUpdated = fixture.since.toOffsetDateTime,
-          lastChanged = fixture.since.toOffsetDateTime
+      status.containers should be(
+        Seq(
+          ContainerStatus(
+            name = "ct1",
+            status = "TASK_RUNNING",
+            statusSince = fixture.since.toOffsetDateTime,
+            containerId = Some(fixture.taskIds.head.idString),
+            conditions = Seq(
+              StatusCondition(
+                "healthy",
+                fixture.since.toOffsetDateTime,
+                fixture.since.toOffsetDateTime,
+                "true",
+                Some(PodStatusConversion.HEALTH_REPORTED)
+              )
+            ),
+            endpoints = Seq(
+              ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
+              ContainerEndpointStatus(name = "web", healthy = Some(true))
+            ),
+            resources = pod.container("ct1").map(_.resources),
+            lastUpdated = fixture.since.toOffsetDateTime,
+            lastChanged = fixture.since.toOffsetDateTime
+          )
         )
-      ))
-      status.networks.toSet should be(Set(
-        NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
-        NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
-      ))
+      )
+      status.networks.toSet should be(
+        Set(
+          NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
+          NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
+        )
+      )
     }
 
     "ephemeral pod launched, received RUNNING status from Mesos, task command-line health is missing" in {
@@ -293,32 +332,41 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
-      status.agentId should be (Some("agentId1"))
+      status.agentId should be(Some("agentId1"))
       status.status should be(PodInstanceState.Degraded)
       status.resources should be(Some(pod.aggregateResources()))
-      status.containers should be(Seq(
-        ContainerStatus(
-          name = "ct1",
-          status = "TASK_RUNNING",
-          statusSince = fixture.since.toOffsetDateTime,
-          containerId = Some(fixture.taskIds.head.idString),
-          conditions = Seq(
-            StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "false",
-              Some(PodStatusConversion.HEALTH_UNREPORTED))
-          ),
-          endpoints = Seq(
-            ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
-            ContainerEndpointStatus(name = "web")
-          ),
-          resources = pod.container("ct1").map(_.resources),
-          lastUpdated = fixture.since.toOffsetDateTime,
-          lastChanged = fixture.since.toOffsetDateTime
+      status.containers should be(
+        Seq(
+          ContainerStatus(
+            name = "ct1",
+            status = "TASK_RUNNING",
+            statusSince = fixture.since.toOffsetDateTime,
+            containerId = Some(fixture.taskIds.head.idString),
+            conditions = Seq(
+              StatusCondition(
+                "healthy",
+                fixture.since.toOffsetDateTime,
+                fixture.since.toOffsetDateTime,
+                "false",
+                Some(PodStatusConversion.HEALTH_UNREPORTED)
+              )
+            ),
+            endpoints = Seq(
+              ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
+              ContainerEndpointStatus(name = "web")
+            ),
+            resources = pod.container("ct1").map(_.resources),
+            lastUpdated = fixture.since.toOffsetDateTime,
+            lastChanged = fixture.since.toOffsetDateTime
+          )
         )
-      ))
-      status.networks.toSet should be(Set(
-        NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
-        NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
-      ))
+      )
+      status.networks.toSet should be(
+        Set(
+          NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
+          NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
+        )
+      )
     }
 
     "ephemeral pod launched, received RUNNING status from Mesos, task command-line health is failing" in {
@@ -332,33 +380,42 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
-      status.agentId should be (Some("agentId1"))
+      status.agentId should be(Some("agentId1"))
       status.status should be(PodInstanceState.Degraded)
       status.resources should be(Some(pod.aggregateResources()))
       status.role should be("test")
-      status.containers should be(Seq(
-        ContainerStatus(
-          name = "ct1",
-          status = "TASK_RUNNING",
-          statusSince = fixture.since.toOffsetDateTime,
-          containerId = Some(fixture.taskIds.head.idString),
-          conditions = Seq(
-            StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "false",
-              Some(PodStatusConversion.HEALTH_REPORTED))
-          ),
-          endpoints = Seq(
-            ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
-            ContainerEndpointStatus(name = "web")
-          ),
-          resources = pod.container("ct1").map(_.resources),
-          lastUpdated = fixture.since.toOffsetDateTime,
-          lastChanged = fixture.since.toOffsetDateTime
+      status.containers should be(
+        Seq(
+          ContainerStatus(
+            name = "ct1",
+            status = "TASK_RUNNING",
+            statusSince = fixture.since.toOffsetDateTime,
+            containerId = Some(fixture.taskIds.head.idString),
+            conditions = Seq(
+              StatusCondition(
+                "healthy",
+                fixture.since.toOffsetDateTime,
+                fixture.since.toOffsetDateTime,
+                "false",
+                Some(PodStatusConversion.HEALTH_REPORTED)
+              )
+            ),
+            endpoints = Seq(
+              ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
+              ContainerEndpointStatus(name = "web")
+            ),
+            resources = pod.container("ct1").map(_.resources),
+            lastUpdated = fixture.since.toOffsetDateTime,
+            lastChanged = fixture.since.toOffsetDateTime
+          )
         )
-      ))
-      status.networks.toSet should be(Set(
-        NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
-        NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
-      ))
+      )
+      status.networks.toSet should be(
+        Set(
+          NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
+          NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
+        )
+      )
     }
 
     "ephemeral pod launched, received RUNNING status from Mesos, task command-line health is passing" in {
@@ -372,37 +429,45 @@ class PodStatusConversionTest extends UnitTest {
       val status = PodStatusConversion.podInstanceStatusRamlWriter((pod, fixture.instance))
       status.id should be(fixture.instance.instanceId.idString)
       status.agentHostname should be(Some("agent1"))
-      status.agentId should be (Some("agentId1"))
+      status.agentId should be(Some("agentId1"))
       status.status should be(PodInstanceState.Stable)
       status.resources should be(Some(pod.aggregateResources()))
-      status.containers should be(Seq(
-        ContainerStatus(
-          name = "ct1",
-          status = "TASK_RUNNING",
-          statusSince = fixture.since.toOffsetDateTime,
-          containerId = Some(fixture.taskIds.head.idString),
-          conditions = Seq(
-            StatusCondition("healthy", fixture.since.toOffsetDateTime, fixture.since.toOffsetDateTime, "true",
-              Some(PodStatusConversion.HEALTH_REPORTED))
-          ),
-          endpoints = Seq(
-            ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
-            ContainerEndpointStatus(name = "web")
-          ),
-          resources = pod.container("ct1").map(_.resources),
-          lastUpdated = fixture.since.toOffsetDateTime,
-          lastChanged = fixture.since.toOffsetDateTime
+      status.containers should be(
+        Seq(
+          ContainerStatus(
+            name = "ct1",
+            status = "TASK_RUNNING",
+            statusSince = fixture.since.toOffsetDateTime,
+            containerId = Some(fixture.taskIds.head.idString),
+            conditions = Seq(
+              StatusCondition(
+                "healthy",
+                fixture.since.toOffsetDateTime,
+                fixture.since.toOffsetDateTime,
+                "true",
+                Some(PodStatusConversion.HEALTH_REPORTED)
+              )
+            ),
+            endpoints = Seq(
+              ContainerEndpointStatus(name = "admin", allocatedHostPort = Some(1001)),
+              ContainerEndpointStatus(name = "web")
+            ),
+            resources = pod.container("ct1").map(_.resources),
+            lastUpdated = fixture.since.toOffsetDateTime,
+            lastChanged = fixture.since.toOffsetDateTime
+          )
         )
-      ))
-      status.networks.toSet should be(Set(
-        NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
-        NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
-      ))
+      )
+      status.networks.toSet should be(
+        Set(
+          NetworkStatus(Some("dcos"), Seq("1.2.3.4")),
+          NetworkStatus(Some("bigdog"), Seq("2.3.4.5"))
+        )
+      )
     }
 
     "a stateful pod with one container and one persistent volume" in {
-      val localVolumeId = core.instance.LocalVolumeId(
-        AbsolutePathId("/persistent"), "volume", "5425cbaa-8fd3-45f0-afa4-74ef4fcc594b")
+      val localVolumeId = core.instance.LocalVolumeId(AbsolutePathId("/persistent"), "volume", "5425cbaa-8fd3-45f0-afa4-74ef4fcc594b")
       val reservation = core.instance.Reservation(
         volumeIds = Seq(localVolumeId),
         state = core.instance.Reservation.State.New(timeout = None),
@@ -411,14 +476,23 @@ class PodStatusConversionTest extends UnitTest {
 
       implicit val clock = new SettableClock()
       val fixture = fakeInstance(
-        podWithPersistentVolume, core.condition.Condition.Running, core.condition.Condition.Running,
-        maybeReservation = Some(reservation))
+        podWithPersistentVolume,
+        core.condition.Condition.Running,
+        core.condition.Condition.Running,
+        maybeReservation = Some(reservation)
+      )
 
       val status = PodStatusConversion.podInstanceStatusRamlWriter((podWithPersistentVolume, fixture.instance))
-      status.localVolumes should be(Seq(
-        LocalVolumeId(
-          "/persistent", "volume", "5425cbaa-8fd3-45f0-afa4-74ef4fcc594b",
-          "persistent#volume#5425cbaa-8fd3-45f0-afa4-74ef4fcc594b")))
+      status.localVolumes should be(
+        Seq(
+          LocalVolumeId(
+            "/persistent",
+            "volume",
+            "5425cbaa-8fd3-45f0-afa4-74ef4fcc594b",
+            "persistent#volume#5425cbaa-8fd3-45f0-afa4-74ef4fcc594b"
+          )
+        )
+      )
     }
 
   }
@@ -456,17 +530,18 @@ object PodStatusConversionTest {
         name = "ct1",
         resources = containerResources,
         image = Some(Image(kind = ImageType.Docker, id = "busybox")),
-        volumeMounts = Seq(state.VolumeMount(Some("data"), "mountPath")))),
-    volumes = Seq(
-      state.PersistentVolume(
-        name = Some("volume"),
-        persistent = state.PersistentVolumeInfo(10))))
+        volumeMounts = Seq(state.VolumeMount(Some("data"), "mountPath"))
+      )
+    ),
+    volumes = Seq(state.PersistentVolume(name = Some("volume"), persistent = state.PersistentVolumeInfo(10)))
+  )
 
   case class InstanceFixture(
       since: Timestamp,
       agentInfo: core.instance.Instance.AgentInfo,
       taskIds: Seq[core.task.Task.Id],
-      instance: core.instance.Instance)
+      instance: core.instance.Instance
+  )
 
   def provisionedInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
     fakeInstance(pod, core.condition.Condition.Provisioned, core.condition.Condition.Provisioned)
@@ -475,24 +550,33 @@ object PodStatusConversionTest {
     fakeInstance(pod, core.condition.Condition.Staging, core.condition.Condition.Staging, Some(Protos.TaskState.TASK_STAGING))
 
   def startingInstance(pod: PodDefinition)(implicit clock: SettableClock): InstanceFixture =
-    fakeInstance(pod, core.condition.Condition.Starting, core.condition.Condition.Starting, Some(Protos.TaskState.TASK_STARTING),
-      Some(Map("dcos" -> "1.2.3.4", "bigdog" -> "2.3.4.5")))
+    fakeInstance(
+      pod,
+      core.condition.Condition.Starting,
+      core.condition.Condition.Starting,
+      Some(Protos.TaskState.TASK_STARTING),
+      Some(Map("dcos" -> "1.2.3.4", "bigdog" -> "2.3.4.5"))
+    )
 
-  def runningInstance(
-    pod: PodDefinition,
-    maybeHealthy: Option[Boolean] = None)(implicit clock: SettableClock): InstanceFixture =
-
-    fakeInstance(pod, core.condition.Condition.Running, core.condition.Condition.Running, Some(Protos.TaskState.TASK_RUNNING),
-      Some(Map("dcos" -> "1.2.3.4", "bigdog" -> "2.3.4.5")), maybeHealthy)
+  def runningInstance(pod: PodDefinition, maybeHealthy: Option[Boolean] = None)(implicit clock: SettableClock): InstanceFixture =
+    fakeInstance(
+      pod,
+      core.condition.Condition.Running,
+      core.condition.Condition.Running,
+      Some(Protos.TaskState.TASK_RUNNING),
+      Some(Map("dcos" -> "1.2.3.4", "bigdog" -> "2.3.4.5")),
+      maybeHealthy
+    )
 
   def fakeInstance(
-    pod: PodDefinition,
-    condition: core.condition.Condition,
-    taskStatus: core.condition.Condition,
-    maybeTaskState: Option[Protos.TaskState] = None,
-    maybeNetworks: Option[Map[String, String]] = None,
-    maybeHealthy: Option[Boolean] = None,
-    maybeReservation: Option[Reservation] = None)(implicit clock: SettableClock): InstanceFixture = {
+      pod: PodDefinition,
+      condition: core.condition.Condition,
+      taskStatus: core.condition.Condition,
+      maybeTaskState: Option[Protos.TaskState] = None,
+      maybeNetworks: Option[Map[String, String]] = None,
+      maybeHealthy: Option[Boolean] = None,
+      maybeReservation: Option[Reservation] = None
+  )(implicit clock: SettableClock): InstanceFixture = {
 
     val since = clock.now()
     val agentInfo = core.instance.Instance.AgentInfo("agent1", Some("agentId1"), None, None, Seq.empty)
@@ -502,19 +586,29 @@ object PodStatusConversionTest {
     }
 
     val mesosStatus = maybeTaskState.map { taskState =>
-      val statusProto = Protos.TaskStatus.newBuilder()
+      val statusProto = Protos.TaskStatus
+        .newBuilder()
         .setState(taskState)
         .setTaskId(taskIds.head.mesosTaskId)
 
       maybeNetworks.foreach { networks =>
-        statusProto.setContainerStatus(Protos.ContainerStatus.newBuilder()
-          .addAllNetworkInfos(networks.map { entry =>
-            val (networkName, ipAddress) = entry
-            Protos.NetworkInfo.newBuilder().addIpAddresses(
-              Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ipAddress)
-            ).setName(networkName).build()
-          }.asJava).build()
-        ).build()
+        statusProto
+          .setContainerStatus(
+            Protos.ContainerStatus
+              .newBuilder()
+              .addAllNetworkInfos(networks.map { entry =>
+                val (networkName, ipAddress) = entry
+                Protos.NetworkInfo
+                  .newBuilder()
+                  .addIpAddresses(
+                    Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ipAddress)
+                  )
+                  .setName(networkName)
+                  .build()
+              }.asJava)
+              .build()
+          )
+          .build()
       }
 
       maybeHealthy.foreach(statusProto.setHealthy)
@@ -529,7 +623,8 @@ object PodStatusConversionTest {
         since = since,
         activeSince = if (condition == core.condition.Condition.Provisioned) None else Some(since),
         healthy = None,
-        goal = core.instance.Goal.Running),
+        goal = core.instance.Goal.Running
+      ),
       tasksMap = Seq[core.task.Task](
         core.task.Task(
           taskIds.head,
@@ -558,22 +653,31 @@ object PodStatusConversionTest {
       taskId = taskId,
       status = core.task.Task.Status(
         stagedAt = Timestamp.zero,
-        mesosStatus = Some(Protos.TaskStatus.newBuilder()
-          .setTaskId(taskId.mesosTaskId)
-          .setState(Protos.TaskState.TASK_UNKNOWN)
-          .setContainerStatus(Protos.ContainerStatus.newBuilder()
-            .addAllNetworkInfos(networks.asJava).build())
-          .build()),
+        mesosStatus = Some(
+          Protos.TaskStatus
+            .newBuilder()
+            .setTaskId(taskId.mesosTaskId)
+            .setState(Protos.TaskState.TASK_UNKNOWN)
+            .setContainerStatus(
+              Protos.ContainerStatus
+                .newBuilder()
+                .addAllNetworkInfos(networks.asJava)
+                .build()
+            )
+            .build()
+        ),
         condition = core.condition.Condition.Finished,
         networkInfo = NetworkInfoPlaceholder()
       ),
-      runSpecVersion = Timestamp.zero)
+      runSpecVersion = Timestamp.zero
+    )
   }
 
-  def withCommandLineHealthChecks(pod: PodDefinition): PodDefinition = pod.copy(
-    // swap any endpoint health checks for a command-line health check
-    containers = basicOneContainerPod.containers.map { ct =>
-      ct.copy(
-        healthCheck = Some(MesosCommandHealthCheck(command = state.Command("echo this is a health check command"))))
-    })
+  def withCommandLineHealthChecks(pod: PodDefinition): PodDefinition =
+    pod.copy(
+      // swap any endpoint health checks for a command-line health check
+      containers = basicOneContainerPod.containers.map { ct =>
+        ct.copy(healthCheck = Some(MesosCommandHealthCheck(command = state.Command("echo this is a health check command"))))
+      }
+    )
 }

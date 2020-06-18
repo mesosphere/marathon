@@ -6,4 +6,5 @@ case class FrameworkInfo(
     id: FrameworkID = FrameworkID(""),
     failoverTimeout: Double = 0.0d,
     checkpoint: Boolean = false,
-    role: String = "*") // Default role
+    role: String = "*"
+) // Default role

@@ -49,7 +49,8 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
         )
 
         validator(app) should haveViolations(
-          "/dependencies(0)" -> """must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])|(\.|\.\.)$'""")
+          "/dependencies(0)" -> """must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])\.)*([a-z0-9]|[a-z0-9][a-z0-9\-]*[a-z0-9])|(\.|\.\.)$'"""
+        )
       }
     }
 
@@ -58,73 +59,71 @@ class AppDefinitionValidationTest extends UnitTest with ValidationTestLike {
       "be invalid if persistent volumes change" in new Fixture {
         val app = validResidentApp
         val to = app.copy(container = Some(Container.Mesos(Seq(persistentVolume("foo", 2)))))
-        AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/" -> "Persistent volumes can not be changed!")
+        AppDefinition.residentUpdateIsValid(app)(to) should haveViolations("/" -> "Persistent volumes can not be changed!")
       }
 
       "be invalid if ports change" in new Fixture {
         val app = validResidentApp
         val to1 = app.copy(portDefinitions = Seq.empty) // no port
         val to2 = app.copy(portDefinitions = Seq(PortDefinition(1))) // different port
-        AppDefinition.residentUpdateIsValid(app)(to1) should haveViolations(
-          "/" -> PersistentVolumeHostPortsChanged)
-        AppDefinition.residentUpdateIsValid(app)(to2) should haveViolations(
-          "/" -> PersistentVolumeHostPortsChanged)
+        AppDefinition.residentUpdateIsValid(app)(to1) should haveViolations("/" -> PersistentVolumeHostPortsChanged)
+        AppDefinition.residentUpdateIsValid(app)(to2) should haveViolations("/" -> PersistentVolumeHostPortsChanged)
       }
 
       "be invalid if cpu changes" in new Fixture {
         val app = validResidentApp
         val to = app.copy(resources = app.resources.copy(cpus = 3))
-        AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/cpus" -> PersistentVolumeResourcesChanged)
+        AppDefinition.residentUpdateIsValid(app)(to) should haveViolations("/cpus" -> PersistentVolumeResourcesChanged)
       }
 
       "be invalid if mem changes" in new Fixture {
         val app = validResidentApp
         val to = app.copy(resources = app.resources.copy(mem = 3))
-        AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/mem" -> PersistentVolumeResourcesChanged)
+        AppDefinition.residentUpdateIsValid(app)(to) should haveViolations("/mem" -> PersistentVolumeResourcesChanged)
       }
 
       "be invalid if disk changes" in new Fixture {
         val app = validResidentApp
         val to = app.copy(resources = app.resources.copy(disk = 3))
-        AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/disk" -> PersistentVolumeResourcesChanged)
+        AppDefinition.residentUpdateIsValid(app)(to) should haveViolations("/disk" -> PersistentVolumeResourcesChanged)
       }
 
       "be invalid if gpus change" in new Fixture {
         val app = validResidentApp
         val to = app.copy(resources = app.resources.copy(gpus = 3))
-        AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/gpus" -> PersistentVolumeResourcesChanged)
+        AppDefinition.residentUpdateIsValid(app)(to) should haveViolations("/gpus" -> PersistentVolumeResourcesChanged)
       }
 
       "be invalid with default upgrade strategy" in new Fixture {
         val app = validResidentApp
         val to = app.copy(upgradeStrategy = UpgradeStrategy.empty)
         AppDefinition.residentUpdateIsValid(app)(to) should haveViolations(
-          "/upgradeStrategy/maximumOverCapacity" -> "got 1.0, expected 0.0")
+          "/upgradeStrategy/maximumOverCapacity" -> "got 1.0, expected 0.0"
+        )
       }
     }
   }
 
   class Fixture {
-    implicit val validator: Validator[AppDefinition] = AppDefinition.validAppDefinition(Set.empty, ValidationHelper.roleSettings())(PluginManager.None)
-    def validApp = AppDefinition(
-      id = AbsolutePathId("/a/b/c/d"),
-      role = "*",
-      cmd = Some("sleep 1000"),
-      portDefinitions = Seq(PortDefinition(0, name = Some("default")))
-    )
+    implicit val validator: Validator[AppDefinition] =
+      AppDefinition.validAppDefinition(Set.empty, ValidationHelper.roleSettings())(PluginManager.None)
+    def validApp =
+      AppDefinition(
+        id = AbsolutePathId("/a/b/c/d"),
+        role = "*",
+        cmd = Some("sleep 1000"),
+        portDefinitions = Seq(PortDefinition(0, name = Some("default")))
+      )
     def persistentVolume(path: String, size: Long = 1) =
       VolumeWithMount(
         volume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(size)),
-        mount = VolumeMount(volumeName = None, mountPath = path, readOnly = false))
-    def validResidentApp = validApp.copy(
-      container = Some(Container.Mesos(Seq(persistentVolume("foo")))),
-      upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0, maximumOverCapacity = 0)
-    )
+        mount = VolumeMount(volumeName = None, mountPath = path, readOnly = false)
+      )
+    def validResidentApp =
+      validApp.copy(
+        container = Some(Container.Mesos(Seq(persistentVolume("foo")))),
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0, maximumOverCapacity = 0)
+      )
 
   }
 }

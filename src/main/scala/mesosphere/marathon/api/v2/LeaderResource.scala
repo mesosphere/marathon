@@ -31,46 +31,51 @@ class LeaderResource @Inject() (
     val runtimeConfigRepo: RuntimeConfigurationRepository,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    val scheduler: Scheduler)(implicit val executionContext: ExecutionContext)
-  extends RestResource with AuthResource {
+    val scheduler: Scheduler
+)(implicit val executionContext: ExecutionContext)
+    extends RestResource
+    with AuthResource {
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
-  def index(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
-    async {
-      implicit val identity = await(authenticatedAsync(req))
-      withAuthorization(ViewResource, AuthorizedResource.Leader) {
-        electionService.leaderHostPort match {
-          case None => notFound("There is no leader")
-          case Some(leader) => ok(raml.LeaderInfo(leader))
+  def index(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit =
+    sendResponse(asyncResponse) {
+      async {
+        implicit val identity = await(authenticatedAsync(req))
+        withAuthorization(ViewResource, AuthorizedResource.Leader) {
+          electionService.leaderHostPort match {
+            case None => notFound("There is no leader")
+            case Some(leader) => ok(raml.LeaderInfo(leader))
+          }
         }
       }
     }
-  }
 
   @DELETE
   @Produces(Array(MediaType.APPLICATION_JSON))
   def delete(
-    @QueryParam("backup") backupNullable: String,
-    @QueryParam("restore") restoreNullable: String,
-    @Context req: HttpServletRequest,
-    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
-    async {
-      implicit val identity = await(authenticatedAsync(req))
-      checkAuthorization(UpdateResource, AuthorizedResource.Leader)
-      if (electionService.isLeader) {
-        val backup = validateOrThrow(Option(backupNullable))(optional(UriIO.valid))
-        val restore = validateOrThrow(Option(restoreNullable))(optional(UriIO.valid))
-        await(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
+      @QueryParam("backup") backupNullable: String,
+      @QueryParam("restore") restoreNullable: String,
+      @Context req: HttpServletRequest,
+      @Suspended asyncResponse: AsyncResponse
+  ): Unit =
+    sendResponse(asyncResponse) {
+      async {
+        implicit val identity = await(authenticatedAsync(req))
+        checkAuthorization(UpdateResource, AuthorizedResource.Leader)
+        if (electionService.isLeader) {
+          val backup = validateOrThrow(Option(backupNullable))(optional(UriIO.valid))
+          val restore = validateOrThrow(Option(restoreNullable))(optional(UriIO.valid))
+          await(runtimeConfigRepo.store(RuntimeConfiguration(backup, restore)))
 
-        scheduler.scheduleOnce(LeaderResource.abdicationDelay) {
-          electionService.abdicateLeadership()
+          scheduler.scheduleOnce(LeaderResource.abdicationDelay) {
+            electionService.abdicateLeadership()
+          }
+
+          ok(raml.Error(message = "Leadership abdicated"))
+        } else {
+          notFound("There is no leader")
         }
-
-        ok(raml.Error(message = "Leadership abdicated"))
-      } else {
-        notFound("There is no leader")
       }
     }
-  }
 }

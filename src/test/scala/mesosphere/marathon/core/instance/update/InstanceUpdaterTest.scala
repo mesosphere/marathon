@@ -230,7 +230,8 @@ class InstanceUpdaterTest extends UnitTest with Inside {
       val unreachableInstance = f.instance.copy(
         tasksMap = Map(f.taskId -> unreachableTask),
         state = unreachableState,
-        runSpec = f.app.copy(unreachableStrategy = UnreachableEnabled(0.seconds, 15.minutes)))
+        runSpec = f.app.copy(unreachableStrategy = UnreachableEnabled(0.seconds, 15.minutes))
+      )
 
       // Update to running
       val unknownMesosTaskStatus = MesosTaskStatusTestHelper.unknown(f.taskId)
@@ -254,10 +255,8 @@ class InstanceUpdaterTest extends UnitTest with Inside {
       val unreachableState = f.instanceState.copy(condition = Condition.Unreachable)
       val unreachableStrategy = UnreachableEnabled(inactiveAfter = 30.minutes, expungeAfter = 1.hour)
       val updatedRunSpec = f.app.copy(unreachableStrategy = unreachableStrategy)
-      val unreachableInstance = f.instance.copy(
-        tasksMap = Map(f.taskId -> unreachableTask),
-        state = unreachableState,
-        runSpec = updatedRunSpec)
+      val unreachableInstance =
+        f.instance.copy(tasksMap = Map(f.taskId -> unreachableTask), state = unreachableState, runSpec = updatedRunSpec)
 
       // Move time forward
       f.clock.advanceBy(5.minutes)
@@ -281,10 +280,8 @@ class InstanceUpdaterTest extends UnitTest with Inside {
       val unreachableInactiveState = f.instanceState.copy(condition = Condition.UnreachableInactive)
       val unreachableStrategy = UnreachableEnabled(inactiveAfter = 1.minute, expungeAfter = 1.hour)
       val updatedRunSpec = f.app.copy(unreachableStrategy = unreachableStrategy)
-      val unreachableInactiveInstance = f.instance.copy(
-        tasksMap = Map(f.taskId -> unreachableTask),
-        state = unreachableInactiveState,
-        runSpec = updatedRunSpec)
+      val unreachableInactiveInstance =
+        f.instance.copy(tasksMap = Map(f.taskId -> unreachableTask), state = unreachableInactiveState, runSpec = updatedRunSpec)
 
       // Move time forward
       f.clock.advanceBy(5.minutes)
@@ -318,7 +315,8 @@ class InstanceUpdaterTest extends UnitTest with Inside {
   "An instance with 2 containers" should {
 
     val f = new Fixture
-    var instance: Instance = TestInstanceBuilder.newBuilder(AbsolutePathId("/pod"))
+    var instance: Instance = TestInstanceBuilder
+      .newBuilder(AbsolutePathId("/pod"))
       .addTaskStaged(containerName = Some(f.container1.name))
       .addTaskStaged(containerName = Some(f.container2.name))
       .getInstance()
@@ -376,7 +374,7 @@ class InstanceUpdaterTest extends UnitTest with Inside {
     val operation = InstanceUpdateOperation.MesosUpdate(stagedAndStoppedInstance, f.mesosTaskStatus, f.clock.now())
     val result = InstanceUpdater.mesosUpdate(stagedAndStoppedInstance, operation)
 
-    result.asInstanceOf[Update].instance.state.goal should be (Goal.Stopped)
+    result.asInstanceOf[Update].instance.state.goal should be(Goal.Stopped)
   }
 
   "suspend reservation when resident instance is terminal" in {
@@ -386,7 +384,12 @@ class InstanceUpdaterTest extends UnitTest with Inside {
     val scheduledReserved = TestInstanceBuilder.scheduledWithReservation(app)
     val provisionedTasks = Tasks.provisioned(f.taskId, NetworkInfoPlaceholder(), app.version, Timestamp.now(f.clock))
     val provisionedInstance = scheduledReserved.provisioned(f.agentInfo, app, provisionedTasks, Timestamp(f.clock.instant()))
-    val killedOperation = InstanceUpdateOperation.MesosUpdate(provisionedInstance, Condition.Killed, MesosTaskStatusTestHelper.killed(f.taskId), Timestamp(f.clock.instant()))
+    val killedOperation = InstanceUpdateOperation.MesosUpdate(
+      provisionedInstance,
+      Condition.Killed,
+      MesosTaskStatusTestHelper.killed(f.taskId),
+      Timestamp(f.clock.instant())
+    )
     val updated = InstanceUpdater.mesosUpdate(provisionedInstance, killedOperation).asInstanceOf[Update]
 
     updated.instance.reservation.get.state should be(Suspended)
@@ -405,7 +408,8 @@ class InstanceUpdaterTest extends UnitTest with Inside {
           instance,
           Condition.Gone,
           MesosTaskStatusTestHelper.goneByOperator(task.taskId, task.status.mesosStatus.map(_.getSlaveId)),
-          Timestamp(clock.instant()))
+          Timestamp(clock.instant())
+        )
         val updated = InstanceUpdater.mesosUpdate(instance, goneOperation).asInstanceOf[Update]
 
         updated.instance.reservation shouldBe None
@@ -420,14 +424,17 @@ class InstanceUpdaterTest extends UnitTest with Inside {
           instance,
           Condition.Gone,
           MesosTaskStatusTestHelper.goneByOperator(task.taskId, task.status.mesosStatus.map(_.getSlaveId)),
-          Timestamp(clock.instant()))
+          Timestamp(clock.instant())
+        )
 
         val scheduledInstance = InstanceUpdater.mesosUpdate(instance, goneOperation).asInstanceOf[Update].instance
 
         And("the reserved instance gets a new reservation, but doesn't yet launch tasks")
         val withNewReservation = scheduledInstance.copy(
-          reservation = Some(Reservation(Nil, Reservation.State.New(timeout = None), Reservation.SimplifiedId(scheduledInstance.instanceId))),
-          agentInfo = Some(AgentInfo("new-host", Some("new-agent-id"), None, None, Nil)))
+          reservation =
+            Some(Reservation(Nil, Reservation.State.New(timeout = None), Reservation.SimplifiedId(scheduledInstance.instanceId))),
+          agentInfo = Some(AgentInfo("new-host", Some("new-agent-id"), None, None, Nil))
+        )
         withNewReservation.state.condition shouldBe Condition.Scheduled
 
         When("an old status update is received again, due to a pending reconciliation attempt")
@@ -440,7 +447,8 @@ class InstanceUpdaterTest extends UnitTest with Inside {
 
     "for a pod" should {
       val podId = AbsolutePathId("/test")
-      val podInstance = TestInstanceBuilder.newBuilder(podId)
+      val podInstance = TestInstanceBuilder
+        .newBuilder(podId)
         .withReservation(Nil)
         .addTaskWithBuilder()
         .taskRunning(containerName = Some("container-1"))
@@ -457,7 +465,8 @@ class InstanceUpdaterTest extends UnitTest with Inside {
             podInstance,
             Condition.Gone,
             MesosTaskStatusTestHelper.goneByOperator(task.taskId, task.status.mesosStatus.map(_.getSlaveId)),
-            Timestamp(clock.instant()))
+            Timestamp(clock.instant())
+          )
         }
 
         val progressivelyApplied = goneOperations.scanLeft(podInstance) { (instance, operation) =>
@@ -482,14 +491,16 @@ class InstanceUpdaterTest extends UnitTest with Inside {
             podInstance,
             Condition.Finished,
             MesosTaskStatusTestHelper.finished(task1.taskId),
-            Timestamp(clock.instant()))
+            Timestamp(clock.instant())
+          )
 
         val goneOperation =
           InstanceUpdateOperation.MesosUpdate(
             podInstance,
             Condition.Gone,
             MesosTaskStatusTestHelper.goneByOperator(task2.taskId, task2.status.mesosStatus.map(_.getSlaveId)),
-            Timestamp(clock.instant()))
+            Timestamp(clock.instant())
+          )
 
         val progressivelyApplied = Seq(finishedOperation, goneOperation).scanLeft(podInstance) { (instance, operation) =>
           InstanceUpdater.mesosUpdate(instance, operation).asInstanceOf[Update].instance
@@ -534,8 +545,12 @@ class InstanceUpdaterTest extends UnitTest with Inside {
       networkInfo = NetworkInfoPlaceholder()
     )
     val task = Task(taskId, runSpecVersion = clock.now(), status = taskStatus)
-    val app = AppDefinition(instanceId.runSpecId, role = "*", versionInfo = VersionInfo.OnlyVersion(clock.now()), unreachableStrategy = unreachableStrategy)
-    val instance = Instance(
-      instanceId, Some(agentInfo), instanceState, Map(taskId -> task), app, None, "*")
+    val app = AppDefinition(
+      instanceId.runSpecId,
+      role = "*",
+      versionInfo = VersionInfo.OnlyVersion(clock.now()),
+      unreachableStrategy = unreachableStrategy
+    )
+    val instance = Instance(instanceId, Some(agentInfo), instanceState, Map(taskId -> task), app, None, "*")
   }
 }

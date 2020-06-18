@@ -39,7 +39,13 @@ class AppDefinitionAppInfoTest extends UnitTest {
   "AppDefinitionAppInfo" should {
     "app with taskCounts" in {
       Given("an app with counts")
-      val extended = raml.AppInfo.fromParent(parent = app, tasksStaged = Some(3), tasksRunning = Some(5), tasksHealthy = Some(4), tasksUnhealthy = Some(1))
+      val extended = raml.AppInfo.fromParent(
+        parent = app,
+        tasksStaged = Some(3),
+        tasksRunning = Some(5),
+        tasksHealthy = Some(4),
+        tasksUnhealthy = Some(1)
+      )
 
       Then("the result contains all fields of the app plus the counts")
       val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
@@ -94,16 +100,18 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
       Then("the result contains all fields of the app plus the deployments")
       val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
-        "readinessCheckResults" -> Seq(Json.obj(
-          "name" -> "foo",
-          "taskId" -> taskId.idString,
-          "ready" -> false,
-          "lastResponse" -> Json.obj(
-            "status" -> 503,
-            "contentType" -> "text/plain",
-            "body" -> "n/a"
+        "readinessCheckResults" -> Seq(
+          Json.obj(
+            "name" -> "foo",
+            "taskId" -> taskId.idString,
+            "ready" -> false,
+            "lastResponse" -> Json.obj(
+              "status" -> 503,
+              "contentType" -> "text/plain",
+              "body" -> "n/a"
+            )
           )
-        ))
+        )
       )
       JsonTestHelper.assertThatJsonOf(extended).correspondsToJsonOf(expectedJson)
       JsonTestHelper.assertThatJacksonJsonOf(extended).correspondsToJsonOf(expectedJson)
@@ -111,7 +119,14 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
     "app with taskCounts + deployments (show that combinations work)" in {
       Given("an app with counts")
-      val extended = raml.AppInfo.fromParent(parent = app, tasksStaged = Some(3), tasksRunning = Some(5), tasksHealthy = Some(4), tasksUnhealthy = Some(1), deployments = Some(deployments))
+      val extended = raml.AppInfo.fromParent(
+        parent = app,
+        tasksStaged = Some(3),
+        tasksRunning = Some(5),
+        tasksHealthy = Some(4),
+        tasksUnhealthy = Some(1),
+        deployments = Some(deployments)
+      )
 
       Then("the result contains all fields of the app plus the counts")
       val expectedJson =
@@ -122,8 +137,8 @@ class AppDefinitionAppInfoTest extends UnitTest {
             "tasksHealthy" -> 4,
             "tasksUnhealthy" -> 1
           ) ++ Json.obj(
-              "deployments" -> Seq(Json.obj("id" -> "deployment1"))
-            )
+          "deployments" -> Seq(Json.obj("id" -> "deployment1"))
+        )
       JsonTestHelper.assertThatJsonOf(extended).correspondsToJsonOf(expectedJson)
       JsonTestHelper.assertThatJacksonJsonOf(extended).correspondsToJsonOf(expectedJson)
     }
@@ -143,8 +158,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
       val extended = raml.AppInfo.fromParent(parent = app, lastTaskFailure = Some(lastTaskFailure))
 
       Then("the result contains all fields of the app plus the deployments")
-      val lastTaskFailureJson = Json.parse(
-        """
+      val lastTaskFailureJson = Json.parse("""
        | {
        |   "lastTaskFailure": {
        |     "appId": "/myapp",

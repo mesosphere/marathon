@@ -21,6 +21,7 @@ trait ReadinessCheckExecutor {
 }
 
 object ReadinessCheckExecutor {
+
   /**
     * A self-contained description which contains all information necessary to perform
     * a readiness check.
@@ -32,26 +33,26 @@ object ReadinessCheckExecutor {
       interval: FiniteDuration = ReadinessCheck.DefaultInterval,
       timeout: FiniteDuration = ReadinessCheck.DefaultTimeout,
       httpStatusCodesForReady: Set[Int] = ReadinessCheck.DefaultHttpStatusCodesForReady,
-      preserveLastResponse: Boolean = ReadinessCheck.DefaultPreserveLastResponse)
+      preserveLastResponse: Boolean = ReadinessCheck.DefaultPreserveLastResponse
+  )
 
   object ReadinessCheckSpec {
+
     /**
       * Returns the readiness checks for the given task.
       */
-    def readinessCheckSpecsForTask(
-      runSpec: RunSpec,
-      task: Task): Seq[ReadinessCheckExecutor.ReadinessCheckSpec] = {
+    def readinessCheckSpecsForTask(runSpec: RunSpec, task: Task): Seq[ReadinessCheckExecutor.ReadinessCheckSpec] = {
 
       require(task.runSpecId == runSpec.id, s"Task id and RunSpec id must match: ${task.runSpecId} != ${runSpec.id}")
       require(task.isActive, s"Unable to perform readiness checks against inactive ${task.taskId}")
       require(
         task.status.networkInfo.effectiveIpAddress(runSpec).isDefined,
-        "Task is unreachable: an IP address was requested but not yet assigned")
+        "Task is unreachable: an IP address was requested but not yet assigned"
+      )
 
       runSpec match {
         case app: AppDefinition =>
           app.readinessChecks.map { checkDef =>
-
             // determining the URL is difficult, everything else is just copying configuration
             val url = {
               val schema = checkDef.protocol match {
@@ -60,11 +61,13 @@ object ReadinessCheckExecutor {
               }
 
               val portAssignments: Seq[PortAssignment] = task.status.networkInfo.portAssignments(app, includeUnresolved = false)
-              val effectivePortAssignment = portAssignments.find(_.portName.contains(checkDef.portName)).getOrElse(
-                throw new IllegalArgumentException(s"no port definition for port name '${checkDef.portName}' was found"))
+              val effectivePortAssignment = portAssignments
+                .find(_.portName.contains(checkDef.portName))
+                .getOrElse(throw new IllegalArgumentException(s"no port definition for port name '${checkDef.portName}' was found"))
 
               val host = effectivePortAssignment.effectiveIpAddress.getOrElse(
-                throw new IllegalArgumentException(s"no effective IP address for '${checkDef.portName}' was found"))
+                throw new IllegalArgumentException(s"no effective IP address for '${checkDef.portName}' was found")
+              )
 
               val port = effectivePortAssignment.effectivePort
 

@@ -6,7 +6,7 @@ import mesosphere.marathon.raml.LocalVolumeConversion.localVolumeIdWrites
 
 object TaskConversion extends HealthConversion with DefaultConversions {
 
-  implicit val taskFailureRamlWrite: Writes[state.TaskFailure, raml.TaskFailure] = Writes{ failure =>
+  implicit val taskFailureRamlWrite: Writes[state.TaskFailure, raml.TaskFailure] = Writes { failure =>
     raml.TaskFailure(
       appId = failure.appId.toString,
       host = failure.host,

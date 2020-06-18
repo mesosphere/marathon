@@ -23,9 +23,10 @@ object RichLock {
 class Lock[T](private val value: T, fair: Boolean = true) extends StrictLogging {
   private val lock = RichLock(fair)
 
-  def apply[R](f: T => R): R = lock {
-    f(value)
-  }
+  def apply[R](f: T => R): R =
+    lock {
+      f(value)
+    }
 
   /**
     * Previously, this method was too smart and had a serious flaw. Given lock a and lock b, the following could
@@ -40,17 +41,17 @@ class Lock[T](private val value: T, fair: Boolean = true) extends StrictLogging 
     * After some time, we can remove the exception and use the default Java equals method (compare identity).
     */
   override def equals(o: Any): Boolean = {
-    val ex = new RuntimeException(
-      "Comparing two locked values was not safe and is no longer allowed.")
+    val ex = new RuntimeException("Comparing two locked values was not safe and is no longer allowed.")
     logger.error("attempted usage of equals; remove!", ex)
     throw ex
   }
 
   override def hashCode(): Int = lock(value.hashCode())
 
-  override def toString: String = lock {
-    value.toString
-  }
+  override def toString: String =
+    lock {
+      value.toString
+    }
 }
 
 object Lock {
@@ -61,15 +62,17 @@ class LockedVar[T](initialValue: T, fair: Boolean = true) {
   private[this] val lock = RichRwLock(fair)
   private[this] var item: T = initialValue
 
-  def :=(f: => T): T = lock.write {
-    item = f
-    item
-  }
+  def :=(f: => T): T =
+    lock.write {
+      item = f
+      item
+    }
 
-  def update(f: T => T): T = lock.write {
-    item = f(item)
-    item
-  }
+  def update(f: T => T): T =
+    lock.write {
+      item = f(item)
+      item
+    }
 
   def get(): T = lock.read { item }
 }
@@ -105,16 +108,17 @@ object RichRwLock {
 class RwLock[T](private val value: T, fair: Boolean) {
   private val lock = RichRwLock(fair)
 
-  def read[R](f: T => R): R = lock.read {
-    f(value)
-  }
+  def read[R](f: T => R): R =
+    lock.read {
+      f(value)
+    }
 
-  def write[R](f: T => R): R = lock.write {
-    f(value)
-  }
+  def write[R](f: T => R): R =
+    lock.write {
+      f(value)
+    }
 }
 
 object RwLock {
   def apply[T](value: T, fair: Boolean = true): RwLock[T] = new RwLock(value, fair)
 }
-

@@ -19,13 +19,14 @@ case object UnreachableDisabled extends UnreachableStrategy {
   */
 case class UnreachableEnabled(
     inactiveAfter: FiniteDuration = UnreachableEnabled.DefaultInactiveAfter,
-    expungeAfter: FiniteDuration = UnreachableEnabled.DefaultExpungeAfter) extends UnreachableStrategy {
+    expungeAfter: FiniteDuration = UnreachableEnabled.DefaultExpungeAfter
+) extends UnreachableStrategy {
 
   def toProto: Protos.UnreachableStrategy =
-    Protos.UnreachableStrategy.newBuilder.
-      setExpungeAfterSeconds(expungeAfter.toSeconds).
-      setInactiveAfterSeconds(inactiveAfter.toSeconds).
-      build
+    Protos.UnreachableStrategy.newBuilder
+      .setExpungeAfterSeconds(expungeAfter.toSeconds)
+      .setInactiveAfterSeconds(inactiveAfter.toSeconds)
+      .build
 }
 object UnreachableEnabled {
   val DefaultInactiveAfter: FiniteDuration = 0.seconds
@@ -35,14 +36,26 @@ object UnreachableEnabled {
   implicit val unreachableEnabledValidator = new Validator[UnreachableEnabled] {
     override def apply(unreachableEnabled: UnreachableEnabled): Result = {
       if (unreachableEnabled.inactiveAfter < 0.seconds)
-        Failure(Set(
-          RuleViolation(unreachableEnabled.inactiveAfter, UnreachableStrategy.InactiveAfterGreaterThanZeroMessage(unreachableEnabled.inactiveAfter), Path(Generic("inactiveAfterSeconds")))))
+        Failure(
+          Set(
+            RuleViolation(
+              unreachableEnabled.inactiveAfter,
+              UnreachableStrategy.InactiveAfterGreaterThanZeroMessage(unreachableEnabled.inactiveAfter),
+              Path(Generic("inactiveAfterSeconds"))
+            )
+          )
+        )
       else if (unreachableEnabled.inactiveAfter > unreachableEnabled.expungeAfter)
-        Failure(Set(
-          RuleViolation(
-            unreachableEnabled.inactiveAfter,
-            UnreachableStrategy.inactiveAfterSmallerThanExpungeAfterMessage(unreachableEnabled.inactiveAfter, unreachableEnabled.expungeAfter),
-            Path(Generic("inactiveAfterSeconds")))))
+        Failure(
+          Set(
+            RuleViolation(
+              unreachableEnabled.inactiveAfter,
+              UnreachableStrategy
+                .inactiveAfterSmallerThanExpungeAfterMessage(unreachableEnabled.inactiveAfter, unreachableEnabled.expungeAfter),
+              Path(Generic("inactiveAfterSeconds"))
+            )
+          )
+        )
       else
         Success
     }
@@ -50,7 +63,8 @@ object UnreachableEnabled {
 }
 
 object UnreachableStrategy {
-  def InactiveAfterGreaterThanZeroMessage(inactiveAfter: Duration) = s"inactiveAfterSeconds (${inactiveAfter.toSeconds}) must be greater than or equal to 0"
+  def InactiveAfterGreaterThanZeroMessage(inactiveAfter: Duration) =
+    s"inactiveAfterSeconds (${inactiveAfter.toSeconds}) must be greater than or equal to 0"
   def inactiveAfterSmallerThanExpungeAfterMessage(inactiveAfter: Duration, expungeAfter: Duration) =
     s"inactiveAfterSeconds (${inactiveAfter.toSeconds}) must be less or equal to expungeAfterSeconds, which is ${expungeAfter.toSeconds}"
 
@@ -62,17 +76,19 @@ object UnreachableStrategy {
     if (unreachableStrategyProto.hasInactiveAfterSeconds && unreachableStrategyProto.hasExpungeAfterSeconds)
       UnreachableEnabled(
         inactiveAfter = unreachableStrategyProto.getInactiveAfterSeconds.seconds,
-        expungeAfter = unreachableStrategyProto.getExpungeAfterSeconds.seconds)
+        expungeAfter = unreachableStrategyProto.getExpungeAfterSeconds.seconds
+      )
     else
       UnreachableDisabled
   }
 
   implicit val unreachableStrategyValidator = new Validator[UnreachableStrategy] {
-    def apply(strategy: UnreachableStrategy): Result = strategy match {
-      case UnreachableDisabled =>
-        Success
-      case unreachableEnabled: UnreachableEnabled =>
-        validate(unreachableEnabled)
-    }
+    def apply(strategy: UnreachableStrategy): Result =
+      strategy match {
+        case UnreachableDisabled =>
+          Success
+        case unreachableEnabled: UnreachableEnabled =>
+          validate(unreachableEnabled)
+      }
   }
 }

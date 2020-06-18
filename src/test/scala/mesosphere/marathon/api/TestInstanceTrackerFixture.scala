@@ -17,25 +17,15 @@ class TestInstanceTrackerFixture(
     authorized: Boolean = true,
     authFn: Any => Boolean = _ => true,
     val clock: Clock = Clock.systemUTC(),
-    config: AllConf = AllConf.withTestConfig("--zk_timeout", "3000"))(implicit as: ActorSystem, ec: ExecutionContext) extends TestGroupManagerFixture(
-  initialRoot,
-  authenticated = authenticated,
-  authorized = authorized,
-  authFn = authFn,
-  config = config) {
+    config: AllConf = AllConf.withTestConfig("--zk_timeout", "3000")
+)(implicit as: ActorSystem, ec: ExecutionContext)
+    extends TestGroupManagerFixture(initialRoot, authenticated = authenticated, authorized = authorized, authFn = authFn, config = config) {
 
   val crashStrategy = new TestCrashStrategy
   val instanceView = InstanceView(instanceRepository, groupRepository)
-  val instanceTrackerActor = as.actorOf(InstanceTrackerActor.props(
-    metrics = metrics,
-    config = config,
-    steps = Nil,
-    repository = instanceView,
-    clock = clock,
-    crashStrategy = crashStrategy))
-  val instanceTracker = new InstanceTrackerDelegate(
-    metrics = metrics,
-    clock = clock,
-    config = config,
-    instanceTrackerActor)
+  val instanceTrackerActor = as.actorOf(
+    InstanceTrackerActor
+      .props(metrics = metrics, config = config, steps = Nil, repository = instanceView, clock = clock, crashStrategy = crashStrategy)
+  )
+  val instanceTracker = new InstanceTrackerDelegate(metrics = metrics, clock = clock, config = config, instanceTrackerActor)
 }

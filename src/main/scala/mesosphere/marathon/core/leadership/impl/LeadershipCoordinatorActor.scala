@@ -13,8 +13,7 @@ private[leadership] object LeadershipCoordinatorActor {
   }
 }
 
-private[leadership] class LeadershipCoordinatorActor(var whenLeaderActors: Set[ActorRef])
-  extends Actor with StrictLogging with Stash {
+private[leadership] class LeadershipCoordinatorActor(var whenLeaderActors: Set[ActorRef]) extends Actor with StrictLogging with Stash {
 
   override def preStart(): Unit = {
     whenLeaderActors.foreach(context.watch)
@@ -40,9 +39,7 @@ private[leadership] class LeadershipCoordinatorActor(var whenLeaderActors: Set[A
     }
   }
 
-  private[impl] def preparingForStart(
-    ackStartRefs: Set[ActorRef],
-    whenLeaderActorsWithoutAck: Set[ActorRef]): Receive = {
+  private[impl] def preparingForStart(ackStartRefs: Set[ActorRef], whenLeaderActorsWithoutAck: Set[ActorRef]): Receive = {
     if (whenLeaderActorsWithoutAck.isEmpty) {
       ackStartRefs.foreach { ackStartRef =>
         ackStartRef ! PreparationMessages.Prepared(self)
@@ -71,19 +68,20 @@ private[leadership] class LeadershipCoordinatorActor(var whenLeaderActors: Set[A
     }
   }
 
-  private[impl] def active: Receive = LoggingReceive.withLabel("active") {
-    logger.info(s"All actors active:\n${whenLeaderActors.map(actorRef => s"* $actorRef").mkString("\n")}")
-
+  private[impl] def active: Receive =
     LoggingReceive.withLabel("active") {
-      case Terminated(actorRef) =>
-        logger.error(s"unexpected death of $actorRef")
-        whenLeaderActors -= actorRef
+      logger.info(s"All actors active:\n${whenLeaderActors.map(actorRef => s"* $actorRef").mkString("\n")}")
 
-      case PreparationMessages.PrepareForStart => sender() ! PreparationMessages.Prepared(self)
+      LoggingReceive.withLabel("active") {
+        case Terminated(actorRef) =>
+          logger.error(s"unexpected death of $actorRef")
+          whenLeaderActors -= actorRef
 
-      case WhenLeaderActor.Stop =>
-        whenLeaderActors.foreach(_ ! Stop)
-        context.become(suspended)
+        case PreparationMessages.PrepareForStart => sender() ! PreparationMessages.Prepared(self)
+
+        case WhenLeaderActor.Stop =>
+          whenLeaderActors.foreach(_ ! Stop)
+          context.become(suspended)
+      }
     }
-  }
 }

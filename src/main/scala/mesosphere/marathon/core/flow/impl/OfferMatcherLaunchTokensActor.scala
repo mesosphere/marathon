@@ -9,9 +9,7 @@ import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import scala.concurrent.duration._
 
 private[flow] object OfferMatcherLaunchTokensActor {
-  def props(
-    conf: LaunchTokenConfig,
-    offerMatcherManager: OfferMatcherManager): Props = {
+  def props(conf: LaunchTokenConfig, offerMatcherManager: OfferMatcherManager): Props = {
     Props(new OfferMatcherLaunchTokensActor(conf, offerMatcherManager))
   }
 }
@@ -24,8 +22,7 @@ private[flow] object OfferMatcherLaunchTokensActor {
   *
   * In addition, we periodically reset our token count to a fixed number.
   */
-private[impl] class OfferMatcherLaunchTokensActor(conf: LaunchTokenConfig, offerMatcherManager: OfferMatcherManager)
-  extends Actor {
+private[impl] class OfferMatcherLaunchTokensActor(conf: LaunchTokenConfig, offerMatcherManager: OfferMatcherManager) extends Actor {
   var periodicSetToken: Cancellable = _
 
   override def preStart(): Unit = {

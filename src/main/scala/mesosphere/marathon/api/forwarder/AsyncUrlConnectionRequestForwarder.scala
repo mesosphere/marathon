@@ -28,11 +28,11 @@ import scala.jdk.CollectionConverters._
   * Forwarder which uses Akka HTTP to proxy requests, and then streams the response back
   * to the original client.
   */
-class AsyncUrlConnectionRequestForwarder(
-    sslContext: SSLContext,
-    leaderProxyConf: LeaderProxyConf,
-    myHostPort: String)(implicit executionContext: ExecutionContext, actorSystem: ActorSystem)
-  extends RequestForwarder with StrictLogging {
+class AsyncUrlConnectionRequestForwarder(sslContext: SSLContext, leaderProxyConf: LeaderProxyConf, myHostPort: String)(implicit
+    executionContext: ExecutionContext,
+    actorSystem: ActorSystem
+) extends RequestForwarder
+    with StrictLogging {
   private implicit val mat = ActorMaterializer()
 
   import RequestForwarder._
@@ -46,9 +46,9 @@ class AsyncUrlConnectionRequestForwarder(
       s
   }
   private val connectionContext = new HttpsConnectionContext(sslContext, sslConfig = Some(sslConfig))
-  private val connectionSettings = ClientConnectionSettings(actorSystem).
-    withIdleTimeout(leaderProxyConf.leaderProxyReadTimeout().millis).
-    withConnectingTimeout(leaderProxyConf.leaderProxyConnectionTimeout().millis)
+  private val connectionSettings = ClientConnectionSettings(actorSystem)
+    .withIdleTimeout(leaderProxyConf.leaderProxyReadTimeout().millis)
+    .withConnectingTimeout(leaderProxyConf.leaderProxyConnectionTimeout().millis)
   private val poolSettings = ConnectionPoolSettings(actorSystem)
     .withMaxConnections(leaderProxyConf.leaderProxyMaxOpenConnections())
     .withMaxOpenRequests(leaderProxyConf.leaderProxyMaxOpenConnections())
@@ -156,45 +156,46 @@ class AsyncUrlConnectionRequestForwarder(
     val asyncContext = request.startAsync()
     asyncContext.setTimeout(0L) // delegate timeout to stream
 
-    val result: Future[Done] = try {
-      val hasProxyLoop: Boolean = Option(request.getHeaders(HEADER_VIA)).exists(_.asScala.contains(viaValue))
+    val result: Future[Done] =
+      try {
+        val hasProxyLoop: Boolean = Option(request.getHeaders(HEADER_VIA)).exists(_.asScala.contains(viaValue))
 
-      if (hasProxyLoop) {
-        logger.error("Prevent proxy cycle, rejecting request")
-        response.sendError(BadGateway.intValue, ERROR_STATUS_LOOP)
-        Future.successful(Done)
-      } else {
-        val leaderRequest = createAndConfigureConnection(url, request)
+        if (hasProxyLoop) {
+          logger.error("Prevent proxy cycle, rejecting request")
+          response.sendError(BadGateway.intValue, ERROR_STATUS_LOOP)
+          Future.successful(Done)
+        } else {
+          val leaderRequest = createAndConfigureConnection(url, request)
 
-        leaderRequest.transformWith {
-          case Failure(ex: akka.stream.StreamTcpException) =>
-            /* Unfortunately, akka-http does not give us a different error message if the TCP connection is established,
-             * but gives no response, or if the TCP connection is refused outright.
-             *
+          leaderRequest.transformWith {
+            case Failure(ex: akka.stream.StreamTcpException) =>
+              /* Unfortunately, akka-http does not give us a different error message if the TCP connection is established,
+               * but gives no response, or if the TCP connection is refused outright.
+               *
              * So, we report BadGateway in either case.
-             */
-            logger.error(ERROR_STATUS_CONNECTION_REFUSED, ex)
-            response.sendError(BadGateway.intValue, ERROR_STATUS_CONNECTION_REFUSED)
-            Future.successful(Done)
-          case Failure(ex) =>
-            logger.error(ERROR_STATUS_BAD_CONNECTION, ex)
-            response.sendError(InternalServerError.intValue)
-            Future.successful(Done)
-          case Success(proxyResponse) =>
-            // Auto flush in order to not buffer SSE events. When we disable event proxying, we should not need this any
-            // longer
-            val outputSink = ServletOutputStreamSink(asyncContext.getResponse.getOutputStream, autoFlushing = true)
-            cloneResponseStatusAndHeader(proxyResponse, response)
+               */
+              logger.error(ERROR_STATUS_CONNECTION_REFUSED, ex)
+              response.sendError(BadGateway.intValue, ERROR_STATUS_CONNECTION_REFUSED)
+              Future.successful(Done)
+            case Failure(ex) =>
+              logger.error(ERROR_STATUS_BAD_CONNECTION, ex)
+              response.sendError(InternalServerError.intValue)
+              Future.successful(Done)
+            case Success(proxyResponse) =>
+              // Auto flush in order to not buffer SSE events. When we disable event proxying, we should not need this any
+              // longer
+              val outputSink = ServletOutputStreamSink(asyncContext.getResponse.getOutputStream, autoFlushing = true)
+              cloneResponseStatusAndHeader(proxyResponse, response)
 
-            proxyResponse.entity.contentLengthOption.foreach { len =>
-              response.setContentLength(len.toInt)
-            }
-            proxyResponse.entity.dataBytes.runWith(outputSink)
+              proxyResponse.entity.contentLengthOption.foreach { len =>
+                response.setContentLength(len.toInt)
+              }
+              proxyResponse.entity.dataBytes.runWith(outputSink)
+          }
         }
+      } catch {
+        case ex: Exception => Future.failed(ex)
       }
-    } catch {
-      case ex: Exception => Future.failed(ex)
-    }
 
     result.andThen {
       case Failure(ex) =>

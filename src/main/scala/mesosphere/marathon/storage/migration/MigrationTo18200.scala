@@ -17,7 +17,9 @@ import play.api.libs.functional.syntax._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class MigrationTo18200(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
+class MigrationTo18200(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])
+    extends MigrationStep
+    with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     InstanceMigration.migrateInstances(instanceRepository, persistenceStore, MigrationTo18200.migrationFlow)
@@ -35,19 +37,19 @@ object MigrationTo18200 extends StrictLogging {
   val instanceJsonReads18100: Reads[Instance] = {
     (
       (__ \ "instanceId").read[Id] ~
-      (__ \ "agentInfo").read[AgentInfo] ~
-      (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
-      (__ \ "runSpecVersion").read[Timestamp] ~
-      (__ \ "state").read[InstanceState] ~
-      (__ \ "reservation").readNullable[JsObject]
+        (__ \ "agentInfo").read[AgentInfo] ~
+        (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
+        (__ \ "runSpecVersion").read[Timestamp] ~
+        (__ \ "state").read[InstanceState] ~
+        (__ \ "reservation").readNullable[JsObject]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, rawReservation) =>
-        logger.info(s"Migrate $instanceId")
+      logger.info(s"Migrate $instanceId")
 
-        val reservation = rawReservation.map { raw =>
-          raw.as[Reservation](InstanceMigration.legacyReservationReads(tasksMap, instanceId))
-        }
-        new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation, None)
+      val reservation = rawReservation.map { raw =>
+        raw.as[Reservation](InstanceMigration.legacyReservationReads(tasksMap, instanceId))
       }
+      new Instance(instanceId, Some(agentInfo), state, tasksMap, runSpecVersion, reservation, None)
+    }
   }
 
   /**
@@ -58,10 +60,8 @@ object MigrationTo18200 extends StrictLogging {
     */
   def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads18100)
 
-  val migrationFlow = Flow[JsValue]
-    .filter { jsValue =>
-      // Only migrate instances that have a reservation but not id defined.
-      (jsValue \ "reservation").isDefined && (jsValue \ "reservation" \ "id").isEmpty
-    }
-    .map(extractInstanceFromJson)
+  val migrationFlow = Flow[JsValue].filter { jsValue =>
+    // Only migrate instances that have a reservation but not id defined.
+    (jsValue \ "reservation").isDefined && (jsValue \ "reservation" \ "id").isEmpty
+  }.map(extractInstanceFromJson)
 }

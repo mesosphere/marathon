@@ -17,8 +17,7 @@ class AppUpdateValidatorTest extends UnitTest with Matchers {
   "validation for network type changes" should {
     // regression test for DCOS-10641
     "allow updating from HOST to USER network for an app using a Docker container" in {
-      val originalApp = Json.parse(
-        """
+      val originalApp = Json.parse("""
           | {
           |  "id": "/sleepy-moby",
           |  "cmd": "sleep 1000",
@@ -54,12 +53,14 @@ class AppUpdateValidatorTest extends UnitTest with Matchers {
 
       val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved, false)
       val appDef = Raml.fromRaml(
-        AppNormalization.apply(config)
-          .normalized(AppNormalization.forDeprecated(config).normalized(originalApp)))
+        AppNormalization
+          .apply(config)
+          .normalized(AppNormalization.forDeprecated(config).normalized(originalApp))
+      )
 
-      val appUpdate = AppNormalization.forUpdates(config).normalized(
-        AppNormalization.forDeprecatedUpdates(config).normalized(Json.parse(
-          """
+      val appUpdate = AppNormalization
+        .forUpdates(config)
+        .normalized(AppNormalization.forDeprecatedUpdates(config).normalized(Json.parse("""
             |{
             |  "id": "/sleepy-moby",
             |  "cmd": "sleep 1000",

@@ -31,7 +31,8 @@ import scala.concurrent.Future
   * * and creating unreserved/destroy operations for tasks in state "garbage" only
   */
 private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker, groupRepository: GroupRepository)
-  extends OfferMatcher with StrictLogging {
+    extends OfferMatcher
+    with StrictLogging {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -55,60 +56,62 @@ private[reconcile] class OfferMatcherReconciler(instanceTracker: InstanceTracker
     * For example, if an instance is no longer required then any resident resources it's using should be released.
     */
   private[this] def processResourcesByInstanceId(
-    offer: Offer, resourcesByInstanceId: Map[Instance.Id, Seq[Resource]]): Future[MatchedInstanceOps] =
-    {
-      // do not query instanceTracker in the common case
-      if (resourcesByInstanceId.isEmpty) Future.successful(MatchedInstanceOps.noMatch(offer.getId))
-      else {
-        def createInstanceOps(instancesBySpec: InstancesBySpec, rootGroup: RootGroup): MatchedInstanceOps = {
+      offer: Offer,
+      resourcesByInstanceId: Map[Instance.Id, Seq[Resource]]
+  ): Future[MatchedInstanceOps] = {
+    // do not query instanceTracker in the common case
+    if (resourcesByInstanceId.isEmpty) Future.successful(MatchedInstanceOps.noMatch(offer.getId))
+    else {
+      def createInstanceOps(instancesBySpec: InstancesBySpec, rootGroup: RootGroup): MatchedInstanceOps = {
 
-          /* Was this task launched from a previous app definition, or a prior launch that did not clean up properly */
-          def spurious(instanceId: Instance.Id): Boolean =
-            instancesBySpec.instance(instanceId).isEmpty ||
-              (rootGroup.app(instanceId.runSpecId).isEmpty && rootGroup.pod(instanceId.runSpecId).isEmpty)
+        /* Was this task launched from a previous app definition, or a prior launch that did not clean up properly */
+        def spurious(instanceId: Instance.Id): Boolean =
+          instancesBySpec.instance(instanceId).isEmpty ||
+            (rootGroup.app(instanceId.runSpecId).isEmpty && rootGroup.pod(instanceId.runSpecId).isEmpty)
 
-          def terminalResident(id: Instance.Id): Boolean = instancesBySpec.instance(id).forall { instance =>
+        def terminalResident(id: Instance.Id): Boolean =
+          instancesBySpec.instance(id).forall { instance =>
             instance.reservation.nonEmpty && instance.state.goal == Goal.Decommissioned && instance.state.condition.isTerminal
           }
 
-          val instanceOps: Seq[InstanceOpWithSource] = resourcesByInstanceId.iterator.collect {
-            case (instanceId, spuriousResources) if spurious(instanceId) =>
-              val unreserveAndDestroy =
-                InstanceOp.UnreserveAndDestroyVolumes(
-                  stateOp = InstanceUpdateOperation.ForceExpunge(instanceId),
-                  oldInstance = instancesBySpec.instance(instanceId),
-                  resources = spuriousResources
-                )
-              logger.warn(s"removing spurious resources and volumes of $instanceId because the instance no longer exist")
-              InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
+        val instanceOps: Seq[InstanceOpWithSource] = resourcesByInstanceId.iterator.collect {
+          case (instanceId, spuriousResources) if spurious(instanceId) =>
+            val unreserveAndDestroy =
+              InstanceOp.UnreserveAndDestroyVolumes(
+                stateOp = InstanceUpdateOperation.ForceExpunge(instanceId),
+                oldInstance = instancesBySpec.instance(instanceId),
+                resources = spuriousResources
+              )
+            logger.warn(s"removing spurious resources and volumes of $instanceId because the instance no longer exist")
+            InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
 
-            case (instanceId, spuriousResources) if terminalResident(instanceId) =>
-              val unreserveAndDestroy =
-                InstanceOp.UnreserveAndDestroyVolumes(
-                  stateOp = InstanceUpdateOperation.Unreserve(instanceId),
-                  oldInstance = instancesBySpec.instance(instanceId),
-                  resources = spuriousResources
-                )
-              logger.info(s"Freeing reservation for terminal $instanceId")
-              InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
-          }.toSeq
+          case (instanceId, spuriousResources) if terminalResident(instanceId) =>
+            val unreserveAndDestroy =
+              InstanceOp.UnreserveAndDestroyVolumes(
+                stateOp = InstanceUpdateOperation.Unreserve(instanceId),
+                oldInstance = instancesBySpec.instance(instanceId),
+                resources = spuriousResources
+              )
+            logger.info(s"Freeing reservation for terminal $instanceId")
+            InstanceOpWithSource(source(offer.getId), unreserveAndDestroy)
+        }.toSeq
 
-          MatchedInstanceOps(offer.getId, instanceOps, resendThisOffer = true)
-        }
-
-        // query in parallel
-        val instancesBySpedFuture = instanceTracker.instancesBySpec()
-        val rootGroupFuture = groupRepository.root()
-
-        for { instancesBySpec <- instancesBySpedFuture; rootGroup <- rootGroupFuture }
-          yield createInstanceOps(instancesBySpec, rootGroup)
+        MatchedInstanceOps(offer.getId, instanceOps, resendThisOffer = true)
       }
-    }
 
-  private[this] def source(offerId: OfferID) = new InstanceOpSource {
-    override def instanceOpAccepted(instanceOp: InstanceOp): Unit =
-      logger.info(s"accepted unreserveAndDestroy for ${instanceOp.instanceId} in offer [${offerId.getValue}]")
-    override def instanceOpRejected(instanceOp: InstanceOp, reason: String): Unit =
-      logger.info(s"rejected unreserveAndDestroy for ${instanceOp.instanceId} in offer [${offerId.getValue}]: $reason")
+      // query in parallel
+      val instancesBySpedFuture = instanceTracker.instancesBySpec()
+      val rootGroupFuture = groupRepository.root()
+
+      for { instancesBySpec <- instancesBySpedFuture; rootGroup <- rootGroupFuture } yield createInstanceOps(instancesBySpec, rootGroup)
+    }
   }
+
+  private[this] def source(offerId: OfferID) =
+    new InstanceOpSource {
+      override def instanceOpAccepted(instanceOp: InstanceOp): Unit =
+        logger.info(s"accepted unreserveAndDestroy for ${instanceOp.instanceId} in offer [${offerId.getValue}]")
+      override def instanceOpRejected(instanceOp: InstanceOp, reason: String): Unit =
+        logger.info(s"rejected unreserveAndDestroy for ${instanceOp.instanceId} in offer [${offerId.getValue}]: $reason")
+    }
 }

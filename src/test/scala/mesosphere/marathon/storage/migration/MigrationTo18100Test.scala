@@ -36,10 +36,12 @@ class MigrationTo18100Test extends AkkaUnitTest with StrictLogging with TableDri
         val instanceId2 = Instance.Id.forRunSpec(AbsolutePathId("/app2"))
 
         val taskId = Task.Id(instanceId2)
-        val instances = Source(List(
-          f.legacyInstanceJson(instanceId1),
-          f.legacyResidentInstanceJson(instanceId2, taskId.idString, f.task(taskId, mesosState))
-        ))
+        val instances = Source(
+          List(
+            f.legacyInstanceJson(instanceId1),
+            f.legacyResidentInstanceJson(instanceId2, taskId.idString, f.task(taskId, mesosState))
+          )
+        )
 
         When("they are run through the migration flow")
         val updatedInstances = instances.via(MigrationTo18100.migrationFlow).runWith(Sink.seq).futureValue
@@ -58,8 +60,7 @@ class MigrationTo18100Test extends AkkaUnitTest with StrictLogging with TableDri
       * @param i The id of the instance.
       * @return The JSON of the instance.
       */
-    def legacyInstanceJson(i: Instance.Id): JsObject = Json.parse(
-      s"""
+    def legacyInstanceJson(i: Instance.Id): JsObject = Json.parse(s"""
          |{
          |  "instanceId": { "idString": "${i.idString}" },
          |  "tasksMap": {},
@@ -76,7 +77,9 @@ class MigrationTo18100Test extends AkkaUnitTest with StrictLogging with TableDri
     def legacyResidentInstanceJson(id: Instance.Id, taskId: String, task: JsValue): JsValue = {
 
       legacyInstanceJson(id) ++
-        Json.obj("state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Reserved"), "goal" -> "running")) ++
+        Json.obj(
+          "state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Reserved"), "goal" -> "running")
+        ) ++
         Json.obj("reservation" -> Json.obj("volumeIds" -> Json.arr(), "state" -> Json.obj("name" -> "suspended"))) ++
         Json.obj("tasksMap" -> Json.obj(taskId -> task))
     }
@@ -88,11 +91,12 @@ class MigrationTo18100Test extends AkkaUnitTest with StrictLogging with TableDri
       * @return The JSON object of the task.
       */
     def task(taskId: Task.Id, state: MesosProtos.TaskState): JsValue = task(taskId, taskStatus(taskId.idString, state))
-    def task(taskId: Task.Id, status: JsValue): JsValue = Json.obj(
-      "taskId" -> taskId.idString,
-      "runSpecVersion" -> "2015-01-01T12:00:00.000Z",
-      "status" -> status
-    )
+    def task(taskId: Task.Id, status: JsValue): JsValue =
+      Json.obj(
+        "taskId" -> taskId.idString,
+        "runSpecVersion" -> "2015-01-01T12:00:00.000Z",
+        "status" -> status
+      )
 
     /**
       * Construct a task status in 1.6.0 JSON format.
@@ -101,7 +105,8 @@ class MigrationTo18100Test extends AkkaUnitTest with StrictLogging with TableDri
       * @return The JSON object of the task status.
       */
     def taskStatus(taskId: String, state: MesosProtos.TaskState): JsValue = {
-      val mesosTaskStatus: MesosProtos.TaskStatus = MesosProtos.TaskStatus.newBuilder()
+      val mesosTaskStatus: MesosProtos.TaskStatus = MesosProtos.TaskStatus
+        .newBuilder()
         .setState(state)
         .setTaskId(MesosProtos.TaskID.newBuilder().setValue(taskId).build())
         .build()

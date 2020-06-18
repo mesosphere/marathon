@@ -37,16 +37,16 @@ object EnrichedSource {
     * @param overflowStrategy Strategy that is  used when incoming elements cannot fit inside the buffer
     */
   def eventBusSource[T](
-    message: Class[T],
-    eventStream: akka.event.EventStream,
-    bufferSize: Int,
-    overflowStrategy: OverflowStrategy): Source[T, Cancellable] = {
+      message: Class[T],
+      eventStream: akka.event.EventStream,
+      bufferSize: Int,
+      overflowStrategy: OverflowStrategy
+  ): Source[T, Cancellable] = {
     val source = Source.actorRef[T](bufferSize, overflowStrategy)
 
-    source.
-      mapMaterializedValue { ref =>
-        eventStream.subscribe(ref, message)
-        new CancellableOnce(() => ref ! PoisonPill)
-      }
+    source.mapMaterializedValue { ref =>
+      eventStream.subscribe(ref, message)
+      new CancellableOnce(() => ref ! PoisonPill)
+    }
   }
 }

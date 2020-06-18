@@ -10,8 +10,8 @@ class RequestFacade(request: HttpServletRequest, path: String) extends HttpReque
   def this(request: HttpServletRequest) = this(request, request.getRequestURI)
   // Jersey will not allow calls to the request object from another thread
   // To circumvent that, we have to copy all data during creation
-  val headers: Map[String, Seq[String]] = request.getHeaderNames.asScala.iterator.map(header =>
-    header.toLowerCase -> request.getHeaders(header).asScala.to(Seq)).toMap
+  val headers: Map[String, Seq[String]] =
+    request.getHeaderNames.asScala.iterator.map(header => header.toLowerCase -> request.getHeaders(header).asScala.to(Seq)).toMap
   val cookies = request.getCookies
   val params = request.getParameterMap
   val remoteAddr = request.getRemoteAddr

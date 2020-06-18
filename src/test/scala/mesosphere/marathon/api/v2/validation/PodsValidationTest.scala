@@ -3,7 +3,34 @@ package api.v2.validation
 
 import com.wix.accord.{Failure, Result, Validator}
 import mesosphere.marathon.core.plugin.PluginManager
-import mesosphere.marathon.raml.{Constraint, ConstraintOperator, DockerPullConfig, Endpoint, EnvVarSecret, Image, ImageType, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodEphemeralVolume, PodPersistentVolume, PodPlacementPolicy, PodSchedulingPolicy, PodSecretVolume, PodUpgradeStrategy, ResourceLimitNumber, ResourceLimitUnlimited, ResourceLimits, Resources, SecretDef, UnreachableDisabled, UnreachableEnabled, VolumeMount}
+import mesosphere.marathon.raml.{
+  Constraint,
+  ConstraintOperator,
+  DockerPullConfig,
+  Endpoint,
+  EnvVarSecret,
+  Image,
+  ImageType,
+  Network,
+  NetworkMode,
+  PersistentVolumeInfo,
+  Pod,
+  PodContainer,
+  PodEphemeralVolume,
+  PodPersistentVolume,
+  PodPlacementPolicy,
+  PodSchedulingPolicy,
+  PodSecretVolume,
+  PodUpgradeStrategy,
+  ResourceLimitNumber,
+  ResourceLimitUnlimited,
+  ResourceLimits,
+  Resources,
+  SecretDef,
+  UnreachableDisabled,
+  UnreachableEnabled,
+  VolumeMount
+}
 import mesosphere.marathon.state.PersistentVolume
 import mesosphere.marathon.util.{RoleSettings, SemanticVersion}
 import mesosphere.{UnitTest, ValidationTestLike}
@@ -25,7 +52,8 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
     }
 
     "be accepted if secrets defined" in new Fixture(validateSecrets = true) {
-      private val valid = validPod.copy(secrets = Map("secret1" -> SecretDef(source = "/foo")), environment = Map("TEST" -> EnvVarSecret("secret1")))
+      private val valid =
+        validPod.copy(secrets = Map("secret1" -> SecretDef(source = "/foo")), environment = Map("TEST" -> EnvVarSecret("secret1")))
       validator(valid) should be(aSuccess)
     }
 
@@ -35,23 +63,22 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
 
     "be rejected if container names are not unique" in new Fixture() {
       validator(validPod.copy(containers = Seq(validContainer, validContainer))) should haveViolations(
-        "/containers" -> PodsValidationMessages.ContainerNamesMustBeUnique)
+        "/containers" -> PodsValidationMessages.ContainerNamesMustBeUnique
+      )
     }
 
     "be rejected if endpoint names are not unique" in new Fixture() {
       val endpoint1 = Endpoint("endpoint", hostPort = Some(123))
       val endpoint2 = Endpoint("endpoint", hostPort = Some(124))
       private val invalid = validPod.copy(containers = Seq(validContainer.copy(endpoints = Seq(endpoint1, endpoint2))))
-      validator(invalid) should haveViolations(
-        "/" -> PodsValidationMessages.EndpointNamesMustBeUnique)
+      validator(invalid) should haveViolations("/" -> PodsValidationMessages.EndpointNamesMustBeUnique)
     }
 
     "be rejected if endpoint host ports are not unique" in new Fixture() {
       val endpoint1 = Endpoint("endpoint1", hostPort = Some(123))
       val endpoint2 = Endpoint("endpoint2", hostPort = Some(123))
       private val invalid = validPod.copy(containers = Seq(validContainer.copy(endpoints = Seq(endpoint1, endpoint2))))
-      validator(invalid) should haveViolations(
-        "/" -> PodsValidationMessages.HostPortsMustBeUnique)
+      validator(invalid) should haveViolations("/" -> PodsValidationMessages.HostPortsMustBeUnique)
     }
 
     "be rejected if endpoint container ports are not unique" in new Fixture() {
@@ -61,8 +88,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
         networks = Seq(Network(mode = NetworkMode.Container, name = Some("default-network-name"))),
         containers = Seq(validContainer.copy(endpoints = Seq(endpoint1, endpoint2)))
       )
-      validator(invalid) should haveViolations(
-        "/" -> PodsValidationMessages.ContainerPortsMustBeUnique)
+      validator(invalid) should haveViolations("/" -> PodsValidationMessages.ContainerPortsMustBeUnique)
     }
 
     "be rejected if volume names are not unique" in new Fixture() {
@@ -72,8 +98,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
         volumes = Seq(volume, volume),
         containers = Seq(validContainer.copy(volumeMounts = Seq(volumeMount)))
       )
-      validator(invalid) should haveViolations(
-        "/volumes" -> PodsValidationMessages.VolumeNamesMustBeUnique)
+      validator(invalid) should haveViolations("/volumes" -> PodsValidationMessages.VolumeNamesMustBeUnique)
     }
 
     "be rejected if a secret volume is defined without a corresponding secret" in new Fixture(validateSecrets = true) {
@@ -101,8 +126,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
 
     "be rejected if a pull config pod doesn't have secrets" in new Fixture(validateSecrets = true) {
       private val invalid = pullConfigPod.copy(secrets = Map.empty)
-      validator(invalid) should haveViolations(
-        "/containers(0)/image/pullConfig" -> "pullConfig.secret must refer to an existing secret")
+      validator(invalid) should haveViolations("/containers(0)/image/pullConfig" -> "pullConfig.secret must refer to an existing secret")
     }
   }
 
@@ -124,64 +148,56 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
     }
 
     "be valid if no unreachable strategy is provided" in new Fixture {
-      val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(
-        unreachableStrategy = None)))
+      val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(unreachableStrategy = None)))
       validator(pod) should be(aSuccess)
     }
 
     "be valid if no upgrade strategy is provided" in new Fixture {
-      val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(
-        upgrade = None)))
+      val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(upgrade = None)))
       validator(pod) should be(aSuccess)
     }
 
     "be invalid if unreachable strategy is enabled" in new Fixture {
-      val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(
-        unreachableStrategy = Some(UnreachableEnabled()))))
-      validator(pod) should haveViolations(
-        "/" -> "unreachableStrategy must be disabled for pods with persistent volumes")
+      val pod =
+        validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(unreachableStrategy = Some(UnreachableEnabled()))))
+      validator(pod) should haveViolations("/" -> "unreachableStrategy must be disabled for pods with persistent volumes")
     }
 
     "be invalid if upgrade strategy has maximumOverCapacity set to non-zero" in new Fixture {
-      val pod = validResidentPod.copy(scheduling = validResidentPod.scheduling.map(_.copy(
-        upgrade = Some(PodUpgradeStrategy(maximumOverCapacity = 0.1)))))
-      validator(pod) should haveViolations(
-        "/upgrade/maximumOverCapacity" -> "got 0.1, expected 0.0")
+      val pod = validResidentPod.copy(scheduling =
+        validResidentPod.scheduling.map(_.copy(upgrade = Some(PodUpgradeStrategy(maximumOverCapacity = 0.1))))
+      )
+      validator(pod) should haveViolations("/upgrade/maximumOverCapacity" -> "got 0.1, expected 0.0")
     }
 
     "be invalid if cpu changes" in new Fixture {
       val pod = validResidentPod.fromRaml
       val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(cpus = 3))))
-      residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> PodsValidationMessages.CpusPersistentVolumes)
+      residentUpdateIsValid(pod)(to) should haveViolations("/" -> PodsValidationMessages.CpusPersistentVolumes)
     }
 
     "be invalid if mem changes" in new Fixture {
       val pod = validResidentPod.fromRaml
       val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(mem = 3))))
-      residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> PodsValidationMessages.MemPersistentVolumes)
+      residentUpdateIsValid(pod)(to) should haveViolations("/" -> PodsValidationMessages.MemPersistentVolumes)
     }
 
     "be invalid if disk changes" in new Fixture {
       val pod = validResidentPod.fromRaml
       val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(disk = 3))))
-      residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> PodsValidationMessages.DiskPersistentVolumes)
+      residentUpdateIsValid(pod)(to) should haveViolations("/" -> PodsValidationMessages.DiskPersistentVolumes)
     }
 
     "be invalid if gpus change" in new Fixture {
       val pod = validResidentPod.fromRaml
       val to = pod.copy(containers = pod.containers.map(ct => ct.copy(resources = ct.resources.copy(gpus = 3))))
-      residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> PodsValidationMessages.GpusPersistentVolumes)
+      residentUpdateIsValid(pod)(to) should haveViolations("/" -> PodsValidationMessages.GpusPersistentVolumes)
     }
 
     "be invalid with default upgrade strategy" in new Fixture {
       val pod = validResidentPod.fromRaml
       val to = pod.copy(upgradeStrategy = state.UpgradeStrategy.empty)
-      residentUpdateIsValid(pod)(to) should haveViolations(
-        "/upgradeStrategy/maximumOverCapacity" -> "got 1.0, expected 0.0")
+      residentUpdateIsValid(pod)(to) should haveViolations("/upgradeStrategy/maximumOverCapacity" -> "got 1.0, expected 0.0")
     }
 
     "be invalid if persistent volumes change" in new Fixture {
@@ -190,20 +206,15 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
         case vol: PersistentVolume => vol.copy(persistent = vol.persistent.copy(size = 2))
         case vol => vol
       })
-      residentUpdateIsValid(pod)(to) should haveViolations(
-        "/" -> "persistent volumes cannot be updated")
+      residentUpdateIsValid(pod)(to) should haveViolations("/" -> "persistent volumes cannot be updated")
     }
 
     "be invalid if ports change" in new Fixture {
       val pod = validResidentPod.fromRaml
-      val to1 = pod.copy(containers = pod.containers.map(ct => ct.copy(
-        endpoints = ct.endpoints.map(ep => ep.copy(hostPort = None)))))
-      val to2 = pod.copy(containers = pod.containers.map(ct => ct.copy(
-        endpoints = ct.endpoints.map(ep => ep.copy(hostPort = Some(2))))))
-      residentUpdateIsValid(pod)(to1) should haveViolations(
-        "/" -> PodsValidationMessages.HostPortsPersistentVolumes)
-      residentUpdateIsValid(pod)(to2) should haveViolations(
-        "/" -> PodsValidationMessages.HostPortsPersistentVolumes)
+      val to1 = pod.copy(containers = pod.containers.map(ct => ct.copy(endpoints = ct.endpoints.map(ep => ep.copy(hostPort = None)))))
+      val to2 = pod.copy(containers = pod.containers.map(ct => ct.copy(endpoints = ct.endpoints.map(ep => ep.copy(hostPort = Some(2))))))
+      residentUpdateIsValid(pod)(to1) should haveViolations("/" -> PodsValidationMessages.HostPortsPersistentVolumes)
+      residentUpdateIsValid(pod)(to2) should haveViolations("/" -> PodsValidationMessages.HostPortsPersistentVolumes)
     }
   }
 
@@ -216,19 +227,28 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
 
     "be invalid when the role is neither the group-role nor the default role (and enforcerole is off)" in new Fixture {
       val podDef = podWithoutRole.copy(role = Some("anotherRole")).fromRaml
-      podDefValidatorWithValidRolesList(podDef) should haveViolations(
-        "/role" -> "got anotherRole, expected one of: [dev]")
+      podDefValidatorWithValidRolesList(podDef) should haveViolations("/role" -> "got anotherRole, expected one of: [dev]")
     }
 
     "be invalid when acceptedResource role is different from the role" in new Fixture {
-      val podDef = podWithoutRole.copy(role = Some("dev"), scheduling = Some(PodSchedulingPolicy(placement = Some(PodPlacementPolicy(acceptedResourceRoles = Seq("differentRole")))))).fromRaml
+      val podDef = podWithoutRole
+        .copy(
+          role = Some("dev"),
+          scheduling = Some(PodSchedulingPolicy(placement = Some(PodPlacementPolicy(acceptedResourceRoles = Seq("differentRole")))))
+        )
+        .fromRaml
       podDefValidatorWithValidRolesList(podDef) should haveViolations(
         "/acceptedResourceRoles" -> "acceptedResourceRoles can only contain * and dev"
       )
     }
 
     "be invalid when acceptedResource role is different from the role and role is *" in new Fixture {
-      val podDef = podWithoutRole.copy(role = Some("*"), scheduling = Some(PodSchedulingPolicy(placement = Some(PodPlacementPolicy(acceptedResourceRoles = Seq("differentRole")))))).fromRaml
+      val podDef = podWithoutRole
+        .copy(
+          role = Some("*"),
+          scheduling = Some(PodSchedulingPolicy(placement = Some(PodPlacementPolicy(acceptedResourceRoles = Seq("differentRole")))))
+        )
+        .fromRaml
       podDefValidatorWithValidRolesList(podDef) should haveViolations(
         "/acceptedResourceRoles" -> "acceptedResourceRoles can only contain *"
       )
@@ -264,14 +284,20 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       containers = Seq(validContainer)
     )
 
-    def validResidentPod = validPod.copy(
-      containers = Seq(validContainer.copy(
-        endpoints = Seq(Endpoint("ep1", hostPort = Some(1))),
-        volumeMounts = Seq(VolumeMount("vol1", "vol1-mount", Some(false))))),
-      volumes = Seq(PodPersistentVolume("vol1", PersistentVolumeInfo(size = 1))),
-      scheduling = Some(PodSchedulingPolicy(
-        upgrade = Some(PodUpgradeStrategy(minimumHealthCapacity = 0, maximumOverCapacity = 0)),
-        unreachableStrategy = Some(UnreachableDisabled()))))
+    def validResidentPod =
+      validPod.copy(
+        containers = Seq(
+          validContainer
+            .copy(endpoints = Seq(Endpoint("ep1", hostPort = Some(1))), volumeMounts = Seq(VolumeMount("vol1", "vol1-mount", Some(false))))
+        ),
+        volumes = Seq(PodPersistentVolume("vol1", PersistentVolumeInfo(size = 1))),
+        scheduling = Some(
+          PodSchedulingPolicy(
+            upgrade = Some(PodUpgradeStrategy(minimumHealthCapacity = 0, maximumOverCapacity = 0)),
+            unreachableStrategy = Some(UnreachableDisabled())
+          )
+        )
+      )
 
     val features: Set[String] = if (validateSecrets) Set(Features.SECRETS) else Set.empty
     implicit val validator: Validator[Pod] = podValidator(features, SemanticVersion.zero, None)
@@ -287,10 +313,7 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       podValidator(Set.empty, SemanticVersion.zero, Some("default-network-name"))
 
     def podContainer(name: String = "ct1", resources: Resources = Resources(), endpoints: Seq[Endpoint]) =
-      PodContainer(
-        name = name,
-        resources = resources,
-        endpoints = endpoints)
+      PodContainer(name = name, resources = resources, endpoints = endpoints)
 
     def networks(networkCount: Int = 1): Seq[Network] =
       1.to(networkCount).map(i => Network(mode = NetworkMode.Container, name = Some(i.toString)))
@@ -300,25 +323,21 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
     def hostNetwork: Seq[Network] = Seq(Network(mode = NetworkMode.Host))
 
     def networkedPod(containers: Seq[PodContainer], nets: => Seq[Network] = networks()) =
-      Pod(
-        id = "/foo",
-        networks = nets,
-        containers = containers)
+      Pod(id = "/foo", networks = nets, containers = containers)
 
     "multiple container networks are specified for a pod" should {
 
       "require networkNames for containerPort to hostPort mapping" in {
         val badApp = networkedPod(
           Seq(podContainer(endpoints = Seq(Endpoint("endpoint", containerPort = Some(80), hostPort = Option(0))))),
-          networks(2))
+          networks(2)
+        )
 
         validator(badApp).isFailure shouldBe true
       }
 
       "allow endpoints that don't declare hostPort nor networkNames" in {
-        val app = networkedPod(
-          Seq(podContainer(endpoints = Seq(Endpoint("endpoint", containerPort = Some(80))))),
-          networks(2))
+        val app = networkedPod(Seq(podContainer(endpoints = Seq(Endpoint("endpoint", containerPort = Some(80))))), networks(2))
         validator(app) should be(aSuccess)
       }
 
@@ -334,13 +353,11 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
 
       "allow endpoints that both declare a hostPort and a networkNames" in {
         val app = networkedPod(
-          Seq(podContainer(endpoints = Seq(
-            Endpoint(
-              "endpoint",
-              hostPort = Option(0),
-              containerPort = Some(80),
-              networkNames = List("1"))))),
-          networks(2))
+          Seq(
+            podContainer(endpoints = Seq(Endpoint("endpoint", hostPort = Option(0), containerPort = Some(80), networkNames = List("1"))))
+          ),
+          networks(2)
+        )
         validator(app) should be(aSuccess)
       }
     }
@@ -350,54 +367,49 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
       def containerAndBridgeMode(subtitle: String, networks: => Seq[Network]): Unit = {
         s"${subtitle} allow endpoint with no networkNames" in {
           validator(
-            networkedPod(Seq(
-              podContainer(endpoints = Seq(
-                Endpoint(
-                  "endpoint",
-                  hostPort = Some(80),
-                  containerPort = Some(80),
-                  networkNames = Nil)))), networks)) should be(aSuccess)
+            networkedPod(
+              Seq(podContainer(endpoints = Seq(Endpoint("endpoint", hostPort = Some(80), containerPort = Some(80), networkNames = Nil)))),
+              networks
+            )
+          ) should be(aSuccess)
         }
 
         s"${subtitle} allow endpoint without hostport" in {
           validator(
-            networkedPod(Seq(
-              podContainer(endpoints = Seq(
-                Endpoint(
-                  "endpoint",
-                  hostPort = None,
-                  containerPort = Some(80),
-                  networkNames = Nil)))), networks)) should be(aSuccess)
+            networkedPod(
+              Seq(podContainer(endpoints = Seq(Endpoint("endpoint", hostPort = None, containerPort = Some(80), networkNames = Nil)))),
+              networks
+            )
+          ) should be(aSuccess)
         }
 
         s"${subtitle} allow endpoint with zero hostport" in {
           validator(
-            networkedPod(Seq(
-              podContainer(endpoints = Seq(
-                Endpoint(
-                  "endpoint",
-                  containerPort = Some(80),
-                  hostPort = Some(0))))), networks)) should be(aSuccess)
+            networkedPod(Seq(podContainer(endpoints = Seq(Endpoint("endpoint", containerPort = Some(80), hostPort = Some(0))))), networks)
+          ) should be(aSuccess)
         }
 
         s"${subtitle} allows containerPort of zero" in {
           validator(
-            networkedPod(Seq(
-              podContainer(endpoints = Seq(
-                Endpoint("name1", containerPort = Some(0)),
-                Endpoint("name2", containerPort = Some(0))
-              ))), networks)) should be(aSuccess)
+            networkedPod(
+              Seq(
+                podContainer(endpoints =
+                  Seq(
+                    Endpoint("name1", containerPort = Some(0)),
+                    Endpoint("name2", containerPort = Some(0))
+                  )
+                )
+              ),
+              networks
+            )
+          ) should be(aSuccess)
         }
 
         s"${subtitle} require that hostPort is unique" in {
-          val pod = networkedPod(Seq(
-            podContainer(endpoints = Seq(
-              Endpoint(
-                "name1",
-                hostPort = Some(123)),
-              Endpoint(
-                "name2",
-                hostPort = Some(123))))), networks)
+          val pod = networkedPod(
+            Seq(podContainer(endpoints = Seq(Endpoint("name1", hostPort = Some(123)), Endpoint("name2", hostPort = Some(123))))),
+            networks
+          )
           validator(pod) should haveViolations("/" -> PodsValidationMessages.HostPortsMustBeUnique)
         }
       }
@@ -407,62 +419,64 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
     }
 
     "container-mode: requires containerPort" in {
-      val pod = networkedPod(Seq(
-        podContainer(endpoints = Seq(
-          Endpoint(
-            "name1",
-            hostPort = Some(123))))))
+      val pod = networkedPod(Seq(podContainer(endpoints = Seq(Endpoint("name1", hostPort = Some(123))))))
       validator(pod) should haveViolations(
-        "/containers(0)/endpoints(0)/containerPort" -> "is required when using container-mode networking")
+        "/containers(0)/endpoints(0)/containerPort" -> "is required when using container-mode networking"
+      )
     }
 
     "allow endpoint with a networkNames" in {
       validator(
-        networkedPod(Seq(
-          podContainer(endpoints = Seq(
-            Endpoint(
-              "endpoint",
-              hostPort = Some(80),
-              containerPort = Some(80),
-              networkNames = List("1"))))))) should be(aSuccess)
+        networkedPod(
+          Seq(podContainer(endpoints = Seq(Endpoint("endpoint", hostPort = Some(80), containerPort = Some(80), networkNames = List("1")))))
+        )
+      ) should be(aSuccess)
     }
 
     "disallow endpoint with a host port and two valid networkNames" in {
       validator(
-        networkedPod(Seq(
-          podContainer(endpoints = Seq(
-            Endpoint(
-              "endpoint",
-              hostPort = Some(80),
-              containerPort = Some(80),
-              networkNames = List("1", "2"))))))) shouldNot be(aSuccess)
+        networkedPod(
+          Seq(
+            podContainer(endpoints =
+              Seq(Endpoint("endpoint", hostPort = Some(80), containerPort = Some(80), networkNames = List("1", "2")))
+            )
+          )
+        )
+      ) shouldNot be(aSuccess)
     }
 
     "disallow endpoint with a non-matching network name" in {
       validator(
-        networkedPod(Seq(
-          podContainer(endpoints = Seq(
-            Endpoint(
-              "endpoint",
-              containerPort = Some(80),
-              hostPort = Some(80),
-              networkNames = List("invalid-network-name"))))))) shouldNot be(aSuccess)
+        networkedPod(
+          Seq(
+            podContainer(endpoints =
+              Seq(Endpoint("endpoint", containerPort = Some(80), hostPort = Some(80), networkNames = List("invalid-network-name")))
+            )
+          )
+        )
+      ) shouldNot be(aSuccess)
     }
 
     "allow endpoint without hostPort for host networking" in {
-      validator(networkedPod(Seq(
-        podContainer(endpoints = Seq(Endpoint("ep")))
-      ), hostNetwork)) should be(aSuccess)
+      validator(
+        networkedPod(
+          Seq(
+            podContainer(endpoints = Seq(Endpoint("ep")))
+          ),
+          hostNetwork
+        )
+      ) should be(aSuccess)
     }
   }
 
   "resourceLimits validation" should {
     def withResourceLimits(pod: Pod, cpus: Option[Double] = None, mem: Option[Double] = None): Pod = {
-      def doubleToResourceLimit(d: Double) = if (d.isInfinite()) {
-        ResourceLimitUnlimited("unlimited")
-      } else {
-        ResourceLimitNumber(d)
-      }
+      def doubleToResourceLimit(d: Double) =
+        if (d.isInfinite()) {
+          ResourceLimitUnlimited("unlimited")
+        } else {
+          ResourceLimitNumber(d)
+        }
 
       pod.copy(containers = pod.containers.map { container =>
         container.copy(resourceLimits = Some(ResourceLimits(cpus = cpus.map(doubleToResourceLimit), mem = mem.map(doubleToResourceLimit))))
@@ -481,15 +495,18 @@ class PodsValidationTest extends UnitTest with ValidationTestLike with PodsValid
 
     "fail when resource limits are less than requested resources" in new Fixture {
       validator(withResourceLimits(validPod, mem = Some(100))) should haveViolations(
-        "/containers(0)/resourceLimits/mem" -> "resource limit must be greater than or equal to requested resource (128.0)")
+        "/containers(0)/resourceLimits/mem" -> "resource limit must be greater than or equal to requested resource (128.0)"
+      )
       validator(withResourceLimits(validPod, cpus = Some(0.5))) should haveViolations(
-        "/containers(0)/resourceLimits/cpus" -> "resource limit must be greater than or equal to requested resource (1.0)")
+        "/containers(0)/resourceLimits/cpus" -> "resource limit must be greater than or equal to requested resource (1.0)"
+      )
     }
 
     "fail when resource limits are specified and sharedCgroups is enabled" in new Fixture {
       val podWithSharedCgroups = validPod.copy(legacySharedCgroups = Some(true))
       validator(withResourceLimits(podWithSharedCgroups, cpus = Some(Double.PositiveInfinity))) should haveViolations(
-        "/containers(0)/resourceLimits" -> "resourceLimits cannot be defined if legacySharedCgroups is enabled")
+        "/containers(0)/resourceLimits" -> "resourceLimits cannot be defined if legacySharedCgroups is enabled"
+      )
     }
   }
 }

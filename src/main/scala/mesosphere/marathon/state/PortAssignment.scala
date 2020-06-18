@@ -14,7 +14,8 @@ case class PortAssignment(
     effectiveIpAddress: Option[String],
     effectivePort: Int,
     hostPort: Option[Int] = None,
-    containerPort: Option[Int] = None) {
+    containerPort: Option[Int] = None
+) {
 
   require(
     effectiveIpAddress.nonEmpty || effectivePort == PortAssignment.NoPort,

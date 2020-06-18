@@ -41,7 +41,10 @@ class ReviveOffersActor(
     instanceUpdates: InstanceTracker.InstanceUpdates,
     rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
     driverHolder: MarathonSchedulerDriverHolder,
-    enableSuppress: Boolean) extends Actor with Stash with StrictLogging {
+    enableSuppress: Boolean
+) extends Actor
+    with Stash
+    with StrictLogging {
 
   private[this] val reviveCountMetric: Counter = metrics.counter("mesos.calls.revive")
   private[this] val suppressCountMetric: Counter = metrics.counter("mesos.calls.suppress")
@@ -74,7 +77,8 @@ class ReviveOffersActor(
     )
 
     val done: Future[Done] = initialFrameworkInfo.flatMap { frameworkInfo =>
-      flattenedInstanceUpdates.map(Left(_))
+      flattenedInstanceUpdates
+        .map(Left(_))
         .merge(delayedConfigRefs.map(Right(_)))
         .via(suppressReviveFlow)
         .via(reviveSuppressMetrics)
@@ -82,9 +86,7 @@ class ReviveOffersActor(
           case UpdateFramework(roleState, _, _) =>
             driverHolder.driver.foreach { d =>
               val newInfo = frameworkInfoWithRoles(frameworkInfo, roleState.keys)
-              val suppressedRoles = roleState.iterator
-                .collect { case (role, OffersNotWanted) => role }
-                .toSeq
+              val suppressedRoles = roleState.iterator.collect { case (role, OffersNotWanted) => role }.toSeq
               d.updateFramework(newInfo, suppressedRoles.asJava)
             }
 
@@ -120,26 +122,39 @@ class ReviveOffersActor(
       directive
   }
 
-  override def receive: Receive = LoggingReceive {
-    case Status.Failure(ex) =>
-      logger.error("Unexpected termination of revive stream", ex)
-      throw ex
-    case Done =>
-      logger.error(s"Unexpected successful termination of revive stream")
-  }
+  override def receive: Receive =
+    LoggingReceive {
+      case Status.Failure(ex) =>
+        logger.error("Unexpected termination of revive stream", ex)
+        throw ex
+      case Done =>
+        logger.error(s"Unexpected successful termination of revive stream")
+    }
 
 }
 
 object ReviveOffersActor {
   def props(
-    metrics: Metrics,
-    initialFrameworkInfo: Future[FrameworkInfo],
-    defaultMesosRole: String,
-    minReviveOffersInterval: FiniteDuration,
-    instanceUpdates: InstanceTracker.InstanceUpdates,
-    rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
-    driverHolder: MarathonSchedulerDriverHolder,
-    enableSuppress: Boolean): Props = {
-    Props(new ReviveOffersActor(metrics, initialFrameworkInfo, defaultMesosRole, minReviveOffersInterval, instanceUpdates, rateLimiterUpdates, driverHolder, enableSuppress))
+      metrics: Metrics,
+      initialFrameworkInfo: Future[FrameworkInfo],
+      defaultMesosRole: String,
+      minReviveOffersInterval: FiniteDuration,
+      instanceUpdates: InstanceTracker.InstanceUpdates,
+      rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
+      driverHolder: MarathonSchedulerDriverHolder,
+      enableSuppress: Boolean
+  ): Props = {
+    Props(
+      new ReviveOffersActor(
+        metrics,
+        initialFrameworkInfo,
+        defaultMesosRole,
+        minReviveOffersInterval,
+        instanceUpdates,
+        rateLimiterUpdates,
+        driverHolder,
+        enableSuppress
+      )
+    )
   }
 }

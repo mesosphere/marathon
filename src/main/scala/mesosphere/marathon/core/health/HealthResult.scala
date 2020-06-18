@@ -11,25 +11,20 @@ sealed trait HealthResult {
   def publishEvent: Boolean
 }
 
-case class Healthy(
-    instanceId: Instance.Id,
-    version: Timestamp,
-    time: Timestamp = Timestamp.now(),
-    publishEvent: Boolean = true) extends HealthResult
+case class Healthy(instanceId: Instance.Id, version: Timestamp, time: Timestamp = Timestamp.now(), publishEvent: Boolean = true)
+    extends HealthResult
 
 case class Unhealthy(
     instanceId: Instance.Id,
     version: Timestamp,
     cause: String,
     time: Timestamp = Timestamp.now(),
-    publishEvent: Boolean = true) extends HealthResult
+    publishEvent: Boolean = true
+) extends HealthResult
 
 /**
   * Representing an ignored HTTP response code (see [[MarathonHttpHealthCheck.ignoreHttp1xx]]. Will not update the
   * health check state and not be published.
   */
-case class Ignored(
-    instanceId: Instance.Id,
-    version: Timestamp,
-    time: Timestamp = Timestamp.now(),
-    publishEvent: Boolean = false) extends HealthResult
+case class Ignored(instanceId: Instance.Id, version: Timestamp, time: Timestamp = Timestamp.now(), publishEvent: Boolean = false)
+    extends HealthResult

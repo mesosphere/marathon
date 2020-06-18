@@ -19,9 +19,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.{Await, ExecutionContext}
 import scala.util.{Failure, Random, Success}
 
-class ZooKeeperPersistenceStoreTest extends UnitTest
-  with ZookeeperServerTest
-  with StrictLogging {
+class ZooKeeperPersistenceStoreTest extends UnitTest with ZookeeperServerTest with StrictLogging {
 
   implicit val system: ActorSystem = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -79,9 +77,12 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         val created = new TrieMap[String, Done]()
 
         intercept[NodeExistsException] {
-          Await.result(store
-            .create(nodes :+ nodes.head)
-            .runWith(Sink.foreach(p => created.put(p, Done))), patienceConfig.timeout)
+          Await.result(
+            store
+              .create(nodes :+ nodes.head)
+              .runWith(Sink.foreach(p => created.put(p, Done))),
+            patienceConfig.timeout
+          )
         }
 
         And("but first 3 nodes were successfully created")
@@ -124,7 +125,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
 
         Then("read operations should be successful")
         res.size shouldBe 3
-        res.collect{ case Success(node) => node.data.utf8String } should contain theSameElementsAs (Seq("foo", "foo", "foo"))
+        res.collect { case Success(node) => node.data.utf8String } should contain theSameElementsAs (Seq("foo", "foo", "foo"))
       }
     }
 
@@ -163,7 +164,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         Then("update operation is successful")
         val res = store.read(nodes.map(_.path)).runWith(Sink.seq).futureValue
         res.size shouldBe 3
-        res.collect{ case Success(node) => node.data.utf8String } should contain theSameElementsAs (Seq("bar", "bar", "bar"))
+        res.collect { case Success(node) => node.data.utf8String } should contain theSameElementsAs (Seq("bar", "bar", "bar"))
       }
     }
 
@@ -261,9 +262,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
         store.create(Node(prefix, ByteString.empty)).futureValue
 
         And("a transaction with two create operations is submitted")
-        val ops = Seq(
-          CreateOp(Node(randomPath(prefix), ByteString("foo"))),
-          CreateOp(Node(randomPath(prefix), ByteString("foo"))))
+        val ops = Seq(CreateOp(Node(randomPath(prefix), ByteString("foo"))), CreateOp(Node(randomPath(prefix), ByteString("foo"))))
 
         Then("a transaction should be successful")
         val res = store.transaction(ops).futureValue
@@ -282,9 +281,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
 
         And("a transaction is submitted")
         val path = randomPath(prefix)
-        val ops = Seq(
-          CreateOp(Node(path, ByteString("foo"))),
-          UpdateOp(Node(path, ByteString("bar"))))
+        val ops = Seq(CreateOp(Node(path, ByteString("foo"))), UpdateOp(Node(path, ByteString("bar"))))
 
         Then("a transaction should be successful")
         val res = store.transaction(ops).futureValue
@@ -307,9 +304,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
 
         And("a transaction with create, update and delete operations is submitted")
         val path = randomPath(prefix)
-        val ops = Seq(
-          CreateOp(Node(path, ByteString("foo"))),
-          DeleteOp(path))
+        val ops = Seq(CreateOp(Node(path, ByteString("foo"))), DeleteOp(path))
 
         Then("a transaction should be successful")
         val res = store.transaction(ops).futureValue
@@ -346,9 +341,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
 
         And("a transaction is submitted")
         val path = randomPath(prefix)
-        val ops = Seq(
-          CreateOp(Node(path, ByteString("foo"))),
-          CheckOp(path))
+        val ops = Seq(CreateOp(Node(path, ByteString("foo"))), CheckOp(path))
 
         Then("transaction should be successful")
         val res = store.transaction(ops).futureValue
@@ -366,9 +359,7 @@ class ZooKeeperPersistenceStoreTest extends UnitTest
 
         And("a transaction with create and erroneous check operations is submitted")
         val path = randomPath(prefix)
-        val ops = Seq(
-          CheckOp(path),
-          CreateOp(Node(path, ByteString("foo"))))
+        val ops = Seq(CheckOp(path), CreateOp(Node(path, ByteString("foo"))))
 
         Then("an exception is thrown")
         intercept[NoNodeException] {

@@ -20,9 +20,13 @@ import mesosphere.marathon.test.SettableClock
 
 import scala.concurrent.duration._
 
-class LazyCachingPersistenceStoreTest extends AkkaUnitTest
-  with PersistenceStoreTest with ZkTestClass1Serialization with ZookeeperServerTest
-  with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
+class LazyCachingPersistenceStoreTest
+    extends AkkaUnitTest
+    with PersistenceStoreTest
+    with ZkTestClass1Serialization
+    with ZookeeperServerTest
+    with InMemoryStoreSerialization
+    with InMemoryTestClass1Serialization {
 
   private val metrics = DummyMetrics
 
@@ -41,9 +45,7 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
   private def cachedZk = {
     val root = UUID.randomUUID().toString
     val client = RichCuratorFramework(zkClient(namespace = Some(root)), JvmExitsCrashStrategy)
-    val store = LazyCachingPersistenceStore(
-      metrics,
-      new ZkPersistenceStore(metrics, client))
+    val store = LazyCachingPersistenceStore(metrics, new ZkPersistenceStore(metrics, client))
     store.markOpen()
     store
   }
@@ -56,13 +58,11 @@ class LazyCachingPersistenceStoreTest extends AkkaUnitTest
 
   behave like cachingPersistenceStore("cache internals(InMemory)", withLazyVersionCaching)
 
-  def cachingPersistenceStore[K, C, Serialized](
-    name: String,
-    newStore: => LazyVersionCachingPersistentStore[K, C, Serialized])(
-    implicit
-    ir: IdResolver[String, TestClass1, C, K],
-    m: Marshaller[TestClass1, Serialized],
-    um: Unmarshaller[Serialized, TestClass1]): Unit = {
+  def cachingPersistenceStore[K, C, Serialized](name: String, newStore: => LazyVersionCachingPersistentStore[K, C, Serialized])(implicit
+      ir: IdResolver[String, TestClass1, C, K],
+      m: Marshaller[TestClass1, Serialized],
+      um: Unmarshaller[Serialized, TestClass1]
+  ): Unit = {
 
     name should {
       "purge the cache appropriately" in {

@@ -32,19 +32,22 @@ trait StorageModule {
 }
 
 object StorageModule {
-  def apply(metrics: Metrics, conf: MarathonConf, curatorFramework: RichCuratorFramework)(
-    implicit
-    mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
+  def apply(metrics: Metrics, conf: MarathonConf, curatorFramework: RichCuratorFramework)(implicit
+      mat: Materializer,
+      ctx: ExecutionContext,
+      scheduler: Scheduler,
+      actorSystem: ActorSystem
+  ): StorageModule = {
     val currentConfig = StorageConfig(conf, curatorFramework)
     apply(metrics, currentConfig, RootGroup.NewGroupStrategy.fromConfig(conf.newGroupEnforceRole()), conf.mesosRole())
   }
 
-  def apply(
-    metrics: Metrics, config: StorageConfig, newGroupStrategy: RootGroup.NewGroupStrategy, defaultMesosRole: String)(
-    implicit
-    mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler, actorSystem: ActorSystem): StorageModule = {
+  def apply(metrics: Metrics, config: StorageConfig, newGroupStrategy: RootGroup.NewGroupStrategy, defaultMesosRole: String)(implicit
+      mat: Materializer,
+      ctx: ExecutionContext,
+      scheduler: Scheduler,
+      actorSystem: ActorSystem
+  ): StorageModule = {
 
     config match {
       case zk: CuratorZk =>
@@ -54,8 +57,16 @@ object StorageModule {
         val groupRepository = GroupRepository.zkRepository(store, appRepository, podRepository, zk.groupVersionsCacheSize, newGroupStrategy)
 
         val instanceRepository = InstanceRepository.zkRepository(store)
-        val deploymentRepository = DeploymentRepository.zkRepository(metrics, store, groupRepository,
-          appRepository, podRepository, zk.maxVersions, zk.storageCompactionScanBatchSize, zk.storageCompactionInterval)
+        val deploymentRepository = DeploymentRepository.zkRepository(
+          metrics,
+          store,
+          groupRepository,
+          appRepository,
+          podRepository,
+          zk.maxVersions,
+          zk.storageCompactionScanBatchSize,
+          zk.storageCompactionInterval
+        )
         val taskFailureRepository = TaskFailureRepository.zkRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.zkRepository(store)
         val runtimeConfigurationRepository = RuntimeConfigurationRepository.zkRepository(store)
@@ -68,9 +79,22 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(store)
-        val migration = new Migration(zk.availableFeatures, defaultMesosRole, store, appRepository, podRepository, groupRepository,
-          deploymentRepository, instanceRepository,
-          taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.zkRepository(store), runtimeConfigurationRepository, backup, config)
+        val migration = new Migration(
+          zk.availableFeatures,
+          defaultMesosRole,
+          store,
+          appRepository,
+          podRepository,
+          groupRepository,
+          deploymentRepository,
+          instanceRepository,
+          taskFailureRepository,
+          frameworkIdRepository,
+          ServiceDefinitionRepository.zkRepository(store),
+          runtimeConfigurationRepository,
+          backup,
+          config
+        )
 
         StorageModuleImpl(
           store,
@@ -89,9 +113,17 @@ object StorageModule {
         val appRepository = AppRepository.inMemRepository(store)
         val podRepository = PodRepository.inMemRepository(store)
         val instanceRepository = InstanceRepository.inMemRepository(store)
-        val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository, mem.groupVersionsCacheSize, newGroupStrategy)
-        val deploymentRepository = DeploymentRepository.inMemRepository(metrics, store, groupRepository,
-          appRepository, podRepository, mem.maxVersions, mem.storageCompactionScanBatchSize)
+        val groupRepository =
+          GroupRepository.inMemRepository(store, appRepository, podRepository, mem.groupVersionsCacheSize, newGroupStrategy)
+        val deploymentRepository = DeploymentRepository.inMemRepository(
+          metrics,
+          store,
+          groupRepository,
+          appRepository,
+          podRepository,
+          mem.maxVersions,
+          mem.storageCompactionScanBatchSize
+        )
         val taskFailureRepository = TaskFailureRepository.inMemRepository(store)
         val frameworkIdRepository = FrameworkIdRepository.inMemRepository(store)
         val runtimeConfigurationRepository = RuntimeConfigurationRepository.inMemRepository(store)
@@ -104,9 +136,22 @@ object StorageModule {
         }
 
         val backup = PersistentStoreBackup(store)
-        val migration = new Migration(mem.availableFeatures, defaultMesosRole, ???, appRepository, podRepository, groupRepository,
-          deploymentRepository, instanceRepository,
-          taskFailureRepository, frameworkIdRepository, ServiceDefinitionRepository.inMemRepository(store), runtimeConfigurationRepository, backup, config)
+        val migration = new Migration(
+          mem.availableFeatures,
+          defaultMesosRole,
+          ???,
+          appRepository,
+          podRepository,
+          groupRepository,
+          deploymentRepository,
+          instanceRepository,
+          taskFailureRepository,
+          frameworkIdRepository,
+          ServiceDefinitionRepository.inMemRepository(store),
+          runtimeConfigurationRepository,
+          backup,
+          config
+        )
 
         StorageModuleImpl(
           store,

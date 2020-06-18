@@ -26,7 +26,7 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
   def resolve(maybeInstance: Option[Instance], op: InstanceUpdateOperation): InstanceUpdateEffect = {
     op match {
       case op: Schedule =>
-        createInstance(maybeInstance){
+        createInstance(maybeInstance) {
           val events = Seq(InstanceChangedEventsGenerator.updatedCondition(op.instance))
           InstanceUpdateEffect.Update(op.instance, oldState = None, events)
         }
@@ -86,14 +86,15 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
     * @param applyOperation the operation that shall be applied to the instance
     * @return The [[InstanceUpdateEffect]] that results from applying the given operation.
     */
-  private[this] def updateExistingInstance(maybeInstance: Option[Instance], id: Instance.Id)(applyOperation: Instance => InstanceUpdateEffect): InstanceUpdateEffect = {
+  private[this] def updateExistingInstance(maybeInstance: Option[Instance], id: Instance.Id)(
+      applyOperation: Instance => InstanceUpdateEffect
+  ): InstanceUpdateEffect = {
     maybeInstance match {
       case Some(existingInstance) =>
         applyOperation(existingInstance)
 
       case None =>
-        InstanceUpdateEffect.Failure(
-          new IllegalStateException(s"$id of app [${id.runSpecId}] does not exist"))
+        InstanceUpdateEffect.Failure(new IllegalStateException(s"$id of app [${id.runSpecId}] does not exist"))
     }
   }
 
@@ -108,8 +109,7 @@ private[marathon] class InstanceUpdateOpResolver(clock: Clock) extends StrictLog
   private[this] def createInstance(maybeInstance: Option[Instance])(applyOperation: => InstanceUpdateEffect): InstanceUpdateEffect = {
     maybeInstance match {
       case Some(instance) =>
-        InstanceUpdateEffect.Failure(
-          new IllegalStateException(s"${instance.instanceId} of app [${instance.runSpecId}] already exists"))
+        InstanceUpdateEffect.Failure(new IllegalStateException(s"${instance.instanceId} of app [${instance.runSpecId}] already exists"))
 
       case None =>
         applyOperation

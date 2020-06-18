@@ -29,7 +29,8 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       taskKiller: TaskKiller = mock[TaskKiller],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
       config: MarathonConf = AllConf.withTestConfig("--deprecated_features", "text_plain_tasks"),
-      groupManager: GroupManager = mock[GroupManager]) {
+      groupManager: GroupManager = mock[GroupManager]
+  ) {
     val identity = auth.identity
     val appsTaskResource = new AppTasksResource(
       instanceTracker,
@@ -47,14 +48,14 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
       config: MarathonConf = AllConf.withTestConfig("--deprecated_features", "text_plain_tasks"),
-      groupManager: GroupManager = mock[GroupManager]) {
+      groupManager: GroupManager = mock[GroupManager]
+  ) {
     val identity = auth.identity
     val killService = mock[KillService]
     implicit val system = ActorSystem("test")
     def materializerSettings = ActorMaterializerSettings(system)
     implicit val mat = ActorMaterializer(materializerSettings)
-    val taskKiller = new TaskKiller(
-      instanceTracker, groupManager, auth.auth, auth.auth, killService)
+    val taskKiller = new TaskKiller(instanceTracker, groupManager, auth.auth, auth.auth, killService)
     val appsTaskResource = new AppTasksResource(
       instanceTracker,
       taskKiller,
@@ -71,8 +72,10 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       val appId = AbsolutePathId("/my/app")
       val host = "host"
       val clock = new SettableClock()
-      val instance1 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).addTaskStaged().getInstance()
-      val instance2 = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).addTaskStaged().getInstance()
+      val instance1 =
+        TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).addTaskStaged().getInstance()
+      val instance2 =
+        TestInstanceBuilder.newBuilderWithLaunchedTask(appId, now = clock.now(), version = clock.now()).addTaskStaged().getInstance()
       val toKill = Seq(instance1, instance2)
 
       taskKiller.kill(any, any, any)(any) returns Future.successful(toKill)
@@ -161,7 +164,14 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
 
       val response = asyncRequest { r =>
         appsTaskResource.deleteOne(
-          appId.toString, instance1.instanceId.idString, scale = false, force = false, wipe = false, auth.request, r)
+          appId.toString,
+          instance1.instanceId.idString,
+          scale = false,
+          force = false,
+          wipe = false,
+          auth.request,
+          r
+        )
       }
       response.getStatus shouldEqual 200
 
@@ -219,7 +229,15 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       healthCheckManager.statuses(appId) returns Future.successful(collection.immutable.Map.empty)
 
       val response = asyncRequest { r =>
-        appsTaskResource.deleteOne(appId.toString, instance1.instanceId.idString, scale = false, force = false, wipe = true, auth.request, r)
+        appsTaskResource.deleteOne(
+          appId.toString,
+          instance1.instanceId.idString,
+          scale = false,
+          force = false,
+          wipe = true,
+          auth.request,
+          r
+        )
       }
       response.getStatus shouldEqual 200
 

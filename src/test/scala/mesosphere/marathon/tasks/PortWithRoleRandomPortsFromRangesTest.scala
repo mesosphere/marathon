@@ -32,8 +32,7 @@ class PortWithRoleRandomPortsFromRangesTest extends UnitTest {
     }
 
     "works for one element range" in {
-      assert(
-        PortWithRole.lazyRandomPortsFromRanges()(Seq(portRange("role", 10, 10))).to(Seq) == Seq(PortWithRole("role", 10)))
+      assert(PortWithRole.lazyRandomPortsFromRanges()(Seq(portRange("role", 10, 10))).to(Seq) == Seq(PortWithRole("role", 10)))
     }
 
     "works for one range with four ports" in {

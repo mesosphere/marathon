@@ -24,12 +24,14 @@ trait ConstraintConversion {
     def validOperator(op: String): Boolean = ConstraintConversion.ValidOperators.contains(op)
     val result: Protos.Constraint = (raw.lift(0), raw.lift(1), raw.lift(2)) match {
       case (Some(field), Some(op), None) if validOperator(op) =>
-        Protos.Constraint.newBuilder()
+        Protos.Constraint
+          .newBuilder()
           .setField(field)
           .setOperator(Protos.Constraint.Operator.valueOf(op))
           .build()
       case (Some(field), Some(op), Some(value)) if validOperator(op) =>
-        Protos.Constraint.newBuilder()
+        Protos.Constraint
+          .newBuilder()
           .setField(field)
           .setOperator(Protos.Constraint.Operator.valueOf(op))
           .setValue(value)

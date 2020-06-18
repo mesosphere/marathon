@@ -16,16 +16,18 @@ trait GroupInfoService extends AppInfoService {
     * Query info for an existing group.
     */
   def selectGroup(
-    groupId: AbsolutePathId,
-    selectors: Selectors,
-    appEmbed: Set[AppInfo.Embed],
-    groupEmbed: Set[GroupInfo.Embed]): Future[Option[raml.GroupInfo]]
+      groupId: AbsolutePathId,
+      selectors: Selectors,
+      appEmbed: Set[AppInfo.Embed],
+      groupEmbed: Set[GroupInfo.Embed]
+  ): Future[Option[raml.GroupInfo]]
 
   def selectGroupVersion(
-    groupId: AbsolutePathId,
-    version: Timestamp,
-    selectors: Selectors,
-    groupEmbed: Set[GroupInfo.Embed]): Future[Option[raml.GroupInfo]]
+      groupId: AbsolutePathId,
+      version: Timestamp,
+      selectors: Selectors,
+      groupEmbed: Set[GroupInfo.Embed]
+  ): Future[Option[raml.GroupInfo]]
 }
 
 object GroupInfoService {

@@ -43,14 +43,15 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
     System.exit(CrashStrategy.IncompatibleLibMesos.code)
   }
 
-  val cliConf: AllConf = try {
-    new AllConf(args)
-  } catch {
-    case e: Throwable =>
-      logger.error("Invalid command line flag", e)
-      Runtime.getRuntime.exit(CrashStrategy.InvalidCommandLineFlag.code)
-      ???
-  }
+  val cliConf: AllConf =
+    try {
+      new AllConf(args)
+    } catch {
+      case e: Throwable =>
+        logger.error("Invalid command line flag", e)
+        Runtime.getRuntime.exit(CrashStrategy.InvalidCommandLineFlag.code)
+        ???
+    }
 
   val actorSystem = ActorSystem("marathon")
 
@@ -63,75 +64,79 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
       leaderProxyFilterModule,
       new MarathonModule(cliConf, cliConf, actorSystem),
       new DebugModule(cliConf),
-      new CoreGuiceModule(cliConf))
+      new CoreGuiceModule(cliConf)
+    )
 
   private var serviceManager: Option[ServiceManager] = None
 
   val injector = Guice.createInjector(modules.asJava)
   val httpModule = new HttpModule(conf = cliConf, injector.getInstance(classOf[MetricsModule]))
-  val services = Seq(
-    httpModule.marathonHttpService,
-    injector.getInstance(classOf[MarathonSchedulerService]))
+  val services = Seq(httpModule.marathonHttpService, injector.getInstance(classOf[MarathonSchedulerService]))
 
-  def start(): Unit = if (!running) {
-    running = true
-    setConcurrentContextDefaults()
-    Formats.configureJacksonSerializer()
+  def start(): Unit =
+    if (!running) {
+      running = true
+      setConcurrentContextDefaults()
+      Formats.configureJacksonSerializer()
 
-    logger.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref}")
-    logger.info(Main.configToLogLines(cliConf))
+      logger.info(s"Starting Marathon ${BuildInfo.version}/${BuildInfo.buildref}")
+      logger.info(Main.configToLogLines(cliConf))
 
-    api.HttpBindings.apply(
-      httpModule.servletContextHandler,
-      rootApplication = injector.getInstance(classOf[api.RootApplication]),
-      leaderProxyFilter = injector.getInstance(classOf[api.LeaderProxyFilter]),
-      limitConcurrentRequestsFilter = injector.getInstance(classOf[api.LimitConcurrentRequestsFilter]),
-      corsFilter = injector.getInstance(classOf[api.CORSFilter]),
-      cacheDisablingFilter = injector.getInstance(classOf[api.CacheDisablingFilter]),
-      eventSourceServlet = injector.getInstance(classOf[EventSourceServlet]),
-      webJarServlet = injector.getInstance(classOf[api.WebJarServlet]),
-      publicServlet = injector.getInstance(classOf[api.PublicServlet]))
+      api.HttpBindings.apply(
+        httpModule.servletContextHandler,
+        rootApplication = injector.getInstance(classOf[api.RootApplication]),
+        leaderProxyFilter = injector.getInstance(classOf[api.LeaderProxyFilter]),
+        limitConcurrentRequestsFilter = injector.getInstance(classOf[api.LimitConcurrentRequestsFilter]),
+        corsFilter = injector.getInstance(classOf[api.CORSFilter]),
+        cacheDisablingFilter = injector.getInstance(classOf[api.CacheDisablingFilter]),
+        eventSourceServlet = injector.getInstance(classOf[EventSourceServlet]),
+        webJarServlet = injector.getInstance(classOf[api.WebJarServlet]),
+        publicServlet = injector.getInstance(classOf[api.PublicServlet])
+      )
 
-    serviceManager = Some(new ServiceManager(services.asJava))
+      serviceManager = Some(new ServiceManager(services.asJava))
 
-    sys.addShutdownHook {
-      shutdownAndWait()
+      sys.addShutdownHook {
+        shutdownAndWait()
 
-      logger.info("Shutting down actor system {}", actorSystem)
-      Await.result(actorSystem.terminate(), 10.seconds)
+        logger.info("Shutting down actor system {}", actorSystem)
+        Await.result(actorSystem.terminate(), 10.seconds)
+      }
+
+      serviceManager.foreach(_.startAsync())
+
+      try {
+        serviceManager.foreach(_.awaitHealthy())
+      } catch {
+        case ie: IllegalStateException =>
+          logger.error(s"Failed to start all services. Services by state: ${serviceManager.map(_.servicesByState()).getOrElse("[]")}", ie)
+
+          // Try to find a failed service, if we have one, rethrow the failure cause to handle it in the
+          // unchecked exception handler.
+          services
+            .find(_.state() == Service.State.FAILED)
+            .foreach(failedService => {
+              throw failedService.failureCause()
+            })
+
+          // Otherwise just shutdown and rethrow the original exception
+          shutdownAndWait()
+          throw ie
+        case e: Exception =>
+          logger.error(s"Failed to start all services. Services by state: ${serviceManager.map(_.servicesByState()).getOrElse("[]")}", e)
+          shutdownAndWait()
+          throw e
+      }
+
+      logger.info("All services up and running.")
     }
 
-    serviceManager.foreach(_.startAsync())
-
-    try {
-      serviceManager.foreach(_.awaitHealthy())
-    } catch {
-      case ie: IllegalStateException =>
-        logger.error(s"Failed to start all services. Services by state: ${serviceManager.map(_.servicesByState()).getOrElse("[]")}", ie)
-
-        // Try to find a failed service, if we have one, rethrow the failure cause to handle it in the
-        // unchecked exception handler.
-        services.find(_.state() == Service.State.FAILED).foreach(failedService => {
-          throw failedService.failureCause()
-        })
-
-        // Otherwise just shutdown and rethrow the original exception
-        shutdownAndWait()
-        throw ie
-      case e: Exception =>
-        logger.error(s"Failed to start all services. Services by state: ${serviceManager.map(_.servicesByState()).getOrElse("[]")}", e)
-        shutdownAndWait()
-        throw e
+  def shutdown(): Unit =
+    if (running) {
+      running = false
+      logger.info("Shutting down services")
+      serviceManager.foreach(_.stopAsync())
     }
-
-    logger.info("All services up and running.")
-  }
-
-  def shutdown(): Unit = if (running) {
-    running = false
-    logger.info("Shutting down services")
-    serviceManager.foreach(_.stopAsync())
-  }
 
   def shutdownAndWait(): Unit = {
     serviceManager.foreach { serviceManager =>
@@ -189,6 +194,7 @@ class MarathonApp(args: Seq[String]) extends AutoCloseable with StrictLogging {
 }
 
 object Main {
+
   /**
     * Serialize configuration in form that can be presented in a log
     */

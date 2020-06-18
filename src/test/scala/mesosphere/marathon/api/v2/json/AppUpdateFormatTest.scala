@@ -10,8 +10,9 @@ import play.api.libs.json.Json
 class AppUpdateFormatTest extends UnitTest {
 
   def normalizedAndValidated(appUpdate: AppUpdate): AppUpdate =
-    AppHelpers.appUpdateNormalization(
-      AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved, true)).normalized(appUpdate)
+    AppHelpers
+      .appUpdateNormalization(AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved, true))
+      .normalized(appUpdate)
 
   def fromJson(json: String): AppUpdate =
     normalizedAndValidated(Json.parse(json).as[AppUpdate])

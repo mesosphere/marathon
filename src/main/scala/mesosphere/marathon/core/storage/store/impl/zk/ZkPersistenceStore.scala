@@ -31,10 +31,11 @@ case class ZkId(category: String, id: String, version: Option[OffsetDateTime]) {
   private val bucket = math.abs(id.hashCode % ZkId.HashBucketSize)
 
   // BUG: id = "" for the root group this results in "Path must not end with / character" in curator
-  def path: String = version.fold(f"/$category/$bucket%x/$id") { v =>
-    val truncatedVersion = v.truncatedTo(ChronoUnit.MILLIS)
-    f"/$category/$bucket%x/$id/${ZkId.DateFormat.format(truncatedVersion)}"
-  }
+  def path: String =
+    version.fold(f"/$category/$bucket%x/$id") { v =>
+      val truncatedVersion = v.truncatedTo(ChronoUnit.MILLIS)
+      f"/$category/$bucket%x/$id/${ZkId.DateFormat.format(truncatedVersion)}"
+    }
 }
 
 object ZkId {
@@ -49,10 +50,9 @@ class ZkPersistenceStore(
     val client: RichCuratorFramework,
     maxConcurrent: Int = RepositoryConstants.maxConcurrency,
     maxQueued: Int = 100
-)(
-    implicit
-    mat: Materializer,
-    ctx: ExecutionContext) extends BasePersistenceStore[ZkId, String, ZkSerialized](metrics) with StrictLogging {
+)(implicit mat: Materializer, ctx: ExecutionContext)
+    extends BasePersistenceStore[ZkId, String, ZkSerialized](metrics)
+    with StrictLogging {
 
   private val limitRequests = WorkQueue("ZkPersistenceStore", maxConcurrent = maxConcurrent, maxQueueLength = maxQueued)
 
@@ -84,11 +84,14 @@ class ZkPersistenceStore(
         val path = s"/${Migration.StorageVersionName}"
         val actualVersion = storageVersion.toBuilder.setFormat(StorageVersion.StorageFormat.PERSISTENCE_STORE).build()
         val data = ByteString(
-          ZKStoreEntry.newBuilder().setValue(com.google.protobuf.ByteString.copyFrom(actualVersion.toByteArray))
+          ZKStoreEntry
+            .newBuilder()
+            .setValue(com.google.protobuf.ByteString.copyFrom(actualVersion.toByteArray))
             .setName(Migration.StorageVersionName)
             .setCompressed(false)
             .setUuid(com.google.protobuf.ByteString.copyFromUtf8(UUID.randomUUID().toString))
-            .build.toByteArray
+            .build
+            .toByteArray
         )
         await(client.setData(path, data).asTry) match {
           case Success(_) =>
@@ -216,9 +219,7 @@ class ZkPersistenceStore(
             Done
           case Failure(e: NoNodeException) =>
             logger.debug(s"Node for $id not found. Creating node now", e)
-            await(limitRequests(client.create(
-              id.path,
-              creatingParentContainersIfNeeded = true, data = Some(v.bytes))).asTry) match {
+            await(limitRequests(client.create(id.path, creatingParentContainersIfNeeded = true, data = Some(v.bytes))).asTry) match {
               case Success(_) =>
                 Done
               case Failure(_: NodeExistsException) =>
@@ -274,19 +275,22 @@ class ZkPersistenceStore(
     val ids: Source[ZkId, NotUsed] = allKeys().map(_.key)
     val versions: Source[ZkId, NotUsed] = ids.flatMapConcat(id => rawVersions(id).map(v => id.copy(version = Some(v))))
     val combined = Source.combine(ids, versions)(Merge(_))
-    combined.mapAsync(maxConcurrent) { id =>
-      rawGet(id).map { maybeSerialized =>
-        maybeSerialized.map(serialized => BackupItem(id.category, id.id, id.version, serialized.bytes))
+    combined
+      .mapAsync(maxConcurrent) { id =>
+        rawGet(id).map { maybeSerialized =>
+          maybeSerialized.map(serialized => BackupItem(id.category, id.id, id.version, serialized.bytes))
+        }
       }
-    }.collect {
-      case Some(backupItem) => backupItem
-    }.concat {
-      Source.fromFuture(storageVersion()).map { storedVersion =>
-        val version = storedVersion.getOrElse(StorageVersions(Migration.steps))
-        val name = Migration.StorageVersionName
-        BackupItem(name, name, None, ByteString(version.toByteArray))
+      .collect {
+        case Some(backupItem) => backupItem
       }
-    }
+      .concat {
+        Source.fromFuture(storageVersion()).map { storedVersion =>
+          val version = storedVersion.getOrElse(StorageVersions(Migration.steps))
+          val name = Migration.StorageVersionName
+          BackupItem(name, name, None, ByteString(version.toByteArray))
+        }
+      }
   }
 
   override def restore(): Sink[BackupItem, Future[Done]] = {
@@ -305,12 +309,10 @@ class ZkPersistenceStore(
       setStorageVersion(StorageVersion.parseFrom(item.data.toArray))
     }
 
-    Flow[BackupItem]
-      .map {
-        case item if item.key == Migration.StorageVersionName => () => setVersion(item)
-        case item => () => store(item)
-      }
-      .prepend { Source.single(() => clean()) }
+    Flow[BackupItem].map {
+      case item if item.key == Migration.StorageVersionName => () => setVersion(item)
+      case item => () => store(item)
+    }.prepend { Source.single(() => clean()) }
       .mapAsync(1) { _.apply() } // no parallelization: first element needs to be processed before the second
       .toMat(Sink.ignore)(Keep.right)
   }
@@ -338,8 +340,7 @@ class ZkPersistenceStore(
         case Success(_) =>
           Done
         case Failure(e: KeeperException.NodeExistsException) =>
-          throw new StoreCommandFailedException(
-            "Migration is already in progress; /migration-in-progress node already exists", e)
+          throw new StoreCommandFailedException("Migration is already in progress; /migration-in-progress node already exists", e)
         case Failure(e: KeeperException) =>
           throw new StoreCommandFailedException("Failed to start migration", e)
         case Failure(e) =>
@@ -356,8 +357,7 @@ class ZkPersistenceStore(
         case Success(_) =>
           Done
         case Failure(e: KeeperException.NoNodeException) =>
-          throw new StoreCommandFailedException(
-            "Migration has not been started; /migration-in-progress node does not exist", e)
+          throw new StoreCommandFailedException("Migration has not been started; /migration-in-progress node does not exist", e)
         case Failure(e: KeeperException) =>
           throw new StoreCommandFailedException("Failed to end migration", e)
         case Failure(e) =>

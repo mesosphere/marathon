@@ -17,7 +17,8 @@ class ReviveOffersStateTest extends UnitTest with Inside {
     val webRunningInstance = TestInstanceBuilder.newBuilderForRunSpec(webApp).addTaskRunning().instance
     val monitoringScheduledInstance = Instance.scheduled(monitoringApp)
 
-    val state = ReviveOffersState.empty.withSnapshot(InstancesSnapshot(List(webRunningInstance, monitoringScheduledInstance)), defaultRole = "*")
+    val state =
+      ReviveOffersState.empty.withSnapshot(InstancesSnapshot(List(webRunningInstance, monitoringScheduledInstance)), defaultRole = "*")
 
     state.roleReviveVersions("web").roleState shouldBe OffersNotWanted
     state.roleReviveVersions("monitoring").roleState shouldBe OffersWanted

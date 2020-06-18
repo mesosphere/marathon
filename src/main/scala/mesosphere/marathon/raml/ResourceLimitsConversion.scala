@@ -11,17 +11,18 @@ trait ResourceLimitsConversion {
     )
   }
 
-  implicit val ramlResourceLimitsWrite = Writes[state.ResourceLimits, ResourceLimits]{ resourceLimits =>
+  implicit val ramlResourceLimitsWrite = Writes[state.ResourceLimits, ResourceLimits] { resourceLimits =>
     ResourceLimits(
       cpus = resourceLimits.cpus.map(resourceLimitFromDouble),
       mem = resourceLimits.mem.map(resourceLimitFromDouble)
     )
   }
 
-  implicit val resourceLimitsProtoRamlWrites = Writes[Protos.ResourceLimits, ResourceLimits]{ proto =>
+  implicit val resourceLimitsProtoRamlWrites = Writes[Protos.ResourceLimits, ResourceLimits] { proto =>
     ResourceLimits(
       cpus = if (proto.hasCpus) Some(resourceLimitFromDouble(proto.getCpus)) else None,
-      mem = if (proto.hasMem) Some(resourceLimitFromDouble(proto.getMem)) else None)
+      mem = if (proto.hasMem) Some(resourceLimitFromDouble(proto.getMem)) else None
+    )
   }
 }
 
@@ -32,7 +33,9 @@ object ResourceLimitsConversion {
         // This value is understood by protobuf as infinity, and Mesos consequently also understands it
         Double.PositiveInfinity
       case ResourceLimitUnlimited(text) =>
-        throw new IllegalStateException(s"ResourceLimitUnlimited(${text}) encountered, should be ResourceLimitUnlimited(unlimited)") // we should never get here
+        throw new IllegalStateException(
+          s"ResourceLimitUnlimited(${text}) encountered, should be ResourceLimitUnlimited(unlimited)"
+        ) // we should never get here
       case ResourceLimitNumber(value) =>
         value
     }

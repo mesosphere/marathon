@@ -15,14 +15,14 @@ import scala.async.Async.{async, await}
 import scala.collection.JavaConverters._
 import scala.concurrent.{ExecutionContext, Future}
 
-class MigrationTo19300(
-    persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]) extends MigrationStep with StrictLogging {
+class MigrationTo19300(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]) extends MigrationStep with StrictLogging {
 
-  override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = async {
-    logger.info("Starting migration to 1.9.300")
-    await(MigrationTo19300.migrateApps(persistenceStore))
-    await(MigrationTo19300.migratePods(persistenceStore))
-  }
+  override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] =
+    async {
+      logger.info("Starting migration to 1.9.300")
+      await(MigrationTo19300.migrateApps(persistenceStore))
+      await(MigrationTo19300.migratePods(persistenceStore))
+    }
 
 }
 
@@ -46,7 +46,10 @@ object MigrationTo19300 extends MaybeStore with StrictLogging {
       val repaired = repairRoles(role, acceptedResourceRoles)
       if (repaired != acceptedResourceRoles) {
         val repairedApp = service.toBuilder.setAcceptedResourceRoles(Protos.ResourceRoles.newBuilder().addAllRole(repaired.asJava)).build
-        logger.info(s"Culling invalid resource roles from ${service.getId}, version ${version}; old acceptedResourceRoles: ${acceptedResourceRoles.mkString(",")}, new acceptedResourceRoles: ${repaired.mkString(",")}")
+        logger.info(
+          s"Culling invalid resource roles from ${service.getId}, version ${version}; old acceptedResourceRoles: ${acceptedResourceRoles
+            .mkString(",")}, new acceptedResourceRoles: ${repaired.mkString(",")}"
+        )
         List((repairedApp, version))
       } else {
         Nil
@@ -55,7 +58,6 @@ object MigrationTo19300 extends MaybeStore with StrictLogging {
 
   private[migration] val podMigratingFlow = Flow[(raml.Pod, Option[OffsetDateTime])].mapConcat {
     case (podRaml, version) =>
-
       val repaired = for {
         scheduling <- podRaml.scheduling
         placement <- scheduling.placement
@@ -65,8 +67,12 @@ object MigrationTo19300 extends MaybeStore with StrictLogging {
         repaired = repairRoles(role, acceptedResourceRoles)
         if (repaired != acceptedResourceRoles)
       } yield {
-        val repairedPod = podRaml.copy(scheduling = Some(scheduling.copy(placement = Some(placement.copy(acceptedResourceRoles = repaired)))))
-        logger.info(s"Culling invalid resource roles from pod ${podRaml.id}, version ${version}; old acceptedResourceRoles: ${acceptedResourceRoles.mkString(",")}, new acceptedResourceRoles: ${repaired.mkString(",")}")
+        val repairedPod =
+          podRaml.copy(scheduling = Some(scheduling.copy(placement = Some(placement.copy(acceptedResourceRoles = repaired)))))
+        logger.info(
+          s"Culling invalid resource roles from pod ${podRaml.id}, version ${version}; old acceptedResourceRoles: ${acceptedResourceRoles
+            .mkString(",")}, new acceptedResourceRoles: ${repaired.mkString(",")}"
+        )
         (repairedPod, version)
       }
       repaired.toList
@@ -78,7 +84,9 @@ object MigrationTo19300 extends MaybeStore with StrictLogging {
     * @param persistenceStore The ZooKeeper storage.
     * @return Successful future when done.
     */
-  def migrateApps(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+  def migrateApps(
+      persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]
+  )(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     ServiceMigration.migrateAppVersions(migrationVersion, persistenceStore, appMigratingFlow)
   }
 
@@ -88,7 +96,9 @@ object MigrationTo19300 extends MaybeStore with StrictLogging {
     * @param persistenceStore The ZooKeeper storage.
     * @return Successful future when done.
     */
-  def migratePods(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+  def migratePods(
+      persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]
+  )(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     ServiceMigration.migratePodVersions(migrationVersion, persistenceStore, podMigratingFlow)
   }
 }

@@ -57,10 +57,11 @@ object EndpointsHelper {
             // port definition with no hostPort: container network
             case Some(portMapping) if portMapping.hostPort.isEmpty =>
               runningInstances.foreach { instance =>
-                val networkNames = if (portMapping.networkNames.isEmpty)
-                  appContainerNetworkNames
-                else
-                  portMapping.networkNames
+                val networkNames =
+                  if (portMapping.networkNames.isEmpty)
+                    appContainerNetworkNames
+                  else
+                    portMapping.networkNames
                 // note: this excludes bridge-networks
                 if (networkNames.exists(containerNetworkPredicate))
                   tryAppendContainerPort(sb, app, portMapping, instance, delimiter)
@@ -95,8 +96,13 @@ object EndpointsHelper {
     * Append an entry to the provided string builder for the specified containerPort. If we cannot tell the
     * effectiveIpAddress, output nothing.
     */
-  def tryAppendContainerPort(sb: StringBuilder, app: AppDefinition, portMapping: PortMapping, instance: Instance,
-    delimiter: String): Unit = {
+  def tryAppendContainerPort(
+      sb: StringBuilder,
+      app: AppDefinition,
+      portMapping: PortMapping,
+      instance: Instance,
+      delimiter: String
+  ): Unit = {
     for {
       task <- instance.tasksMap.values
       address <- task.status.networkInfo.effectiveIpAddress(app)

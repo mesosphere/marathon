@@ -23,7 +23,11 @@ sealed trait Container extends Product with Serializable {
   def servicePorts: Seq[Int] =
     portMappings.map(_.servicePort)
 
-  def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes, linuxInfo: Option[LinuxInfo] = linuxInfo): Container
+  def copyWith(
+      portMappings: Seq[PortMapping] = portMappings,
+      volumes: Seq[VolumeWithMount[Volume]] = volumes,
+      linuxInfo: Option[LinuxInfo] = linuxInfo
+  ): Container
 }
 
 object Container {
@@ -34,7 +38,11 @@ object Container {
       override val linuxInfo: Option[LinuxInfo] = None
   ) extends Container {
 
-    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes, linuxInfo: Option[LinuxInfo] = linuxInfo) =
+    override def copyWith(
+        portMappings: Seq[PortMapping] = portMappings,
+        volumes: Seq[VolumeWithMount[Volume]] = volumes,
+        linuxInfo: Option[LinuxInfo] = linuxInfo
+    ) =
       copy(portMappings = portMappings, volumes = volumes)
 
   }
@@ -46,9 +54,14 @@ object Container {
       privileged: Boolean = false,
       parameters: Seq[Parameter] = Nil,
       forcePullImage: Boolean = false,
-      override val linuxInfo: Option[LinuxInfo] = None) extends Container {
+      override val linuxInfo: Option[LinuxInfo] = None
+  ) extends Container {
 
-    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes, linuxInfo: Option[LinuxInfo] = linuxInfo) =
+    override def copyWith(
+        portMappings: Seq[PortMapping] = portMappings,
+        volumes: Seq[VolumeWithMount[Volume]] = volumes,
+        linuxInfo: Option[LinuxInfo] = linuxInfo
+    ) =
       copy(portMappings = portMappings, volumes = volumes)
   }
 
@@ -88,9 +101,7 @@ object Container {
     val HostPortDefault = AppDefinition.RandomPortValue // HostPortDefault only applies when in BRIDGE mode
   }
 
-  case class Credential(
-      principal: String,
-      secret: Option[String] = None)
+  case class Credential(principal: String, secret: Option[String] = None)
 
   case class DockerPullConfig(secret: String)
 
@@ -101,9 +112,14 @@ object Container {
       credential: Option[Credential] = None,
       pullConfig: Option[DockerPullConfig] = None,
       forcePullImage: Boolean = false,
-      override val linuxInfo: Option[LinuxInfo] = None) extends Container {
+      override val linuxInfo: Option[LinuxInfo] = None
+  ) extends Container {
 
-    override def copyWith(portMappings: Seq[PortMapping] = portMappings, volumes: Seq[VolumeWithMount[Volume]] = volumes, linuxInfo: Option[LinuxInfo] = linuxInfo) =
+    override def copyWith(
+        portMappings: Seq[PortMapping] = portMappings,
+        volumes: Seq[VolumeWithMount[Volume]] = volumes,
+        linuxInfo: Option[LinuxInfo] = linuxInfo
+    ) =
       copy(portMappings = portMappings, volumes = volumes)
   }
 
@@ -121,11 +137,12 @@ object Container {
     }
 
     new Validator[Container] {
-      override def apply(container: Container): Result = container match {
-        case _: Mesos => Success
-        case dd: Docker => validate(dd)(Docker.validDockerContainer)
-        case md: MesosDocker => validate(md)(MesosDocker.validMesosDockerContainer)
-      }
+      override def apply(container: Container): Result =
+        container match {
+          case _: Mesos => Success
+          case dd: Docker => validate(dd)(Docker.validDockerContainer)
+          case md: MesosDocker => validate(md)(MesosDocker.validMesosDockerContainer)
+        }
     } and
       validGeneralContainer and
       implied(networks.hasBridgeNetworking)(validator[Container] { container =>
@@ -133,4 +150,3 @@ object Container {
       })
   }
 }
-

@@ -52,8 +52,7 @@ class WebJarServlet extends HttpServlet with StrictLogging {
     val mime = Option(getServletContext.getMimeType(file)).getOrElse(mimeType(mediaType)) //e.g plain/text
     val resourceURI = s"/META-INF/resources/webjars$jar$resource"
     //log request data, since the names are not very intuitive
-    logger.debug(
-      s"""
+    logger.debug(s"""
          |pathinfo: ${req.getPathInfo}
          |context: ${req.getContextPath}
          |servlet: ${req.getServletPath}

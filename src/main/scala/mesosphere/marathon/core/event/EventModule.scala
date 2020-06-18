@@ -20,7 +20,8 @@ class EventModule(
     conf: EventConf,
     electionService: ElectionService,
     authenticator: Authenticator,
-    authorizer: Authorizer)(implicit val materializer: Materializer) {
+    authorizer: Authorizer
+)(implicit val materializer: Materializer) {
 
   lazy val httpEventStreamActor: ActorRef = {
     val outstanding = conf.eventStreamMaxOutstandingMessages()
@@ -30,21 +31,13 @@ class EventModule(
 
     actorSystem.actorOf(
       Props(
-        new HttpEventStreamActor(
-          electionService.leadershipTransitionEvents,
-          new HttpEventStreamActorMetrics(metrics),
-          handleStreamProps)
+        new HttpEventStreamActor(electionService.leadershipTransitionEvents, new HttpEventStreamActorMetrics(metrics), handleStreamProps)
       ),
       "HttpEventStream"
     )
   }
 
   lazy val httpEventStreamServlet: EventSourceServlet = {
-    new HttpEventStreamServlet(
-      metrics,
-      httpEventStreamActor,
-      conf,
-      authenticator,
-      authorizer)
+    new HttpEventStreamServlet(metrics, httpEventStreamActor, conf, authenticator, authorizer)
   }
 }

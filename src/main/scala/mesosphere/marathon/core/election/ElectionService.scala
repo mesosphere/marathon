@@ -21,6 +21,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 trait ElectionServiceLeaderInfo {
+
   /**
     * isLeader checks whether this instance is the leader, and is initialized
     *
@@ -90,6 +91,7 @@ trait ElectionService extends ElectionServiceLeaderInfo {
   * ElectionCandidate per ElectionService.
   */
 trait ElectionCandidate {
+
   /**
     * stopLeadership is called when the candidate was leader, but was defeated. It is guaranteed
     * that calls to stopLeadership and startLeadership alternate and are synchronized.
@@ -124,7 +126,9 @@ class ElectionServiceImpl(
     leaderEventsSource: Source[LeadershipState, Cancellable],
     crashStrategy: CrashStrategy,
     electionEC: ExecutionContext
-)(implicit system: ActorSystem) extends ElectionService with StrictLogging {
+)(implicit system: ActorSystem)
+    extends ElectionService
+    with StrictLogging {
 
   @volatile private[this] var lastState: LeadershipState = LeadershipState.Standby(None)
   @volatile private[this] var _leaderAndReady: Boolean = false
@@ -137,12 +141,13 @@ class ElectionServiceImpl(
 
   override def localHostPort: String = hostPort
 
-  override def leaderHostPort: Option[String] = lastState match {
-    case LeadershipState.ElectedAsLeader =>
-      Some(hostPort)
-    case LeadershipState.Standby(currentLeader) =>
-      currentLeader
-  }
+  override def leaderHostPort: Option[String] =
+    lastState match {
+      case LeadershipState.ElectedAsLeader =>
+        Some(hostPort)
+      case LeadershipState.Standby(currentLeader) =>
+        currentLeader
+    }
 
   /**
     * Releases leadership
@@ -213,7 +218,7 @@ class ElectionServiceImpl(
     * When the stream ends (exception or not), we report accordingly and crash.
     */
   private def initializeStream(leadershipTransitionsFlow: Flow[LeadershipState, LeadershipTransition, NotUsed]) = {
-    val graph = GraphDSL.create(leaderEventsSource, localEventListenerSink, localTransitionSink, metricsSink){
+    val graph = GraphDSL.create(leaderEventsSource, localEventListenerSink, localTransitionSink, metricsSink) {
       (leaderStream, localEventListenerSinkR, localTransitionSinkR, metricsSinkR) =>
         import system.dispatcher
         val aggregateResult = for {
@@ -273,12 +278,10 @@ class ElectionServiceImpl(
       * Does not emit an event if the first events are Standby.
       */
     val leadershipTransitionsFlow =
-      Flow[LeadershipState]
-        .map {
-          case LeadershipState.ElectedAsLeader => true
-          case _: LeadershipState.Standby => false
-        }
-        .via(EnrichedFlow.dedup(initialFilterElement = false)) // Until we become leader, we emit nothing
+      Flow[LeadershipState].map {
+        case LeadershipState.ElectedAsLeader => true
+        case _: LeadershipState.Standby => false
+      }.via(EnrichedFlow.dedup(initialFilterElement = false)) // Until we become leader, we emit nothing
         .mapAsync(1) { becameLeader =>
           if (becameLeader)
             Future {
@@ -296,7 +299,8 @@ class ElectionServiceImpl(
   }
 
   private[this] val (leadershipTransitionsEventsSubscriber, _leadershipTransitionEvents) =
-    Source.asSubscriber[LeadershipTransition]
+    Source
+      .asSubscriber[LeadershipTransition]
       .prepend(Source.single(LeadershipTransition.Standby))
       // Subject keeps track of the last item received, and published updates going forward
       // If they get behind, we can safely drop old updates as the last state matters most here.
@@ -312,7 +316,9 @@ class ElectionServiceImpl(
       val startedAt = System.currentTimeMillis()
       metrics.closureGauge(
         leaderDurationMetric,
-        () => (System.currentTimeMillis() - startedAt).toDouble / 1000.0, unit = UnitOfMeasurement.Time)
+        () => (System.currentTimeMillis() - startedAt).toDouble / 1000.0,
+        unit = UnitOfMeasurement.Time
+      )
 
     case LeadershipTransition.Standby =>
   }
@@ -324,6 +330,7 @@ class ElectionServiceImpl(
   */
 private[election] sealed trait LeadershipState
 private[election] object LeadershipState {
+
   /**
     * Indicates that our election backend has said we are the leader; emitted _before_ Marathon initialization
     * routine.
@@ -341,6 +348,7 @@ private[election] object LeadershipState {
 /** Local leadership transition events */
 sealed trait LeadershipTransition
 object LeadershipTransition {
+
   /**
     * Emitted when we are elected as leader, _after_ Marathon is initialized
     */

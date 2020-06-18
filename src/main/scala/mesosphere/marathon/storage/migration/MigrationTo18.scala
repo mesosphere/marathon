@@ -21,7 +21,9 @@ import org.apache.mesos.{Protos => MesosProtos}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class MigrationTo18(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _]) extends MigrationStep with StrictLogging {
+class MigrationTo18(instanceRepository: InstanceRepository, persistenceStore: PersistenceStore[_, _, _])
+    extends MigrationStep
+    with StrictLogging {
 
   override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     InstanceMigration.migrateInstances(instanceRepository, persistenceStore, MigrationTo18.migrationFlow)
@@ -42,11 +44,12 @@ object MigrationTo18 extends StrictLogging {
   }
 
   val migrationConditionReader = new Reads[ParsedValue[Condition]] {
-    private def readString(j: JsReadable): JsResult[ParsedValue[Condition]] = j.validate[String].map {
+    private def readString(j: JsReadable): JsResult[ParsedValue[Condition]] =
+      j.validate[String].map {
 
-      case created if created.toLowerCase == "created" => ParsedValue(Condition.Provisioned, Modified)
-      case other => ParsedValue(Condition(other), NotModified)
-    }
+        case created if created.toLowerCase == "created" => ParsedValue(Condition.Provisioned, Modified)
+        case other => ParsedValue(Condition(other), NotModified)
+      }
     override def reads(json: JsValue): JsResult[ParsedValue[Condition]] =
       readString(json).orElse {
         json.validate[JsObject].flatMap { obj => readString(obj \ "str") }
@@ -59,58 +62,55 @@ object MigrationTo18 extends StrictLogging {
   val instanceStateReads17: Reads[ParsedValue[InstanceState]] = {
     (
       (__ \ "condition").read[ParsedValue[Condition]](migrationConditionReader) ~
-      (__ \ "since").read[Timestamp] ~
-      (__ \ "activeSince").readNullable[Timestamp] ~
-      (__ \ "healthy").readNullable[Boolean] ~
-      (__ \ "goal").read[Goal]
+        (__ \ "since").read[Timestamp] ~
+        (__ \ "activeSince").readNullable[Timestamp] ~
+        (__ \ "healthy").readNullable[Boolean] ~
+        (__ \ "goal").read[Goal]
     ) { (condition, since, activeSince, healthy, goal) =>
-
-        condition.map { c =>
-          InstanceState(c, since, activeSince, healthy, goal)
-        }
+      condition.map { c =>
+        InstanceState(c, since, activeSince, healthy, goal)
       }
+    }
   }
 
   val taskStatusReads17: Reads[ParsedValue[Task.Status]] = {
     (
       (__ \ "stagedAt").read[Timestamp] ~
-      (__ \ "startedAt").readNullable[Timestamp] ~
-      (__ \ "mesosStatus").readNullable[MesosProtos.TaskStatus](Task.Status.MesosTaskStatusFormat) ~
-      (__ \ "condition").read[ParsedValue[Condition]](migrationConditionReader) ~
-      (__ \ "networkInfo").read[NetworkInfo](Formats.TaskStatusNetworkInfoFormat)
-
+        (__ \ "startedAt").readNullable[Timestamp] ~
+        (__ \ "mesosStatus").readNullable[MesosProtos.TaskStatus](Task.Status.MesosTaskStatusFormat) ~
+        (__ \ "condition").read[ParsedValue[Condition]](migrationConditionReader) ~
+        (__ \ "networkInfo").read[NetworkInfo](Formats.TaskStatusNetworkInfoFormat)
     ) { (stagedAt, startedAt, mesosStatus, condition, networkInfo) =>
-        condition.map { c =>
-          Task.Status(stagedAt, startedAt, mesosStatus, c, networkInfo)
-        }
-
+      condition.map { c =>
+        Task.Status(stagedAt, startedAt, mesosStatus, c, networkInfo)
       }
+
+    }
   }
 
   val taskReads17: Reads[ParsedValue[Task]] = {
     (
       (__ \ "taskId").read[Task.Id] ~
-      (__ \ "runSpecVersion").read[Timestamp] ~
-      (__ \ "status").read[ParsedValue[Task.Status]](taskStatusReads17)
+        (__ \ "runSpecVersion").read[Timestamp] ~
+        (__ \ "status").read[ParsedValue[Task.Status]](taskStatusReads17)
     ) { (taskId, runSpecVersion, status) =>
-        status.map { s =>
-          Task(taskId, runSpecVersion, s)
-        }
+      status.map { s =>
+        Task(taskId, runSpecVersion, s)
       }
+    }
   }
 
   val taskMapReads17: Reads[ParsedValue[Map[Task.Id, Task]]] = {
 
     mapReads(taskReads17).map {
       _.map { case (k, v) => Task.Id.parse(k) -> v }
-    }
-      .map { taskMap =>
-        if (taskMap.values.exists(_.isModified)) {
-          ParsedValue(taskMap.map { case (k, v) => k -> v.value }, Modified)
-        } else {
-          ParsedValue(taskMap.map { case (k, v) => k -> v.value }, NotModified)
-        }
+    }.map { taskMap =>
+      if (taskMap.values.exists(_.isModified)) {
+        ParsedValue(taskMap.map { case (k, v) => k -> v.value }, Modified)
+      } else {
+        ParsedValue(taskMap.map { case (k, v) => k -> v.value }, NotModified)
       }
+    }
   }
 
   /**
@@ -119,26 +119,25 @@ object MigrationTo18 extends StrictLogging {
   val instanceJsonReads17: Reads[ParsedValue[Instance]] = {
     (
       (__ \ "instanceId").read[Id] ~
-      (__ \ "agentInfo").read[AgentInfo] ~
-      (__ \ "tasksMap").read[ParsedValue[Map[Task.Id, Task]]](taskMapReads17) ~
-      (__ \ "runSpecVersion").read[Timestamp] ~
-      (__ \ "state").read[ParsedValue[InstanceState]](instanceStateReads17) ~
-      (__ \ "reservation").readNullable[JsObject]
+        (__ \ "agentInfo").read[AgentInfo] ~
+        (__ \ "tasksMap").read[ParsedValue[Map[Task.Id, Task]]](taskMapReads17) ~
+        (__ \ "runSpecVersion").read[Timestamp] ~
+        (__ \ "state").read[ParsedValue[InstanceState]](instanceStateReads17) ~
+        (__ \ "reservation").readNullable[JsObject]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, rawReservation) =>
-
-        val reservation = rawReservation.map { raw =>
-          raw.as[Reservation](InstanceMigration.legacyReservationReads(tasksMap.value, instanceId))
-        }
-
-        if (List(state, tasksMap).exists(_.isModified)) {
-          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation, None)
-          ParsedValue(instance, Modified)
-        } else {
-          val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation, None)
-          ParsedValue(instance, NotModified)
-        }
-
+      val reservation = rawReservation.map { raw =>
+        raw.as[Reservation](InstanceMigration.legacyReservationReads(tasksMap.value, instanceId))
       }
+
+      if (List(state, tasksMap).exists(_.isModified)) {
+        val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation, None)
+        ParsedValue(instance, Modified)
+      } else {
+        val instance = new Instance(instanceId, Some(agentInfo), state.value, tasksMap.value, runSpecVersion, reservation, None)
+        ParsedValue(instance, NotModified)
+      }
+
+    }
   }
 
   /**

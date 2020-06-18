@@ -21,10 +21,7 @@ import scala.concurrent.{Await, blocking}
   * @param request the initial http request.
   * @param emitter the emitter to emit data
   */
-class HttpEventSSEHandle(
-    metrics: Metrics,
-    request: HttpServletRequest,
-    emitter: Emitter) extends HttpEventStreamHandle {
+class HttpEventSSEHandle(metrics: Metrics, request: HttpServletRequest, emitter: Emitter) extends HttpEventStreamHandle {
 
   lazy val id: String = UUID.randomUUID().toString
 
@@ -81,8 +78,8 @@ class HttpEventStreamServlet(
     streamActor: ActorRef,
     conf: EventConf,
     val authenticator: Authenticator,
-    val authorizer: Authorizer)
-  extends EventSourceServlet {
+    val authorizer: Authorizer
+) extends EventSourceServlet {
 
   override def doGet(request: HttpServletRequest, response: HttpServletResponse): Unit = {
     val requestFacade = new RequestFacade(request)
@@ -139,24 +136,24 @@ class HttpEventStreamServlet(
     resp.setHeader("Allow", "GET, HEAD, OPTIONS")
   }
 
-  override def newEventSource(request: HttpServletRequest): EventSource = new EventSource {
-    @volatile private var handler: Option[HttpEventSSEHandle] = None
+  override def newEventSource(request: HttpServletRequest): EventSource =
+    new EventSource {
+      @volatile private var handler: Option[HttpEventSSEHandle] = None
 
-    override def onOpen(emitter: Emitter): Unit = {
-      // We don't want to count this response towards the http metrics as it could be quite large by the time it closes.
-      // Also, the serialization for events is done once for all consumers; we should track the data with a separate
-      // metric.
-      HttpTransferMetricsHandler.exclude(request)
+      override def onOpen(emitter: Emitter): Unit = {
+        // We don't want to count this response towards the http metrics as it could be quite large by the time it closes.
+        // Also, the serialization for events is done once for all consumers; we should track the data with a separate
+        // metric.
+        HttpTransferMetricsHandler.exclude(request)
 
-      val handle = new HttpEventSSEHandle(metrics, request, emitter)
-      this.handler = Some(handle)
-      streamActor ! HttpEventStreamConnectionOpen(handle)
+        val handle = new HttpEventSSEHandle(metrics, request, emitter)
+        this.handler = Some(handle)
+        streamActor ! HttpEventStreamConnectionOpen(handle)
+      }
+
+      override def onClose(): Unit = {
+        handler.foreach(streamActor ! HttpEventStreamConnectionClosed(_))
+        handler = None
+      }
     }
-
-    override def onClose(): Unit = {
-      handler.foreach(streamActor ! HttpEventStreamConnectionClosed(_))
-      handler = None
-    }
-  }
 }
-

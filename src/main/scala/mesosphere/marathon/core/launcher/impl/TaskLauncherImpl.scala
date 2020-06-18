@@ -10,9 +10,9 @@ import scala.jdk.CollectionConverters._
 import org.apache.mesos.Protos.{OfferID, Status}
 import org.apache.mesos.{Protos, SchedulerDriver}
 
-private[launcher] class TaskLauncherImpl(
-    metrics: Metrics,
-    marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder) extends TaskLauncher with StrictLogging {
+private[launcher] class TaskLauncherImpl(metrics: Metrics, marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder)
+    extends TaskLauncher
+    with StrictLogging {
 
   private[this] val usedOffersMetric =
     metrics.counter("mesos.offers.used")
@@ -23,7 +23,6 @@ private[launcher] class TaskLauncherImpl(
 
   override def acceptOffer(offerID: OfferID, taskOps: Seq[InstanceOp]): Boolean = {
     val accepted = withDriver(s"launchTasks($offerID)") { driver =>
-
       //We accept the offer, the rest of the offer is declined automatically with the given filter.
       //The filter duration is set to 0, so we get the same offer in the next allocator cycle.
       val noFilter = Protos.Filters.newBuilder().setRefuseSeconds(0).build()

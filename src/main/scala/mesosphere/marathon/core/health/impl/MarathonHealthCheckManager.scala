@@ -36,11 +36,12 @@ class MarathonHealthCheckManager(
     eventBus: EventStream,
     instanceTracker: InstanceTracker,
     groupManager: GroupManager,
-    conf: MarathonConf)(implicit mat: ActorMaterializer) extends HealthCheckManager with StrictLogging {
+    conf: MarathonConf
+)(implicit mat: ActorMaterializer)
+    extends HealthCheckManager
+    with StrictLogging {
 
-  protected[this] case class ActiveHealthCheck(
-      healthCheck: HealthCheck,
-      actor: ActorRef)
+  protected[this] case class ActiveHealthCheck(healthCheck: HealthCheck, actor: ActorRef)
 
   protected[this] var appHealthChecks: RWLock[mutable.Map[AbsolutePathId, Map[Timestamp, Set[ActiveHealthCheck]]]] =
     RWLock(mutable.Map.empty.withDefaultValue(Map.empty.withDefaultValue(Set.empty)))
@@ -65,7 +66,7 @@ class MarathonHealthCheckManager(
   val healthCheckWorkerHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed] =
     MergeHub
       .source[(AppDefinition, Instance, MarathonHealthCheck, ActorRef)](1)
-      .mapAsync(conf.maxConcurrentMarathonHealthChecks()){
+      .mapAsync(conf.maxConcurrentMarathonHealthChecks()) {
         case (app, instance, marathonHealthCheck, actorRef) =>
           HealthCheckWorker
             .run(app, instance, marathonHealthCheck)
@@ -74,8 +75,11 @@ class MarathonHealthCheckManager(
               // Theoretically we should never get there: [[HealthCheckWorker.run]] already wraps failed health checks into
               // successful futures with Healthy/Unhealthy message. But just in case the underlying implementation changes...
               case NonFatal(e) =>
-                logger.warn(s"HealthCheck stream for app ${app.id} version ${app.version} " +
-                  s"and healthCheck $marathonHealthCheck failed with: ", e)
+                logger.warn(
+                  s"HealthCheck stream for app ${app.id} version ${app.version} " +
+                    s"and healthCheck $marathonHealthCheck failed with: ",
+                  e
+                )
             }
       }
       .to(Sink.ignore)
@@ -96,20 +100,21 @@ class MarathonHealthCheckManager(
         logger.info(s"Adding health check for app [${app.id}] and version [${app.version}]: [$healthCheck]")
 
         val ref = actorRefFactory.actorOf(
-          HealthCheckActor.props(app, appHealthChecksActor, killService, healthCheck, instanceTracker, eventBus, healthCheckWorkerHub))
+          HealthCheckActor.props(app, appHealthChecksActor, killService, healthCheck, instanceTracker, eventBus, healthCheckWorkerHub)
+        )
         val newHealthChecksForApp =
           healthChecksForApp + ActiveHealthCheck(healthCheck, ref)
 
-        appHealthChecksActor ! AppHealthCheckActor.AddHealthCheck(
-          ApplicationKey(app.id, app.version), healthCheck)
+        appHealthChecksActor ! AppHealthCheckActor.AddHealthCheck(ApplicationKey(app.id, app.version), healthCheck)
 
         healthCheck match {
           case _: MesosHealthCheck =>
             instances.foreach { instance =>
               instance.tasksMap.values.withFilter(_.isRunning).map(_.status.mesosStatus).foreach {
                 case Some(mesosStatus) if mesosStatus.hasHealthy =>
-                  val health = if (mesosStatus.getHealthy) Healthy(instance.instanceId, instance.runSpecVersion, publishEvent = false)
-                  else Unhealthy(instance.instanceId, instance.runSpecVersion, "", publishEvent = false)
+                  val health =
+                    if (mesosStatus.getHealthy) Healthy(instance.instanceId, instance.runSpecVersion, publishEvent = false)
+                    else Unhealthy(instance.instanceId, instance.runSpecVersion, "", publishEvent = false)
                   ref ! health
                 case None =>
               }
@@ -146,8 +151,7 @@ class MarathonHealthCheckManager(
         currentHealthChecksForApp + (appVersion -> newHealthChecksForVersion)
       }
 
-      appHealthChecksActor ! AppHealthCheckActor.RemoveHealthCheck(
-        ApplicationKey(appId, appVersion), healthCheck)
+      appHealthChecksActor ! AppHealthCheckActor.RemoveHealthCheck(ApplicationKey(appId, appVersion), healthCheck)
 
       if (newHealthChecksForApp.isEmpty) ahcs -= appId
       else ahcs += (appId -> newHealthChecksForApp)
@@ -212,7 +216,8 @@ class MarathonHealthCheckManager(
             // throw away old versions such that we may not have the app configuration of all tasks available anymore.
             logger.warn(
               s"Cannot find health check configuration for [$appId] and version [$version], " +
-                "using most recent one.")
+                "using most recent one."
+            )
 
           case Some(appVersion) =>
             logger.info(s"addAllFor [$appId] version [$version]")

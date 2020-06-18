@@ -12,9 +12,14 @@ class GroupValidationTest extends UnitTest with ValidationTestLike {
       val update = raml.GroupUpdate(
         id = Some("/prod"),
         enforceRole = Some(true),
-        groups = Some(Set(raml.GroupUpdate(
-          id = Some("second"), enforceRole = Some(true)
-        )))
+        groups = Some(
+          Set(
+            raml.GroupUpdate(
+              id = Some("second"),
+              enforceRole = Some(true)
+            )
+          )
+        )
       )
 
       groupValidator(update) should haveViolations(
@@ -26,9 +31,7 @@ class GroupValidationTest extends UnitTest with ValidationTestLike {
       val originalGroup = RootGroup.empty().putGroup(Group(AbsolutePathId("/dev"), enforceRole = false))
       val groupValidator = Group.validNestedGroupUpdateWithBase(AbsolutePathId("/"), originalGroup, servicesGloballyModified = true)
 
-      val update = raml.GroupUpdate(
-        id = Some("/dev"),
-        enforceRole = Some(true))
+      val update = raml.GroupUpdate(id = Some("/dev"), enforceRole = Some(true))
 
       groupValidator(update) should haveViolations(
         "/enforceRole" -> Group.disallowEnforceRoleChangeIfServicesChanged.EnforceRoleCantBeChangedMessage
@@ -39,9 +42,7 @@ class GroupValidationTest extends UnitTest with ValidationTestLike {
       val originalGroup = RootGroup.empty().putGroup(Group(AbsolutePathId("/dev"), enforceRole = false))
       val groupValidator = Group.validNestedGroupUpdateWithBase(AbsolutePathId("/"), originalGroup, servicesGloballyModified = false)
 
-      val update = raml.GroupUpdate(
-        id = Some("/dev"),
-        enforceRole = Some(true))
+      val update = raml.GroupUpdate(id = Some("/dev"), enforceRole = Some(true))
 
       groupValidator(update) shouldBe aSuccess
     }

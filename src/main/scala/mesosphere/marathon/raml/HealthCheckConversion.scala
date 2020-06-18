@@ -63,9 +63,10 @@ trait HealthCheckConversion {
 
   implicit val healthCheckRamlWriter: Writes[MesosHealthCheck, HealthCheck] = Writes { check =>
     def requiredField[T](msg: String): T = throw new IllegalStateException(msg)
-    def requireEndpoint(portIndex: Option[PortReference]): String = portIndex.fold(
-      requiredField[String]("portIndex undefined for health-check")
-    ) {
+    def requireEndpoint(portIndex: Option[PortReference]): String =
+      portIndex.fold(
+        requiredField[String]("portIndex undefined for health-check")
+      ) {
         case byName: PortReference.ByName => byName.value
         case index => throw new IllegalStateException(s"unsupported type of port-index for $index")
       }
@@ -80,31 +81,33 @@ trait HealthCheckConversion {
     check match {
       case httpCheck: MesosHttpHealthCheck =>
         partialCheck.copy(
-          http = Some(HttpCheck(
-            endpoint = requireEndpoint(httpCheck.portIndex),
-            path = httpCheck.path,
-            scheme = Raml.toRaml(httpCheck.protocol)))
+          http = Some(
+            HttpCheck(endpoint = requireEndpoint(httpCheck.portIndex), path = httpCheck.path, scheme = Raml.toRaml(httpCheck.protocol))
+          )
         )
       case tcpCheck: MesosTcpHealthCheck =>
         partialCheck.copy(
-          tcp = Some(TcpCheck(
-            endpoint = requireEndpoint(tcpCheck.portIndex)
-          ))
+          tcp = Some(
+            TcpCheck(
+              endpoint = requireEndpoint(tcpCheck.portIndex)
+            )
+          )
         )
       case cmdCheck: MesosCommandHealthCheck =>
         partialCheck.copy(
-          exec = Some(CommandCheck(
-            command = cmdCheck.command match {
-              case cmd: state.Command => ShellCommand(cmd.value)
-              case argv: state.ArgvList => ArgvCommand(argv.value)
-            }
-          ))
+          exec = Some(
+            CommandCheck(
+              command = cmdCheck.command match {
+                case cmd: state.Command => ShellCommand(cmd.value)
+                case argv: state.ArgvList => ArgvCommand(argv.value)
+              }
+            )
+          )
         )
     }
   }
 
   implicit val appHealthCheckWrites: Writes[CoreHealthCheck, AppHealthCheck] = Writes { health =>
-
     implicit val commandCheckWrites: Writes[state.Executable, AppCommandCheck] = Writes {
       case state.Command(value) => AppCommandCheck(value)
       case state.ArgvList(args) => throw SerializationFailedException("serialization of ArgvList not supported")
@@ -122,15 +125,16 @@ trait HealthCheckConversion {
     }
 
     def create(
-      protocol: AppHealthCheckProtocol,
-      ipProtocol: Option[mesosphere.marathon.core.health.IpProtocol],
-      command: Option[AppCommandCheck] = None,
-      ignoreHttp1xx: Option[Boolean] = None,
-      path: Option[String] = None,
-      port: Option[Int] = None,
-      portReference: Option[PortReference] = None,
-      delay: Duration = core.health.HealthCheck.DefaultDelay): AppHealthCheck = {
-      val portIndex = portReference.collect{ case index: PortReference.ByIndex => index.value }
+        protocol: AppHealthCheckProtocol,
+        ipProtocol: Option[mesosphere.marathon.core.health.IpProtocol],
+        command: Option[AppCommandCheck] = None,
+        ignoreHttp1xx: Option[Boolean] = None,
+        path: Option[String] = None,
+        port: Option[Int] = None,
+        portReference: Option[PortReference] = None,
+        delay: Duration = core.health.HealthCheck.DefaultDelay
+    ): AppHealthCheck = {
+      val portIndex = portReference.collect { case index: PortReference.ByIndex => index.value }
       AppHealthCheck(
         gracePeriodSeconds = health.gracePeriod.toSeconds.toInt,
         command = command,
@@ -149,11 +153,28 @@ trait HealthCheckConversion {
 
     import raml.{AppHealthCheckProtocol => AHCP}
     health match {
-      case hc: MarathonHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], ipProtocol = None, ignoreHttp1xx = Some(hc.ignoreHttp1xx), path = hc.path, port = hc.port, portReference = hc.portIndex)
+      case hc: MarathonHttpHealthCheck =>
+        create(
+          hc.protocol.toRaml[AppHealthCheckProtocol],
+          ipProtocol = None,
+          ignoreHttp1xx = Some(hc.ignoreHttp1xx),
+          path = hc.path,
+          port = hc.port,
+          portReference = hc.portIndex
+        )
       case hc: MarathonTcpHealthCheck => create(AHCP.Tcp, ipProtocol = None, port = hc.port, portReference = hc.portIndex)
       case hc: MesosCommandHealthCheck => create(AHCP.Command, ipProtocol = None, command = Some(hc.command.toRaml), delay = hc.delay)
-      case hc: MesosHttpHealthCheck => create(hc.protocol.toRaml[AppHealthCheckProtocol], Some(hc.ipProtocol), path = hc.path, port = hc.port, portReference = hc.portIndex, delay = hc.delay)
-      case hc: MesosTcpHealthCheck => create(AHCP.MesosTcp, Some(hc.ipProtocol), port = hc.port, portReference = hc.portIndex, delay = hc.delay)
+      case hc: MesosHttpHealthCheck =>
+        create(
+          hc.protocol.toRaml[AppHealthCheckProtocol],
+          Some(hc.ipProtocol),
+          path = hc.path,
+          port = hc.port,
+          portReference = hc.portIndex,
+          delay = hc.delay
+        )
+      case hc: MesosTcpHealthCheck =>
+        create(AHCP.MesosTcp, Some(hc.ipProtocol), port = hc.port, portReference = hc.portIndex, delay = hc.delay)
     }
   }
 
@@ -163,20 +184,23 @@ trait HealthCheckConversion {
     case TaskLostProto.RELAUNCH_AFTER_TIMEOUT => TaskLostBehavior.RelaunchAfterTimeout
   }
 
-  private def ipProtocolFromRaml(ipProtocol: raml.IpProtocol): mesosphere.marathon.core.health.IpProtocol = ipProtocol match {
-    case raml.IpProtocol.Ipv4 => IPv4
-    case raml.IpProtocol.Ipv6 => IPv6
-  }
+  private def ipProtocolFromRaml(ipProtocol: raml.IpProtocol): mesosphere.marathon.core.health.IpProtocol =
+    ipProtocol match {
+      case raml.IpProtocol.Ipv4 => IPv4
+      case raml.IpProtocol.Ipv6 => IPv6
+    }
 
-  private def ipProtocolToRaml(ipProtocol: mesosphere.marathon.core.health.IpProtocol): raml.IpProtocol = ipProtocol match {
-    case IPv4 => raml.IpProtocol.Ipv4
-    case IPv6 => raml.IpProtocol.Ipv6
-  }
+  private def ipProtocolToRaml(ipProtocol: mesosphere.marathon.core.health.IpProtocol): raml.IpProtocol =
+    ipProtocol match {
+      case IPv4 => raml.IpProtocol.Ipv4
+      case IPv6 => raml.IpProtocol.Ipv6
+    }
 
-  def ipProtocolFromProtoToRaml(ipProtocol: HealthCheckDefinition.IpProtocol): raml.IpProtocol = ipProtocol match {
-    case HealthCheckDefinition.IpProtocol.IPv4 => raml.IpProtocol.Ipv4
-    case HealthCheckDefinition.IpProtocol.IPv6 => raml.IpProtocol.Ipv6
-  }
+  def ipProtocolFromProtoToRaml(ipProtocol: HealthCheckDefinition.IpProtocol): raml.IpProtocol =
+    ipProtocol match {
+      case HealthCheckDefinition.IpProtocol.IPv4 => raml.IpProtocol.Ipv4
+      case HealthCheckDefinition.IpProtocol.IPv6 => raml.IpProtocol.Ipv6
+    }
 
   implicit val appHealthCheckRamlReader: Reads[AppHealthCheck, CoreHealthCheck] = Reads { check =>
     val result: CoreHealthCheck = check match {
@@ -263,7 +287,8 @@ trait HealthCheckConversion {
     val prototype = AppHealthCheck(
       gracePeriodSeconds = if (check.hasGracePeriodSeconds) check.getGracePeriodSeconds else AppHealthCheck.DefaultGracePeriodSeconds,
       intervalSeconds = if (check.hasIntervalSeconds) check.getIntervalSeconds else AppHealthCheck.DefaultIntervalSeconds,
-      maxConsecutiveFailures = if (check.hasMaxConsecutiveFailures) check.getMaxConsecutiveFailures else AppHealthCheck.DefaultMaxConsecutiveFailures,
+      maxConsecutiveFailures =
+        if (check.hasMaxConsecutiveFailures) check.getMaxConsecutiveFailures else AppHealthCheck.DefaultMaxConsecutiveFailures,
       timeoutSeconds = if (check.hasTimeoutSeconds) check.getTimeoutSeconds else AppHealthCheck.DefaultTimeoutSeconds,
       delaySeconds = if (check.hasDelaySeconds) check.getDelaySeconds else AppHealthCheck.DefaultDelaySeconds,
       path = if (check.hasPath) Option(check.getPath) else AppHealthCheck.DefaultPath,
@@ -273,10 +298,11 @@ trait HealthCheckConversion {
       ipProtocol = ipProtocolFromProtoToRaml(check.getIpProtocol)
     )
     check.getProtocol match {
-      case Protocol.COMMAND => prototype.copy(
-        protocol = AppHealthCheckProtocol.Command,
-        command = if (check.hasCommand) Option(check.getCommand.toRaml) else AppHealthCheck.DefaultCommand
-      )
+      case Protocol.COMMAND =>
+        prototype.copy(
+          protocol = AppHealthCheckProtocol.Command,
+          command = if (check.hasCommand) Option(check.getCommand.toRaml) else AppHealthCheck.DefaultCommand
+        )
       case Protocol.TCP => prototype.copy(protocol = AppHealthCheckProtocol.Tcp)
       case Protocol.HTTP => prototype.copy(protocol = AppHealthCheckProtocol.Http)
       case Protocol.HTTPS => prototype.copy(protocol = AppHealthCheckProtocol.Https)

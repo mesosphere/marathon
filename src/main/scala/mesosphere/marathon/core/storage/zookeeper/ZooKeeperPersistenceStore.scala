@@ -38,11 +38,9 @@ import scala.util.{Failure, Try}
   * @param parallelism parallelism level for CRUD operations
   * @param ec execution context
   */
-class ZooKeeperPersistenceStore(
-    metrics: Metrics,
-    factory: AsyncCuratorBuilderFactory,
-    parallelism: Int = 10)(implicit ec: ExecutionContext)
-  extends PersistenceStore with StrictLogging {
+class ZooKeeperPersistenceStore(metrics: Metrics, factory: AsyncCuratorBuilderFactory, parallelism: Int = 10)(implicit ec: ExecutionContext)
+    extends PersistenceStore
+    with StrictLogging {
 
   private[this] val createMetric = metrics.counter("debug.zookeeper.operations.create")
   private[this] val readMetric = metrics.counter("debug.zookeeper.operations.read")
@@ -66,8 +64,8 @@ class ZooKeeperPersistenceStore(
     */
   override def createFlow: Flow[Node, String, NotUsed] =
     Flow[Node]
-      // `groupBy(path.hashCode % parallelism)` makes sure that updates to the same path always land in the same
-      // sub-stream, thus keeping the order of writes to the same path, even with parallelism > 1
+    // `groupBy(path.hashCode % parallelism)` makes sure that updates to the same path always land in the same
+    // sub-stream, thus keeping the order of writes to the same path, even with parallelism > 1
       .groupBy(parallelism, node => Math.abs(node.path.hashCode) % parallelism)
       .mapAsync(1)(node => create(node))
       .mergeSubstreams
@@ -115,8 +113,8 @@ class ZooKeeperPersistenceStore(
     */
   override def updateFlow: Flow[Node, String, NotUsed] =
     Flow[Node]
-      // `groupBy(path.hashCode % parallelism)` makes sure that updates to the same path always land in the same
-      // sub-stream, thus keeping the order of writes to the same path, even with parallelism > 1
+    // `groupBy(path.hashCode % parallelism)` makes sure that updates to the same path always land in the same
+    // sub-stream, thus keeping the order of writes to the same path, even with parallelism > 1
       .groupBy(parallelism, node => Math.abs(node.path.hashCode) % parallelism)
       .mapAsync(1)(node => update(node))
       .mergeSubstreams
@@ -168,11 +166,13 @@ class ZooKeeperPersistenceStore(
       .children()
       .forPath(path)
       .toScala
-      .map{ list =>
+      .map { list =>
         Try(
-          JavaConverters.asScalaBuffer(list)
+          JavaConverters
+            .asScalaBuffer(list)
             .to(Seq)
-            .map(child => if (absolute) Paths.get(path, child).toString else child))
+            .map(child => if (absolute) Paths.get(path, child).toString else child)
+        )
       }
       .recover {
         case e: NoNodeException => Failure(e) // re-throw exception in all other cases
@@ -188,7 +188,8 @@ class ZooKeeperPersistenceStore(
     existsMetric.increment()
     factory
       .checkExists()
-      .forPath(path).toScala
+      .forPath(path)
+      .toScala
       .map(stat => if (stat == null) false else true)
   }
 
@@ -196,7 +197,8 @@ class ZooKeeperPersistenceStore(
     logger.debug(s"Syncing nodes for path $path")
     factory
       .sync()
-      .forPath(path).toScala
+      .forPath(path)
+      .toScala
       .map(_ => Done)
   }
 
@@ -235,9 +237,8 @@ class ZooKeeperPersistenceStore(
     logger.debug(s"Creating a node if absent for path ${node.path}")
     createIfAbsentMetric.increment()
 
-    create(node)
-      .recoverWith {
-        case _: NodeExistsException => Future(node.path) // CreateIfAbsent hasn't created a new node since it already exists
-      }
+    create(node).recoverWith {
+      case _: NodeExistsException => Future(node.path) // CreateIfAbsent hasn't created a new node since it already exists
+    }
   }
 }

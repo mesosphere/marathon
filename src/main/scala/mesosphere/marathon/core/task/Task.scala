@@ -87,11 +87,14 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
       // case 1: running
       case Condition.Running if !hasStartedRunning =>
         val updatedNetworkInfo = status.networkInfo.update(newMesosStatus)
-        val updatedTask = copy(status = status.copy(
-          mesosStatus = Some(newMesosStatus),
-          condition = Condition.Running,
-          startedAt = Some(now),
-          networkInfo = updatedNetworkInfo))
+        val updatedTask = copy(status =
+          status.copy(
+            mesosStatus = Some(newMesosStatus),
+            condition = Condition.Running,
+            startedAt = Some(now),
+            networkInfo = updatedNetworkInfo
+          )
+        )
         TaskUpdateEffect.Update(newState = updatedTask)
 
       // case 2: terminal; extractor applies specific logic e.g. when an Unreachable task becomes Gone
@@ -117,8 +120,7 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
         // TODO(PODS): strange to use Condition here
         updatedHealthOrState(status.mesosStatus, newMesosStatus).map { newTaskStatus =>
           val updatedNetworkInfo = status.networkInfo.update(newMesosStatus)
-          val updatedStatus = status.copy(
-            mesosStatus = Some(newTaskStatus), condition = newStatus, networkInfo = updatedNetworkInfo)
+          val updatedStatus = status.copy(mesosStatus = Some(newTaskStatus), condition = newStatus, networkInfo = updatedNetworkInfo)
           val updatedTask = copy(status = updatedStatus)
           // TODO(PODS): The instance needs to handle a terminal task via an Update here
           // Or should we use Expunge in case of a terminal update for resident tasks?
@@ -133,8 +135,9 @@ case class Task(taskId: Task.Id, runSpecVersion: Timestamp, status: Task.Status)
 
   /** returns the new status if the health status has been added or changed, or if the state changed */
   private[this] def updatedHealthOrState(
-    maybeCurrent: Option[MesosProtos.TaskStatus],
-    update: MesosProtos.TaskStatus): Option[MesosProtos.TaskStatus] = {
+      maybeCurrent: Option[MesosProtos.TaskStatus],
+      update: MesosProtos.TaskStatus
+  ): Option[MesosProtos.TaskStatus] = {
     maybeCurrent match {
       case Some(current) =>
         val healthy = update.hasHealthy && (!current.hasHealthy || current.getHealthy != update.getHealthy)
@@ -409,7 +412,8 @@ object Task {
       startedAt: Option[Timestamp] = None,
       mesosStatus: Option[MesosProtos.TaskStatus] = None,
       condition: Condition,
-      networkInfo: NetworkInfo) {
+      networkInfo: NetworkInfo
+  ) {
 
     /**
       * @return the health status reported by mesos for this task
@@ -433,10 +437,11 @@ object Task {
   }
 
   object Terminated {
-    def isTerminated(state: TaskState): Boolean = state match {
-      case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST => true
-      case _ => false
-    }
+    def isTerminated(state: TaskState): Boolean =
+      state match {
+        case TASK_ERROR | TASK_FAILED | TASK_FINISHED | TASK_KILLED | TASK_LOST => true
+        case _ => false
+      }
 
     def unapply(state: TaskState): Option[TaskState] = if (isTerminated(state)) Some(state) else None
   }
@@ -464,16 +469,20 @@ object Task {
 }
 
 object Tasks {
+
   /**
     * Creates a new artificial tasks with the `Provisioned` condition that are used when provisioning an instance
     *
     * @return new tasks with condition Provisioned
     */
-  def provisioned(taskIds: Seq[Task.Id], taskNetworkInfos: Map[Task.Id, NetworkInfo], version: Timestamp, now: Timestamp): Map[Task.Id, Task] = {
+  def provisioned(
+      taskIds: Seq[Task.Id],
+      taskNetworkInfos: Map[Task.Id, NetworkInfo],
+      version: Timestamp,
+      now: Timestamp
+  ): Map[Task.Id, Task] = {
     taskIds.iterator.map { taskId =>
-      val networkInfo = taskNetworkInfos.getOrElse(
-        taskId,
-        throw new IllegalStateException("failed to retrieve a task network info"))
+      val networkInfo = taskNetworkInfos.getOrElse(taskId, throw new IllegalStateException("failed to retrieve a task network info"))
       taskId -> Task(
         taskId = taskId,
         runSpecVersion = version,

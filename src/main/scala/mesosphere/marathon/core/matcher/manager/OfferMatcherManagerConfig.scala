@@ -14,7 +14,8 @@ trait OfferMatcherManagerConfig extends ScallopConf {
   lazy val offerMatchingTimeout = opt[Int](
     "offer_matching_timeout",
     descr = "Offer matching timeout (ms). Stop trying to match additional tasks for this offer after this time.",
-    default = Some(3000)).map(_.millis)
+    default = Some(3000)
+  ).map(_.millis)
 
   /**
     * Do not start more instances on one offer than this number.
@@ -33,7 +34,8 @@ trait OfferMatcherManagerConfig extends ScallopConf {
     */
   lazy val maxParallelOffers = opt[Int](
     "max_parallel_offers",
-    descr = "[INTERNAL] The number of offers that are processed in parallel. The default value will be derived from the number of available processors in the system with a maximum of 8",
+    descr =
+      "[INTERNAL] The number of offers that are processed in parallel. The default value will be derived from the number of available processors in the system with a maximum of 8",
     default = Some(math.min(8, Runtime.getRuntime.availableProcessors())),
     hidden = true
   )

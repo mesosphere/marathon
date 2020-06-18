@@ -33,7 +33,9 @@ private[marathon] class InstanceTrackerDelegate(
     metrics: Metrics,
     clock: Clock,
     config: InstanceTrackerConfig,
-    instanceTrackerRef: ActorRef)(implicit mat: Materializer) extends InstanceTracker {
+    instanceTrackerRef: ActorRef
+)(implicit mat: Materializer)
+    extends InstanceTracker {
 
   override def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec] =
     tasksByAppTimeMetric {
@@ -56,7 +58,9 @@ private[marathon] class InstanceTrackerDelegate(
   override def hasSpecInstances(appId: AbsolutePathId)(implicit ec: ExecutionContext): Future[Boolean] =
     specInstances(appId).map(_.nonEmpty)
 
-  override def specInstances(appId: AbsolutePathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]] = {
+  override def specInstances(appId: AbsolutePathId, readAfterWrite: Boolean = false)(implicit
+      ec: ExecutionContext
+  ): Future[Seq[Instance]] = {
     val query = InstanceTrackerActor.ListBySpec(appId)
     if (readAfterWrite) {
       val promise = Promise[Seq[Instance]]
@@ -64,7 +68,8 @@ private[marathon] class InstanceTrackerDelegate(
         case QueueOfferResult.Enqueued => logger.info(s"Queued query ${query.appId}")
         case QueueOfferResult.Dropped => promise.failure(new RuntimeException(s"Dropped instance query: $query"))
         case QueueOfferResult.Failure(ex) => promise.failure(new RuntimeException(s"Failed to process instance query $query because", ex))
-        case QueueOfferResult.QueueClosed => promise.failure(new RuntimeException(s"Failed to process instance query $query because the queue is closed"))
+        case QueueOfferResult.QueueClosed =>
+          promise.failure(new RuntimeException(s"Failed to process instance query $query because the queue is closed"))
       }
       promise.future
     } else {
@@ -153,9 +158,7 @@ private[marathon] class InstanceTrackerDelegate(
   // format: ON
 
   override def schedule(instance: Instance): Future[Done] = {
-    require(
-      instance.isScheduled,
-      s"Instance ${instance.instanceId} was not in scheduled state but ${instance.state.condition}")
+    require(instance.isScheduled, s"Instance ${instance.instanceId} was not in scheduled state but ${instance.state.condition}")
 
     import scala.concurrent.ExecutionContext.Implicits.global
     process(InstanceUpdateOperation.Schedule(instance)).map(_ => Done)
@@ -193,7 +196,8 @@ private[marathon] class InstanceTrackerDelegate(
   }
 
   override val instanceUpdates: Source[(InstancesSnapshot, Source[InstanceChange, NotUsed]), NotUsed] = {
-    Source.actorRef[Any](Int.MaxValue, OverflowStrategy.fail)
+    Source
+      .actorRef[Any](Int.MaxValue, OverflowStrategy.fail)
       .watchTermination()(Keep.both)
       .mapMaterializedValue {
         case (ref, done) =>
@@ -202,7 +206,9 @@ private[marathon] class InstanceTrackerDelegate(
           }(ExecutionContexts.callerThread)
           instanceTrackerRef.tell(InstanceTrackerActor.Subscribe, ref)
           NotUsed
-      }.prefixAndTail(1).map {
+      }
+      .prefixAndTail(1)
+      .map {
         case (Seq(el: InstancesSnapshot), rest) =>
           // The contract is that all messages delivered after the first snapshot message will be instance change
           (el, rest.asInstanceOf[Source[InstanceChange, NotUsed]]): @silent

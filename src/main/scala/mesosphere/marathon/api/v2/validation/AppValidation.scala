@@ -21,34 +21,38 @@ trait AppValidation {
   import SchedulingValidation._
   import SecretValidation._
 
-  val portDefinitionsValidator: Validator[Seq[PortDefinition]] = validator[Seq[PortDefinition]] {
-    portDefinitions =>
-      portDefinitions is elementsAreUniqueByOptional(_.name, "Port names must be unique.")
-      portDefinitions is elementsAreUniqueBy(_.port, "Ports must be unique.",
-        filter = { (port: Int) => port != AppDefinition.RandomPortValue })
+  val portDefinitionsValidator: Validator[Seq[PortDefinition]] = validator[Seq[PortDefinition]] { portDefinitions =>
+    portDefinitions is elementsAreUniqueByOptional(_.name, "Port names must be unique.")
+    portDefinitions is elementsAreUniqueBy(
+      _.port,
+      "Ports must be unique.",
+      filter = { (port: Int) => port != AppDefinition.RandomPortValue }
+    )
   }
 
   val portMappingsIndependentOfNetworks = validator[Seq[ContainerPortMapping]] { portMappings =>
     portMappings is elementsAreUniqueByOptional(_.name, "Port names must be unique.")
   }
 
-  private def portMappingNetworkNameValidator(networkNames: Seq[String]) = validator[ContainerPortMapping] { portMapping =>
-    portMapping.networkNames is every(oneOf(networkNames: _*))
-  }
+  private def portMappingNetworkNameValidator(networkNames: Seq[String]) =
+    validator[ContainerPortMapping] { portMapping =>
+      portMapping.networkNames is every(oneOf(networkNames: _*))
+    }
 
   private def portMappingIsCompatibleWithNetworks(networks: Seq[Network]): Validator[ContainerPortMapping] = {
-    val hostPortRequiresNetworkName = isTrue[ContainerPortMapping](
-      AppValidationMessages.NetworkNameRequiredForMultipleContainerNetworks) { mapping =>
+    val hostPortRequiresNetworkName = isTrue[ContainerPortMapping](AppValidationMessages.NetworkNameRequiredForMultipleContainerNetworks) {
+      mapping =>
         mapping.hostPort.isEmpty || mapping.networkNames.length == 1
-      }
+    }
     implied(networks.count(_.mode == NetworkMode.Container) > 1)(hostPortRequiresNetworkName)
   }
 
-  def portMappingsValidator(networks: Seq[Network]): Validator[Seq[ContainerPortMapping]] = validator { portMappings =>
-    portMappings is portMappingsIndependentOfNetworks
-    portMappings is every(portMappingIsCompatibleWithNetworks(networks))
-    portMappings is every(portMappingNetworkNameValidator(networks.flatMap(_.name)))
-  }
+  def portMappingsValidator(networks: Seq[Network]): Validator[Seq[ContainerPortMapping]] =
+    validator { portMappings =>
+      portMappings is portMappingsIndependentOfNetworks
+      portMappings is every(portMappingIsCompatibleWithNetworks(networks))
+      portMappings is every(portMappingNetworkNameValidator(networks.flatMap(_.name)))
+    }
 
   def dockerDockerContainerValidator(networks: Seq[Network]): Validator[Container] = {
     val validDockerEngineSpec: Validator[DockerContainer] = validator[DockerContainer] { docker =>
@@ -63,8 +67,7 @@ trait AppValidation {
 
   def mesosDockerContainerValidator(enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[Container] = {
     val validPullConfigSpec: Validator[DockerPullConfig] = validator[DockerPullConfig] { pullConfig =>
-      pullConfig is isTrue("pullConfig.secret must refer to an existing secret")(
-        config => secrets.contains(config.secret))
+      pullConfig is isTrue("pullConfig.secret must refer to an existing secret")(config => secrets.contains(config.secret))
     }
     val validMesosEngineSpec: Validator[DockerContainer] = validator[DockerContainer] { docker =>
       docker.image is notEmpty
@@ -117,7 +120,7 @@ trait AppValidation {
 
     def volumesValidator(container: Container): Validator[Seq[AppVolume]] =
       isTrue("Volume names must be unique") { (vols: Seq[AppVolume]) =>
-        val names: Seq[String] = vols.collect{ case v: AppExternalVolume => v.external.name }.flatten
+        val names: Seq[String] = vols.collect { case v: AppExternalVolume => v.external.name }.flatten
         names.distinct.size == names.size
       } and every(validVolume(container, enabledFeatures, secrets))
 
@@ -144,108 +147,108 @@ trait AppValidation {
     )
   }
 
-  def validVolume(container: Container, enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[AppVolume] = new Validator[AppVolume] {
-    import state.PathPatterns._
-    val validHostVolume = validator[AppHostVolume] { v =>
-      v.containerPath is notEmpty
-      v.hostPath is notEmpty
-    }
-    val validPersistentVolume = {
-      val notHaveConstraintsOnRoot = isTrue[PersistentVolumeInfo](
-        "Constraints on root volumes are not supported") { info =>
+  def validVolume(container: Container, enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[AppVolume] =
+    new Validator[AppVolume] {
+      import state.PathPatterns._
+      val validHostVolume = validator[AppHostVolume] { v =>
+        v.containerPath is notEmpty
+        v.hostPath is notEmpty
+      }
+      val validPersistentVolume = {
+        val notHaveConstraintsOnRoot = isTrue[PersistentVolumeInfo]("Constraints on root volumes are not supported") { info =>
           if (info.`type`.forall(_ == PersistentVolumeType.Root)) // default is Root, see AppConversion
             info.constraints.isEmpty
           else
             true
         }
 
-      val meetMaxSizeConstraint = isTrue[PersistentVolumeInfo]("Only mount volumes can have maxSize") { info =>
-        info.`type`.contains(PersistentVolumeType.Mount) || info.maxSize.isEmpty
-      }
+        val meetMaxSizeConstraint = isTrue[PersistentVolumeInfo]("Only mount volumes can have maxSize") { info =>
+          info.`type`.contains(PersistentVolumeType.Mount) || info.maxSize.isEmpty
+        }
 
-      val haveProperlyOrderedMaxSize = isTrue[PersistentVolumeInfo]("Max size must be larger than size") { info =>
-        info.maxSize.forall(_ > info.size)
-      }
+        val haveProperlyOrderedMaxSize = isTrue[PersistentVolumeInfo]("Max size must be larger than size") { info =>
+          info.maxSize.forall(_ > info.size)
+        }
 
-      val complyWithVolumeConstraintRules: Validator[Seq[String]] = new Validator[Seq[String]] {
-        override def apply(c: Seq[String]): Result = {
-          import Protos.Constraint.Operator._
-          (c.headOption, c.lift(1), c.lift(2)) match {
-            case (None, None, _) =>
-              Failure(Set(RuleViolation(c, "Missing field and operator")))
-            case (Some("path"), Some(op), Some(value)) =>
-              Try(Protos.Constraint.Operator.valueOf(op)).toOption.map {
-                case LIKE | UNLIKE =>
-                  Try(Pattern.compile(value)).toOption.map(_ => Success).getOrElse(
-                    Failure(Set(RuleViolation(c, "Invalid regular expression", Path(Generic(value)))))
-                  )
-                case _ =>
-                  Failure(Set(
-                    RuleViolation(c, "Operator must be one of LIKE, UNLIKE")))
-              }.getOrElse(
-                Failure(Set(
-                  RuleViolation(c, s"unknown constraint operator $op")))
-              )
-            case _ =>
-              Failure(Set(RuleViolation(c, s"Unsupported constraint ${c.mkString(",")}")))
+        val complyWithVolumeConstraintRules: Validator[Seq[String]] = new Validator[Seq[String]] {
+          override def apply(c: Seq[String]): Result = {
+            import Protos.Constraint.Operator._
+            (c.headOption, c.lift(1), c.lift(2)) match {
+              case (None, None, _) =>
+                Failure(Set(RuleViolation(c, "Missing field and operator")))
+              case (Some("path"), Some(op), Some(value)) =>
+                Try(Protos.Constraint.Operator.valueOf(op)).toOption.map {
+                  case LIKE | UNLIKE =>
+                    Try(Pattern.compile(value)).toOption
+                      .map(_ => Success)
+                      .getOrElse(
+                        Failure(Set(RuleViolation(c, "Invalid regular expression", Path(Generic(value)))))
+                      )
+                  case _ =>
+                    Failure(Set(RuleViolation(c, "Operator must be one of LIKE, UNLIKE")))
+                }.getOrElse(
+                  Failure(Set(RuleViolation(c, s"unknown constraint operator $op")))
+                )
+              case _ =>
+                Failure(Set(RuleViolation(c, s"Unsupported constraint ${c.mkString(",")}")))
+            }
           }
         }
-      }
 
-      val validPersistentInfo = validator[PersistentVolumeInfo] { info =>
-        info.size should be > 0L
-        info.constraints.each must complyWithVolumeConstraintRules
-      } and meetMaxSizeConstraint and notHaveConstraintsOnRoot and haveProperlyOrderedMaxSize
+        val validPersistentInfo = validator[PersistentVolumeInfo] { info =>
+          info.size should be > 0L
+          info.constraints.each must complyWithVolumeConstraintRules
+        } and meetMaxSizeConstraint and notHaveConstraintsOnRoot and haveProperlyOrderedMaxSize
 
-      validator[AppPersistentVolume] { v =>
-        v.containerPath is notEqualTo("") and notOneOf(DotPaths: _*)
-        v.containerPath is matchRegexWithFailureMessage(NoSlashesPattern, "value must not contain \"/\"")
-        v.mode is equalTo(ReadMode.Rw) // see AppConversion, default is RW
-        v.persistent is validPersistentInfo
+        validator[AppPersistentVolume] { v =>
+          v.containerPath is notEqualTo("") and notOneOf(DotPaths: _*)
+          v.containerPath is matchRegexWithFailureMessage(NoSlashesPattern, "value must not contain \"/\"")
+          v.mode is equalTo(ReadMode.Rw) // see AppConversion, default is RW
+          v.persistent is validPersistentInfo
+        }
       }
-    }
-    val validExternalVolume: Validator[AppExternalVolume] = {
-      import state.OptionLabelPatterns._
-      val validOptions = validator[Map[String, String]] { option =>
-        option.keys.each should matchRegex(OptionKeyRegex)
-      }
-      val validExternalInfo: Validator[ExternalVolumeInfo] = validator[ExternalVolumeInfo] { info =>
-        info.name is notEmpty
-        info.provider is definedAnd(matchRegex(LabelRegex))
-        info.options is validOptions
-      }
+      val validExternalVolume: Validator[AppExternalVolume] = {
+        import state.OptionLabelPatterns._
+        val validOptions = validator[Map[String, String]] { option =>
+          option.keys.each should matchRegex(OptionKeyRegex)
+        }
+        val validExternalInfo: Validator[ExternalVolumeInfo] = validator[ExternalVolumeInfo] { info =>
+          info.name is notEmpty
+          info.provider is definedAnd(matchRegex(LabelRegex))
+          info.options is validOptions
+        }
 
-      forAll(
-        validator[AppExternalVolume] { v =>
-          v.containerPath is notEmpty
-          v.external is validExternalInfo
-        },
-        { v: AppExternalVolume => v.external.provider.nonEmpty } -> ExternalVolumes.validRamlVolume(container),
-        featureEnabled[AppVolume](enabledFeatures, Features.EXTERNAL_VOLUMES)
-      )
-    }
-    val validSecretVolume: Validator[AppSecretVolume] = {
-      isTrue("volume.secret must refer to an existing secret")(
-        vol => secrets.contains(vol.secret))
-    }
-    override def apply(v: AppVolume): Result = {
-      v match {
-        case v: AppHostVolume => validate(v)(validHostVolume)
-        case v: AppPersistentVolume => validate(v)(validPersistentVolume)
-        case v: AppExternalVolume => validate(v)(validExternalVolume)
-        case v: AppSecretVolume => validate(v)(validSecretVolume) // Validate that the secret reference is valid
-        case _ => Failure(Set(RuleViolation(v, "Unknown app volume type")))
+        forAll(
+          validator[AppExternalVolume] { v =>
+            v.containerPath is notEmpty
+            v.external is validExternalInfo
+          },
+          { v: AppExternalVolume => v.external.provider.nonEmpty } -> ExternalVolumes.validRamlVolume(container),
+          featureEnabled[AppVolume](enabledFeatures, Features.EXTERNAL_VOLUMES)
+        )
+      }
+      val validSecretVolume: Validator[AppSecretVolume] = {
+        isTrue("volume.secret must refer to an existing secret")(vol => secrets.contains(vol.secret))
+      }
+      override def apply(v: AppVolume): Result = {
+        v match {
+          case v: AppHostVolume => validate(v)(validHostVolume)
+          case v: AppPersistentVolume => validate(v)(validPersistentVolume)
+          case v: AppExternalVolume => validate(v)(validExternalVolume)
+          case v: AppSecretVolume => validate(v)(validSecretVolume) // Validate that the secret reference is valid
+          case _ => Failure(Set(RuleViolation(v, "Unknown app volume type")))
+        }
       }
     }
-  }
 
   def readinessCheckValidator(app: App): Validator[ReadinessCheck] = {
     // we expect that the deprecated API has already been translated into canonical form
     def namesFromDefinitions = app.portDefinitions.fold(Set.empty[String])(_.iterator.flatMap(_.name).toSet)
-    def portNames = app.container.flatMap(_.portMappings).fold(namesFromDefinitions){ l => l.iterator.flatMap(_.name).toSet }
-    def portNameExists = isTrue[String]{ name: String => s"No port definition reference for portName $name" } { name =>
-      portNames.contains(name)
-    }
+    def portNames = app.container.flatMap(_.portMappings).fold(namesFromDefinitions) { l => l.iterator.flatMap(_.name).toSet }
+    def portNameExists =
+      isTrue[String] { name: String => s"No port definition reference for portName $name" } { name =>
+        portNames.contains(name)
+      }
     validator[ReadinessCheck] { rc =>
       rc.portName is portNameExists
       rc.timeoutSeconds should be < rc.intervalSeconds
@@ -259,12 +262,12 @@ trait AppValidation {
     validator[App] { app =>
       app.container is optional(validOldContainerAPI)
       app.container.flatMap(_.docker.flatMap(_.portMappings)) is optional(portMappingsIndependentOfNetworks)
-      app.ipAddress is optional(isTrue(
-        "ipAddress/discovery is not allowed for Docker containers") { (ipAddress: IpAddress) =>
-          !(app.container.exists(c => c.`type` == EngineType.Docker) && ipAddress.discovery.nonEmpty)
-        })
-      app.uris is optional(every(api.v2.Validation.uriIsValid) and isTrue(
-        "may not be set in conjunction with fetch") { (uris: Seq[String]) => !(uris.nonEmpty && app.fetch.nonEmpty) })
+      app.ipAddress is optional(isTrue("ipAddress/discovery is not allowed for Docker containers") { (ipAddress: IpAddress) =>
+        !(app.container.exists(c => c.`type` == EngineType.Docker) && ipAddress.discovery.nonEmpty)
+      })
+      app.uris is optional(every(api.v2.Validation.uriIsValid) and isTrue("may not be set in conjunction with fetch") {
+        (uris: Seq[String]) => !(uris.nonEmpty && app.fetch.nonEmpty)
+      })
     },
     isTrue("must not specify both container.docker.network and networks") { app =>
       !(app.container.exists(_.docker.exists(_.network.nonEmpty)) && app.networks.nonEmpty)
@@ -286,99 +289,115 @@ trait AppValidation {
     }
   )
 
-  def validateCanonicalAppAPI(enabledFeatures: Set[String], defaultNetworkName: () => Option[String], validRoles: Set[String]): Validator[App] = forAll(
-    validBasicAppDefinition(enabledFeatures, validRoles),
-    validator[App] { app =>
-      PathId(app.id) as "id" is (PathId.pathIdValidator and PathId.absolutePathValidator and PathId.nonEmptyPath)
-      app.dependencies.map(PathId(_)) as "dependencies" is every(valid)
-      app.networks is defaultNetworkNameValidator(defaultNetworkName)
-    },
-    isTrue("must not be root")(!_.id.toPath.isRoot),
-    isTrue("must not be an empty string")(_.cmd.forall { s => s.length() > 1 }),
-    isTrue("portMappings are not allowed with host-networking") { app =>
-      !(app.networks.exists(_.mode == NetworkMode.Host) && app.container.exists(_.portMappings.exists(_.nonEmpty)))
-    },
-    isTrue("portDefinitions are only allowed with host-networking") { app =>
-      !(app.networks.exists(_.mode != NetworkMode.Host) && app.portDefinitions.exists(_.nonEmpty))
-    }
-  )
-
-  def validateAppUpdateVersion: Validator[AppUpdate] = forAll(
-    isTrue("The 'version' field may only be combined with the 'id' field.") { update =>
-      def onlyVersionOrIdSet: Boolean = update.productIterator.forall {
-        case x: Some[Any] => x == update.version || x == update.id // linter:ignore UnlikelyEquality
-        case _ => true
+  def validateCanonicalAppAPI(
+      enabledFeatures: Set[String],
+      defaultNetworkName: () => Option[String],
+      validRoles: Set[String]
+  ): Validator[App] =
+    forAll(
+      validBasicAppDefinition(enabledFeatures, validRoles),
+      validator[App] { app =>
+        PathId(app.id) as "id" is (PathId.pathIdValidator and PathId.absolutePathValidator and PathId.nonEmptyPath)
+        app.dependencies.map(PathId(_)) as "dependencies" is every(valid)
+        app.networks is defaultNetworkNameValidator(defaultNetworkName)
+      },
+      isTrue("must not be root")(!_.id.toPath.isRoot),
+      isTrue("must not be an empty string")(_.cmd.forall { s => s.length() > 1 }),
+      isTrue("portMappings are not allowed with host-networking") { app =>
+        !(app.networks.exists(_.mode == NetworkMode.Host) && app.container.exists(_.portMappings.exists(_.nonEmpty)))
+      },
+      isTrue("portDefinitions are only allowed with host-networking") { app =>
+        !(app.networks.exists(_.mode != NetworkMode.Host) && app.portDefinitions.exists(_.nonEmpty))
       }
-      update.version.isEmpty || onlyVersionOrIdSet
-    }
-  )
+    )
+
+  def validateAppUpdateVersion: Validator[AppUpdate] =
+    forAll(
+      isTrue("The 'version' field may only be combined with the 'id' field.") { update =>
+        def onlyVersionOrIdSet: Boolean =
+          update.productIterator.forall {
+            case x: Some[Any] => x == update.version || x == update.id // linter:ignore UnlikelyEquality
+            case _ => true
+          }
+        update.version.isEmpty || onlyVersionOrIdSet
+      }
+    )
 
   /** expects that app is already in canonical form and that someone else is (or will) handle basic app validation */
-  def validNestedApp(base: PathId): Validator[App] = validator[App] { app =>
-    PathId(app.id) as "id" is PathId.validPathWithBase(base)
-  }
+  def validNestedApp(base: PathId): Validator[App] =
+    validator[App] { app =>
+      PathId(app.id) as "id" is PathId.validPathWithBase(base)
+    }
 
   def portIndices(app: App): Range = {
     // should be kept in sync with AppDefinition.portIndices
-    app.container.withFilter(_.portMappings.nonEmpty)
-      .flatMap(_.portMappings).orElse(app.portDefinitions).getOrElse(Nil).indices
+    app.container
+      .withFilter(_.portMappings.nonEmpty)
+      .flatMap(_.portMappings)
+      .orElse(app.portDefinitions)
+      .getOrElse(Nil)
+      .indices
   }
 
-  def validResourceLimit(requestResource: Double): Validator[ResourceLimit] = new Validator[ResourceLimit] {
-    override def apply(resourceLimit: ResourceLimit): Result = {
-      resourceLimit match {
-        case ResourceLimitUnlimited(value) =>
-          if (value != "unlimited")
-            Failure(Set(RuleViolation(value, s"'$value' is an invalid resource limit. It must be 'unlimited' or a number")))
-          else
-            Success
-        case ResourceLimitNumber(value) =>
-          if (value < requestResource)
-            Failure(Set(RuleViolation(value, s"resource limit must be greater than or equal to requested resource (${requestResource})")))
-          else
-            Success
+  def validResourceLimit(requestResource: Double): Validator[ResourceLimit] =
+    new Validator[ResourceLimit] {
+      override def apply(resourceLimit: ResourceLimit): Result = {
+        resourceLimit match {
+          case ResourceLimitUnlimited(value) =>
+            if (value != "unlimited")
+              Failure(Set(RuleViolation(value, s"'$value' is an invalid resource limit. It must be 'unlimited' or a number")))
+            else
+              Success
+          case ResourceLimitNumber(value) =>
+            if (value < requestResource)
+              Failure(Set(RuleViolation(value, s"resource limit must be greater than or equal to requested resource (${requestResource})")))
+            else
+              Success
+        }
       }
     }
-  }
 
-  def validResourceLimits(requestCpus: Double, requestMem: Double): Validator[ResourceLimits] = validator[ResourceLimits] { resourceLimits =>
-    resourceLimits.cpus is optional(validResourceLimit(requestCpus))
-    resourceLimits.mem is
-      optional(validResourceLimit(requestMem))
-  }
+  def validResourceLimits(requestCpus: Double, requestMem: Double): Validator[ResourceLimits] =
+    validator[ResourceLimits] { resourceLimits =>
+      resourceLimits.cpus is optional(validResourceLimit(requestCpus))
+      resourceLimits.mem is
+        optional(validResourceLimit(requestMem))
+    }
 
   /** validate most canonical API fields */
-  private def validBasicAppDefinition(enabledFeatures: Set[String], validRoles: Set[String]): Validator[App] = validator[App] { app =>
-    app.container is optional(validContainer(enabledFeatures, app.networks, app.secrets))
-    app.portDefinitions is optional(portDefinitionsValidator)
-    app is containsCmdArgsOrContainer
-    app.healthChecks is every(portIndexIsValid(portIndices(app)))
-    app.healthChecks is every(complyWithIpProtocolRules(app.container))
-    app must haveAtMostOneMesosHealthCheck
-    app.fetch is every(valid)
-    app.resourceLimits is optional(validResourceLimits(app.cpus, app.mem))
-    app.secrets is { secrets: Map[String, SecretDef] =>
-      secrets.nonEmpty
-    } -> (featureEnabled(enabledFeatures, Features.SECRETS))
-    app.secrets is featureEnabledImplies(enabledFeatures, Features.SECRETS)(secretValidator)
-    app.env is envValidator(strictNameValidation = false, app.secrets, enabledFeatures)
-    app.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles("app", app.residency.isDefined) and notEmpty)
-    app must complyWithGpuRules(enabledFeatures)
-    app must complyWithMigrationAPI
-    app must complyWithReadinessCheckRules
-    app must complyWithSingleInstanceLabelRules
-    app must complyWithUpgradeStrategyRules
-    app must complyWithDockerNetworkingRules
-    app must requireUnreachableDisabledForResidentTasks
-    app.constraints.each must complyWithAppConstraintRules
-    app.networks is ramlNetworksValidator
-    app is validWithRoleEnforcement(validRoles)
-  } and ExternalVolumes.validAppRaml()
+  private def validBasicAppDefinition(enabledFeatures: Set[String], validRoles: Set[String]): Validator[App] =
+    validator[App] { app =>
+      app.container is optional(validContainer(enabledFeatures, app.networks, app.secrets))
+      app.portDefinitions is optional(portDefinitionsValidator)
+      app is containsCmdArgsOrContainer
+      app.healthChecks is every(portIndexIsValid(portIndices(app)))
+      app.healthChecks is every(complyWithIpProtocolRules(app.container))
+      app must haveAtMostOneMesosHealthCheck
+      app.fetch is every(valid)
+      app.resourceLimits is optional(validResourceLimits(app.cpus, app.mem))
+      app.secrets is { secrets: Map[String, SecretDef] =>
+        secrets.nonEmpty
+      } -> (featureEnabled(enabledFeatures, Features.SECRETS))
+      app.secrets is featureEnabledImplies(enabledFeatures, Features.SECRETS)(secretValidator)
+      app.env is envValidator(strictNameValidation = false, app.secrets, enabledFeatures)
+      app.acceptedResourceRoles is optional(ResourceRole.validAcceptedResourceRoles("app", app.residency.isDefined) and notEmpty)
+      app must complyWithGpuRules(enabledFeatures)
+      app must complyWithMigrationAPI
+      app must complyWithReadinessCheckRules
+      app must complyWithSingleInstanceLabelRules
+      app must complyWithUpgradeStrategyRules
+      app must complyWithDockerNetworkingRules
+      app must requireUnreachableDisabledForResidentTasks
+      app.constraints.each must complyWithAppConstraintRules
+      app.networks is ramlNetworksValidator
+      app is validWithRoleEnforcement(validRoles)
+    } and ExternalVolumes.validAppRaml()
 
-  def validWithRoleEnforcement(validRoles: Set[String]): Validator[App] = validator[App] { app =>
-    app.role is optional(in(validRoles))
-    app.acceptedResourceRoles is optional(ResourceRole.validForRole(app.role))
-  }
+  def validWithRoleEnforcement(validRoles: Set[String]): Validator[App] =
+    validator[App] { app =>
+      app.role is optional(in(validRoles))
+      app.acceptedResourceRoles is optional(ResourceRole.validForRole(app.role))
+    }
 
   val requireUnreachableDisabledForResidentTasks =
     conditional((app: App) => app.residency.isDefined && app.unreachableStrategy.isDefined)(
@@ -392,7 +411,7 @@ trait AppValidation {
     */
   val complyWithDockerNetworkingRules: Validator[App] =
     conditional((app: App) => app.container.fold(false)(_.`type` == EngineType.Docker))(
-      isTrue(AppValidationMessages.DockerEngineLimitedToSingleContainerNetwork){
+      isTrue(AppValidationMessages.DockerEngineLimitedToSingleContainerNetwork) {
         _.networks.count(_.mode == NetworkMode.Container) <= 1
       }
     )
@@ -404,8 +423,10 @@ trait AppValidation {
 
   // TODO: migrate DCOS-specific things to plugins
   private val complyWithMigrationAPI: Validator[App] =
-    isTrue("DCOS_PACKAGE_FRAMEWORK_NAME and DCOS_MIGRATION_API_PATH must be defined" +
-      " when using DCOS_MIGRATION_API_VERSION") { app =>
+    isTrue(
+      "DCOS_PACKAGE_FRAMEWORK_NAME and DCOS_MIGRATION_API_PATH must be defined" +
+        " when using DCOS_MIGRATION_API_VERSION"
+    ) { app =>
       val understandsMigrationProtocol = app.labels.get(Apps.LabelDcosMigrationApiVersion).exists(_.nonEmpty)
 
       // if the api version IS NOT set, we're ok
@@ -413,8 +434,8 @@ trait AppValidation {
       def compliesWithMigrationApi =
         app.labels.get(Apps.LabelDcosMigrationApiVersion).fold(true) { apiVersion =>
           apiVersion == "v1" &&
-            app.labels.get(Apps.LabelDcosPackageFrameworkName).exists(_.nonEmpty) &&
-            app.labels.get(Apps.LabelDcosMigrationApiPath).exists(_.nonEmpty)
+          app.labels.get(Apps.LabelDcosPackageFrameworkName).exists(_.nonEmpty) &&
+          app.labels.get(Apps.LabelDcosMigrationApiPath).exists(_.nonEmpty)
         }
 
       !understandsMigrationProtocol || (understandsMigrationProtocol && compliesWithMigrationApi)
@@ -443,10 +464,11 @@ trait AppValidation {
 
   private def complyWithIpProtocolRules(container: Option[Container]): Validator[AppHealthCheck] =
     isTrue(AppValidationMessages.HealthCheckIpProtocolLimitation) { healthCheck =>
-      def isMesosHttpHealthCheck: Boolean = healthCheck.protocol match {
-        case AppHealthCheckProtocol.MesosHttp | AppHealthCheckProtocol.MesosHttps | AppHealthCheckProtocol.MesosTcp => true
-        case _ => false
-      }
+      def isMesosHttpHealthCheck: Boolean =
+        healthCheck.protocol match {
+          case AppHealthCheckProtocol.MesosHttp | AppHealthCheckProtocol.MesosHttps | AppHealthCheckProtocol.MesosTcp => true
+          case _ => false
+        }
       def isDockerContainer = container.exists(c => c.`type` == EngineType.Docker)
       val hasDefaultIpProtocol = healthCheck.ipProtocol == IpProtocol.Ipv4
 
@@ -458,7 +480,8 @@ trait AppValidation {
       AppHealthCheckProtocol.Command,
       AppHealthCheckProtocol.MesosHttp,
       AppHealthCheckProtocol.MesosHttps,
-      AppHealthCheckProtocol.MesosTcp)
+      AppHealthCheckProtocol.MesosTcp
+    )
 
     isTrue[App]("AppDefinition can contain at most one Mesos health check") { app =>
       val mesosCommandHealthChecks = app.healthChecks.count(_.command.nonEmpty)
@@ -477,9 +500,7 @@ trait AppValidation {
       val args = app.args.nonEmpty
       val container = app.container.exists { ct =>
         (ct.docker, ct.`type`) match {
-          case (Some(_), EngineType.Docker) |
-            (Some(_), EngineType.Mesos) |
-            (None, EngineType.Mesos) => true
+          case (Some(_), EngineType.Docker) | (Some(_), EngineType.Mesos) | (None, EngineType.Mesos) => true
           case _ => false
         }
       }

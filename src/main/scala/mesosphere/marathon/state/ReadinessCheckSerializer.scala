@@ -8,33 +8,29 @@ import scala.concurrent.duration._
 
 object ReadinessCheckSerializer {
   def fromProto(proto: Protos.ReadinessCheckDefinition): ReadinessCheck = {
-    def opt[T](
-      hasValue: Protos.ReadinessCheckDefinition => Boolean,
-      getValue: Protos.ReadinessCheckDefinition => T): Option[T] = {
+    def opt[T](hasValue: Protos.ReadinessCheckDefinition => Boolean, getValue: Protos.ReadinessCheckDefinition => T): Option[T] = {
       if (hasValue(proto)) Some(getValue(proto))
       else None
     }
 
     ReadinessCheck(
       name = opt(_.hasName, _.getName).getOrElse(ReadinessCheck.DefaultName),
-      protocol =
-        opt(_.hasProtocol, _.getProtocol).map(ProtocolSerializer.fromProto).getOrElse(ReadinessCheck.DefaultProtocol),
+      protocol = opt(_.hasProtocol, _.getProtocol).map(ProtocolSerializer.fromProto).getOrElse(ReadinessCheck.DefaultProtocol),
       path = opt(_.hasPath, _.getPath).getOrElse(ReadinessCheck.DefaultPath),
       portName = opt(_.hasPortName, _.getPortName).getOrElse(ReadinessCheck.DefaultPortName),
       interval = opt(_.hasIntervalMillis, _.getIntervalMillis.millis).getOrElse(ReadinessCheck.DefaultInterval),
       timeout = opt(_.hasTimeoutMillis, _.getTimeoutMillis.millis).getOrElse(ReadinessCheck.DefaultTimeout),
-      httpStatusCodesForReady =
-        opt(
-          _.getHttpStatusCodeForReadyCount > 0,
-          _.getHttpStatusCodeForReadyList.asScala.map(_.intValue()).to(Set)
-        ).getOrElse(ReadinessCheck.DefaultHttpStatusCodesForReady),
-      preserveLastResponse =
-        opt(_.hasPreserveLastResponse, _.getPreserveLastResponse).getOrElse(ReadinessCheck.DefaultPreserveLastResponse)
+      httpStatusCodesForReady = opt(
+        _.getHttpStatusCodeForReadyCount > 0,
+        _.getHttpStatusCodeForReadyList.asScala.map(_.intValue()).to(Set)
+      ).getOrElse(ReadinessCheck.DefaultHttpStatusCodesForReady),
+      preserveLastResponse = opt(_.hasPreserveLastResponse, _.getPreserveLastResponse).getOrElse(ReadinessCheck.DefaultPreserveLastResponse)
     )
   }
 
   def toProto(check: ReadinessCheck): Protos.ReadinessCheckDefinition = {
-    Protos.ReadinessCheckDefinition.newBuilder()
+    Protos.ReadinessCheckDefinition
+      .newBuilder()
       .setName(check.name)
       .setProtocol(ProtocolSerializer.toProto(check.protocol))
       .setPath(check.path)

@@ -71,11 +71,12 @@ class CoreGuiceModule(cliConf: MarathonConf) extends AbstractModule {
 
   @Provides @Singleton
   def leadershipCoordinator( // linter:ignore UnusedParameter
-    leadershipModule: LeadershipModule,
-    // makeSureToInitializeThisBeforeCreatingCoordinator
-    prerequisite1: TaskStatusUpdateProcessor,
-    prerequisite2: LaunchQueue,
-    prerequisite3: DeploymentManager): LeadershipCoordinator =
+      leadershipModule: LeadershipModule,
+      // makeSureToInitializeThisBeforeCreatingCoordinator
+      prerequisite1: TaskStatusUpdateProcessor,
+      prerequisite2: LaunchQueue,
+      prerequisite3: DeploymentManager
+  ): LeadershipCoordinator =
     leadershipModule.coordinator()
 
   @Provides @Singleton
@@ -168,11 +169,12 @@ class CoreGuiceModule(cliConf: MarathonConf) extends AbstractModule {
 
   @Provides @Singleton
   def taskStatusUpdateSteps(
-    notifyHealthCheckManagerStepImpl: NotifyHealthCheckManagerStepImpl,
-    notifyRateLimiterStepImpl: NotifyRateLimiterStepImpl,
-    notifyLaunchQueueStepImpl: NotifyLaunchQueueStepImpl,
-    postToEventStreamStepImpl: PostToEventStreamStepImpl,
-    scaleAppUpdateStepImpl: ScaleAppUpdateStepImpl): Seq[InstanceChangeHandler] = {
+      notifyHealthCheckManagerStepImpl: NotifyHealthCheckManagerStepImpl,
+      notifyRateLimiterStepImpl: NotifyRateLimiterStepImpl,
+      notifyLaunchQueueStepImpl: NotifyLaunchQueueStepImpl,
+      postToEventStreamStepImpl: PostToEventStreamStepImpl,
+      scaleAppUpdateStepImpl: ScaleAppUpdateStepImpl
+  ): Seq[InstanceChangeHandler] = {
 
     // This is a sequence on purpose. The specified steps are executed in order for every
     // task status update.
@@ -207,7 +209,8 @@ class CoreGuiceModule(cliConf: MarathonConf) extends AbstractModule {
     // FIXME: Because of cycle breaking in guice, it is hard to not wire it with Guice directly
     bind(classOf[TaskStatusUpdateProcessor])
       .annotatedWith(Names.named(ThrottlingTaskStatusUpdateProcessor.dependencyTag))
-      .to(classOf[TaskStatusUpdateProcessorImpl]).asEagerSingleton()
+      .to(classOf[TaskStatusUpdateProcessorImpl])
+      .asEagerSingleton()
 
     bind(classOf[TaskStatusUpdateProcessor]).to(classOf[ThrottlingTaskStatusUpdateProcessor]).asEagerSingleton()
 
@@ -216,8 +219,11 @@ class CoreGuiceModule(cliConf: MarathonConf) extends AbstractModule {
 
   @Provides @Singleton @Named(ThrottlingTaskStatusUpdateProcessor.dependencyTag)
   def throttlingTaskStatusUpdateProcessorSerializer(config: MarathonConf): WorkQueue = {
-    WorkQueue("TaskStatusUpdates", maxConcurrent = config.internalMaxParallelStatusUpdates(),
-      maxQueueLength = config.internalMaxQueuedStatusUpdates())
+    WorkQueue(
+      "TaskStatusUpdates",
+      maxConcurrent = config.internalMaxParallelStatusUpdates(),
+      maxQueueLength = config.internalMaxQueuedStatusUpdates()
+    )
   }
 
   @Provides

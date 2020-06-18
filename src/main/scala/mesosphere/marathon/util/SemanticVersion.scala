@@ -15,11 +15,12 @@ object SemanticVersion {
 
   // If we can not match the version pattern we prefer to throw an
   // error rather than silently construct a dummy version.
-  def apply(version: String): Option[SemanticVersion] = version match {
-    case Pattern(major, minor, patch) =>
-      Some(new SemanticVersion(major.toInt, minor.toInt, patch.toInt))
-    case _ => None
-  }
+  def apply(version: String): Option[SemanticVersion] =
+    version match {
+      case Pattern(major, minor, patch) =>
+        Some(new SemanticVersion(major.toInt, minor.toInt, patch.toInt))
+      case _ => None
+    }
 
   implicit class OrderedSemanticVersion(val version: SemanticVersion) extends AnyVal with Ordered[SemanticVersion] {
     override def compare(that: SemanticVersion): Int = {

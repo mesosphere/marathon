@@ -48,7 +48,9 @@ private[impl] class KillServiceActor(
     instanceTracker: InstanceTracker,
     config: KillConfig,
     metrics: Metrics,
-    clock: Clock) extends Actor with StrictLogging {
+    clock: Clock
+) extends Actor
+    with StrictLogging {
   import KillServiceActor._
   import context.dispatcher
 
@@ -69,8 +71,7 @@ private[impl] class KillServiceActor(
 
   def initializeWithDecommissionedInstances() = {
     async {
-      val toKillBasedOnGoal = await(instanceTracker.instancesBySpec())
-        .allInstances
+      val toKillBasedOnGoal = await(instanceTracker.instancesBySpec()).allInstances
         .filter(i => i.state.goal.isTerminal() && i.isActive)
 
       KillInstancesAndForget(toKillBasedOnGoal)
@@ -88,7 +89,8 @@ private[impl] class KillServiceActor(
     retryTimer.cancel()
     context.system.eventStream.unsubscribe(self)
     if (instancesToKill.nonEmpty) {
-      logger.warn(s"Stopping $self, but not all tasks have been killed. Remaining: ${instancesToKill.keySet.mkString(", ")}, inFlight: ${inFlight.keySet.mkString(", ")}")
+      logger.warn(s"Stopping $self, but not all tasks have been killed. Remaining: ${instancesToKill.keySet
+        .mkString(", ")}, inFlight: ${inFlight.keySet.mkString(", ")}")
     }
   }
 
@@ -102,8 +104,9 @@ private[impl] class KillServiceActor(
     case KillInstancesAndForget(instances) =>
       killInstances(instances, None)
 
-    case InstanceChanged(id, _, _, condition, _) if considerTerminal(condition) &&
-      (inFlight.contains(id) || instancesToKill.contains(id)) =>
+    case InstanceChanged(id, _, _, condition, _)
+        if considerTerminal(condition) &&
+          (inFlight.contains(id) || instancesToKill.contains(id)) =>
       handleTerminal(id)
 
     // Only consider goal changes for non-terminal instances. This event could also be triggered by a condition change.
@@ -133,11 +136,15 @@ private[impl] class KillServiceActor(
   def killInstances(instances: Seq[Instance], maybePromise: Option[Promise[Done]]): Unit = {
     val instanceIds = instances.map(_.instanceId)
     logger.debug(s"Adding instances $instanceIds to the queue")
-    maybePromise.map(p => p.completeWith(KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)))
+    maybePromise.map(p =>
+      p.completeWith(KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore))
+    )
     instances
       .filterNot(instance => inFlight.keySet.contains(instance.instanceId) || instance.tasksMap.isEmpty)
       .foreach { instance =>
-        logger.info(s"Process kill for ${instance.instanceId}:{${instance.state.condition}, ${instance.state.goal}} with tasks ${instance.tasksMap.values.map(_.taskId).toSeq}")
+        logger.info(
+          s"Process kill for ${instance.instanceId}:{${instance.state.condition}, ${instance.state.goal}} with tasks ${instance.tasksMap.values.map(_.taskId).toSeq}"
+        )
         val taskIds: IndexedSeq[Id] = instance.tasksMap.values.iterator.filter(!_.isTerminal).map(_.taskId).to(IndexedSeq)
 
         if (taskIds.nonEmpty) {
@@ -181,8 +188,7 @@ private[impl] class KillServiceActor(
           taskIds.map(_.mesosTaskId).foreach(driver.killTask)
         }
         val attempts = inFlight.get(toKill.instanceId).fold(1)(_.attempts + 1)
-        inFlight.update(
-          toKill.instanceId, ToKill(instanceId, taskIds, toKill.maybeInstance, attempts, issued = clock.now()))
+        inFlight.update(toKill.instanceId, ToKill(instanceId, taskIds, toKill.maybeInstance, attempts, issued = clock.now()))
 
       case KillAction.Decommission =>
         instanceTracker.setGoal(instanceId, Goal.Decommissioned, GoalChangeReason.UnkillableEphemeralInstance)
@@ -210,7 +216,7 @@ private[impl] class KillServiceActor(
     }
 
     instanceDoomedMetric.setValue(inFlight.size.toLong)
-    instancesDoomedAttempsMetric.setValue(inFlight.foldLeft(0L){ case (acc, (_, toKill)) => acc + toKill.attempts })
+    instancesDoomedAttempsMetric.setValue(inFlight.foldLeft(0L) { case (acc, (_, toKill)) => acc + toKill.attempts })
   }
 }
 
@@ -225,12 +231,12 @@ private[termination] object KillServiceActor {
   case object Retry extends InternalRequest
 
   def props(
-    driverHolder: MarathonSchedulerDriverHolder,
-    instanceTracker: InstanceTracker,
-    config: KillConfig,
-    metrics: Metrics,
-    clock: Clock): Props = Props(
-    new KillServiceActor(driverHolder, instanceTracker, config, metrics, clock))
+      driverHolder: MarathonSchedulerDriverHolder,
+      instanceTracker: InstanceTracker,
+      config: KillConfig,
+      metrics: Metrics,
+      clock: Clock
+  ): Props = Props(new KillServiceActor(driverHolder, instanceTracker, config, metrics, clock))
 
   /**
     * Metadata used to track which instances to kill and how many attempts have been made
@@ -246,7 +252,8 @@ private[termination] object KillServiceActor {
       taskIdsToKill: Seq[Task.Id],
       maybeInstance: Option[Instance],
       attempts: Int,
-      issued: Timestamp = Timestamp.zero)
+      issued: Timestamp = Timestamp.zero
+  )
 }
 
 /**

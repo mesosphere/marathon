@@ -23,10 +23,7 @@ object ResourceUtil extends StrictLogging {
       require(resource.getName == protos.Resource.DISK)
       val diskSource = DiskSource.fromMesos(getDiskSourceOption)
       /* TODO - make this match mesos stringification */
-      (List(
-        resource.getName,
-        diskSource.diskType.toString,
-        resource.getScalar.getValue.toString) ++
+      (List(resource.getName, diskSource.diskType.toString, resource.getScalar.getValue.toString) ++
         diskSource.path).mkString(":")
     }
   }
@@ -35,9 +32,7 @@ object ResourceUtil extends StrictLogging {
     * The resources in launched tasks, should
     * be consumed from resources in the offer with the same [[ResourceMatchKey]].
     */
-  private[this] case class ResourceMatchKey(
-      role: String, name: String,
-      reservation: Option[ReservationInfo], disk: Option[DiskInfo])
+  private[this] case class ResourceMatchKey(role: String, name: String, reservation: Option[ReservationInfo], disk: Option[DiskInfo])
 
   private[this] object ResourceMatchKey {
     def apply(resource: MesosProtos.Resource): ResourceMatchKey = {
@@ -62,39 +57,40 @@ object ResourceUtil extends StrictLogging {
     if (leftOver <= 0 || isMountDiskResource) {
       None
     } else {
-      Some(resource
-        .toBuilder
-        .setScalar(
-          MesosProtos.Value.Scalar
-            .newBuilder().setValue(leftOver))
-        .build())
+      Some(
+        resource.toBuilder
+          .setScalar(
+            MesosProtos.Value.Scalar
+              .newBuilder()
+              .setValue(leftOver)
+          )
+          .build()
+      )
     }
   }
 
   /**
     * Deduct usedResource from resource. If nothing is left, None is returned.
     */
-  def consumeResource(
-    resource: MesosProtos.Resource,
-    usedResource: MesosProtos.Resource): Option[MesosProtos.Resource] = {
+  def consumeResource(resource: MesosProtos.Resource, usedResource: MesosProtos.Resource): Option[MesosProtos.Resource] = {
     require(resource.getType == usedResource.getType)
 
-    def deductRange(
-      baseRange: MesosProtos.Value.Range,
-      usedRange: MesosProtos.Value.Range): Seq[MesosProtos.Value.Range] = {
+    def deductRange(baseRange: MesosProtos.Value.Range, usedRange: MesosProtos.Value.Range): Seq[MesosProtos.Value.Range] = {
       if (baseRange.getEnd < usedRange.getBegin || baseRange.getBegin > usedRange.getEnd) {
         // baseRange completely before or after usedRange
         Seq(baseRange)
       } else {
-        val rangeBefore: Option[MesosProtos.Value.Range] = if (baseRange.getBegin < usedRange.getBegin)
-          Some(baseRange.toBuilder.setEnd(usedRange.getBegin - 1).build())
-        else
-          None
+        val rangeBefore: Option[MesosProtos.Value.Range] =
+          if (baseRange.getBegin < usedRange.getBegin)
+            Some(baseRange.toBuilder.setEnd(usedRange.getBegin - 1).build())
+          else
+            None
 
-        val rangeAfter: Option[MesosProtos.Value.Range] = if (baseRange.getEnd > usedRange.getEnd)
-          Some(baseRange.toBuilder.setBegin(usedRange.getEnd + 1).build())
-        else
-          None
+        val rangeAfter: Option[MesosProtos.Value.Range] =
+          if (baseRange.getEnd > usedRange.getEnd)
+            Some(baseRange.toBuilder.setBegin(usedRange.getEnd + 1).build())
+          else
+            None
 
         Seq(rangeBefore, rangeAfter).flatten
       }
@@ -115,8 +111,7 @@ object ResourceUtil extends StrictLogging {
       val rangesBuilder = MesosProtos.Value.Ranges.newBuilder()
       diminished.foreach(rangesBuilder.addRange)
 
-      val result = resource
-        .toBuilder
+      val result = resource.toBuilder
         .setRanges(rangesBuilder)
         .build()
 
@@ -135,8 +130,7 @@ object ResourceUtil extends StrictLogging {
 
       if (resultSet.nonEmpty)
         Some(
-          resource
-            .toBuilder
+          resource.toBuilder
             .setSet(MesosProtos.Value.Set.newBuilder().addAllItem(resultSet.asJava))
             .build()
         )
@@ -159,9 +153,7 @@ object ResourceUtil extends StrictLogging {
   /**
     * Deduct usedResources from resources by matching them by name and role.
     */
-  def consumeResources(
-    resources: Seq[MesosProtos.Resource],
-    usedResources: Seq[MesosProtos.Resource]): Seq[MesosProtos.Resource] = {
+  def consumeResources(resources: Seq[MesosProtos.Resource], usedResources: Seq[MesosProtos.Resource]): Seq[MesosProtos.Resource] = {
     val usedResourceMap: Map[ResourceMatchKey, Seq[MesosProtos.Resource]] =
       usedResources.groupBy(ResourceMatchKey(_))
 
@@ -171,9 +163,7 @@ object ResourceUtil extends StrictLogging {
           usedResources.foldLeft(Some(resource): Option[MesosProtos.Resource]) {
             case (Some(resource), usedResource) =>
               if (resource.getType != usedResource.getType) {
-                logger.warn(
-                  "Different resource types for resource {}: {} and {}",
-                  resource.getName, resource.getType, usedResource.getType)
+                logger.warn("Different resource types for resource {}: {} and {}", resource.getName, resource.getType, usedResource.getType)
                 None
               } else
                 try ResourceUtil.consumeResource(resource, usedResource)
@@ -194,9 +184,7 @@ object ResourceUtil extends StrictLogging {
   /**
     * Deduct usedResources from resources in the offer.
     */
-  def consumeResourcesFromOffer(
-    offer: MesosProtos.Offer,
-    usedResources: Seq[MesosProtos.Resource]): MesosProtos.Offer = {
+  def consumeResourcesFromOffer(offer: MesosProtos.Offer, usedResources: Seq[MesosProtos.Resource]): MesosProtos.Offer = {
     val offerResources: Seq[MesosProtos.Resource] = offer.getResourcesList.asScala.toSeq
     val leftOverResources = ResourceUtil.consumeResources(offerResources, usedResources)
     offer.toBuilder.clearResources().addAllResources(leftOverResources.asJava).build()
@@ -208,14 +196,16 @@ object ResourceUtil extends StrictLogging {
     }
 
     lazy val resourceName = {
-      val principalString = if (resource.hasReservation && resource.getReservation.hasPrincipal)
-        s", RESERVED for ${resource.getReservation.getPrincipal}"
-      else
-        ""
-      val diskString = if (resource.hasDisk && resource.getDisk.hasPersistence)
-        s", diskId ${resource.getDisk.getPersistence.getId}"
-      else
-        ""
+      val principalString =
+        if (resource.hasReservation && resource.getReservation.hasPrincipal)
+          s", RESERVED for ${resource.getReservation.getPrincipal}"
+        else
+          ""
+      val diskString =
+        if (resource.hasDisk && resource.getDisk.hasPersistence)
+          s", diskId ${resource.getDisk.getPersistence.getId}"
+        else
+          ""
 
       s"${resource.getName}(${resource.getRole: @silent}$principalString$diskString)"
     }

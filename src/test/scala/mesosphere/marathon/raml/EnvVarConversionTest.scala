@@ -18,7 +18,8 @@ class EnvVarConversionTest extends UnitTest {
           val converted = sd.whenOrElse(
             _.hasCmd,
             s => (s.getCmd.getEnvironment.getVariablesList.asScala.to(Seq), s.getEnvVarReferencesList.asScala.to(Seq)).toRaml,
-            App.DefaultEnv)
+            App.DefaultEnv
+          )
           converted should be(expected)
         }
 
@@ -39,7 +40,8 @@ class EnvVarConversionTest extends UnitTest {
   }
 
   class Fixture {
-    val emptyService: Protos.ServiceDefinition = Protos.ServiceDefinition.newBuilder()
+    val emptyService: Protos.ServiceDefinition = Protos.ServiceDefinition
+      .newBuilder()
       .setCmd(Mesos.CommandInfo.newBuilder())
       .setExecutor("//cmd")
       .setId("/foo")
@@ -61,7 +63,8 @@ class EnvVarConversionTest extends UnitTest {
       val builder = sd.toBuilder
       secretRefs.foreach {
         case (envVarName, secretName) =>
-          builder.addEnvVarReferencesBuilder()
+          builder
+            .addEnvVarReferencesBuilder()
             .setType(Protos.EnvVarReference.Type.SECRET)
             .setName(envVarName)
             .setSecretRef(Protos.EnvVarSecretRef.newBuilder().setSecretId(secretName))

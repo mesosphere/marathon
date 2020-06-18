@@ -39,18 +39,17 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       val instance = Option.empty[Instance]
 
       When("call taskTracker.task")
-      val stateChange = updateOpResolver.resolve(instance, InstanceUpdateOperation.MesosUpdate(
-        instance = existingInstance,
-        mesosStatus = MesosTaskStatusTestHelper.running(),
-        now = Timestamp(0)))
+      val stateChange = updateOpResolver.resolve(
+        instance,
+        InstanceUpdateOperation
+          .MesosUpdate(instance = existingInstance, mesosStatus = MesosTaskStatusTestHelper.running(), now = Timestamp(0))
+      )
 
       Then("result in a Failure")
       stateChange shouldBe a[InstanceUpdateEffect.Failure]
     }
 
-    for (
-      reason <- TaskConditionMapping.Unreachable
-    ) {
+    for (reason <- TaskConditionMapping.Unreachable) {
       s"TASK_LOST update with $reason indicating a TemporarilyUnreachable" in new Fixture {
         val instance = Some(existingInstance)
 
@@ -66,15 +65,13 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       }
     }
 
-    for (
-      reason <- TaskConditionMapping.Gone
-    ) {
+    for (reason <- TaskConditionMapping.Gone) {
       s"process TASK_LOST update with $reason indicating a task won't come" in new Fixture {
         val instance = Some(existingInstance)
 
         When("we resolve the update")
-        val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(
-          reason, existingInstance).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+        val stateOp: InstanceUpdateOperation.MesosUpdate =
+          TaskStatusUpdateTestHelper.lost(reason, existingInstance).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
         val stateChange = updateOpResolver.resolve(instance, stateOp)
 
         Then("result in an Update with the correct status")
@@ -84,10 +81,12 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
         // it should be verified elsewhere (in a unit test) that updating is done correctly both on task level
         // and on instance level, then it'd be enough here to check that the operation results in an
         // InstanceUpdateEffect.Expunge of the expected instanceId
-        val updatedTask = existingTask.copy(status = existingTask.status.copy(
-          mesosStatus = Some(stateOp.mesosStatus),
-          condition = TaskCondition(stateOp.mesosStatus)
-        ))
+        val updatedTask = existingTask.copy(status =
+          existingTask.status.copy(
+            mesosStatus = Some(stateOp.mesosStatus),
+            condition = TaskCondition(stateOp.mesosStatus)
+          )
+        )
         val updatedTasksMap = existingInstance.tasksMap.updated(updatedTask.taskId, updatedTask)
         val expectedState = existingInstance.copy(
           state = existingInstance.state.copy(
@@ -97,8 +96,7 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
           tasksMap = updatedTasksMap
         )
 
-        val events = eventsGenerator.events(
-          expectedState, Some(updatedTask), stateOp.now, previousState = Some(existingInstance.state))
+        val events = eventsGenerator.events(expectedState, Some(updatedTask), stateOp.now, previousState = Some(existingInstance.state))
         stateChange shouldEqual InstanceUpdateEffect.Update(expectedState, instance, events)
       }
 
@@ -106,8 +104,8 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
         val decommissionedInstance = Some(existingDecommissionedInstance)
 
         When("we resolve the update")
-        val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(
-          reason, decommissionedInstance.get).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+        val stateOp: InstanceUpdateOperation.MesosUpdate =
+          TaskStatusUpdateTestHelper.lost(reason, decommissionedInstance.get).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
         val stateChange = updateOpResolver.resolve(decommissionedInstance, stateOp)
 
         Then("result in an expunge")
@@ -115,16 +113,14 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       }
     }
 
-    for (
-      reason <- TaskConditionMapping.Unreachable
-    ) {
+    for (reason <- TaskConditionMapping.Unreachable) {
       s"expunge after TASK_LOST update on decommissionged instance with an unreachable $reason but a message saying that the task is unknown to the slave " in new Fixture {
         val instance = Some(existingDecommissionedInstance)
 
         When("we resolve the update")
         val message = "Reconciliation: Task is unknown to the slave"
-        val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(
-          reason, instance.get, Some(message)).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+        val stateOp: InstanceUpdateOperation.MesosUpdate =
+          TaskStatusUpdateTestHelper.lost(reason, instance.get, Some(message)).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
         val stateChange = updateOpResolver.resolve(instance, stateOp)
 
         Then("result in an expunge")
@@ -158,8 +154,10 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
       When("we resolve the update")
       val reason = mesos.Protos.TaskStatus.Reason.REASON_RECONCILIATION
       val maybeMessage = Some("Reconciliation: Task is unknown to the slave")
-      val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper.lost(
-        reason, unreachableInstance, maybeMessage).operation.asInstanceOf[InstanceUpdateOperation.MesosUpdate]
+      val stateOp: InstanceUpdateOperation.MesosUpdate = TaskStatusUpdateTestHelper
+        .lost(reason, unreachableInstance, maybeMessage)
+        .operation
+        .asInstanceOf[InstanceUpdateOperation.MesosUpdate]
 
       val stateChange = updateOpResolver.resolve(instance, stateOp)
 
@@ -184,7 +182,10 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     }
 
     "Processing a Reserve for an existing instanceId" in new Fixture {
-      val stateChange = updateOpResolver.resolve(Some(reservedInstance), InstanceUpdateOperation.Reserve(reservedInstance.instanceId, reservedInstance.reservation.get, reservedInstance.agentInfo.get))
+      val stateChange = updateOpResolver.resolve(
+        Some(reservedInstance),
+        InstanceUpdateOperation.Reserve(reservedInstance.instanceId, reservedInstance.reservation.get, reservedInstance.agentInfo.get)
+      )
 
       Then("result in an Update")
       stateChange shouldBe an[InstanceUpdateEffect.Update]
@@ -330,14 +331,16 @@ class InstanceUpdateOpResolverTest extends UnitTest with Inside {
     val existingDecommissionedInstance = existingInstance.copy(state = existingInstance.state.copy(goal = Goal.Decommissioned))
     lazy val existingTask: Task = existingInstance.appTask
 
-    lazy val reservedInstance = TestInstanceBuilder.scheduledWithReservation(AppDefinition(appId, role = "*")).copy(state = InstanceState(Condition.Killed, Timestamp.now(), None, healthy = None, Goal.Running))
+    lazy val reservedInstance = TestInstanceBuilder
+      .scheduledWithReservation(AppDefinition(appId, role = "*"))
+      .copy(state = InstanceState(Condition.Killed, Timestamp.now(), None, healthy = None, Goal.Running))
     lazy val existingReservedTask: Task = reservedInstance.appTask
 
-    lazy val reservedLaunchedInstance: Instance = TestInstanceBuilder.
-      newBuilder(appId).addTaskResidentLaunched(Seq.empty).getInstance()
+    lazy val reservedLaunchedInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched(Seq.empty).getInstance()
 
     lazy val notExistingInstanceId = Instance.Id.forRunSpec(appId)
     lazy val unreachableInstance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()
-    lazy val unreachableDecommissionedInstance = unreachableInstance.copy(state = unreachableInstance.state.copy(goal = Goal.Decommissioned))
+    lazy val unreachableDecommissionedInstance =
+      unreachableInstance.copy(state = unreachableInstance.state.copy(goal = Goal.Decommissioned))
   }
 }

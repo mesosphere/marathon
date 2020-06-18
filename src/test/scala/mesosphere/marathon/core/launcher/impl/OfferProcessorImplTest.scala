@@ -29,8 +29,10 @@ class OfferProcessorImplTest extends UnitTest {
   private[this] val instanceId2 = Instance.Id.forRunSpec(appId)
   private[this] val taskInfo1 = MarathonTestHelper.makeOneCPUTask(Task.Id(instanceId1)).build()
   private[this] val taskInfo2 = MarathonTestHelper.makeOneCPUTask(Task.Id(instanceId2)).build()
-  private[this] val instance1 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId1).addTaskWithBuilder().taskFromTaskInfo(taskInfo1).build().getInstance()
-  private[this] val instance2 = TestInstanceBuilder.newBuilderWithInstanceId(instanceId2).addTaskWithBuilder().taskFromTaskInfo(taskInfo2).build().getInstance()
+  private[this] val instance1 =
+    TestInstanceBuilder.newBuilderWithInstanceId(instanceId1).addTaskWithBuilder().taskFromTaskInfo(taskInfo1).build().getInstance()
+  private[this] val instance2 =
+    TestInstanceBuilder.newBuilderWithInstanceId(instanceId2).addTaskWithBuilder().taskFromTaskInfo(taskInfo2).build().getInstance()
   private[this] val task1: Task = instance1.appTask
   private[this] val task2: Task = instance2.appTask
 
@@ -42,10 +44,10 @@ class OfferProcessorImplTest extends UnitTest {
       clock: SettableClock = new SettableClock(),
       offerMatcher: OfferMatcher = mock[OfferMatcher],
       taskLauncher: TaskLauncher = mock[TaskLauncher],
-      instanceTracker: InstanceTracker = mock[InstanceTracker]) {
+      instanceTracker: InstanceTracker = mock[InstanceTracker]
+  ) {
     val metrics = DummyMetrics
-    val offerProcessor = new OfferProcessorImpl(
-      metrics, conf, offerMatcher, taskLauncher, instanceTracker)
+    val offerProcessor = new OfferProcessorImpl(metrics, conf, offerMatcher, taskLauncher, instanceTracker)
   }
 
   object f {
@@ -156,7 +158,11 @@ class OfferProcessorImplTest extends UnitTest {
           val launch = f.launchWithNewTask(
             taskInfo,
             InstanceUpdateOperation.Provision(
-              dummyInstance.instanceId, AgentInfoPlaceholder(), app, Tasks.provisioned(taskId, NetworkInfoPlaceholder(), app.version, clock.now()), clock.now()
+              dummyInstance.instanceId,
+              AgentInfoPlaceholder(),
+              app,
+              Tasks.provisioned(taskId, NetworkInfoPlaceholder(), app.version, clock.now()),
+              clock.now()
             ),
             dummyInstance
           )

@@ -23,7 +23,14 @@ class MainTest extends UnitTest {
   }
 
   "configToLogLines" should {
-    val conf = AllConf("--master", "zk://super:secret@127.0.0.1:2181/master", "--zk", "zk://also:special@localhost:2181/marathon", "--mesos_role", "super")
+    val conf = AllConf(
+      "--master",
+      "zk://super:secret@127.0.0.1:2181/master",
+      "--zk",
+      "zk://also:special@localhost:2181/marathon",
+      "--mesos_role",
+      "super"
+    )
     "redact credentials from Zookeeper" in {
       val lines = Main.configToLogLines(conf).split("\n")
       val Some(masterLine) = lines.find(_.startsWith(" - master "))

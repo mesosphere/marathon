@@ -9,8 +9,7 @@ import mesosphere.marathon.state.TaskFailure
 import mesosphere.marathon.storage.repository.TaskFailureRepository
 
 // TODO(PODS): Move from Task to Instance
-class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepository)
-  extends Actor with StrictLogging {
+class HistoryActor(eventBus: EventStream, taskFailureRepository: TaskFailureRepository) extends Actor with StrictLogging {
 
   override def preStart(): Unit = {
     // TODO(cleanup): adjust InstanceChanged to be able to replace using MesosStatusUpdateEvent here (#4792)
