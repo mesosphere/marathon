@@ -73,7 +73,7 @@ class InfoResource @Inject() (
     "maintenance_mode" -> config.maintenanceMode.toOption
   )
 
-  // ZooKeeper congiurations
+  // ZooKeeper configurations
   private[this] lazy val zookeeperConfigValues = Json.obj(
     "zk" -> config.zooKeeperUrl().redactedConnectionString,
     "zk_compression" -> config.zooKeeperCompressionEnabled.toOption,

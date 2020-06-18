@@ -6,6 +6,7 @@ import java.time.Clock
 import akka.Done
 import akka.actor._
 import akka.event.LoggingReceive
+import akka.pattern._
 import akka.stream.scaladsl.SourceQueue
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.Instance
@@ -19,9 +20,9 @@ import mesosphere.marathon.core.matcher.base.util.{ActorOfferMatcher, InstanceOp
 import mesosphere.marathon.core.matcher.manager.OfferMatcherManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state._
-import scala.jdk.CollectionConverters._
 import mesosphere.marathon.util.CancellableOnce
 import org.apache.mesos.{Protos => Mesos}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.collection.mutable
 import scala.concurrent.Promise
@@ -46,12 +47,17 @@ private[launchqueue] object TaskLauncherActor {
       runSpecId, localRegion))
   }
 
-  sealed trait Requests
+  sealed trait Message
+
+  sealed trait Requests extends Message
 
   /**
     * Results in rechecking whether we may launch tasks.
     */
   private case object RecheckIfBackOffUntilReached extends Requests
+
+  private case class LoadedInstances(value: Map[Instance.Id, Instance]) extends Message
+  private case class SynchronizedInstance(value: Option[Instance]) extends Message
 
   val OfferOperationRejectedTimeoutReason: String =
     "InstanceLauncherActor: no accept received within timeout. " +
@@ -70,11 +76,13 @@ private class TaskLauncherActor(
     rateLimiterActor: ActorRef,
     offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
     runSpecId: AbsolutePathId,
-    localRegion: () => Option[Region]) extends Actor with StrictLogging with Stash {
+    localRegion: () => Option[Region]) extends Actor with Stash with StrictLogging {
   // scalastyle:on parameter.number
 
+  import TaskLauncherActor._
+
   /** instances that are in the tracker */
-  private[impl] var instanceMap: Map[Instance.Id, Instance] = _
+  private[impl] var instanceMap: Map[Instance.Id, Instance] = Map.empty
 
   private[impl] def inFlightInstanceOperations = instanceMap.values.filter(_.isProvisioned)
 
@@ -98,12 +106,9 @@ private class TaskLauncherActor(
   override def preStart(): Unit = {
     super.preStart()
 
-    syncInstances()
-
-    logger.info(s"Started instanceLaunchActor for ${runSpecId} with initial count $instancesToLaunch")
-    scheduledVersions.foreach { configRef =>
-      rateLimiterActor ! RateLimiterActor.GetDelay(configRef)
-    }
+    instanceTracker.instancesBySpec()
+      .map(bySpec => LoadedInstances(bySpec.instancesMap(runSpecId).instanceMap))
+      .pipeTo(self)
   }
 
   override def postStop(): Unit = {
@@ -122,7 +127,75 @@ private class TaskLauncherActor(
     logger.info(s"Stopped InstanceLauncherActor for ${runSpecId}.")
   }
 
-  override def receive: Receive = active
+  override def receive: Receive = loading
+
+  /**
+    * Initial loading of instances. The preStart calls the instance tracker and pipes the result here.
+    */
+  private[this] def loading: Receive = {
+    case LoadedInstances(loadedInstances) =>
+      instanceMap = loadedInstances
+      val readable = instanceMap.values
+        .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, goal: ${i.state.goal}, version: ${i.runSpecVersion}, reservation: ${i.reservation}}")
+        .mkString(", ")
+      logger.info(s"Loaded instance map: instances=[$readable]")
+      logger.info(s"Started instanceLaunchActor for $runSpecId with initial count $instancesToLaunch")
+      scheduledVersions.foreach { configRef =>
+        rateLimiterActor ! RateLimiterActor.GetDelay(configRef)
+      }
+
+      unstashAll()
+      context.become(active)
+      logger.debug("Became active.")
+
+    case Status.Failure(cause) =>
+      // escalate this failure
+      throw new IllegalStateException("while loading tasks", cause)
+
+    case other: AnyRef =>
+      logger.debug(s"Stashing $other")
+      stash()
+
+  }
+
+  /**
+    * Processes the result from [[TaskLauncherActor.syncInstance()]].
+    *
+    * @param instanceId The id of the instance which is synchronized.
+    */
+  private[this] def syncing(instanceId: Instance.Id): Receive = {
+    case SynchronizedInstance(maybeInstance) =>
+      maybeInstance match {
+        case Some(instance) =>
+          instanceMap += instanceId -> instance
+
+          // This timeout is only between us creating provisioned instance operation based on received offer
+          // and that instance in provisioned state being persisted so this makes no sense for instances in all other states
+          if (!instance.isProvisioned) {
+            offerOperationAcceptTimeout.get(instanceId).foreach(_.cancel())
+            offerOperationAcceptTimeout -= instanceId
+          }
+          logger.info(s"Synced single $instanceId from InstanceTracker: $instance")
+
+          // Request delay for new run spec config.
+          if (!launchAllowedAt.contains(instance.runSpec.configRef)) {
+            // signal no interest in new offers until we get the back off delay.
+            // this makes sure that we see unused offers again that we rejected for the old configuration.
+            unregister()
+            rateLimiterActor ! RateLimiterActor.GetDelay(instance.runSpec.configRef)
+          }
+        case None =>
+          logger.info(s"Instance $instanceId does not exist in InstanceTracker - removing it from internal state.")
+          removeInstanceFromInternalState(instanceId)
+      }
+
+      manageOfferMatcherStatus(clock.now())
+      context.become(active)
+      unstashAll()
+
+    case other: AnyRef =>
+      stash()
+  }
 
   private[this] def active: Receive = LoggingReceive.withLabel("active") {
     Seq(
@@ -136,9 +209,10 @@ private class TaskLauncherActor(
 
   private[this] def receiveUnknown: Receive = {
     case Status.Failure(ex) =>
-      logger.error(s"TaskLauncherActor received a failure from ${sender}", ex)
+      logger.error(s"TaskLauncherActor received a failure from $sender", ex)
 
     case msg: Any =>
+      logger.debug(s"Received unknown message. msg=$msg")
       // fail fast and do not let the sender time out
       sender() ! Status.Failure(new IllegalStateException(s"Unhandled message: $msg"))
   }
@@ -150,7 +224,7 @@ private class TaskLauncherActor(
     case RateLimiter.DelayUpdate(ref, maybeDelayUntil) if scheduledVersions.contains(ref) =>
       val now = clock.now()
       // If there's no delay, then launch immediately
-      launchAllowedAt += ref -> maybeDelayUntil.map(_.deadline).getOrElse(now)
+      launchAllowedAt += ref -> maybeDelayUntil.fold(now)(_.deadline)
 
       manageOfferMatcherStatus(now)
 
@@ -158,7 +232,7 @@ private class TaskLauncherActor(
 
       logger.debug(s"After delay update $status")
 
-    case msg @ RateLimiter.DelayUpdate(ref, delayUntil) if ref.id != runSpecId =>
+    case RateLimiter.DelayUpdate(ref, delayUntil) if ref.id != runSpecId =>
       logger.warn(s"BUG! Received delay update for other run spec $ref and delay $delayUntil. Current run spec is $runSpecId")
 
     case RecheckIfBackOffUntilReached => manageOfferMatcherStatus(clock.now())
@@ -245,40 +319,10 @@ private class TaskLauncherActor(
       }
   }
 
-  def syncInstances(): Unit = {
-    instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpecId).instanceMap
-    val readable = instanceMap.values
-      .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, goal: ${i.state.goal}, version: ${i.runSpecVersion}, reservation: ${i.reservation}}")
-      .mkString(", ")
-    logger.info(s"Synced instance map to $readable")
-  }
-
   def syncInstance(instanceId: Instance.Id): Unit = {
-    instanceTracker.instancesBySpecSync.instance(instanceId) match {
-      case Some(instance) =>
-        instanceMap += instanceId -> instance
-
-        // This timeout is only between us creating provisioned instance operation based on received offer
-        // and that instance in provisioned state being persisted so this makes no sense for instances in all other states
-        if (!instance.isProvisioned) {
-          offerOperationAcceptTimeout.get(instanceId).foreach(_.cancel())
-          offerOperationAcceptTimeout -= instanceId
-        }
-        logger.info(s"Synced single $instanceId from InstanceTracker: $instance")
-
-        // Request delay for new run spec config.
-        if (!launchAllowedAt.contains(instance.runSpec.configRef)) {
-          // signal no interest in new offers until we get the back off delay.
-          // this makes sure that we see unused offers again that we rejected for the old configuration.
-          unregister()
-          rateLimiterActor ! RateLimiterActor.GetDelay(instance.runSpec.configRef)
-        }
-      case None =>
-        logger.info(s"Instance $instanceId does not exist in InstanceTracker - removing it from internal state.")
-        removeInstanceFromInternalState(instanceId)
-    }
-
-    manageOfferMatcherStatus(clock.now())
+    logger.debug(s"Synchronizing $instanceId")
+    context.become(syncing(instanceId))
+    instanceTracker.instancesBySpec.map(bySpec => SynchronizedInstance(bySpec.instance(instanceId))).pipeTo(self)
   }
 
   def removeInstanceFromInternalState(instanceId: Instance.Id): Unit = {

@@ -20,7 +20,7 @@ import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import org.apache.mesos
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future, Promise}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.util.{Failure, Success}
 
 /**
@@ -35,15 +35,10 @@ private[marathon] class InstanceTrackerDelegate(
     config: InstanceTrackerConfig,
     instanceTrackerRef: ActorRef)(implicit mat: Materializer) extends InstanceTracker {
 
-  override def instancesBySpecSync: InstanceTracker.InstancesBySpec = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    Await.result(instancesBySpec(), instanceTrackerQueryTimeout.duration)
-  }
-
   override def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec] =
     tasksByAppTimeMetric {
       (instanceTrackerRef ? InstanceTrackerActor.List).mapTo[InstanceTracker.InstancesBySpec].recover {
-        case e: AskTimeoutException =>
+        case _: AskTimeoutException =>
           throw new TimeoutException(
             s"timeout while calling instancesBySpec() (current value = ${config.internalTaskTrackerRequestTimeout().milliseconds}ms." +
               "If you know what you are doing, you can adjust the timeout " +
@@ -58,14 +53,8 @@ private[marathon] class InstanceTrackerDelegate(
     specInstances(appId).map(_.count(instance => instance.isActive))
   }
 
-  override def hasSpecInstancesSync(appId: AbsolutePathId): Boolean = specInstancesSync(appId).nonEmpty
   override def hasSpecInstances(appId: AbsolutePathId)(implicit ec: ExecutionContext): Future[Boolean] =
     specInstances(appId).map(_.nonEmpty)
-
-  override def specInstancesSync(appId: AbsolutePathId, readAfterWrite: Boolean = false): Seq[Instance] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    Await.result(specInstances(appId, readAfterWrite), instanceTrackerQueryTimeout.duration)
-  }
 
   override def specInstances(appId: AbsolutePathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]] = {
     val query = InstanceTrackerActor.ListBySpec(appId)
