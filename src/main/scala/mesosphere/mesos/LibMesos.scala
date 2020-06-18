@@ -8,6 +8,15 @@ object LibMesos extends StrictLogging {
 
   /**
     * The changelog should describe why this version is needed.
+    * 
+    * **ATTENTATION**
+    * Make sure that the latest Marathon supports latest Mesos -2 versions.
+    * Eg Marathon 1.10 should support Mesos 1.10, 1.9 and 1.8. This ensures
+    * that DC/OS upgrades won't break. If you must violate this rule be sure
+    * to visit the DC/OS upgrade procedure with other engineers.
+    *
+    * This notice relates to incident https://jira.d2iq.com/browse/D2IQ-64410 when
+    * an upgrade from DC/OS 1.10 to 1.12 left Marathon in a crash loop.
     */
   val MesosMasterMinimumVersion: SemanticVersion = SemanticVersion(1, 5, 0)
 

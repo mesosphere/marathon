@@ -61,11 +61,11 @@ class LaunchQueueActorTest extends AkkaUnitTest with ImplicitSender {
       val instanceTracker = mock[InstanceTracker]
       instanceTracker.instancesBySpec().returns(Future.successful(InstanceTracker.InstancesBySpec.empty))
       val instanceUpdate = InstanceUpdated(instance, None, Seq.empty)
-      val groupManager = mock[GroupManager]
-      groupManager.runSpec(app.id).returns(Some(app))
       val delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed] =
         EnrichedSource.emptyCancellable.mapMaterializedValue { _ => NotUsed }
-      lazy val launchQueue = system.actorOf(LaunchQueueActor.props(config, instanceTracker, groupManager, runSpecActorProps, delayUpdates))
+      lazy val launchQueue = system.actorOf(
+        LaunchQueueActor.props(
+          config, instanceTracker, runSpecActorProps, delayUpdates))
 
       @volatile
       var changes = List.empty[InstanceChange]

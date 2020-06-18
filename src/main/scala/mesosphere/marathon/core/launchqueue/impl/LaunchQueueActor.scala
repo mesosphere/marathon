@@ -1,8 +1,6 @@
 package mesosphere.marathon
 package core.launchqueue.impl
 
-import java.util.concurrent.atomic.AtomicLong
-
 import akka.stream.Materializer
 import akka.stream.scaladsl.Sink
 import akka.{Done, NotUsed}
@@ -31,13 +29,11 @@ import scala.util.control.NonFatal
 
 private[launchqueue] object LaunchQueueActor {
   def props(
-      config: LaunchQueueConfig,
-      instanceTracker: InstanceTracker,
-      runSpecProvider: GroupManager.RunSpecProvider,
-      runSpecActorProps: RunSpec => Props,
-      delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]
-  ): Props = {
-    Props(new LaunchQueueActor(config, instanceTracker, runSpecProvider, runSpecActorProps, delayUpdates))
+    config: LaunchQueueConfig,
+    instanceTracker: InstanceTracker,
+    runSpecActorProps: RunSpec => Props,
+    delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]): Props = {
+    Props(new LaunchQueueActor(config, instanceTracker, runSpecActorProps, delayUpdates))
   }
 
   case class FullCount(appId: PathId)
@@ -53,7 +49,6 @@ private[launchqueue] object LaunchQueueActor {
 private[impl] class LaunchQueueActor(
     launchQueueConfig: LaunchQueueConfig,
     instanceTracker: InstanceTracker,
-    runSpecProvider: GroupManager.RunSpecProvider,
     runSpecActorProps: RunSpec => Props,
     delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]
 ) extends Actor
@@ -96,12 +91,14 @@ private[impl] class LaunchQueueActor(
 
   def initializing: Receive = {
     case instances: InstanceTracker.InstancesBySpec =>
-      instances.instancesMap.collect {
-        case (id, specInstances) if specInstances.instances.exists(_.isScheduled) =>
-          runSpecProvider.runSpec(id)
-      }.flatten.foreach { scheduledRunSpec =>
-        launchers.getOrElse(scheduledRunSpec.id, createAppTaskLauncher(scheduledRunSpec))
-      }
+
+      instances.allInstances
+        .filter(_.isScheduled)
+        .map(_.runSpec)
+        .distinct
+        .foreach { scheduledRunSpec =>
+          launchers.getOrElse(scheduledRunSpec.id, createAppTaskLauncher(scheduledRunSpec))
+        }
 
       context.become(initialized)
 
@@ -133,7 +130,7 @@ private[impl] class LaunchQueueActor(
     launchers.get(instance.runSpecId).orElse {
       if (instance.isScheduled) {
         logger.info(s"No active taskLauncherActor for scheduled ${instance.instanceId}, will create one.")
-        runSpecProvider.runSpec(instance.runSpecId).map(createAppTaskLauncher)
+        Some(createAppTaskLauncher(instance.runSpec))
       } else None
     }
   }
