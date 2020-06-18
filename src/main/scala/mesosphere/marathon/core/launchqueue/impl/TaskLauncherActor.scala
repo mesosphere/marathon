@@ -83,7 +83,10 @@ private class TaskLauncherActor(
     rateLimiterActor: ActorRef,
     offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
     runSpecId: AbsolutePathId,
-    localRegion: () => Option[Region]) extends Actor with Stash with StrictLogging {
+    localRegion: () => Option[Region]
+) extends Actor
+    with Stash
+    with StrictLogging {
   // scalastyle:on parameter.number
 
   import TaskLauncherActor._
@@ -113,7 +116,8 @@ private class TaskLauncherActor(
   override def preStart(): Unit = {
     super.preStart()
 
-    instanceTracker.instancesBySpec()
+    instanceTracker
+      .instancesBySpec()
       .map(bySpec => LoadedInstances(bySpec.instancesMap(runSpecId).instanceMap))
       .pipeTo(self)
   }
@@ -143,7 +147,9 @@ private class TaskLauncherActor(
     case LoadedInstances(loadedInstances) =>
       instanceMap = loadedInstances
       val readable = instanceMap.values
-        .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, goal: ${i.state.goal}, version: ${i.runSpecVersion}, reservation: ${i.reservation}}")
+        .map(i =>
+          s"${i.instanceId}:{condition: ${i.state.condition}, goal: ${i.state.goal}, version: ${i.runSpecVersion}, reservation: ${i.reservation}}"
+        )
         .mkString(", ")
       logger.info(s"Loaded instance map: instances=[$readable]")
       logger.info(s"Started instanceLaunchActor for $runSpecId with initial count $instancesToLaunch")

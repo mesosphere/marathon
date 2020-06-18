@@ -140,7 +140,9 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       instanceTracker.updateStatus(sampleInstance, runningStatus, clock.now()).futureValue
       instanceTracker.specInstances(TEST_APP_NAME).futureValue.map(_.instanceId) should contain(sampleInstance.instanceId)
       every(instanceTracker.specInstances(TEST_APP_NAME).futureValue.headOption.toList) should be('active)
-      every(instanceTracker.specInstances(TEST_APP_NAME).futureValue.headOption.toList.flatMap(_.tasksMap.values)) should have(taskStatus(runningStatus))
+      every(instanceTracker.specInstances(TEST_APP_NAME).futureValue.headOption.toList.flatMap(_.tasksMap.values)) should have(
+        taskStatus(runningStatus)
+      )
 
       // TASK TERMINATED
       instanceTracker.forceExpunge(sampleInstance.instanceId).futureValue

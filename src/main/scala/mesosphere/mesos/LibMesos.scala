@@ -8,7 +8,7 @@ object LibMesos extends StrictLogging {
 
   /**
     * The changelog should describe why this version is needed.
-    * 
+    *
     * **ATTENTATION**
     * Make sure that the latest Marathon supports latest Mesos -2 versions.
     * Eg Marathon 1.10 should support Mesos 1.10, 1.9 and 1.8. This ensures

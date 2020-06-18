@@ -58,7 +58,9 @@ private[marathon] class InstanceTrackerDelegate(
   override def hasSpecInstances(appId: AbsolutePathId)(implicit ec: ExecutionContext): Future[Boolean] =
     specInstances(appId).map(_.nonEmpty)
 
-  override def specInstances(appId: AbsolutePathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]] = {
+  override def specInstances(appId: AbsolutePathId, readAfterWrite: Boolean = false)(implicit
+      ec: ExecutionContext
+  ): Future[Seq[Instance]] = {
     val query = InstanceTrackerActor.ListBySpec(appId)
     if (readAfterWrite) {
       val promise = Promise[Seq[Instance]]

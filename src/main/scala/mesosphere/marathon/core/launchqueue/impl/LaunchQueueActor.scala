@@ -29,10 +29,11 @@ import scala.util.control.NonFatal
 
 private[launchqueue] object LaunchQueueActor {
   def props(
-    config: LaunchQueueConfig,
-    instanceTracker: InstanceTracker,
-    runSpecActorProps: RunSpec => Props,
-    delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]): Props = {
+      config: LaunchQueueConfig,
+      instanceTracker: InstanceTracker,
+      runSpecActorProps: RunSpec => Props,
+      delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed]
+  ): Props = {
     Props(new LaunchQueueActor(config, instanceTracker, runSpecActorProps, delayUpdates))
   }
 
@@ -91,7 +92,6 @@ private[impl] class LaunchQueueActor(
 
   def initializing: Receive = {
     case instances: InstanceTracker.InstancesBySpec =>
-
       instances.allInstances
         .filter(_.isScheduled)
         .map(_.runSpec)

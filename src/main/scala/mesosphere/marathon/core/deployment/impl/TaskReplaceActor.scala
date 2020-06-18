@@ -48,8 +48,10 @@ class TaskReplaceActor(
     eventBus.subscribe(self, classOf[InstanceChanged])
     eventBus.subscribe(self, classOf[InstanceHealthChanged])
 
-    instanceTracker.specInstances(runSpec.id, readAfterWrite = true)
-      .map(instances => TaskReplaceActor.State(runSpec, instances)).pipeTo(self)
+    instanceTracker
+      .specInstances(runSpec.id, readAfterWrite = true)
+      .map(instances => TaskReplaceActor.State(runSpec, instances))
+      .pipeTo(self)
   }
 
   override def postStop(): Unit = {
@@ -124,8 +126,10 @@ class TaskReplaceActor(
         instanceTerminated(id)
       } // 2) Did someone tamper with new instance's goal? Don't do that - there should be only one "orchestrator" per service per time!
       else if (considerTerminal(condition) && goal.isTerminal()) {
-        logger.error(s"Deployment $deploymentId: New $id is terminal ($condition) on agent $agentId during app $pathId restart " +
-          s"(reservation: ${instance.reservation}) and the goal ($goal) is *NOT* Running! This means that someone is interfering with current deployment!")
+        logger.error(
+          s"Deployment $deploymentId: New $id is terminal ($condition) on agent $agentId during app $pathId restart " +
+            s"(reservation: ${instance.reservation}) and the goal ($goal) is *NOT* Running! This means that someone is interfering with current deployment!"
+        )
         state.instancesStarted -= 1
       } else {
         logger.info(
@@ -141,8 +145,10 @@ class TaskReplaceActor(
       // 1) An old instance terminated out of band and was not yet chosen to be decommissioned or stopped.
       // We stop/decommission the instance and let it be rescheduled with new instance RunSpec
       if (considerTerminal(condition) && goal == Goal.Running) {
-        logger.info(s"Deployment $deploymentId: Old $id became $condition during an upgrade but still has goal Running. " +
-          "We will decommission that instance and launch new one with the new RunSpec.")
+        logger.info(
+          s"Deployment $deploymentId: Old $id became $condition during an upgrade but still has goal Running. " +
+            "We will decommission that instance and launch new one with the new RunSpec."
+        )
         state.oldActiveInstanceIds -= id
         instanceTerminated(id)
         val goal = if (runSpec.isResident) Goal.Stopped else Goal.Decommissioned
@@ -182,8 +188,12 @@ class TaskReplaceActor(
   }
 
   def reconcileAlreadyStartedInstances(): Unit = {
-    logger.info(s"Deployment $deploymentId: Reconciling instances during ${runSpec.id} deployment: found ${state.instancesAlreadyStarted.size} already started instances " +
-      s"and ${state.oldActiveInstanceIds.size} old instances: ${if (state.currentInstances.size > 0) state.currentInstances.map{ i => i.instanceId -> i.state.condition } else "[]"}")
+    logger.info(
+      s"Deployment $deploymentId: Reconciling instances during ${runSpec.id} deployment: found ${state.instancesAlreadyStarted.size} already started instances " +
+        s"and ${state.oldActiveInstanceIds.size} old instances: ${if (state.currentInstances.size > 0)
+          state.currentInstances.map { i => i.instanceId -> i.state.condition }
+        else "[]"}"
+    )
     state.instancesAlreadyStarted.foreach(reconcileHealthAndReadinessCheck)
   }
 
@@ -194,13 +204,17 @@ class TaskReplaceActor(
     val instancesNotStartedYet = math.max(0, runSpec.instances - state.instancesStarted)
     val instancesToStartNow = math.min(instancesNotStartedYet, leftCapacity)
     if (instancesToStartNow > 0) {
-      logger.info(s"Deployment $deploymentId: Restarting app $pathId: queuing $instancesToStartNow new instances since leftCapacity = $leftCapacity, " +
-        s"instancesStarted = ${state.instancesStarted}, instancesNotStartedYet = $instancesNotStartedYet and instancesToStartNow = $instancesToStartNow")
+      logger.info(
+        s"Deployment $deploymentId: Restarting app $pathId: queuing $instancesToStartNow new instances since leftCapacity = $leftCapacity, " +
+          s"instancesStarted = ${state.instancesStarted}, instancesNotStartedYet = $instancesNotStartedYet and instancesToStartNow = $instancesToStartNow"
+      )
       state.instancesStarted += instancesToStartNow
       launchQueue.add(runSpec, instancesToStartNow)
     } else {
-      logger.info(s"Deployment $deploymentId: Restarting app $pathId. No need to start new instances right now with leftCapacity = $leftCapacity, " +
-        s"instancesStarted = ${state.instancesStarted}, instancesNotStartedYet = $instancesNotStartedYet and instancesToStartNow = $instancesToStartNow")
+      logger.info(
+        s"Deployment $deploymentId: Restarting app $pathId. No need to start new instances right now with leftCapacity = $leftCapacity, " +
+          s"instancesStarted = ${state.instancesStarted}, instancesNotStartedYet = $instancesNotStartedYet and instancesToStartNow = $instancesToStartNow"
+      )
       Future.successful(Done)
     }
   }
@@ -236,10 +250,12 @@ class TaskReplaceActor(
       promise.trySuccess(())
       context.stop(self)
     } else {
-      logger.info(s"Deployment $deploymentId: For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +
-        s"[${readyInstances.size}] ready new instances and " +
-        s"[${state.oldActiveInstanceIds.size}] old instances (${state.oldActiveInstanceIds.take(3).map(_.idString).mkString("[", ",", "]")}). " +
-        s"Target count is ${runSpec.instances}.")
+      logger.info(
+        s"Deployment $deploymentId: For run spec: [${runSpec.id}] there are [${healthyInstances.size}] healthy and " +
+          s"[${readyInstances.size}] ready new instances and " +
+          s"[${state.oldActiveInstanceIds.size}] old instances (${state.oldActiveInstanceIds.take(3).map(_.idString).mkString("[", ",", "]")}). " +
+          s"Target count is ${runSpec.instances}."
+      )
     }
   }
 
