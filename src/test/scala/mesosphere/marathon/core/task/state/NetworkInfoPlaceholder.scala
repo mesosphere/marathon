@@ -9,9 +9,10 @@ import org.apache.mesos
 /** NetworkInfo to use in tests if no specific values are required */
 object NetworkInfoPlaceholder {
   def apply(
-    hostName: String = defaultHostName,
-    hostPorts: Seq[Int] = defaultHostPorts,
-    ipAddresses: Seq[IPAddress] = defaultIpAddresses): NetworkInfo = new NetworkInfo(hostName, hostPorts, ipAddresses)
+      hostName: String = defaultHostName,
+      hostPorts: Seq[Int] = defaultHostPorts,
+      ipAddresses: Seq[IPAddress] = defaultIpAddresses
+  ): NetworkInfo = new NetworkInfo(hostName, hostPorts, ipAddresses)
 }
 
 /** Defaults for NetworkInfo to use in tests */
@@ -24,10 +25,10 @@ object AgentTestDefaults {
 
 object AgentInfoPlaceholder {
   def apply(
-    host: String = defaultHostName,
-    agentId: Option[String] = Some(defaultAgentId),
-    region: Option[String] = None,
-    zone: Option[String] = None,
-    attributes: Seq[mesos.Protos.Attribute] = Seq.empty
+      host: String = defaultHostName,
+      agentId: Option[String] = Some(defaultAgentId),
+      region: Option[String] = None,
+      zone: Option[String] = None,
+      attributes: Seq[mesos.Protos.Attribute] = Seq.empty
   ): AgentInfo = AgentInfo(host, agentId, region, zone, attributes)
 }

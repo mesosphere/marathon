@@ -9,4 +9,3 @@ object GroupInfo {
     case object Pods extends Embed
   }
 }
-

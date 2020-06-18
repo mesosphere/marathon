@@ -7,9 +7,7 @@ import scala.collection.immutable.Seq
 import scala.jdk.CollectionConverters._
 
 object PersistentVolumeMatcher {
-  def matchVolumes(
-    offer: Mesos.Offer,
-    waitingInstances: Seq[Instance]): Option[VolumeMatch] = {
+  def matchVolumes(offer: Mesos.Offer, waitingInstances: Seq[Instance]): Option[VolumeMatch] = {
 
     // find all offered persistent volumes
     val availableVolumes: Map[String, Mesos.Resource] = offer.getResourcesList.asScala.iterator.collect {
@@ -24,12 +22,11 @@ object PersistentVolumeMatcher {
         None
     }
 
-    waitingInstances.toStream
-      .flatMap { instance =>
-        instance.reservation.flatMap { reservation =>
-          resourcesForReservation(reservation).flatMap(rs => Some(VolumeMatch(instance, rs)))
-        }
-      }.headOption
+    waitingInstances.toStream.flatMap { instance =>
+      instance.reservation.flatMap { reservation =>
+        resourcesForReservation(reservation).flatMap(rs => Some(VolumeMatch(instance, rs)))
+      }
+    }.headOption
   }
 
   case class VolumeMatch(instance: Instance, persistentVolumeResources: Seq[Mesos.Resource])

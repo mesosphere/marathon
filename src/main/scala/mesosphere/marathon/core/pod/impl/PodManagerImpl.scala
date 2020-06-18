@@ -16,9 +16,10 @@ case class PodManagerImpl(groupManager: GroupManager) extends PodManager {
   override def ids(): Set[AbsolutePathId] = groupManager.rootGroup().transitivePodIds.toSet
 
   def create(p: PodDefinition, force: Boolean): Future[DeploymentPlan] = {
-    def createOrThrow(opt: Option[PodDefinition]) = opt
-      .map(_ => throw ConflictingChangeException(s"A pod with id [${p.id}] already exists."))
-      .getOrElse(p)
+    def createOrThrow(opt: Option[PodDefinition]) =
+      opt
+        .map(_ => throw ConflictingChangeException(s"A pod with id [${p.id}] already exists."))
+        .getOrElse(p)
     groupManager.updatePod(p.id, createOrThrow, p.version, force)
   }
 

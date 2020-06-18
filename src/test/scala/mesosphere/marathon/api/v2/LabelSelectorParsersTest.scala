@@ -71,7 +71,9 @@ class LabelSelectorParsersTest extends UnitTest {
       val parser = new LabelSelectorParsers
       val combined = parser.parsed("foo==one, bla!=one, foo in (one, two, three), bla notin (one, two, three), existence")
       combined.selectors should have size 5
-      combined.matches(AppDefinition(id = runSpecId, labels = Map("foo" -> "one", "bla" -> "four", "existence" -> "true"), role = "*")) should be(true)
+      combined.matches(
+        AppDefinition(id = runSpecId, labels = Map("foo" -> "one", "bla" -> "four", "existence" -> "true"), role = "*")
+      ) should be(true)
       combined.matches(AppDefinition(id = runSpecId, labels = Map("foo" -> "one"), role = "*")) should be(false)
       combined.matches(AppDefinition(id = runSpecId, labels = Map("bla" -> "four"), role = "*")) should be(false)
     }
@@ -80,7 +82,9 @@ class LabelSelectorParsersTest extends UnitTest {
       val parser = new LabelSelectorParsers
       val combined = parser.parsed("""\{\{\{ in (\*\*\*, \&\&\&, \$\$\$), \^\^\^ notin (\-\-\-, \!\!\!, \@\@\@), \#\#\#""")
       combined.selectors should have size 3
-      combined.matches(AppDefinition(id = runSpecId, labels = Map("{{{" -> "&&&", "^^^" -> "&&&", "###" -> "&&&"), role = "*")) should be(true)
+      combined.matches(AppDefinition(id = runSpecId, labels = Map("{{{" -> "&&&", "^^^" -> "&&&", "###" -> "&&&"), role = "*")) should be(
+        true
+      )
       combined.matches(AppDefinition(id = runSpecId, labels = Map("^^^" -> "---"), role = "*")) should be(false)
       combined.matches(AppDefinition(id = runSpecId, labels = Map("###" -> "four"), role = "*")) should be(false)
     }

@@ -38,7 +38,11 @@ class ResourceUtilTest extends UnitTest {
     "resource consumption considers roles" in {
       val leftOvers = ResourceUtil.consumeResources(
         Seq(MTH.scalarResource("cpus", 2), MTH.scalarResource("cpus", 2, role = "marathon")),
-        Seq(MTH.scalarResource("cpus", 0.5), MTH.scalarResource("cpus", 1, role = "marathon"), MTH.scalarResource("cpus", 0.5, role = "marathon"))
+        Seq(
+          MTH.scalarResource("cpus", 0.5),
+          MTH.scalarResource("cpus", 1, role = "marathon"),
+          MTH.scalarResource("cpus", 0.5, role = "marathon")
+        )
       )
       assert(leftOvers == Seq(MTH.scalarResource("cpus", 1.5), MTH.scalarResource("cpus", 0.5, role = "marathon")))
     }
@@ -98,10 +102,7 @@ class ResourceUtilTest extends UnitTest {
     }
 
     "resource consumption fully consumes mount disks" in {
-      ResourceUtil.consumeScalarResource(
-        MTH.scalarResource("disk", 1024.0,
-          disk = Some(MTH.mountDisk("/mnt/disk1"))),
-        32.0) shouldBe (None)
+      ResourceUtil.consumeScalarResource(MTH.scalarResource("disk", 1024.0, disk = Some(MTH.mountDisk("/mnt/disk1"))), 32.0) shouldBe (None)
     }
 
     "resource consumption considers reservation labels" in {
@@ -177,14 +178,19 @@ class ResourceUtilTest extends UnitTest {
     // in the middle
     portsTest(consumedResource = Seq(10 to 10), baseResource = Seq(5 to 15), expectedResult = Some(Seq(5 to 9, 11 to 15)))
     portsTest(consumedResource = Seq(10 to 11), baseResource = Seq(5 to 15), expectedResult = Some(Seq(5 to 9, 12 to 15)))
-    portsTest(consumedResource = Seq(10 to 11), baseResource = Seq(5 to 15, 30 to 31),
-      expectedResult = Some(Seq(5 to 9, 12 to 15, 30 to 31)))
+    portsTest(
+      consumedResource = Seq(10 to 11),
+      baseResource = Seq(5 to 15, 30 to 31),
+      expectedResult = Some(Seq(5 to 9, 12 to 15, 30 to 31))
+    )
 
     portsTest(consumedResource = Seq(), baseResource = Seq(5 to 15), expectedResult = Some(Seq(5 to 15)))
 
     portsTest(
       consumedResource = Seq(31084 to 31084),
-      baseResource = Seq(31000 to 31096, 31098 to 32000), expectedResult = Some(Seq(31000 to 31083, 31085 to 31096, 31098 to 32000)))
+      baseResource = Seq(31000 to 31096, 31098 to 32000),
+      expectedResult = Some(Seq(31000 to 31083, 31085 to 31096, 31098 to 32000))
+    )
 
     // overlapping smaller
     portsTest(consumedResource = Seq(2 to 5), baseResource = Seq(5 to 15), expectedResult = Some(Seq(6 to 15)))
@@ -206,10 +212,7 @@ class ResourceUtilTest extends UnitTest {
     setResourceTest(consumedResource = Set("a", "b", "c"), baseResource = Set("a", "b", "c"), expectedResult = None)
   }
 
-  private[this] def setResourceTest(
-    consumedResource: Set[String],
-    baseResource: Set[String],
-    expectedResult: Option[Set[String]]): Unit = {
+  private[this] def setResourceTest(consumedResource: Set[String], baseResource: Set[String], expectedResult: Option[Set[String]]): Unit = {
 
     s"consuming sets resource $consumedResource from $baseResource results in $expectedResult" in {
       val r1 = set("cpus", consumedResource)
@@ -230,9 +233,10 @@ class ResourceUtilTest extends UnitTest {
   }
 
   private[this] def portsTest(
-    consumedResource: Seq[Range.Inclusive],
-    baseResource: Seq[Range.Inclusive],
-    expectedResult: Option[Seq[Range.Inclusive]]): Unit = {
+      consumedResource: Seq[Range.Inclusive],
+      baseResource: Seq[Range.Inclusive],
+      expectedResult: Option[Seq[Range.Inclusive]]
+  ): Unit = {
 
     s"consuming ports resource $consumedResource from $baseResource results in $expectedResult" in {
       val r1 = ports("cpus", consumedResource: _*)
@@ -247,7 +251,9 @@ class ResourceUtilTest extends UnitTest {
     def toRange(range: Range.Inclusive): Value.Range =
       Value.Range
         .newBuilder()
-        .setBegin(range.start.toLong).setEnd(range.end.toLong).build()
+        .setBegin(range.start.toLong)
+        .setEnd(range.end.toLong)
+        .build()
 
     Resource
       .newBuilder()

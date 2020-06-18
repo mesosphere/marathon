@@ -60,7 +60,8 @@ class TimestampTest extends UnitTest {
       import org.apache.mesos
       "resolve TaskStatus.timestamp correctly" in {
         val instant = Instant.now()
-        val taskStatus = mesos.Protos.TaskStatus.newBuilder()
+        val taskStatus = mesos.Protos.TaskStatus
+          .newBuilder()
           .setTimestamp(instant.getEpochSecond.toDouble)
           .setTaskId(mesos.Protos.TaskID.newBuilder().setValue("task-1").build())
           .setState(mesos.Protos.TaskState.TASK_STAGING)

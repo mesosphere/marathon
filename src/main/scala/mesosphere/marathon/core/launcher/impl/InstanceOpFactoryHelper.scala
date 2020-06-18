@@ -8,15 +8,11 @@ import mesosphere.marathon.core.matcher.base.util.OfferOperationFactory
 import mesosphere.marathon.metrics.Metrics
 import org.apache.mesos.{Protos => Mesos}
 
-class InstanceOpFactoryHelper(
-    private val metrics: Metrics,
-    private val principalOpt: Option[String]) {
+class InstanceOpFactoryHelper(private val metrics: Metrics, private val principalOpt: Option[String]) {
 
   private[this] val offerOperationFactory = new OfferOperationFactory(metrics, principalOpt)
 
-  def provision(
-    taskInfo: Mesos.TaskInfo,
-    stateOp: InstanceUpdateOperation.Provision): InstanceOp.LaunchTask = {
+  def provision(taskInfo: Mesos.TaskInfo, stateOp: InstanceUpdateOperation.Provision): InstanceOp.LaunchTask = {
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
@@ -24,14 +20,16 @@ class InstanceOpFactoryHelper(
   }
 
   def provision(
-    executorInfo: Mesos.ExecutorInfo,
-    groupInfo: Mesos.TaskGroupInfo,
-    instanceId: Instance.Id,
-    stateOp: InstanceUpdateOperation.Provision): InstanceOp.LaunchTaskGroup = {
+      executorInfo: Mesos.ExecutorInfo,
+      groupInfo: Mesos.TaskGroupInfo,
+      instanceId: Instance.Id,
+      stateOp: InstanceUpdateOperation.Provision
+  ): InstanceOp.LaunchTaskGroup = {
 
     assume(
       executorInfo.getExecutorId.getValue == instanceId.executorIdString,
-      "marathon pod instance id and mesos executor id must be equal")
+      "marathon pod instance id and mesos executor id must be equal"
+    )
 
     def createOperations = Seq(offerOperationFactory.launch(executorInfo, groupInfo))
 
@@ -39,13 +37,12 @@ class InstanceOpFactoryHelper(
   }
 
   def launchOnReservation(
-    taskInfo: Mesos.TaskInfo,
-    newState: InstanceUpdateOperation.Provision,
-    oldState: Instance): InstanceOp.LaunchTask = {
+      taskInfo: Mesos.TaskInfo,
+      newState: InstanceUpdateOperation.Provision,
+      oldState: Instance
+  ): InstanceOp.LaunchTask = {
 
-    assume(
-      oldState.hasReservation,
-      "only an instance with a reservation can be re-launched")
+    assume(oldState.hasReservation, "only an instance with a reservation can be re-launched")
 
     def createOperations = Seq(offerOperationFactory.launch(taskInfo))
 
@@ -53,10 +50,11 @@ class InstanceOpFactoryHelper(
   }
 
   def launchOnReservation(
-    executorInfo: Mesos.ExecutorInfo,
-    groupInfo: Mesos.TaskGroupInfo,
-    newState: InstanceUpdateOperation.Provision,
-    oldState: Instance): InstanceOp.LaunchTaskGroup = {
+      executorInfo: Mesos.ExecutorInfo,
+      groupInfo: Mesos.TaskGroupInfo,
+      newState: InstanceUpdateOperation.Provision,
+      oldState: Instance
+  ): InstanceOp.LaunchTaskGroup = {
 
     def createOperations = Seq(offerOperationFactory.launch(executorInfo, groupInfo))
 
@@ -68,11 +66,12 @@ class InstanceOpFactoryHelper(
     * volumes against them as needed
     */
   def reserveAndCreateVolumes(
-    role: String,
-    reservationLabels: ReservationLabels,
-    newState: InstanceUpdateOperation.Reserve,
-    resources: Seq[Mesos.Resource],
-    localVolumes: Seq[InstanceOpFactory.OfferedVolume]): InstanceOp.ReserveAndCreateVolumes = {
+      role: String,
+      reservationLabels: ReservationLabels,
+      newState: InstanceUpdateOperation.Reserve,
+      resources: Seq[Mesos.Resource],
+      localVolumes: Seq[InstanceOpFactory.OfferedVolume]
+  ): InstanceOp.ReserveAndCreateVolumes = {
 
     def createOperations =
       offerOperationFactory.reserve(role, reservationLabels, resources) ++

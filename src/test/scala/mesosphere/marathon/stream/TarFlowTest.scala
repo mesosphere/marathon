@@ -17,27 +17,20 @@ class TarFlowTest extends AkkaUnitTest {
   val tarEntries = List(
     TarEntry(
       "1234567890/1234567890/1234567890/1234567890/1234567890/1234567890/1234567890/1234567890/1234567890/1234567890/long.txt",
-      ByteString("> 100 char file name. Look out!")),
-    TarEntry(
-      "/path/to/file-2.txt",
-      sampleData),
-    TarEntry(
-      "/path/to/file.txt",
-      (1 to 1024).map(_ => sampleData).reduce(_ ++ _)))
+      ByteString("> 100 char file name. Look out!")
+    ),
+    TarEntry("/path/to/file-2.txt", sampleData),
+    TarEntry("/path/to/file.txt", (1 to 1024).map(_ => sampleData).reduce(_ ++ _))
+  )
 
   val tarredBytes =
-    Source(tarEntries).
-      via(TarFlow.writer).
-      runReduce(_ ++ _).
-      futureValue
+    Source(tarEntries).via(TarFlow.writer).runReduce(_ ++ _).futureValue
 
   List(1, 13, 512, Int.MaxValue).foreach { n =>
     s"it can roundtrip tar and untar with ${n} sized byte boundaries" in {
       val untarredItems =
         Source(tarredBytes.grouped(n).toList). // we vary the chunk sizes to make sure we handle boundaries properly
-          via(TarFlow.reader).
-          runFold(List.empty[TarEntry]) { _ :+ _ }.
-          futureValue
+        via(TarFlow.reader).runFold(List.empty[TarEntry]) { _ :+ _ }.futureValue
       untarredItems.map(_.header.getName) shouldBe tarEntries.map(_.header.getName)
       untarredItems.map(_.data) shouldBe tarEntries.map(_.data)
     }
@@ -75,10 +68,7 @@ class TarFlowTest extends AkkaUnitTest {
     tarOut.finish()
 
     val untarredItems =
-      Source(ByteString(bos.toByteArray()).grouped(1024).toList).
-        via(TarFlow.reader).
-        runFold(List.empty[TarEntry]) { _ :+ _ }.
-        futureValue
+      Source(ByteString(bos.toByteArray()).grouped(1024).toList).via(TarFlow.reader).runFold(List.empty[TarEntry]) { _ :+ _ }.futureValue
 
     untarredItems.map(_.header.getName) shouldBe tarEntries.map(_.header.getName)
     untarredItems.map(_.data) shouldBe tarEntries.map(_.data)

@@ -13,13 +13,13 @@ import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkSerialized}
 import scala.async.Async.{async, await}
 import scala.concurrent.{ExecutionContext, Future}
 
-class MigrationTo110000(
-    persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]) extends MigrationStep with StrictLogging {
+class MigrationTo110000(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]) extends MigrationStep with StrictLogging {
 
-  override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = async {
-    logger.info("Starting migration to 1.10.000")
-    await(MigrationTo110000.migratePods(persistenceStore))
-  }
+  override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] =
+    async {
+      logger.info("Starting migration to 1.10.000")
+      await(MigrationTo110000.migratePods(persistenceStore))
+    }
 
 }
 
@@ -39,7 +39,9 @@ object MigrationTo110000 {
     * @param persistenceStore The ZooKeeper storage.
     * @return Successful future when done.
     */
-  def migratePods(persistenceStore: PersistenceStore[ZkId, String, ZkSerialized])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+  def migratePods(
+      persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]
+  )(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
     ServiceMigration.migratePodVersions(migrationVersion, persistenceStore, podMigratingFlow)
   }
 

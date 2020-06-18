@@ -45,9 +45,6 @@ trait InstanceTracker extends StrictLogging {
     */
   def specInstances(pathId: AbsolutePathId, readAfterWrite: Boolean = false)(implicit ec: ExecutionContext): Future[Seq[Instance]]
 
-  /** Synchronous blocking version of [[InstanceTracker.specInstances()]]. */
-  def specInstancesSync(pathId: AbsolutePathId, readAfterWrite: Boolean = false): Seq[Instance]
-
   /**
     * Look up a specific instance by id.
     *
@@ -64,12 +61,10 @@ trait InstanceTracker extends StrictLogging {
     */
   def instance(instanceId: Instance.Id): Future[Option[Instance]]
 
-  def instancesBySpecSync: InstanceTracker.InstancesBySpec
   def instancesBySpec()(implicit ec: ExecutionContext): Future[InstanceTracker.InstancesBySpec]
 
   def countActiveSpecInstances(appId: AbsolutePathId): Future[Int]
 
-  def hasSpecInstancesSync(appId: AbsolutePathId): Boolean
   def hasSpecInstances(appId: AbsolutePathId)(implicit ec: ExecutionContext): Future[Boolean]
 
   /** Process an InstanceUpdateOperation and propagate its result. */
@@ -100,6 +95,7 @@ trait InstanceTracker extends StrictLogging {
 
 object InstanceTracker {
   type InstanceUpdates = Source[(InstancesSnapshot, Source[InstanceChange, NotUsed]), NotUsed]
+
   /**
     * Contains all tasks grouped by app ID.
     */
@@ -113,10 +109,11 @@ object InstanceTracker {
       instancesMap.get(pathId).map(_.instances).getOrElse(Seq.empty)
     }
 
-    def instance(instanceId: Instance.Id): Option[Instance] = for {
-      runSpec <- instancesMap.get(instanceId.runSpecId)
-      instance <- runSpec.instanceMap.get(instanceId)
-    } yield instance
+    def instance(instanceId: Instance.Id): Option[Instance] =
+      for {
+        runSpec <- instancesMap.get(instanceId.runSpecId)
+        instance <- runSpec.instanceMap.get(instanceId)
+      } yield instance
 
     // TODO(PODS): the instanceTracker should not expose a def for tasks
     def task(id: Task.Id): Option[Task] = {
@@ -126,8 +123,9 @@ object InstanceTracker {
 
     def allInstances: Seq[Instance] = instancesMap.values.iterator.flatMap(_.instances).toSeq
 
-    private[tracker] def updateApp(appId: AbsolutePathId)(
-      update: InstanceTracker.SpecInstances => InstanceTracker.SpecInstances): InstancesBySpec = {
+    private[tracker] def updateApp(
+        appId: AbsolutePathId
+    )(update: InstanceTracker.SpecInstances => InstanceTracker.SpecInstances): InstancesBySpec = {
       val updated = update(instancesMap(appId))
       if (updated.isEmpty) {
         logger.info(s"Removed app [$appId] from tracker")
@@ -142,21 +140,23 @@ object InstanceTracker {
   object InstancesBySpec {
 
     def of(specInstances: collection.immutable.Map[AbsolutePathId, InstanceTracker.SpecInstances]): InstancesBySpec = {
-      new InstancesBySpec(specInstances.withDefault(appId => InstanceTracker.SpecInstances()))
+      new InstancesBySpec(specInstances.withDefault(_ => InstanceTracker.SpecInstances()))
     }
 
-    def forInstances(instances: Iterable[Instance]): InstancesBySpec = of(
-      instances
-        .groupBy(_.runSpecId)
-        .map {
-          case (appId, appInstances) =>
-            val instancesById: Map[Instance.Id, Instance] = appInstances.iterator.map(instance => instance.instanceId -> instance).toMap
-            appId -> SpecInstances(instancesById)
-        }
-    )
+    def forInstances(instances: Iterable[Instance]): InstancesBySpec =
+      of(
+        instances
+          .groupBy(_.runSpecId)
+          .map {
+            case (appId, appInstances) =>
+              val instancesById: Map[Instance.Id, Instance] = appInstances.iterator.map(instance => instance.instanceId -> instance).toMap
+              appId -> SpecInstances(instancesById)
+          }
+      )
 
     def empty: InstancesBySpec = of(collection.immutable.Map.empty[AbsolutePathId, InstanceTracker.SpecInstances])
   }
+
   /**
     * Contains only the instances of a specific run spec.
     *

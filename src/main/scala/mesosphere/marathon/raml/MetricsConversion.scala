@@ -42,7 +42,8 @@ trait MetricsConversion {
           p98 = snapshot.get98thPercentile,
           p99 = snapshot.get99thPercentile,
           p999 = snapshot.get999thPercentile,
-          stddev = snapshot.getStdDev)
+          stddev = snapshot.getStdDev
+        )
     }
 
     val rateFactor = TimeUnit.SECONDS.toSeconds(1)
@@ -54,7 +55,8 @@ trait MetricsConversion {
           m5_rate = meter.getFiveMinuteRate * rateFactor,
           m15_rate = meter.getFifteenMinuteRate * rateFactor,
           mean_rate = meter.getMeanRate * rateFactor,
-          units = "events/second")
+          units = "events/second"
+        )
     }
 
     val durationFactor = 1.0 / TimeUnit.SECONDS.toNanos(1)
@@ -78,16 +80,11 @@ trait MetricsConversion {
           m15_rate = timer.getFifteenMinuteRate * rateFactor,
           mean_rate = timer.getMeanRate * rateFactor,
           duration_units = "seconds",
-          rate_units = "calls/second")
+          rate_units = "calls/second"
+        )
     }
 
-    NewMetrics(
-      version = "4.0.0",
-      counters = counters,
-      gauges = gauges,
-      histograms = histograms,
-      meters = meters,
-      timers = timers)
+    NewMetrics(version = "4.0.0", counters = counters, gauges = gauges, histograms = histograms, meters = meters, timers = timers)
   }
 }
 

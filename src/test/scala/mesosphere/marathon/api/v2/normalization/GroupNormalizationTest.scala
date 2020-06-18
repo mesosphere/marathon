@@ -17,9 +17,14 @@ class GroupNormalizationTest extends UnitTest {
       val invalidUpdate = raml.GroupUpdate(
         id = Some("/prod"),
         enforceRole = Some(true),
-        groups = Some(Set(raml.GroupUpdate(
-          id = Some("second"), enforceRole = Some(true) // This is invalid
-        )))
+        groups = Some(
+          Set(
+            raml.GroupUpdate(
+              id = Some("second"),
+              enforceRole = Some(true) // This is invalid
+            )
+          )
+        )
       )
 
       val normalized = GroupNormalization(config, RootGroup.empty()).updateNormalization(AbsolutePathId("/prod")).normalized(invalidUpdate)

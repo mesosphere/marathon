@@ -63,13 +63,14 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       Given("some initial instances")
       val (instanceChangesInput, instanceChanges) = Source.queue[InstanceChange](16, OverflowStrategy.fail).preMaterialize()
       val testInstanceScheduled = Instance.scheduled(testApp)
-      val snapshot = InstancesSnapshot(Seq(
-        TestInstanceBuilder.newBuilderForRunSpec(testApp).addTaskStaged(Timestamp.now()).getInstance(),
-        testInstanceScheduled,
-        TestInstanceBuilder.newBuilderForRunSpec(testApp).addTaskRunning().getInstance()))
-      val f = new Fixture(
-        instancesSnapshot = snapshot,
-        instanceChanges = instanceChanges)
+      val snapshot = InstancesSnapshot(
+        Seq(
+          TestInstanceBuilder.newBuilderForRunSpec(testApp).addTaskStaged(Timestamp.now()).getInstance(),
+          testInstanceScheduled,
+          TestInstanceBuilder.newBuilderForRunSpec(testApp).addTaskRunning().getInstance()
+        )
+      )
+      val f = new Fixture(instancesSnapshot = snapshot, instanceChanges = instanceChanges)
 
       When("the actor initializes")
       f.actorRef.start()
@@ -82,7 +83,8 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       f.verifyExplicitRevive(Mockito.timeout(5000))
 
       When("the actor gets notified of the Scheduled instance becoming Staging")
-      val testInstanceStaging = TestInstanceBuilder.newBuilderForRunSpec(testApp, instanceId = testInstanceScheduled.instanceId).addTaskStaged().getInstance()
+      val testInstanceStaging =
+        TestInstanceBuilder.newBuilderForRunSpec(testApp, instanceId = testInstanceScheduled.instanceId).addTaskStaged().getInstance()
       instanceChangesInput.offer(InstanceUpdated(testInstanceStaging, None, Nil)).futureValue
 
       Then("suppress offers is called")
@@ -94,9 +96,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       Given("no initial instances")
       val (instanceChangesInput, instanceChanges) = Source.queue[InstanceChange](16, OverflowStrategy.fail).preMaterialize()
       val snapshot = InstancesSnapshot(Nil)
-      val f = new Fixture(
-        instancesSnapshot = snapshot,
-        instanceChanges = instanceChanges)
+      val f = new Fixture(instancesSnapshot = snapshot, instanceChanges = instanceChanges)
 
       When("the actor initializes")
       f.actorRef.start()
@@ -119,7 +119,8 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       f.verifyExplicitRevive()
 
       When("the actor gets notified of the first instance becoming Staging")
-      val instance1Staging = TestInstanceBuilder.newBuilderForRunSpec(testApp, instanceId = instance1.instanceId).addTaskStaged().getInstance()
+      val instance1Staging =
+        TestInstanceBuilder.newBuilderForRunSpec(testApp, instanceId = instance1.instanceId).addTaskStaged().getInstance()
       instanceChangesInput.offer(InstanceUpdated(instance1Staging, None, Nil)).futureValue
 
       And("the actor gets notified of the second instance becoming Gone")
@@ -137,7 +138,8 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed] = StreamHelpers.sourceNever,
       val defaultRole: String = "role",
       enableSuppress: Boolean = true,
-      val invocationTimeout: VerificationMode = Mockito.timeout(1000).atLeastOnce()) {
+      val invocationTimeout: VerificationMode = Mockito.timeout(1000).atLeastOnce()
+  ) {
 
     val instanceUpdates: InstanceTracker.InstanceUpdates = Source.single(instancesSnapshot -> instanceChanges)
     implicit val mat: ActorMaterializer = ActorMaterializer()
@@ -151,8 +153,16 @@ class ReviveOffersActorTest extends AkkaUnitTest {
     val initialFrameworkInfo = FrameworkInfo.newBuilder().setUser("test").setName("test").build
 
     lazy val actorRef: TestActorRef[ReviveOffersActor] = TestActorRef[ReviveOffersActor](
-      ReviveOffersActor.props(metrics, Future.successful(initialFrameworkInfo), defaultRole, minReviveOffersInterval = 500.millis,
-        instanceUpdates = instanceUpdates, rateLimiterUpdates = delayUpdates, driverHolder = driverHolder, enableSuppress = enableSuppress)
+      ReviveOffersActor.props(
+        metrics,
+        Future.successful(initialFrameworkInfo),
+        defaultRole,
+        minReviveOffersInterval = 500.millis,
+        instanceUpdates = instanceUpdates,
+        rateLimiterUpdates = delayUpdates,
+        driverHolder = driverHolder,
+        enableSuppress = enableSuppress
+      )
     )
 
     def verifyUnsuppress(): Unit = {

@@ -33,7 +33,8 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val f = new Fixture
 
       val appId = AbsolutePathId("/test")
-      val offer = MarathonTestHelper.makeBasicOffer()
+      val offer = MarathonTestHelper
+        .makeBasicOffer()
         .setHostname(f.defaultHostName)
         .setSlaveId(SlaveID("some slave ID"))
         .build()
@@ -72,7 +73,13 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       )
 
       val expectedState = instance.state.copy(condition = Condition.Provisioned)
-      val provisionOp = InstanceUpdateOperation.Provision(expectedTaskId.instanceId, expectedAgentInfo, app, Map(expectedTaskId -> expectedTask), expectedState.since)
+      val provisionOp = InstanceUpdateOperation.Provision(
+        expectedTaskId.instanceId,
+        expectedAgentInfo,
+        app,
+        Map(expectedTaskId -> expectedTask),
+        expectedState.since
+      )
       matched.instanceOp.stateOp should be(provisionOp)
     }
 
@@ -115,10 +122,12 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val f = new Fixture
       val pod = PodDefinition(
         AbsolutePathId("/test-pod"),
-        containers = Seq(MesosContainer(
-          name = "first",
-          resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
-          volumeMounts = Seq(VolumeMount(volumeName = Some("pst"), mountPath = "persistent-volume")))
+        containers = Seq(
+          MesosContainer(
+            name = "first",
+            resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
+            volumeMounts = Seq(VolumeMount(volumeName = Some("pst"), mountPath = "persistent-volume"))
+          )
         ),
         volumes = Seq(PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(10))),
         role = "test"
@@ -146,10 +155,12 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val reservedInstance = f.scheduledReservedInstance(app.id, localVolumeIdMatch)
       val reservedTaskId = Task.Id(reservedInstance.instanceId)
       val offer = f.offerWithVolumes(
-        reservedTaskId, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
+        reservedTaskId,
+        localVolumeIdLaunched,
+        localVolumeIdUnwanted,
+        localVolumeIdMatch
       )
-      val runningInstances = Instance.instancesById(Seq(
-        f.residentLaunchedInstance(app.id, localVolumeIdLaunched)))
+      val runningInstances = Instance.instancesById(Seq(f.residentLaunchedInstance(app.id, localVolumeIdLaunched)))
 
       When("We infer the taskOp")
       val request = InstanceOpFactory.Request(offer, runningInstances, scheduledInstances = NonEmptyIterable(reservedInstance))
@@ -166,7 +177,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val taskInfoResources = matched.instanceOp.offerOperations.head.getLaunch.getTaskInfos(0).getResourcesList
       val found = taskInfoResources.asScala.find { resource =>
         resource.hasDisk && resource.getDisk.hasPersistence &&
-          resource.getDisk.getPersistence.getId == localVolumeIdMatch.idString
+        resource.getDisk.getPersistence.getId == localVolumeIdMatch.idString
       }
       found should not be empty
     }
@@ -212,17 +223,13 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val pod: PodDefinition = PodDefinition(
         id = podId,
         executorResources = ExecutorResources(disk = 0).fromRaml,
-        containers = Seq(
-          MesosContainer(
-            resources = Resources(cpus = 0.1, mem = 32.0, disk = 0),
-            name = "first")),
-        role = "*")
+        containers = Seq(MesosContainer(resources = Resources(cpus = 0.1, mem = 32.0, disk = 0), name = "first")),
+        role = "*"
+      )
       val scheduledInstance = Instance.scheduled(pod, Instance.Id.forRunSpec(podId))
 
-      val request = InstanceOpFactory.Request(
-        offer,
-        Map(instance.instanceId -> instance),
-        scheduledInstances = NonEmptyIterable(scheduledInstance))
+      val request =
+        InstanceOpFactory.Request(offer, Map(instance.instanceId -> instance), scheduledInstances = NonEmptyIterable(scheduledInstance))
 
       val matched = inside(f.instanceOpFactory.matchOfferRequest(request)) {
         case matched: OfferMatchResult.Match => matched
@@ -230,7 +237,9 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
       val Some(op) = matched.instanceOp.offerOperations.headOption
 
-      val envValue = op.getLaunchGroup.getTaskGroup.getTasks(0).getCommand.getEnvironment.getVariablesList.asScala.collect { case pair if pair.getName == TaskBuilderConstants.MARATHON_APP_ENFORCE_GROUP_ROLE => pair.getValue }
+      val envValue = op.getLaunchGroup.getTaskGroup.getTasks(0).getCommand.getEnvironment.getVariablesList.asScala.collect {
+        case pair if pair.getName == TaskBuilderConstants.MARATHON_APP_ENFORCE_GROUP_ROLE => pair.getValue
+      }
       envValue.head shouldBe "TRUE"
     }
 
@@ -243,10 +252,8 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val app: AppDefinition = AppDefinition(id = appId, portDefinitions = List(), role = "*")
       val scheduledInstance = Instance.scheduled(app, Instance.Id.forRunSpec(appId))
 
-      val request = InstanceOpFactory.Request(
-        offer,
-        Map(instance.instanceId -> instance),
-        scheduledInstances = NonEmptyIterable(scheduledInstance))
+      val request =
+        InstanceOpFactory.Request(offer, Map(instance.instanceId -> instance), scheduledInstances = NonEmptyIterable(scheduledInstance))
 
       val matched = inside(f.instanceOpFactory.matchOfferRequest(request)) {
         case matched: OfferMatchResult.Match => matched
@@ -254,7 +261,9 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
       val Some(op) = matched.instanceOp.offerOperations.headOption
 
-      val envValue = op.getLaunch.getTaskInfos(0).getCommand.getEnvironment.getVariablesList.asScala.collect { case pair if pair.getName == TaskBuilderConstants.MARATHON_APP_ENFORCE_GROUP_ROLE => pair.getValue }
+      val envValue = op.getLaunch.getTaskInfos(0).getCommand.getEnvironment.getVariablesList.asScala.collect {
+        case pair if pair.getName == TaskBuilderConstants.MARATHON_APP_ENFORCE_GROUP_ROLE => pair.getValue
+      }
       envValue.head shouldBe "TRUE"
     }
   }

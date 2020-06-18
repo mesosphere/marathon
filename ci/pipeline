@@ -45,6 +45,8 @@ def compileAndTest(logFileName: String): Unit = utils.stage("Compile and Test") 
   def run(cmd: String *) = utils.runWithTimeout(30.minutes, logFileName)(cmd)
   def runIn(workDirectory: Path)(cmd: String *) = utils.runWithTimeout(5.minutes, logFileName, workDirectory)(cmd)
 
+  run("sbt", "scalafmtCheck", "test:scalafmtCheck")
+
   // Run type-generator compile before anything else.
   runIn(pwd / "type-generator")("sbt", "compile")
 

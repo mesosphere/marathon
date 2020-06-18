@@ -31,18 +31,25 @@ case class InstancesSnapshot(instances: Seq[Instance]) extends InstanceChangeOrS
   * An event notifying of an [[Instance]] change.
   */
 sealed trait InstanceChange extends InstanceChangeOrSnapshot with Product with Serializable {
+
   /** The affected [[Instance]] */
   val instance: Instance
+
   /** Id of the affected [[Instance]] */
   val id: Instance.Id = instance.instanceId
+
   /** version of the related run spec */
   val runSpecVersion: Timestamp = instance.runSpecVersion
+
   /** Condition of the [[Instance]] */
   val condition: Condition = instance.state.condition
+
   /** Id of the related [[mesosphere.marathon.state.RunSpec]] */
   val runSpecId: AbsolutePathId = id.runSpecId
+
   /** the previous state of this instance */
   def lastState: Option[InstanceState]
+
   /** Events that should be published for this change */
   def events: Seq[MarathonEvent]
 
@@ -50,13 +57,7 @@ sealed trait InstanceChange extends InstanceChangeOrSnapshot with Product with S
 }
 
 /** The given instance has been created or updated. */
-case class InstanceUpdated(
-    instance: Instance,
-    lastState: Option[InstanceState],
-    events: Seq[MarathonEvent]) extends InstanceChange
+case class InstanceUpdated(instance: Instance, lastState: Option[InstanceState], events: Seq[MarathonEvent]) extends InstanceChange
 
 /** The given instance has been deleted. */
-case class InstanceDeleted(
-    instance: Instance,
-    lastState: Option[InstanceState],
-    events: Seq[MarathonEvent]) extends InstanceChange
+case class InstanceDeleted(instance: Instance, lastState: Option[InstanceState], events: Seq[MarathonEvent]) extends InstanceChange

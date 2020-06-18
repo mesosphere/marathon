@@ -29,11 +29,7 @@ object RoleSettings extends StrictLogging {
     *
     * @return A data set with valid roles, default role and a flag if the role should be enforced
     */
-  def forService(
-    config: MarathonConf,
-    servicePathId: AbsolutePathId,
-    rootGroup: RootGroup,
-    forceRoleUpdate: Boolean): RoleSettings = {
+  def forService(config: MarathonConf, servicePathId: AbsolutePathId, rootGroup: RootGroup, forceRoleUpdate: Boolean): RoleSettings = {
     val defaultRole = config.mesosRole()
 
     if (servicePathId.parent.isRoot) {
@@ -57,7 +53,9 @@ object RoleSettings extends StrictLogging {
         // If the topLevelGroup is empty, we might have run into the case where a user creates
         // a group with runSpecs in a single action. The group isn't yet created, therefore we can't lookup
         // the enforceRole flag.
-        logger.warn(s"Calculating role settings for $servicePathId, but unable to access top level group $topLevelGroupPath, using default for enforceRole flag: $enforceRole")
+        logger.warn(
+          s"Calculating role settings for $servicePathId, but unable to access top level group $topLevelGroupPath, using default for enforceRole flag: $enforceRole"
+        )
       }
 
       // Look up any previously set group on the specified runSpec, and add that to the validRoles set if it exists
@@ -65,12 +63,22 @@ object RoleSettings extends StrictLogging {
 
       if (enforceRole) {
         // With enforceRole, we only allow the service to use the group-role or an existing role
-        RoleSettings(validRoles = Set(topLevelGroupRole) ++ maybeExistingRole, defaultRole = topLevelGroupRole, previousRole = oldServiceRole, forceRoleUpdate = forceRoleUpdate)
+        RoleSettings(
+          validRoles = Set(topLevelGroupRole) ++ maybeExistingRole,
+          defaultRole = topLevelGroupRole,
+          previousRole = oldServiceRole,
+          forceRoleUpdate = forceRoleUpdate
+        )
       } else {
         // Without enforce role, we allow default role, group role, and the already existing role
         // We always default to the configured Mesos default role.
         val defaultRoleToUse = if (enforceRole) topLevelGroupRole else defaultRole
-        RoleSettings(validRoles = Set(defaultRole, topLevelGroupRole) ++ maybeExistingRole, defaultRole = defaultRoleToUse, previousRole = oldServiceRole, forceRoleUpdate = forceRoleUpdate)
+        RoleSettings(
+          validRoles = Set(defaultRole, topLevelGroupRole) ++ maybeExistingRole,
+          defaultRole = defaultRoleToUse,
+          previousRole = oldServiceRole,
+          forceRoleUpdate = forceRoleUpdate
+        )
       }
     }
   }

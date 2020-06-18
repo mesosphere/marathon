@@ -41,12 +41,9 @@ trait HttpTransferMetrics {
   * currently (and lamentably) tied to classes.
   */
 class HTTPMetricsFilter(metrics: Metrics) extends HttpTransferMetrics {
-  override val responsesSizeGzippedMetric = metrics.counter(
-    "http.responses.size.gzipped", DropwizardUnitOfMeasurement.Memory)
-  override val requestsSizeMetric = metrics.counter(
-    "http.requests.size", DropwizardUnitOfMeasurement.Memory)
-  override val responsesSizeMetric = metrics.counter(
-    "http.responses.size", DropwizardUnitOfMeasurement.Memory)
+  override val responsesSizeGzippedMetric = metrics.counter("http.responses.size.gzipped", DropwizardUnitOfMeasurement.Memory)
+  override val requestsSizeMetric = metrics.counter("http.requests.size", DropwizardUnitOfMeasurement.Memory)
+  override val responsesSizeMetric = metrics.counter("http.responses.size", DropwizardUnitOfMeasurement.Memory)
 }
 
 class HttpTransferMetricsHandler(httpMetrics: HttpTransferMetrics) extends AbstractHandler with StrictLogging {
@@ -59,12 +56,13 @@ class HttpTransferMetricsHandler(httpMetrics: HttpTransferMetrics) extends Abstr
       event.getAsyncContext.addListener(this)
     }
 
-    override def onComplete(event: AsyncEvent): Unit = event match {
-      case ace: AsyncContextEvent =>
-        updateResponse(ace.getHttpChannelState.getBaseRequest)
-      case _ =>
-        logger.error(s"${event.getClass} wasn't an AsyncContextEvent (We should see this)")
-    }
+    override def onComplete(event: AsyncEvent): Unit =
+      event match {
+        case ace: AsyncContextEvent =>
+          updateResponse(ace.getHttpChannelState.getBaseRequest)
+        case _ =>
+          logger.error(s"${event.getClass} wasn't an AsyncContextEvent (We should see this)")
+      }
   }
 
   override def handle(path: String, baseRequest: Request, request: HttpServletRequest, response: HttpServletResponse): Unit = {

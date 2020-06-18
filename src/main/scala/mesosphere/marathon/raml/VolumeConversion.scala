@@ -49,15 +49,17 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   }
 
   implicit val volumeRamlWriter: Writes[state.Volume, PodVolume] = Writes {
-    case e: state.EphemeralVolume => raml.PodEphemeralVolume(
-      name = e.name.getOrElse(throw new IllegalArgumentException("name must not be empty")))
-    case h: state.HostVolume => raml.PodHostVolume(
-      name = h.name.getOrElse(throw new IllegalArgumentException("name must not be empty")), host = h.hostPath)
-    case s: state.SecretVolume => raml.PodSecretVolume(
-      name = s.name.getOrElse(throw new IllegalArgumentException("name must not be empty")), secret = s.secret)
-    case p: state.PersistentVolume => raml.PodPersistentVolume(
-      name = p.name.getOrElse(throw new IllegalArgumentException("name must not be empty")),
-      persistent = p.persistent.toRaml)
+    case e: state.EphemeralVolume =>
+      raml.PodEphemeralVolume(name = e.name.getOrElse(throw new IllegalArgumentException("name must not be empty")))
+    case h: state.HostVolume =>
+      raml.PodHostVolume(name = h.name.getOrElse(throw new IllegalArgumentException("name must not be empty")), host = h.hostPath)
+    case s: state.SecretVolume =>
+      raml.PodSecretVolume(name = s.name.getOrElse(throw new IllegalArgumentException("name must not be empty")), secret = s.secret)
+    case p: state.PersistentVolume =>
+      raml.PodPersistentVolume(
+        name = p.name.getOrElse(throw new IllegalArgumentException("name must not be empty")),
+        persistent = p.persistent.toRaml
+      )
   }
 
   implicit val volumeModeWrites: Writes[Mesos.Volume.Mode, ReadMode] = Writes {
@@ -85,12 +87,16 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       case DiskType.Path => PersistentVolumeType.Path
       case DiskType.Root => PersistentVolumeType.Root
     })
-    PersistentVolumeInfo(`type` = pvType, size = pv.size, maxSize = pv.maxSize, profileName = pv.profileName,
-      constraints = pv.constraints.toRaml[Set[Seq[String]]])
+    PersistentVolumeInfo(
+      `type` = pvType,
+      size = pv.size,
+      maxSize = pv.maxSize,
+      profileName = pv.profileName,
+      constraints = pv.constraints.toRaml[Set[Seq[String]]]
+    )
   }
 
   implicit val volumeWrites: Writes[state.VolumeWithMount[Volume], AppVolume] = Writes { volumeWithMount =>
-
     implicit val externalVolumeWrites: Writes[state.ExternalVolumeInfo, ExternalVolumeInfo] = Writes { ev =>
       ExternalVolumeInfo(size = ev.size, name = Some(ev.name), provider = Some(ev.provider), options = ev.options, shared = ev.shared)
     }
@@ -98,22 +104,16 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     val volume = volumeWithMount.volume
     val mount = volumeWithMount.mount
     volume match {
-      case dv: state.HostVolume => AppHostVolume(
-        containerPath = mount.mountPath,
-        hostPath = dv.hostPath,
-        mode = mount.readOnly.toRaml)
-      case ev: state.ExternalVolume => AppExternalVolume(
-        containerPath = mount.mountPath,
-        external = ev.external.toRaml,
-        mode = mount.readOnly.toRaml)
-      case pv: state.PersistentVolume => AppPersistentVolume(
-        containerPath = mount.mountPath,
-        persistent = pv.persistent.toRaml,
-        mode = mount.readOnly.toRaml)
-      case sv: state.SecretVolume => AppSecretVolume(
-        containerPath = mount.mountPath,
-        secret = sv.secret
-      )
+      case dv: state.HostVolume => AppHostVolume(containerPath = mount.mountPath, hostPath = dv.hostPath, mode = mount.readOnly.toRaml)
+      case ev: state.ExternalVolume =>
+        AppExternalVolume(containerPath = mount.mountPath, external = ev.external.toRaml, mode = mount.readOnly.toRaml)
+      case pv: state.PersistentVolume =>
+        AppPersistentVolume(containerPath = mount.mountPath, persistent = pv.persistent.toRaml, mode = mount.readOnly.toRaml)
+      case sv: state.SecretVolume =>
+        AppSecretVolume(
+          containerPath = mount.mountPath,
+          secret = sv.secret
+        )
     }
   }
 
@@ -128,16 +128,13 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   implicit val volumeExternalReads: Reads[AppExternalVolume, state.VolumeWithMount[Volume]] = Reads { volumeRaml =>
     val info = state.ExternalVolumeInfo(
       size = volumeRaml.external.size,
-      name = volumeRaml.external.name.getOrElse(
-        throw SerializationFailedException("external volume requires a name")),
-      provider = volumeRaml.external.provider.getOrElse(
-        throw SerializationFailedException("external volume requires a provider")),
+      name = volumeRaml.external.name.getOrElse(throw SerializationFailedException("external volume requires a name")),
+      provider = volumeRaml.external.provider.getOrElse(throw SerializationFailedException("external volume requires a provider")),
       options = volumeRaml.external.options,
       shared = volumeRaml.external.shared
     )
     val volume = state.ExternalVolume(name = None, external = info)
-    val mount = state.VolumeMount(
-      volumeName = None, mountPath = volumeRaml.containerPath, readOnly = volumeRaml.mode.fromRaml)
+    val mount = state.VolumeMount(volumeName = None, mountPath = volumeRaml.containerPath, readOnly = volumeRaml.mode.fromRaml)
     state.VolumeWithMount[Volume](volume = volume, mount = mount)
   }
 
@@ -153,7 +150,8 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
     constraints.map { constraint =>
       (constraint.headOption, constraint.lift(1), constraint.lift(2)) match {
         case (Some("path"), Some("LIKE"), Some(value)) =>
-          Protos.Constraint.newBuilder()
+          Protos.Constraint
+            .newBuilder()
             .setField("path")
             .setOperator(Protos.Constraint.Operator.LIKE)
             .setValue(value)
@@ -174,15 +172,13 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       constraints = volumeRaml.persistent.constraints.fromRaml
     )
     val volume = state.PersistentVolume(name = None, persistent = info)
-    val mount = state.VolumeMount(
-      volumeName = None, mountPath = volumeRaml.containerPath, readOnly = volumeRaml.mode.fromRaml)
+    val mount = state.VolumeMount(volumeName = None, mountPath = volumeRaml.containerPath, readOnly = volumeRaml.mode.fromRaml)
     state.VolumeWithMount[Volume](volume = volume, mount = mount)
   }
 
   implicit val volumeHostReads: Reads[AppHostVolume, state.VolumeWithMount[Volume]] = Reads { volumeRaml =>
     val volume = state.HostVolume(name = None, hostPath = volumeRaml.hostPath)
-    val mount = state.VolumeMount(
-      volumeName = None, mountPath = volumeRaml.containerPath, readOnly = volumeRaml.mode.fromRaml)
+    val mount = state.VolumeMount(volumeName = None, mountPath = volumeRaml.containerPath, readOnly = volumeRaml.mode.fromRaml)
     state.VolumeWithMount[Volume](volume = volume, mount = mount)
   }
 
@@ -201,7 +197,8 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         options = volume.whenOrElse(
           _.getOptionsCount > 0,
           _.getOptionsList.asScala.iterator.map { x => x.getKey -> x.getValue }.toMap,
-          ExternalVolumeInfo.DefaultOptions),
+          ExternalVolumeInfo.DefaultOptions
+        ),
         shared = volume.when(_.hasShared, _.getShared).getOrElse(ExternalVolumeInfo.DefaultShared)
       )
     }
@@ -226,30 +223,35 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
         constraints = volume.whenOrElse(
           _.getConstraintsCount > 0,
           _.getConstraintsList.asScala.iterator.map(_.toRaml[Seq[String]]).toSet,
-          PersistentVolumeInfo.DefaultConstraints)
+          PersistentVolumeInfo.DefaultConstraints
+        )
       )
     }
 
   implicit val appVolumeProtoRamlWriter: Writes[Protos.Volume, AppVolume] = Writes {
-    case vol if vol.hasExternal => AppExternalVolume(
-      containerPath = vol.getContainerPath,
-      external = vol.getExternal.toRaml,
-      mode = vol.getMode.toRaml
-    )
-    case vol if vol.hasPersistent => AppPersistentVolume(
-      containerPath = vol.getContainerPath,
-      persistent = vol.getPersistent.toRaml,
-      mode = vol.getMode.toRaml
-    )
-    case vol if vol.hasSecret => AppSecretVolume(
-      containerPath = vol.getContainerPath,
-      secret = vol.getSecret.getSecret
-    )
-    case vol => AppHostVolume(
-      containerPath = vol.getContainerPath,
-      hostPath = vol.getHostPath,
-      mode = vol.getMode.toRaml
-    )
+    case vol if vol.hasExternal =>
+      AppExternalVolume(
+        containerPath = vol.getContainerPath,
+        external = vol.getExternal.toRaml,
+        mode = vol.getMode.toRaml
+      )
+    case vol if vol.hasPersistent =>
+      AppPersistentVolume(
+        containerPath = vol.getContainerPath,
+        persistent = vol.getPersistent.toRaml,
+        mode = vol.getMode.toRaml
+      )
+    case vol if vol.hasSecret =>
+      AppSecretVolume(
+        containerPath = vol.getContainerPath,
+        secret = vol.getSecret.getSecret
+      )
+    case vol =>
+      AppHostVolume(
+        containerPath = vol.getContainerPath,
+        hostPath = vol.getHostPath,
+        mode = vol.getMode.toRaml
+      )
   }
 }
 

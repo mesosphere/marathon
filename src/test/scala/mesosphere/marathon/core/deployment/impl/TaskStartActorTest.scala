@@ -278,9 +278,22 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
     }
 
     def startActor(app: AppDefinition, scaleTo: Int, promise: Promise[Unit]): TestActorRef[TaskStartActor] =
-      TestActorRef(childSupervisor(TaskStartActor.props(
-        deploymentManager.ref, status, launchQueue, instanceTracker, system.eventStream, readinessCheckExecutor,
-        app, scaleTo, promise), "Test-TaskStartActor"))
+      TestActorRef(
+        childSupervisor(
+          TaskStartActor.props(
+            deploymentManager.ref,
+            status,
+            launchQueue,
+            instanceTracker,
+            system.eventStream,
+            readinessCheckExecutor,
+            app,
+            scaleTo,
+            promise
+          ),
+          "Test-TaskStartActor"
+        )
+      )
 
     // Prevents the TaskActor from restarting too many times (filling the log with exceptions) similar to how it's
     // parent actor (DeploymentActor) does it.
@@ -288,18 +301,21 @@ class TaskStartActorTest extends AkkaUnitTest with Eventually {
       import scala.concurrent.duration._
 
       BackoffSupervisor.props(
-        Backoff.onFailure(
-          childProps = props,
-          childName = name,
-          minBackoff = 5.seconds,
-          maxBackoff = 30.seconds,
-          randomFactor = 0.2 // adds 20% "noise" to vary the intervals slightly
-        ).withSupervisorStrategy(
-          OneForOneStrategy() {
-            case NonFatal(_) => SupervisorStrategy.Restart
-            case _ => SupervisorStrategy.Escalate
-          }
-        ))
+        Backoff
+          .onFailure(
+            childProps = props,
+            childName = name,
+            minBackoff = 5.seconds,
+            maxBackoff = 30.seconds,
+            randomFactor = 0.2 // adds 20% "noise" to vary the intervals slightly
+          )
+          .withSupervisorStrategy(
+            OneForOneStrategy() {
+              case NonFatal(_) => SupervisorStrategy.Restart
+              case _ => SupervisorStrategy.Escalate
+            }
+          )
+      )
     }
   }
 

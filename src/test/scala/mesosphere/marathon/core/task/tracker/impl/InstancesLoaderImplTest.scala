@@ -110,7 +110,8 @@ class InstancesLoaderImplTest extends AkkaUnitTest {
 
       Then("the resulting data includes an instance for app 2 with the latest run spec")
       // we do not need to verify the mocked calls because the only way to get the data is to perform the calls
-      val expectedData = InstanceTracker.InstancesBySpec.forInstances(Seq(app1Instance1, app1Instance2, app2Instance1.copy(runSpec = app2Newer)))
+      val expectedData =
+        InstanceTracker.InstancesBySpec.forInstances(Seq(app1Instance1, app1Instance2, app2Instance1.copy(runSpec = app2Newer)))
       loaded.futureValue should equal(expectedData)
     }
 

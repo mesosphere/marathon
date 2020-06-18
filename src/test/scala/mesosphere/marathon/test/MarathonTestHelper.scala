@@ -51,18 +51,23 @@ object MarathonTestHelper {
   }
 
   def defaultConfig(
-    maxInstancesPerOffer: Int = 1,
-    minReviveOffersInterval: Long = 100,
-    mesosRole: Option[String] = None,
-    envVarsPrefix: Option[String] = None,
-    maxZkNodeSize: Option[Int] = None,
-    internalStorageBackend: Option[String] = None): AllConf = {
+      maxInstancesPerOffer: Int = 1,
+      minReviveOffersInterval: Long = 100,
+      mesosRole: Option[String] = None,
+      envVarsPrefix: Option[String] = None,
+      maxZkNodeSize: Option[Int] = None,
+      internalStorageBackend: Option[String] = None
+  ): AllConf = {
 
     var args = Seq(
-      "--master", "127.0.0.1:5050",
-      "--max_instances_per_offer", maxInstancesPerOffer.toString,
-      "--min_revive_offers_interval", minReviveOffersInterval.toString,
-      "--mesos_authentication_principal", "marathon"
+      "--master",
+      "127.0.0.1:5050",
+      "--max_instances_per_offer",
+      maxInstancesPerOffer.toString,
+      "--min_revive_offers_interval",
+      minReviveOffersInterval.toString,
+      "--mesos_authentication_principal",
+      "marathon"
     )
 
     mesosRole.foreach(args ++= Seq("--mesos_role", _))
@@ -75,9 +80,16 @@ object MarathonTestHelper {
   val frameworkID: FrameworkID = FrameworkID("marathon")
   val frameworkId: FrameworkId = FrameworkId("").mergeFromProto(frameworkID)
 
-  def makeBasicOffer(cpus: Double = 4.0, mem: Double = 16000, disk: Double = 1.0,
-    beginPort: Int = 31000, endPort: Int = 32000, role: String = ResourceRole.Unreserved,
-    reservation: Option[ReservationLabels] = None, gpus: Double = 0.0): Offer.Builder = {
+  def makeBasicOffer(
+      cpus: Double = 4.0,
+      mem: Double = 16000,
+      disk: Double = 1.0,
+      beginPort: Int = 31000,
+      endPort: Int = 32000,
+      role: String = ResourceRole.Unreserved,
+      reservation: Option[ReservationLabels] = None,
+      gpus: Double = 0.0
+  ): Offer.Builder = {
 
     require(role != ResourceRole.Unreserved || reservation.isEmpty, "reserved resources cannot have role *")
 
@@ -86,7 +98,8 @@ object MarathonTestHelper {
         case Some(reservationWithLabels) =>
           val labels = reservationWithLabels.mesosLabels
           val reservation =
-            Mesos.Resource.ReservationInfo.newBuilder()
+            Mesos.Resource.ReservationInfo
+              .newBuilder()
               .setPrincipal("marathon")
               .setLabels(labels)
           resource.toBuilder.setReservation(reservation).build()
@@ -100,11 +113,15 @@ object MarathonTestHelper {
     val memResource = heedReserved(ScalarResource(Resource.MEM, mem, role = role))
     val diskResource = heedReserved(ScalarResource(Resource.DISK, disk, role = role))
     val portsResource = if (beginPort <= endPort) {
-      Some(heedReserved(RangesResource(
-        Resource.PORTS,
-        Seq(Range(beginPort.toLong, endPort.toLong)),
-        role
-      )))
+      Some(
+        heedReserved(
+          RangesResource(
+            Resource.PORTS,
+            Seq(Range(beginPort.toLong, endPort.toLong)),
+            role
+          )
+        )
+      )
     } else {
       None
     }
@@ -127,7 +144,8 @@ object MarathonTestHelper {
   }
 
   def makeBasicOfferWithUnavailability(startTime: Timestamp, duration: FiniteDuration = Duration(5, MINUTES)): Offer.Builder = {
-    val unavailableOfferBuilder = Unavailability.newBuilder()
+    val unavailableOfferBuilder = Unavailability
+      .newBuilder()
       .setStart(TimeInfo.newBuilder().setNanoseconds(startTime.nanos))
 
     if (duration.isFinite) {
@@ -138,11 +156,9 @@ object MarathonTestHelper {
   }
 
   def mountSource(path: Option[String]): Mesos.Resource.DiskInfo.Source = {
-    val b = Mesos.Resource.DiskInfo.Source.newBuilder.
-      setType(Mesos.Resource.DiskInfo.Source.Type.MOUNT)
+    val b = Mesos.Resource.DiskInfo.Source.newBuilder.setType(Mesos.Resource.DiskInfo.Source.Type.MOUNT)
     path.foreach { p =>
-      b.setMount(Mesos.Resource.DiskInfo.Source.Mount.newBuilder.
-        setRoot(p))
+      b.setMount(Mesos.Resource.DiskInfo.Source.Mount.newBuilder.setRoot(p))
     }
 
     b.build
@@ -153,21 +169,16 @@ object MarathonTestHelper {
 
   def mountDisk(path: Option[String]): Mesos.Resource.DiskInfo = {
     // val source = Mesos.Resource.DiskInfo.sour
-    Mesos.Resource.DiskInfo.newBuilder.
-      setSource(
-        mountSource(path)).
-        build
+    Mesos.Resource.DiskInfo.newBuilder.setSource(mountSource(path)).build
   }
 
   def mountDisk(path: String): Mesos.Resource.DiskInfo =
     mountDisk(Some(path))
 
   def pathSource(path: Option[String]): Mesos.Resource.DiskInfo.Source = {
-    val b = Mesos.Resource.DiskInfo.Source.newBuilder.
-      setType(Mesos.Resource.DiskInfo.Source.Type.PATH)
+    val b = Mesos.Resource.DiskInfo.Source.newBuilder.setType(Mesos.Resource.DiskInfo.Source.Type.PATH)
     path.foreach { p =>
-      b.setPath(Mesos.Resource.DiskInfo.Source.Path.newBuilder.
-        setRoot(p))
+      b.setPath(Mesos.Resource.DiskInfo.Source.Path.newBuilder.setRoot(p))
     }
 
     b.build
@@ -178,43 +189,38 @@ object MarathonTestHelper {
 
   def pathDisk(path: Option[String]): Mesos.Resource.DiskInfo = {
     // val source = Mesos.Resource.DiskInfo.sour
-    Mesos.Resource.DiskInfo.newBuilder.
-      setSource(
-        pathSource(path)).
-        build
+    Mesos.Resource.DiskInfo.newBuilder.setSource(pathSource(path)).build
   }
 
   def pathDisk(path: String): Mesos.Resource.DiskInfo =
     pathDisk(Some(path))
 
   def rawSource: Mesos.Resource.DiskInfo.Source = {
-    val b = Mesos.Resource.DiskInfo.Source.newBuilder.
-      setType(Mesos.Resource.DiskInfo.Source.Type.RAW)
+    val b = Mesos.Resource.DiskInfo.Source.newBuilder.setType(Mesos.Resource.DiskInfo.Source.Type.RAW)
     b.build
   }
 
   def rawDisk(): Mesos.Resource.DiskInfo = {
-    Mesos.Resource.DiskInfo.newBuilder.
-      setSource(rawSource).
-      build
+    Mesos.Resource.DiskInfo.newBuilder.setSource(rawSource).build
   }
 
   def blockSource: Mesos.Resource.DiskInfo.Source = {
-    val b = Mesos.Resource.DiskInfo.Source.newBuilder.
-      setType(Mesos.Resource.DiskInfo.Source.Type.BLOCK)
+    val b = Mesos.Resource.DiskInfo.Source.newBuilder.setType(Mesos.Resource.DiskInfo.Source.Type.BLOCK)
     b.build
   }
 
   def blockDisk(): Mesos.Resource.DiskInfo = {
-    Mesos.Resource.DiskInfo.newBuilder.
-      setSource(blockSource).
-      build
+    Mesos.Resource.DiskInfo.newBuilder.setSource(blockSource).build
   }
 
   def scalarResource(
-    name: String, d: Double, role: String = ResourceRole.Unreserved,
-    providerId: Option[protos.ResourceProviderID] = None, reservation: Option[ReservationInfo] = None,
-    disk: Option[DiskInfo] = None): Mesos.Resource = {
+      name: String,
+      d: Double,
+      role: String = ResourceRole.Unreserved,
+      providerId: Option[protos.ResourceProviderID] = None,
+      reservation: Option[ReservationInfo] = None,
+      disk: Option[DiskInfo] = None
+  ): Mesos.Resource = {
 
     val builder = Mesos.Resource
       .newBuilder()
@@ -234,10 +240,14 @@ object MarathonTestHelper {
   }
 
   def portsResource(
-    begin: Long, end: Long, role: String = ResourceRole.Unreserved,
-    reservation: Option[ReservationInfo] = None): Mesos.Resource = {
+      begin: Long,
+      end: Long,
+      role: String = ResourceRole.Unreserved,
+      reservation: Option[ReservationInfo] = None
+  ): Mesos.Resource = {
 
-    val ranges = Mesos.Value.Ranges.newBuilder()
+    val ranges = Mesos.Value.Ranges
+      .newBuilder()
       .addRange(Mesos.Value.Range.newBuilder().setBegin(begin).setEnd(end))
 
     val builder = Mesos.Resource
@@ -253,34 +263,43 @@ object MarathonTestHelper {
   }
 
   def reservation(principal: String, labels: Map[String, String] = Map.empty): Mesos.Resource.ReservationInfo = {
-    Mesos.Resource.ReservationInfo.newBuilder()
+    Mesos.Resource.ReservationInfo
+      .newBuilder()
       .setPrincipal(principal)
       .setLabels(labels.toMesosLabels)
       .build()
   }
 
   def constraint(field: String, operator: String, value: Option[String]): Constraint = {
-    val b = Constraint.newBuilder.
-      setField(field).
-      setOperator(Operator.valueOf(operator))
+    val b = Constraint.newBuilder.setField(field).setOperator(Operator.valueOf(operator))
     value.foreach(b.setValue)
     b.build
   }
 
-  def reservedDisk(id: String, size: Double = 4096, role: String = ResourceRole.Unreserved,
-    principal: String = "test", containerPath: String = "/container"): Mesos.Resource.Builder = {
-    Mesos.Resource.newBuilder()
+  def reservedDisk(
+      id: String,
+      size: Double = 4096,
+      role: String = ResourceRole.Unreserved,
+      principal: String = "test",
+      containerPath: String = "/container"
+  ): Mesos.Resource.Builder = {
+    Mesos.Resource
+      .newBuilder()
       .setType(Mesos.Value.Type.SCALAR)
       .setName(Resource.DISK)
       .setScalar(Mesos.Value.Scalar.newBuilder.setValue(size))
       .setRole(role)
       .setReservation(ReservationInfo.newBuilder().setPrincipal(principal))
-      .setDisk(DiskInfo.newBuilder()
-        .setPersistence(DiskInfo.Persistence.newBuilder().setId(id))
-        .setVolume(Mesos.Volume.newBuilder()
-          .setMode(Mesos.Volume.Mode.RW)
-          .setContainerPath(containerPath)
-        )
+      .setDisk(
+        DiskInfo
+          .newBuilder()
+          .setPersistence(DiskInfo.Persistence.newBuilder().setId(id))
+          .setVolume(
+            Mesos.Volume
+              .newBuilder()
+              .setMode(Mesos.Volume.Mode.RW)
+              .setContainerPath(containerPath)
+          )
       ): @silent
   }
 
@@ -289,7 +308,8 @@ object MarathonTestHelper {
       .setFaultDomain(
         FaultDomain.newBuilder
           .setZone(FaultDomain.ZoneInfo.newBuilder.setName(zone))
-          .setRegion(FaultDomain.RegionInfo.newBuilder.setName(region)))
+          .setRegion(FaultDomain.RegionInfo.newBuilder.setName(region))
+      )
       .build
   }
 
@@ -321,8 +341,7 @@ object MarathonTestHelper {
     offerBuilder
   }
 
-  def makeBasicOfferWithRole(cpus: Double, mem: Double, disk: Double,
-    beginPort: Int, endPort: Int, role: String) = {
+  def makeBasicOfferWithRole(cpus: Double, mem: Double, disk: Double, beginPort: Int, endPort: Int, role: String) = {
     val portsResource = RangesResource(
       Resource.PORTS,
       Seq(Range(beginPort.toLong, endPort.toLong)),
@@ -345,7 +364,8 @@ object MarathonTestHelper {
   def makeOneCPUTask(taskId: String): TaskInfo.Builder = makeOneCPUTask(TaskID.newBuilder().setValue(taskId).build())
   def makeOneCPUTask(taskId: Task.Id): TaskInfo.Builder = makeOneCPUTask(TaskID.newBuilder().setValue(taskId.idString).build())
   def makeOneCPUTask(taskId: TaskID): TaskInfo.Builder = {
-    TaskInfo.newBuilder()
+    TaskInfo
+      .newBuilder()
       .setName("true")
       .setTaskId(taskId)
       .setSlaveId(SlaveID("slave1"))
@@ -353,19 +373,21 @@ object MarathonTestHelper {
       .addResources(ScalarResource(Resource.CPUS, 1.0, ResourceRole.Unreserved))
   }
 
-  def makeBasicApp(id: AbsolutePathId = AbsolutePathId("/test-app")) = AppDefinition(
-    id,
-    cmd = Some("sleep 60"),
-    resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
-    executor = "//cmd",
-    portDefinitions = Seq(PortDefinition(0)),
-    role = "*"
-  )
+  def makeBasicApp(id: AbsolutePathId = AbsolutePathId("/test-app")) =
+    AppDefinition(
+      id,
+      cmd = Some("sleep 60"),
+      resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
+      executor = "//cmd",
+      portDefinitions = Seq(PortDefinition(0)),
+      role = "*"
+    )
 
   def createTaskTrackerModule(
-    leadershipModule: LeadershipModule,
-    instanceStore: Option[InstanceRepository] = None,
-    groupStore: Option[GroupRepository] = None)(implicit mat: Materializer): InstanceTrackerModule = {
+      leadershipModule: LeadershipModule,
+      instanceStore: Option[InstanceRepository] = None,
+      groupStore: Option[GroupRepository] = None
+  )(implicit mat: Materializer): InstanceTrackerModule = {
 
     implicit val ctx = ExecutionContext.Implicits.global
     val instanceRepo = instanceStore.getOrElse {
@@ -392,50 +414,66 @@ object MarathonTestHelper {
   }
 
   def createTaskTracker(
-    leadershipModule: LeadershipModule,
-    instanceStore: Option[InstanceRepository] = None,
-    groupStore: Option[GroupRepository] = None)(implicit mat: Materializer): InstanceTracker = {
+      leadershipModule: LeadershipModule,
+      instanceStore: Option[InstanceRepository] = None,
+      groupStore: Option[GroupRepository] = None
+  )(implicit mat: Materializer): InstanceTracker = {
     createTaskTrackerModule(leadershipModule, instanceStore, groupStore).instanceTracker
   }
 
-  def persistentVolumeResources(reservationId: Reservation.Id, localVolumeIds: LocalVolumeId*) = localVolumeIds.map { id =>
-    Mesos.Resource.newBuilder()
-      .setName("disk")
-      .setType(Mesos.Value.Type.SCALAR)
-      .setScalar(Mesos.Value.Scalar.newBuilder().setValue(10))
-      .setRole("test")
-      .setReservation(
-        Mesos.Resource.ReservationInfo
-          .newBuilder()
-          .setPrincipal("principal")
-          .setLabels(TaskLabels.labelsForTask(frameworkId, reservationId).mesosLabels)
-      )
-      .setDisk(Mesos.Resource.DiskInfo.newBuilder()
-        .setPersistence(Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(id.idString))
-        .setVolume(Mesos.Volume.newBuilder()
-          .setContainerPath(id.name)
-          .setMode(Mesos.Volume.Mode.RW)))
-      .build(): @silent
-  }
+  def persistentVolumeResources(reservationId: Reservation.Id, localVolumeIds: LocalVolumeId*) =
+    localVolumeIds.map { id =>
+      Mesos.Resource
+        .newBuilder()
+        .setName("disk")
+        .setType(Mesos.Value.Type.SCALAR)
+        .setScalar(Mesos.Value.Scalar.newBuilder().setValue(10))
+        .setRole("test")
+        .setReservation(
+          Mesos.Resource.ReservationInfo
+            .newBuilder()
+            .setPrincipal("principal")
+            .setLabels(TaskLabels.labelsForTask(frameworkId, reservationId).mesosLabels)
+        )
+        .setDisk(
+          Mesos.Resource.DiskInfo
+            .newBuilder()
+            .setPersistence(Mesos.Resource.DiskInfo.Persistence.newBuilder().setId(id.idString))
+            .setVolume(
+              Mesos.Volume
+                .newBuilder()
+                .setContainerPath(id.name)
+                .setMode(Mesos.Volume.Mode.RW)
+            )
+        )
+        .build(): @silent
+    }
 
   def offerWithVolumes(reservationId: Reservation.Id, localVolumeIds: LocalVolumeId*) = {
-    MarathonTestHelper.makeBasicOffer(
-      reservation = Some(TaskLabels.labelsForTask(frameworkId, reservationId)),
-      role = "test"
-    ).addAllResources(persistentVolumeResources(reservationId, localVolumeIds: _*).asJava).build()
+    MarathonTestHelper
+      .makeBasicOffer(
+        reservation = Some(TaskLabels.labelsForTask(frameworkId, reservationId)),
+        role = "test"
+      )
+      .addAllResources(persistentVolumeResources(reservationId, localVolumeIds: _*).asJava)
+      .build()
   }
 
   def offerWithVolumes(taskId: Task.Id, hostname: String, agentId: String, localVolumeIds: LocalVolumeId*) = {
-    MarathonTestHelper.makeBasicOffer(
-      reservation = Some(TaskLabels.labelsForTask(frameworkId, Reservation.SimplifiedId(taskId.instanceId))),
-      role = "test"
-    ).setHostname(hostname)
+    MarathonTestHelper
+      .makeBasicOffer(
+        reservation = Some(TaskLabels.labelsForTask(frameworkId, Reservation.SimplifiedId(taskId.instanceId))),
+        role = "test"
+      )
+      .setHostname(hostname)
       .setSlaveId(Mesos.SlaveID.newBuilder().setValue(agentId).build())
-      .addAllResources(persistentVolumeResources(Reservation.SimplifiedId(taskId.instanceId), localVolumeIds: _*).asJava).build()
+      .addAllResources(persistentVolumeResources(Reservation.SimplifiedId(taskId.instanceId), localVolumeIds: _*).asJava)
+      .build()
   }
 
   def offerWithVolumesOnly(taskId: Task.Id, localVolumeIds: LocalVolumeId*) = {
-    MarathonTestHelper.makeBasicOffer()
+    MarathonTestHelper
+      .makeBasicOffer()
       .clearResources()
       .addAllResources(persistentVolumeResources(Reservation.SimplifiedId(taskId.instanceId), localVolumeIds: _*).asJava)
       .build()
@@ -447,15 +485,22 @@ object MarathonTestHelper {
   }
 
   def appWithPersistentVolume(): AppDefinition = {
-    MarathonTestHelper.makeBasicApp().copy(
-      container = Some(mesosContainerWithPersistentVolume)
-    )
+    MarathonTestHelper
+      .makeBasicApp()
+      .copy(
+        container = Some(mesosContainerWithPersistentVolume)
+      )
   }
 
-  def mesosContainerWithPersistentVolume = Container.Mesos(
-    volumes = Seq(VolumeWithMount(
-      volume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(10)), // must match persistentVolumeResources
-      mount = VolumeMount(volumeName = None, mountPath = "persistent-volume"))))
+  def mesosContainerWithPersistentVolume =
+    Container.Mesos(
+      volumes = Seq(
+        VolumeWithMount(
+          volume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(10)), // must match persistentVolumeResources
+          mount = VolumeMount(volumeName = None, mountPath = "persistent-volume")
+        )
+      )
+    )
 
   def mesosIpAddress(ipAddress: String) = {
     Mesos.NetworkInfo.IPAddress.newBuilder().setIpAddress(ipAddress).build
@@ -505,24 +550,34 @@ object MarathonTestHelper {
         task.copy(status = newStatus)
       }
 
-      def withNetworkInfo(hostName: Option[String] = None, hostPorts: Seq[Int] = Nil, networkInfos: scala.collection.Seq[NetworkInfo] = Nil): Task = {
+      def withNetworkInfo(
+          hostName: Option[String] = None,
+          hostPorts: Seq[Int] = Nil,
+          networkInfos: scala.collection.Seq[NetworkInfo] = Nil
+      ): Task = {
         def containerStatus(networkInfos: scala.collection.Seq[NetworkInfo]) = {
           Mesos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos.asJava)
         }
-        def mesosStatus(taskId: Task.Id, mesosStatus: Option[TaskStatus], networkInfos: scala.collection.Seq[NetworkInfo]): Option[TaskStatus] = {
+        def mesosStatus(
+            taskId: Task.Id,
+            mesosStatus: Option[TaskStatus],
+            networkInfos: scala.collection.Seq[NetworkInfo]
+        ): Option[TaskStatus] = {
           val taskState = mesosStatus.fold(TaskState.TASK_STAGING)(_.getState)
-          Some(mesosStatus.getOrElse(Mesos.TaskStatus.getDefaultInstance).toBuilder
-            .setContainerStatus(containerStatus(networkInfos))
-            .setState(taskState)
-            .setTaskId(taskId.mesosTaskId)
-            .build)
+          Some(
+            mesosStatus
+              .getOrElse(Mesos.TaskStatus.getDefaultInstance)
+              .toBuilder
+              .setContainerStatus(containerStatus(networkInfos))
+              .setState(taskState)
+              .setTaskId(taskId.mesosTaskId)
+              .build
+          )
         }
         val taskStatus = mesosStatus(task.taskId, task.status.mesosStatus, networkInfos)
         val ipAddresses: Seq[Mesos.NetworkInfo.IPAddress] = networkInfos.iterator.flatMap(_.getIpAddressesList.asScala).toSeq
-        val initialNetworkInfo = core.task.state.NetworkInfo(
-          hostName.getOrElse("host.some"),
-          hostPorts = hostPorts,
-          ipAddresses = ipAddresses)
+        val initialNetworkInfo =
+          core.task.state.NetworkInfo(hostName.getOrElse("host.some"), hostPorts = hostPorts, ipAddresses = ipAddresses)
         val networkInfo = taskStatus.fold(initialNetworkInfo)(initialNetworkInfo.update)
         withNetworkInfo(networkInfo).withStatus(_.copy(mesosStatus = taskStatus))
       }

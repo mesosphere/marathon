@@ -42,9 +42,11 @@ object PortReference {
 
   case class ByName(value: String) extends PortReference {
     override def apply(assignments: Seq[PortAssignment]): PortAssignment =
-      assignments.find(_.portName.contains(value)).getOrElse(
-        throw new IndexOutOfBoundsException(s"no PortAssignment named $value")
-      )
+      assignments
+        .find(_.portName.contains(value))
+        .getOrElse(
+          throw new IndexOutOfBoundsException(s"no PortAssignment named $value")
+        )
     override def buildProto(builder: Protos.HealthCheckDefinition.Builder): Unit =
       builder.setPortName(value)
   }
@@ -81,16 +83,18 @@ sealed trait MarathonHealthCheck extends HealthCheckWithPort { this: HealthCheck
   def port: Option[Int]
 
   def effectivePort(app: AppDefinition, instance: Instance): Option[Int] = {
-    def portViaIndex(task: Task): Option[Int] = portIndex.flatMap { idx =>
-      val effectivePort = idx(task.status.networkInfo.portAssignments(app, includeUnresolved = true)).effectivePort
-      if (effectivePort == PortAssignment.NoPort) None
-      else Option(effectivePort)
-    }
+    def portViaIndex(task: Task): Option[Int] =
+      portIndex.flatMap { idx =>
+        val effectivePort = idx(task.status.networkInfo.portAssignments(app, includeUnresolved = true)).effectivePort
+        if (effectivePort == PortAssignment.NoPort) None
+        else Option(effectivePort)
+      }
     port.orElse {
       // HealthChecks are only supported for legacy App instances with exactly one task
       require(
         instance.tasksMap.size == 1,
-        s"Unable to compute effective port for ${instance.instanceId} with ${instance.tasksMap.size} containers")
+        s"Unable to compute effective port for ${instance.instanceId} with ${instance.tasksMap.size} containers"
+      )
       portViaIndex(instance.appTask)
     }
   }
@@ -129,8 +133,9 @@ case class MarathonHttpHealthCheck(
     port: Option[Int] = HealthCheckWithPort.DefaultPort,
     path: Option[String] = MarathonHttpHealthCheck.DefaultPath,
     protocol: Protocol = MarathonHttpHealthCheck.DefaultProtocol,
-    ignoreHttp1xx: Boolean = MarathonHttpHealthCheck.DefaultIgnoreHttp1xx)
-  extends HealthCheck with MarathonHealthCheck {
+    ignoreHttp1xx: Boolean = MarathonHttpHealthCheck.DefaultIgnoreHttp1xx
+) extends HealthCheck
+    with MarathonHealthCheck {
   override def toProto: Protos.HealthCheckDefinition = {
     val builder = protoBuilder
       .setProtocol(protocol)
@@ -169,8 +174,9 @@ case class MarathonTcpHealthCheck(
     timeout: FiniteDuration = HealthCheck.DefaultTimeout,
     maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
     portIndex: Option[PortReference] = HealthCheckWithPort.DefaultPortIndex,
-    port: Option[Int] = HealthCheckWithPort.DefaultPort)
-  extends HealthCheck with MarathonHealthCheck {
+    port: Option[Int] = HealthCheckWithPort.DefaultPort
+) extends HealthCheck
+    with MarathonHealthCheck {
   override def toProto: Protos.HealthCheckDefinition = {
     val builder = protoBuilder.setProtocol(Protos.HealthCheckDefinition.Protocol.TCP)
 
@@ -199,8 +205,9 @@ case class MesosCommandHealthCheck(
     timeout: FiniteDuration = HealthCheck.DefaultTimeout,
     maxConsecutiveFailures: Int = HealthCheck.DefaultMaxConsecutiveFailures,
     delay: FiniteDuration = HealthCheck.DefaultDelay,
-    command: Executable)
-  extends HealthCheck with MesosHealthCheck {
+    command: Executable
+) extends HealthCheck
+    with MesosHealthCheck {
   override def toProto: Protos.HealthCheckDefinition = {
     protoBuilder
       .setProtocol(Protos.HealthCheckDefinition.Protocol.COMMAND)
@@ -209,15 +216,17 @@ case class MesosCommandHealthCheck(
   }
 
   override def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): Option[MesosProtos.HealthCheck] = {
-    Option(MesosProtos.HealthCheck.newBuilder
-      .setType(MesosProtos.HealthCheck.Type.COMMAND)
-      .setIntervalSeconds(this.interval.toSeconds.toDouble)
-      .setTimeoutSeconds(this.timeout.toSeconds.toDouble)
-      .setConsecutiveFailures(this.maxConsecutiveFailures)
-      .setGracePeriodSeconds(this.gracePeriod.toUnit(SECONDS))
-      .setDelaySeconds(this.delay.toUnit(SECONDS))
-      .setCommand(Executable.toProto(this.command))
-      .build())
+    Option(
+      MesosProtos.HealthCheck.newBuilder
+        .setType(MesosProtos.HealthCheck.Type.COMMAND)
+        .setIntervalSeconds(this.interval.toSeconds.toDouble)
+        .setTimeoutSeconds(this.timeout.toSeconds.toDouble)
+        .setConsecutiveFailures(this.maxConsecutiveFailures)
+        .setGracePeriodSeconds(this.gracePeriod.toUnit(SECONDS))
+        .setDelaySeconds(this.delay.toUnit(SECONDS))
+        .setCommand(Executable.toProto(this.command))
+        .build()
+    )
   }
 }
 
@@ -243,8 +252,10 @@ case class MesosHttpHealthCheck(
     path: Option[String] = MarathonHttpHealthCheck.DefaultPath,
     protocol: Protocol = MesosHttpHealthCheck.DefaultProtocol,
     ipProtocol: IpProtocol = MesosHttpHealthCheck.DefaultIpProtocol,
-    delay: FiniteDuration = HealthCheck.DefaultDelay)
-  extends HealthCheck with MesosHealthCheck with MesosHealthCheckWithPorts {
+    delay: FiniteDuration = HealthCheck.DefaultDelay
+) extends HealthCheck
+    with MesosHealthCheck
+    with MesosHealthCheckWithPorts {
   require(protocol == Protocol.MESOS_HTTP || protocol == Protocol.MESOS_HTTPS)
 
   import MesosHttpHealthCheck._
@@ -265,7 +276,8 @@ case class MesosHttpHealthCheck(
   override def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): Option[MesosProtos.HealthCheck] = {
     val port = effectivePort(portAssignments)
     port.map { healthCheckPort =>
-      val httpInfoBuilder = MesosProtos.HealthCheck.HTTPCheckInfo.newBuilder()
+      val httpInfoBuilder = MesosProtos.HealthCheck.HTTPCheckInfo
+        .newBuilder()
         .setScheme(if (protocol == Protocol.MESOS_HTTP) "http" else "https")
         .setPort(healthCheckPort)
         .setProtocol(MesosHttpHealthCheck.ipProtocolToMesosProto(ipProtocol))
@@ -290,15 +302,17 @@ object MesosHttpHealthCheck {
   val DefaultProtocol = Protocol.MESOS_HTTP
   val DefaultIpProtocol = IPv4
 
-  def ipProtocolConversion(ipProtocol: IpProtocol): Protos.HealthCheckDefinition.IpProtocol = ipProtocol match {
-    case IPv4 => Protos.HealthCheckDefinition.IpProtocol.IPv4
-    case IPv6 => Protos.HealthCheckDefinition.IpProtocol.IPv6
-  }
+  def ipProtocolConversion(ipProtocol: IpProtocol): Protos.HealthCheckDefinition.IpProtocol =
+    ipProtocol match {
+      case IPv4 => Protos.HealthCheckDefinition.IpProtocol.IPv4
+      case IPv6 => Protos.HealthCheckDefinition.IpProtocol.IPv6
+    }
 
-  def ipProtocolToMesosProto(ipProtocol: IpProtocol): NetworkInfo.Protocol = ipProtocol match {
-    case IPv4 => NetworkInfo.Protocol.IPv4
-    case IPv6 => NetworkInfo.Protocol.IPv6
-  }
+  def ipProtocolToMesosProto(ipProtocol: IpProtocol): NetworkInfo.Protocol =
+    ipProtocol match {
+      case IPv4 => NetworkInfo.Protocol.IPv4
+      case IPv6 => NetworkInfo.Protocol.IPv6
+    }
 
   def mergeFromProto(proto: Protos.HealthCheckDefinition): MesosHttpHealthCheck =
     MesosHttpHealthCheck(
@@ -323,8 +337,10 @@ case class MesosTcpHealthCheck(
     portIndex: Option[PortReference] = HealthCheckWithPort.DefaultPortIndex,
     port: Option[Int] = HealthCheckWithPort.DefaultPort,
     ipProtocol: IpProtocol = MesosHttpHealthCheck.DefaultIpProtocol,
-    delay: FiniteDuration = HealthCheck.DefaultDelay)
-  extends HealthCheck with MesosHealthCheck with MesosHealthCheckWithPorts {
+    delay: FiniteDuration = HealthCheck.DefaultDelay
+) extends HealthCheck
+    with MesosHealthCheck
+    with MesosHealthCheckWithPorts {
 
   import MesosHttpHealthCheck._
 
@@ -342,7 +358,9 @@ case class MesosTcpHealthCheck(
   override def toMesos(portAssignments: Seq[PortAssignment] = Seq.empty): Option[MesosProtos.HealthCheck] = {
     val port = effectivePort(portAssignments)
     port.map { healthCheckPort =>
-      val tcpInfoBuilder = MesosProtos.HealthCheck.TCPCheckInfo.newBuilder().setPort(healthCheckPort)
+      val tcpInfoBuilder = MesosProtos.HealthCheck.TCPCheckInfo
+        .newBuilder()
+        .setPort(healthCheckPort)
         .setProtocol(MesosHttpHealthCheck.ipProtocolToMesosProto(ipProtocol))
 
       MesosProtos.HealthCheck.newBuilder
@@ -359,10 +377,11 @@ case class MesosTcpHealthCheck(
 }
 
 object MesosTcpHealthCheck {
-  def ipProtocolFromProto(ipProtocol: Protos.HealthCheckDefinition.IpProtocol): IpProtocol = ipProtocol match {
-    case Protos.HealthCheckDefinition.IpProtocol.IPv4 => IPv4
-    case Protos.HealthCheckDefinition.IpProtocol.IPv6 => IPv6
-  }
+  def ipProtocolFromProto(ipProtocol: Protos.HealthCheckDefinition.IpProtocol): IpProtocol =
+    ipProtocol match {
+      case Protos.HealthCheckDefinition.IpProtocol.IPv4 => IPv4
+      case Protos.HealthCheckDefinition.IpProtocol.IPv6 => IPv6
+    }
 
   def mergeFromProto(proto: Protos.HealthCheckDefinition): MesosTcpHealthCheck =
     MesosTcpHealthCheck(

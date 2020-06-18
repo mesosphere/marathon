@@ -62,4 +62,3 @@ class HttpEventStreamServletTest extends UnitTest {
     def streamServlet() = new HttpEventStreamServlet(metrics, actor, config, auth.auth, auth.auth)
   }
 }
-

@@ -48,26 +48,27 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int) exte
     * @tparam T
     * @return Future that completes when work item fished.
     */
-  private def run[T](workItem: WorkItem[T]): Unit = synchronized {
-    workItem.ctx.execute(new Runnable {
-      override def run(): Unit = {
-        try {
-          val future = workItem.f()
-          future.onComplete { _ =>
-            // This might block for a short time if something is put into the queue. This is fine for two reasons
-            // * The time it takes to complete apply() is very short.
-            // * The blocking does not take place in this thread. So we won't deadlock.
-            executeNextIfPossible()
-          }(workItem.ctx)
-          workItem.promise.completeWith(future)
-        } catch {
-          case ex: Throwable =>
-            workItem.promise.failure(ex)
-            executeNextIfPossible()
+  private def run[T](workItem: WorkItem[T]): Unit =
+    synchronized {
+      workItem.ctx.execute(new Runnable {
+        override def run(): Unit = {
+          try {
+            val future = workItem.f()
+            future.onComplete { _ =>
+              // This might block for a short time if something is put into the queue. This is fine for two reasons
+              // * The time it takes to complete apply() is very short.
+              // * The blocking does not take place in this thread. So we won't deadlock.
+              executeNextIfPossible()
+            }(workItem.ctx)
+            workItem.promise.completeWith(future)
+          } catch {
+            case ex: Throwable =>
+              workItem.promise.failure(ex)
+              executeNextIfPossible()
+          }
         }
-      }
-    })
-  }
+      })
+    }
 
   /**
     * Executes the next work item or opens up a work slot for [[WorkQueue.apply]].
@@ -76,13 +77,14 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int) exte
     * If the queue is not empty we use our current slot to process the next item. The slot stays blocked and thus the
     * open slots count does not change.
     */
-  private def executeNextIfPossible(): Unit = synchronized {
-    if (queue.isEmpty) {
-      openSlotsCount += 1
-    } else {
-      run(queue.dequeue())
+  private def executeNextIfPossible(): Unit =
+    synchronized {
+      if (queue.isEmpty) {
+        openSlotsCount += 1
+      } else {
+        run(queue.dequeue())
+      }
     }
-  }
 
   /**
     * Put work into the queue.
@@ -92,25 +94,26 @@ case class WorkQueue(name: String, maxConcurrent: Int, maxQueueLength: Int) exte
     * @tparam T
     * @return Future that completes when f completed.
     */
-  def apply[T](f: => Future[T])(implicit ctx: ExecutionContext): Future[T] = synchronized {
-    if (openSlotsCount > 0) {
-      // We have an open slot so start processing the work immediately.
-      openSlotsCount -= 1
-      val promise = Promise[T]()
-      run(WorkItem(() => f, ctx, promise))
-      promise.future
-    } else {
-      // No work slot is left. Let's queue the work if possible.
-      if (queue.size + 1 > maxQueueLength) {
-        logger.warn(s"$name queue exceeded $maxQueueLength")
-        Future.failed(new IllegalStateException(s"$name queue may not exceed $maxQueueLength entries"))
-      } else {
+  def apply[T](f: => Future[T])(implicit ctx: ExecutionContext): Future[T] =
+    synchronized {
+      if (openSlotsCount > 0) {
+        // We have an open slot so start processing the work immediately.
+        openSlotsCount -= 1
         val promise = Promise[T]()
-        queue += WorkItem(() => f, ctx, promise)
+        run(WorkItem(() => f, ctx, promise))
         promise.future
+      } else {
+        // No work slot is left. Let's queue the work if possible.
+        if (queue.size + 1 > maxQueueLength) {
+          logger.warn(s"$name queue exceeded $maxQueueLength")
+          Future.failed(new IllegalStateException(s"$name queue may not exceed $maxQueueLength entries"))
+        } else {
+          val promise = Promise[T]()
+          queue += WorkItem(() => f, ctx, promise)
+          promise.future
+        }
       }
     }
-  }
 }
 
 /**

@@ -16,9 +16,7 @@ import scala.util.{Failure, Success, Try}
   */
 abstract case class Timestamp private (private val instant: Instant) extends Ordered[Timestamp] {
   def toOffsetDateTime: OffsetDateTime =
-    OffsetDateTime.ofInstant(
-      instant,
-      ZoneOffset.UTC)
+    OffsetDateTime.ofInstant(instant, ZoneOffset.UTC)
 
   def compare(that: Timestamp): Int = this.instant compareTo that.instant
 
@@ -69,11 +67,13 @@ object Timestamp {
   /**
     * Returns a new Timestamp representing the supplied time.
     */
-  def apply(time: String): Timestamp = Timestamp(Try(OffsetDateTime.parse(time)) match {
-    case Success(parsed) => parsed
-    case Failure(e: DateTimeParseException) => throw new IllegalArgumentException(s"Invalid timestamp provided '$time'. Expecting ISO-8601 datetime string.", e)
-    case Failure(e) => throw e
-  })
+  def apply(time: String): Timestamp =
+    Timestamp(Try(OffsetDateTime.parse(time)) match {
+      case Success(parsed) => parsed
+      case Failure(e: DateTimeParseException) =>
+        throw new IllegalArgumentException(s"Invalid timestamp provided '$time'. Expecting ISO-8601 datetime string.", e)
+      case Failure(e) => throw e
+    })
 
   /**
     * Returns a new Timestamp representing the current instant.

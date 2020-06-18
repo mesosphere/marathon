@@ -64,10 +64,11 @@ object OfferMatchStatistics {
       lastMatch: Option[Match],
       lastNoMatch: Option[NoMatch]
   ) {
-    def incrementMatched(withMatched: Match): RunSpecOfferStatistics = copy(
-      processedOfferCount = processedOfferCount + 1,
-      lastMatch = Some(withMatched)
-    )
+    def incrementMatched(withMatched: Match): RunSpecOfferStatistics =
+      copy(
+        processedOfferCount = processedOfferCount + 1,
+        lastMatch = Some(withMatched)
+      )
 
     def incrementUnmatched(noMatch: NoMatch): RunSpecOfferStatistics = {
       val updatedSummary: Map[NoOfferMatchReason, Int] =

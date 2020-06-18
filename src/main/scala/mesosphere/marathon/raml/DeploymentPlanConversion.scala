@@ -6,7 +6,7 @@ import mesosphere.marathon.state.AppDefinition
 
 trait DeploymentPlanConversion extends ReadinessConversions {
 
-  implicit val deploymentPlanWrites: Writes[core.deployment.DeploymentPlan, raml.DeploymentPlan] = Writes{ plan =>
+  implicit val deploymentPlanWrites: Writes[core.deployment.DeploymentPlan, raml.DeploymentPlan] = Writes { plan =>
     raml.DeploymentPlan(
       id = plan.id,
       steps = plan.steps.toRaml,

@@ -39,12 +39,11 @@ class LaunchQueueModule(
     taskOpFactory: InstanceOpFactory,
     runSpecProvider: GroupManager.RunSpecProvider,
     localRegion: () => Option[Region],
-    initialFrameworkInfo: Future[FrameworkInfo])(implicit materializer: Materializer, ec: ExecutionContext) {
+    initialFrameworkInfo: Future[FrameworkInfo]
+)(implicit materializer: Materializer, ec: ExecutionContext) {
 
   val (offerMatchStatisticsInput, offerMatchStatistics) =
-    Source.queue[OfferMatchStatistics.OfferMatchUpdate](Int.MaxValue, OverflowStrategy.fail).
-      toMat(BroadcastHub.sink)(Keep.both).
-      run
+    Source.queue[OfferMatchStatistics.OfferMatchUpdate](Int.MaxValue, OverflowStrategy.fail).toMat(BroadcastHub.sink)(Keep.both).run
 
   private[this] val rateLimiter: RateLimiter = new RateLimiter(clock)
   private[this] val rateLimiterActor: ActorRef = {
@@ -52,7 +51,8 @@ class LaunchQueueModule(
     leadershipModule.startWhenLeader(props, "rateLimiter")
   }
   val rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed] =
-    Source.actorRef[RateLimiter.DelayUpdate](Int.MaxValue, OverflowStrategy.fail)
+    Source
+      .actorRef[RateLimiter.DelayUpdate](Int.MaxValue, OverflowStrategy.fail)
       .watchTermination()(Keep.both)
       .mapMaterializedValue {
         case (ref, termination) =>
@@ -73,19 +73,15 @@ class LaunchQueueModule(
         instanceTracker,
         rateLimiterActor,
         offerMatchStatisticsInput,
-        localRegion)(runSpec.id)
-    val props = LaunchQueueActor.props(config, instanceTracker, runSpecProvider, runSpecActorProps, rateLimiterUpdates)
+        localRegion
+      )(runSpec.id)
+    val props = LaunchQueueActor.props(config, instanceTracker, runSpecActorProps, rateLimiterUpdates)
     leadershipModule.startWhenLeader(props, "launchQueue")
   }
 
   val launchQueue: LaunchQueue = new LaunchQueueDelegate(config, launchQueueActor, rateLimiterActor)
 
-  val launchStats = LaunchStats(
-    runSpecProvider,
-    clock,
-    instanceTracker.instanceUpdates,
-    rateLimiterUpdates,
-    offerMatchStatistics)
+  val launchStats = LaunchStats(runSpecProvider, clock, instanceTracker.instanceUpdates, rateLimiterUpdates, offerMatchStatistics)
 
   def reviveOffersActor(): ActorRef = {
     val props = ReviveOffersActor.props(
@@ -93,7 +89,11 @@ class LaunchQueueModule(
       initialFrameworkInfo,
       reviveConfig.mesosRole(),
       reviveConfig.minReviveOffersInterval().millis,
-      instanceTracker.instanceUpdates, rateLimiterUpdates, driverHolder, reviveConfig.suppressOffers())
+      instanceTracker.instanceUpdates,
+      rateLimiterUpdates,
+      driverHolder,
+      reviveConfig.suppressOffers()
+    )
     leadershipModule.startWhenLeader(props, "reviveOffers")
   }
 }

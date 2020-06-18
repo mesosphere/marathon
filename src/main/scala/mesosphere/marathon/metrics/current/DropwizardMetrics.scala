@@ -9,7 +9,18 @@ import com.codahale
 import com.codahale.metrics
 import com.codahale.metrics.MetricRegistry
 import com.github.rollingmetrics.histogram.{HdrBuilder, OverflowResolver}
-import mesosphere.marathon.metrics.{ClosureGauge, Counter, Gauge, HistogramTimer, Meter, Metrics, MetricsConf, SettableGauge, Timer, TimerAdapter}
+import mesosphere.marathon.metrics.{
+  ClosureGauge,
+  Counter,
+  Gauge,
+  HistogramTimer,
+  Meter,
+  Metrics,
+  MetricsConf,
+  SettableGauge,
+  Timer,
+  TimerAdapter
+}
 import mesosphere.marathon.metrics.current.{UnitOfMeasurement => DropwizardUnitOfMeasurement}
 
 import scala.util.matching.Regex
@@ -32,8 +43,11 @@ class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) exte
     registry.counter(constructName(namePrefix, name, "counter", unit))
   }
 
-  override def closureGauge[N](name: String, fn: () => N,
-    unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): ClosureGauge = {
+  override def closureGauge[N](
+      name: String,
+      fn: () => N,
+      unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None
+  ): ClosureGauge = {
     class DropwizardClosureGauge(val name: String) extends ClosureGauge {
       registry.gauge(name, () => () => fn())
     }
@@ -52,9 +66,7 @@ class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) exte
   override def gauge(name: String, unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): Gauge = {
     new DropwizardSettableGauge(constructName(namePrefix, name, "gauge", unit))
   }
-  override def settableGauge(
-    name: String,
-    unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): SettableGauge = {
+  override def settableGauge(name: String, unit: DropwizardUnitOfMeasurement = DropwizardUnitOfMeasurement.None): SettableGauge = {
     new DropwizardSettableGauge(constructName(namePrefix, name, "gauge", unit))
   }
 
@@ -82,7 +94,9 @@ class DropwizardMetrics(metricsConf: MetricsConf, registry: MetricRegistry) exte
           reservoirBuilder.resetReservoirPeriodically(Duration.ofMillis(histogramReservoirResettingIntervalMs))
         else
           reservoirBuilder.resetReservoirPeriodicallyByChunks(
-            Duration.ofMillis(histogramReservoirResettingIntervalMs), histogramReservoirResettingChunks)
+            Duration.ofMillis(histogramReservoirResettingIntervalMs),
+            histogramReservoirResettingChunks
+          )
       }
       val reservoir = reservoirBuilder.buildReservoir()
       new metrics.Timer(reservoir)

@@ -17,9 +17,7 @@ trait LinuxInfoConversion extends IpcModeConversion {
     val seccomp = stateLinuxInfo.seccomp.map { seccomp =>
       Seccomp(seccomp.profileName, seccomp.unconfined)
     }
-    val ipcInfo = stateLinuxInfo.ipcInfo.map(stateIpcInfo =>
-      raml.IPCInfo(stateIpcInfo.ipcMode.toRaml, stateIpcInfo.shmSize)
-    )
+    val ipcInfo = stateLinuxInfo.ipcInfo.map(stateIpcInfo => raml.IPCInfo(stateIpcInfo.ipcMode.toRaml, stateIpcInfo.shmSize))
     raml.LinuxInfo(seccomp, ipcInfo)
   }
 

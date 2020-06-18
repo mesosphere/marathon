@@ -22,7 +22,8 @@ trait EnvVarConversion {
       }
     }
 
-  implicit val envProtoRamlWrites: Writes[(Seq[Mesos.Environment.Variable], Seq[Protos.EnvVarReference]), Map[String, EnvVarValueOrSecret]] =
+  implicit val envProtoRamlWrites
+      : Writes[(Seq[Mesos.Environment.Variable], Seq[Protos.EnvVarReference]), Map[String, EnvVarValueOrSecret]] =
     Writes {
       case (env, refs) =>
         val vanillaEnv: Map[String, EnvVarValueOrSecret] = env.iterator.map { item =>

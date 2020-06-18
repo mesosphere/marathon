@@ -14,7 +14,8 @@ trait DeploymentConfig extends ScallopConf {
     "deployment_manager_request_timeout",
     descr = "INTERNAL TUNING PARAMETER: Timeout (in ms) for requests to the deployment manager actor.",
     hidden = true,
-    default = Some(1000))
+    default = Some(1000)
+  )
 
   lazy val killsPerBatch = opt[Int](
     "killsPerBatch",

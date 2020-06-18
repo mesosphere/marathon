@@ -7,10 +7,11 @@ import mesosphere.marathon.Protos._
 import com.wix.accord.dsl._
 
 case class UpgradeStrategy(minimumHealthCapacity: Double, maximumOverCapacity: Double = 1.0) {
-  def toProto: UpgradeStrategyDefinition = UpgradeStrategyDefinition.newBuilder
-    .setMinimumHealthCapacity(minimumHealthCapacity)
-    .setMaximumOverCapacity(maximumOverCapacity)
-    .build
+  def toProto: UpgradeStrategyDefinition =
+    UpgradeStrategyDefinition.newBuilder
+      .setMinimumHealthCapacity(minimumHealthCapacity)
+      .setMaximumOverCapacity(maximumOverCapacity)
+      .build
 }
 
 object UpgradeStrategy {

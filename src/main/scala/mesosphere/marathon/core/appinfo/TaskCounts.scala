@@ -12,11 +12,7 @@ import mesosphere.marathon.state.Timestamp
   * @param tasksHealthy snapshot of the number of healthy tasks (does not include tasks without health info)
   * @param tasksUnhealthy snapshot of the number of unhealthy tasks (does not include tasks without health info)
   */
-case class TaskCounts(
-    tasksStaged: Int,
-    tasksRunning: Int,
-    tasksHealthy: Int,
-    tasksUnhealthy: Int) {
+case class TaskCounts(tasksStaged: Int, tasksRunning: Int, tasksHealthy: Int, tasksUnhealthy: Int) {
   def +(counts: TaskCounts): TaskCounts = {
     copy(
       tasksRunning = tasksRunning + counts.tasksRunning,

@@ -4,11 +4,7 @@ package core.readiness
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.task.Task
 
-case class ReadinessCheckResult(
-    name: String,
-    taskId: Task.Id,
-    ready: Boolean,
-    lastResponse: Option[HttpResponse]) {
+case class ReadinessCheckResult(name: String, taskId: Task.Id, ready: Boolean, lastResponse: Option[HttpResponse]) {
 
   def summary: String = {
     val responseSummary = lastResponse.fold("") { response =>

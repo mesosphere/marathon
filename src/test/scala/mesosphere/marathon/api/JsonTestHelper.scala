@@ -18,8 +18,8 @@ object JsonTestHelper extends Assertions with Matchers {
     val json = Json.toJson(normed)
     val reread = Json.fromJson[T](json)
     withClue(s"for json:\n${Json.prettyPrint(json)}\n") {
-      reread should be ('success)
-      normed should be (normalize(reread.get))
+      reread should be('success)
+      normed should be(normalize(reread.get))
     }
   }
 
@@ -29,8 +29,8 @@ object JsonTestHelper extends Assertions with Matchers {
     val jsonObj = Json.parse(json)
     val reread = Json.fromJson[T](jsonObj)
     withClue(s"for json:\n${Json.prettyPrint(jsonObj)}\n") {
-      reread should be ('success)
-      normed should be (normalize(reread.get))
+      reread should be('success)
+      normed should be(normalize(reread.get))
     }
   }
 
@@ -39,7 +39,7 @@ object JsonTestHelper extends Assertions with Matchers {
     val jsonJackson = RamlSerializer.serializer.writeValueAsString(normed)
     val jsonPlay = Json.toJson(normed).toString()
 
-    jsonJackson should be (jsonPlay)
+    jsonJackson should be(jsonPlay)
   }
 
   def assertThatJsonOf[T](value: T)(implicit writes: Writes[T]): AssertThatJsonString = {
@@ -55,31 +55,36 @@ object JsonTestHelper extends Assertions with Matchers {
     AssertThatJsonString(actual)
   }
 
-  def removeNullFieldValues(json: JsValue): JsValue = json match {
-    case JsObject(fields) =>
-      val withoutNullValues: Map[String, JsValue] = fields.filter {
-        case (_, JsNull) => false
-        case _ => true
-      }
-      val filterSubValues = withoutNullValues.map { case (k, v) => k -> removeNullFieldValues(v) }
+  def removeNullFieldValues(json: JsValue): JsValue =
+    json match {
+      case JsObject(fields) =>
+        val withoutNullValues: Map[String, JsValue] = fields.filter {
+          case (_, JsNull) => false
+          case _ => true
+        }
+        val filterSubValues = withoutNullValues.map { case (k, v) => k -> removeNullFieldValues(v) }
 
-      JsObject(filterSubValues)
-    case JsArray(v) =>
-      JsArray(v.map(removeNullFieldValues))
-    case _: JsValue => json
-  }
+        JsObject(filterSubValues)
+      case JsArray(v) =>
+        JsArray(v.map(removeNullFieldValues))
+      case _: JsValue => json
+    }
 
   case class AssertThatJsonString(actual: String) {
     val actualJson = Json.parse(actual)
-    private[this] def isAddition(op: Operation[JsValue]): Boolean = op match {
-      case _: Add[_] | _: Copy[_] => true
-      case _ => false
-    }
+    private[this] def isAddition(op: Operation[JsValue]): Boolean =
+      op match {
+        case _: Add[_] | _: Copy[_] => true
+        case _ => false
+      }
 
     def containsEverythingInJsonString(expected: String): Unit = {
       val expectedJson = Json.parse(expected)
       val diff = diffson.diff(expectedJson, actualJson)
-      require(diff.ops.forall(isAddition), s"unexpected differences in actual json:\n$actual\nexpected:\n$expected\n${diff.ops.filter(!isAddition(_))}")
+      require(
+        diff.ops.forall(isAddition),
+        s"unexpected differences in actual json:\n$actual\nexpected:\n$expected\n${diff.ops.filter(!isAddition(_))}"
+      )
     }
 
     def containsEverythingInJsonOf[T](expected: T)(implicit writes: Writes[T]): Unit = {

@@ -10,8 +10,7 @@ import play.api.libs.json._
 class InstanceFormatTest extends UnitTest {
   import Instance._
 
-  val template = Json.parse(
-    """
+  val template = Json.parse("""
       |{
       |  "instanceId": { "idString": "app.instance-b6ff5fa5-7714-11e7-a55c-5ecf1c4671f6" },
       |  "tasksMap": {},
@@ -23,9 +22,7 @@ class InstanceFormatTest extends UnitTest {
 
   "Instance.instanceFormat" should {
     "ignore unreachable strategy when reading" in {
-      val json = template ++ Json.obj(
-        "unreachableStrategy" -> Json.obj(
-          "inactiveAfterSeconds" -> 1, "expungeAfterSeconds" -> 2))
+      val json = template ++ Json.obj("unreachableStrategy" -> Json.obj("inactiveAfterSeconds" -> 1, "expungeAfterSeconds" -> 2))
       val instance = json.asOpt[Instance]
 
       instance should be('defined)

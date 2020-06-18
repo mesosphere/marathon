@@ -69,16 +69,16 @@ class NetworkConversionTest extends UnitTest {
     }
   }
   "NetworkConversion network conversion" should {
-    behave like convertToProtobufThenToRAML(
-      "host network",
-      core.pod.HostNetwork, Network(mode = NetworkMode.Host))
+    behave like convertToProtobufThenToRAML("host network", core.pod.HostNetwork, Network(mode = NetworkMode.Host))
     behave like convertToProtobufThenToRAML(
       "container network named 'foo'",
       core.pod.ContainerNetwork("foo", Map("qwe" -> "asd")),
-      Network(name = Option("foo"), mode = NetworkMode.Container, labels = Map("qwe" -> "asd")))
+      Network(name = Option("foo"), mode = NetworkMode.Container, labels = Map("qwe" -> "asd"))
+    )
     behave like convertToProtobufThenToRAML(
       "bridge network",
       core.pod.BridgeNetwork(Map("qwe" -> "asd")),
-      Network(mode = NetworkMode.ContainerBridge, labels = Map("qwe" -> "asd")))
+      Network(mode = NetworkMode.ContainerBridge, labels = Map("qwe" -> "asd"))
+    )
   }
 }

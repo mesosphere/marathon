@@ -18,7 +18,8 @@ import mesosphere.marathon.state.RunSpecConfigRef
 case class ReviveOffersState(
     instancesWantingOffers: Map[Role, Map[Instance.Id, OffersWantedInfo]],
     activeDelays: Set[RunSpecConfigRef],
-    version: Long) extends StrictLogging {
+    version: Long
+) extends StrictLogging {
 
   /** whether the instance has a reservation that should be freed. */
   private def shouldUnreserve(instance: Instance): Boolean = {
@@ -26,8 +27,9 @@ case class ReviveOffersState(
   }
 
   private def copyBumpingVersion(
-    instancesWantingOffers: Map[Role, Map[Instance.Id, OffersWantedInfo]] = instancesWantingOffers,
-    activeDelays: Set[RunSpecConfigRef] = activeDelays): ReviveOffersState = {
+      instancesWantingOffers: Map[Role, Map[Instance.Id, OffersWantedInfo]] = instancesWantingOffers,
+      activeDelays: Set[RunSpecConfigRef] = activeDelays
+  ): ReviveOffersState = {
 
     copy(instancesWantingOffers, activeDelays, version + 1)
   }
@@ -100,7 +102,8 @@ case class ReviveOffersState(
     OffersWantedInfo(
       version,
       if (shouldUnreserve(instance)) OffersWantedReason.CleaningUpReservations else OffersWantedReason.Launching,
-      instance.runSpec.configRef)
+      instance.runSpec.configRef
+    )
   }
 
   /** @return this state with passed instance removed from [[instancesWantingOffers]]. */
@@ -150,7 +153,9 @@ case class ReviveOffersState(
     */
   lazy val roleReviveVersions: Map[Role, VersionedRoleState] = {
     instancesWantingOffers.keysIterator.map { role =>
-      val iterator = instancesWantingOffers.getOrElse(role, Map.empty).values
+      val iterator = instancesWantingOffers
+        .getOrElse(role, Map.empty)
+        .values
         .iterator
         .filter(launchAllowedOrCleanUpRequired)
 

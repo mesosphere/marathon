@@ -28,7 +28,10 @@ class TaskStartActor(
     val readinessCheckExecutor: ReadinessCheckExecutor,
     val runSpec: RunSpec,
     val scaleTo: Int,
-    promise: Promise[Unit]) extends Actor with StrictLogging with ReadinessBehavior {
+    promise: Promise[Unit]
+) extends Actor
+    with StrictLogging
+    with ReadinessBehavior {
 
   override def preStart(): Unit = {
     if (hasHealthChecks) eventBus.subscribe(self, classOf[InstanceHealthChanged])
@@ -47,18 +50,19 @@ class TaskStartActor(
         launchQueue.add(runSpec, 1).pipeTo(self)
       }
 
-    case Sync => async {
-      val instances = await(instanceTracker.specInstances(runSpec.id))
-      val actualSize = instances.count { i => i.isActive || i.isScheduled }
-      val instancesToStartNow = Math.max(scaleTo - actualSize, 0)
-      logger.debug(s"Sync start instancesToStartNow=$instancesToStartNow appId=${runSpec.id}")
-      if (instancesToStartNow > 0) {
-        logger.info(s"Reconciling app ${runSpec.id} scaling: queuing $instancesToStartNow new instances")
-        await(launchQueue.add(runSpec, instancesToStartNow))
-      }
-      context.system.scheduler.scheduleOnce(syncInterval, self, Sync)
-      Done // Otherwise we will pipe the result of scheduleOnce(...) call which is a Cancellable
-    }.pipeTo(self)
+    case Sync =>
+      async {
+        val instances = await(instanceTracker.specInstances(runSpec.id))
+        val actualSize = instances.count { i => i.isActive || i.isScheduled }
+        val instancesToStartNow = Math.max(scaleTo - actualSize, 0)
+        logger.debug(s"Sync start instancesToStartNow=$instancesToStartNow appId=${runSpec.id}")
+        if (instancesToStartNow > 0) {
+          logger.info(s"Reconciling app ${runSpec.id} scaling: queuing $instancesToStartNow new instances")
+          await(launchQueue.add(runSpec, instancesToStartNow))
+        }
+        context.system.scheduler.scheduleOnce(syncInterval, self, Sync)
+        Done // Otherwise we will pipe the result of scheduleOnce(...) call which is a Cancellable
+      }.pipeTo(self)
 
     case Status.Failure(e) =>
       // This is the result of failed initializeStart(...) call. Log the message and
@@ -74,13 +78,15 @@ class TaskStartActor(
   }
 
   override def instanceConditionChanged(instanceId: Instance.Id): Unit = {
-    logger.debug(s"New instance $instanceId changed during app ${runSpec.id} scaling, " +
-      s"${readyInstances.size} ready ${healthyInstances.size} healthy need ${nrToStart.value}")
+    logger.debug(
+      s"New instance $instanceId changed during app ${runSpec.id} scaling, " +
+        s"${readyInstances.size} ready ${healthyInstances.size} healthy need ${nrToStart.value}"
+    )
     checkFinished()
   }
 
   def checkFinished(): Unit = {
-    nrToStart.foreach{ n =>
+    nrToStart.foreach { n =>
       if (targetCountReached(n)) success()
     }
   }
@@ -93,12 +99,13 @@ class TaskStartActor(
     target
   }.pipeTo(self)
 
-  def initializeStart(): Future[Done] = async {
-    val toStart = await(nrToStart)
-    logger.info(s"TaskStartActor: initializing for ${runSpec.id} and toStart: $toStart")
-    if (toStart > 0) await(launchQueue.add(runSpec, toStart))
-    else Done
-  }.pipeTo(self)
+  def initializeStart(): Future[Done] =
+    async {
+      val toStart = await(nrToStart)
+      logger.info(s"TaskStartActor: initializing for ${runSpec.id} and toStart: $toStart")
+      if (toStart > 0) await(launchQueue.add(runSpec, toStart))
+      else Done
+    }.pipeTo(self)
 
   override def postStop(): Unit = {
     eventBus.unsubscribe(self)
@@ -124,17 +131,28 @@ object TaskStartActor {
   val syncInterval = 5.seconds
 
   def props(
-    deploymentManager: ActorRef,
-    status: DeploymentStatus,
-    launchQueue: LaunchQueue,
-    instanceTracker: InstanceTracker,
-    eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor,
-    runSpec: RunSpec,
-    scaleTo: Int,
-    promise: Promise[Unit]): Props = {
-    Props(new TaskStartActor(deploymentManager, status, launchQueue, instanceTracker,
-      eventBus, readinessCheckExecutor, runSpec, scaleTo, promise)
+      deploymentManager: ActorRef,
+      status: DeploymentStatus,
+      launchQueue: LaunchQueue,
+      instanceTracker: InstanceTracker,
+      eventBus: EventStream,
+      readinessCheckExecutor: ReadinessCheckExecutor,
+      runSpec: RunSpec,
+      scaleTo: Int,
+      promise: Promise[Unit]
+  ): Props = {
+    Props(
+      new TaskStartActor(
+        deploymentManager,
+        status,
+        launchQueue,
+        instanceTracker,
+        eventBus,
+        readinessCheckExecutor,
+        runSpec,
+        scaleTo,
+        promise
+      )
     )
   }
 }

@@ -66,7 +66,9 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
       val orphanedInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
 
       groupRepo.root() returns Future.successful(createRootGroup())
-      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(orphanedInstance)))
+      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(
+        InstanceTracker.InstancesBySpec.forInstances(Seq(orphanedInstance))
+      )
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! ReconcileTasks
@@ -82,10 +84,17 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Terminal tasks should not be submitted in reconciliation" in withFixture() { f =>
       import f._
       val app = AppDefinition(id = AbsolutePathId("/test-app"), instances = 1, cmd = Some("sleep"), role = "*")
-      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskUnreachable(containerName = Some("unreachable")).addTaskRunning().addTaskGone(containerName = Some("gone")).getInstance()
+      val instance = TestInstanceBuilder
+        .newBuilder(app.id)
+        .addTaskUnreachable(containerName = Some("unreachable"))
+        .addTaskRunning()
+        .addTaskGone(containerName = Some("gone"))
+        .getInstance()
 
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
-      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance)))
+      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(
+        InstanceTracker.InstancesBySpec.forInstances(Seq(instance))
+      )
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! ReconcileTasks
@@ -105,7 +114,8 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Terminal tasks should not be submitted in reconciliation - Instance with only terminal tasks" in withFixture() { f =>
       import f._
       val app = AppDefinition(id = AbsolutePathId("/test-app"), instances = 1, cmd = Some("sleep"), role = "*")
-      val instance = TestInstanceBuilder.newBuilder(app.id)
+      val instance = TestInstanceBuilder
+        .newBuilder(app.id)
         .addTaskError(containerName = Some("error"))
         .addTaskFailed(containerName = Some("failed"))
         .addTaskFinished(containerName = Some("finished"))
@@ -116,7 +126,9 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         .getInstance()
 
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
-      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance)))
+      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(
+        InstanceTracker.InstancesBySpec.forInstances(Seq(instance))
+      )
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! ReconcileTasks
@@ -130,7 +142,8 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Terminal tasks should not be submitted in reconciliation - Instance with all kind of tasks status" in withFixture() { f =>
       import f._
       val app = AppDefinition(id = AbsolutePathId("/test-app"), instances = 1, cmd = Some("sleep"), role = "*")
-      val instance = TestInstanceBuilder.newBuilder(app.id)
+      val instance = TestInstanceBuilder
+        .newBuilder(app.id)
         .addTaskError(containerName = Some("error"))
         .addTaskFailed(containerName = Some("failed"))
         .addTaskFinished(containerName = Some("finished"))
@@ -146,7 +159,9 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
         .getInstance()
 
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
-      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance)))
+      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(
+        InstanceTracker.InstancesBySpec.forInstances(Seq(instance))
+      )
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! ReconcileTasks
@@ -171,12 +186,15 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     "Created tasks should not be submitted in reconciliation" in withFixture() { f =>
       import f._
       val app = AppDefinition(id = AbsolutePathId("/test-app"), instances = 1, cmd = Some("sleep"), role = "*")
-      val instance = TestInstanceBuilder.newBuilder(app.id)
+      val instance = TestInstanceBuilder
+        .newBuilder(app.id)
         .addTaskProvisioned(containerName = Some("created"))
         .getInstance()
 
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
-      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance)))
+      instanceTracker.instancesBySpec()(any[ExecutionContext]) returns Future.successful(
+        InstanceTracker.InstancesBySpec.forInstances(Seq(instance))
+      )
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
       schedulerActor ! ReconcileTasks
@@ -193,7 +211,9 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       val instances = Seq(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
 
-      instanceTracker.specInstances(M.eq(AbsolutePathId("/nope")), M.eq(false))(M.any[ExecutionContext]) returns Future.successful(instances)
+      instanceTracker.specInstances(M.eq(AbsolutePathId("/nope")), M.eq(false))(M.any[ExecutionContext]) returns Future.successful(
+        instances
+      )
       groupRepo.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
 
       leadershipTransitionInput.offer(LeadershipTransition.ElectedAsLeaderAndReady)
@@ -346,7 +366,13 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     "Forced deployment" in withFixture() { f =>
       import f._
-      val app = AppDefinition(id = AbsolutePathId("/foo/app1"), cmd = Some("cmd"), instances = 2, upgradeStrategy = UpgradeStrategy(0.5), role = "*")
+      val app = AppDefinition(
+        id = AbsolutePathId("/foo/app1"),
+        cmd = Some("cmd"),
+        instances = 2,
+        upgradeStrategy = UpgradeStrategy(0.5),
+        role = "*"
+      )
       val rootGroup = createRootGroup(groups = Set(createGroup(AbsolutePathId("/foo"), Map(app.id -> app))))
 
       val plan = DeploymentPlan(createRootGroup(), rootGroup, id = Some("d1"))
@@ -426,7 +452,6 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     val instanceTracker: InstanceTracker = mock[InstanceTracker]
     instanceTracker.specInstances(any, M.eq(false))(any) returns Future.successful(Seq.empty[Instance])
-    instanceTracker.specInstancesSync(any, M.eq(false)) returns Seq.empty[Instance]
     instanceTracker.setGoal(any, any, any) returns Future.successful(Done)
     instanceTracker.instanceUpdates returns Source.empty
     val killService = new KillServiceMock(system)
@@ -439,12 +464,16 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
     val holder: MarathonSchedulerDriverHolder = new MarathonSchedulerDriverHolder
     holder.driver = Some(driver)
     val taskFailureEventRepository: TaskFailureRepository = mock[TaskFailureRepository]
-    val (leadershipTransitionInput, leadershipTransitionEvents) = Source.queue[LeadershipTransition](16, OverflowStrategy.fail)
+    val (leadershipTransitionInput, leadershipTransitionEvents) = Source
+      .queue[LeadershipTransition](16, OverflowStrategy.fail)
       .toMat(Subject(16, OverflowStrategy.fail))(Keep.both)
       .run
     val electionService: ElectionService = mock[ElectionService]
-    val schedulerActions: SchedulerActions = new SchedulerActions(
-      groupRepo, hcManager, instanceTracker, queue, new EventStream(system), killService)(system.dispatcher, ActorMaterializer()(system))
+    val schedulerActions: SchedulerActions =
+      new SchedulerActions(groupRepo, hcManager, instanceTracker, queue, new EventStream(system), killService)(
+        system.dispatcher,
+        ActorMaterializer()(system)
+      )
     val readinessCheckExecutor: ReadinessCheckExecutor = mock[ReadinessCheckExecutor]
     val historyActorProps: Props = Props(new HistoryActor(system.eventStream, taskFailureEventRepository))
 
@@ -455,16 +484,18 @@ class MarathonSchedulerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     val metrics: Metrics = DummyMetrics
 
-    val deploymentManagerActor = system.actorOf(DeploymentManagerActor.props(
-      metrics,
-      instanceTracker,
-      killService,
-      queue,
-      hcManager,
-      system.eventStream,
-      readinessCheckExecutor,
-      deploymentRepo
-    ))
+    val deploymentManagerActor = system.actorOf(
+      DeploymentManagerActor.props(
+        metrics,
+        instanceTracker,
+        killService,
+        queue,
+        hcManager,
+        system.eventStream,
+        readinessCheckExecutor,
+        deploymentRepo
+      )
+    )
 
     val deploymentManager = new DeploymentManagerDelegate(conf, deploymentManagerActor)
 

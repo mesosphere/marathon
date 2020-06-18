@@ -37,7 +37,9 @@ private class DeploymentActor(
     launchQueue: LaunchQueue,
     healthCheckManager: HealthCheckManager,
     eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor) extends Actor with StrictLogging {
+    readinessCheckExecutor: ReadinessCheckExecutor
+) extends Actor
+    with StrictLogging {
 
   import context.dispatcher
 
@@ -58,18 +60,21 @@ private class DeploymentActor(
 
   def childSupervisor(props: Props, name: String): Props = {
     BackoffSupervisor.props(
-      BackoffOpts.onFailure(
-        childProps = props,
-        childName = name,
-        minBackoff = 5.seconds,
-        maxBackoff = 1.minute,
-        randomFactor = 0.2 // adds 20% "noise" to vary the intervals slightly
-      ).withSupervisorStrategy(
-        OneForOneStrategy() {
-          case NonFatal(_) => SupervisorStrategy.Restart
-          case _ => SupervisorStrategy.Escalate
-        }
-      ))
+      BackoffOpts
+        .onFailure(
+          childProps = props,
+          childName = name,
+          minBackoff = 5.seconds,
+          maxBackoff = 1.minute,
+          randomFactor = 0.2 // adds 20% "noise" to vary the intervals slightly
+        )
+        .withSupervisorStrategy(
+          OneForOneStrategy() {
+            case NonFatal(_) => SupervisorStrategy.Restart
+            case _ => SupervisorStrategy.Escalate
+          }
+        )
+    )
   }
 
   override def preStart(): Unit = {
@@ -144,20 +149,19 @@ private class DeploymentActor(
     Future.successful(Done)
   }
 
-  private def decommissionInstances(instancesToDecommission: Seq[Instance]): Future[Done] = async {
-    logger.debug("Kill instances {}", instancesToDecommission)
-    val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instancesToDecommission)
-    val changeGoalsFuture = instancesToDecommission.map(i => {
-      if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.DeploymentScaling)
-      else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeploymentScaling)
-    })
-    await(Future.sequence(changeGoalsFuture))
-    await(instancesAreTerminal.runWith(Sink.ignore))
-  }
+  private def decommissionInstances(instancesToDecommission: Seq[Instance]): Future[Done] =
+    async {
+      logger.debug("Kill instances {}", instancesToDecommission)
+      val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instancesToDecommission)
+      val changeGoalsFuture = instancesToDecommission.map(i => {
+        if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.DeploymentScaling)
+        else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeploymentScaling)
+      })
+      await(Future.sequence(changeGoalsFuture))
+      await(instancesAreTerminal.runWith(Sink.ignore))
+    }
 
-  def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int,
-    toKill: Seq[Instance],
-    status: DeploymentStatus): Future[Done] = {
+  def scaleRunnable(runnableSpec: RunSpec, scaleTo: Int, toKill: Seq[Instance], status: DeploymentStatus): Future[Done] = {
     logger.debug(s"Scale runnable $runnableSpec")
 
     def killToMeetConstraints(notSentencedAndRunning: Seq[Instance], toKillCount: Int) = {
@@ -166,8 +170,8 @@ private class DeploymentActor(
 
     async {
       val instances = await(instanceTracker.specInstances(runnableSpec.id))
-      val ScalingProposition(instancesToDecommission, tasksToStart) = ScalingProposition.propose(
-        instances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection, runnableSpec.id)
+      val ScalingProposition(instancesToDecommission, tasksToStart) =
+        ScalingProposition.propose(instances, toKill, killToMeetConstraints, scaleTo, runnableSpec.killSelection, runnableSpec.id)
 
       logger.debug("Kill tasks if needed")
       await(decommissionInstances(instancesToDecommission))
@@ -175,8 +179,22 @@ private class DeploymentActor(
       def startInstancesIfNeeded: Future[Done] = {
         logger.debug(s"Start next $tasksToStart tasks")
         val promise = Promise[Unit]()
-        val startActor = context.actorOf(childSupervisor(TaskStartActor.props(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus,
-          readinessCheckExecutor, runnableSpec, scaleTo, promise), s"TaskStart-${plan.id}"))
+        val startActor = context.actorOf(
+          childSupervisor(
+            TaskStartActor.props(
+              deploymentManagerActor,
+              status,
+              launchQueue,
+              instanceTracker,
+              eventBus,
+              readinessCheckExecutor,
+              runnableSpec,
+              scaleTo,
+              promise
+            ),
+            s"TaskStart-${plan.id}"
+          )
+        )
         promise.future.map(_ => {
           context.stop(startActor)
           Done
@@ -186,38 +204,43 @@ private class DeploymentActor(
     }
   }
 
-  def stopRunnable(runSpec: RunSpec): Future[Done] = async {
-    logger.debug(s"Stop runnable $runSpec")
-    healthCheckManager.removeAllFor(runSpec.id)
+  def stopRunnable(runSpec: RunSpec): Future[Done] =
+    async {
+      logger.debug(s"Stop runnable $runSpec")
+      healthCheckManager.removeAllFor(runSpec.id)
 
-    val instances = await(instanceTracker.specInstances(runSpec.id))
+      val instances = await(instanceTracker.specInstances(runSpec.id))
 
-    logger.info(s"Decommissioning all instances of ${runSpec.id}: ${instances.map(_.instanceId)}")
-    val instancesAreTerminal = KillStreamWatcher.watchForDecommissionedInstances(
-      instanceTracker.instanceUpdates, instances)
-    await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeletingApp))))
-    await(instancesAreTerminal.runWith(Sink.ignore))
+      logger.info(s"Decommissioning all instances of ${runSpec.id}: ${instances.map(_.instanceId)}")
+      val instancesAreTerminal = KillStreamWatcher.watchForDecommissionedInstances(instanceTracker.instanceUpdates, instances)
+      await(Future.sequence(instances.map(i => instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.DeletingApp))))
+      await(instancesAreTerminal.runWith(Sink.ignore))
 
-    launchQueue.resetDelay(runSpec)
+      launchQueue.resetDelay(runSpec)
 
-    // The tasks will be removed from the InstanceTracker when their termination
-    // was confirmed by Mesos via a task update.
-    eventBus.publish(AppTerminatedEvent(runSpec.id))
+      // The tasks will be removed from the InstanceTracker when their termination
+      // was confirmed by Mesos via a task update.
+      eventBus.publish(AppTerminatedEvent(runSpec.id))
 
-    Done
-  }.recover {
-    case NonFatal(error) =>
-      logger.warn(s"Error in stopping runSpec ${runSpec.id}", error)
       Done
-  }
+    }.recover {
+      case NonFatal(error) =>
+        logger.warn(s"Error in stopping runSpec ${runSpec.id}", error)
+        Done
+    }
 
   def restartRunnable(run: RunSpec, status: DeploymentStatus): Future[Done] = {
     if (run.instances == 0) {
       Future.successful(Done)
     } else {
       val promise = Promise[Unit]()
-      context.actorOf(childSupervisor(TaskReplaceActor.props(deploymentManagerActor, status,
-        launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise), s"TaskReplace-${plan.id}"))
+      context.actorOf(
+        childSupervisor(
+          TaskReplaceActor
+            .props(deploymentManagerActor, status, launchQueue, instanceTracker, eventBus, readinessCheckExecutor, run, promise),
+          s"TaskReplace-${plan.id}"
+        )
+      )
       promise.future.map(_ => Done)
     }
   }
@@ -231,24 +254,27 @@ object DeploymentActor {
   case class DeploymentActionInfo(plan: DeploymentPlan, step: DeploymentStep, action: DeploymentAction)
 
   def props(
-    deploymentManagerActor: ActorRef,
-    killService: KillService,
-    plan: DeploymentPlan,
-    taskTracker: InstanceTracker,
-    launchQueue: LaunchQueue,
-    healthCheckManager: HealthCheckManager,
-    eventBus: EventStream,
-    readinessCheckExecutor: ReadinessCheckExecutor): Props = {
+      deploymentManagerActor: ActorRef,
+      killService: KillService,
+      plan: DeploymentPlan,
+      taskTracker: InstanceTracker,
+      launchQueue: LaunchQueue,
+      healthCheckManager: HealthCheckManager,
+      eventBus: EventStream,
+      readinessCheckExecutor: ReadinessCheckExecutor
+  ): Props = {
 
-    Props(new DeploymentActor(
-      deploymentManagerActor,
-      killService,
-      plan,
-      taskTracker,
-      launchQueue,
-      healthCheckManager,
-      eventBus,
-      readinessCheckExecutor
-    ))
+    Props(
+      new DeploymentActor(
+        deploymentManagerActor,
+        killService,
+        plan,
+        taskTracker,
+        launchQueue,
+        healthCheckManager,
+        eventBus,
+        readinessCheckExecutor
+      )
+    )
   }
 }

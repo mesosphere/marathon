@@ -33,4 +33,3 @@ class MutableMesosLeaderInfo extends MesosLeaderInfo {
     leaderUrl = Some(s"http://${master.getHostname}:${master.getPort}/")
   }
 }
-

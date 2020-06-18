@@ -173,9 +173,7 @@ class InstanceTrackerDelegateTest extends AkkaUnitTest {
       Given("the delegate is processing a request")
       val f = new Fixture
       val appId: AbsolutePathId = AbsolutePathId("/test")
-      val config = AllConf.withTestConfig(
-        "--instance_tracker_update_queue_size", "1",
-        "--instance_tracker_num_parallel_updates", "1")
+      val config = AllConf.withTestConfig("--instance_tracker_update_queue_size", "1", "--instance_tracker_num_parallel_updates", "1")
       lazy val delegate = new InstanceTrackerDelegate(f.metrics, f.clock, config, f.instanceTrackerProbe.ref)
 
       And("three queued queries")

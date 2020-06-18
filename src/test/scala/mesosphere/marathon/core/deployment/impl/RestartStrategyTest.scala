@@ -8,11 +8,16 @@ import mesosphere.marathon.state._
 
 class RestartStrategyTest extends UnitTest {
 
-  val container = Some(Container.MesosDocker(volumes = Seq(VolumeWithMount(
-    volume = PersistentVolume(name = None, PersistentVolumeInfo(123)),
-    mount = VolumeMount(volumeName = None, mountPath = "path")
-  ))
-  ))
+  val container = Some(
+    Container.MesosDocker(volumes =
+      Seq(
+        VolumeWithMount(
+          volume = PersistentVolume(name = None, PersistentVolumeInfo(123)),
+          mount = VolumeMount(volumeName = None, mountPath = "path")
+        )
+      )
+    )
+  )
 
   def mockInstances(instanceCount: Int, healthy: (Int) => Boolean = _ => true): Seq[mesosphere.marathon.core.instance.Instance] = {
     val instances: Seq[mesosphere.marathon.core.instance.Instance] = List.tabulate(instanceCount)(f = i => {
@@ -35,7 +40,8 @@ class RestartStrategyTest extends UnitTest {
         role = "*",
         instances = 1,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
-        container = container)
+        container = container
+      )
 
       When("the ignition strategy is computed")
 
@@ -55,7 +61,8 @@ class RestartStrategyTest extends UnitTest {
         role = "*",
         instances = 1,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
-        container = container)
+        container = container
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, mockInstances(1, _ => false))
@@ -74,7 +81,8 @@ class RestartStrategyTest extends UnitTest {
         role = "*",
         instances = 5,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
-        container = container)
+        container = container
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, mockInstances(app.instances))
@@ -93,7 +101,8 @@ class RestartStrategyTest extends UnitTest {
         role = "*",
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
-        container = container)
+        container = container
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, mockInstances(app.instances + 2))
@@ -112,7 +121,8 @@ class RestartStrategyTest extends UnitTest {
         role = "*",
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
-        container = container)
+        container = container
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, mockInstances(app.instances, i => (i < app.instances - 2)))
@@ -131,7 +141,8 @@ class RestartStrategyTest extends UnitTest {
         role = "*",
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
-        container = container)
+        container = container
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, mockInstances(app.instances))
@@ -149,7 +160,8 @@ class RestartStrategyTest extends UnitTest {
         id = AbsolutePathId("/app"),
         role = "*",
         instances = 1,
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0)
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, mockInstances(app.instances))
@@ -167,7 +179,8 @@ class RestartStrategyTest extends UnitTest {
         id = AbsolutePathId("/app"),
         role = "*",
         instances = 1,
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0)
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, mockInstances(0))
@@ -185,7 +198,8 @@ class RestartStrategyTest extends UnitTest {
         id = AbsolutePathId("/app"),
         role = "*",
         instances = 2,
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0)
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, mockInstances(app.instances))
@@ -203,7 +217,8 @@ class RestartStrategyTest extends UnitTest {
         id = AbsolutePathId("/app"),
         role = "*",
         instances = 10,
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.1, maximumOverCapacity = 0))
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.1, maximumOverCapacity = 0)
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, mockInstances(1))
@@ -221,7 +236,8 @@ class RestartStrategyTest extends UnitTest {
         id = AbsolutePathId("/app"),
         role = "*",
         instances = 10,
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.1, maximumOverCapacity = 1.0))
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.1, maximumOverCapacity = 1.0)
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, mockInstances(app.instances))
@@ -239,7 +255,8 @@ class RestartStrategyTest extends UnitTest {
         id = AbsolutePathId("/app"),
         role = "*",
         instances = 10,
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 1.0))
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 1.0)
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, mockInstances(app.instances))

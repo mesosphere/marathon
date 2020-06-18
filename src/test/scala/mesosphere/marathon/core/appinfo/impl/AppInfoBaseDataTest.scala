@@ -67,7 +67,9 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
             startedAt = Some(clock.now()),
             mesosStatus = None,
             condition = Condition.Running,
-            networkInfo = NetworkInfoPlaceholder()))
+            networkInfo = NetworkInfoPlaceholder()
+          )
+        )
       }.toMap
 
       Instance(
@@ -76,16 +78,22 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
         state = InstanceState.transitionTo(None, tasks, clock.now(), UnreachableStrategy.default(), Goal.Running),
         tasksMap = tasks,
         runSpec = pod,
-        None, "*"
+        None,
+        "*"
       )
     }
   }
 
   val app = AppDefinition(AbsolutePathId("/test"), role = "*")
   val other = AppDefinition(AbsolutePathId("/other"), role = "*")
-  val pod = PodDefinition(id = AbsolutePathId("/pod"), role = "*", networks = Seq(HostNetwork), containers = Seq(
-    MesosContainer(name = "ct1", resources = Resources(0.01, 32))
-  ))
+  val pod = PodDefinition(
+    id = AbsolutePathId("/pod"),
+    role = "*",
+    networks = Seq(HostNetwork),
+    containers = Seq(
+      MesosContainer(name = "ct1", resources = Resources(0.01, 32))
+    )
+  )
 
   "AppInfoBaseData" should {
     "not embedding anything results in no calls" in {
@@ -141,7 +149,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       Then("we get a tasks object in the appInfo")
       appInfo.tasks.value should have size 2
-      appInfo.tasks.value should equal (eTasks)
+      appInfo.tasks.value should equal(eTasks)
     }
 
     "requesting tasks retrieves tasks from taskTracker and health infos" in {
@@ -156,7 +164,9 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(builder1.getInstance(), builder2.getInstance(), builder3.getInstance())))
+        Future.successful(
+          InstanceTracker.InstancesBySpec.forInstances(Seq(builder1.getInstance(), builder2.getInstance(), builder3.getInstance()))
+        )
 
       val alive = Health(running2.instanceId, lastSuccess = Some(Timestamp(1)))
       val unhealthy = Health(running3.instanceId, lastFailure = Some(Timestamp(1)))
@@ -174,20 +184,26 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       Then("we get a tasks object in the appInfo")
       appInfo.tasks.value should have size 3
-      appInfo.tasks.value.map(_.id).toSet should be (Set(
-        running1.appTask.taskId.idString,
-        running2.appTask.taskId.idString,
-        running3.appTask.taskId.idString))
+      appInfo.tasks.value.map(_.id).toSet should be(
+        Set(running1.appTask.taskId.idString, running2.appTask.taskId.idString, running3.appTask.taskId.idString)
+      )
 
-      appInfo should be(raml.AppInfo.fromParent(parent = Raml.toRaml(app), tasks =
-        Some(
-          Seq(
-            Raml.toRaml(EnrichedTask(running1.runSpecId, running1.appTask, TestInstanceBuilder.defaultAgentInfo, Nil, Nil, None, "*")),
-            Raml.toRaml(EnrichedTask(running2.runSpecId, running2.appTask, TestInstanceBuilder.defaultAgentInfo, Seq(alive), Nil, None, "*")),
-            Raml.toRaml(EnrichedTask(running3.runSpecId, running3.appTask, TestInstanceBuilder.defaultAgentInfo, Seq(unhealthy), Nil, None, "*"))
+      appInfo should be(
+        raml.AppInfo.fromParent(
+          parent = Raml.toRaml(app),
+          tasks = Some(
+            Seq(
+              Raml.toRaml(EnrichedTask(running1.runSpecId, running1.appTask, TestInstanceBuilder.defaultAgentInfo, Nil, Nil, None, "*")),
+              Raml.toRaml(
+                EnrichedTask(running2.runSpecId, running2.appTask, TestInstanceBuilder.defaultAgentInfo, Seq(alive), Nil, None, "*")
+              ),
+              Raml.toRaml(
+                EnrichedTask(running3.runSpecId, running3.appTask, TestInstanceBuilder.defaultAgentInfo, Seq(unhealthy), Nil, None, "*")
+              )
+            )
           )
         )
-      ))
+      )
 
       And("the taskTracker should have been called")
       verify(f.instanceTracker, times(1)).instancesBySpec()
@@ -230,7 +246,10 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       import scala.concurrent.ExecutionContext.Implicits.global
       f.instanceTracker.instancesBySpec() returns
-        Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance())))
+        Future.successful(
+          InstanceTracker.InstancesBySpec
+            .forInstances(Seq(stagedBuilder.getInstance(), runningBuilder.getInstance(), running2Builder.getInstance()))
+        )
 
       f.healthCheckManager.statuses(app.id) returns Future.successful(
         Map(
@@ -244,7 +263,15 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Counts)).futureValue
 
       Then("we get counts object in the appInfo")
-      appInfo should be(raml.AppInfo.fromParent(parent = Raml.toRaml(app), tasksStaged = Some(1), tasksRunning = Some(2), tasksHealthy = Some(1), tasksUnhealthy = Some(1)))
+      appInfo should be(
+        raml.AppInfo.fromParent(
+          parent = Raml.toRaml(app),
+          tasksStaged = Some(1),
+          tasksRunning = Some(2),
+          tasksHealthy = Some(1),
+          tasksUnhealthy = Some(1)
+        )
+      )
 
       And("the taskTracker should have been called")
       verify(f.instanceTracker, times(1)).instancesBySpec()
@@ -260,18 +287,24 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val f = new Fixture
       Given("One related and one unrelated deployment")
       val emptyRootGroup = createRootGroup()
-      val relatedDeployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.root, _ => Map(app.id -> app), emptyRootGroup.version))
-      val unrelatedDeployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.root, _ => Map(other.id -> other), emptyRootGroup.version))
-      f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq[DeploymentStepInfo](
-        DeploymentStepInfo(relatedDeployment, DeploymentStep(Seq.empty), 1),
-        DeploymentStepInfo(unrelatedDeployment, DeploymentStep(Seq.empty), 1)
-      ))
+      val relatedDeployment =
+        DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.root, _ => Map(app.id -> app), emptyRootGroup.version))
+      val unrelatedDeployment =
+        DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.root, _ => Map(other.id -> other), emptyRootGroup.version))
+      f.marathonSchedulerService.listRunningDeployments() returns Future.successful(
+        Seq[DeploymentStepInfo](
+          DeploymentStepInfo(relatedDeployment, DeploymentStep(Seq.empty), 1),
+          DeploymentStepInfo(unrelatedDeployment, DeploymentStep(Seq.empty), 1)
+        )
+      )
 
       When("Getting AppInfos without counts")
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Deployments)).futureValue
 
       Then("we get an counts in the appInfo")
-      appInfo should be(raml.AppInfo.fromParent(parent = Raml.toRaml(app), deployments = Some(Seq(raml.Identifiable(relatedDeployment.id)))))
+      appInfo should be(
+        raml.AppInfo.fromParent(parent = Raml.toRaml(app), deployments = Some(Seq(raml.Identifiable(relatedDeployment.id))))
+      )
 
       And("the marathonSchedulerService should have been called to retrieve the deployments")
       verify(f.marathonSchedulerService, times(1)).listRunningDeployments()
@@ -304,14 +337,17 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val f = new Fixture
       Given("One related and one unrelated deployment")
       val emptyRootGroup = createRootGroup()
-      val deployment = DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.root, _ => Map(app.id -> app), emptyRootGroup.version))
+      val deployment =
+        DeploymentPlan(emptyRootGroup, emptyRootGroup.updateApps(PathId.root, _ => Map(app.id -> app), emptyRootGroup.version))
       val instanceId = Instance.Id.forRunSpec(app.id)
       val taskId: Task.Id = Task.Id(instanceId)
       val result = ReadinessCheckResult("foo", taskId, ready = false, None)
       val resultRaml = raml.TaskReadinessCheckResult("foo", taskId.idString, ready = false, None)
-      f.marathonSchedulerService.listRunningDeployments() returns Future.successful(Seq[DeploymentStepInfo](
-        DeploymentStepInfo(deployment, DeploymentStep(Seq.empty), 1, Map(taskId -> result))
-      ))
+      f.marathonSchedulerService.listRunningDeployments() returns Future.successful(
+        Seq[DeploymentStepInfo](
+          DeploymentStepInfo(deployment, DeploymentStep(Seq.empty), 1, Map(taskId -> result))
+        )
+      )
 
       When("Getting AppInfos without counts")
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.Readiness)).futureValue
@@ -335,7 +371,12 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.LastTaskFailure)).futureValue
 
       Then("we get the failure in the app info")
-      appInfo should be(raml.AppInfo.fromParent(parent = Raml.toRaml(app), lastTaskFailure = Some(Raml.toRaml(TaskFailureTestHelper.taskFailure)(TaskConversion.taskFailureRamlWrite))))
+      appInfo should be(
+        raml.AppInfo.fromParent(
+          parent = Raml.toRaml(app),
+          lastTaskFailure = Some(Raml.toRaml(TaskFailureTestHelper.taskFailure)(TaskConversion.taskFailureRamlWrite))
+        )
+      )
 
       And("the taskFailureRepository should have been called to retrieve the failure")
       verify(f.taskFailureRepository, times(1)).get(app.id)
@@ -365,11 +406,14 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
     "requesting taskStats" in {
       val f = new Fixture
       Given("one staged and two running tasks in the taskTracker")
-      val stagedBuilder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskStaged(stagedAt = Timestamp((f.clock.now() - 10.seconds).millis))
+      val stagedBuilder =
+        TestInstanceBuilder.newBuilder(f.runSpecId).addTaskStaged(stagedAt = Timestamp((f.clock.now() - 10.seconds).millis))
       val staged: Instance = stagedBuilder.getInstance()
-      val runningBuilder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning(stagedAt = Timestamp((f.clock.now() - 11.seconds).millis))
+      val runningBuilder =
+        TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning(stagedAt = Timestamp((f.clock.now() - 11.seconds).millis))
       val running: Instance = runningBuilder.getInstance()
-      val running2Builder = TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning(stagedAt = Timestamp((f.clock.now() - 11.seconds).millis))
+      val running2Builder =
+        TestInstanceBuilder.newBuilder(f.runSpecId).addTaskRunning(stagedAt = Timestamp((f.clock.now() - 11.seconds).millis))
       val running2: Instance = running2Builder.getInstance()
 
       import scala.concurrent.ExecutionContext.Implicits.global
@@ -392,13 +436,15 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
 
       withClue(Json.prettyPrint(Json.toJson(appInfo))) {
         appInfo.tasksStats should not be empty
-        appInfo.tasksStats.value.totalSummary.value.stats.counts.staged should be (1)
-        appInfo.tasksStats.value.totalSummary.value.stats.counts.running should be (2)
+        appInfo.tasksStats.value.totalSummary.value.stats.counts.staged should be(1)
+        appInfo.tasksStats.value.totalSummary.value.stats.counts.running should be(2)
 
-        appInfo should be(raml.AppInfo.fromParent(
-          parent = Raml.toRaml(app),
-          tasksStats = Some(TaskStatsByVersion(f.clock.now(), app.versionInfo, instances, statuses))
-        ))
+        appInfo should be(
+          raml.AppInfo.fromParent(
+            parent = Raml.toRaml(app),
+            tasksStats = Some(TaskStatsByVersion(f.clock.now(), app.versionInfo, instances, statuses))
+          )
+        )
       }
 
       And("the taskTracker should have been called")
@@ -423,11 +469,13 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInfo = f.baseData.appInfoFuture(app, Set(AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Deployments)).futureValue
 
       Then("we get the failure in the app info")
-      appInfo should be(raml.AppInfo.fromParent(
-        parent = Raml.toRaml(app),
-        lastTaskFailure = Some(Raml.toRaml(TaskFailureTestHelper.taskFailure)(TaskConversion.taskFailureRamlWrite)),
-        deployments = Some(Seq.empty)
-      ))
+      appInfo should be(
+        raml.AppInfo.fromParent(
+          parent = Raml.toRaml(app),
+          lastTaskFailure = Some(Raml.toRaml(TaskFailureTestHelper.taskFailure)(TaskConversion.taskFailureRamlWrite)),
+          deployments = Some(Seq.empty)
+        )
+      )
 
       And("the taskFailureRepository should have been called to retrieve the failure")
       verify(f.taskFailureRepository, times(1)).get(app.id)
@@ -478,7 +526,7 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
       val appInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
       val maybeStatus3 = f.baseData.podInstanceStatus(appInstance)
 
-      maybeStatus3 should be ('empty)
+      maybeStatus3 should be('empty)
     }
 
     "pod status for instances already removed from the group repo doesn't throw an exception" in { //DCOS-16151
@@ -521,7 +569,9 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
               startedAt = Some(f.clock.now()),
               mesosStatus = Some(MesosTaskStatusTestHelper.unknown(taskId)),
               condition = Condition.Unknown,
-              networkInfo = NetworkInfoPlaceholder()))
+              networkInfo = NetworkInfoPlaceholder()
+            )
+          )
         }.toMap
 
         Instance(
@@ -530,7 +580,8 @@ class AppInfoBaseDataTest extends UnitTest with GroupCreation {
           state = InstanceState.transitionTo(None, tasks, f.clock.now(), UnreachableStrategy.default(), Goal.Running),
           tasksMap = tasks,
           runSpec = pod,
-          None, "*"
+          None,
+          "*"
         )
       }
       f.instanceTracker.instancesBySpec() returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(instance1)))

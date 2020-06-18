@@ -14,7 +14,7 @@ class InfoEmbedResolverTest extends UnitTest {
         When(s"embed=${prefix}lastTaskFailure")
         val resolved = InfoEmbedResolver.resolveApp(Set(s"${prefix}lastTaskFailure"))
         Then("it should resolve correctly")
-        resolved should be (Set(AppInfo.Embed.LastTaskFailure))
+        resolved should be(Set(AppInfo.Embed.LastTaskFailure))
       }
     }
 
@@ -23,7 +23,7 @@ class InfoEmbedResolverTest extends UnitTest {
         When(s"embed=${prefix}counts")
         val resolved = InfoEmbedResolver.resolveApp(Set(s"${prefix}counts"))
         Then("it should resolve correctly")
-        resolved should be (Set(AppInfo.Embed.Counts))
+        resolved should be(Set(AppInfo.Embed.Counts))
       }
     }
 
@@ -32,7 +32,7 @@ class InfoEmbedResolverTest extends UnitTest {
         When(s"embed=${prefix}deployments")
         val resolved = InfoEmbedResolver.resolveApp(Set(s"${prefix}deployments"))
         Then("it should resolve correctly")
-        resolved should be (Set(AppInfo.Embed.Deployments))
+        resolved should be(Set(AppInfo.Embed.Deployments))
       }
     }
 
@@ -41,7 +41,7 @@ class InfoEmbedResolverTest extends UnitTest {
         When(s"embed=${prefix}readiness")
         val resolved = InfoEmbedResolver.resolveApp(Set(s"${prefix}readiness"))
         Then("it should resolve correctly")
-        resolved should be (Set(AppInfo.Embed.Readiness))
+        resolved should be(Set(AppInfo.Embed.Readiness))
       }
     }
 
@@ -50,7 +50,7 @@ class InfoEmbedResolverTest extends UnitTest {
         When(s"embed=${prefix}tasks")
         val resolved = InfoEmbedResolver.resolveApp(Set(s"${prefix}tasks"))
         Then("it should resolve correctly")
-        resolved should be (Set(AppInfo.Embed.Tasks, AppInfo.Embed.Deployments))
+        resolved should be(Set(AppInfo.Embed.Tasks, AppInfo.Embed.Deployments))
       }
     }
 
@@ -59,7 +59,7 @@ class InfoEmbedResolverTest extends UnitTest {
         When(s"embed=${prefix}failures")
         val resolved = InfoEmbedResolver.resolveApp(Set(s"${prefix}failures"))
         Then("it should resolve correctly")
-        resolved should be (Set(AppInfo.Embed.Tasks, AppInfo.Embed.Deployments, AppInfo.Embed.LastTaskFailure))
+        resolved should be(Set(AppInfo.Embed.Tasks, AppInfo.Embed.Deployments, AppInfo.Embed.LastTaskFailure))
       }
     }
 
@@ -67,14 +67,14 @@ class InfoEmbedResolverTest extends UnitTest {
       When("embed=lastTaskFailure and embed=counts")
       val resolved = InfoEmbedResolver.resolveApp(Set("lastTaskFailure", "counts"))
       Then("it should resolve correctly")
-      resolved should be (Set(AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Counts))
+      resolved should be(Set(AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Counts))
     }
 
     "Unknown embed options are ignored" in {
       When("embed=lastTaskFailure and embed=counts and embed=something")
       val resolved = InfoEmbedResolver.resolveApp(Set("lastTaskFailure", "counts", "something"))
       Then("it should resolve correctly")
-      resolved should be (Set(AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Counts))
+      resolved should be(Set(AppInfo.Embed.LastTaskFailure, AppInfo.Embed.Counts))
     }
 
     "Group resolving works" in {
@@ -87,7 +87,9 @@ class InfoEmbedResolverTest extends UnitTest {
 
     "App / Group resolving works" in {
       When("We resolve group embed infos")
-      val (app, group) = InfoEmbedResolver.resolveAppGroup(Set("group.groups", "group.apps", "group.apps.tasks", "group.apps.unknown", "group.unknown", "unknown"))
+      val (app, group) = InfoEmbedResolver.resolveAppGroup(
+        Set("group.groups", "group.apps", "group.apps.tasks", "group.apps.unknown", "group.unknown", "unknown")
+      )
 
       Then("The embed parameter are resolved correctly")
       group should be(Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))

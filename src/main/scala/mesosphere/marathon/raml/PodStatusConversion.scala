@@ -31,11 +31,8 @@ trait PodStatusConversion {
 
     val resources: Option[Resources] = {
       targetTask.status.condition match {
-        case condition.Condition.Staging |
-          condition.Condition.Starting |
-          condition.Condition.Running |
-          condition.Condition.Unreachable |
-          condition.Condition.Killing =>
+        case condition.Condition.Staging | condition.Condition.Starting | condition.Condition.Running | condition.Condition.Unreachable |
+            condition.Condition.Killing =>
           maybeContainerSpec.map(_.resources)
         case _ if instance.hasReservation =>
           maybeContainerSpec.map(_.resources)
@@ -62,17 +59,16 @@ trait PodStatusConversion {
     * generate a pod instance status RAML for some instance.
     */
   implicit val podInstanceStatusRamlWriter: Writes[(PodDefinition, core.instance.Instance), PodInstanceStatus] = Writes { src =>
-
     val (pod, instance) = src
 
     assume(
       pod.id == instance.instanceId.runSpecId,
-      s"pod id ${pod.id} should match spec id of the instance ${instance.instanceId.runSpecId}")
+      s"pod id ${pod.id} should match spec id of the instance ${instance.instanceId.runSpecId}"
+    )
 
     val containerStatus: Seq[ContainerStatus] =
       instance.tasksMap.values.iterator.map(taskToContainerStatus(pod, instance)).toSeq
-    val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(
-      instance, containerStatus)
+    val (derivedStatus: PodInstanceState, message: Option[String]) = podInstanceState(instance, containerStatus)
 
     val networkStatus: Seq[NetworkStatus] = networkStatuses(instance.tasksMap.values.to(Seq))
     val resources: Resources = containerStatus.flatMap(_.resources).foldLeft(PodDefinition.DefaultExecutorResources) { (all, res) =>
@@ -106,22 +102,26 @@ trait PodStatusConversion {
   }
 
   // TODO: Consider using a view here (since we flatMap and groupBy)
-  def networkStatuses(tasks: Seq[task.Task]): Seq[NetworkStatus] = tasks.flatMap { task =>
-    task.status.mesosStatus.filter(_.hasContainerStatus).fold(List.empty[NetworkStatus]) { mesosStatus =>
-      mesosStatus.getContainerStatus.getNetworkInfosList.asScala.iterator.map { networkInfo =>
-        NetworkStatus(
-          name = if (networkInfo.hasName) Some(networkInfo.getName) else None,
-          addresses = networkInfo.getIpAddressesList.asScala
-            .iterator.filter(_.hasIpAddress).map(_.getIpAddress).toSeq
-        )
-      }.toList
-    }
-  }.groupBy(_.name).values.iterator.map { toMerge =>
-    val networkStatus: NetworkStatus = toMerge.reduceLeft { (merged, single) =>
-      merged.copy(addresses = merged.addresses ++ single.addresses)
-    }
-    networkStatus.copy(addresses = networkStatus.addresses.distinct)
-  }.toSeq
+  def networkStatuses(tasks: Seq[task.Task]): Seq[NetworkStatus] =
+    tasks.flatMap { task =>
+      task.status.mesosStatus.filter(_.hasContainerStatus).fold(List.empty[NetworkStatus]) { mesosStatus =>
+        mesosStatus.getContainerStatus.getNetworkInfosList.asScala.iterator.map { networkInfo =>
+          NetworkStatus(
+            name = if (networkInfo.hasName) Some(networkInfo.getName) else None,
+            addresses = networkInfo.getIpAddressesList.asScala.iterator.filter(_.hasIpAddress).map(_.getIpAddress).toSeq
+          )
+        }.toList
+      }
+    }.groupBy(_.name)
+      .values
+      .iterator
+      .map { toMerge =>
+        val networkStatus: NetworkStatus = toMerge.reduceLeft { (merged, single) =>
+          merged.copy(addresses = merged.addresses ++ single.addresses)
+        }
+        networkStatus.copy(addresses = networkStatus.addresses.distinct)
+      }
+      .toSeq
 
   def healthCheckEndpoint(spec: MesosContainer): Option[String] = {
     def invalidPortIndex[T](msg: String): T = throw new IllegalStateException(msg)
@@ -131,10 +131,10 @@ trait PodStatusConversion {
     }.map {
       _.fold(
         invalidPortIndex(s"missing portIndex to map to an endpoint for container ${spec.name}")
-      ){
-          case portName: PortReference.ByName => portName.value
-          case _ => invalidPortIndex("index byInt not supported for pods")
-        }
+      ) {
+        case portName: PortReference.ByName => portName.value
+        case _ => invalidPortIndex("index byInt not supported for pods")
+      }
     }
   }
 
@@ -143,20 +143,17 @@ trait PodStatusConversion {
     * or else endpoint health checks.
     */
   def maybeHealthCondition(
-    status: task.Task.Status,
-    maybeContainerSpec: Option[MesosContainer],
-    endpointStatuses: Seq[ContainerEndpointStatus],
-    since: OffsetDateTime,
-    instance: core.instance.Instance): Option[StatusCondition] = {
+      status: task.Task.Status,
+      maybeContainerSpec: Option[MesosContainer],
+      endpointStatuses: Seq[ContainerEndpointStatus],
+      since: OffsetDateTime,
+      instance: core.instance.Instance
+  ): Option[StatusCondition] = {
 
     status.condition match {
       // do not show health status for instances that are not expunged because of reservation but are terminal at the same time
       case c if c.isTerminal && instance.hasReservation => None
-      case condition.Condition.Staging |
-        condition.Condition.Starting |
-        condition.Condition.Scheduled |
-        condition.Condition.Provisioned =>
-
+      case condition.Condition.Staging | condition.Condition.Starting | condition.Condition.Scheduled | condition.Condition.Provisioned =>
         // not useful to report health conditions for tasks that have never reached a running state
         None
       case _ =>
@@ -193,11 +190,7 @@ trait PodStatusConversion {
     }
   }
 
-  def endpointStatuses(
-    pod: PodDefinition,
-    maybeContainerSpec: Option[MesosContainer],
-    task: core.task.Task): Seq[ContainerEndpointStatus] =
-
+  def endpointStatuses(pod: PodDefinition, maybeContainerSpec: Option[MesosContainer], task: core.task.Task): Seq[ContainerEndpointStatus] =
     maybeContainerSpec.flatMap { _ =>
       if (task.isActive) {
         val taskHealthy: Option[Boolean] = // only calculate this once so we do it here
@@ -214,7 +207,7 @@ trait PodStatusConversion {
                 endpointRequestedHostPort.size == reservedHostPorts.size,
                 s"number of reserved host ports ${reservedHostPorts.size} should equal number of" +
                   s"requested host ports ${endpointRequestedHostPort.size}")
-              */
+             */
             // we assume that order has been preserved between the allocated port list and the endpoint list
             // TODO(jdef) pods what actually guarantees that this doesn't change? (do we check this upon pod update?)
             def reservedEndpointStatus: Seq[ContainerEndpointStatus] =
@@ -223,8 +216,10 @@ trait PodStatusConversion {
                   ContainerEndpointStatus(name, Some(allocated))
               }
 
-            def unreservedEndpointStatus: Seq[ContainerEndpointStatus] = containerSpec.endpoints
-              .withFilter(_.hostPort.isEmpty).map(ep => ContainerEndpointStatus(ep.name))
+            def unreservedEndpointStatus: Seq[ContainerEndpointStatus] =
+              containerSpec.endpoints
+                .withFilter(_.hostPort.isEmpty)
+                .map(ep => ContainerEndpointStatus(ep.name))
 
             def withHealth: Seq[ContainerEndpointStatus] = {
               val allEndpoints = reservedEndpointStatus ++ unreservedEndpointStatus
@@ -248,40 +243,33 @@ trait PodStatusConversion {
       }
     }.getOrElse(List.empty[ContainerEndpointStatus])
 
-  def podInstanceState(
-    instance: core.instance.Instance,
-    containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) = {
+  def podInstanceState(instance: core.instance.Instance, containerStatus: Seq[ContainerStatus]): (PodInstanceState, Option[String]) = {
 
-    if (instance.isScheduled ||
-      instance.isProvisioned) {
+    if (
+      instance.isScheduled ||
+      instance.isProvisioned
+    ) {
       PodInstanceState.Pending -> None
     } else {
       instance.state.condition match {
         // In this rare case, an instance never ran (e.g. not enough resources) and was
         // stopped (e.g. due to a scale down) but still exists because this is a resident
         // app/pod with a state.condition == Scheduled/Provisioned
-        case condition.Condition.Scheduled |
-          condition.Condition.Provisioned =>
+        case condition.Condition.Scheduled | condition.Condition.Provisioned =>
           PodInstanceState.Terminal -> None
-        case condition.Condition.Staging |
-          condition.Condition.Starting =>
+        case condition.Condition.Staging | condition.Condition.Starting =>
           PodInstanceState.Staging -> None
-        case condition.Condition.Error |
-          condition.Condition.Failed |
-          condition.Condition.Finished |
-          condition.Condition.Killed |
-          condition.Condition.Gone |
-          condition.Condition.Dropped |
-          condition.Condition.Unknown |
-          condition.Condition.Killing =>
+        case condition.Condition.Error | condition.Condition.Failed | condition.Condition.Finished | condition.Condition.Killed |
+            condition.Condition.Gone | condition.Condition.Dropped | condition.Condition.Unknown | condition.Condition.Killing =>
           PodInstanceState.Terminal -> None
-        case condition.Condition.Unreachable |
-          condition.Condition.UnreachableInactive =>
+        case condition.Condition.Unreachable | condition.Condition.UnreachableInactive =>
           PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNREACHABLE)
         case condition.Condition.Running =>
-          if (containerStatus.exists(_.conditions.exists { cond =>
-            cond.name == STATUS_CONDITION_HEALTHY && cond.value == "false"
-          }))
+          if (
+            containerStatus.exists(_.conditions.exists { cond =>
+              cond.name == STATUS_CONDITION_HEALTHY && cond.value == "false"
+            })
+          )
             PodInstanceState.Degraded -> Some(MSG_INSTANCE_UNHEALTHY_CONTAINERS)
           else
             PodInstanceState.Stable -> None

@@ -16,15 +16,16 @@ object HttpBindings {
   val EventsPath: String = "/v2/events"
 
   def apply(
-    handler: ServletContextHandler,
-    rootApplication: RootApplication,
-    leaderProxyFilter: LeaderProxyFilter,
-    limitConcurrentRequestsFilter: LimitConcurrentRequestsFilter,
-    corsFilter: CORSFilter,
-    cacheDisablingFilter: CacheDisablingFilter,
-    eventSourceServlet: EventSourceServlet,
-    webJarServlet: WebJarServlet,
-    publicServlet: PublicServlet): Unit = {
+      handler: ServletContextHandler,
+      rootApplication: RootApplication,
+      leaderProxyFilter: LeaderProxyFilter,
+      limitConcurrentRequestsFilter: LimitConcurrentRequestsFilter,
+      corsFilter: CORSFilter,
+      cacheDisablingFilter: CacheDisablingFilter,
+      eventSourceServlet: EventSourceServlet,
+      webJarServlet: WebJarServlet,
+      publicServlet: PublicServlet
+  ): Unit = {
 
     val allDispatchers = EnumSet.allOf(classOf[DispatcherType])
     def addFilter(path: String, filter: Filter, dispatches: EnumSet[DispatcherType] = allDispatchers): Unit = {

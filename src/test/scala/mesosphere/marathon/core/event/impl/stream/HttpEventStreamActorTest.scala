@@ -23,12 +23,15 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender with Eve
     val metrics: Metrics = DummyMetrics
     val actorMetrics: HttpEventStreamActorMetrics = new HttpEventStreamActorMetrics(metrics)
     val leadershipTransitionInput = TestPublisher.probe[LeadershipTransition](0)
-    val leadershipTransitionEvents = Source.fromPublisher(leadershipTransitionInput)
-      .mapMaterializedValue { c => new CancellableOnce(() => leadershipTransitionInput.sendComplete()) }
+    val leadershipTransitionEvents = Source.fromPublisher(leadershipTransitionInput).mapMaterializedValue { c =>
+      new CancellableOnce(() => leadershipTransitionInput.sendComplete())
+    }
     def handleStreamProps(handle: HttpEventStreamHandle) = Props(new HttpEventStreamHandleActor(handle, stream, 1))
-    val streamActor: TestActorRef[HttpEventStreamActor] = TestActorRef(Props(
-      new HttpEventStreamActor(leadershipTransitionEvents, actorMetrics, handleStreamProps)
-    ))
+    val streamActor: TestActorRef[HttpEventStreamActor] = TestActorRef(
+      Props(
+        new HttpEventStreamActor(leadershipTransitionEvents, actorMetrics, handleStreamProps)
+      )
+    )
 
     def setLeadership(leader: Boolean): Unit = {
       leadershipTransitionInput.sendNext(
@@ -57,7 +60,7 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender with Eve
 
       Then("An actor is created and subscribed to the event stream")
       streamActor.underlyingActor.streamHandleActors should have size 1
-      streamActor.underlyingActor.streamHandleActors.get(handle) should be ('nonEmpty)
+      streamActor.underlyingActor.streamHandleActors.get(handle) should be('nonEmpty)
     }
 
     "Unregister handlers when switching to standby mode" in new Fixture {
@@ -76,7 +79,7 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender with Eve
       val terminated = expectMsgClass(1.second, classOf[Terminated])
       terminated.getActor should be(handleActor)
       streamActor.underlyingActor.streamHandleActors should have size 0
-      streamActor.underlyingActor.streamHandleActors.get(handle) should be ('empty)
+      streamActor.underlyingActor.streamHandleActors.get(handle) should be('empty)
       verify(handle).close()
     }
 
@@ -89,7 +92,7 @@ class HttpEventStreamActorTest extends AkkaUnitTest with ImplicitSender with Eve
 
       Then("The connection is immediately closed without creating an actor")
       streamActor.underlyingActor.streamHandleActors should have size 0
-      streamActor.underlyingActor.streamHandleActors.get(handle) should be ('empty)
+      streamActor.underlyingActor.streamHandleActors.get(handle) should be('empty)
       verify(handle).close()
       verifyNoMoreInteractions(handle)
     }

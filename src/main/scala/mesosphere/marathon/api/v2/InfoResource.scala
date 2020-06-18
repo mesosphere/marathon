@@ -26,7 +26,8 @@ class InfoResource @Inject() (
     val authenticator: Authenticator,
     val authorizer: Authorizer,
     protected val config: MarathonConf with HttpConf
-)(implicit val executionContext: ExecutionContext) extends AuthResource {
+)(implicit val executionContext: ExecutionContext)
+    extends AuthResource {
 
   // Marathon configurations
   private[this] lazy val marathonConfigValues = Json.obj(
@@ -73,7 +74,7 @@ class InfoResource @Inject() (
     "maintenance_mode" -> config.maintenanceMode.toOption
   )
 
-  // ZooKeeper congiurations
+  // ZooKeeper configurations
   private[this] lazy val zookeeperConfigValues = Json.obj(
     "zk" -> config.zooKeeperUrl().redactedConnectionString,
     "zk_compression" -> config.zooKeeperCompressionEnabled.toOption,
@@ -92,23 +93,31 @@ class InfoResource @Inject() (
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
-  def index(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
-    async {
-      implicit val identity = await(authenticatedAsync(req))
-      val frameworkId = await(frameworkIdRepository.get()).map(_.id)
-      withAuthorization(ViewResource, AuthorizedResource.SystemConfig) {
-        val mesosLeaderUiUrl = Json.obj("mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl)
-        Response.ok(Json.stringify(Json.obj(
-          "name" -> BuildInfo.name,
-          "version" -> BuildInfo.version.toString(),
-          "buildref" -> BuildInfo.buildref,
-          "elected" -> electionService.isLeader,
-          "leader" -> electionService.leaderHostPort,
-          "frameworkId" -> frameworkId,
-          "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
-          "zookeeper_config" -> zookeeperConfigValues,
-          "http_config" -> httpConfigValues))).build()
+  def index(@Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit =
+    sendResponse(asyncResponse) {
+      async {
+        implicit val identity = await(authenticatedAsync(req))
+        val frameworkId = await(frameworkIdRepository.get()).map(_.id)
+        withAuthorization(ViewResource, AuthorizedResource.SystemConfig) {
+          val mesosLeaderUiUrl = Json.obj("mesos_leader_ui_url" -> mesosLeaderInfo.currentLeaderUrl)
+          Response
+            .ok(
+              Json.stringify(
+                Json.obj(
+                  "name" -> BuildInfo.name,
+                  "version" -> BuildInfo.version.toString(),
+                  "buildref" -> BuildInfo.buildref,
+                  "elected" -> electionService.isLeader,
+                  "leader" -> electionService.leaderHostPort,
+                  "frameworkId" -> frameworkId,
+                  "marathon_config" -> (marathonConfigValues ++ mesosLeaderUiUrl),
+                  "zookeeper_config" -> zookeeperConfigValues,
+                  "http_config" -> httpConfigValues
+                )
+              )
+            )
+            .build()
+        }
       }
     }
-  }
 }

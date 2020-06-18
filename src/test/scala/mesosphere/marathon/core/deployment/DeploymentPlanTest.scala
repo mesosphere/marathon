@@ -29,14 +29,18 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val c = AppDefinition(cId, dependencies = Set(aId), cmd = Some("sleep"), role = "*")
       val d = AppDefinition(dId, dependencies = Set(bId), cmd = Some("sleep"), role = "*")
 
-      val rootGroup = createRootGroup(groups = Set(createGroup(
-        id = "/test".toAbsolutePath,
-        apps = Map(c.id -> c, d.id -> d),
-        groups = Set(
-          createGroup("/test/database".toAbsolutePath, Map(a.id -> a)),
-          createGroup("/test/service".toAbsolutePath, Map(b.id -> b))
+      val rootGroup = createRootGroup(groups =
+        Set(
+          createGroup(
+            id = "/test".toAbsolutePath,
+            apps = Map(c.id -> c, d.id -> d),
+            groups = Set(
+              createGroup("/test/database".toAbsolutePath, Map(a.id -> a)),
+              createGroup("/test/service".toAbsolutePath, Map(b.id -> b))
+            )
+          )
         )
-      )))
+      )
 
       When("the group's apps are grouped by the longest outbound path")
       val partitionedApps = DeploymentPlan.runSpecsGroupedByLongestPath(Set(a.id, b.id, c.id, d.id), rootGroup)
@@ -108,10 +112,10 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val plan = DeploymentPlan(from, to)
 
       val actions = plan.steps.flatMap(s => s.actions)
-      actions.collect{ case s: StartApplication => s } should have size 1
-      actions.collect{ case s: RestartApplication => s } should have size 1
-      actions.collect{ case s: ScaleApplication => s } should have size 2
-      actions.collect{ case s: StopApplication => s } should have size 1
+      actions.collect { case s: StartApplication => s } should have size 1
+      actions.collect { case s: RestartApplication => s } should have size 1
+      actions.collect { case s: ScaleApplication => s } should have size 2
+      actions.collect { case s: StopApplication => s } should have size 1
     }
 
     "can compute affected app ids" in {
@@ -119,7 +123,8 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val app: AppDefinition = AppDefinition(AbsolutePathId("/group/app"), Some("sleep 10"), versionInfo = versionInfo, role = "*")
       val app2: AppDefinition = AppDefinition(AbsolutePathId("/group/app2"), Some("cmd2"), versionInfo = versionInfo, role = "*")
       val app3: AppDefinition = AppDefinition(AbsolutePathId("/group/app3"), Some("cmd3"), versionInfo = versionInfo, role = "*")
-      val unchanged: AppDefinition = AppDefinition(AbsolutePathId("/group/unchanged"), Some("unchanged"), versionInfo = versionInfo, role = "*")
+      val unchanged: AppDefinition =
+        AppDefinition(AbsolutePathId("/group/unchanged"), Some("unchanged"), versionInfo = versionInfo, role = "*")
 
       val apps = Map(app.id -> app, app2.id -> app2, app3.id -> app3, unchanged.id -> unchanged)
 
@@ -137,7 +142,9 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val to = createRootGroup(groups = Set(createGroup("/group".toAbsolutePath, update)))
       val plan = DeploymentPlan(from, to)
 
-      plan.affectedRunSpecIds should equal(Set(AbsolutePathId("/group/app"), AbsolutePathId("/group/app2"), AbsolutePathId("/group/app3"), AbsolutePathId("/group/app4")))
+      plan.affectedRunSpecIds should equal(
+        Set(AbsolutePathId("/group/app"), AbsolutePathId("/group/app2"), AbsolutePathId("/group/app3"), AbsolutePathId("/group/app4"))
+      )
       plan.isAffectedBy(plan) should equal(right = true)
       plan.isAffectedBy(DeploymentPlan(from, from)) should equal(right = false)
     }
@@ -157,23 +164,38 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val service: (AppDefinition, AppDefinition) =
         AppDefinition(serviceId, Some("srv1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo, role = "*") ->
           AppDefinition(
-            serviceId, Some("srv2"), dependencies = Set(mongoId), instances = 10, upgradeStrategy = strategy,
-            versionInfo = versionInfo, role = "*"
+            serviceId,
+            Some("srv2"),
+            dependencies = Set(mongoId),
+            instances = 10,
+            upgradeStrategy = strategy,
+            versionInfo = versionInfo,
+            role = "*"
           )
 
-      val from = createRootGroup(groups = Set(createGroup(
-        id = "/test".toAbsolutePath,
-        groups = Set(
-          createGroup("/test/database".toAbsolutePath, Map(mongo._1.id -> mongo._1)),
-          createGroup("/test/service".toAbsolutePath, Map(service._1.id -> service._1))
+      val from = createRootGroup(groups =
+        Set(
+          createGroup(
+            id = "/test".toAbsolutePath,
+            groups = Set(
+              createGroup("/test/database".toAbsolutePath, Map(mongo._1.id -> mongo._1)),
+              createGroup("/test/service".toAbsolutePath, Map(service._1.id -> service._1))
+            )
+          )
         )
       )
-      ))
 
-      val to = createRootGroup(groups = Set(createGroup("/test".toAbsolutePath, groups = Set(
-        createGroup("/test/database".toAbsolutePath, Map(mongo._2.id -> mongo._2)),
-        createGroup("/test/service".toAbsolutePath, Map(service._2.id -> service._2))
-      ))))
+      val to = createRootGroup(groups =
+        Set(
+          createGroup(
+            "/test".toAbsolutePath,
+            groups = Set(
+              createGroup("/test/database".toAbsolutePath, Map(mongo._2.id -> mongo._2)),
+              createGroup("/test/service".toAbsolutePath, Map(service._2.id -> service._2))
+            )
+          )
+        )
+      )
 
       When("the deployment plan is computed")
       val plan = DeploymentPlan(from, to)
@@ -195,11 +217,15 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
         app.id -> app
       }.toMap
 
-      val targetGroup = createRootGroup(groups = Set(createGroup(
-        id = "/test".toAbsolutePath,
-        apps = apps,
-        groups = Set()
-      )))
+      val targetGroup = createRootGroup(groups =
+        Set(
+          createGroup(
+            id = "/test".toAbsolutePath,
+            apps = apps,
+            groups = Set()
+          )
+        )
+      )
 
       When("the deployment plan is computed")
       val plan = DeploymentPlan(emptyGroup, targetGroup)
@@ -228,15 +254,29 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
         AppDefinition(serviceId, Some("srv1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo, role = "*") ->
           AppDefinition(serviceId, Some("srv2"), instances = 10, upgradeStrategy = strategy, versionInfo = versionInfo, role = "*")
 
-      val from = createRootGroup(groups = Set(createGroup("/test".toAbsolutePath, groups = Set(
-        createGroup("/test/database".toAbsolutePath, Map(mongo._1.id -> mongo._1)),
-        createGroup("/test/service".toAbsolutePath, Map(service._1.id -> service._1))
-      ))))
+      val from = createRootGroup(groups =
+        Set(
+          createGroup(
+            "/test".toAbsolutePath,
+            groups = Set(
+              createGroup("/test/database".toAbsolutePath, Map(mongo._1.id -> mongo._1)),
+              createGroup("/test/service".toAbsolutePath, Map(service._1.id -> service._1))
+            )
+          )
+        )
+      )
 
-      val to = createRootGroup(groups = Set(createGroup("/test".toAbsolutePath, groups = Set(
-        createGroup("/test/database".toAbsolutePath, Map(mongo._2.id -> mongo._2)),
-        createGroup("/test/service".toAbsolutePath, Map(service._2.id -> service._2))
-      ))))
+      val to = createRootGroup(groups =
+        Set(
+          createGroup(
+            "/test".toAbsolutePath,
+            groups = Set(
+              createGroup("/test/database".toAbsolutePath, Map(mongo._2.id -> mongo._2)),
+              createGroup("/test/service".toAbsolutePath, Map(service._2.id -> service._2))
+            )
+          )
+        )
+      )
 
       When("the deployment plan is computed")
       val plan = DeploymentPlan(from, to)
@@ -261,27 +301,55 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
 
       val service =
         AppDefinition(serviceId, Some("srv1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo, role = "*") ->
-          AppDefinition(serviceId, Some("srv2"), dependencies = Set(mongoId), instances = 10, upgradeStrategy = strategy,
-            versionInfo = versionInfo, role = "*")
+          AppDefinition(
+            serviceId,
+            Some("srv2"),
+            dependencies = Set(mongoId),
+            instances = 10,
+            upgradeStrategy = strategy,
+            versionInfo = versionInfo,
+            role = "*"
+          )
 
       val independent =
         AppDefinition(appId, Some("app1"), instances = 1, upgradeStrategy = strategy, role = "*") ->
           AppDefinition(appId, Some("app2"), instances = 3, upgradeStrategy = strategy, role = "*")
 
-      val toStop = AppDefinition(AbsolutePathId("/test/service/to-stop"), instances = 1, dependencies = Set(mongoId), cmd = Some("sleep"), role = "*")
-      val toStart = AppDefinition(AbsolutePathId("/test/service/to-start"), instances = 2, dependencies = Set(serviceId), cmd = Some("sleep"), role = "*")
+      val toStop =
+        AppDefinition(AbsolutePathId("/test/service/to-stop"), instances = 1, dependencies = Set(mongoId), cmd = Some("sleep"), role = "*")
+      val toStart = AppDefinition(
+        AbsolutePathId("/test/service/to-start"),
+        instances = 2,
+        dependencies = Set(serviceId),
+        cmd = Some("sleep"),
+        role = "*"
+      )
 
-      val from = createRootGroup(groups = Set(createGroup("/test".toAbsolutePath, groups = Set(
-        createGroup("/test/database".toAbsolutePath, Map(mongo._1.id -> mongo._1)),
-        createGroup("/test/service".toAbsolutePath, Map(service._1.id -> service._1, toStop.id -> toStop)),
-        createGroup("/test/independent".toAbsolutePath, Map(independent._1.id -> independent._1))
-      ))))
+      val from = createRootGroup(groups =
+        Set(
+          createGroup(
+            "/test".toAbsolutePath,
+            groups = Set(
+              createGroup("/test/database".toAbsolutePath, Map(mongo._1.id -> mongo._1)),
+              createGroup("/test/service".toAbsolutePath, Map(service._1.id -> service._1, toStop.id -> toStop)),
+              createGroup("/test/independent".toAbsolutePath, Map(independent._1.id -> independent._1))
+            )
+          )
+        )
+      )
 
-      val to = createRootGroup(groups = Set(createGroup("/test".toAbsolutePath, groups = Set(
-        createGroup("/test/database".toAbsolutePath, Map(mongo._2.id -> mongo._2)),
-        createGroup("/test/service".toAbsolutePath, Map(service._2.id -> service._2, toStart.id -> toStart)),
-        createGroup("/test/independent".toAbsolutePath, Map(independent._2.id -> independent._2))
-      ))))
+      val to = createRootGroup(groups =
+        Set(
+          createGroup(
+            "/test".toAbsolutePath,
+            groups = Set(
+              createGroup("/test/database".toAbsolutePath, Map(mongo._2.id -> mongo._2)),
+              createGroup("/test/service".toAbsolutePath, Map(service._2.id -> service._2, toStart.id -> toStart)),
+              createGroup("/test/independent".toAbsolutePath, Map(independent._2.id -> independent._2))
+            )
+          )
+        )
+      )
 
       When("the deployment plan is computed")
       val plan = DeploymentPlan(from, to)
@@ -301,11 +369,18 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
     "when the only action is to stop an application" in {
       Given("application updates with only the removal of an app")
       val strategy = UpgradeStrategy(0.75)
-      val app = AppDefinition(AbsolutePathId("/test/independent/app"), Some("app2"), instances = 3, upgradeStrategy = strategy, role = "*") -> None
+      val app =
+        AppDefinition(AbsolutePathId("/test/independent/app"), Some("app2"), instances = 3, upgradeStrategy = strategy, role = "*") -> None
       val from = createRootGroup(
-        groups = Set(createGroup("/test".toAbsolutePath, groups = Set(
-          createGroup("/test/independent".toAbsolutePath, Map(app._1.id -> app._1))
-        ))))
+        groups = Set(
+          createGroup(
+            "/test".toAbsolutePath,
+            groups = Set(
+              createGroup("/test/independent".toAbsolutePath, Map(app._1.id -> app._1))
+            )
+          )
+        )
+      )
       val to = createRootGroup(groups = Set(createGroup("/test".toAbsolutePath)))
 
       When("the deployment plan is computed")
@@ -369,27 +444,32 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
       val oldAppA = AppDefinition(aId, versionInfo = VersionInfo.forNewConfig(Timestamp(10)), cmd = Some("sleep"), role = "*")
 
       When("A deployment plan is generated")
-      val originalGroup = createRootGroup(groups = Set(createGroup(
-        id = "/test".toAbsolutePath,
-        groups = Set(
-          createGroup("/test/some".toAbsolutePath, Map(oldAppA.id -> oldAppA))
+      val originalGroup = createRootGroup(groups =
+        Set(
+          createGroup(
+            id = "/test".toAbsolutePath,
+            groups = Set(
+              createGroup("/test/some".toAbsolutePath, Map(oldAppA.id -> oldAppA))
+            )
+          )
         )
-      )))
+      )
 
       val newAppA = oldAppA.copy(instances = 5)
-      val targetGroup = createRootGroup(groups = Set(createGroup(
-        id = "/test".toAbsolutePath,
-        groups = Set(
-          createGroup("/test/some".toAbsolutePath, Map(newAppA.id -> newAppA))
+      val targetGroup = createRootGroup(groups =
+        Set(
+          createGroup(
+            id = "/test".toAbsolutePath,
+            groups = Set(
+              createGroup("/test/some".toAbsolutePath, Map(newAppA.id -> newAppA))
+            )
+          )
         )
-      )))
+      )
 
       val instanceToKill = TestInstanceBuilder.newBuilder(aId).addTaskStaged().getInstance()
-      val plan = DeploymentPlan(
-        original = originalGroup,
-        target = targetGroup,
-        version = Timestamp.now(),
-        toKill = Map(aId -> Seq(instanceToKill)))
+      val plan =
+        DeploymentPlan(original = originalGroup, target = targetGroup, version = Timestamp.now(), toKill = Map(aId -> Seq(instanceToKill)))
 
       Then("DeploymentSteps should include ScaleApplication w/ tasksToKill")
       plan.steps should not be empty
@@ -432,17 +512,27 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
         AppDefinition(mongoId, Some("mng1"), instances = 4, upgradeStrategy = strategy, versionInfo = versionInfo, role = "*") ->
           AppDefinition(mongoId, Some("mng2"), instances = 0, upgradeStrategy = strategy, versionInfo = versionInfo, role = "*")
 
-      val from = createRootGroup(groups = Set(createGroup(
-        id = "/test".toAbsolutePath,
-        groups = Set(
-          createGroup("/test/database".toAbsolutePath, Map(mongo._1.id -> mongo._1))
+      val from = createRootGroup(groups =
+        Set(
+          createGroup(
+            id = "/test".toAbsolutePath,
+            groups = Set(
+              createGroup("/test/database".toAbsolutePath, Map(mongo._1.id -> mongo._1))
+            )
+          )
         )
       )
-      ))
 
-      val to = createRootGroup(groups = Set(createGroup("/test".toAbsolutePath, groups = Set(
-        createGroup("/test/database".toAbsolutePath, Map(mongo._2.id -> mongo._2))
-      ))))
+      val to = createRootGroup(groups =
+        Set(
+          createGroup(
+            "/test".toAbsolutePath,
+            groups = Set(
+              createGroup("/test/database".toAbsolutePath, Map(mongo._2.id -> mongo._2))
+            )
+          )
+        )
+      )
 
       When("the deployment plan is computed")
       val plan = DeploymentPlan(from, to)
@@ -453,9 +543,11 @@ class DeploymentPlanTest extends UnitTest with GroupCreation {
     }
   }
   class Fixture {
-    def persistentVolume(path: String) = VolumeWithMount(
-      volume = PersistentVolume(name = None, PersistentVolumeInfo(123)),
-      mount = VolumeMount(volumeName = None, mountPath = path, readOnly = false))
+    def persistentVolume(path: String) =
+      VolumeWithMount(
+        volume = PersistentVolume(name = None, PersistentVolumeInfo(123)),
+        mount = VolumeMount(volumeName = None, mountPath = path, readOnly = false)
+      )
     val zero = UpgradeStrategy(0, 0)
 
     def residentApp(id: String, volumes: Seq[VolumeWithMount[PersistentVolume]]): AppDefinition = {

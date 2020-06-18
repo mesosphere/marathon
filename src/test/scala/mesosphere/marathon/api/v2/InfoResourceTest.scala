@@ -53,8 +53,11 @@ class InfoResourceTest extends UnitTest with JerseyTest {
       f.auth.authenticated = true
       f.auth.authorized = true
       f.config = MarathonTestHelper.makeConfig(
-        "--master", "zk://root:password@127.0.0.1:2181/mesos",
-        "--zk", "zk://root:password@127.0.0.1:2181/marathon")
+        "--master",
+        "zk://root:password@127.0.0.1:2181/mesos",
+        "--zk",
+        "zk://root:password@127.0.0.1:2181/marathon"
+      )
       val resource = f.infoResource()
 
       When("the info is fetched")
@@ -64,10 +67,14 @@ class InfoResourceTest extends UnitTest with JerseyTest {
       response.getStatus should be(200)
 
       val parsedResponse = Option(response.getEntity.asInstanceOf[String]).map(Json.parse)
-      parsedResponse should be (defined)
+      parsedResponse should be(defined)
       val responseObject = parsedResponse.get.asInstanceOf[JsObject]
-      (responseObject \ "marathon_config" \ "master").get.asInstanceOf[JsString].value shouldEqual "zk://xxxxxxxx:xxxxxxxx@127.0.0.1:2181/mesos"
-      (responseObject \ "zookeeper_config" \ "zk").get.asInstanceOf[JsString].value shouldEqual "zk://xxxxxxxx:xxxxxxxx@127.0.0.1:2181/marathon"
+      (responseObject \ "marathon_config" \ "master").get
+        .asInstanceOf[JsString]
+        .value shouldEqual "zk://xxxxxxxx:xxxxxxxx@127.0.0.1:2181/mesos"
+      (responseObject \ "zookeeper_config" \ "zk").get
+        .asInstanceOf[JsString]
+        .value shouldEqual "zk://xxxxxxxx:xxxxxxxx@127.0.0.1:2181/marathon"
     }
   }
 

@@ -17,10 +17,11 @@ import scala.util.matching.Regex
 
 // TODO(jdef) move this into package "validation"
 trait Validation {
-  def validateOrThrow[T](t: T)(implicit validator: Validator[T]): T = validate(t) match {
-    case Success => t
-    case f: Failure => throw ValidationFailedException(t, f)
-  }
+  def validateOrThrow[T](t: T)(implicit validator: Validator[T]): T =
+    validate(t) match {
+      case Success => t
+      case f: Failure => throw ValidationFailedException(t, f)
+    }
 
   implicit def optional[T](implicit validator: Validator[T]): Validator[Option[T]] = {
     new Validator[Option[T]] {
@@ -33,9 +34,12 @@ trait Validation {
     */
   def definedAnd[T](implicit validator: Validator[T]): Validator[Option[T]] = {
     new Validator[Option[T]] {
-      override def apply(option: Option[T]): Result = option.map(validator).getOrElse(
-        Failure(Set(RuleViolation(None, "not defined")))
-      )
+      override def apply(option: Option[T]): Result =
+        option
+          .map(validator)
+          .getOrElse(
+            Failure(Set(RuleViolation(None, "not defined")))
+          )
     }
   }
 
@@ -43,13 +47,15 @@ trait Validation {
     * When the supplied expression `b` yields `true` then the supplied (implicit) validator is returned; otherwise
     * `Success`. Similar to [[conditional]] except the predicate producing the boolean is not parameterized.
     */
-  def implied[T](b: => Boolean)(implicit validator: Validator[T]): Validator[T] = new Validator[T] {
-    override def apply(t: T): Result = if (!b) Success else validator(t)
-  }
+  def implied[T](b: => Boolean)(implicit validator: Validator[T]): Validator[T] =
+    new Validator[T] {
+      override def apply(t: T): Result = if (!b) Success else validator(t)
+    }
 
-  def conditional[T](b: T => Boolean)(implicit validator: Validator[T]): Validator[T] = new Validator[T] {
-    override def apply(t: T): Result = if (!b(t)) Success else validator(t)
-  }
+  def conditional[T](b: T => Boolean)(implicit validator: Validator[T]): Validator[T] =
+    new Validator[T] {
+      override def apply(t: T): Result = if (!b(t)) Success else validator(t)
+    }
 
   implicit class RichViolation(v: Violation) {
     def withPath(path: Path): Violation =
@@ -150,7 +156,8 @@ trait Validation {
                 "errors" -> ruleViolations.map(_.constraint)
               )
           }
-      })
+      }
+    )
   }
 
   def urlIsValid: Validator[String] = {
@@ -179,9 +186,10 @@ trait Validation {
     }
   }
 
-  def fetchUriIsValid: Validator[FetchUri] = validator[FetchUri] { fetch =>
-    fetch.uri is uriIsValid
-  }
+  def fetchUriIsValid: Validator[FetchUri] =
+    validator[FetchUri] { fetch =>
+      fetch.uri is uriIsValid
+    }
 
   def elementsAreUnique[A](errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
     new Validator[Seq[A]] {
@@ -190,26 +198,26 @@ trait Validation {
   }
 
   def elementsAreUniqueBy[A, B](
-    fn: A => B,
-    errorMessage: String = "Elements must be unique.",
-    filter: B => Boolean = { _: B => true }): Validator[Iterable[A]] = {
+      fn: A => B,
+      errorMessage: String = "Elements must be unique.",
+      filter: B => Boolean = { _: B => true }
+  ): Validator[Iterable[A]] = {
     new Validator[Iterable[A]] {
       def apply(seq: Iterable[A]) = areUnique(seq.map(fn).iterator.filter(filter).toSeq, errorMessage)
     }
   }
 
   def elementsAreUniqueByOptional[A, B](
-    fn: A => GenTraversableOnce[B],
-    errorMessage: String = "Elements must be unique.",
-    filter: B => Boolean = { _: B => true }): Validator[Iterable[A]] = {
+      fn: A => GenTraversableOnce[B],
+      errorMessage: String = "Elements must be unique.",
+      filter: B => Boolean = { _: B => true }
+  ): Validator[Iterable[A]] = {
     new Validator[Iterable[A]] {
       def apply(seq: Iterable[A]) = areUnique(seq.flatMap(fn).filter(filter), errorMessage)
     }
   }
 
-  def elementsAreUniqueWithFilter[A](
-    fn: A => Boolean,
-    errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
+  def elementsAreUniqueWithFilter[A](fn: A => Boolean, errorMessage: String = "Elements must be unique."): Validator[Seq[A]] = {
     new Validator[Seq[A]] {
       def apply(seq: Seq[A]) = areUnique(seq.filter(fn), errorMessage)
     }
@@ -261,12 +269,13 @@ trait Validation {
 
   def isTrue[T](constraint: String)(test: T => Boolean): Validator[T] = isTrue[T]((_: T) => constraint)(test)
 
-  def isTrue[T](constraint: T => String)(test: T => Boolean): Validator[T] = new Validator[T] {
-    import ViolationBuilder._
-    override def apply(value: T): Result = {
-      if (test(value)) Success else RuleViolation(value, constraint(value))
+  def isTrue[T](constraint: T => String)(test: T => Boolean): Validator[T] =
+    new Validator[T] {
+      import ViolationBuilder._
+      override def apply(value: T): Result = {
+        if (test(value)) Success else RuleViolation(value, constraint(value))
+      }
     }
-  }
 
   def group(violations: Iterable[Violation]): Result = if (violations.nonEmpty) Failure(violations.to(Set)) else Success
 
@@ -285,12 +294,13 @@ trait Validation {
     * @param result The wix accord validation result
     */
   def allViolations(result: Result): Seq[ConstraintViolation] = {
-    def renderPath(desc: Description): String = desc match {
-      case Explicit(s) => s"/${s}"
-      case Generic(s) => s"/${s}"
-      case Indexed(index) => s"($index)"
-      case _ => ""
-    }
+    def renderPath(desc: Description): String =
+      desc match {
+        case Explicit(s) => s"/${s}"
+        case Generic(s) => s"/${s}"
+        case Indexed(index) => s"($index)"
+        case _ => ""
+      }
     def mkPath(path: Path): String =
       if (path.isEmpty)
         "/"
@@ -315,9 +325,10 @@ object Validation extends Validation {
 
   case class ConstraintViolation(path: String, constraint: String)
 
-  def forAll[T](all: Validator[T]*): Validator[T] = new Validator[T] {
-    override def apply(x: T): Result = validateAll(x, all: _*)
-  }
+  def forAll[T](all: Validator[T]*): Validator[T] =
+    new Validator[T] {
+      override def apply(x: T): Result = validateAll(x, all: _*)
+    }
 
   /**
     * Improve legibility of long validation rule sets by removing some of the "wordiness" of using `conditional`

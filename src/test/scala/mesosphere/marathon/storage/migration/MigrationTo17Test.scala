@@ -30,7 +30,7 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
 
       Then("only two instances have been migrated")
       updatedInstances should have size (2)
-      forAll (updatedInstances) { i: state.Instance => i.state.goal should be(Goal.Running) }
+      forAll(updatedInstances) { i: state.Instance => i.state.goal should be(Goal.Running) }
     }
 
     "update terminal resident instances to stopped" in {
@@ -58,8 +58,7 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       * @param i The id of the instance.
       * @return The JSON of the instance.
       */
-    def legacyInstanceJson(i: Instance.Id): JsObject = Json.parse(
-      s"""
+    def legacyInstanceJson(i: Instance.Id): JsObject = Json.parse(s"""
         |{
         |  "instanceId": { "idString": "${i.idString}" },
         |  "tasksMap": {},
@@ -77,7 +76,9 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       val taskId = Task.Id(id)
 
       legacyInstanceJson(id) ++
-        Json.obj("state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Killed"), "goal" -> "running")) ++
+        Json.obj(
+          "state" -> Json.obj("since" -> "2015-01-01T12:00:00.000Z", "condition" -> Json.obj("str" -> "Killed"), "goal" -> "running")
+        ) ++
         Json.obj("reservation" -> Json.obj("volumeIds" -> Json.arr(), "state" -> Json.obj("name" -> "suspended"))) ++
         Json.obj("tasksMap" -> Json.obj(taskId.idString -> terminalTask(taskId)))
     }
@@ -87,11 +88,12 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       * @param taskId The id of the terminal task.
       * @return The JSON object of the task.
       */
-    def terminalTask(taskId: Task.Id): JsValue = Json.obj(
-      "taskId" -> taskId.idString,
-      "runSpecVersion" -> "2015-01-01T12:00:00.000Z",
-      "status" -> terminalTaskStatus(taskId.idString)
-    )
+    def terminalTask(taskId: Task.Id): JsValue =
+      Json.obj(
+        "taskId" -> taskId.idString,
+        "runSpecVersion" -> "2015-01-01T12:00:00.000Z",
+        "status" -> terminalTaskStatus(taskId.idString)
+      )
 
     /**
       * Construct a terminal task status in 1.6.0 JSON format.
@@ -100,7 +102,8 @@ class MigrationTo17Test extends AkkaUnitTest with StrictLogging with Inspectors 
       */
     def terminalTaskStatus(taskId: String): JsValue = {
       val state = MesosProtos.TaskState.TASK_FINISHED
-      val mesosTaskStatus: MesosProtos.TaskStatus = MesosProtos.TaskStatus.newBuilder()
+      val mesosTaskStatus: MesosProtos.TaskStatus = MesosProtos.TaskStatus
+        .newBuilder()
         .setState(state)
         .setTaskId(MesosProtos.TaskID.newBuilder().setValue(taskId).build())
         .build()

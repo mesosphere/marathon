@@ -49,25 +49,35 @@ class HealthCheckActorTest extends AkkaUnitTest {
         .to(Sink.ignore)
         .run()
 
-    def actor(healthCheck: HealthCheck) = TestActorRef[HealthCheckActor](
-      Props(
-        new HealthCheckActor(app, appHealthCheckActor.ref, killService, healthCheck, instanceTracker, system.eventStream, healthCheckWorkerHub)
+    def actor(healthCheck: HealthCheck) =
+      TestActorRef[HealthCheckActor](
+        Props(
+          new HealthCheckActor(
+            app,
+            appHealthCheckActor.ref,
+            killService,
+            healthCheck,
+            instanceTracker,
+            system.eventStream,
+            healthCheckWorkerHub
+          )
+        )
       )
-    )
 
-    def healthCheckActor() = TestActorRef[HealthCheckActor](
-      Props(
-        new HealthCheckActor(
-          app,
-          appHealthCheckActor.ref,
-          killService,
-          healthCheck,
-          instanceTracker,
-          system.eventStream,
-          healthCheckWorkerHub) {
-        }
+    def healthCheckActor() =
+      TestActorRef[HealthCheckActor](
+        Props(
+          new HealthCheckActor(
+            app,
+            appHealthCheckActor.ref,
+            killService,
+            healthCheck,
+            instanceTracker,
+            system.eventStream,
+            healthCheckWorkerHub
+          ) {}
+        )
       )
-    )
   }
 
   "HealthCheckActor" should {
@@ -110,7 +120,8 @@ class HealthCheckActorTest extends AkkaUnitTest {
       val f = new Fixture
       val actor = f.actor(MarathonHttpHealthCheck(maxConsecutiveFailures = 3, portIndex = Some(PortReference(0))))
 
-      actor.underlyingActor.checkConsecutiveFailures(f.unreachableInstance, Health(f.unreachableInstance.instanceId, consecutiveFailures = 3))
+      actor.underlyingActor
+        .checkConsecutiveFailures(f.unreachableInstance, Health(f.unreachableInstance.instanceId, consecutiveFailures = 3))
       verifyNoMoreInteractions(f.instanceTracker, f.scheduler)
     }
   }

@@ -31,9 +31,12 @@ class UriIOTest extends AkkaUnitTest {
       file.deleteOnExit()
       val content = s"Hello World ${System.currentTimeMillis()}"
       FileUtils.write(file, content, Charset.defaultCharset)
-      UriIO.reader(new URI(s"file://${file.getAbsolutePath}")).runWith(Sink.foreach[ByteString]{ bs =>
-        bs.utf8String shouldBe content
-      }).futureValue
+      UriIO
+        .reader(new URI(s"file://${file.getAbsolutePath}"))
+        .runWith(Sink.foreach[ByteString] { bs =>
+          bs.utf8String shouldBe content
+        })
+        .futureValue
       file.delete()
     }
 

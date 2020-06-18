@@ -56,10 +56,14 @@ class TaskLabelsTest extends UnitTest {
     require(unlabeledResources.forall(!_.hasReservation))
 
     def labelResourcesFor(frameworkId: FrameworkId): Seq[MesosProtos.Resource] = {
-      MarathonTestHelper.makeBasicOffer(
-        reservation = Some(TaskLabels.labelsForTask(frameworkId, reservationId)),
-        role = "test"
-      ).getResourcesList.asScala.to(Seq)
+      MarathonTestHelper
+        .makeBasicOffer(
+          reservation = Some(TaskLabels.labelsForTask(frameworkId, reservationId)),
+          role = "test"
+        )
+        .getResourcesList
+        .asScala
+        .to(Seq)
     }
 
     val labeledResources = labelResourcesFor(frameworkId)

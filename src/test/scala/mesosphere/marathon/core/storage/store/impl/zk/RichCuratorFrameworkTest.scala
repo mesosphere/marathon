@@ -53,10 +53,9 @@ class RichCuratorFrameworkTest extends UnitTest with ZookeeperServerTest {
       childrenData.stat.getNumChildren should equal(1)
     }
     "be able to create a tree with data" in {
-      richClient.create(
-        "/3/4/5/6",
-        data = Some(ByteString("def")),
-        creatingParentContainersIfNeeded = true).futureValue should equal("/3/4/5/6")
+      richClient.create("/3/4/5/6", data = Some(ByteString("def")), creatingParentContainersIfNeeded = true).futureValue should equal(
+        "/3/4/5/6"
+      )
       richClient.data("/3/4/5/6").futureValue.data should equal(ByteString("def"))
     }
     "fail when creating a nested node when the parent doesn't exist and createParent isn't enabled" in {

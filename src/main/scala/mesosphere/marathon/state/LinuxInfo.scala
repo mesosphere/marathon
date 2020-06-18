@@ -43,7 +43,8 @@ object LinuxInfo {
     override def apply(ipcInfoOpt: Option[state.IPCInfo]): Result = {
       ipcInfoOpt match {
         case Some(ipcInfo) =>
-          if (ipcInfo.ipcMode == state.IpcMode.ShareParent && ipcInfo.shmSize.isDefined) Failure(Set(RuleViolation(ipcInfo, "ipcInfo shmSize can NOT be set when mode is SHARE_PARENT")))
+          if (ipcInfo.ipcMode == state.IpcMode.ShareParent && ipcInfo.shmSize.isDefined)
+            Failure(Set(RuleViolation(ipcInfo, "ipcInfo shmSize can NOT be set when mode is SHARE_PARENT")))
           else Success
         case None => Success
       }
@@ -54,7 +55,8 @@ object LinuxInfo {
     override def apply(ipcInfoOpt: Option[raml.IPCInfo]): Result = {
       ipcInfoOpt match {
         case Some(ipcInfo) =>
-          if (ipcInfo.mode == raml.IPCMode.ShareParent && ipcInfo.shmSize.isDefined) Failure(Set(RuleViolation(ipcInfo, "ipcInfo shmSize can NOT be set when mode is SHARE_PARENT")))
+          if (ipcInfo.mode == raml.IPCMode.ShareParent && ipcInfo.shmSize.isDefined)
+            Failure(Set(RuleViolation(ipcInfo, "ipcInfo shmSize can NOT be set when mode is SHARE_PARENT")))
           else Success
         case None => Success
       }
@@ -65,8 +67,10 @@ object LinuxInfo {
     override def apply(seccompOpt: Option[state.Seccomp]): Result = {
       seccompOpt match {
         case Some(seccomp) =>
-          if (seccomp.profileName.isDefined && seccomp.unconfined) Failure(Set(RuleViolation(seccomp, "Seccomp unconfined can NOT be true when Profile is defined")))
-          else if (seccomp.profileName.isEmpty && !seccomp.unconfined) Failure(Set(RuleViolation(seccomp, "Seccomp unconfined must be true when Profile is NOT defined")))
+          if (seccomp.profileName.isDefined && seccomp.unconfined)
+            Failure(Set(RuleViolation(seccomp, "Seccomp unconfined can NOT be true when Profile is defined")))
+          else if (seccomp.profileName.isEmpty && !seccomp.unconfined)
+            Failure(Set(RuleViolation(seccomp, "Seccomp unconfined must be true when Profile is NOT defined")))
           else Success
         case None => Success
       }
@@ -77,8 +81,10 @@ object LinuxInfo {
     override def apply(seccompOpt: Option[raml.Seccomp]): Result = {
       seccompOpt match {
         case Some(seccomp) =>
-          if (seccomp.profileName.isDefined && seccomp.unconfined) Failure(Set(RuleViolation(seccomp, "Seccomp unconfined can NOT be true when Profile is defined")))
-          else if (seccomp.profileName.isEmpty && !seccomp.unconfined) Failure(Set(RuleViolation(seccomp, "Seccomp unconfined must be true when Profile is NOT defined")))
+          if (seccomp.profileName.isDefined && seccomp.unconfined)
+            Failure(Set(RuleViolation(seccomp, "Seccomp unconfined can NOT be true when Profile is defined")))
+          else if (seccomp.profileName.isEmpty && !seccomp.unconfined)
+            Failure(Set(RuleViolation(seccomp, "Seccomp unconfined must be true when Profile is NOT defined")))
           else Success
         case None => Success
       }

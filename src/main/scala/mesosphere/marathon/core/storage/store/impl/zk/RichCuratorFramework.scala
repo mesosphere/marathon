@@ -31,23 +31,26 @@ import scala.util.control.NonFatal
   */
 class RichCuratorFramework(val client: CuratorFramework) extends StrictLogging {
 
-  def close(): Unit = synchronized {
-    client.close()
-  }
+  def close(): Unit =
+    synchronized {
+      client.close()
+    }
 
-  def start(): Unit = synchronized {
-    client.start()
-  }
+  def start(): Unit =
+    synchronized {
+      client.start()
+    }
 
   def create(
-    path: String,
-    data: Option[ByteString] = None,
-    compress: Boolean = false,
-    `protected`: Boolean = false,
-    acls: Seq[ACL] = Nil,
-    createMode: CreateMode = CreateMode.PERSISTENT,
-    creatingParentsIfNeeded: Boolean = false,
-    creatingParentContainersIfNeeded: Boolean = false): Future[String] =
+      path: String,
+      data: Option[ByteString] = None,
+      compress: Boolean = false,
+      `protected`: Boolean = false,
+      acls: Seq[ACL] = Nil,
+      createMode: CreateMode = CreateMode.PERSISTENT,
+      creatingParentsIfNeeded: Boolean = false,
+      creatingParentContainersIfNeeded: Boolean = false
+  ): Future[String] =
     build(client.create(), ZkFuture.create) { builder =>
       if (compress) builder.compressed()
       if (`protected`) builder.withProtection()
@@ -61,10 +64,11 @@ class RichCuratorFramework(val client: CuratorFramework) extends StrictLogging {
     }
 
   def delete(
-    path: String,
-    version: Option[Int] = None,
-    guaranteed: Boolean = false,
-    deletingChildrenIfNeeded: Boolean = false): Future[String] =
+      path: String,
+      version: Option[Int] = None,
+      guaranteed: Boolean = false,
+      deletingChildrenIfNeeded: Boolean = false
+  ): Future[String] =
     build(client.delete(), ZkFuture.delete) { builder =>
       if (deletingChildrenIfNeeded) builder.deletingChildrenIfNeeded()
       if (guaranteed) builder.guaranteed()
@@ -73,27 +77,19 @@ class RichCuratorFramework(val client: CuratorFramework) extends StrictLogging {
       builder.forPath(path)
     }
 
-  def exists(
-    path: String,
-    creatingParentContainersIfNeeded: Boolean = false): Future[ExistsResult] =
+  def exists(path: String, creatingParentContainersIfNeeded: Boolean = false): Future[ExistsResult] =
     build(client.checkExists(), ZkFuture.exists) { builder =>
       if (creatingParentContainersIfNeeded) builder.creatingParentContainersIfNeeded()
       builder.forPath(path)
     }
 
-  def data(
-    path: String,
-    decompressed: Boolean = false): Future[GetData] =
+  def data(path: String, decompressed: Boolean = false): Future[GetData] =
     build(client.getData, ZkFuture.data) { builder =>
       if (decompressed) builder.decompressed()
       builder.forPath(path)
     }
 
-  def setData(
-    path: String,
-    data: ByteString,
-    compressed: Boolean = false,
-    version: Option[Int] = None): Future[SetData] =
+  def setData(path: String, data: ByteString, compressed: Boolean = false, version: Option[Int] = None): Future[SetData] =
     build(client.setData(), ZkFuture.setData) { builder =>
       version.foreach(builder.withVersion)
       if (compressed) builder.compressed()
@@ -115,8 +111,7 @@ class RichCuratorFramework(val client: CuratorFramework) extends StrictLogging {
       builder.forPath(path)
     }
 
-  def setAcl(path: String, acls: Seq[ACL],
-    version: Option[Int] = None): Future[Done] = {
+  def setAcl(path: String, acls: Seq[ACL], version: Option[Int] = None): Future[Done] = {
     val builder = client.setACL()
     // sadly, the builder doesn't export BackgroundPathable, but the impl is.
     build(builder.asInstanceOf[BackgroundPathable[_]], ZkFuture.setAcl) { _ =>
@@ -127,17 +122,19 @@ class RichCuratorFramework(val client: CuratorFramework) extends StrictLogging {
     }
   }
 
-  private def build[A <: Backgroundable[_], B](builder: A, future: ZkFuture[B])(f: A => Unit): Future[B] = synchronized {
-    if (client.getState() == CuratorFrameworkState.STOPPED) future.fail(new IllegalStateException("Curator connection to ZooKeeper has been stopped."))
-    try {
-      builder.inBackground(future)
-      f(builder)
-      future
-    } catch {
-      case NonFatal(e) =>
-        future.fail(e)
+  private def build[A <: Backgroundable[_], B](builder: A, future: ZkFuture[B])(f: A => Unit): Future[B] =
+    synchronized {
+      if (client.getState() == CuratorFrameworkState.STOPPED)
+        future.fail(new IllegalStateException("Curator connection to ZooKeeper has been stopped."))
+      try {
+        builder.inBackground(future)
+        f(builder)
+        future
+      } catch {
+        case NonFatal(e) =>
+          future.fail(e)
+      }
     }
-  }
 
   override def toString: String =
     s"CuratorFramework(${client.getZookeeperClient.getCurrentConnectionString}/${client.getNamespace})"
@@ -202,10 +199,13 @@ object RichCuratorFramework {
         }
       }
     })
-    builder.retryPolicy(new BoundedExponentialBackoffRetry(
-      conf.zooKeeperOperationBaseRetrySleepMs(),
-      conf.zooKeeperTimeout().toInt,
-      conf.zooKeeperOperationMaxRetries()))
+    builder.retryPolicy(
+      new BoundedExponentialBackoffRetry(
+        conf.zooKeeperOperationBaseRetrySleepMs(),
+        conf.zooKeeperTimeout().toInt,
+        conf.zooKeeperOperationMaxRetries()
+      )
+    )
     builder.namespace(conf.zooKeeperStateUrl.path.stripPrefix("/"))
 
     RichCuratorFramework(builder.build(), crashStrategy)

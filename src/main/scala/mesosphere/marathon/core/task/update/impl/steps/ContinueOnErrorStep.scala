@@ -23,15 +23,11 @@ class ContinueOnErrorStep(wrapped: InstanceChangeHandler) extends InstanceChange
       case Some(processed) =>
         processed.recover {
           case NonFatal(e) =>
-            logger.error(
-              "while executing step {} for [{}], continue with other steps",
-              wrapped.name, update.id.idString, e)
+            logger.error("while executing step {} for [{}], continue with other steps", wrapped.name, update.id.idString, e)
             Done
         }
       case None =>
-        logger.error(
-          "step {} for [{}] returned null, continue with other steps",
-          Array[Object](wrapped.name, update.id.idString): _*)
+        logger.error("step {} for [{}] returned null, continue with other steps", Array[Object](wrapped.name, update.id.idString): _*)
         Future.successful(Done)
     }
   }

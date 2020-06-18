@@ -246,25 +246,31 @@ class HealthCheckTest extends UnitTest {
     }
 
     "both port and portIndex are not accepted at the same time for a HTTP HealthCheck" in {
-      shouldBeInvalid(MarathonHttpHealthCheck(
-        protocol = Protocol.HTTP,
-        port = Some(1),
-        portIndex = Some(PortReference(0))
-      ))
+      shouldBeInvalid(
+        MarathonHttpHealthCheck(
+          protocol = Protocol.HTTP,
+          port = Some(1),
+          portIndex = Some(PortReference(0))
+        )
+      )
     }
 
     "both port and portIndex are not accepted at the same time for a TCP HealthCheck" in {
-      shouldBeInvalid(MarathonTcpHealthCheck(
-        port = Some(1),
-        portIndex = Some(PortReference(0))
-      ))
+      shouldBeInvalid(
+        MarathonTcpHealthCheck(
+          port = Some(1),
+          portIndex = Some(PortReference(0))
+        )
+      )
     }
 
     "port is accepted for a HTTP HealthCheck" in {
-      shouldBeValid(MarathonHttpHealthCheck(
-        protocol = Protocol.HTTP,
-        port = Some(1)
-      ))
+      shouldBeValid(
+        MarathonHttpHealthCheck(
+          protocol = Protocol.HTTP,
+          port = Some(1)
+        )
+      )
     }
 
     "port is accepted for a TCP HealthCheck" in {
@@ -283,9 +289,13 @@ class HealthCheckTest extends UnitTest {
       import mesosphere.marathon.test.MarathonTestHelper.Implicits._
       val check = new MarathonTcpHealthCheck(port = Some(1234))
       val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(Seq(PortDefinition(0)))
-      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskWithBuilder().taskRunning()
+      val instance = TestInstanceBuilder
+        .newBuilder(app.id)
+        .addTaskWithBuilder()
+        .taskRunning()
         .withNetworkInfo(hostPorts = Seq(4321))
-        .build().getInstance()
+        .build()
+        .getInstance()
 
       assert(check.effectivePort(app, instance) == Option(1234))
     }

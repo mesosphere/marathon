@@ -29,14 +29,12 @@ class EnvVarValidationTest extends UnitTest with ValidationTestLike {
       behave like compliantEnv("numerical env", Environment("9" -> "x"), strictNameValidation = false)
 
       "fail with a numerical env variable name" in new Fixtures {
-        validator(Environment("9" -> "x")) should haveViolations(
-          "/keys(0)" -> MustContainOnlyAlphanumeric)
+        validator(Environment("9" -> "x")) should haveViolations("/keys(0)" -> MustContainOnlyAlphanumeric)
       }
 
       def failsWhenExpected(subtitle: String, strict: Boolean): Unit = {
         s"fail with empty variable name $subtitle" in new Fixtures(strict) {
-          validator(Environment("" -> "x")) should haveViolations(
-            "/keys(0)" -> "must not be empty")
+          validator(Environment("" -> "x")) should haveViolations("/keys(0)" -> "must not be empty")
           if (strict) validator(Environment("" -> "x")) should haveViolations("/keys(0)" -> MustContainOnlyAlphanumeric)
         }
 
@@ -67,20 +65,19 @@ class EnvVarValidationTest extends UnitTest with ValidationTestLike {
   }
 
   class Fixtures(strictNameValidation: Boolean = true, secrets: Boolean = false) {
-    val definedSecrets: Map[String, SecretDef] = if (secrets)
-      Map("secret" -> SecretDef("var"))
-    else
-      Map.empty
+    val definedSecrets: Map[String, SecretDef] =
+      if (secrets)
+        Map("secret" -> SecretDef("var"))
+      else
+        Map.empty
 
-    val enabledFeatures: Set[String] = if (secrets)
-      Set(Features.SECRETS)
-    else
-      Set.empty
+    val enabledFeatures: Set[String] =
+      if (secrets)
+        Set(Features.SECRETS)
+      else
+        Set.empty
 
     val validator: Validator[Map[String, EnvVarValueOrSecret]] =
-      EnvVarValidation.envValidator(
-        strictNameValidation,
-        secrets = definedSecrets,
-        enabledFeatures = enabledFeatures)
+      EnvVarValidation.envValidator(strictNameValidation, secrets = definedSecrets, enabledFeatures = enabledFeatures)
   }
 }

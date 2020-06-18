@@ -29,7 +29,8 @@ object TarBackupFlow {
 
     def tarEntryToBackupItem(entry: TarEntry): BackupItem = {
       entry.header.getName match {
-        case CategoryItemWithVersionRegexp(category, key, version) => BackupItem(category, key, Some(OffsetDateTime.parse(version)), entry.data)
+        case CategoryItemWithVersionRegexp(category, key, version) =>
+          BackupItem(category, key, Some(OffsetDateTime.parse(version)), entry.data)
         case CategoryItemRegexp(category, key) => BackupItem(category, key, None, entry.data)
         case key => throw new IllegalArgumentException(s"Can not read: $key")
       }
@@ -37,4 +38,3 @@ object TarBackupFlow {
     Flow[ByteString].via(TarFlow.reader).map(tarEntryToBackupItem)
   }
 }
-

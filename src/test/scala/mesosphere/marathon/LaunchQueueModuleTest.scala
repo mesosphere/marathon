@@ -42,7 +42,9 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("An empty task tracker")
       instanceTracker.specInstances(any[AbsolutePathId], Matchers.eq(false))(any) returns Future.successful(Seq.empty)
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Seq(Instance.scheduled(app)))
+      instanceTracker.instancesBySpec()(any) returns Future.successful(
+        InstanceTracker.InstancesBySpec.forInstances(Seq(Instance.scheduled(app)))
+      )
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
 
@@ -61,7 +63,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       Given("An app in the queue")
       val scheduledInstance = Instance.scheduled(app)
       instanceTracker.specInstances(any[AbsolutePathId], Matchers.eq(false))(any) returns Future.successful(Seq.empty)
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Seq(scheduledInstance))
+      instanceTracker.instancesBySpec()(any) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(scheduledInstance)))
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       launchQueue.add(app).futureValue
@@ -85,7 +87,7 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
       import f._
       Given("An app in the queue")
       instanceTracker.specInstances(any[AbsolutePathId], Matchers.eq(false))(any) returns Future.successful(Seq.empty)
-      instanceTracker.instancesBySpecSync returns InstanceTracker.InstancesBySpec.forInstances(Seq(scheduledInstance))
+      instanceTracker.instancesBySpec()(any) returns Future.successful(InstanceTracker.InstancesBySpec.forInstances(Seq(scheduledInstance)))
       instanceTracker.schedule(any[Seq[Instance]])(any) returns Future.successful(Done)
       instanceTracker.process(any[InstanceUpdateOperation]) returns Future.successful[InstanceUpdateEffect](InstanceUpdateEffect.Noop(null))
       launchQueue.add(app).futureValue
@@ -127,7 +129,9 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
           Timestamp.now()
         ),
         oldState = None,
-        events = Nil)).wrapped
+        events = Nil
+      )
+    ).wrapped
 
     lazy val clock: Clock = Clock.systemUTC()
     val noMatchResult = OfferMatchResult.NoMatch(app, offer, Seq.empty, clock.now())

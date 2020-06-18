@@ -18,13 +18,12 @@ trait DebugConf extends ScallopConf {
 
   lazy val metrics = toggle(
     "metrics",
-    descrYes =
-      "(Deprecated) Ignored",
-    descrNo =
-      "(Deprecated) Ignored",
+    descrYes = "(Deprecated) Ignored",
+    descrNo = "(Deprecated) Ignored",
     default = Some(false),
     noshort = true,
-    prefix = "disable_")
+    prefix = "disable_"
+  )
 
   lazy val logLevel = opt[String](
     "logging_level",
@@ -87,7 +86,6 @@ class DebugModule(conf: DebugConf) extends AbstractModule {
   private def configureLogstash(destination: URI): Unit = {
     LoggerFactory.getILoggerFactory match {
       case context: LoggerContext =>
-
         val encoder = new net.logstash.logback.encoder.LogstashEncoder()
         encoder.setContext(context)
         encoder.addProvider(new ArgumentsJsonProvider())

@@ -27,18 +27,17 @@ object ReviveOffersStreamLogic extends StrictLogging {
     * This allows us to receive an event when a delay's deadline expires, an removes the concern of dealing with timers
     * from the rate limiting logic itself.
     */
-  val activelyDelayedRefs: Flow[RateLimiter.DelayUpdate, DelayedStatus, NotUsed] = Flow[RateLimiter.DelayUpdate]
-    .map { delayUpdate =>
-      val deadline = delayUpdate.delay.map(_.deadline.toInstant)
-      delayUpdate.ref -> deadline
-    }
-    .via(TimedEmitter.flow)
-    .map {
-      case TimedEmitter.Active(ref) => Delayed(ref)
-      case TimedEmitter.Inactive(ref) => NotDelayed(ref)
-    }
+  val activelyDelayedRefs: Flow[RateLimiter.DelayUpdate, DelayedStatus, NotUsed] = Flow[RateLimiter.DelayUpdate].map { delayUpdate =>
+    val deadline = delayUpdate.delay.map(_.deadline.toInstant)
+    delayUpdate.ref -> deadline
+  }.via(TimedEmitter.flow).map {
+    case TimedEmitter.Active(ref) => Delayed(ref)
+    case TimedEmitter.Inactive(ref) => NotDelayed(ref)
+  }
 
-  def reviveStateFromInstancesAndDelays(defaultRole: Role): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], ReviveOffersState, NotUsed] = {
+  def reviveStateFromInstancesAndDelays(
+      defaultRole: Role
+  ): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], ReviveOffersState, NotUsed] = {
     Flow[Either[InstanceChangeOrSnapshot, DelayedStatus]].scan(ReviveOffersState.empty) {
       case (current, Left(snapshot: InstancesSnapshot)) => current.withSnapshot(snapshot, defaultRole)
       case (current, Left(InstanceUpdated(updated, _, _))) => current.withInstanceAddedOrUpdated(updated)
@@ -60,10 +59,10 @@ object ReviveOffersStreamLogic extends StrictLogging {
     * @return
     */
   def suppressAndReviveFlow(
-
-    minReviveOffersInterval: FiniteDuration,
-    enableSuppress: Boolean,
-    defaultRole: Role): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], RoleDirective, NotUsed] = {
+      minReviveOffersInterval: FiniteDuration,
+      enableSuppress: Boolean,
+      defaultRole: Role
+  ): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], RoleDirective, NotUsed] = {
 
     val reviveRepeaterWithTicks = Flow[RoleDirective]
       .map(Left(_))
@@ -122,12 +121,10 @@ object ReviveOffersStreamLogic extends StrictLogging {
         )
         directives += updateFramework
       }
-      val needsExplicitRevive = newState.iterator
-        .collect {
-          case (role, VersionedRoleState(_, OffersWanted)) if !lastState.get(role).exists(_.roleState.isWanted) => role
-          case (role, VersionedRoleState(version, OffersWanted)) if lastOffersWantedVersion(lastState, role).exists(_ < version) => role
-        }
-        .toSet
+      val needsExplicitRevive = newState.iterator.collect {
+        case (role, VersionedRoleState(_, OffersWanted)) if !lastState.get(role).exists(_.roleState.isWanted) => role
+        case (role, VersionedRoleState(version, OffersWanted)) if lastOffersWantedVersion(lastState, role).exists(_ < version) => role
+      }.toSet
 
       if (needsExplicitRevive.nonEmpty)
         directives += IssueRevive(needsExplicitRevive)
@@ -154,20 +151,19 @@ object ReviveOffersStreamLogic extends StrictLogging {
         val roleState = newState.map {
           case (role, VersionedRoleState(_, state)) => role -> state
         }
-        val newlyWanted = newState
-          .iterator
-          .collect { case (role, v) if v.roleState.isWanted && !lastState.get(role).exists(_.roleState.isWanted) => role }
-          .to(Set)
+        val newlyWanted = newState.iterator.collect {
+          case (role, v) if v.roleState.isWanted && !lastState.get(role).exists(_.roleState.isWanted) => role
+        }.to(Set)
 
-        val newlyNotWanted = newState
-          .iterator
-          .collect { case (role, v) if !v.roleState.isWanted && lastState.get(role).exists(_.roleState.isWanted) => role }
-          .to(Set)
+        val newlyNotWanted = newState.iterator.collect {
+          case (role, v) if !v.roleState.isWanted && lastState.get(role).exists(_.roleState.isWanted) => role
+        }.to(Set)
         directives += UpdateFramework(roleState, newlyRevived = newlyWanted, newlySuppressed = newlyNotWanted)
       }
 
-      val rolesNeedingRevive = newState.view
-        .collect { case (role, VersionedRoleState(version, OffersWanted)) if lastOffersWantedVersion(lastState, role).exists(_ < version) => role }.toSet
+      val rolesNeedingRevive = newState.view.collect {
+        case (role, VersionedRoleState(version, OffersWanted)) if lastOffersWantedVersion(lastState, role).exists(_ < version) => role
+      }.toSet
 
       if (rolesNeedingRevive.nonEmpty)
         directives += IssueRevive(rolesNeedingRevive)
@@ -177,8 +173,8 @@ object ReviveOffersStreamLogic extends StrictLogging {
     }
   }
 
-  def reviveRepeater: Flow[Either[RoleDirective, Tick.type], RoleDirective, NotUsed] = Flow[Either[RoleDirective, Tick.type]]
-    .statefulMapConcat { () =>
+  def reviveRepeater: Flow[Either[RoleDirective, Tick.type], RoleDirective, NotUsed] =
+    Flow[Either[RoleDirective, Tick.type]].statefulMapConcat { () =>
       val logic = new ReviveRepeaterLogic
 
       {
@@ -203,22 +199,22 @@ object ReviveOffersStreamLogic extends StrictLogging {
     var repeatIn: Map[Role, Int] = Map.empty
 
     def markRolesForRepeat(roles: Iterable[Role]): Unit =
-      roles.foreach {
-        role =>
-          // Override any old state.
-          repeatIn += role -> 2
+      roles.foreach { role =>
+        // Override any old state.
+        repeatIn += role -> 2
       }
 
-    def processRoleDirective(directive: RoleDirective): Unit = directive match {
-      case updateFramework: UpdateFramework =>
-        logger.info(s"Issuing update framework for $updateFramework")
-        currentRoleState = updateFramework.roleState
-        markRolesForRepeat(updateFramework.newlyRevived)
+    def processRoleDirective(directive: RoleDirective): Unit =
+      directive match {
+        case updateFramework: UpdateFramework =>
+          logger.info(s"Issuing update framework for $updateFramework")
+          currentRoleState = updateFramework.roleState
+          markRolesForRepeat(updateFramework.newlyRevived)
 
-      case IssueRevive(roles) =>
-        logger.info(s"Issuing revive for roles $roles")
-        markRolesForRepeat(roles) // set / reset the repeat delay
-    }
+        case IssueRevive(roles) =>
+          logger.info(s"Issuing revive for roles $roles")
+          markRolesForRepeat(roles) // set / reset the repeat delay
+      }
 
     def handleTick(): List[RoleDirective] = {
       // Decrease tick counts and filter out those that are zero.
@@ -252,10 +248,8 @@ object ReviveOffersStreamLogic extends StrictLogging {
     * @param newlyRevived    Convenience metadata - Set of roles that were previously non-existent or suppressed
     * @param newlySuppressed Convenience metadata - Set of roles that were previously not suppressed
     */
-  case class UpdateFramework(
-      roleState: Map[String, RoleOfferState],
-      newlyRevived: Set[String],
-      newlySuppressed: Set[String]) extends RoleDirective
+  case class UpdateFramework(roleState: Map[String, RoleOfferState], newlyRevived: Set[String], newlySuppressed: Set[String])
+      extends RoleDirective
 
   case class IssueRevive(roles: Set[String]) extends RoleDirective
 

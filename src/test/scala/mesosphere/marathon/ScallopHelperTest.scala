@@ -3,7 +3,14 @@ package mesosphere.marathon
 import mesosphere.UnitTest
 
 class ScallopHelperTest extends UnitTest {
-  val conf = AllConf("--master", "zk://super:secret@127.0.0.1:2181/master", "--zk", "zk://also:special@localhost:2181/marathon", "--mesos_role", "super")
+  val conf = AllConf(
+    "--master",
+    "zk://super:secret@127.0.0.1:2181/master",
+    "--zk",
+    "zk://also:special@localhost:2181/marathon",
+    "--mesos_role",
+    "super"
+  )
 
   "return the defined scallop options for a ScallopConf, specified or not" in {
     val opts = ScallopHelper.scallopOptions(conf).groupBy(_.name).mapValues(_.head)

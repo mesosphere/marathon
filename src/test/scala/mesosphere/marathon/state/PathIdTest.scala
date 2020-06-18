@@ -208,7 +208,8 @@ class PathIdTest extends UnitTest with ValidationTestLike {
       "be invalid" in {
         val path = AbsolutePathId("/@§\'foobar-0")
         pathIdValidator(path) should haveViolations(
-          "/" -> "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'")
+          "/" -> "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'"
+        )
       }
     }
 
@@ -218,8 +219,12 @@ class PathIdTest extends UnitTest with ValidationTestLike {
         s"be invalid if the $keyword used in the end" in {
           val path = AbsolutePathId(s"/$keyword")
           val path1 = AbsolutePathId(s"/foo/$keyword")
-          pathIdValidator(path) should haveViolations("/" -> "must not end with any of the following reserved keywords: restart, tasks, versions, ., ..")
-          pathIdValidator(path1) should haveViolations("/" -> "must not end with any of the following reserved keywords: restart, tasks, versions, ., ..")
+          pathIdValidator(path) should haveViolations(
+            "/" -> "must not end with any of the following reserved keywords: restart, tasks, versions, ., .."
+          )
+          pathIdValidator(path1) should haveViolations(
+            "/" -> "must not end with any of the following reserved keywords: restart, tasks, versions, ., .."
+          )
         }
       }
 

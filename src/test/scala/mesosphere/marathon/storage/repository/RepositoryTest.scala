@@ -9,7 +9,11 @@ import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import mesosphere.AkkaUnitTest
 import mesosphere.marathon.core.base.JvmExitsCrashStrategy
 import mesosphere.marathon.core.storage.repository.{Repository, RepositoryConstants, VersionedRepository}
-import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
+import mesosphere.marathon.core.storage.store.impl.cache.{
+  LazyCachingPersistenceStore,
+  LazyVersionCachingPersistentStore,
+  LoadTimeCachingPersistenceStore
+}
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkPersistenceStore}
 import mesosphere.marathon.metrics.Metrics
@@ -106,15 +110,22 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
           app,
           app.copy(versionInfo = VersionInfo.OnlyVersion(Timestamp(2))),
           app.copy(versionInfo = VersionInfo.OnlyVersion(Timestamp(3))),
-          lastVersion)
+          lastVersion
+        )
         versions.foreach { v => repo.store(v).futureValue }
 
         // New Persistence Stores are Garbage collected so they can store extra versions...
-        versions.tail.map(_.version.toOffsetDateTime).toSet.diff(
-          repo.versions(app.id).runWith(EnrichedSink.set).futureValue) should be ('empty)
-        versions.tail.toSet.diff(repo.versions(app.id).mapAsync(RepositoryConstants.maxConcurrency)(repo.getVersion(app.id, _))
-          .collect { case Some(g) => g }
-          .runWith(EnrichedSink.set).futureValue) should be ('empty)
+        versions.tail.map(_.version.toOffsetDateTime).toSet.diff(repo.versions(app.id).runWith(EnrichedSink.set).futureValue) should be(
+          'empty
+        )
+        versions.tail.toSet.diff(
+          repo
+            .versions(app.id)
+            .mapAsync(RepositoryConstants.maxConcurrency)(repo.getVersion(app.id, _))
+            .collect { case Some(g) => g }
+            .runWith(EnrichedSink.set)
+            .futureValue
+        ) should be('empty)
 
         repo.get(app.id).futureValue.value should equal(lastVersion)
 
@@ -122,13 +133,17 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
         repo.deleteCurrent(app.id).futureValue
 
         Then("The versions are still list-able, including the current one")
-        versions.tail.map(_.version.toOffsetDateTime).toSet.diff(
-          repo.versions(app.id).runWith(EnrichedSink.set).futureValue) should be('empty)
+        versions.tail.map(_.version.toOffsetDateTime).toSet.diff(repo.versions(app.id).runWith(EnrichedSink.set).futureValue) should be(
+          'empty
+        )
         versions.tail.toSet.diff(
-          repo.versions(app.id).mapAsync(RepositoryConstants.maxConcurrency)(repo.getVersion(app.id, _))
+          repo
+            .versions(app.id)
+            .mapAsync(RepositoryConstants.maxConcurrency)(repo.getVersion(app.id, _))
             .collect { case Some(g) => g }
-            .runWith(EnrichedSink.set).futureValue
-        ) should be ('empty)
+            .runWith(EnrichedSink.set)
+            .futureValue
+        ) should be('empty)
 
         And("Get of the current will fail")
         repo.get(app.id).futureValue should be('empty)
@@ -146,7 +161,7 @@ class RepositoryTest extends AkkaUnitTest with ZookeeperServerTest with GivenWhe
 
         repo.versions(app.id).runWith(Sink.seq).futureValue should
           contain theSameElementsAs Seq(app.version.toOffsetDateTime)
-        repo.get(app.id).futureValue should be ('empty)
+        repo.get(app.id).futureValue should be('empty)
         repo.getVersion(app.id, app.version.toOffsetDateTime).futureValue.value should equal(app)
       }
     }

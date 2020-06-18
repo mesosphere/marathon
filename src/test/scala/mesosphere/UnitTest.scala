@@ -32,7 +32,8 @@ case class KnownIssue(jira: String) extends Tag(s"mesosphere.marathon.KnownIssue
   *   "Something" should "do something" taggedAs WhenEnvSet("ABC") in {...}
   * }}}
   */
-case class WhenEnvSet(envVarName: String, default: String = "false") extends Tag(if (sys.env.getOrElse(envVarName, default) == "true") "" else classOf[Ignore].getName)
+case class WhenEnvSet(envVarName: String, default: String = "false")
+    extends Tag(if (sys.env.getOrElse(envVarName, default) == "true") "" else classOf[Ignore].getName)
 
 /**
   * Tag that will conditionally enable a specific test case if the operating system is Linux
@@ -46,7 +47,7 @@ trait CancelFailedTestWithKnownIssue extends TestSuite {
   val cancelFailedTestsWithKnownIssue = sys.env.getOrElse("MARATHON_CANCEL_TESTS", "false") == "true"
   val containsJira = """mesosphere\.marathon\.KnownIssue\:(\S+)""".r
 
-  def knownIssue(testData: TestData): Option[String] = testData.tags.collectFirst{ case containsJira(jira) => jira }
+  def knownIssue(testData: TestData): Option[String] = testData.tags.collectFirst { case containsJira(jira) => jira }
 
   def markAsCanceledOnFailure(jira: String)(blk: => Outcome): Outcome =
     blk match {
@@ -54,10 +55,11 @@ trait CancelFailedTestWithKnownIssue extends TestSuite {
       case other => other
     }
 
-  override def withFixture(test: NoArgTest): Outcome = knownIssue(test) match {
-    case Some(jira) if cancelFailedTestsWithKnownIssue => markAsCanceledOnFailure(jira) { super.withFixture(test) }
-    case _ => super.withFixture(test)
-  }
+  override def withFixture(test: NoArgTest): Outcome =
+    knownIssue(test) match {
+      case Some(jira) if cancelFailedTestsWithKnownIssue => markAsCanceledOnFailure(jira) { super.withFixture(test) }
+      case _ => super.withFixture(test)
+    }
 
 }
 
@@ -65,21 +67,22 @@ trait CancelFailedTestWithKnownIssue extends TestSuite {
   * Base trait for all unit tests in WordSpec style with common matching/before/after and Option/Try/Future
   * helpers all mixed in.
   */
-trait UnitTestLike extends WordSpecLike
-  with GivenWhenThen
-  with ScalaFutures
-  with JavaFutures
-  with Matchers
-  with BeforeAndAfter
-  with BeforeAndAfterEach
-  with OptionValues
-  with TryValues
-  with AppendedClues
-  with StrictLogging
-  with Mockito
-  with BeforeAndAfterAll
-  with TimeLimitedTests
-  with CancelFailedTestWithKnownIssue {
+trait UnitTestLike
+    extends WordSpecLike
+    with GivenWhenThen
+    with ScalaFutures
+    with JavaFutures
+    with Matchers
+    with BeforeAndAfter
+    with BeforeAndAfterEach
+    with OptionValues
+    with TryValues
+    with AppendedClues
+    with StrictLogging
+    with Mockito
+    with BeforeAndAfterAll
+    with TimeLimitedTests
+    with CancelFailedTestWithKnownIssue {
 
   private class LoggingInformer(info: Informer) extends Informer {
     def apply(message: String, payload: Option[Any] = None)(implicit pos: Position): Unit = {
@@ -109,8 +112,7 @@ abstract class UnitTest extends WordSpec with UnitTestLike {
 }
 
 trait AkkaUnitTestLike extends UnitTestLike with TestKitBase {
-  protected lazy val akkaConfig: Config = ConfigFactory.parseString(
-    s"""
+  protected lazy val akkaConfig: Config = ConfigFactory.parseString(s"""
       |akka.test.default-timeout=${patienceConfig.timeout.millisPart}
     """.stripMargin).withFallback(ConfigFactory.load())
   implicit lazy val system: ActorSystem = {

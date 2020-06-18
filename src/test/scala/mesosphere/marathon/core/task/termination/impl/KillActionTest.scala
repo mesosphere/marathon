@@ -13,13 +13,11 @@ class KillActionTest extends UnitTest with TableDrivenPropertyChecks {
   val appId = AbsolutePathId("/test")
 
   lazy val localVolumeId = LocalVolumeId(appId, "unwanted-persistent-volume", "uuid1")
-  lazy val residentLaunchedInstance: Instance = TestInstanceBuilder.newBuilder(appId).
-    addTaskResidentLaunched(Seq(localVolumeId)).
-    getInstance()
+  lazy val residentLaunchedInstance: Instance =
+    TestInstanceBuilder.newBuilder(appId).addTaskResidentLaunched(Seq(localVolumeId)).getInstance()
 
-  lazy val residentUnreachableInstance: Instance = TestInstanceBuilder.newBuilder(appId).
-    addTaskUnreachable(Seq(localVolumeId)).
-    getInstance()
+  lazy val residentUnreachableInstance: Instance =
+    TestInstanceBuilder.newBuilder(appId).addTaskUnreachable(Seq(localVolumeId)).getInstance()
 
   lazy val unreachableInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskUnreachable().getInstance()
   lazy val runningInstance: Instance = TestInstanceBuilder.newBuilder(appId).addTaskLaunched().getInstance()
@@ -31,16 +29,13 @@ class KillActionTest extends UnitTest with TableDrivenPropertyChecks {
       ("a running reserved instance", residentLaunchedInstance, KillAction.IssueKillRequest),
       ("an unreachable ephemeral instance", unreachableInstance, KillAction.Decommission),
       ("a running ephemeral instance", runningInstance, KillAction.IssueKillRequest)
-    ).
-      foreach {
-        case (name, instance, expected) =>
-          s"killing ${name}" should {
-            s"result in ${expected}" in {
-              KillAction(
-                instance.instanceId, instance.tasksMap.keys, Some(instance)).
-                shouldBe(expected)
-            }
+    ).foreach {
+      case (name, instance, expected) =>
+        s"killing ${name}" should {
+          s"result in ${expected}" in {
+            KillAction(instance.instanceId, instance.tasksMap.keys, Some(instance)).shouldBe(expected)
           }
-      }
+        }
+    }
   }
 }

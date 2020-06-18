@@ -26,7 +26,9 @@ private[plugin] class PluginManagerImpl(
     val config: MarathonConf,
     val definitions: PluginDefinitions,
     val urls: Seq[URL],
-    val crashStrategy: CrashStrategy) extends PluginManager with StrictLogging {
+    val crashStrategy: CrashStrategy
+) extends PluginManager
+    with StrictLogging {
 
   private[this] var pluginHolders: List[PluginHolder[_]] = List.empty[PluginHolder[_]]
 
@@ -37,21 +39,22 @@ private[plugin] class PluginManagerImpl(
     */
   private[this] def load[T](implicit ct: ClassTag[T]): PluginHolder[T] = {
     logger.info(s"Loading plugins implementing '${ct.runtimeClass.getName}' from these urls: [${urls.mkString(", ")}]")
-    def configure(plugin: T, definition: PluginDefinition): T = plugin match {
-      case cf: PluginConfiguration if definition.configuration.isDefined =>
-        try {
-          logger.info(s"Configure the plugin with this configuration: ${definition.configuration}")
-          cf.initialize(Map("frameworkName" -> config.frameworkName()), definition.configuration.get)
-        } catch {
-          case NonFatal(ex) => {
-            logger.error(s"Plugin Initialization Failure: ${ex.getMessage}.", ex)
-            crashStrategy.crash(CrashStrategy.PluginInitializationFailure)
+    def configure(plugin: T, definition: PluginDefinition): T =
+      plugin match {
+        case cf: PluginConfiguration if definition.configuration.isDefined =>
+          try {
+            logger.info(s"Configure the plugin with this configuration: ${definition.configuration}")
+            cf.initialize(Map("frameworkName" -> config.frameworkName()), definition.configuration.get)
+          } catch {
+            case NonFatal(ex) => {
+              logger.error(s"Plugin Initialization Failure: ${ex.getMessage}.", ex)
+              crashStrategy.crash(CrashStrategy.PluginInitializationFailure)
+            }
           }
-        }
 
-        plugin
-      case _ => plugin
-    }
+          plugin
+        case _ => plugin
+      }
     val serviceLoader = ServiceLoader.load(ct.runtimeClass.asInstanceOf[Class[T]], classLoader)
     val providers = serviceLoader.iterator().asScala.toSeq
     val plugins = definitions.plugins.withFilter(_.plugin == ct.runtimeClass.getName).map { definition =>
@@ -70,19 +73,21 @@ private[plugin] class PluginManagerImpl(
     *
     * @return the list of all service providers for the given type.
     */
-  def plugins[T](implicit ct: ClassTag[T]): Seq[T] = synchronized {
-    def loadAndAdd: PluginHolder[T] = {
-      val pluginHolder: PluginHolder[T] = load[T]
-      pluginHolders ::= pluginHolder
-      pluginHolder
-    }
+  def plugins[T](implicit ct: ClassTag[T]): Seq[T] =
+    synchronized {
+      def loadAndAdd: PluginHolder[T] = {
+        val pluginHolder: PluginHolder[T] = load[T]
+        pluginHolders ::= pluginHolder
+        pluginHolder
+      }
 
-    pluginHolders
-      .find(_.classTag == ct)
-      .map(_.asInstanceOf[PluginHolder[T]])
-      .getOrElse(loadAndAdd)
-      .plugins.map(_.plugin)
-  }
+      pluginHolders
+        .find(_.classTag == ct)
+        .map(_.asInstanceOf[PluginHolder[T]])
+        .getOrElse(loadAndAdd)
+        .plugins
+        .map(_.plugin)
+    }
 }
 
 object PluginManagerImpl extends StrictLogging {
@@ -94,10 +99,16 @@ object PluginManagerImpl extends StrictLogging {
     val confJson: JsObject = Json.parse(FileUtils.readFileToByteArray(new File(fileName).getCanonicalFile)).as[JsObject]
     logger.info(s"Found plugin configuration: ${Json.prettyPrint(confJson)}")
 
-    val plugins: Seq[PluginDefinition] = confJson.\("plugins").as[JsObject].fields.iterator.map {
-      case (id, value) =>
-        JsObject(value.as[JsObject].fields :+ ("id" -> JsString(id))).as[PluginDefinition]
-    }.toSeq
+    val plugins: Seq[PluginDefinition] = confJson
+      .\("plugins")
+      .as[JsObject]
+      .fields
+      .iterator
+      .map {
+        case (id, value) =>
+          JsObject(value.as[JsObject].fields :+ ("id" -> JsString(id))).as[PluginDefinition]
+      }
+      .toSeq
       .filter(_.enabled.getOrElse(true))
     PluginDefinitions(plugins)
   }
@@ -118,4 +129,3 @@ object PluginManagerImpl extends StrictLogging {
     configuredPluginManager.getOrElse(new PluginManagerImpl(conf, PluginDefinitions(Seq.empty), Seq.empty, crashStrategy: CrashStrategy))
   }
 }
-

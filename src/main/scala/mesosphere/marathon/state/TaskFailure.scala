@@ -14,8 +14,8 @@ case class TaskFailure(
     host: String = "",
     version: Timestamp = Timestamp.now(),
     timestamp: Timestamp = Timestamp.now(),
-    slaveId: Option[mesos.SlaveID] = None)
-  extends MarathonState[Protos.TaskFailure, TaskFailure] {
+    slaveId: Option[mesos.SlaveID] = None
+) extends MarathonState[Protos.TaskFailure, TaskFailure] {
 
   override def mergeFromProto(proto: Protos.TaskFailure): TaskFailure =
     TaskFailure(proto)
@@ -89,21 +89,32 @@ object TaskFailure {
 
     def apply(statusUpdate: MesosStatusUpdateEvent): Option[TaskFailure] = {
       val MesosStatusUpdateEvent(
-        slaveId, taskId, state, message,
-        appId, host, _, _, version, _, ts
-        ) = statusUpdate
+        slaveId,
+        taskId,
+        state,
+        message,
+        appId,
+        host,
+        _,
+        _,
+        version,
+        _,
+        ts
+      ) = statusUpdate
 
       if (isFailureState(state))
-        Some(TaskFailure(
-          appId,
-          taskId.mesosTaskId,
-          state,
-          message,
-          host,
-          Timestamp(version),
-          Timestamp(ts),
-          Option(slaveIDToProto(SlaveID(slaveId)))
-        ))
+        Some(
+          TaskFailure(
+            appId,
+            taskId.mesosTaskId,
+            state,
+            message,
+            host,
+            Timestamp(version),
+            Timestamp(ts),
+            Option(slaveIDToProto(SlaveID(slaveId)))
+          )
+        )
       else None
     }
   }
@@ -116,8 +127,7 @@ object TaskFailure {
   private[this] def isFailureState(state: mesos.TaskState): Boolean = {
     import mesos.TaskState._
     state match {
-      case TASK_FAILED | TASK_ERROR |
-        TASK_LOST | TASK_DROPPED | TASK_GONE | TASK_GONE_BY_OPERATOR | TASK_UNKNOWN => true
+      case TASK_FAILED | TASK_ERROR | TASK_LOST | TASK_DROPPED | TASK_GONE | TASK_GONE_BY_OPERATOR | TASK_UNKNOWN => true
       case _ => false
     }
   }

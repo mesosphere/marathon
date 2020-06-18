@@ -8,7 +8,11 @@ import akka.stream.Materializer
 import mesosphere.marathon.core.base.{CrashStrategy, LifecycleState}
 import mesosphere.marathon.core.storage.store.PersistenceStore
 import mesosphere.marathon.core.storage.store.impl.BasePersistenceStore
-import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
+import mesosphere.marathon.core.storage.store.impl.cache.{
+  LazyCachingPersistenceStore,
+  LazyVersionCachingPersistentStore,
+  LoadTimeCachingPersistenceStore
+}
 import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}
 import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkId, ZkPersistenceStore, ZkSerialized}
 import mesosphere.marathon.metrics.Metrics
@@ -26,11 +30,12 @@ case object EagerCaching extends CacheType
 case object LazyCaching extends CacheType
 
 object CacheType {
-  def apply(str: String): CacheType = str.toLowerCase match {
-    case str: String if str.startsWith("eager") => EagerCaching
-    case str: String if str.startsWith("lazy") => LazyCaching
-    case _ => NoCaching
-  }
+  def apply(str: String): CacheType =
+    str.toLowerCase match {
+      case str: String if str.startsWith("eager") => EagerCaching
+      case str: String if str.startsWith("lazy") => LazyCaching
+      case _ => NoCaching
+    }
 }
 
 sealed trait PersistenceStorageConfig[K, C, S] extends StorageConfig {
@@ -38,22 +43,20 @@ sealed trait PersistenceStorageConfig[K, C, S] extends StorageConfig {
   val cacheType: CacheType
   val versionCacheConfig: Option[VersionCacheConfig]
 
-  protected def leafStore(metrics: Metrics)(
-    implicit
-    mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler, actorSystem: ActorSystem): BasePersistenceStore[K, C, S]
+  protected def leafStore(
+      metrics: Metrics
+  )(implicit mat: Materializer, ctx: ExecutionContext, scheduler: Scheduler, actorSystem: ActorSystem): BasePersistenceStore[K, C, S]
 
-  protected def lazyStore(metrics: Metrics)(
-    implicit
-    mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler, actorSystem: ActorSystem): PersistenceStore[K, C, S] = {
+  protected def lazyStore(
+      metrics: Metrics
+  )(implicit mat: Materializer, ctx: ExecutionContext, scheduler: Scheduler, actorSystem: ActorSystem): PersistenceStore[K, C, S] = {
     val lazyCachingStore: PersistenceStore[K, C, S] = LazyCachingPersistenceStore(metrics, leafStore(metrics))
-    versionCacheConfig.fold(lazyCachingStore){ config => LazyVersionCachingPersistentStore(metrics, lazyCachingStore, config) }
+    versionCacheConfig.fold(lazyCachingStore) { config => LazyVersionCachingPersistentStore(metrics, lazyCachingStore, config) }
   }
 
-  def store(metrics: Metrics)(implicit
-    mat: Materializer,
-    ctx: ExecutionContext, scheduler: Scheduler, actorRefFactory: ActorSystem): PersistenceStore[K, C, S] = {
+  def store(
+      metrics: Metrics
+  )(implicit mat: Materializer, ctx: ExecutionContext, scheduler: Scheduler, actorRefFactory: ActorSystem): PersistenceStore[K, C, S] = {
     cacheType match {
       case NoCaching => leafStore(metrics)
       case LazyCaching => lazyStore(metrics)
@@ -69,10 +72,12 @@ case class VersionCacheConfig(
 )
 
 object VersionCacheConfig {
+
   /**
     * max number of entries allowed in the versioned value cache before entries are purged
     */
   protected val MaxVersionedCacheSize = 10000
+
   /**
     * probability that, during a purge of the versioned value cache, a given entry will be removed
     */
@@ -99,10 +104,12 @@ case class CuratorZk(
     backupLocation: Option[URI]
 ) extends PersistenceStorageConfig[ZkId, String, ZkSerialized] {
 
-  def leafStore(metrics: Metrics)(
-    implicit
-    mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler, actorSystem: ActorSystem): BasePersistenceStore[ZkId, String, ZkSerialized] = {
+  def leafStore(metrics: Metrics)(implicit
+      mat: Materializer,
+      ctx: ExecutionContext,
+      scheduler: Scheduler,
+      actorSystem: ActorSystem
+  ): BasePersistenceStore[ZkId, String, ZkSerialized] = {
 
     actorSystem.registerOnTermination {
       client.close()
@@ -142,10 +149,12 @@ case class InMem(
   override val cacheType: CacheType = NoCaching
   override val versionCacheConfig: Option[VersionCacheConfig] = None
 
-  protected def leafStore(metrics: Metrics)(
-    implicit
-    mat: Materializer, ctx: ExecutionContext,
-    scheduler: Scheduler, actorSystem: ActorSystem): BasePersistenceStore[RamId, String, Identity] =
+  protected def leafStore(metrics: Metrics)(implicit
+      mat: Materializer,
+      ctx: ExecutionContext,
+      scheduler: Scheduler,
+      actorSystem: ActorSystem
+  ): BasePersistenceStore[RamId, String, Identity] =
     new InMemoryPersistenceStore(metrics)
 }
 
@@ -153,7 +162,14 @@ object InMem {
   val StoreName = "mem"
 
   def apply(conf: StorageConf): InMem =
-    InMem(conf.maxVersions(), conf.storageCompactionScanBatchSize(), conf.availableFeatures, conf.defaultNetworkName.toOption, conf.backupLocation.toOption, conf.groupVersionsCacheSize())
+    InMem(
+      conf.maxVersions(),
+      conf.storageCompactionScanBatchSize(),
+      conf.availableFeatures,
+      conf.defaultNetworkName.toOption,
+      conf.backupLocation.toOption,
+      conf.groupVersionsCacheSize()
+    )
 }
 
 object StorageConfig {

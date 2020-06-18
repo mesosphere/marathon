@@ -34,28 +34,32 @@ object EnvVarValue {
   }
 
   // forward implicit validation to the internal API we've defined
-  implicit def valueValidator: Validator[EnvVarValue] = validator[EnvVarValue] { v =>
-    v is v.valueValidator
-  }
+  implicit def valueValidator: Validator[EnvVarValue] =
+    validator[EnvVarValue] { v =>
+      v is v.valueValidator
+    }
 
   /** @return a validator that checks the validity of a container given the related secrets */
-  def validApp(): Validator[AppDefinition] = new Validator[AppDefinition] {
-    def apply(app: AppDefinition) = {
-      val refValidators = app.env.collect{ case (s: String, sr: EnvVarRef) => sr.appValidator }.toSet
-      refValidators.map(validate(app)(_)).fold(Success)(_ and _)
+  def validApp(): Validator[AppDefinition] =
+    new Validator[AppDefinition] {
+      def apply(app: AppDefinition) = {
+        val refValidators = app.env.collect { case (s: String, sr: EnvVarRef) => sr.appValidator }.toSet
+        refValidators.map(validate(app)(_)).fold(Success)(_ and _)
+      }
     }
-  }
 
-  def envValidator: Validator[Map[String, EnvVarValue]] = new Validator[Map[String, EnvVarValue]] {
-    override def apply(env: Map[String, EnvVarValue]): Result = {
-      env.toSeq.map(validate(_)(envEntryValidator)).fold(Success)(_ and _)
+  def envValidator: Validator[Map[String, EnvVarValue]] =
+    new Validator[Map[String, EnvVarValue]] {
+      override def apply(env: Map[String, EnvVarValue]): Result = {
+        env.toSeq.map(validate(_)(envEntryValidator)).fold(Success)(_ and _)
+      }
     }
-  }
 
-  def envEntryValidator: Validator[(String, EnvVarValue)] = validator[(String, EnvVarValue)] { t =>
-    t._1 as s"(${t._1})" is notEmpty
-    t._2 as s"(${t._1})" is valid
-  }
+  def envEntryValidator: Validator[(String, EnvVarValue)] =
+    validator[(String, EnvVarValue)] { t =>
+      t._1 as s"(${t._1})" is notEmpty
+      t._2 as s"(${t._1})" is valid
+    }
 }
 
 object EnvVarString {
@@ -72,15 +76,15 @@ object EnvVarSecretRef {
 
   lazy val appValidator = new Validator[AppDefinition] {
     override def apply(app: AppDefinition): Result = {
-      val envSecrets = app.env.collect{ case (s: String, sr: EnvVarSecretRef) => (s, sr) }.toSet
+      val envSecrets = app.env.collect { case (s: String, sr: EnvVarSecretRef) => (s, sr) }.toSet
       val zipped = List.fill(envSecrets.size)(app).zip(envSecrets.toSeq).map { case (a, (b, c)) => (a, b, c) }
       zipped.map(validate(_)(tupleValidator)).fold(Success)(_ and _)
     }
   }
 
   lazy val tupleValidator: Validator[(AppDefinition, String, EnvVarSecretRef)] = {
-    val ifSecretIsDefined = isTrue[(AppDefinition, String, EnvVarSecretRef)](
-      (t: (AppDefinition, String, EnvVarSecretRef)) => s"references an undefined secret named '${t._3.secret}'"
+    val ifSecretIsDefined = isTrue[(AppDefinition, String, EnvVarSecretRef)]((t: (AppDefinition, String, EnvVarSecretRef)) =>
+      s"references an undefined secret named '${t._3.secret}'"
     ) { (t: (AppDefinition, String, EnvVarSecretRef)) => t._1.secrets.keySet.contains(t._3.secret) }
 
     validator[(AppDefinition, String, EnvVarSecretRef)] { t =>

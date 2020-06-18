@@ -9,6 +9,7 @@ import mesosphere.marathon.core.task.Task
   * apply a retry strategy and throttle kill requests to Mesos.
   */
 trait KillService {
+
   /**
     * Kill the passed instances. Similarly to the [[killUnknownTask()]] method the implementation will *not* create a
     * [[mesosphere.marathon.core.task.termination.impl.KillStreamWatcher]] internally saving resources in cases when

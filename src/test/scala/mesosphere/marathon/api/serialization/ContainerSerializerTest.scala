@@ -60,9 +60,13 @@ class ContainerSerializerTest extends UnitTest with Inside {
     "multiple container networks are defined" should {
       "assign the portMappings to the specified network" in {
         val networks = List(ContainerNetwork("network-1"), ContainerNetwork("network-2"))
-        val container = Container.Mesos(Nil, List(
-          PortMapping(hostPort = Some(1000), networkNames = List("network-1")),
-          PortMapping(hostPort = Some(1001), networkNames = List("network-2"))))
+        val container = Container.Mesos(
+          Nil,
+          List(
+            PortMapping(hostPort = Some(1000), networkNames = List("network-1")),
+            PortMapping(hostPort = Some(1001), networkNames = List("network-2"))
+          )
+        )
 
         val result = ContainerSerializer.toMesos(networks, container, "mesos-bridge")
 

@@ -34,14 +34,20 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
       (Running, Dropped, Seq(Unreachable, Dropped))
     )
 
-    forAll (stateChangeCases) { (from, to, withTasks) =>
+    forAll(stateChangeCases) { (from, to, withTasks) =>
       val f = new Fixture
 
       val (instance, tasks) = f.instanceWith(from, withTasks)
 
       s"$from and tasks become ${withTasks.mkString(", ")}" should {
 
-        val status = Instance.InstanceState.transitionTo(Some(instance.state), tasks, f.clock.now(), UnreachableStrategy.default(), instance.state.goal)
+        val status = Instance.InstanceState.transitionTo(
+          Some(instance.state),
+          tasks,
+          f.clock.now(),
+          UnreachableStrategy.default(),
+          instance.state.goal
+        )
 
         s"change to $to" in {
           status.condition should be(to)
@@ -96,18 +102,26 @@ class InstanceTest extends UnitTest with TableDrivenPropertyChecks {
   "say it's reserved when reservation is set" in {
     val f = new Fixture
     val (instance, _) = f.instanceWith(Condition.Scheduled, Seq.empty)
-    val instanceWithReservation = instance.copy(reservation = Some(Reservation(Seq.empty, Reservation.State.New(None), Reservation.SimplifiedId(instance.instanceId))))
-    instanceWithReservation.hasReservation should be (true)
+    val instanceWithReservation =
+      instance.copy(reservation = Some(Reservation(Seq.empty, Reservation.State.New(None), Reservation.SimplifiedId(instance.instanceId))))
+    instanceWithReservation.hasReservation should be(true)
   }
 
   "agentInfo serialization" should {
     "round trip serialize" in {
-      val agentInfo = Instance.AgentInfo(host = "host", agentId = Some("agentId"), region = Some("region"), zone = Some("zone"),
-        attributes = Seq(Attribute.newBuilder
-          .setName("name")
-          .setText(Text.newBuilder.setValue("value"))
-          .setType(Type.TEXT)
-          .build))
+      val agentInfo = Instance.AgentInfo(
+        host = "host",
+        agentId = Some("agentId"),
+        region = Some("region"),
+        zone = Some("zone"),
+        attributes = Seq(
+          Attribute.newBuilder
+            .setName("name")
+            .setText(Text.newBuilder.setValue("value"))
+            .setType(Type.TEXT)
+            .build
+        )
+      )
       println(Json.toJson(agentInfo))
       Json.toJson(agentInfo).as[Instance.AgentInfo] shouldBe agentInfo
     }

@@ -9,9 +9,10 @@ trait NetworkConf extends ScallopConf {
     "mesos_bridge_name",
     descr = "The name of the Mesos CNI network used by MESOS-type containers configured to use bridged networking",
     noshort = true,
-    default = Some(raml.Networks.DefaultMesosBridgeName))
+    default = Some(raml.Networks.DefaultMesosBridgeName)
+  )
 
-  validate (mesosBridgeName) { str =>
+  validate(mesosBridgeName) { str =>
     import NetworkConf._
     if (NetworkNamePattern.pattern.matcher(str).matches())
       Right(())

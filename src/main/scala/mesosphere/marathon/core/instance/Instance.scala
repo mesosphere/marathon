@@ -43,7 +43,8 @@ case class Instance(
     tasksMap: Map[Task.Id, Task],
     runSpec: RunSpec,
     reservation: Option[Reservation],
-    role: Role) extends Placed {
+    role: Role
+) extends Placed {
 
   def runSpecId: AbsolutePathId = runSpec.id
 
@@ -89,7 +90,10 @@ case class Instance(
     * @return new instance in a provisioned state
     */
   def provisioned(agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Map[Task.Id, Task], now: Timestamp): Instance = {
-    require(isScheduled, s"Instance '$instanceId' must not be in state '${state.condition}'. Scheduled instance is required to create provisioned instance.")
+    require(
+      isScheduled,
+      s"Instance '$instanceId' must not be in state '${state.condition}'. Scheduled instance is required to create provisioned instance."
+    )
 
     this.copy(
       agentInfo = Some(agentInfo),
@@ -103,9 +107,7 @@ case class Instance(
     * Creates new instance that is scheduled and has reservation (for resident run specs)
     */
   def reserved(reservation: Reservation, agentInfo: AgentInfo): Instance = {
-    this.copy(
-      reservation = Some(reservation),
-      agentInfo = Some(agentInfo))
+    this.copy(reservation = Some(reservation), agentInfo = Some(agentInfo))
   }
 
   /**
@@ -113,13 +115,14 @@ case class Instance(
     *
     * @return true if runSpec has some health checks defined. false if there is not any health check defined on this app/pod
     */
-  def hasConfiguredHealthChecks: Boolean = this.runSpec match {
-    case app: AppDefinition => {
-      app.healthChecks.nonEmpty || app.check.nonEmpty || app.readinessChecks.nonEmpty
+  def hasConfiguredHealthChecks: Boolean =
+    this.runSpec match {
+      case app: AppDefinition => {
+        app.healthChecks.nonEmpty || app.check.nonEmpty || app.readinessChecks.nonEmpty
+      }
+      case pod: PodDefinition => pod.containers.exists(!_.healthCheck.isEmpty)
+      case _ => false // non-app/pod RunSpecs don't have health checks
     }
-    case pod: PodDefinition => pod.containers.exists(!_.healthCheck.isEmpty)
-    case _ => false // non-app/pod RunSpecs don't have health checks
-  }
 
   def consideredHealthy: Boolean = !hasConfiguredHealthChecks || state.healthy.getOrElse(false)
 }
@@ -132,12 +135,13 @@ object Instance {
     instances.iterator.map(instance => instance.instanceId -> instance).toMap
 
   object Running {
-    def unapply(instance: Instance): Option[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]] = instance match {
-      case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _, _) =>
-        Some((instanceId, agentInfo, tasksMap))
-      case _ =>
-        Option.empty[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]]
-    }
+    def unapply(instance: Instance): Option[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]] =
+      instance match {
+        case Instance(instanceId, Some(agentInfo), InstanceState(Condition.Running, _, _, _, _), tasksMap, _, _, _) =>
+          Some((instanceId, agentInfo, tasksMap))
+        case _ =>
+          Option.empty[Tuple3[Instance.Id, Instance.AgentInfo, Map[Task.Id, Task]]]
+      }
   }
 
   /**
@@ -187,7 +191,6 @@ object Instance {
       Condition.Starting,
       Condition.Staging,
       Condition.Unknown,
-
       //From here on all tasks are only in one of the following states
       Condition.Provisioned,
       Condition.Running,
@@ -204,11 +207,12 @@ object Instance {
       * @return new InstanceState
       */
     def transitionTo(
-      maybeOldInstanceState: Option[InstanceState],
-      newTaskMap: Map[Task.Id, Task],
-      now: Timestamp,
-      unreachableStrategy: UnreachableStrategy,
-      goal: Goal): InstanceState = {
+        maybeOldInstanceState: Option[InstanceState],
+        newTaskMap: Map[Task.Id, Task],
+        now: Timestamp,
+        unreachableStrategy: UnreachableStrategy,
+        goal: Goal
+    ): InstanceState = {
 
       val tasks = newTaskMap.values
 
@@ -367,27 +371,24 @@ object Instance {
   /**
     * Info relating to the host on which the Instance has been launched.
     */
-  case class AgentInfo(
-      host: String,
-      agentId: Option[String],
-      region: Option[String],
-      zone: Option[String],
-      attributes: Seq[Attribute])
+  case class AgentInfo(host: String, agentId: Option[String], region: Option[String], zone: Option[String], attributes: Seq[Attribute])
 
   object AgentInfo {
-    def apply(offer: org.apache.mesos.Protos.Offer): AgentInfo = AgentInfo(
-      host = offer.getHostname,
-      agentId = Some(offer.getSlaveId.getValue),
-      region = OfferUtil.region(offer),
-      zone = OfferUtil.zone(offer),
-      attributes = offer.getAttributesList.asScala.to(IndexedSeq)
-    )
+    def apply(offer: org.apache.mesos.Protos.Offer): AgentInfo =
+      AgentInfo(
+        host = offer.getHostname,
+        agentId = Some(offer.getSlaveId.getValue),
+        region = OfferUtil.region(offer),
+        zone = OfferUtil.zone(offer),
+        attributes = offer.getAttributesList.asScala.to(IndexedSeq)
+      )
   }
 
   implicit class LegacyInstanceImprovement(val instance: Instance) extends AnyVal {
+
     /** Convenient access to a legacy instance's only task */
-    def appTask: Task = instance.tasksMap.headOption.map(_._2).getOrElse(
-      throw new IllegalStateException(s"No task in ${instance.instanceId}"))
+    def appTask: Task =
+      instance.tasksMap.headOption.map(_._2).getOrElse(throw new IllegalStateException(s"No task in ${instance.instanceId}"))
   }
 
   implicit object AttributeFormat extends Format[Attribute] {
@@ -420,10 +421,10 @@ object Instance {
   // private val agentFormatWrites: Writes[AgentInfo] = Json.format[AgentInfo]
   private val agentReads: Reads[AgentInfo] = (
     (__ \ "host").read[String] ~
-    (__ \ "agentId").readNullable[String] ~
-    (__ \ "region").readNullable[String] ~
-    (__ \ "zone").readNullable[String] ~
-    (__ \ "attributes").read[Seq[mesos.Protos.Attribute]]
+      (__ \ "agentId").readNullable[String] ~
+      (__ \ "region").readNullable[String] ~
+      (__ \ "zone").readNullable[String] ~
+      (__ \ "attributes").read[Seq[mesos.Protos.Attribute]]
   )(AgentInfo(_, _, _, _, _))
 
   implicit val agentFormat: Format[AgentInfo] = Format(agentReads, Json.writes[AgentInfo])

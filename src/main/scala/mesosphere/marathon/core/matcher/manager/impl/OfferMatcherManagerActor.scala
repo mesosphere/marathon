@@ -38,9 +38,12 @@ private[manager] class OfferMatcherManagerActorMetrics(metrics: Metrics) {
   */
 private[manager] object OfferMatcherManagerActor {
   def props(
-    metrics: OfferMatcherManagerActorMetrics,
-    random: Random, clock: Clock,
-    offerMatcherConfig: OfferMatcherManagerConfig, offersWantedInput: SourceQueue[Boolean]): Props = {
+      metrics: OfferMatcherManagerActorMetrics,
+      random: Random,
+      clock: Clock,
+      offerMatcherConfig: OfferMatcherManagerConfig,
+      offersWantedInput: SourceQueue[Boolean]
+  ): Props = {
     Props(new OfferMatcherManagerActor(metrics, random, clock, offerMatcherConfig, offersWantedInput))
   }
 
@@ -62,7 +65,8 @@ private[manager] object OfferMatcherManagerActor {
       matcherQueue: Queue[OfferMatcher] = Queue.empty,
       ops: Seq[InstanceOpWithSource] = Seq.empty,
       matchPasses: Int = 0,
-      resendThisOffer: Boolean = false) {
+      resendThisOffer: Boolean = false
+  ) {
 
     def addMatcher(matcher: OfferMatcher): MatchOfferData = copy(matcherQueue = matcherQueue.enqueue(matcher))
     def nextMatcherOpt: Option[(OfferMatcher, MatchOfferData)] = {
@@ -97,8 +101,12 @@ private[manager] object OfferMatcherManagerActor {
 
 private[impl] class OfferMatcherManagerActor private (
     metrics: OfferMatcherManagerActorMetrics,
-    random: Random, clock: Clock, conf: OfferMatcherManagerConfig, offersWantedInput: SourceQueue[Boolean])
-  extends Actor with StrictLogging {
+    random: Random,
+    clock: Clock,
+    conf: OfferMatcherManagerConfig,
+    offersWantedInput: SourceQueue[Boolean]
+) extends Actor
+    with StrictLogging {
 
   var launchTokens: Int = 0
 
@@ -120,14 +128,15 @@ private[impl] class OfferMatcherManagerActor private (
     timerTick.foreach(_.cancel())
   }
 
-  override def receive: Receive = LoggingReceive {
-    Seq[Receive](
-      receiveSetLaunchTokens,
-      receiveChangingMatchers,
-      receiveProcessOffer,
-      receiveMatchedInstances
-    ).reduceLeft(_.orElse[Any, Unit](_))
-  }
+  override def receive: Receive =
+    LoggingReceive {
+      Seq[Receive](
+        receiveSetLaunchTokens,
+        receiveChangingMatchers,
+        receiveProcessOffer,
+        receiveMatchedInstances
+      ).reduceLeft(_.orElse[Any, Unit](_))
+    }
 
   def receiveSetLaunchTokens: Receive = {
     case OfferMatcherManagerDelegate.SetInstanceLaunchTokens(tokens) =>
@@ -206,21 +215,22 @@ private[impl] class OfferMatcherManagerActor private (
   def receiveMatchedInstances: Receive = {
     case OfferMatcher.MatchedInstanceOps(offerId, addedOps, resendOffer) =>
       def processAddedInstances(data: MatchOfferData): MatchOfferData = {
-        val dataWithInstances = try {
-          val (acceptedOps, rejectedOps) =
-            addedOps.splitAt(Seq(launchTokens, addedOps.size, conf.maxInstancesPerOffer() - data.ops.size).min)
+        val dataWithInstances =
+          try {
+            val (acceptedOps, rejectedOps) =
+              addedOps.splitAt(Seq(launchTokens, addedOps.size, conf.maxInstancesPerOffer() - data.ops.size).min)
 
-          rejectedOps.foreach(_.reject("not enough launch tokens OR already scheduled sufficient instances on offer"))
+            rejectedOps.foreach(_.reject("not enough launch tokens OR already scheduled sufficient instances on offer"))
 
-          val newData: MatchOfferData = data.addInstances(acceptedOps)
-          launchTokens -= acceptedOps.size
-          metrics.launchTokensMetric.setValue(launchTokens.toLong)
-          newData
-        } catch {
-          case NonFatal(e) =>
-            logger.error(s"unexpected error processing ops for ${offerId.getValue} from ${sender()}", e)
-            data
-        }
+            val newData: MatchOfferData = data.addInstances(acceptedOps)
+            launchTokens -= acceptedOps.size
+            metrics.launchTokensMetric.setValue(launchTokens.toLong)
+            newData
+          } catch {
+            case NonFatal(e) =>
+              logger.error(s"unexpected error processing ops for ${offerId.getValue} from ${sender()}", e)
+              data
+          }
 
         dataWithInstances.nextMatcherOpt match {
           case Some((matcher, contData)) =>
@@ -259,7 +269,9 @@ private[impl] class OfferMatcherManagerActor private (
     }
     // safeguard: if matchers are stuck during offer matching, complete the match result
     offerQueues.valuesIterator.withFilter(_.deadline + conf.offerMatchingTimeout() < clock.now()).foreach { matchOfferData =>
-      logger.warn(s"Matchers ${matchOfferData.matcherQueue} did not respond with a matching result in time for offer ${matchOfferData.offer.getId.getValue}.")
+      logger.warn(
+        s"Matchers ${matchOfferData.matcherQueue} did not respond with a matching result in time for offer ${matchOfferData.offer.getId.getValue}."
+      )
       completeWithMatchResult(matchOfferData, resendThisOffer = true)
     }
   }
@@ -287,11 +299,10 @@ private[impl] class OfferMatcherManagerActor private (
   /**
     * Start processing an offer by asking all interested parties.
     */
-  def startProcessOffer(
-    offer: Offer,
-    deadline: Timestamp,
-    promise: Promise[OfferMatcher.MatchedInstanceOps]): Unit = {
-    logger.info(s"Start processing offer ${offer.getId.getValue} with role ${offer.getAllocationInfo.getRole}. Current offer matcher count: ${offerQueues.size}")
+  def startProcessOffer(offer: Offer, deadline: Timestamp, promise: Promise[OfferMatcher.MatchedInstanceOps]): Unit = {
+    logger.info(
+      s"Start processing offer ${offer.getId.getValue} with role ${offer.getAllocationInfo.getRole}. Current offer matcher count: ${offerQueues.size}"
+    )
 
     // setup initial offer data
     val randomizedMatchers = offerMatchers(offer)
@@ -314,12 +325,14 @@ private[impl] class OfferMatcherManagerActor private (
     } else if (data.ops.size >= conf.maxInstancesPerOffer()) {
       logger.info(
         s"Already scheduled the maximum number of ${data.ops.size} instances on this offer. " +
-          s"Increase with --${conf.maxInstancesPerOffer.name}.")
+          s"Increase with --${conf.maxInstancesPerOffer.name}."
+      )
       None
     } else if (launchTokens <= 0) {
       logger.info(
         s"No launch tokens left for ${data.offer.getId.getValue}. " +
-          "Tune with --launch_tokens/launch_token_refresh_interval.")
+          "Tune with --launch_tokens/launch_token_refresh_interval."
+      )
       None
     } else {
       data.nextMatcherOpt
@@ -335,7 +348,8 @@ private[impl] class OfferMatcherManagerActor private (
             case NonFatal(e) =>
               logger.warn("Received error from", e)
               MatchedInstanceOps.noMatch(data.offer.getId, resendThisOffer = true)
-          }.pipeTo(self)
+          }
+          .pipeTo(self)
       case None =>
         completeWithMatchResult(data, data.resendThisOffer)
         // one offer match is finished. Let's see if we can start an unprocessed offer now.
@@ -347,9 +361,11 @@ private[impl] class OfferMatcherManagerActor private (
     data.promise.trySuccess(OfferMatcher.MatchedInstanceOps(data.offer.getId, data.ops, resendThisOffer))
     offerQueues -= data.offer.getId
     metrics.currentOffersMetric.setValue(offerQueues.size.toLong)
-    logger.info(s"Finished processing ${data.offer.getId.getValue} from ${data.offer.getHostname}. " +
-      s"Matched ${data.ops.size} ops after ${data.matchPasses} passes. " +
-      s"First 10: ${ResourceUtil.displayResources(data.offer.getResourcesList.asScala.to(Seq), 10)}")
+    logger.info(
+      s"Finished processing ${data.offer.getId.getValue} from ${data.offer.getHostname}. " +
+        s"Matched ${data.ops.size} ops after ${data.matchPasses} passes. " +
+        s"First 10: ${ResourceUtil.displayResources(data.offer.getResourcesList.asScala.to(Seq), 10)}"
+    )
     logger.debug(s"First 1000 offers: ${ResourceUtil.displayResources(data.offer.getResourcesList.asScala.to(Seq), 1000)}.")
   }
 
@@ -358,4 +374,3 @@ private[impl] class OfferMatcherManagerActor private (
     logger.info(s"No match for:${offer.getId.getValue} from:${offer.getHostname} reason:$reason")
   }
 }
-

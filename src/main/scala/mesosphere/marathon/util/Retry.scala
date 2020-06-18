@@ -16,7 +16,8 @@ case class RetryConfig(
     maxAttempts: Int = Retry.DefaultMaxAttempts,
     minDelay: Duration = Retry.DefaultMinDelay,
     maxDelay: Duration = Retry.DefaultMaxDelay,
-    maxDuration: Duration = Retry.DefaultMaxDuration)
+    maxDuration: Duration = Retry.DefaultMaxDuration
+)
 
 object RetryConfig {
   def apply(config: Config): RetryConfig = {
@@ -64,19 +65,16 @@ object Retry {
     *         non-retry-able exception.
     */
   def apply[T](
-    name: String,
-    maxAttempts: Int = DefaultMaxAttempts,
-    minDelay: FiniteDuration = DefaultMinDelay,
-    maxDelay: FiniteDuration = DefaultMaxDelay,
-    maxDuration: Duration = DefaultMaxDuration,
-    retryOn: RetryOnFn = defaultRetry)(f: => Future[T])(implicit
-    scheduler: Scheduler,
-    ctx: ExecutionContext): Future[T] = {
+      name: String,
+      maxAttempts: Int = DefaultMaxAttempts,
+      minDelay: FiniteDuration = DefaultMinDelay,
+      maxDelay: FiniteDuration = DefaultMaxDelay,
+      maxDuration: Duration = DefaultMaxDuration,
+      retryOn: RetryOnFn = defaultRetry
+  )(f: => Future[T])(implicit scheduler: Scheduler, ctx: ExecutionContext): Future[T] = {
     val promise = Promise[T]()
 
-    require(
-      maxDelay < maxDuration,
-      s"maxDelay of ${maxDelay.toSeconds} seconds is larger than the maximum allowed duration: $maxDuration")
+    require(maxDelay < maxDuration, s"maxDelay of ${maxDelay.toSeconds} seconds is larger than the maximum allowed duration: $maxDuration")
 
     def retry(attempt: Int, lastDelay: FiniteDuration): Unit = {
       val startedAt = Instant.now()
@@ -88,11 +86,11 @@ object Retry {
           if (attempt + 1 < maxAttempts && !expired) {
             val jitteredLastDelay = lastDelay.toNanos * 3
             val nextDelay = randomBetween(
-              lastDelay.toNanos, if (jitteredLastDelay < 0 || jitteredLastDelay > maxDelay.toNanos) maxDelay.toNanos else jitteredLastDelay).nano
+              lastDelay.toNanos,
+              if (jitteredLastDelay < 0 || jitteredLastDelay > maxDelay.toNanos) maxDelay.toNanos else jitteredLastDelay
+            ).nano
 
-            require(
-              nextDelay <= maxDelay,
-              s"nextDelay of ${nextDelay.toNanos}ns is too big, may not exceed ${maxDelay.toNanos}ns")
+            require(nextDelay <= maxDelay, s"nextDelay of ${nextDelay.toNanos}ns is too big, may not exceed ${maxDelay.toNanos}ns")
 
             scheduler.scheduleOnce(nextDelay)(retry(attempt + 1, nextDelay))
           } else {
@@ -127,14 +125,13 @@ object Retry {
     *         non-retry-able exception.
     */
   def blocking[T](
-    name: String,
-    maxAttempts: Int = 5,
-    minDelay: FiniteDuration = DefaultMinDelay,
-    maxDelay: FiniteDuration = DefaultMaxDelay,
-    maxDuration: Duration = DefaultMaxDuration,
-    retryOn: RetryOnFn = defaultRetry)(f: => T)(implicit
-    scheduler: Scheduler,
-    ctx: ExecutionContext): Future[T] = {
+      name: String,
+      maxAttempts: Int = 5,
+      minDelay: FiniteDuration = DefaultMinDelay,
+      maxDelay: FiniteDuration = DefaultMaxDelay,
+      maxDuration: Duration = DefaultMaxDuration,
+      retryOn: RetryOnFn = defaultRetry
+  )(f: => T)(implicit scheduler: Scheduler, ctx: ExecutionContext): Future[T] = {
     apply(name, maxAttempts, minDelay, maxDelay, maxDuration, retryOn)(Future(blockingCall(f)))
   }
 }

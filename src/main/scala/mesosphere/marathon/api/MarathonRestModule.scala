@@ -16,16 +16,15 @@ import scala.concurrent.ExecutionContext
   * This filter will redirect to the master if running in HA mode.
   */
 class LeaderProxyFilterModule extends AbstractModule {
-  override def configure(): Unit = {
-  }
+  override def configure(): Unit = {}
 
   @Provides
   @Singleton
   def provideLeaderProxyFilter(
-    httpConf: HttpConf,
-    electionService: ElectionService,
-    leaderProxyConf: LeaderProxyConf,
-    @Named(ModuleNames.HOST_PORT) myHostPort: String
+      httpConf: HttpConf,
+      electionService: ElectionService,
+      leaderProxyConf: LeaderProxyConf,
+      @Named(ModuleNames.HOST_PORT) myHostPort: String
   )(implicit executionContext: ExecutionContext, actorSystem: ActorSystem): LeaderProxyFilter = {
 
     val sslContext = SSLContextUtil.createSSLContext(httpConf.sslKeystorePath.toOption, httpConf.sslKeystorePassword.toOption)
@@ -35,7 +34,8 @@ class LeaderProxyFilterModule extends AbstractModule {
       disableHttp = httpConf.disableHttp(),
       electionService = electionService,
       myHostPort = myHostPort,
-      forwarder = forwarder)
+      forwarder = forwarder
+    )
   }
 }
 
@@ -74,21 +74,33 @@ class MarathonRestModule() extends AbstractModule {
   @Provides
   @Singleton
   def rootApplication(
-    marathonExceptionMapper: MarathonExceptionMapper,
-    systemResource: SystemResource,
-    appsResource: v2.AppsResource,
-    podsResource: v2.PodsResource,
-    tasksResource: v2.TasksResource,
-    queueResource: v2.QueueResource,
-    groupsResource: v2.GroupsResource,
-    infoResource: v2.InfoResource,
-    leaderResource: v2.LeaderResource,
-    deploymentsResource: v2.DeploymentsResource,
-    pluginsResource: v2.PluginsResource): RootApplication = {
+      marathonExceptionMapper: MarathonExceptionMapper,
+      systemResource: SystemResource,
+      appsResource: v2.AppsResource,
+      podsResource: v2.PodsResource,
+      tasksResource: v2.TasksResource,
+      queueResource: v2.QueueResource,
+      groupsResource: v2.GroupsResource,
+      infoResource: v2.InfoResource,
+      leaderResource: v2.LeaderResource,
+      deploymentsResource: v2.DeploymentsResource,
+      pluginsResource: v2.PluginsResource
+  ): RootApplication = {
 
     new RootApplication(
       Seq(marathonExceptionMapper),
-      List(systemResource, appsResource, podsResource, tasksResource, queueResource, groupsResource,
-        infoResource, leaderResource, deploymentsResource, pluginsResource))
+      List(
+        systemResource,
+        appsResource,
+        podsResource,
+        tasksResource,
+        queueResource,
+        groupsResource,
+        infoResource,
+        leaderResource,
+        deploymentsResource,
+        pluginsResource
+      )
+    )
   }
 }

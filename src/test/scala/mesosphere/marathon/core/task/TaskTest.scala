@@ -27,7 +27,8 @@ class TaskTest extends UnitTest with Inside {
 
     val clock = new SettableClock()
 
-    val appWithoutIpAddress = AppDefinition(id = AbsolutePathId("/foo/bar"), role = "*", networks = Seq(HostNetwork), portDefinitions = Seq(PortDefinition(0)))
+    val appWithoutIpAddress =
+      AppDefinition(id = AbsolutePathId("/foo/bar"), role = "*", networks = Seq(HostNetwork), portDefinitions = Seq(PortDefinition(0)))
     val appVirtualNetworks = Seq(ContainerNetwork("whatever"))
     val appWithIpAddress = AppDefinition(
       id = AbsolutePathId("/foo/bar"),
@@ -62,13 +63,15 @@ class TaskTest extends UnitTest with Inside {
     }
 
     def taskWithMultipleNetworksAndOneIp: Task = {
-      val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithoutIp, networkWithOneIp1).flatMap(_.getIpAddressesList.asScala)
+      val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] =
+        Seq(networkWithoutIp, networkWithOneIp1).flatMap(_.getIpAddressesList.asScala)
       val t = TestTaskBuilder.Helper.runningTaskForApp(appWithIpAddress.id)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
 
     def taskWithMultipleNetworkAndNoIp: Task = {
-      val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithoutIp, networkWithoutIp).flatMap(_.getIpAddressesList.asScala)
+      val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] =
+        Seq(networkWithoutIp, networkWithoutIp).flatMap(_.getIpAddressesList.asScala)
       val t = TestTaskBuilder.Helper.runningTaskForApp(appWithIpAddress.id)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
@@ -80,7 +83,8 @@ class TaskTest extends UnitTest with Inside {
     }
 
     def taskWithMultipleNetworkAndMultipleIPs: Task = {
-      val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] = Seq(networkWithOneIp1, networkWithOneIp2).flatMap(_.getIpAddressesList.asScala)
+      val ipAddresses: Seq[MesosProtos.NetworkInfo.IPAddress] =
+        Seq(networkWithOneIp1, networkWithOneIp2).flatMap(_.getIpAddressesList.asScala)
       val t = TestTaskBuilder.Helper.runningTaskForApp(appWithIpAddress.id)
       t.copy(status = t.status.copy(networkInfo = NetworkInfo(hostName = host, hostPorts = Nil, ipAddresses = ipAddresses)))
     }
@@ -163,10 +167,8 @@ class TaskTest extends UnitTest with Inside {
       val condition = Condition.Running
       val instanceId = Instance.Id.forRunSpec(f.appWithIpAddress.id)
       val taskId = Task.Id(instanceId)
-      val status = Task.Status(
-        stagedAt = f.clock.now,
-        startedAt = Some(f.clock.now),
-        mesosStatus = None, condition, NetworkInfoPlaceholder())
+      val status =
+        Task.Status(stagedAt = f.clock.now, startedAt = Some(f.clock.now), mesosStatus = None, condition, NetworkInfoPlaceholder())
       val task = Task(taskId, f.clock.now, status)
       val instance = mock[Instance]
       instance.hasReservation returns true
@@ -177,7 +179,8 @@ class TaskTest extends UnitTest with Inside {
         .setTaskId(taskId.mesosTaskId)
         .setState(MesosProtos.TaskState.TASK_RUNNING)
         .setContainerStatus(containerStatus)
-        .setTimestamp(f.clock.now.millis.toDouble).build()
+        .setTimestamp(f.clock.now.millis.toDouble)
+        .build()
 
       When("task is launched, no ipAddress should be found")
       task.status.networkInfo.ipAddresses shouldBe Nil
@@ -196,10 +199,7 @@ class TaskTest extends UnitTest with Inside {
       val condition = Condition.Staging
       val instanceId = Instance.Id.forRunSpec(f.appWithIpAddress.id)
       val taskId = Task.Id(instanceId)
-      val status = Task.Status(
-        stagedAt = f.clock.now,
-        startedAt = None,
-        mesosStatus = None, condition, NetworkInfoPlaceholder())
+      val status = Task.Status(stagedAt = f.clock.now, startedAt = None, mesosStatus = None, condition, NetworkInfoPlaceholder())
       val task = Task(taskId, f.clock.now, status)
       val instance = mock[Instance]
       instance.hasReservation returns true
@@ -210,7 +210,8 @@ class TaskTest extends UnitTest with Inside {
         .setTaskId(taskId.mesosTaskId)
         .setState(MesosProtos.TaskState.TASK_RUNNING)
         .setContainerStatus(containerStatus)
-        .setTimestamp(f.clock.now.millis.toDouble).build()
+        .setTimestamp(f.clock.now.millis.toDouble)
+        .build()
 
       When("task is launched, no ipAddress should be found")
       task.status.networkInfo.ipAddresses shouldBe Nil
@@ -240,8 +241,7 @@ class TaskTest extends UnitTest with Inside {
   "json serialization" should {
     "round trip serialize a Task" in {
       val f = new Fixture
-      val task: Task = TestTaskBuilder.Helper.minimalRunning(
-        f.appWithoutIpAddress.id, Condition.Running, f.clock.now)
+      val task: Task = TestTaskBuilder.Helper.minimalRunning(f.appWithoutIpAddress.id, Condition.Running, f.clock.now)
       Json.toJson(task).as[Task] shouldBe task
     }
   }

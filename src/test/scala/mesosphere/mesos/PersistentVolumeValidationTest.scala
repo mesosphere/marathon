@@ -14,7 +14,7 @@ class PersistentVolumeValidationTest extends UnitTest with ValidationTestLike {
       val validation = Volume.validVolume(Set())(volume)
 
       Then("A validation exists with no error message")
-      validation.isSuccess should be (true)
+      validation.isSuccess should be(true)
     }
 
     "create a PersistentVolume with validation violation in containerPath" in {
@@ -27,8 +27,7 @@ class PersistentVolumeValidationTest extends UnitTest with ValidationTestLike {
       volume should not be null
 
       Then("A validation exists with a readable error message")
-      VolumeWithMount.validVolumeWithMount(Set())(volume) should haveViolations(
-        "/mount/mountPath" -> "value must not contain \"/\"")
+      VolumeWithMount.validVolumeWithMount(Set())(volume) should haveViolations("/mount/mountPath" -> "value must not contain \"/\"")
     }
   }
 }

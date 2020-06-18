@@ -22,6 +22,7 @@ trait InstanceOpFactory {
 }
 
 object InstanceOpFactory {
+
   /**
     * @param offer              the offer to match against
     * @param instanceMap        a map of running tasks or reservations for the given run spec,
@@ -33,7 +34,8 @@ object InstanceOpFactory {
       offer: Mesos.Offer,
       instanceMap: Map[Instance.Id, Instance],
       scheduledInstances: NonEmptyIterable[Instance],
-      localRegion: Option[Region] = None) {
+      localRegion: Option[Region] = None
+  ) {
     def frameworkId: FrameworkId = FrameworkId("").mergeFromProto(offer.getFrameworkId)
     def instances: Seq[Instance] = instanceMap.values.to(Seq)
     lazy val reserved: Seq[Instance] = scheduledInstances.filter(_.hasReservation).to(Seq)
@@ -49,8 +51,5 @@ object InstanceOpFactory {
     * @param source     a disk source from an offer received
     * @param volume     a instance local volume
     */
-  case class OfferedVolume(
-      providerId: Option[ResourceProviderID],
-      source: DiskSource,
-      volume: LocalVolume)
+  case class OfferedVolume(providerId: Option[ResourceProviderID], source: DiskSource, volume: LocalVolume)
 }

@@ -41,9 +41,8 @@ class AppDefinitionMesosHealthCheckValidationTest extends UnitTest {
     "app with more than 1 command Mesos health check is valid" in {
       val f = new Fixture
       Given("an app with one health check")
-      val app = f.app(healthChecks = Set(
-        MesosCommandHealthCheck(command = Command("true")),
-        MesosCommandHealthCheck(command = Command("true"))))
+      val app =
+        f.app(healthChecks = Set(MesosCommandHealthCheck(command = Command("true")), MesosCommandHealthCheck(command = Command("true"))))
 
       Then("the app is considered valid")
       validAppDefinition(app).isSuccess shouldBe true
