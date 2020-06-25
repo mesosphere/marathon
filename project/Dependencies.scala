@@ -111,7 +111,7 @@ object Dependencies {
 object Dependency {
   object V {
     // runtime deps versions
-    val Akka = "2.6.3"
+    val Akka = "2.6.5"
     val AkkaHttp = "10.1.11"
     val Alpakka  = "1.1.2"
     val ApacheCommonsCompress = "1.13"
