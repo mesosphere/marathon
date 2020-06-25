@@ -37,7 +37,7 @@ import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.{StorageConf, StorageConfig, StorageModule}
-import mesosphere.util.NamedExecutionContext
+import com.mesosphere.usi.async.NamedExecutionContext
 import mesosphere.util.state.MesosLeaderInfo
 import org.apache.mesos.Protos.FrameworkID
 
