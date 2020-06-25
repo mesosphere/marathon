@@ -55,7 +55,7 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       waitForTasks(appId, 1) //make sure, the app has really started
 
       When("the task is killed")
-      val Some(task) = marathon.tasks(appId).value.headOption
+      val task = marathon.tasks(appId).value.headOption.value
 
       val killResult = marathon.killTask(appId, task.id, false)
       killResult should be(OK)
@@ -64,7 +64,7 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val nextTaskId = Task.Id.nextIncarnationFor(taskId)
 
       eventually {
-        val Some(newTask) = marathon.tasks(appId).value.headOption
+        val newTask = marathon.tasks(appId).value.headOption.value
         newTask.id shouldBe nextTaskId.idString
       }
     }
@@ -84,7 +84,7 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       waitForTasks(appId, 1) //make sure, the app has really started
 
       When("the task is killed with wipe = true")
-      val Some(task) = marathon.tasks(appId).value.headOption
+      val task = marathon.tasks(appId).value.headOption.value
 
       val killResult = marathon.killTask(appId, task.id, wipe = true)
       killResult should be(OK)
@@ -93,7 +93,7 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val instanceId = taskId.instanceId
 
       eventually {
-        val Some(newTask) = marathon.tasks(appId).value.headOption
+        val newTask = marathon.tasks(appId).value.headOption.value
         Task.Id.parse(newTask.id).instanceId shouldNot be(instanceId)
       }
     }

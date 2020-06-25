@@ -121,10 +121,10 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       tasks.groupBy(_.region.value).get("remote_region").value should have size (2)
 
       When("an agent in the remote region with running tasks becomes unreachable")
-      val Some(agent) = mesosCluster.agents.filter { agent =>
+      val agent = mesosCluster.agents.filter { agent =>
         (originalAgentIds contains mesosCluster.agentIdFor(agent)) &&
-          agent.extraArgs.exists(_.contains("remote_region"))
-      }.headOption
+          agent.mesosFaultDomainAgentCmdOption.exists(_.contains("remote_region"))
+      }.headOption.value
 
       agent.stop()
       eventually {

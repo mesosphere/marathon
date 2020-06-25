@@ -1,13 +1,12 @@
 package mesosphere
 
-import com.mesosphere.utils.http.RestResult
+import com.mesosphere.utils.http.{RestResult, RestResultMatchers}
 import com.typesafe.config.{Config, ConfigFactory}
 import mesosphere.marathon.raml.{PodState, PodStatus}
 import org.scalatest._
 import org.scalatest.matchers.{BeMatcher, MatchResult}
 import org.scalatest.time.{Minutes, Seconds, Span}
-
-trait IntegrationTestLike extends UnitTestLike {
+trait IntegrationTestLike extends UnitTestLike with RestResultMatchers {
   override val timeLimit = Span(15, Minutes)
 
   override implicit lazy val patienceConfig: PatienceConfig = PatienceConfig(timeout = Span(300, Seconds))
@@ -15,30 +14,6 @@ trait IntegrationTestLike extends UnitTestLike {
   // Integration tests using docker image provisioning with the Mesos containerizer need to be
   // run as root in a Linux environment. They have to be explicitly enabled through an env variable.
   val envVarRunMesosTests = "RUN_MESOS_INTEGRATION_TESTS"
-
-  /**
-    * Custom matcher for HTTP responses that print response body.
-    * @param status The expected status code.
-    */
-  class RestResultMatcher(status: Int) extends BeMatcher[RestResult[_]] {
-    def apply(left: RestResult[_]) =
-      MatchResult(
-        left.code == status,
-        s"Response code was not $status but ${left.code} with body '${left.entityString}'",
-        s"Response code was $status with body '${left.entityString}'"
-      )
-  }
-
-  val OK = new RestResultMatcher(200)
-  val Created = new RestResultMatcher(201)
-  val Accepted = new RestResultMatcher(202)
-  val NoContent = new RestResultMatcher(204)
-  val Redirect = new RestResultMatcher(302)
-  val NotFound = new RestResultMatcher(404)
-  val Conflict = new RestResultMatcher(409)
-  val UnprocessableEntity = new RestResultMatcher(422)
-  val ServerError = new RestResultMatcher(500)
-  val BadGateway = new RestResultMatcher(502)
 
   /**
     * Custom pod status matcher for Marathon facade request results.
