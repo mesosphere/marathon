@@ -4,12 +4,12 @@ package core.appinfo
 import java.time.Clock
 
 import com.google.inject.Inject
+import com.mesosphere.usi.async.NamedExecutionContext
 import mesosphere.marathon.core.appinfo.impl.{AppInfoBaseData, DefaultInfoService}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.storage.repository.TaskFailureRepository
-import mesosphere.util.NamedExecutionContext
 
 /**
   * Provides a service to query information related to apps.

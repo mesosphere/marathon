@@ -14,11 +14,11 @@ import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import com.typesafe.sslconfig.akka.AkkaSSLConfig
 import javax.net.ssl.{KeyManager, SSLContext, X509TrustManager}
+import com.mesosphere.usi.async.ThreadPoolContext
 import mesosphere.marathon.Protos.HealthCheckDefinition.Protocol
 import mesosphere.marathon.core.health._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.{AppDefinition, Timestamp}
-import mesosphere.util.ThreadPoolContext
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration

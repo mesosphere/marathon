@@ -10,10 +10,11 @@ import akka.pattern.after
 import akka.stream.scaladsl.{Keep, Source}
 import akka.stream.{KillSwitches, Materializer}
 import com.typesafe.scalalogging.StrictLogging
+import com.mesosphere.usi.async.Timeout
 import mesosphere.marathon.core.health.impl.HealthCheckWorker
 import mesosphere.marathon.core.readiness.ReadinessCheckExecutor.ReadinessCheckSpec
 import mesosphere.marathon.core.readiness.{HttpResponse, ReadinessCheckExecutor, ReadinessCheckResult}
-import mesosphere.marathon.util.{CancellableOnce, Timeout}
+import mesosphere.marathon.util.CancellableOnce
 
 import scala.concurrent.Future
 import scala.util.Success

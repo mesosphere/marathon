@@ -24,13 +24,14 @@ import com.mesosphere.utils.http.RestResult
 import com.mesosphere.utils.mesos.{MesosClusterTest, MesosFacade, MesosTest}
 import com.mesosphere.utils.zookeeper.ZookeeperServerTest
 import com.typesafe.scalalogging.{Logger, StrictLogging}
+import com.mesosphere.usi.async.{Retry, Timeout}
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades._
 import mesosphere.marathon.raml.{App, AppCheck, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
 import mesosphere.marathon.state.{AbsolutePathId, PathId, PersistentVolume, VolumeMount}
 import mesosphere.marathon.test.MarathonTestHelper
-import mesosphere.marathon.util.{Lock, Retry, Timeout}
+import mesosphere.marathon.util.Lock
 import mesosphere.{AkkaUnitTestLike, WaitTestSupport}
 import org.apache.commons.io.FileUtils
 import org.scalatest.concurrent.{Eventually, ScalaFutures}

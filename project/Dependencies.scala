@@ -62,6 +62,7 @@ object Dependencies {
     scalaCollectionCompat % "compile",
     scalaLogging % "compile",
     uuidGenerator % "compile",
+    usiCommons % "compile",
     wixAccord % "compile",
 
     // old Chaos deps
@@ -110,7 +111,7 @@ object Dependencies {
 object Dependency {
   object V {
     // runtime deps versions
-    val Akka = "2.6.3"
+    val Akka = "2.6.5"
     val AkkaHttp = "10.1.11"
     val Alpakka  = "1.1.2"
     val ApacheCommonsCompress = "1.13"
@@ -151,7 +152,7 @@ object Dependency {
     val JUnitBenchmarks = "0.7.2"
     val Mockito = "1.10.19"
     val ScalaTest = "3.0.8"
-    val UsiTestUtil = "0.1.38"
+    val Usi = "0.1.53"
   }
 
   val excludeMortbayJetty = ExclusionRule(organization = "org.mortbay.jetty")
@@ -204,6 +205,7 @@ object Dependency {
   val scallop = "org.rogach" %% "scallop" % V.Scallop
   val servletApi = "javax.servlet" % "servlet-api" % V.ServletApi
   val uuidGenerator = "com.fasterxml.uuid" % "java-uuid-generator" % V.UUIDGenerator
+  val usiCommons = "com.mesosphere.usi" %% "commons" % V.Usi
   val wixAccord = "com.wix" %% "accord-core" % V.WixAccord
 
   object Java9Compatibility {
@@ -264,6 +266,6 @@ object Dependency {
     val akkaHttpTestKit = "com.typesafe.akka" %% "akka-http-testkit" % V.AkkaHttp
     val diffson = "org.gnieh" %% "diffson-play-json" % V.Diffson
     val scalacheck = "org.scalacheck" %% "scalacheck" % V.ScalaCheck
-    val usiTestUtils = ("com.mesosphere.usi" %% "test-utils" % V.UsiTestUtil).excludeAll(excludeZk35)
+    val usiTestUtils = ("com.mesosphere.usi" %% "test-utils" % V.Usi).excludeAll(excludeZk35)
   }
 }

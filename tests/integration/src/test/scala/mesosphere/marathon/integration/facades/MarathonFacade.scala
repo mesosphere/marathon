@@ -17,6 +17,7 @@ import akka.util.ByteString
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.mesosphere.usi.async.Retry
 import com.mesosphere.utils.http.RestResult
 import com.typesafe.scalalogging.StrictLogging
 import de.heikoseeberger.akkahttpplayjson.PlayJsonSupport
@@ -26,7 +27,6 @@ import mesosphere.marathon.integration.raml18.PodStatus18
 import mesosphere.marathon.raml.{App, AppUpdate, GroupPartialUpdate, GroupUpdate, Pod, PodConversion, PodInstanceStatus, PodStatus, Raml}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
-import mesosphere.marathon.util.Retry
 import play.api.libs.functional.syntax._
 import play.api.libs.json.JsArray
 
