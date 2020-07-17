@@ -62,10 +62,12 @@ class MarathonSchedulerActor private (
     * Since multiple conflicting deployment can be handled at the same time lockedRunSpecs saves
     * the lock count for each affected PathId. Lock is removed if lock count == 0.
     */
-  val lockedRunSpecs = collection.mutable.Map[AbsolutePathId, Int]().withDefaultValue(0)
+  val lockedRunSpecs = collection.mutable.Map.empty[AbsolutePathId, Long]
   var historyActor: ActorRef = _
   var activeReconciliation: Option[Future[Status]] = None
   var electionEventsSubscription: Option[Cancellable] = None
+
+  var currentLockVersion: Long = 0
 
   override def preStart(): Unit = {
     historyActor = context.actorOf(historyActorProps, "HistoryActor")
@@ -153,7 +155,7 @@ class MarathonSchedulerActor private (
       case cmd @ ScaleRunSpec(runSpecId) =>
         logger.debug("Receive scale run spec for {}", runSpecId)
 
-        withLockFor(Set(runSpecId)) {
+        withLockFor(Set(runSpecId)) { lockVersion =>
           val result: Future[Event] = schedulerActions
             .scale(runSpecId)
             .map { _ =>
@@ -167,7 +169,7 @@ class MarathonSchedulerActor private (
             }
 
           // Always release the lock.
-          result.onComplete(_ => self ! ReleaseLock(runSpecId))
+          result.onComplete(_ => self ! RemoveLocks(runSpecId :: Nil, lockVersion))
 
           if (sender != context.system.deadLetters)
             result.pipeTo(sender)
@@ -178,8 +180,8 @@ class MarathonSchedulerActor private (
           case _ =>
         }
 
-      case ReleaseLock(runSpecId) =>
-        removeLock(runSpecId)
+      case RemoveLocks(runSpecIds, lockVersion) =>
+        removeLocks(runSpecIds, lockVersion)
 
       case cmd @ CancelDeployment(plan) =>
         // The deployment manager will respond via the plan future/promise
@@ -189,16 +191,12 @@ class MarathonSchedulerActor private (
         deploy(sender(), cmd)
 
       case DeploymentFinished(plan) =>
-        removeLocks(plan.affectedRunSpecIds)
         deploymentSuccess(plan)
 
       case DeploymentFailed(plan, reason) =>
-        removeLocks(plan.affectedRunSpecIds)
         deploymentFailed(plan, reason)
 
-      case RunSpecScaled(id) => removeLock(id)
-
-      case TasksKilled(runSpecId, _) => removeLock(runSpecId)
+      case RunSpecScaled(id) =>
 
       case msg => logger.warn(s"Received unexpected message from ${sender()}: $msg")
     }
@@ -211,18 +209,18 @@ class MarathonSchedulerActor private (
 
   /**
     * Tries to acquire the lock for the given runSpecIds.
-    * If it succeeds it evalutes the by name reference, returning Some(result)
-    * Otherwise, returns None, which should be interpretted as lock acquisition failure
+    * If it succeeds it evaluates the by name reference, returning Some(result)
+    * Otherwise, returns None, which should be interpreted as lock acquisition failure
     *
     * @param runSpecIds the set of runSpecIds for which to acquire the lock
     * @param f the by-name reference that is evaluated if the lock acquisition is successful
     */
-  def withLockFor[A](runSpecIds: Set[AbsolutePathId])(f: => A): Option[A] = {
+  def withLockFor[A](runSpecIds: Set[AbsolutePathId])(f: Long => A): Option[A] = {
     // there's no need for synchronization here, because this is being
     // executed inside an actor, i.e. single threaded
     if (noConflictsWith(runSpecIds)) {
-      addLocks(runSpecIds)
-      Some(f)
+      val lockVersion = addLocks(runSpecIds)
+      Some(f(lockVersion))
     } else {
       None
     }
@@ -233,18 +231,26 @@ class MarathonSchedulerActor private (
     conflicts.isEmpty
   }
 
-  def removeLocks(runSpecIds: Set[AbsolutePathId]): Unit = runSpecIds.foreach(removeLock)
-  def removeLock(runSpecId: AbsolutePathId): Unit = {
-    if (lockedRunSpecs.contains(runSpecId)) {
-      val locks = lockedRunSpecs(runSpecId) - 1
-      if (locks <= 0) lockedRunSpecs -= runSpecId else lockedRunSpecs(runSpecId) -= 1
+  def removeLocks(runSpecIds: Iterable[AbsolutePathId], lockVersion: Long): Unit = runSpecIds.foreach { runSpecId => removeLock(runSpecId, lockVersion)}
+  def removeLock(runSpecId: AbsolutePathId, lockVersion: Long): Unit = {
+    if (lockedRunSpecs.get(runSpecId).exists( _ == lockVersion)) {
+      val locks = lockedRunSpecs - runSpecId
       logger.debug(s"Removed lock for run spec: id=$runSpecId locks=$locks lockedRunSpec=$lockedRunSpecs")
     }
   }
 
-  def addLocks(runSpecIds: Set[AbsolutePathId]): Unit = runSpecIds.foreach(addLock)
-  def addLock(runSpecId: AbsolutePathId): Unit = {
-    lockedRunSpecs(runSpecId) += 1
+  def getNextLockVersion(): Long = {
+    currentLockVersion += 1
+    currentLockVersion
+  }
+  def addLocks(runSpecIds: Set[AbsolutePathId]): Long = {
+    val lockVersion = getNextLockVersion()
+    runSpecIds.foreach { id => addLock(id, lockVersion) }
+    lockVersion
+  }
+
+  def addLock(runSpecId: AbsolutePathId, lockVersion: Long): Unit = {
+    lockedRunSpecs(runSpecId) = lockVersion
     logger.debug(s"Added to lock for run spec: id=$runSpecId locks=${lockedRunSpecs(runSpecId)} lockedRunSpec=$lockedRunSpecs")
   }
 
@@ -264,11 +270,16 @@ class MarathonSchedulerActor private (
     // - the old deployment will be cancelled and release all claimed locks
     //
     // In the case of a DeploymentFinished or DeploymentFailed we lower the lock again. See the receiving methods
-    addLocks(runSpecIds)
+    val lockVersion = addLocks(runSpecIds)
 
     deploymentManager.start(plan, cmd.force, origSender).onComplete {
-      case Success(_) => self ! DeploymentFinished(plan)
-      case Failure(t) => self ! DeploymentFailed(plan, t)
+      case Success(_) =>
+        self ! DeploymentFinished(plan)
+        self ! RemoveLocks(plan.affectedRunSpecIds, lockVersion)
+
+      case Failure(t) =>
+        self ! DeploymentFailed(plan, t)
+        self ! RemoveLocks(plan.affectedRunSpecIds, lockVersion)
     }
   }
 
@@ -330,7 +341,7 @@ object MarathonSchedulerActor {
 
   case object ScaleRunSpecs
 
-  case class ReleaseLock(runSpecId: AbsolutePathId)
+  case class RemoveLocks(runSpecId: Iterable[AbsolutePathId], lockVersion: Long)
 
   case class ScaleRunSpec(runSpecId: AbsolutePathId) extends Command {
     def answer: Event = RunSpecScaled(runSpecId)
@@ -350,7 +361,6 @@ object MarathonSchedulerActor {
   case class DeploymentStarted(plan: DeploymentPlan) extends Event
   case class DeploymentFailed(plan: DeploymentPlan, reason: Throwable) extends Event
   case class DeploymentFinished(plan: DeploymentPlan) extends Event
-  case class TasksKilled(runSpecId: AbsolutePathId, taskIds: Seq[Instance.Id]) extends Event
   case class CommandFailed(cmd: Command, reason: Throwable) extends Event
 }
 
