@@ -160,7 +160,15 @@ class MarathonSchedulerActor private (
               self ! cmd.answer
               cmd.answer
             }
-            .recover { case ex => CommandFailed(cmd, ex) }
+            .recover {
+              case ex =>
+                logger.error(s"Scale run spec failed. runSpecId=$runSpecId", ex)
+                CommandFailed(cmd, ex)
+            }
+
+          // Always release the lock.
+          result.onComplete(_ => self ! ReleaseLock(runSpecId))
+
           if (sender != context.system.deadLetters)
             result.pipeTo(sender)
         } match {
@@ -169,6 +177,9 @@ class MarathonSchedulerActor private (
             logger.info(s"Did not try to scale run spec ${runSpecId}; it is locked")
           case _ =>
         }
+
+      case ReleaseLock(runSpecId) =>
+        removeLock(runSpecId)
 
       case cmd @ CancelDeployment(plan) =>
         // The deployment manager will respond via the plan future/promise
@@ -319,6 +330,8 @@ object MarathonSchedulerActor {
 
   case object ScaleRunSpecs
 
+  case class ReleaseLock(runSpecId: AbsolutePathId)
+
   case class ScaleRunSpec(runSpecId: AbsolutePathId) extends Command {
     def answer: Event = RunSpecScaled(runSpecId)
   }
@@ -419,6 +432,9 @@ class SchedulerActions(
       if (instancesToDecommission.nonEmpty) {
         logger.info(s"Adjusting goals for instances ${instancesToDecommission.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
         val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)
+
+        // Race condition with line 421. The instances we loaded might not exist anymore, e.g. the agent
+        // might have been removed and the instance expunged.
         val changeGoalsFuture = instancesToDecommission.map { i =>
           if (i.hasReservation) instanceTracker.setGoal(i.instanceId, Goal.Stopped, GoalChangeReason.OverCapacity)
           else instanceTracker.setGoal(i.instanceId, Goal.Decommissioned, GoalChangeReason.OverCapacity)
