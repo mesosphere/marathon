@@ -18,13 +18,6 @@ object Int {
   def unapply(s: String): Option[Int] = Try(s.toInt).toOption
 }
 
-trait Placed {
-  def attributes: Seq[Attribute]
-  def hostname: Option[String]
-  def region: Option[String]
-  def zone: Option[String]
-}
-
 object Constraints extends StrictLogging {
 
   private val GroupByDefault = 0
@@ -66,7 +59,7 @@ object Constraints extends StrictLogging {
         s"{$s}"
     }
 
-  type FieldReader = (Offer => Option[String], Placed => Option[String])
+  type FieldReader = (Offer => Option[String], Instance => Option[String])
   private val hostnameReader: FieldReader = (offer => Some(offer.getHostname), placed => placed.hostname)
   private val regionReader: FieldReader = (OfferUtil.region(_), _.region)
   private val zoneReader: FieldReader = (OfferUtil.zone(_), _.zone)
@@ -92,7 +85,7 @@ object Constraints extends StrictLogging {
   private[mesos] val MesosRangeValue = "\\[(.+)\\]".r
   private[mesos] val MesosScalarValue = "([0-9]+(?:\\.[0-9]+)?)".r
 
-  private final class ConstraintsChecker(allPlaced: Seq[Placed], offer: Offer, constraint: Constraint) {
+  private final class ConstraintsChecker(allInstances: Seq[Instance], offer: Offer, constraint: Constraint) {
     val constraintValue = constraint.getValue
     def constraintValueAsScalar: Option[Double] =
       constraintValue match {
@@ -116,45 +109,56 @@ object Constraints extends StrictLogging {
       checkConstraint(offerReader(offer), placedReader)
     }
 
-    private def checkGroupBy(offerValue: String, groupFunc: (Placed) => Option[String]) = {
-      // Minimum group count
-      val minimum = List(GroupByDefault, getIntValue(constraintValue, GroupByDefault)).max
-      // Group tasks by the constraint value, and calculate the task count of each group
-      val groupedTasks = allPlaced.groupBy(groupFunc).map { case (k, v) => k -> v.size }
-      // Task count of the smallest group
-      val minCount = groupedTasks.values.reduceOption(_ min _).getOrElse(0)
+    private def checkGroupBy(offerValue: String, groupFunc: (Instance) => Option[String]): Boolean = {
+      val desiredInstanceCount: Int = allInstances.headOption.map(_.runSpec.instances).getOrElse(1)
+      val desiredGroupCount: Int = List(GroupByDefault, getIntValue(constraintValue, GroupByDefault)).max
 
-      // Return true if any of these are also true:
-      // a) this offer matches the smallest grouping when there
-      // are >= minimum groupings
-      // b) the constraint value from the offer is not yet in the grouping
-      groupedTasks
-        .find(_._1.contains(offerValue))
-        .forall(pair => groupedTasks.size >= minimum && pair._2 == minCount)
+      val currentCountPerGroup = allInstances.groupBy(groupFunc).map { case (k, v) => k -> v.size }
+      val desiredCountPerGroup: Int = (desiredInstanceCount / desiredGroupCount)
+      val remainder = desiredInstanceCount % desiredGroupCount
+      val remainderConsumed = currentCountPerGroup.map {
+        case (_, count) =>
+          Math.max(0, count - desiredCountPerGroup)
+      }.sum
+      def remainderUnused: Boolean = (remainder - remainderConsumed) > 0
+
+      val countInOfferGroup = currentCountPerGroup.collectFirst {
+        case (Some(v), groupCount) if v == offerValue =>
+          groupCount
+      }
+
+      countInOfferGroup match {
+        case Some(count) => // we've already placed at least one instance in this group
+          (count < desiredCountPerGroup) || // we haven't yet reached the desired count
+            (count == desiredCountPerGroup && remainderUnused) // we've reached exactly the desired count, but there's still a remainder
+        case None =>
+          // allow selection of a new group if we still haven't chosen all of our group values
+          currentCountPerGroup.size < desiredGroupCount
+      }
     }
 
-    private def checkMaxPer(offerValue: String, maxCount: Int, groupFunc: (Placed) => Option[String]): Boolean = {
+    private def checkMaxPer(offerValue: String, maxCount: Int, groupFunc: (Instance) => Option[String]): Boolean = {
       // Group tasks by the constraint value, and calculate the task count of each group
-      val groupedTasks = allPlaced.groupBy(groupFunc).map { case (k, v) => k -> v.size }
+      val groupedTasks = allInstances.groupBy(groupFunc).map { case (k, v) => k -> v.size }
 
       groupedTasks.find(_._1.contains(offerValue)).forall(_._2 < maxCount)
     }
 
-    private def checkCluster(offerValue: String, placedValue: Placed => Option[String]) =
+    private def checkCluster(offerValue: String, placedValue: Instance => Option[String]) =
       if (constraintValue.isEmpty)
         // If no placements are made, then accept (and make this offerValue) the value on which all future tasks are
         // placed
-        allPlaced.headOption.fold(true) { p => placedValue(p) contains offerValue }
+        allInstances.headOption.fold(true) { p => placedValue(p) contains offerValue }
       else
         // Is constraint
         (offerValue == constraintValue)
 
     // All running tasks must have a value that is different from the one in the offer
-    private def checkUnique(offerValue: Option[String], placedValue: Placed => Option[String]) = {
-      allPlaced.forall { p => placedValue(p) != offerValue }
+    private def checkUnique(offerValue: Option[String], placedValue: Instance => Option[String]) = {
+      allInstances.forall { p => placedValue(p) != offerValue }
     }
 
-    def checkConstraint(maybeOfferValue: Option[String], placedValue: Placed => Option[String]) = {
+    def checkConstraint(maybeOfferValue: Option[String], placedValue: Instance => Option[String]): Boolean = {
       maybeOfferValue match {
         case Some(offerValue) =>
           constraint.getOperator match {
@@ -189,8 +193,8 @@ object Constraints extends StrictLogging {
       }
   }
 
-  def meetsConstraint(allPlaced: Seq[Placed], offer: Offer, constraint: Constraint): Boolean =
-    new ConstraintsChecker(allPlaced, offer, constraint).isMatch
+  def meetsConstraint(allInstance: Seq[Instance], offer: Offer, constraint: Constraint): Boolean =
+    new ConstraintsChecker(allInstance, offer, constraint).isMatch
 
   /**
     * Select instances to kill while maintaining the constraints of the application definition.
