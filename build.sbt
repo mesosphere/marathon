@@ -87,6 +87,7 @@ lazy val commonSettings = Seq(
   ),
   resolvers := {
     Seq(
+      "D2iQ Proxy" at "https://nexus.mesosphere.com/repository/maven-proxy/",
       "Mesosphere Snapshot Repo" at "https://downloads.mesosphere.com/maven-snapshot",
       "Mesosphere Public Repo" at "https://downloads.mesosphere.com/maven",
       "Typesafe Releases" at "https://repo.typesafe.com/typesafe/releases/",

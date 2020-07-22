@@ -1,4 +1,5 @@
 resolvers ++= Seq(
+  "D2iQ Proxy" at "https://nexus.mesosphere.com/repository/maven-proxy/",
   Resolver.typesafeRepo("releases"),
   Resolver.sonatypeRepo("releases"),
   Resolver.sonatypeRepo("snapshots"),
