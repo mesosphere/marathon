@@ -18,9 +18,12 @@ ansiColor('xterm') {
         withCredentials([
             usernamePassword(credentialsId: 'a7ac7f84-64ea-4483-8e66-bb204484e58f', passwordVariable: 'GIT_PASSWORD', usernameVariable: 'GIT_USER'),
             string(credentialsId: '3f0dbb48-de33-431f-b91c-2366d2f0e1cf',variable: 'AWS_ACCESS_KEY_ID'),
-            string(credentialsId: 'f585ec9a-3c38-4f67-8bdb-79e5d4761937',variable: 'AWS_SECRET_ACCESS_KEY')
+            string(credentialsId: 'f585ec9a-3c38-4f67-8bdb-79e5d4761937',variable: 'AWS_SECRET_ACCESS_KEY'),
+            file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')
         ]) {
 	    withDockerRegistry([credentialsId: 'docker-hub-credentials']) {
+	        sh """mkdir -p ~/.m2 && ln -fs ${DOT_M2_SETTINGS} ~/.m2/settings.xml"""
+	        sh """ln -fs ci/repositories ~/.sbt/repositories"""
                 sh """sudo update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java"""
                 sh """sudo -E ci/pipeline jenkins"""
             }

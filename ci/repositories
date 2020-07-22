@@ -1,0 +1,3 @@
+[repositories]
+  local
+  proxy: https://nexus.mesosphere.com/repository/maven-proxy/
