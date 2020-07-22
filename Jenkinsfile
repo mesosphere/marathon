@@ -22,8 +22,8 @@ ansiColor('xterm') {
             file(credentialsId: 'DOT_M2_SETTINGS', variable: 'DOT_M2_SETTINGS')
         ]) {
 	    withDockerRegistry([credentialsId: 'docker-hub-credentials']) {
-	        sh """mkdir -p ~/.m2 && ln -fs ${DOT_M2_SETTINGS} ~/.m2/settings.xml"""
-	        sh """mkdir -p ~/.sbt && ln -fs ci/repositories ~/.sbt/repositories"""
+	        sh """sudo mkdir -p ~/.m2 && sudo ln -fs ${DOT_M2_SETTINGS} ~/.m2/settings.xml"""
+	        sh """sudo mkdir -p ~/.sbt && sudo ln -fs ci/repositories ~/.sbt/repositories"""
                 sh """sudo update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java"""
                 sh """sudo -E ci/pipeline jenkins"""
             }
