@@ -233,6 +233,10 @@ class MarathonSchedulerActor private (
   def removeLocks(runSpecIds: Iterable[AbsolutePathId], lockVersion: Long): Unit =
     runSpecIds.foreach { runSpecId => removeLock(runSpecId, lockVersion) }
   def removeLock(runSpecId: AbsolutePathId, lockVersion: Long): Unit = {
+    // Only remove the latest lock version. Eg let's say we have two scale events for app /foo after
+    // another. The first scale check locks with version 1. The seconds will lock with version 2 after
+    // the lock for v1 was released. This check will then prevent that a delayed duplicated lock release
+    // for v1 will not release v2.
     if (lockedRunSpecs.get(runSpecId).exists(_ == lockVersion)) {
       val locks = lockedRunSpecs - runSpecId
       logger.debug(s"Removed lock for run spec: id=$runSpecId locks=$locks lockedRunSpec=$lockedRunSpecs")
