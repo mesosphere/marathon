@@ -197,7 +197,6 @@ class MarathonSchedulerActor private (
         deploymentFailed(plan, reason)
 
       case RunSpecScaled(id) =>
-
       case msg => logger.warn(s"Received unexpected message from ${sender()}: $msg")
     }
 
@@ -231,9 +230,10 @@ class MarathonSchedulerActor private (
     conflicts.isEmpty
   }
 
-  def removeLocks(runSpecIds: Iterable[AbsolutePathId], lockVersion: Long): Unit = runSpecIds.foreach { runSpecId => removeLock(runSpecId, lockVersion)}
+  def removeLocks(runSpecIds: Iterable[AbsolutePathId], lockVersion: Long): Unit =
+    runSpecIds.foreach { runSpecId => removeLock(runSpecId, lockVersion) }
   def removeLock(runSpecId: AbsolutePathId, lockVersion: Long): Unit = {
-    if (lockedRunSpecs.get(runSpecId).exists( _ == lockVersion)) {
+    if (lockedRunSpecs.get(runSpecId).exists(_ == lockVersion)) {
       val locks = lockedRunSpecs - runSpecId
       logger.debug(s"Removed lock for run spec: id=$runSpecId locks=$locks lockedRunSpec=$lockedRunSpecs")
     }
