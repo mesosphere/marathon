@@ -196,7 +196,7 @@ class MarathonSchedulerActor private (
       case DeploymentFailed(plan, reason) =>
         deploymentFailed(plan, reason)
 
-      case RunSpecScaled(id) =>
+      case RunSpecScaled(id) => () // The lock is released via RemoveLocks.
       case msg => logger.warn(s"Received unexpected message from ${sender()}: $msg")
     }
 
