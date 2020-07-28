@@ -237,7 +237,7 @@ class MarathonSchedulerActor private (
     // Only remove if we are at the latest lock version. Eg let's say we have two scale events for
     // app /foo after another. The first scale check locks with version 1. The seconds will lock
     // with version 2 after the lock for v1 was released. This check will then prevent that a delayed
-    // duplicated lock release for v1 will not release v2.
+    // duplicated lock release for v1 will release v2.
     if (lockedRunSpecs.get(runSpecId).contains(lockVersion)) {
       lockedRunSpecs.remove(runSpecId)
       logger.debug(
