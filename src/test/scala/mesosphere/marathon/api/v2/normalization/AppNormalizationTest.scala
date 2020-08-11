@@ -712,36 +712,52 @@ class AppNormalizationTest extends UnitTest with Inside {
     }
 
     "normalize accepted resource roles" when {
-      val `without-*-role` = App(
-        id = "/foo",
+      val role = "foo"
+      val onlyWithInvalidRole = App(
+        id = "/foo/sleeper",
         cmd = Option("sleep"),
         acceptedResourceRoles = Some(Set("other"))
       )
 
-      val `with-*-role` = App(
-        id = "/foo",
+      val anInvalidAndAValidRole = App(
+        id = "/foo/sleeper",
         cmd = Option("sleep"),
         acceptedResourceRoles = Some(Set("*", "other"))
       )
 
-      "refuses to normalize when neither '*' nor the app role is contained" in {
-        val configuredNormalizer = normalizer(role = Some("default_role"), sanitizeAcceptedResourceRoles = true)
-        inside(Try({
-          `without-*-role`.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*"))
-        })) {
-          case Failure(ex: NormalizationException) =>
-            ex.msg shouldBe """acceptedResourceRoles is invalid. Valid values are ["*"], ["default_role"], or ["*", "default_role"]."""
+      val allRolesValid = App(
+        id = "/foo/sleeper",
+        cmd = Option("sleep"),
+        acceptedResourceRoles = Some(Set("*", "foo"))
+      )
+
+      "the sanitizeAcceptedResourceRoles feature is enabled" should {
+        "refuses to normalize when neither '*' nor the app role is contained" in {
+          val configuredNormalizer = normalizer(role = Some("foo"), sanitizeAcceptedResourceRoles = true)
+          inside(Try({
+            onlyWithInvalidRole.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*"))
+          })) {
+            case Failure(ex: NormalizationException) =>
+              ex.msg shouldBe """acceptedResourceRoles is invalid. Valid values are ["*"], ["foo"], or ["*", "foo"]."""
+          }
+        }
+
+        "remove invalid roles, leaving only valid roles" in {
+          val configuredNormalizer = normalizer(role = Some(role), sanitizeAcceptedResourceRoles = true)
+          anInvalidAndAValidRole.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*"))
+        }
+
+        "leave acceptedResourceRoles alone if all roles are valid" in {
+          val configuredNormalizer = normalizer(role = Some(role), sanitizeAcceptedResourceRoles = true)
+          allRolesValid.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*", "foo"))
         }
       }
 
-      s"the ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} feature is enabled" in {
-        val configuredNormalizer = normalizer(role = Some("default_role"), sanitizeAcceptedResourceRoles = true)
-        `with-*-role`.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*"))
-      }
-
-      s"the ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} feature is disabled" in {
-        val configuredNormalizer = normalizer(role = Some("default_role"), sanitizeAcceptedResourceRoles = false)
-        `with-*-role`.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*", "other"))
+      "the sanitizeAcceptedResourceRoles feature is disabled" should {
+        "leave the acceptedResourceRoles field alone" in {
+          val configuredNormalizer = normalizer(role = Some(role), sanitizeAcceptedResourceRoles = false)
+          anInvalidAndAValidRole.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*", "other"))
+        }
       }
     }
   }
