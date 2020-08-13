@@ -6,7 +6,79 @@ uses:
   pragma: pragma.raml
   secrets: secrets.raml
 
+
 types:
+  AppCSIVolume:
+    type: object
+    properties:
+      csi: ExternalCSIVolumeInfo
+  ExternalCSIVolumeInfo:
+    type: object
+    properties:
+      pluginName:
+        type: string
+      provisioning: StaticProvisioning
+  StaticProvisioning:
+    type: object
+    additionalProperties: false
+    properties:
+      static:
+        type: object
+        properties:
+          volumeId:
+            type: string
+            description: The ID of the volume to publish
+          accessType: BlockOptions | MountOptions
+          accessMode:
+            type: string
+            # TODO: shall we create a map for those to make the value more marathon'y?
+            enum: [SINGLE_NODE_WRITER , SINGLE_NODE_READER_ONLY , MULTI_NODE_READER_ONLY , MULTI_NODE_SINGLE_WRITER , MULTI_NODE_MULTI_WRITER]
+            description: |
+              # TODO: is UNKNOWN a valid option? what does it default to?
+              * `SINGLE_NODE_WRITER`       - Can only be published once as read/write on a single node, at any given time.
+              * `SINGLE_NODE_READER_ONLY`  - Can only be published once as readonly on a single node, at any given time.
+              * `MULTI_NODE_READER_ONLY`   - Can be published as readonly at multiple nodes simultaneously.
+              * `MULTI_NODE_SINGLE_WRITER` - Can be published at multiple nodes simultaneously. Only one of the node can be used as read/write. The rest will be readonly.
+              * `MULTI_NODE_MULTI_WRITER`  - Can be published as read/write at multiple nodes simultaneously.
+          # TODO: no idea yet, what this is about. seems to clash with accessMode.
+          readonly?:
+            type: boolean
+          volumeContext?:
+            type: object
+            description: |
+              # TODO: more approachable description
+              Volume context as returned by SP in CreateVolumeResponse.Volume.volume_context.
+              This field is OPTIONAL and MUST match the volume_context of the volume identified by `volume_id`.
+
+          # TODO: @tharper i feel like there should already be a way to obtain and pipe through secrets (https://github.com/apache/mesos/blob/master/include/mesos/v1/mesos.proto#L2861). it's not trivial for me to find that.
+          # nodeStageSecret?:
+          # nodePublishSecret?:
+
+  # Empty for now. We could have also used a string here, but went with this more extensible approach.
+  BlockOptions:
+    type: object
+    additionalProperties: false
+    description: Indicate that the volume will be accessed via the block device API
+    properties:
+      block:
+        type: object
+  MountOptions:
+    type: object
+    additionalProperties: false
+    properties:
+      mount:
+        type: object
+        description: Indicate that the volume will be accessed via the filesystem API.
+        properties:
+          fsType?:
+            type: string
+            description: The filesystem type.
+          mount_flags?:
+            type: array
+            description: |
+              The mount options that can be used for the volume. MAY contain sensitive information. The total size SHALL NOT exceed 4 KiB.
+            items:
+              type: string
   ExternalVolumeInfo:
     type: object
     properties:
@@ -163,6 +235,7 @@ types:
         type: boolean
 
   AppVolume:
-    type: AppPersistentVolume | AppExternalVolume | AppSecretVolume | AppHostVolume
+    type: AppPersistentVolume | AppExternalVolume | AppSecretVolume | AppHostVolume | AppCSIVolume
   PodVolume:
+    # TODO: can we have pods with CSI volumes? We don't have DVDI Volumes... :thinking:
     type: PodPersistentVolume | PodSecretVolume | PodHostVolume | PodEphemeralVolume
