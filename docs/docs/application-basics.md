@@ -88,7 +88,7 @@ visiting the Mesos UI and clicking into a Mesos agent node's sandbox where you s
 
 As of Mesos v0.22 and above, the fetcher code does not make downloaded files executable by default.
  In the example above, we provided the field `"executable": true` to tell Mesos change the fetch result to 
- executable for every user. If the `"executable"` field is `"true"`, the `"extract"` field is ignored and has no effect.
+ executable for every user. If the `"executable"` field is `"false"`, the `"extract"` field is ignored and has no effect.
 
 As already mentioned above, Marathon also [knows how to handle](https://github.com/mesosphere/marathon/blob/master/src/main/scala/mesosphere/mesos/TaskBuilder.scala) 
 application resources that reside in archives. By default, Marathon will (via Mesos and before executing the `cmd`) 
