@@ -1,4 +1,10 @@
-## Changes from 1.9.136 to 1.10.xxx
+## Changes from to 1.10.17 to 1.10.xxx
+
+### Fixed issues
+
+* [MARATHON-8762](https://jira.d2iq.com/browse/MARATHON-8762) - Marathon allows migrations to be re-applied if they did not previously complete.
+
+## Changes from 1.9.136 to 1.10.17
 
 ### Vertical container bursting support and shared cgroups
 
