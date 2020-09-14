@@ -114,7 +114,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
                 VolumeWithMount(
                   volume = ExternalVolume(
                     name = None,
-                    external = ExternalVolumeInfo(
+                    external = GenericExternalVolumeInfo(
                       name = volumeName,
                       shared = shared,
                       provider = provider,

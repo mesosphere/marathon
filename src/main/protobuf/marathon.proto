@@ -377,6 +377,8 @@ message Volume {
   // Defines an External Volume; implies no hostPath or persistent.
   optional ExternalVolumeInfo external = 6;
 
+  optional mesos.Volume.Source.CSIVolume csiExternal = 8;
+
   // Defines a SecretVolume; implies no hostPath, persistent or external.
   optional SecretVolumeInfo secret = 7;
 }

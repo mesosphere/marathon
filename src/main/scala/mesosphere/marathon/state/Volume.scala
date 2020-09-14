@@ -9,6 +9,8 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.state.GenericExternalVolumeInfo.{csiValidExternalVolume, genericValidExternalVolumeInfo}
+
 import scala.jdk.CollectionConverters._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
@@ -24,7 +26,7 @@ object Volume {
     if (proto.hasPersistent)
       PersistentVolume(name = name, persistent = PersistentVolumeInfo.fromProto(proto.getPersistent))
     else if (proto.hasExternal)
-      ExternalVolume(name = name, external = ExternalVolumeInfo.fromProto(proto.getExternal))
+      ExternalVolume(name = name, external = GenericExternalVolumeInfo.fromProto(proto.getExternal))
     else if (proto.hasSecret)
       SecretVolume(name = name, secret = proto.getSecret.getSecret)
     else
@@ -305,8 +307,69 @@ object PathPatterns {
   lazy val DotPaths: Seq[String] = Seq(".", "..")
 }
 
+sealed trait ExternalVolumeInfo {
+  def name: String
+  def provider: String
+}
+
+object ExternalVolumeInfo {
+  implicit val validExternalVolumeInfo: Validator[ExternalVolumeInfo] = { volume =>
+    volume match {
+      case generic: GenericExternalVolumeInfo =>
+        genericValidExternalVolumeInfo(generic)
+      case csi: CSIExternalVolumeInfo =>
+        csiValidExternalVolume(csi)
+    }
+  }
+}
+
+case class CSIExternalVolumeInfo(name: String,
+                                 options: CSIExternalVolumeInfo.Options) extends ExternalVolumeInfo {
+  val provider = "csi"
+}
+
+object CSIExternalVolumeInfo {
+  sealed trait AccessType
+
+  case object BlockAccessType extends AccessType
+  case class MountAccessType(fsType: String, mountFlags: Seq[String]) extends AccessType
+
+
+  sealed trait AccessMode { val name: String }
+  object AccessMode {
+    case object UNKNOWN extends AccessMode {
+      override val name = "UNKNOWN"
+    }
+    case object SINGLE_NODE_WRITER extends AccessMode {
+      override val name = "SINGLE_NODE_WRITER"
+    }
+    case object SINGLE_NODE_READER_ONLY extends AccessMode {
+      override val name = "SINGLE_NODE_READER_ONLY"
+    }
+
+    case object MULTI_NODE_READER_ONLY extends AccessMode {
+      override val name = "MULTI_NODE_READER_ONLY"
+    }
+
+    case object MULTI_NODE_SINGLE_WRITER extends AccessMode {
+      override val name = "MULTI_NODE_SINGLE_WRITER"
+    }
+
+    case object MULTI_NODE_MULTI_WRITER extends AccessMode {
+      override val name = "MULTI_NODE_MULTI_WRITER"
+    }
+  }
+
+  case class SecretRef(username: String, password: String)
+
+  case class Options(accessType: Any,
+                     accessMode: AccessMode,
+                     nodeStageSecret: Option[SecretRef],
+                     nodePublishSecret: Option[SecretRef],
+                     volumeContext: Map[String, String])
+}
 /**
-  * ExternalVolumeInfo captures the specification for a volume that survives task restarts.
+  * GenericExternalVolumeInfo captures the specification for a volume that survives task restarts.
   *
   * `name` is the *unique name* of the storage volume. names should be treated as case insensitive labels
   * derived from an alpha-numeric character range [a-z0-9]. while there is no prescribed length limit for
@@ -338,13 +401,13 @@ object PathPatterns {
   * @param options contains storage provider-specific configuration configuration
   * @param shared if true, this volume is excluded from the uniqueness check
   */
-case class ExternalVolumeInfo(
+case class GenericExternalVolumeInfo(
     size: Option[Long] = None,
     name: String,
     provider: String,
     options: Map[String, String] = Map.empty[String, String],
     shared: Boolean = false
-)
+) extends ExternalVolumeInfo
 
 object OptionLabelPatterns {
   val OptionNamespaceSeparator = "/"
@@ -354,21 +417,25 @@ object OptionLabelPatterns {
   val OptionKeyRegex = "^" + LabelPattern + OptionNamespaceSeparator + OptionNamePattern + "$"
 }
 
-object ExternalVolumeInfo {
+object GenericExternalVolumeInfo {
   import OptionLabelPatterns._
 
   implicit val validOptions = validator[Map[String, String]] { option =>
     option.keys.each should matchRegex(OptionKeyRegex)
   }
 
-  implicit val validExternalVolumeInfo = validator[ExternalVolumeInfo] { info =>
+  val csiValidExternalVolume = validator[CSIExternalVolumeInfo] { info =>
+    ???
+  }
+
+  val genericValidExternalVolumeInfo = validator[GenericExternalVolumeInfo] { info =>
     info.size.each should be > 0L
     info.provider should matchRegex(LabelRegex)
     info.options is validOptions
   }
 
   def fromProto(evi: Protos.Volume.ExternalVolumeInfo): ExternalVolumeInfo =
-    ExternalVolumeInfo(
+    GenericExternalVolumeInfo(
       size = if (evi.hasSize) Some(evi.getSize) else None,
       name = evi.getName,
       provider = evi.getProvider,

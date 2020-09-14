@@ -107,10 +107,10 @@ message ResourceProviderID {
 
 
 /**
- * A framework-generated ID to distinguish an offer operation. The ID
+ * A framework-generated ID to distinguish an operation. The ID
  * must be unique within the framework.
  */
-message OfferOperationID {
+message OperationID {
   required string value = 1;
 }
 
@@ -239,11 +239,13 @@ message FrameworkInfo {
   // Name of the framework that shows up in the Mesos Web UI.
   required string name = 2;
 
-  // Note that 'id' is only available after a framework has
-  // registered, however, it is included here in order to facilitate
-  // scheduler failover (i.e., if it is set then the
-  // MesosSchedulerDriver expects the scheduler is performing
-  // failover).
+  // Used to uniquely identify the framework.
+  //
+  // This field must be unset when the framework subscribes for the
+  // first time upon which the master will assign a new ID. To
+  // resubscribe after scheduler failover the framework should set
+  // 'id' to the ID assigned by the master.  Setting 'id' to values
+  // not assigned by Mesos masters is unsupported.
   optional FrameworkID id = 3;
 
   // The amount of time (in seconds) that the master will wait for the
@@ -336,14 +338,16 @@ message FrameworkInfo {
       // Frameworks that enable this capability can define how they
       // would like to handle partitioned tasks. Frameworks will
       // receive TASK_UNREACHABLE for tasks on agents that are
-      // partitioned from the master. If/when a partitioned agent
-      // reregisters, tasks on the agent that were started by
-      // PARTITION_AWARE frameworks will not killed.
+      // partitioned from the master.
       //
       // Without this capability, frameworks will receive TASK_LOST
-      // for tasks on partitioned agents; such tasks will be killed by
-      // Mesos when the agent reregisters (unless the master has
-      // failed over).
+      // for tasks on partitioned agents.
+      // NOTE: Prior to Mesos 1.5, such tasks will be killed by Mesos
+      // when the agent reregisters (unless the master has failed over).
+      // However due to the lack of benefit in maintaining different
+      // behaviors depending on whether the master has failed over
+      // (see MESOS-7215), as of 1.5, Mesos will not kill these
+      // tasks in either case.
       PARTITION_AWARE = 5;
 
       // This expresses the ability for the framework to be
@@ -408,6 +412,11 @@ message FrameworkInfo {
   // the framework). These labels are not interpreted by Mesos itself.
   // Labels should not contain duplicate key-value pairs.
   optional Labels labels = 11;
+
+  // Specifc resource requirements for each of the framework's roles. This field
+  // is used by e.g., the default allocator to decide whether a framework is
+  // interested in seeing a resource of a certain shape.
+  map<string, OfferFilters> offer_filters = 13;
 }
 
 
@@ -417,7 +426,7 @@ message FrameworkInfo {
  * specifying one of the optional fields. Specifying more than one type
  * is an error.
  *
- * NOTE: This API is unstable and the related feature is experimental.
+ * NOTE: This API is subject to change and the related feature is experimental.
  */
 message CheckInfo {
   enum Type {
@@ -718,7 +727,7 @@ message ExecutorInfo {
     // 1) `command` must not be set when using a default executor.
     //
     // 2) Default executor only accepts a *single* `LAUNCH` or `LAUNCH_GROUP`
-    //    offer operation.
+    //    operation.
     //
     // 3) If `container` is set, `container.type` must be `MESOS`
     //    and `container.mesos.image` must not be set.
@@ -731,12 +740,12 @@ message ExecutorInfo {
   }
 
   // For backwards compatibility, if this field is not set when using `LAUNCH`
-  // offer operation, Mesos will infer the type by checking if `command` is
-  // set (`CUSTOM`) or unset (`DEFAULT`). `type` must be set when using
-  // `LAUNCH_GROUP` offer operation.
+  // operation, Mesos will infer the type by checking if `command` is set
+  // (`CUSTOM`) or unset (`DEFAULT`). `type` must be set when using
+  // `LAUNCH_GROUP` operation.
   //
-  // TODO(vinod): Add support for explicitly setting `type` to `DEFAULT `
-  // in `LAUNCH` offer operation.
+  // TODO(vinod): Add support for explicitly setting `type` to `DEFAULT` in
+  // `LAUNCH` operation.
   optional Type type = 15;
 
   required ExecutorID executor_id = 1;
@@ -825,6 +834,18 @@ message ExecutorInfo {
  * in the same zone, in different zones in the same region, or in
  * different regions. Note that all masters in a given Mesos cluster
  * must be in the same region.
+ *
+ * Complex deployments may have additional levels of hierarchy: for example,
+ * multiple racks might be grouped together into "halls" and multiple DCs in
+ * the same geographical vicinity might be grouped together. As a convention,
+ * the recommended way to represent additional levels of hierarchy is via dot-
+ * separated labels in the existing zone and region fields. For example, the
+ * fact that racks "abc" and "def" are in the same hall might be represented
+ * using the zone names "rack-abc.hall-1" and "rack-def.hall-1", for example.
+ * Software that is not aware of this additional structure will compare the
+ * zone names for equality- hence, the two zones will be treated as different
+ * (unrelated) zones. Software that is "hall-aware" can inspect the zone names
+ * and make use of the additional hierarchy.
  */
 message DomainInfo {
   message FaultDomain {
@@ -884,6 +905,34 @@ message MasterInfo {
   // The domain that this master belongs to. All masters in a Mesos
   // cluster should belong to the same region.
   optional DomainInfo domain = 8;
+
+  message Capability {
+    enum Type {
+      UNKNOWN = 0;
+
+      // NOTE: When the master starts to use a new capability that
+      // may prevent compatible downgrade, remember to add the
+      // capability to `Registry::MinimumCapability`. Conversely,
+      // the added minimum capability should be removed if the capability
+      // is deemed to be no longer required for compatible downgrade.
+      // See MESOS-8878 for more details.
+
+      // The master can handle slaves whose state
+      // changes after reregistering.
+      AGENT_UPDATE = 1;
+
+      // The master can drain or deactivate agents when requested
+      // via operator APIs.
+      AGENT_DRAINING = 2;
+
+      // The master can handle the new quota API, which supports setting
+      // limits separately from guarantees (introduced in Mesos 1.9).
+      QUOTA_V2 = 3;
+    }
+    optional Type type = 1;
+  }
+
+  repeated Capability capabilities = 9;
 }
 
 
@@ -976,8 +1025,35 @@ message SlaveInfo {
       // (1) The ability to report resources that are provided by some
       //     local resource providers through the resource provider API.
       //
-      // (2) The ability to provide offer operations feedback.
+      // (2) The ability to provide operation feedback. This also means
+      //     that this capability is a prerequisite for full support of
+      //     feedback for operations on agent default resources. If an
+      //     agent has the mandatory AGENT_OPERATION_FEEDBACK capability
+      //     set but not the RESOURCE_PROVIDER capability, then
+      //     operations on agent default resources which request feedback
+      //     will not be allowed.
       RESOURCE_PROVIDER = 4;
+
+      // This expresses the capability for the agent to handle persistent volume
+      // resize operations safely. This capability is turned on by default.
+      RESIZE_VOLUME = 5;
+
+      // This expresses the ability of the agent to handle operation feedback
+      // for operations on agent default resources.
+      //
+      // Note that full support for this feature also requires the
+      // RESOURCE_PROVIDER capability; if you would like the agent to
+      // handle feedback for operations on agent default resources, the
+      // RESOURCE_PROVIDER capability should be set as well.
+      AGENT_OPERATION_FEEDBACK = 6;
+
+      // This expresses the ability for the agent to automatically drain tasks
+      // in preparation for operator maintenance. This capability is required.
+      AGENT_DRAINING = 7;
+
+      // This expresses the ability for the agent to launch tasks which specify
+      // resource limits for CPU and/or memory.
+      TASK_RESOURCE_LIMITS = 8;
     }
 
     // Enum fields should be optional, see: MESOS-4997.
@@ -987,13 +1063,90 @@ message SlaveInfo {
 
 
 /**
+ * Describes the container configuration to run a managed CSI plugin.
+ */
+message CSIPluginContainerInfo {
+  enum Service {
+    UNKNOWN = 0;
+    CONTROLLER_SERVICE = 1;
+    NODE_SERVICE = 2;
+  }
+
+  repeated Service services = 1;
+  optional CommandInfo command = 2;
+  repeated Resource resources = 3;
+  optional ContainerInfo container = 4;
+}
+
+
+/**
+ * Describes the endpoint of an unmanaged CSI plugin service.
+ */
+message CSIPluginEndpoint {
+  required CSIPluginContainerInfo.Service csi_service = 1;
+  required string endpoint = 2;
+}
+
+
+/**
  * Describes a CSI plugin.
  */
 message CSIPluginInfo {
-  required string name = 1;
-  required CommandInfo command = 2;
-  repeated Resource resources = 3;
-  optional ContainerInfo container = 4;
+  // The type of the CSI plugin. This uniquely identifies a CSI
+  // implementation. For instance:
+  //     org.apache.mesos.csi.test
+  //
+  // Please follow to Java package naming convention
+  // (https://en.wikipedia.org/wiki/Java_package#Package_naming_conventions)
+  // to avoid conflicts on type names.
+  required string type = 1;
+
+  // The name of the CSI plugin. There could be multiple instances of a
+  // type of CSI plugin within a Mesos cluster. The name field is used to
+  // distinguish these instances. It should be a legal Java identifier
+  // (https://docs.oracle.com/javase/tutorial/java/nutsandbolts/variables.html)
+  // to avoid conflicts on concatenation of type and name.
+  //
+  // The type and name together provide the means to uniquely identify a storage
+  // backend and its resources in the cluster, so the operator should ensure
+  // that the concatenation of type and name is unique in the cluster, and it
+  // remains the same if the instance is migrated to another agent (e.g., there
+  // is a change in the agent ID).
+  optional string name = 2 [default = "default"];
+
+  // We support two kinds of CSI plugins:
+  //   1. Managed CSI plugins: This is the plugin which will be launched by
+  //      Mesos as standalone container, and Mesos will internally determine
+  //      its endpoint when launching it and manage its whole lifecyle. For this
+  //      kind of plugins, the `containers` field below must be specified.
+  //   2. Unmanaged CSI plugins: This is the plugin which is launched out of
+  //      Mesos (e.g., manually launched by the operator). For this kind of
+  //      plugins, the `endpoints` field below must be specified because Mesos
+  //      needs it to call CSI gRPC methods.
+  // Please note that only one of the `containers` and `endpoints` fields should
+  // be specified.
+
+  // A list of container configurations to run managed CSI plugin.
+  // The controller service will be served by the first configuration
+  // that contains `CONTROLLER_SERVICE`, and the node service will be
+  // served by the first configuration that contains `NODE_SERVICE`.
+  repeated CSIPluginContainerInfo containers = 3;
+
+  // The service endpoints of the unmanaged CSI plugin. An endpoint is usually
+  // a path to a Unix domain socket.
+  repeated CSIPluginEndpoint endpoints = 4;
+
+  // The root directory of all the target paths managed by the CSI plugin.
+  // Each volume will be published by the CSI plugin at a sub-directory
+  // under this path.
+  optional string target_path_root = 5;
+
+  // For some CSI plugins which implement CSI v1 spec, they expect the target
+  // path is an existing path which is actually not CSI v1 spec compliant. In
+  // such case this field should be set to `true` as a work around for those
+  // plugins. For the CSI plugins which implement CSI v0 spec, this field will
+  // be just ignored.
+  optional bool target_path_exists = 6;
 }
 
 
@@ -1003,12 +1156,6 @@ message CSIPluginInfo {
  * available here to facilitate re-registration.
  */
 message ResourceProviderInfo {
-  message StorageInfo {
-    repeated CSIPluginInfo csi_plugins = 1;
-    required string controller_plugin = 2;
-    required string node_plugin = 3;
-  }
-
   optional ResourceProviderID id = 1;
   repeated Attribute attributes = 2;
 
@@ -1023,10 +1170,34 @@ message ResourceProviderInfo {
 
   // The name of the resource provider. There could be multiple
   // instances of a type of resource provider. The name field is used
-  // to distinguish these instances.
+  // to distinguish these instances. It should be a legal Java identifier
+  // (https://docs.oracle.com/javase/tutorial/java/nutsandbolts/variables.html)
+  // to avoid conflicts on concatenation of type and name.
   required string name = 4;
 
-  optional StorageInfo storage = 5;
+  // The stack of default reservations. If this field is not empty, it
+  // indicates that resources from this resource provider are reserved
+  // by default, except for the resources that have been reserved or
+  // unreserved through operations. The first `ReservationInfo`
+  // may have type `STATIC` or `DYNAMIC`, but the rest must have
+  // `DYNAMIC`. One can create a new reservation on top of an existing
+  // one by pushing a new `ReservationInfo` to the back. The last
+  // `ReservationInfo` in this stack is the "current" reservation. The
+  // new reservation's role must be a child of the current one.
+  repeated Resource.ReservationInfo default_reservations = 5; // EXPERIMENTAL.
+
+  // Storage resource provider related information.
+  message Storage {
+    required CSIPluginInfo plugin = 1;
+
+    // Amount of time to wait after the resource provider finishes reconciling
+    // existing volumes and storage pools against the CSI plugin to start the
+    // next reconciliation. A non-positive value means that no reconciliation
+    // will happen after startup.
+    optional double reconciliation_interval_seconds = 2;
+  }
+
+  optional Storage storage = 6; // EXPERIMENTAL.
 }
 
 
@@ -1108,6 +1279,7 @@ message Attribute {
  * which correspond to partial shares of a CPU.
  */
 message Resource {
+  // Specified if the resource comes from a particular resource provider.
   optional ResourceProviderID provider_id = 12;
 
   required string name = 1;
@@ -1368,7 +1540,8 @@ message Resource {
       // A folder that can be located on a separate disk device. This
       // can be shared and carved up as necessary between frameworks.
       message Path {
-        // Path to the folder (e.g., /mnt/raid/disk0).
+        // Path to the folder (e.g., /mnt/raid/disk0). If the path is a
+        // relative path, it is relative to the agent work directory.
         optional string root = 1;
       }
 
@@ -1376,7 +1549,8 @@ message Resource {
       // can only be used exclusively: a framework cannot accept a
       // partial amount of this disk.
       message Mount {
-        // Path to mount point (e.g., /mnt/raid/disk0).
+        // Path to mount point (e.g., /mnt/raid/disk0). If the path is a
+        // relative path, it is relative to the agent work directory.
         optional string root = 1;
       }
 
@@ -1384,12 +1558,19 @@ message Resource {
       optional Path path = 2;
       optional Mount mount = 3;
 
-      // An identifier for this source. This field maps onto CSI
-      // volume IDs and is not expected to be set by frameworks.
+      // The vendor of this source. If present, this field provides the means to
+      // uniquely identify the storage backend of this source in the cluster.
+      optional string vendor = 7; // EXPERIMENTAL.
+
+      // The identifier of this source. This field maps onto CSI volume IDs and
+      // is not expected to be set by frameworks. If both `vendor` and `id` are
+      // present, these two fields together provide the means to uniquely
+      // identify this source in the cluster.
       optional string id = 4; // EXPERIMENTAL.
 
-      // Additional metadata for this source. This field maps onto CSI
-      // volume metadata and is not expected to be set by frameworks.
+      // Additional metadata for this source. This field maps onto CSI volume
+      // context. Frameworks should neither alter this field, nor expect this
+      // field to remain unchanged.
       optional Labels metadata = 5; // EXPERIMENTAL.
 
       // This field serves as an indirection to a set of storage
@@ -1398,6 +1579,8 @@ message Resource {
       // profile name to a set of vendor specific disk parameters. And
       // the framework will do disk selection based on profile names,
       // instead of vendor specific disk parameters.
+      //
+      // Also see the DiskProfileAdaptor module.
       optional string profile = 6; // EXPERIMENTAL.
     }
 
@@ -1423,7 +1606,39 @@ message Resource {
   // can be launched using this resource and all of them shall refer
   // to the same physical resource on the cluster. Note that only
   // persistent volumes can be shared currently.
+  //
+  // NOTE: Different shared resources must be uniquely identifiable.
+  // This currently holds as persistent volume should have unique `id`
+  // (this is not validated for enforced though).
   optional SharedInfo shared = 10;
+}
+
+
+/**
+ * Represents filters that allow a framework to control the shape of
+ * offers that will be sent to its role(s). These filters apply
+ * globally to any agent (unlike the existing `DECLINE` filter which
+ * us a time-based resource subset filter that only applies to the
+ * agent that was declined).
+ *
+ * NOTE: Custom allocators might interpret these fields in a different
+ * way, or not at all.
+ */
+message OfferFilters {
+  message ResourceQuantities {
+    // Quantities are pairs of identifiers of scalar resources and
+    // an associated value, e.g., `{"disk": Scalar {"value": 30}}`.
+    map<string, Value.Scalar> quantities = 1;
+  }
+
+  message MinAllocatableResources {
+    // A set of resources is considered allocatable if contained in any of
+    // the following quantities. If no quantities are specified any resource
+    // is considered allocatable.
+    repeated ResourceQuantities quantities = 1;
+  }
+
+  optional MinAllocatableResources min_allocatable_resources = 1;
 }
 
 
@@ -1581,8 +1796,11 @@ message ResourceStatistics {
   optional double cpus_user_time_secs = 2;
   optional double cpus_system_time_secs = 3;
 
-  // Number of CPUs allocated.
+  // Hard CPU limit.
   optional double cpus_limit = 4;
+
+  // Soft CPU limit.
+  optional double cpus_soft_limit = 45;
 
   // cpu.stat on process throttling (for contention issues).
   optional uint32 cpus_nr_periods = 7;
@@ -1601,10 +1819,10 @@ message ResourceStatistics {
   // Total memory + swap usage. This is set if swap is enabled.
   optional uint64 mem_total_memsw_bytes = 37;
 
-  // Hard memory limit for a container.
+  // Hard memory limit.
   optional uint64 mem_limit_bytes = 6;
 
-  // Soft memory limit for a container.
+  // Soft memory limit.
   optional uint64 mem_soft_limit_bytes = 38;
 
   // Broken out memory usage information: pagecache, rss (anonymous),
@@ -1822,6 +2040,8 @@ message Offer {
 
   repeated Resource resources = 5;
   repeated Attribute attributes = 7;
+
+  // Executors of the same framework running on this agent.
   repeated ExecutorID executor_ids = 6;
 
   // Signifies that the resources in this Offer may be unavailable during
@@ -1852,10 +2072,10 @@ message Offer {
       UNRESERVE = 3;
       CREATE = 4;
       DESTROY = 5;
-      CREATE_VOLUME = 7;
-      DESTROY_VOLUME = 8;
-      CREATE_BLOCK = 9;
-      DESTROY_BLOCK = 10;
+      GROW_VOLUME = 11;   // EXPERIMENTAL.
+      SHRINK_VOLUME = 12; // EXPERIMENTAL.
+      CREATE_DISK = 13;   // EXPERIMENTAL.
+      DESTROY_DISK = 14;  // EXPERIMENTAL.
     }
 
     // TODO(vinod): Deprecate this in favor of `LaunchGroup` below.
@@ -1877,6 +2097,7 @@ message Offer {
     }
 
     message Reserve {
+      repeated Resource source = 2;
       repeated Resource resources = 1;
     }
 
@@ -1892,35 +2113,102 @@ message Offer {
       repeated Resource volumes = 1;
     }
 
-    message CreateVolume {
-      required Resource source = 1;
-      required Resource.DiskInfo.Source.Type target_type = 2;
-    }
-
-    message DestroyVolume {
+    // Grow a volume by an additional disk resource.
+    // NOTE: This is currently experimental and only for persistent volumes
+    // created on ROOT/PATH disk.
+    message GrowVolume {
       required Resource volume = 1;
+      required Resource addition = 2;
     }
 
-    message CreateBlock {
+    // Shrink a volume by the size specified in the `subtract` field.
+    // NOTE: This is currently experimental and only for persistent volumes
+    // created on ROOT/PATH disk.
+    message ShrinkVolume {
+      required Resource volume = 1;
+
+      // See comments in `Value.Scalar` for maximum precision supported.
+      required Value.Scalar subtract = 2;
+    }
+
+    // Create a `MOUNT` or `BLOCK` disk resource backed by a CSI volume from a
+    // `RAW` disk resource.
+    //
+    // In the typical case where the `RAW` disk resource has a profile and no
+    // source ID, a new CSI volume will be provisioned by Mesos to back the
+    // returned `MOUNT` or `BLOCK` disk resource. However, the `RAW` disk
+    // resource can instead have no profile but a source ID, indicating that
+    // it is already backed by a CSI volume in one of the following scenarios:
+    //
+    // (1) The CSI volume is preprovisioned out-of-band.
+    //
+    // (2) The CSI volume is provisioned by Mesos, but Mesos has lost the
+    //     corresponding `MOUNT` or `BLOCK` resource metadata. This could
+    //     happen if there has been a change in the agent ID or resource
+    //     provider ID where the volume belongs.
+    //
+    // In the above cases, Mesos won't provision a new CSI volume, but instead
+    // will simply return a `MOUNT` or `BLOCK` disk resource backed by the same
+    // CSI volume, with the profile specified in this call.
+    //
+    // NOTE: For the time being, this API is subject to change and the related
+    // feature is experimental.
+    message CreateDisk {
       required Resource source = 1;
+
+      // NOTE: Only `MOUNT` or `BLOCK` is allowed in this field.
+      required Resource.DiskInfo.Source.Type target_type = 2;
+
+      // Apply the specified profile to the created disk. This field must be set
+      // if `source` does not have a profile, and must not be set if it has one.
+      //
+      // NOTE: The operation will fail If the specified profile is unknown to
+      // Mesos, i.e., not reported by the disk profile adaptor.
+      optional string target_profile = 3;
     }
 
-    message DestroyBlock {
-      required Resource block = 1;
+    // Destroy a disk resource backed by a CSI volume.
+    //
+    // In the typical case where the CSI plugin of the volume supports volume
+    // deprovisioning and the disk resource is a `MOUNT` or `BLOCK` disk with a
+    // profile known to Mesos, the volume will be deprovisioned and a `RAW` disk
+    // resource with the same profile but no source ID will be returned.
+    // However, the following scenarios could lead to different outcomes:
+    //
+    // (1) If the CSI plugin supports volume deprovisioning but the profile of
+    //     the disk resource is unknown to the disk profile adaptor, or the disk
+    //     resource is a `RAW` disk with no profile but a source ID (see above
+    //     for possible scenarios), the volume will be deprovisioned but no
+    //     resource will be returned.
+    //
+    // (2) If the CSI plugin does not support volume deprovisioning, the volume
+    //     won't be deprovisioned and a `RAW` disk resource with no profile but
+    //     the same source ID will be returned.
+    //
+    // NOTE: For the time being, this API is subject to change and the related
+    // feature is experimental.
+    message DestroyDisk {
+      // NOTE: Only a `MOUNT`, `BLOCK` or `RAW` disk is allowed in this field.
+      required Resource source = 1;
     }
 
     optional Type type = 1;
-    optional OfferOperationID id = 12;
+
+    // The `id` field allows frameworks to indicate that they wish to receive
+    // feedback about an operation via the UPDATE_OPERATION_STATUS event in the
+    // v1 scheduler API.
+    optional OperationID id = 12; // EXPERIMENTAL.
+
     optional Launch launch = 2;
     optional LaunchGroup launch_group = 7;
     optional Reserve reserve = 3;
     optional Unreserve unreserve = 4;
     optional Create create = 5;
     optional Destroy destroy = 6;
-    optional CreateVolume create_volume = 8;
-    optional DestroyVolume destroy_volume = 9;
-    optional CreateBlock create_block = 10;
-    optional DestroyBlock destroy_block = 11;
+    optional GrowVolume grow_volume = 13; // EXPERIMENTAL.
+    optional ShrinkVolume shrink_volume = 14; // EXPERIMENTAL.
+    optional CreateDisk create_disk = 15; // EXPERIMENTAL.
+    optional DestroyDisk destroy_disk = 16; // EXPERIMENTAL.
   }
 }
 
@@ -2031,6 +2319,17 @@ message TaskInfo {
   // to use this information as needed and to handle tasks without
   // service discovery information.
   optional DiscoveryInfo discovery = 11;
+
+  // Maximum duration for task completion. If the task is non-terminal at the
+  // end of this duration, it will fail with the reason
+  // `REASON_MAX_COMPLETION_TIME_REACHED`. Mesos supports this field for
+  // executor-less tasks, and tasks that use Docker or default executors.
+  // It is the executor's responsibility to implement this, so it might not be
+  // supported by all custom executors.
+  optional DurationInfo max_completion_time = 14;
+
+  // Resource limits associated with the task.
+  map<string, Value.Scalar> limits = 15;
 }
 
 
@@ -2061,8 +2360,8 @@ message TaskGroupInfo {
  *   1) we need additional IDs, such as a specific
  *      framework, executor, or agent; or
  *   2) we do not need the additional data, such as the command run by the
- *      task or the health checks.  These additional fields may be large and
- *      unnecessary for some Mesos messages.
+ *      task. These additional fields may be large and unnecessary for some
+ *      Mesos messages.
  *
  * `Task` is generally constructed from a `TaskInfo`.  See protobuf::createTask.
  */
@@ -2093,8 +2392,19 @@ message Task {
   // Container information for the task.
   optional ContainerInfo container = 13;
 
+  optional HealthCheck health_check = 15;
+
+  // TODO(greggomann): Add the task's `CheckInfo`. See MESOS-8780.
+
+  // The kill policy used for this task when it is killed. It's possible for
+  // this policy to be overridden by the scheduler when killing the task.
+  optional KillPolicy kill_policy = 16;
+
   // Specific user under which task is running.
   optional string user = 14;
+
+  // Resource limits associated with the task.
+  map<string, Value.Scalar> limits = 17;
 }
 
 
@@ -2126,7 +2436,7 @@ enum TaskState {
   //
   // NOTE: This state is not always terminal. For example, tasks might
   // transition from TASK_LOST to TASK_RUNNING or other states when a
-  // partitioned agent re-registers.
+  // partitioned agent reregisters.
   TASK_LOST = 5;     // The task failed but can be rescheduled.
 
   // The following task states are only sent when the framework
@@ -2181,66 +2491,119 @@ message TaskResourceLimitation {
 
 
 /**
- * Describes an offer operation, similar to `Offer.Operation`, with
+ * A 128 bit (16 byte) UUID, see RFC 4122.
+ */
+message UUID {
+  required bytes value = 1;
+}
+
+
+/**
+ * Describes an operation, similar to `Offer.Operation`, with
  * some additional information.
  */
-message OfferOperation {
+message Operation {
   optional FrameworkID framework_id = 1;
   optional SlaveID slave_id = 2;
   required Offer.Operation info = 3;
-  required OfferOperationStatus latest_status = 4;
+  required OperationStatus latest_status = 4;
 
-  // All the statuses known to this offer operation. Some of the
-  // statuses in this list might not have been acknowledged yet. The
-  // statuses are ordered.
-  repeated OfferOperationStatus statuses = 5;
+  // All the statuses known to this operation. Some of the statuses in this
+  // list might not have been acknowledged yet. The statuses are ordered.
+  repeated OperationStatus statuses = 5;
 
-  // This is the internal UUID for the operation, which is kept
-  // independently from the framework-specified operation ID, which is
-  // optional.
-  required bytes operation_uuid = 6;
+  // This is the internal UUID for the operation, which is kept independently
+  // from the framework-specified operation ID, which is optional.
+  required UUID uuid = 6;
 }
 
 
 /**
- * Describes possible offer operation states.
+ * Describes possible operation states.
  */
-enum OfferOperationState {
+enum OperationState {
   // Default value if the enum is not set. See MESOS-4997.
-  OFFER_OPERATION_UNSUPPORTED = 0;
+  OPERATION_UNSUPPORTED = 0;
 
   // Initial state.
-  OFFER_OPERATION_PENDING = 1;
+  OPERATION_PENDING = 1;
 
-  // The operation was successfully applied.
-  // This state is terminal.
-  OFFER_OPERATION_FINISHED = 2;
+  // TERMINAL: The operation was successfully applied.
+  OPERATION_FINISHED = 2;
 
-  // The operation failed to apply.
-  // This state is terminal.
-  OFFER_OPERATION_FAILED = 3;
+  // TERMINAL: The operation failed to apply.
+  OPERATION_FAILED = 3;
 
-  // The operation description contains an error.
-  OFFER_OPERATION_ERROR = 4;
+  // TERMINAL: The operation description contains an error.
+  OPERATION_ERROR = 4;
+
+  // TERMINAL: The operation was dropped due to a transient error.
+  OPERATION_DROPPED = 5;
+
+  // The operation affects an agent that has lost contact with the master,
+  // typically due to a network failure or partition. The operation may or may
+  // not still be pending.
+  OPERATION_UNREACHABLE = 6;
+
+  // The operation affected an agent that the master cannot contact;
+  // the operator has asserted that the agent has been shutdown, but this has
+  // not been directly confirmed by the master.
+  //
+  // If the operator is correct, the operation is not pending and this is a
+  // terminal state; if the operator is mistaken, the operation may still be
+  // pending and might return to a different state in the future.
+  OPERATION_GONE_BY_OPERATOR = 7;
+
+  // The operation affects an agent that the master recovered from its
+  // state, but that agent has not yet re-registered.
+  //
+  // The operation can transition to `OPERATION_UNREACHABLE` if the
+  // corresponding agent is marked as unreachable, and will transition to
+  // another status if the agent re-registers.
+  OPERATION_RECOVERING = 8;
+
+  // The master has no knowledge of the operation. This is typically
+  // because either (a) the master never had knowledge of the operation, or
+  // (b) the master forgot about the operation because it garbage collected
+  // its metadata about the operation. The operation may or may not still be
+  // pending.
+  OPERATION_UNKNOWN = 9;
 }
 
 
 /**
- * Describes the current status of an offer operation.
+ * Describes the current status of an operation.
  */
-message OfferOperationStatus {
-  optional OfferOperationID operation_id = 1;
-  required OfferOperationState state = 2;
+message OperationStatus {
+  // While frameworks will only receive status updates for operations on which
+  // they have set an ID, this field is optional because this message is also
+  // used internally by Mesos components when the operation's ID has not been
+  // set.
+  optional OperationID operation_id = 1;
+
+  required OperationState state = 2;
   optional string message = 3;
 
   // Converted resources after applying the operation. This only
-  // applies if the `state` is `OFFER_OPERATION_FINISHED`.
+  // applies if the `state` is `OPERATION_FINISHED`.
   repeated Resource converted_resources = 4;
 
   // Statuses that are delivered reliably to the scheduler will
-  // include a `status_uuid`. The status is considered delivered once
+  // include a `uuid`. The status is considered delivered once
   // it is acknowledged by the scheduler.
-  optional bytes status_uuid = 5;
+  optional UUID uuid = 5;
+
+  // If the operation affects resources from a local resource provider,
+  // both `slave_id` and `resource_provider_id` will be set.
+  //
+  // If the operation affects resources that belong to an external
+  // resource provider, only `resource_provider_id` will be set.
+  //
+  // In certain cases, e.g., invalid operations, neither `uuid`,
+  // `slave_id` nor `resource_provider_id` will be set, and the
+  // scheduler does not need to acknowledge this status update.
+  optional SlaveID slave_id = 6;
+  optional ResourceProviderID resource_provider_id = 7;
 }
 
 
@@ -2250,7 +2613,7 @@ message OfferOperationStatus {
 * (e.g., the check timed out), these fields must contain empty messages, i.e.,
 * `exit_code` or `status_code` will be unset.
 *
-* NOTE: This API is unstable and the related feature is experimental.
+* NOTE: This API is subject to change and the related feature is experimental.
 */
 message CheckStatusInfo {
   message Command {
@@ -2322,6 +2685,7 @@ message TaskStatus {
     REASON_CONTAINER_LIMITATION_MEMORY = 8;
     REASON_CONTAINER_PREEMPTED = 17;
     REASON_CONTAINER_UPDATE_FAILED = 22;
+    REASON_MAX_COMPLETION_TIME_REACHED = 33;
     REASON_EXECUTOR_REGISTRATION_TIMEOUT = 23;
     REASON_EXECUTOR_REREGISTRATION_TIMEOUT = 24;
     REASON_EXECUTOR_TERMINATED = 1;
@@ -2335,8 +2699,10 @@ message TaskStatus {
     REASON_RECONCILIATION = 9;
     REASON_RESOURCES_UNKNOWN = 18;
     REASON_SLAVE_DISCONNECTED = 10;
+    REASON_SLAVE_DRAINING = 34;
     REASON_SLAVE_REMOVED = 11;
     REASON_SLAVE_REMOVED_BY_OPERATOR = 31;
+    REASON_SLAVE_REREGISTERED = 32;
     REASON_SLAVE_RESTARTED = 12;
     REASON_SLAVE_UNKNOWN = 13;
     REASON_TASK_KILLED_DURING_LAUNCH = 30;
@@ -2638,7 +3004,7 @@ message Image {
     // (see MESOS-7088 for details).
     optional Credential credential = 2 [deprecated = true]; // Since 1.3.
 
-    // Docker config containing credentails to authenticate with
+    // Docker config containing credentials to authenticate with
     // docker registry. The secret is expected to be a docker
     // config file in JSON format with UTF-8 character encoding.
     optional Secret config = 3;
@@ -2659,6 +3025,31 @@ message Image {
 
 
 /**
+ * Describes how the mount will be propagated for a volume. See the
+ * following doc for more details about mount propagation:
+ * https://www.kernel.org/doc/Documentation/filesystems/sharedsubtree.txt
+ */
+message MountPropagation {
+  enum Mode {
+    UNKNOWN = 0;
+
+    // The volume in a container will receive new mounts from the host
+    // or other containers, but filesystems mounted inside the
+    // container won't be propagated to the host or other containers.
+    // This is currently the default behavior for all volumes.
+    HOST_TO_CONTAINER = 1;
+
+    // The volume in a container will receive new mounts from the host
+    // or other containers, and its own mounts will be propagated from
+    // the container to the host or other containers.
+    BIDIRECTIONAL = 2;
+  }
+
+  optional Mode mode = 1;
+}
+
+
+/**
  * Describes a volume mapping either from host to container or vice
  * versa. Both paths can either refer to a directory or a file.
  */
@@ -2671,10 +3062,10 @@ message Volume {
   // TODO(gyliu513): Make this as `optional` after deprecation cycle of 1.0.
   required Mode mode = 3;
 
-  // Path pointing to a directory or file in the container. If the
-  // path is a relative path, it is relative to the container work
-  // directory. If the path is an absolute path, that path must
-  // already exist.
+  // Path pointing to a directory or file in the container. If the path
+  // is a relative path, it is relative to the container work directory.
+  // If the path is an absolute path and the container does not have its
+  // own rootfs, that path must already exist in the agent host rootfs.
   required string container_path = 1;
 
   // The following specifies the source of this volume. At most one of
@@ -2702,6 +3093,7 @@ message Volume {
       HOST_PATH = 4;
       SANDBOX_PATH = 2;
       SECRET = 3;
+      CSI_VOLUME = 5;
     }
 
     message DockerVolume {
@@ -2718,6 +3110,7 @@ message Volume {
     // Absolute path pointing to a directory or file on the host.
     message HostPath {
       required string path = 1;
+      optional MountPropagation mount_propagation = 2;
     }
 
     // Describe a path from a container's sandbox. The container can
@@ -2739,6 +3132,94 @@ message Volume {
       required string path = 2;
     }
 
+    // A volume which will be handled by the `volume/csi` isolator.
+    message CSIVolume {
+      // The name of the CSI plugin.
+      required string plugin_name = 1;
+
+      // Specifies a capability of a volume.
+      // https://github.com/container-storage-interface/spec/blob/v1.3.0/csi.proto#L379:L438
+      message VolumeCapability {
+        // Indicates that the volume will be accessed via the block device API.
+        message BlockVolume {
+          // Intentionally empty, for now.
+        }
+
+        // Indicates that the volume will be accessed via the filesystem API.
+        message MountVolume {
+          // The filesystem type. An empty string is equal to an unspecified
+          // field value.
+          optional string fs_type = 1;
+
+          // The mount options that can be used for the volume. This field is
+          // OPTIONAL. `mount_flags` MAY contain sensitive information.
+          // Therefore, Mesos and the Plugin MUST NOT leak this information
+          // to untrusted entities. The total size of this repeated field
+          // SHALL NOT exceed 4 KiB.
+          repeated string mount_flags = 2;
+        }
+
+        // Specifies how a volume can be accessed.
+        message AccessMode {
+          enum Mode {
+            UNKNOWN = 0;
+
+            // Can only be published once as read/write on a single node, at
+            // any given time.
+            SINGLE_NODE_WRITER = 1;
+
+            // Can only be published once as readonly on a single node, at
+            // any given time.
+            SINGLE_NODE_READER_ONLY = 2;
+
+            // Can be published as readonly at multiple nodes simultaneously.
+            MULTI_NODE_READER_ONLY = 3;
+
+            // Can be published at multiple nodes simultaneously. Only one of
+            // the node can be used as read/write. The rest will be readonly.
+            MULTI_NODE_SINGLE_WRITER = 4;
+
+            // Can be published as read/write at multiple nodes
+            // simultaneously.
+            MULTI_NODE_MULTI_WRITER = 5;
+          }
+
+          required Mode mode = 1;
+        }
+
+        // Specifies what API the volume will be accessed using. One of the
+        // following fields MUST be specified.
+        oneof access_type {
+          BlockVolume block = 1;
+          MountVolume mount = 2;
+        }
+
+        required AccessMode access_mode = 3;
+      }
+
+      // Specifies the parameters used to stage/publish a pre-provisioned volume
+      // on an agent host. The fields are merged from `NodeStageVolumeRequest`
+      // and `NodePublishVolumeRequest` protobuf messages defined in CSI spec
+      // except two fields `staging_target_path` and `target_path` which will be
+      // internally determined by Mesos when staging/publishing the volume.
+      message StaticProvisioning {
+        required string volume_id = 1;
+        required VolumeCapability volume_capability = 2;
+        optional bool readonly = 3;
+
+        // The secrets needed for staging/publishing the volume, e.g.:
+        // {
+        //   "username": {"type": REFERENCE, "reference": {"name": "U_SECRET"}},
+        //   "password": {"type": REFERENCE, "reference": {"name": "P_SECRET"}}
+        // }
+        map<string, Secret> node_stage_secrets = 4;
+        map<string, Secret> node_publish_secrets = 5;
+        map<string, string> volume_context = 6;
+      }
+
+      optional StaticProvisioning static_provisioning = 2;
+    }
+
     // Enum fields should be optional, see: MESOS-4997.
     optional Type type = 1;
 
@@ -2754,6 +3235,8 @@ message Volume {
     // The volume/secret isolator uses the secret-fetcher module (third-party or
     // internal) downloads the secret and makes it available at container_path.
     optional Secret secret = 4;
+
+    optional CSIVolume csi_volume = 6;
   }
 
   optional Source source = 5;
@@ -2903,6 +3386,26 @@ message CapabilityInfo {
 
 
 /**
+ * Encapsulation for Seccomp configuration, which is Linux specific.
+ */
+message SeccompInfo {
+  // A filename of the Seccomp profile. This should be a path
+  // relative to the directory containing Seccomp profiles,
+  // which is specified on the agent via the `--seccomp_config_dir` flag.
+  optional string profile_name = 1;
+
+  // If set to `true`, Seccomp is not applied to the container.
+  // If not set or set to `false`, the container is launched with
+  // the profile specified in the `profile_name` field.
+  //
+  // NOTE: `profile_name` must not be specified if `unconfined` set to `true`.
+  // `profile_name` must be specified if `unconfined` is not set or
+  // is set to `false`.
+  optional bool unconfined = 2;
+}
+
+
+/**
  * Encapsulation for Linux specific configuration.
  * E.g, capabilities, limits etc.
  */
@@ -2925,6 +3428,73 @@ message LinuxInfo {
   // parent container. This field will be ignored if 'namespaces/pid'
   // isolator is not enabled.
   optional bool share_pid_namespace = 4;
+
+  // Represents Seccomp configuration, which is used for syscall filtering.
+  // This field is used to override the agent's default Seccomp configuration.
+  optional SeccompInfo seccomp = 5;
+
+  enum IpcMode {
+    UNKNOWN = 0;
+
+    // The container will have its own IPC namespace and /dev/shm, with a
+    // possibility to share them with its child containers.
+    PRIVATE = 1;
+
+    // The container will share the IPC namespace and /dev/shm from its
+    // parent. If the container is a top level container, it will share
+    // the IPC namespace and /dev/shm from the agent host, if the container
+    // is a nested container, it will share the IPC namespace and /dev/shm
+    // from its parent container. The implication is if a nested container
+    // wants to share the IPC namespace and /dev/shm from the agent host,
+    // its parent container has to do it first.
+    SHARE_PARENT = 2;
+  }
+
+  // There are two special cases that we need to handle for this field:
+  // 1. This field is not set: For backward compatibility we will keep the
+  //    previous behavior: Top level container will have its own IPC namespace
+  //    and nested container will share the IPC namespace from its parent
+  //    container. If the container does not have its own rootfs, it will share
+  //    agent's /dev/shm, otherwise it will have its own /dev/shm.
+  // 2. The `namespaces/ipc` isolator is not enabled: This field will be ignored
+  //    in this case. For backward compatibility, in the `filesystem/linux`
+  //    isolator we will keep the previous behavior: Any containers will share
+  //    IPC namespace from agent, and if the container does not have its own
+  //    rootfs, it will also share agent's /dev/shm, otherwise it will have its
+  //    own /dev/shm.
+  //
+  // TODO(qianzhang): Remove the support for the above two cases after the
+  // deprecation cycle (started in 1.9). Eventually we want a single isolator
+  // (`namespaces/ipc`) to handle both IPC namespace and /dev/shm, and decouple
+  // /dev/shm from container's rootfs (i.e., whether a container will have its
+  // own /dev/shm depends on its `ipc_mode` instead of whether the container
+  // has its own rootfs).
+  optional IpcMode ipc_mode = 6;
+
+  // Size of /dev/shm in MB. If not set, the size of the /dev/shm for container
+  // will be value of the `--default_container_shm_size` agent flag, if that
+  // flag is not set too, the size of the /dev/shm will be half of the host RAM
+  // which is the default behavior of Linux. This field will be ignored for the
+  // container which shares /dev/shm from its parent and it will be also ignored
+  // for any containers if the `namespaces/ipc` isolator is not enabled. Please
+  // note that we only support setting this field when the `ipc_mode` field is
+  // set to `PRIVATE` otherwise the container launch will be rejected.
+  optional uint32 shm_size = 7;
+
+  // If set as 'true', the container will share the cgroups from its parent
+  // container, otherwise it will have its own cgroups created. Please note:
+  // 1. For tasks in a task group launched via the LAUNCH_GROUP operation,
+  //    this field may be set to 'true' or 'false'. Resource limits may only be
+  //    set for tasks in a task group when this field is set to 'false'.
+  // 2. For tasks launched via the LAUNCH operation, this field may only be set
+  //    to 'true', and in this case resource limits may be set on these tasks.
+  // 3. For containers launched via the agent's LAUNCH_NESTED_CONTAINER_SESSION
+  //    call, this field must be set to 'true'.
+  // 4. For executor containers, this field may only be set to 'false'.
+  // 5. All tasks under a single executor must share the same value of this
+  //    field, if it is set. Note that this means that all tasks within a single
+  //    task group must set this field to the same value.
+  optional bool share_cgroups = 8 [default = true];
 }
 
 
@@ -2996,6 +3566,8 @@ message TTYInfo {
  */
 message ContainerInfo {
   // All container implementation types.
+  // For each type there should be a field in the ContainerInfo itself
+  // with exactly matching name in lowercase.
   enum Type {
     DOCKER = 1;
     MESOS = 2;
@@ -3049,8 +3621,8 @@ message ContainerInfo {
   repeated Volume volumes = 2;
   optional string hostname = 4;
 
-  // Only one of the following *Info messages should be set to match
-  // the type.
+  // At most one of the following *Info messages should be set to match
+  // the type, i.e. the "protobuf union" in ContainerInfo should be valid.
   optional DockerInfo docker = 3;
   optional MesosInfo mesos = 5;
 
@@ -3101,6 +3673,7 @@ message CgroupInfo {
       WRITE = 3;
       SYNC = 4;
       ASYNC = 5;
+      DISCARD = 6;
     }
 
     // Describes a stat value without the device descriptor part.
@@ -3295,6 +3868,11 @@ message Role {
   required string name = 1;
   required double weight = 2;
   repeated FrameworkID frameworks = 3;
+
+  // TODO(bmahler): Deprecate `resources` and introduce quota,
+  // consumed quota, allocated, offered, and reserved resource
+  // quantity fields. This is blocked by MESOS-9497 since the
+  // computation of these quantities is currently expensive.
   repeated Resource resources = 4;
 }
 
@@ -3337,7 +3915,7 @@ message FileInfo {
 
 
 /**
- * Describes information abount a device.
+ * Describes information about a device.
  */
 message Device {
   message Number {
@@ -3366,4 +3944,53 @@ message DeviceAccess {
 
 message DeviceWhitelist {
    repeated DeviceAccess allowed_devices = 1;
+}
+
+
+enum DrainState {
+  UNKNOWN = 0;
+
+  // The agent is currently draining.
+  DRAINING = 1;
+
+  // The agent has been drained: all tasks have terminated, all terminal
+  // task status updates have been acknowledged by the frameworks, and all
+  // operations have finished and had their terminal updates acknowledged.
+  DRAINED = 2;
+}
+
+
+message DrainConfig {
+  // An upper bound for tasks with a KillPolicy.
+  // If a task has a KillPolicy grace period greater than this value, this value
+  // will be used instead. This allows the operator to limit the maximum time it
+  // will take the agent to drain. If this field is unset, the task's KillPolicy
+  // or the executor's default grace period is used.
+  //
+  // NOTE: Grace periods start when the executor receives the associated kill.
+  // If, for example, the agent is unreachable when this call is made,
+  // tasks will still receive their full grace period to kill gracefully.
+  optional DurationInfo max_grace_period = 1;
+
+  // Whether or not this agent will be removed permanently from the cluster when
+  // draining is complete. This transition is automatic and does **NOT** require
+  // a separate call to `MarkAgentGone`. If this field is unset, then the
+  // default value of `false` is used.
+  //
+  // Compared to `MarkAgentGone`, which is used for unreachable agents,
+  // marking agents gone after draining will respect kill policies.
+  // To notify frameworks, tasks terminated during draining will return
+  // a `TASK_GONE_BY_OPERATOR` status update instead of any other terminal
+  // status. Executors will not need to account for this case, because
+  // the terminal status update will be intercepted and modified by the agent.
+  optional bool mark_gone = 2 [default = false];
+}
+
+
+message DrainInfo {
+  // The drain state of the agent.
+  required DrainState state = 1;
+
+  // The configuration used to drain the agent.
+  required DrainConfig config = 2;
 }

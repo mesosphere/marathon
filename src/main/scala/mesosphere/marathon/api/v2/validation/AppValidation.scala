@@ -7,7 +7,7 @@ import com.wix.accord.Descriptions.{Generic, Path}
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation.{featureEnabled, _}
-import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.core.externalvolume.{ExternalVolumeRamlHelpers, ExternalVolumes}
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.{AppDefinition, PathId, ResourceRole}
 
@@ -120,7 +120,10 @@ trait AppValidation {
 
     def volumesValidator(container: Container): Validator[Seq[AppVolume]] =
       isTrue("Volume names must be unique") { (vols: Seq[AppVolume]) =>
-        val names: Seq[String] = vols.collect { case v: AppExternalVolume => v.external.name }.flatten
+        val names: Seq[String] = vols.iterator.collect { case v: AppExternalVolume => v.external }.map {
+          case csi: CSIExternalVolumeInfo => Some(csi.name)
+          case generic: GenericExternalVolumeInfo => generic.name
+        }.flatten.toSeq
         names.distinct.size == names.size
       } and every(validVolume(container, enabledFeatures, secrets))
 
@@ -212,18 +215,27 @@ trait AppValidation {
         val validOptions = validator[Map[String, String]] { option =>
           option.keys.each should matchRegex(OptionKeyRegex)
         }
-        val validExternalInfo: Validator[ExternalVolumeInfo] = validator[ExternalVolumeInfo] { info =>
+        val validCsiInfo: Validator[CSIExternalVolumeInfo] = validator[CSIExternalVolumeInfo] { info =>
+          ???
+        }
+
+        val validGenericExternalInfo: Validator[GenericExternalVolumeInfo] = validator[GenericExternalVolumeInfo] { info =>
           info.name is notEmpty
           info.provider is definedAnd(matchRegex(LabelRegex))
           info.options is validOptions
         }
 
+        val validExternalVolume: Validator[ExternalVolumeInfo] = {
+          case info: CSIExternalVolumeInfo => validCsiInfo(info)
+          case info: GenericExternalVolumeInfo => validGenericExternalInfo(info)
+        }
+
         forAll(
           validator[AppExternalVolume] { v =>
             v.containerPath is notEmpty
-            v.external is validExternalInfo
+            v.external is validExternalVolume
           },
-          { v: AppExternalVolume => v.external.provider.nonEmpty } -> ExternalVolumes.validRamlVolume(container),
+          { v: AppExternalVolume => ExternalVolumeRamlHelpers.getProvider(v.external).nonEmpty } -> ExternalVolumes.validRamlVolume(container),
           featureEnabled[AppVolume](enabledFeatures, Features.EXTERNAL_VOLUMES)
         )
       }

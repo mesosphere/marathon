@@ -97,8 +97,11 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   }
 
   implicit val volumeWrites: Writes[state.VolumeWithMount[Volume], AppVolume] = Writes { volumeWithMount =>
-    implicit val externalVolumeWrites: Writes[state.ExternalVolumeInfo, ExternalVolumeInfo] = Writes { ev =>
-      ExternalVolumeInfo(size = ev.size, name = Some(ev.name), provider = Some(ev.provider), options = ev.options, shared = ev.shared)
+    implicit val externalVolumeWrites: Writes[state.ExternalVolumeInfo, ExternalVolumeInfo] = Writes {
+      case ev: GenericExternalVolumeInfo =>
+        raml.GenericExternalVolumeInfo(size = ev.size, name = ev.name, provider = ev.provider, options = ev.options, shared = ev.shared)
+      case ev: CSIExternalVolumeInfo =>
+        ???
     }
 
     val volume = volumeWithMount.volume
@@ -126,13 +129,18 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   }
 
   implicit val volumeExternalReads: Reads[AppExternalVolume, state.VolumeWithMount[Volume]] = Reads { volumeRaml =>
-    val info = state.ExternalVolumeInfo(
-      size = volumeRaml.external.size,
-      name = volumeRaml.external.name.getOrElse(throw SerializationFailedException("external volume requires a name")),
-      provider = volumeRaml.external.provider.getOrElse(throw SerializationFailedException("external volume requires a provider")),
-      options = volumeRaml.external.options,
-      shared = volumeRaml.external.shared
-    )
+    val info: state.ExternalVolumeInfo = volumeRaml.external match {
+      case external: raml.GenericExternalVolumeInfo =>
+        state.GenericExternalVolumeInfo(
+          size = external.size,
+          name = external.name.getOrElse(throw SerializationFailedException("external volume requires a name")),
+          provider = external.provider.getOrElse(throw SerializationFailedException("external volume requires a provider")),
+          options = external.options,
+          shared = external.shared
+        )
+      case csi: raml.CSIExternalVolumeInfo =>
+        ???
+    }
     val volume = state.ExternalVolume(name = None, external = info)
     val mount = state.VolumeMount(volumeName = None, mountPath = volumeRaml.containerPath, readOnly = volumeRaml.mode.fromRaml)
     state.VolumeWithMount[Volume](volume = volume, mount = mount)
@@ -190,16 +198,17 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
 
   implicit val appVolumeExternalProtoRamlWriter: Writes[Protos.Volume.ExternalVolumeInfo, ExternalVolumeInfo] =
     Writes { volume =>
-      ExternalVolumeInfo(
-        size = volume.when(_.hasSize, _.getSize).orElse(ExternalVolumeInfo.DefaultSize),
-        name = volume.when(_.hasName, _.getName).orElse(ExternalVolumeInfo.DefaultName),
-        provider = volume.when(_.hasProvider, _.getProvider).orElse(ExternalVolumeInfo.DefaultProvider),
+      // TODO add csi volume convserion here
+      GenericExternalVolumeInfo(
+        size = volume.when(_.hasSize, _.getSize).orElse(GenericExternalVolumeInfo.DefaultSize),
+        name = volume.when(_.hasName, _.getName).orElse(GenericExternalVolumeInfo.DefaultName),
+        provider = volume.when(_.hasProvider, _.getProvider).orElse(GenericExternalVolumeInfo.DefaultProvider),
         options = volume.whenOrElse(
           _.getOptionsCount > 0,
           _.getOptionsList.asScala.iterator.map { x => x.getKey -> x.getValue }.toMap,
-          ExternalVolumeInfo.DefaultOptions
+          GenericExternalVolumeInfo.DefaultOptions
         ),
-        shared = volume.when(_.hasShared, _.getShared).getOrElse(ExternalVolumeInfo.DefaultShared)
+        shared = volume.when(_.hasShared, _.getShared).getOrElse(GenericExternalVolumeInfo.DefaultShared)
       )
     }
 
