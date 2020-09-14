@@ -147,7 +147,13 @@ object VolumeSerializer {
         volumeBuilder.setPersistent(PersistentVolumeInfoSerializer.toProto(p.persistent))
 
       case e: ExternalVolume =>
-        volumeBuilder.setExternal(ExternalVolumeInfoSerializer.toProto(e.external))
+        e.external match {
+          case generic: GenericExternalVolumeInfo =>
+            volumeBuilder.setExternal(ExternalVolumeInfoSerializer.toProto(generic))
+          case csi: CSIExternalVolumeInfo =>
+            volumeBuilder.setCsiExternal(ExternalVolumeInfoSerializer.toProtoCSI(csi))
+        }
+
 
       case d: HostVolume =>
         volumeBuilder.setHostPath(d.hostPath)
@@ -196,7 +202,11 @@ object PersistentVolumeInfoSerializer {
 }
 
 object ExternalVolumeInfoSerializer {
-  def toProto(info: ExternalVolumeInfo): Protos.Volume.ExternalVolumeInfo = {
+  def toProtoCSI(info: CSIExternalVolumeInfo): mesos.Protos.Volume.Source.CSIVolume = {
+    ???
+  }
+
+  def toProto(info: GenericExternalVolumeInfo): Protos.Volume.ExternalVolumeInfo = {
     val builder = Protos.Volume.ExternalVolumeInfo
       .newBuilder()
       .setName(info.name)
