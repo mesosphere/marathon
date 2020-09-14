@@ -98,9 +98,9 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
 
   implicit val volumeWrites: Writes[state.VolumeWithMount[Volume], AppVolume] = Writes { volumeWithMount =>
     implicit val externalVolumeWrites: Writes[state.ExternalVolumeInfo, ExternalVolumeInfo] = Writes {
-      case ev: GenericExternalVolumeInfo =>
-        raml.GenericExternalVolumeInfo(size = ev.size, name = ev.name, provider = ev.provider, options = ev.options, shared = ev.shared)
-      case ev: CSIExternalVolumeInfo =>
+      case ev: state.GenericExternalVolumeInfo =>
+        raml.GenericExternalVolumeInfo(size = ev.size, name = Some(ev.name), provider = Some(ev.provider), options = ev.options, shared = ev.shared)
+      case ev: state.CSIExternalVolumeInfo =>
         ???
     }
 

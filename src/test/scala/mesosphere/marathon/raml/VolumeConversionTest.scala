@@ -4,9 +4,10 @@ package raml
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.VolumeSerializer
 import mesosphere.marathon.state.{DiskType, Volume}
+import org.scalatest.Inside
 import org.scalatest.prop.TableDrivenPropertyChecks
 
-class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks {
+class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks with Inside {
 
   def convertToProtobufThenToRAML(volumeWithMount: => state.VolumeWithMount[Volume], raml: => AppVolume): Unit = {
     "convert to protobuf, then to RAML" in {
@@ -61,19 +62,23 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks {
         val externalRaml = raml.asInstanceOf[AppExternalVolume]
         externalRaml.containerPath should be(mount.mountPath)
         externalRaml.mode should be(ReadMode.Rw)
-        externalRaml.external.name should be(Some(external.name))
-        externalRaml.external.options should be(external.options)
-        externalRaml.external.provider should be(Some(external.provider))
-        externalRaml.external.size should be(external.size)
-        externalRaml.external.shared should be(true)
+        inside(externalRaml.external) {
+          case vol: GenericExternalVolumeInfo =>
+            vol.name should be(Some(external.name))
+            vol.options should be(external.options)
+            vol.provider should be(Some(external.provider))
+            vol.size should be(external.size)
+            vol.shared should be(true)
+        }
       }
     }
   }
 
   "RAML external volume conversion" when {
+    val volumeInfo = GenericExternalVolumeInfo(Some(1L), Some("vol-name"), Some("provider"), Map("foo" -> "bla"), shared = true)
     val volume = AppExternalVolume(
       "/container",
-      ExternalVolumeInfo(Some(1L), Some("vol-name"), Some("provider"), Map("foo" -> "bla"), shared = true),
+      volumeInfo,
       ReadMode.Rw
     )
     "converting to core ExternalVolume" should {
@@ -83,11 +88,14 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks {
       "covert all fields from RAML to core" in {
         mount.mountPath should be(volume.containerPath)
         mount.readOnly should be(false)
-        externalVolume.external.name should be(volume.external.name.head)
-        externalVolume.external.provider should be(volume.external.provider.head)
-        externalVolume.external.size should be(volume.external.size)
-        externalVolume.external.options should be(volume.external.options)
-        externalVolume.external.shared should be(volume.external.shared)
+        inside(externalVolume.external) {
+          case vol: state.GenericExternalVolumeInfo =>
+            vol.name should be(volumeInfo.name.head)
+            vol.provider should be(volumeInfo.provider.head)
+            vol.size should be(volumeInfo.size)
+            vol.options should be(volumeInfo.options)
+            vol.shared should be(volumeInfo.shared)
+        }
       }
     }
   }
