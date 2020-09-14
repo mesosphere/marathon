@@ -209,7 +209,7 @@ class AppValidationTest extends UnitTest with ValidationTestLike with TableDrive
               volumes = Seq(
                 AppExternalVolume(
                   containerPath = "/some/path",
-                  external = ExternalVolumeInfo(
+                  external = GenericExternalVolumeInfo(
                     provider = Some("dvdi"),
                     size = Some(1024),
                     name = Some("name=teamvolumename,secret_key=volume-secret-key-team,secure=true,size=5,repl=1,shared=true"),

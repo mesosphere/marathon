@@ -60,36 +60,37 @@ private[externalvolume] case object DVDIProvider extends ExternalVolumeProvider 
       }
     }
 
-    def toUnifiedContainerVolume(volume: GenericExternalVolumeInfo, mount: VolumeMount): MesosVolume = {
-      val driverName = volume.options(driverOption)
-      val volBuilder = MesosVolume.Source.DockerVolume.newBuilder
-        .setDriver(driverName)
-        .setName(volume.name)
+    def toUnifiedContainerVolume(volume: ExternalVolume, mount: VolumeMount): MesosVolume = {
+      volume.external match {
+        case info: CSIExternalVolumeInfo =>
+          ???
+        case info: GenericExternalVolumeInfo =>
 
-      // these parameters are only really used for the mesos containerizer, not the docker
-      // containerizer. the docker containerizer simply ignores them.
-      applyOptions(volBuilder, dockerVolumeParameters(volume))
+          val driverName = info.options(driverOption)
+          val volBuilder = MesosVolume.Source.DockerVolume.newBuilder
+            .setDriver(driverName)
+            .setName(info.name)
 
-      val mode = VolumeMount.readOnlyToProto(mount.readOnly)
-      MesosVolume.newBuilder
-        .setContainerPath(mount.mountPath)
-        .setMode(mode)
-        .setSource(
-          MesosVolume.Source.newBuilder
-            .setType(MesosVolume.Source.Type.DOCKER_VOLUME)
-            .setDockerVolume(volBuilder.build)
-        )
-        .build
+          // these parameters are only really used for the mesos containerizer, not the docker
+          // containerizer. the docker containerizer simply ignores them.
+          applyOptions(volBuilder, dockerVolumeParameters(info))
+
+          val mode = VolumeMount.readOnlyToProto(mount.readOnly)
+          MesosVolume.newBuilder
+            .setContainerPath(mount.mountPath)
+            .setMode(mode)
+            .setSource(
+              MesosVolume.Source.newBuilder
+                .setType(MesosVolume.Source.Type.DOCKER_VOLUME)
+                .setDockerVolume(volBuilder.build)
+            )
+            .build
+      }
     }
   } // Builders
 
   override def build(ev: ExternalVolume, mount: VolumeMount): MesosVolume =
-    ev.external match {
-      case genericVolume: GenericExternalVolumeInfo =>
-        Builders.toUnifiedContainerVolume(genericVolume, mount)
-      case csiVolume: CSIExternalVolumeInfo =>
-        ???
-    }
+    Builders.toUnifiedContainerVolume(ev, mount)
 
   val driverOption = "dvdi/driver"
   val quotedDriverOption = '"' + driverOption + '"'
