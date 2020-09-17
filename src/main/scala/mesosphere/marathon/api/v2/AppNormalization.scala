@@ -205,18 +205,6 @@ object AppNormalization {
       else c
     }
 
-  def sanitizeAcceptedResourceRoles(app: App, effectiveRole: String): Option[Set[String]] = {
-    app.acceptedResourceRoles.map { roles =>
-      val sanitized = roles.filter(role => role == "*" || role == effectiveRole)
-
-      // This method is only called when [[DeprecatedFeatures.sanitizeAcceptedResourceRoles]] is ON. In this
-      // case we not only filter out invalid roles, but also fallback to the default (*) one. Note that acceptedResourceRoles
-      // is about reservations and NOT allocation, so the default one is (*) and not (--mesos_role)
-      if (sanitized.isEmpty) Set(ResourceRole.Unreserved)
-      else sanitized
-    }
-  }
-
   def maybeDropPortMappings(c: Container, networks: Seq[Network]): Container =
     // empty networks Seq defaults to host-mode later on, so consider it now as indicating host-mode networking
     if (networks.exists(_.mode == NetworkMode.Host) || networks.isEmpty) c.copy(portMappings = None) else c
@@ -323,16 +311,7 @@ object AppNormalization {
     Normalization { app =>
       val role = app.role.getOrElse(config.defaultRole)
 
-      // sanitize accepted resource roles if enabled
-      val acceptedResourceRoles =
-        if (config.sanitizeAcceptedResourceRoles) {
-          sanitizeAcceptedResourceRoles(app, role)
-        } else app.acceptedResourceRoles
-
-      app.copy(
-        role = Some(role),
-        acceptedResourceRoles = acceptedResourceRoles
-      )
+      app.copy(role = Some(role))
     }
 
   def forPostValidation(config: Config): Normalization[App] =
@@ -368,7 +347,6 @@ object AppNormalization {
     def mesosBridgeName: String
     def enabledFeatures: Set[String]
     def defaultRole: Role
-    def sanitizeAcceptedResourceRoles: Boolean
   }
 
   /** static app normalization configuration */
@@ -376,8 +354,7 @@ object AppNormalization {
       defaultNetworkName: Option[String],
       override val mesosBridgeName: String,
       enabledFeatures: Set[String],
-      defaultRole: Role,
-      sanitizeAcceptedResourceRoles: Boolean
+      defaultRole: Role
   ) extends Config {}
 
   object Configuration {
@@ -386,8 +363,7 @@ object AppNormalization {
         config.defaultNetworkName.toOption,
         config.mesosBridgeName(),
         config.availableFeatures,
-        defaultRole,
-        config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles)
+        defaultRole
       )
   }
 

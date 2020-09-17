@@ -79,7 +79,7 @@ class PodNormalizationTest extends UnitTest with Inside {
         }
       }
       "with default network name" in new Fixture(
-        PodNormalization.Configuration(defaultNetworkName = Some("default1"), ValidationHelper.roleSettings(), true)
+        PodNormalization.Configuration(defaultNetworkName = Some("default1"), ValidationHelper.roleSettings())
       ) {
         // replace empty network name with the default
         val withoutNetworkName = template.copy(networks = Seq(Network()))
@@ -143,7 +143,7 @@ class PodNormalizationTest extends UnitTest with Inside {
       }
 
       "return the configured role for pods without a role" in new Fixture(
-        config = PodNormalization.Configuration(None, RoleSettings(validRoles = Set("customDefault"), defaultRole = "customDefault"), true)
+        config = PodNormalization.Configuration(None, RoleSettings(validRoles = Set("customDefault"), defaultRole = "customDefault"))
       ) {
         inside(template.normalize.role) {
           case Some(role) =>
@@ -159,28 +159,9 @@ class PodNormalizationTest extends UnitTest with Inside {
       }
 
     }
-
-    "sanitizing accepted resource roles" should {
-      val template = Pod(
-        id = "foo",
-        containers = Seq(PodContainer(name = "c", resources = Resources())),
-        scheduling = Some(PodSchedulingPolicy(placement = Some(PodPlacementPolicy(acceptedResourceRoles = Seq("*", "other")))))
-      )
-      val sanitizationEnabled = PodNormalization.Configuration(None, ValidationHelper.roleSettings(), true)
-      val sanitizationDisabled = PodNormalization.Configuration(None, ValidationHelper.roleSettings(), false)
-
-      s"remove the role if ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} is enabled" in new Fixture(config = sanitizationEnabled) {
-        template.normalize.scheduling.value.placement.value.acceptedResourceRoles should contain theSameElementsAs (Set("*"))
-      }
-
-      s"keep the role if ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} is disabled" in new Fixture(config = sanitizationDisabled) {
-        template.normalize.scheduling.value.placement.value.acceptedResourceRoles should contain theSameElementsAs (Set("*", "other"))
-      }
-    }
-
   }
 
-  abstract class Fixture(config: PodNormalization.Config = PodNormalization.Configuration(None, ValidationHelper.roleSettings(), true)) {
+  abstract class Fixture(config: PodNormalization.Config = PodNormalization.Configuration(None, ValidationHelper.roleSettings())) {
     protected implicit val normalization: Normalization[Pod] = PodNormalization(config)
   }
 }

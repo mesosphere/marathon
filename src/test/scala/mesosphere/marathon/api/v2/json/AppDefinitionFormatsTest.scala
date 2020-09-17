@@ -37,8 +37,8 @@ class AppDefinitionFormatsTest extends UnitTest with HealthCheckFormats with Mat
     """)
   }
 
-  def normalizeAndConvert(app: raml.App, sanitizeAcceptedResourceRoles: Boolean = true): AppDefinition = {
-    val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved, sanitizeAcceptedResourceRoles)
+  def normalizeAndConvert(app: raml.App): AppDefinition = {
+    val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved)
     Raml.fromRaml(
       // this is roughly the equivalent of how the original Formats behaved, which is notable because Formats
       // (like this code) reverses the order of validation and normalization
@@ -203,18 +203,12 @@ class AppDefinitionFormatsTest extends UnitTest with HealthCheckFormats with Mat
 
     """FromJSON should parse "acceptedResourceRoles": ["production", "*"] """ in {
       val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": ["production", "*"], "role": "production" }""")
-      val appDef = normalizeAndConvert(json.as[raml.App], false)
+      val appDef = normalizeAndConvert(json.as[raml.App])
       appDef.acceptedResourceRoles should equal(Set("production", ResourceRole.Unreserved))
     }
 
     """FromJSON should parse "acceptedResourceRoles": ["*"] """ in {
       val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": ["*"] }""")
-      val appDef = normalizeAndConvert(json.as[raml.App])
-      appDef.acceptedResourceRoles should equal(Set(ResourceRole.Unreserved))
-    }
-
-    "FromJSON should is sanitized when 'acceptedResourceRoles' is defined but empty" in {
-      val json = Json.parse(""" { "id": "test", "cmd": "foo", "acceptedResourceRoles": [] }""")
       val appDef = normalizeAndConvert(json.as[raml.App])
       appDef.acceptedResourceRoles should equal(Set(ResourceRole.Unreserved))
     }
@@ -576,7 +570,7 @@ class AppDefinitionFormatsTest extends UnitTest with HealthCheckFormats with Mat
     }
 
     "FromJSON should fail for empty container (#4978)" in {
-      val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved, true)
+      val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved)
       val json = Json.parse("""{
           |  "id": "/docker-compose-demo",
           |  "cmd": "echo hello world",

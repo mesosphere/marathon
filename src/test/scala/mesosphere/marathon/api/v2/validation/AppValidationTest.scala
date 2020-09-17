@@ -10,9 +10,9 @@ import org.scalatest.prop.TableDrivenPropertyChecks
 
 class AppValidationTest extends UnitTest with ValidationTestLike with TableDrivenPropertyChecks {
 
-  val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved, true)
+  val config = AppNormalization.Configuration(None, "mesos-bridge-name", Set(), ResourceRole.Unreserved)
   val configWithDefaultNetworkName =
-    AppNormalization.Configuration(Some("defaultNetworkName"), "mesos-bridge-name", Set(), ResourceRole.Unreserved, true)
+    AppNormalization.Configuration(Some("defaultNetworkName"), "mesos-bridge-name", Set(), ResourceRole.Unreserved)
   val basicValidator: Validator[App] =
     AppValidation.validateCanonicalAppAPI(Set.empty, () => config.defaultNetworkName, Set(ResourceRole.Unreserved))
   val withSecretsValidator: Validator[App] =

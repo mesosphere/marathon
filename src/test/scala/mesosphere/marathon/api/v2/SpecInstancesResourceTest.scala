@@ -28,7 +28,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       taskKiller: TaskKiller = mock[TaskKiller],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
-      config: MarathonConf = AllConf.withTestConfig("--deprecated_features", "text_plain_tasks"),
+      config: MarathonConf = AllConf.withTestConfig(),
       groupManager: GroupManager = mock[GroupManager]
   ) {
     val identity = auth.identity
@@ -47,7 +47,7 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       auth: TestAuthFixture = new TestAuthFixture,
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
-      config: MarathonConf = AllConf.withTestConfig("--deprecated_features", "text_plain_tasks"),
+      config: MarathonConf = AllConf.withTestConfig(),
       groupManager: GroupManager = mock[GroupManager]
   ) {
     val identity = auth.identity
@@ -333,11 +333,6 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       Then("we receive a NotAuthenticated response")
       indexJson.getStatus should be(auth.NotAuthenticatedStatus)
 
-      When("the index as txt is fetched")
-      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("", req = req, asyncResponse = r) }
-      Then("we receive a NotAuthenticated response")
-      indexTxt.getStatus should be(auth.NotAuthenticatedStatus)
-
       When("One task is deleted")
       val deleteOne = asyncRequest { r =>
         appsTaskResource.deleteOne("appId", "taskId", false, false, false, req, r)
@@ -427,11 +422,6 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       Given("The app exists")
       groupManager.app("/app".toAbsolutePath) returns Some(AppDefinition("/app".toAbsolutePath, role = "*"))
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-
-      When("the index as txt is fetched")
-      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("/app", req = req, asyncResponse = r) }
-      Then("we receive a not authorized response")
-      indexTxt.getStatus should be(auth.UnauthorizedStatus)
     }
 
     "access to indexTxt without authorization leads to a 404 if the the app does not exist" in new Fixture {
@@ -443,11 +433,6 @@ class SpecInstancesResourceTest extends UnitTest with GroupCreation with JerseyT
       Given("The app not exists")
       groupManager.app("/app".toAbsolutePath) returns None
       instanceTracker.instancesBySpec returns Future.successful(InstanceTracker.InstancesBySpec.empty)
-
-      When("the index as txt is fetched")
-      val indexTxt = asyncRequest { r => appsTaskResource.indexTxt("/app", req = req, asyncResponse = r) }
-      Then("we receive a not authorized response")
-      indexTxt.getStatus should be(404)
     }
 
     "access to deleteOne without authorization is not allowed if the app exists" in new FixtureWithRealTaskKiller() {

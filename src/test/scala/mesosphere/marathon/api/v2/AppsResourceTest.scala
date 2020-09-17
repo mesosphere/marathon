@@ -2531,32 +2531,7 @@ class AppsResourceTest extends AkkaUnitTest with JerseyTest {
       }
     }
 
-    "Create an app in root with acceptedResourceRoles = customMesosRole and sanitizeAcceptedResourceRoles = true" in new Fixture(
-      configArgs = Seq("--deprecated_features", "sanitize_accepted_resource_roles")
-    ) {
-
-      Given("An app with an unknown acceptedResourceRole")
-      val app = App(id = "/app-with-accepted-unknown-mesos-role", cmd = Some("cmd"), acceptedResourceRoles = Some(Set("customMesosRole")))
-
-      val (body, _) = prepareApp(app, groupManager)
-
-      When("The create request is made")
-      clock.advanceBy(5.seconds)
-      val response = asyncRequest { r =>
-        appsResource.create(body, force = false, auth.request, r)
-      }
-
-      withClue(response.getEntity.toString) {
-        Then("The return code indicates success")
-        response.getStatus should be(201)
-      }
-
-      And("resulting app has acceptedResourceRoles sanitized (equals default one)")
-      val appJson = Json.parse(response.getEntity.toString)
-      (appJson \ "acceptedResourceRoles" \ 0) should be(JsDefined(JsString(ResourceRole.Unreserved)))
-    }
-
-    "Create an app in root with acceptedResourceRoles = customMesosRole and sanitize_accepted_resource_roles is disabled" in new Fixture(
+    "Create an app in root with acceptedResourceRoles = customMesosRole with an invalid acceptedResourceRoles value" in new Fixture(
       configArgs = Seq("--deprecated_features", "disable_sanitize_accepted_resource_roles")
     ) {
       Given("An app with an unknown acceptedResourceRole")

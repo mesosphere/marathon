@@ -33,7 +33,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
   private[this] def appNormalization(app: raml.App): raml.App =
     AppHelpers
       .appNormalization(
-        AppNormalization.Configuration(None, "mesos-bridge-name", enabledFeatures, ResourceRole.Unreserved, true),
+        AppNormalization.Configuration(None, "mesos-bridge-name", enabledFeatures, ResourceRole.Unreserved),
         Set(ResourceRole.Unreserved)
       )
       .normalized(app)

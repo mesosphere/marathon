@@ -8,8 +8,7 @@ import javax.servlet.http.HttpServletRequest
 import javax.ws.rs._
 import javax.ws.rs.container.{AsyncResponse, Suspended}
 import javax.ws.rs.core.{Context, MediaType, Response}
-import mesosphere.marathon.api.EndpointsHelper.ListTasks
-import mesosphere.marathon.api.{EndpointsHelper, TaskKiller, _}
+import mesosphere.marathon.api.{TaskKiller, _}
 import mesosphere.marathon.core.appinfo.EnrichedTask
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.group.GroupManager
@@ -86,31 +85,6 @@ class TasksResource @Inject() (
 
         val enrichedTasks: Iterable[EnrichedTask] = await(futureEnrichedTasks)
         ok(raml.TaskList(enrichedTasks.toIndexedSeq.toRaml))
-      }
-    }
-
-  @GET
-  @Produces(Array(RestResource.TEXT_PLAIN_LOW))
-  def indexTxt(
-      @DefaultValue("") @QueryParam("containerNetworks") containerNetworks: String = "",
-      @Context req: HttpServletRequest,
-      @Suspended asyncResponse: AsyncResponse
-  ): Unit =
-    sendResponse(asyncResponse) {
-      async {
-        if (config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.textPlainTasks)) {
-          implicit val identity = await(authenticatedAsync(req))
-          val instancesBySpec = await(instanceTracker.instancesBySpec)
-          val rootGroup = groupManager.rootGroup()
-          val data = ListTasks(instancesBySpec, rootGroup.transitiveApps.iterator.filter(app => isAuthorized(ViewRunSpec, app)).toSeq)
-
-          ok(EndpointsHelper.appsToEndpointString(data, containerNetworks.split(",").toSet))
-        } else {
-          status(
-            Response.Status.NOT_ACCEPTABLE,
-            s"The text/plain output is deprecated. It can be enabled via ${DeprecatedFeatures.textPlainTasks.key}."
-          )
-        }
       }
     }
 
