@@ -4,7 +4,7 @@ package core.externalvolume
 import com.wix.accord.Descriptions.{Explicit, Path}
 import com.wix.accord._
 import mesosphere.marathon.core.externalvolume.impl._
-import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProvider
+import mesosphere.marathon.core.externalvolume.impl.providers.{CSIProvider, DVDIProvider}
 import mesosphere.marathon.raml.AppExternalVolume
 import mesosphere.marathon.state._
 import org.apache.mesos.Protos
@@ -14,7 +14,9 @@ import org.apache.mesos.Protos
   */
 object ExternalVolumes {
   private[this] lazy val providers: Map[String, ExternalVolumeProvider] =
-    Map(DVDIProvider.name -> DVDIProvider)
+    Map(
+      CSIProvider.name -> CSIProvider,
+      DVDIProvider.name -> DVDIProvider)
 
   def build(v: ExternalVolume, mount: VolumeMount): Option[Protos.Volume] = {
     providers.get(v.external.provider).map { _.build(v, mount) }
