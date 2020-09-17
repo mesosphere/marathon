@@ -14,9 +14,7 @@ import org.apache.mesos.Protos
   */
 object ExternalVolumes {
   private[this] lazy val providers: Map[String, ExternalVolumeProvider] =
-    Map(
-      CSIProvider.name -> CSIProvider,
-      DVDIProvider.name -> DVDIProvider)
+    Map(CSIProvider.name -> CSIProvider, DVDIProvider.name -> DVDIProvider)
 
   def build(v: ExternalVolume, mount: VolumeMount): Option[Protos.Volume] = {
     providers.get(v.external.provider).map { _.build(v, mount) }
