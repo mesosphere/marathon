@@ -327,13 +327,15 @@ object ExternalVolumeInfo {
   }
 }
 
-case class CSIExternalVolumeInfo(name: String,
-                                 pluginName: String,
-                                 accessType: AccessType,
-                                 accessMode: AccessMode,
-                                 nodeStageSecret: Map[String, String],
-                                 nodePublishSecret: Map[String, String],
-                                 volumeContext: Map[String, String]) extends ExternalVolumeInfo {
+case class CSIExternalVolumeInfo(
+    name: String,
+    pluginName: String,
+    accessType: AccessType,
+    accessMode: AccessMode,
+    nodeStageSecret: Map[String, String],
+    nodePublishSecret: Map[String, String],
+    volumeContext: Map[String, String]
+) extends ExternalVolumeInfo {
   val provider = "csi"
 }
 
@@ -383,8 +385,8 @@ object CSIExternalVolumeInfo {
       override val readOnly = false
     }
 
-    val all = Seq(
-      UNKNOWN, SINGLE_NODE_WRITER, SINGLE_NODE_READER_ONLY, MULTI_NODE_READER_ONLY, MULTI_NODE_SINGLE_WRITER, MULTI_NODE_MULTI_WRITER)
+    val all =
+      Seq(UNKNOWN, SINGLE_NODE_WRITER, SINGLE_NODE_READER_ONLY, MULTI_NODE_READER_ONLY, MULTI_NODE_SINGLE_WRITER, MULTI_NODE_MULTI_WRITER)
 
     def fromString(mode: String): Option[AccessMode] = all.find(_.name == mode)
   }
@@ -397,8 +399,10 @@ object CSIExternalVolumeInfo {
       accessMode = ExternalVolumeInfoSerializer.csiProtoToAccessMode(evi.getVolumeCapability.getAccessMode),
       nodeStageSecret = evi.getNodeStageSecretsMap.asScala.toMap,
       nodePublishSecret = evi.getNodePublishSecretsMap.asScala.toMap,
-      volumeContext = evi.getVolumeContextMap.asScala.toMap)
+      volumeContext = evi.getVolumeContextMap.asScala.toMap
+    )
 }
+
 /**
   * GenericExternalVolumeInfo captures the specification for a volume that survives task restarts.
   *

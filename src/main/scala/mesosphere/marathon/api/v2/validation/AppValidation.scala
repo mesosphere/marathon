@@ -235,7 +235,9 @@ trait AppValidation {
             v.containerPath is notEmpty
             v.external is validExternalVolume
           },
-          { v: AppExternalVolume => ExternalVolumeRamlHelpers.getProvider(v.external).nonEmpty } -> ExternalVolumes.validRamlVolume(container),
+          { v: AppExternalVolume => ExternalVolumeRamlHelpers.getProvider(v.external).nonEmpty } -> ExternalVolumes.validRamlVolume(
+            container
+          ),
           featureEnabled[AppVolume](enabledFeatures, Features.EXTERNAL_VOLUMES)
         )
       }

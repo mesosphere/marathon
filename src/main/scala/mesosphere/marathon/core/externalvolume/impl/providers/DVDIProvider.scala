@@ -66,7 +66,6 @@ private[externalvolume] case object DVDIProvider extends ExternalVolumeProvider 
         case info: CSIExternalVolumeInfo =>
           throw new IllegalStateException("Bug: CSIProvider should be used for CSIExternalVolumeInfo")
         case info: GenericExternalVolumeInfo =>
-
           val driverName = info.options(driverOption)
           val volBuilder = MesosVolume.Source.DockerVolume.newBuilder
             .setDriver(driverName)
@@ -126,7 +125,12 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       /** @return a count of volume references-by-name within an app spec */
       def volumeNameCounts(app: App): Map[String, Int] =
-        ValidationHelpers.namesOfMatchingVolumes(name, app).groupBy(identity).iterator.map { case (name, names) => name -> names.size }.toMap
+        ValidationHelpers
+          .namesOfMatchingVolumes(name, app)
+          .groupBy(identity)
+          .iterator
+          .map { case (name, names) => name -> names.size }
+          .toMap
     }
 
     val validContainer = {
@@ -142,7 +146,6 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         external.size is isTrue("must be undefined for Docker containers")(_.isEmpty)
       }
 
-
       val validDockerExternalVolume: Validator[raml.ExternalVolumeInfo] = {
         case _: raml.CSIExternalVolumeInfo =>
           throw new IllegalStateException("This validator should only be applied to DVDI volumes")
@@ -155,7 +158,8 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         volume.containerPath is notOneOf(DotPaths: _*)
       }
 
-      def ifDVDIVolume(vtor: Validator[AppExternalVolume]): Validator[AppExternalVolume] = conditional(ValidationHelpers.matchesProviderRaml(name, _))(vtor)
+      def ifDVDIVolume(vtor: Validator[AppExternalVolume]): Validator[AppExternalVolume] =
+        conditional(ValidationHelpers.matchesProviderRaml(name, _))(vtor)
 
       def volumeValidator(container: EngineType): Validator[AppExternalVolume] =
         container match {
@@ -195,7 +199,12 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       /** @return a count of volume references-by-name within an app spec */
       def volumeNameCounts(app: AppDefinition): Map[String, Int] =
-        ValidationHelpers.namesOfMatchingVolumes(name, app).groupBy(identity).iterator.map { case (name, names) => name -> names.size }.toMap
+        ValidationHelpers
+          .namesOfMatchingVolumes(name, app)
+          .groupBy(identity)
+          .iterator
+          .map { case (name, names) => name -> names.size }
+          .toMap
     }
 
     val validContainer = {
@@ -215,8 +224,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         external.size is isTrue("must be undefined for Docker containers")(_.isEmpty)
       }
 
-      val validCSIExternalVolumeInfo = validator[CSIExternalVolumeInfo] { external =>
-      }
+      val validCSIExternalVolumeInfo = validator[CSIExternalVolumeInfo] { external => }
       val validExternalVolumeInfo: Validator[ExternalVolumeInfo] = {
         case volume: GenericExternalVolumeInfo => validGenericExternalVolumeInfo(volume)
       }
@@ -326,7 +334,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     }
 
     val volumeInfo: Validator[raml.ExternalVolumeInfo] = {
-      case  v: raml.GenericExternalVolumeInfo =>
+      case v: raml.GenericExternalVolumeInfo =>
         genericVolumeInfo(v)
       case v: raml.CSIExternalVolumeInfo =>
         ???

@@ -156,7 +156,6 @@ object VolumeSerializer {
             volumeBuilder.setCsiExternal(ExternalVolumeInfoSerializer.toProtoCSI(csi))
         }
 
-
       case d: HostVolume =>
         volumeBuilder.setHostPath(d.hostPath)
 
@@ -223,15 +222,16 @@ object ExternalVolumeInfoSerializer {
   }
 
   def toProtoVolumeCapability(info: CSIExternalVolumeInfo): MesosCSIVolume.VolumeCapability = {
-    val vc = MesosCSIVolume.VolumeCapability.newBuilder()
+    val vc = MesosCSIVolume.VolumeCapability
+      .newBuilder()
       .setAccessMode(csiAccessModeToProto(info.accessMode))
 
     info.accessType match {
       case CSIExternalVolumeInfo.BlockAccessType =>
         vc.setBlock(MesosCSIVolume.VolumeCapability.BlockVolume.newBuilder().build)
       case CSIExternalVolumeInfo.MountAccessType(fsType, flags) =>
-
-        val mountProto = MesosCSIVolume.VolumeCapability.MountVolume.newBuilder()
+        val mountProto = MesosCSIVolume.VolumeCapability.MountVolume
+          .newBuilder()
           .setFsType(fsType)
           .addAllMountFlags(flags.asJava)
         vc.setMount(mountProto)
@@ -241,16 +241,15 @@ object ExternalVolumeInfoSerializer {
 
   def fromProtoVolumeCapabilityToAccessType(proto: MesosCSIVolume.VolumeCapability): CSIExternalVolumeInfo.AccessType = {
     if (proto.hasMount) {
-      CSIExternalVolumeInfo.MountAccessType(
-        proto.getMount.getFsType,
-        proto.getMount.getMountFlagsList.asScala.toSeq)
+      CSIExternalVolumeInfo.MountAccessType(proto.getMount.getFsType, proto.getMount.getMountFlagsList.asScala.toSeq)
     } else {
       CSIExternalVolumeInfo.BlockAccessType
     }
   }
 
   def toProtoCSI(info: CSIExternalVolumeInfo): Protos.Volume.CSIVolumeInfo = {
-    Protos.Volume.CSIVolumeInfo.newBuilder()
+    Protos.Volume.CSIVolumeInfo
+      .newBuilder()
       .setName(info.name)
       .setPluginName(info.pluginName)
       .setVolumeCapability(toProtoVolumeCapability(info))
@@ -259,7 +258,6 @@ object ExternalVolumeInfoSerializer {
       .putAllVolumeContext(info.volumeContext.asJava)
       .build
   }
-
 
   def toGenericProto(info: GenericExternalVolumeInfo): Protos.Volume.ExternalVolumeInfo = {
     val builder = Protos.Volume.ExternalVolumeInfo

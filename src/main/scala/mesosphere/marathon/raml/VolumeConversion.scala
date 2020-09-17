@@ -100,7 +100,13 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   implicit val volumeWrites: Writes[state.VolumeWithMount[Volume], AppVolume] = Writes { volumeWithMount =>
     implicit val externalVolumeWrites: Writes[state.ExternalVolumeInfo, ExternalVolumeInfo] = Writes {
       case ev: state.GenericExternalVolumeInfo =>
-        raml.GenericExternalVolumeInfo(size = ev.size, name = Some(ev.name), provider = Some(ev.provider), options = ev.options, shared = ev.shared)
+        raml.GenericExternalVolumeInfo(
+          size = ev.size,
+          name = Some(ev.name),
+          provider = Some(ev.provider),
+          options = ev.options,
+          shared = ev.shared
+        )
       case ev: state.CSIExternalVolumeInfo =>
         val access = ev.accessType match {
           case state.CSIExternalVolumeInfo.BlockAccessType =>
@@ -158,14 +164,23 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
             state.CSIExternalVolumeInfo.BlockAccessType
           case "mount" =>
             state.CSIExternalVolumeInfo.MountAccessType(
-              fsType = csi.options.access.fsType.getOrElse(throw new IllegalStateException("fsType must be specified with mount access type CSI volumes. This is a bug. Validation should have prevented this")),
-              mountFlags = csi.options.access.mountFlags)
+              fsType = csi.options.access.fsType.getOrElse(
+                throw new IllegalStateException(
+                  "fsType must be specified with mount access type CSI volumes. This is a bug. Validation should have prevented this"
+                )
+              ),
+              mountFlags = csi.options.access.mountFlags
+            )
         }
         state.CSIExternalVolumeInfo(
           name = csi.name,
           pluginName = csi.options.pluginName,
           accessType = accessType,
-          accessMode = state.CSIExternalVolumeInfo.AccessMode.fromString(csi.options.access.mode).getOrElse(throw new IllegalStateException("CSI options.access.mode is invalid. This is a bug. Validation should have prevented this.")),
+          accessMode = state.CSIExternalVolumeInfo.AccessMode
+            .fromString(csi.options.access.mode)
+            .getOrElse(
+              throw new IllegalStateException("CSI options.access.mode is invalid. This is a bug. Validation should have prevented this.")
+            ),
           nodeStageSecret = csi.options.nodeStageSecret,
           nodePublishSecret = csi.options.nodePublishSecret,
           volumeContext = csi.options.volumeContext
