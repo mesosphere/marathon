@@ -9,6 +9,7 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.state.CSIExternalVolumeInfo.{AccessMode, AccessType}
 import mesosphere.marathon.state.GenericExternalVolumeInfo.{csiValidExternalVolume, genericValidExternalVolumeInfo}
 
 import scala.jdk.CollectionConverters._
@@ -324,7 +325,12 @@ object ExternalVolumeInfo {
 }
 
 case class CSIExternalVolumeInfo(name: String,
-                                 options: CSIExternalVolumeInfo.Options) extends ExternalVolumeInfo {
+                                 pluginName: String,
+                                 accessType: AccessType,
+                                 accessMode: AccessMode,
+                                 nodeStageSecret: Map[String, String],
+                                 nodePublishSecret: Map[String, String],
+                                 volumeContext: Map[String, String]) extends ExternalVolumeInfo {
   val provider = "csi"
 }
 
@@ -334,39 +340,46 @@ object CSIExternalVolumeInfo {
   case object BlockAccessType extends AccessType
   case class MountAccessType(fsType: String, mountFlags: Seq[String]) extends AccessType
 
-
-  sealed trait AccessMode { val name: String }
+  sealed trait AccessMode {
+    val name: String
+    val shareable: Boolean
+    val readOnly: Boolean
+  }
   object AccessMode {
     case object UNKNOWN extends AccessMode {
       override val name = "UNKNOWN"
+      override val shareable = false
+      override val readOnly = true
     }
     case object SINGLE_NODE_WRITER extends AccessMode {
       override val name = "SINGLE_NODE_WRITER"
+      override val shareable = false
+      override val readOnly = false
     }
     case object SINGLE_NODE_READER_ONLY extends AccessMode {
       override val name = "SINGLE_NODE_READER_ONLY"
+      override val shareable = false
+      override val readOnly = true
     }
 
     case object MULTI_NODE_READER_ONLY extends AccessMode {
       override val name = "MULTI_NODE_READER_ONLY"
+      override val shareable = true
+      override val readOnly = true
     }
 
     case object MULTI_NODE_SINGLE_WRITER extends AccessMode {
       override val name = "MULTI_NODE_SINGLE_WRITER"
+      override val shareable = false
+      override val readOnly = false
     }
 
     case object MULTI_NODE_MULTI_WRITER extends AccessMode {
       override val name = "MULTI_NODE_MULTI_WRITER"
+      override val shareable = true
+      override val readOnly = false
     }
   }
-
-  case class SecretRef(username: String, password: String)
-
-  case class Options(accessType: Any,
-                     accessMode: AccessMode,
-                     nodeStageSecret: Option[SecretRef],
-                     nodePublishSecret: Option[SecretRef],
-                     volumeContext: Map[String, String])
 }
 /**
   * GenericExternalVolumeInfo captures the specification for a volume that survives task restarts.

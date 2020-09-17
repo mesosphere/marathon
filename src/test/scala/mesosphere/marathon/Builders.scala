@@ -9,23 +9,7 @@ import mesosphere.marathon.core.pod.{Network, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.raml.{App, Apps, Resources}
 import mesosphere.marathon.state.RootGroup.NewGroupStrategy
-import mesosphere.marathon.state.{
-  AbsolutePathId,
-  AppDefinition,
-  BackoffStrategy,
-  EnvVarValue,
-  Group,
-  KillSelection,
-  PortDefinition,
-  ResourceLimits,
-  Role,
-  RootGroup,
-  Secret,
-  Timestamp,
-  UnreachableStrategy,
-  UpgradeStrategy,
-  VersionInfo
-}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, BackoffStrategy, CSIExternalVolumeInfo, EnvVarValue, Group, KillSelection, PortDefinition, ResourceLimits, Role, RootGroup, Secret, Timestamp, UnreachableStrategy, UpgradeStrategy, VersionInfo}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -145,4 +129,20 @@ object Builders {
       )
     }
   }
-}
+
+  def newCSIExternalVolumeInfo(name: String = "csi-volume-name",
+                               pluginName: String = "csi-plugin",
+                               accessType: CSIExternalVolumeInfo.AccessType = CSIExternalVolumeInfo.BlockAccessType,
+                               accessMode: CSIExternalVolumeInfo.AccessMode = CSIExternalVolumeInfo.AccessMode.SINGLE_NODE_WRITER,
+                               nodeStageSecret: Map[String, String] = Map.empty,
+                               nodePublishSecret: Map[String, String] = Map.empty,
+                               volumeContext: Map[String, String] = Map.empty): CSIExternalVolumeInfo = {
+    CSIExternalVolumeInfo(name = name,
+      pluginName = pluginName,
+      accessType = accessType,
+      accessMode = accessMode,
+      nodeStageSecret = nodeStageSecret,
+      nodePublishSecret = nodePublishSecret,
+      volumeContext = volumeContext)
+    }
+  }

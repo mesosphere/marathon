@@ -7,6 +7,74 @@ uses:
   secrets: secrets.raml
 
 types:
+  CSIAccess:
+    type: object
+    properties:
+      mode:
+        type: string
+        enum: [ SINGLE_NODE_WRITER , SINGLE_NODE_READER_ONLY , MULTI_NODE_READER_ONLY , MULTI_NODE_SINGLE_WRITER , MULTI_NODE_MULTI_WRITER ]
+        description: |
+          * `SINGLE_NODE_WRITER`       - Can only be published once as read/write on a single node, at any given time.
+          * `SINGLE_NODE_READER_ONLY`  - Can only be published once as readonly on a single node, at any given time.
+          * `MULTI_NODE_READER_ONLY`   - Can be published as readonly at multiple nodes simultaneously.
+          * `MULTI_NODE_SINGLE_WRITER` - Can be published at multiple nodes simultaneously. Only one of the node can be used as read/write. The rest will be readonly.
+          * `MULTI_NODE_MULTI_WRITER`  - Can be published as read/write at multiple nodes simultaneously.
+      type:
+        type: string
+        enum: [ block, mount ]
+        description: Indicates whether a block volume with no FS, or a mount volume is to be obtained. The optional fields fsType and mountFlags
+      fsType?:
+        type: string
+        description: |
+          Applies only to mount type volumes. The filesystem type. An empty string is equal to an unspecified field value. Optional.
+      mountFlags?:
+        type: array
+        description: |
+          Applies only to mount type volumes. The mount options that can be used for the volume. The total size SHALL NOT exceed 4 KiB.
+        items:
+          type: string
+        (pragma.omitEmpty):
+
+
+  CSIExternalVolumeInfoOptions:
+    type: object
+    properties:
+      pluginName:
+        type: string
+        minLength: 1
+        description: The name of the CSI plugin
+      access:
+        type: CSIAccess
+      nodeStageSecret?:
+        type: label.KVLabels
+        description: |
+          The secrets needed for staging the volume. For example:
+           ```
+          {
+            "username": "MY_USERNAME_SECRET_REFERENCE_NAME",
+            "password": "MY_PASSWORD_SECRET_REFERENCE_NAME",
+          }
+          ```
+        (pragma.omitEmpty):
+      nodePublishSecret?:
+        type: label.KVLabels
+        description: |
+          The secrets needed for publishing the volume
+          ```
+          {
+            "username": "MY_USERNAME_SECRET_REFERENCE_NAME",
+            "password": "MY_PASSWORD_SECRET_REFERENCE_NAME",
+          }
+          ```
+        (pragma.omitEmpty):
+      volumeContext?:
+        type: label.KVLabels
+        description: |
+          Static properties of the volume
+          * SHOULD NOT contain sensitive information
+          * SHOULD NOT be used for uniquely identifying a volume. The `name` alone SHOULD be sufficient to identify the volume
+          * A volume uniquely identified by `name` SHALL always report the same volume_context
+        (pragma.omitEmpty):
   CSIExternalVolumeInfo:
     type: object
     properties:
@@ -18,65 +86,7 @@ types:
         description: The name of the volume provider
         enum: [ csi ]
       options?:
-        type: object
-        properties:
-          accessType: CSIBlockVolume | CSIMountVolume
-          accessMode:
-            type: string
-            enum: [ SINGLE_NODE_WRITER , SINGLE_NODE_READER_ONLY , MULTI_NODE_READER_ONLY , MULTI_NODE_SINGLE_WRITER , MULTI_NODE_MULTI_WRITER ]
-            description: |
-              * `SINGLE_NODE_WRITER`       - Can only be published once as read/write on a single node, at any given time.
-              * `SINGLE_NODE_READER_ONLY`  - Can only be published once as readonly on a single node, at any given time.
-              * `MULTI_NODE_READER_ONLY`   - Can be published as readonly at multiple nodes simultaneously.
-              * `MULTI_NODE_SINGLE_WRITER` - Can be published at multiple nodes simultaneously. Only one of the node can be used as read/write. The rest will be readonly.
-              * `MULTI_NODE_MULTI_WRITER`  - Can be published as read/write at multiple nodes simultaneously.
-          nodeStageSecret?:
-            type: object
-            description: |
-              The secrets needed for staging the volume. For example:
-               ```
-              {
-                "username": "MY_USERNAME_SECRET_REFERENCE_NAME",
-                "password": "MY_PASSWORD_SECRET_REFERENCE_NAME",
-              }
-              ```
-          nodePublishSecret?:
-            type: object
-            description: |
-              The secrets needed for publishing the volume
-              ```
-              {
-                "username": "MY_USERNAME_SECRET_REFERENCE_NAME",
-                "password": "MY_PASSWORD_SECRET_REFERENCE_NAME",
-              }
-              ```
-          volumeContext?:
-            type: object
-            description: |
-              Static properties of the volume
-              * SHOULD NOT contain sensitive information
-              * SHOULD NOT be used for uniquely identifying a volume. The `name` alone SHOULD be sufficient to identify the volume
-              * A volume uniquely identified by `name` SHALL always report the same volume_context
-
-  CSIBlockVolume:
-    type: string
-    description: Indicate that the volume will be accessed via the block device API
-    enum: [ block ]
-
-  CSIMountVolume:
-    type: object
-    description: Indicate that the volume will be accessed via the filesystem API.
-    properties:
-      fsType:
-        type: string
-        description: The filesystem type. An empty string is equal to an unspecified field value.
-        default: ""
-      mountFlags:
-        type: array
-        description: |
-          The mount options that can be used for the volume. MAY contain sensitive information. The total size SHALL NOT exceed 4 KiB.
-        items:
-          type: string
+        type: CSIExternalVolumeInfoOptions
 
   GenericExternalVolumeInfo:
     type: object

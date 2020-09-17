@@ -12,6 +12,7 @@ import mesosphere.marathon.state._
 
 import scala.jdk.CollectionConverters._
 import org.apache.mesos.Protos.{Parameter, Parameters, Volume => MesosVolume}
+import org.apache.zookeeper.KeeperException.BadArgumentsException
 
 /**
   * DVDIProvider (Docker Volume Driver Interface provider) handles external volumes allocated
@@ -63,7 +64,7 @@ private[externalvolume] case object DVDIProvider extends ExternalVolumeProvider 
     def toUnifiedContainerVolume(volume: ExternalVolume, mount: VolumeMount): MesosVolume = {
       volume.external match {
         case info: CSIExternalVolumeInfo =>
-          ???
+          throw new IllegalStateException("Bug: CSIProvider should be used for CSIExternalVolumeInfo")
         case info: GenericExternalVolumeInfo =>
 
           val driverName = info.options(driverOption)
@@ -105,42 +106,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
   // group-level validation for DVDI volumes: the same volume name may only be referenced by a single
   // task instance across the entire cluster.
-  override lazy val rootGroup = new Validator[RootGroup] {
-    override def apply(rootGroup: RootGroup): Result = {
-      val appsByVolume: Map[String, Iterable[PathId]] =
-        rootGroup.transitiveApps.flatMap { app => namesOfMatchingVolumes(app).map(_ -> app.id) }.groupBy {
-          case (volumeName, _) => volumeName
-        }.map { case (volumeName, volumes) => volumeName -> volumes.map { case (_, appId) => appId } }
-
-      val appValid: Validator[AppDefinition] = {
-        def volumeNameUnique(appId: PathId): Validator[ExternalVolume] = {
-          def conflictingApps(vol: ExternalVolume): Iterable[PathId] =
-            appsByVolume.getOrElse(vol.external.name, Iterable.empty).filter(_ != appId)
-
-          isTrue { (vol: ExternalVolume) =>
-            val conflictingAppIds = conflictingApps(vol).mkString(", ")
-            s"Volume name '${vol.external.name}' in $appId conflicts with volume(s) of same name in app(s): " +
-              s"$conflictingAppIds"
-          } { vol => conflictingApps(vol).isEmpty }
-        }
-
-        validator[AppDefinition] { app =>
-          app.externalVolumes is every(volumeNameUnique(app.id))
-        }
-      }
-
-      def groupValid: Validator[Group] =
-        validator[Group] { group =>
-          group.apps.values as "apps" is every(appValid)
-          group.groupsById.values as "groups" is every(groupValid)
-        }
-
-      // We need to call the validators recursively such that the "description" of the rule violations
-      // is correctly calculated.
-      groupValid(rootGroup)
-    }
-
-  }
+  override lazy val rootGroup = ValidationHelpers.validateUniqueVolumes(name)
 
   override lazy val ramlApp = {
     val haveOnlyOneInstance: Validator[App] =
@@ -160,7 +126,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       /** @return a count of volume references-by-name within an app spec */
       def volumeNameCounts(app: App): Map[String, Int] =
-        namesOfMatchingVolumes(app).groupBy(identity).iterator.map { case (name, names) => name -> names.size }.toMap
+        ValidationHelpers.namesOfMatchingVolumes(name, app).groupBy(identity).iterator.map { case (name, names) => name -> names.size }.toMap
     }
 
     val validContainer = {
@@ -172,14 +138,14 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       }
 
       val validDockerExternalVolumeInfo = validator[raml.GenericExternalVolumeInfo] { external =>
-        external.options is isTrue(s"must only contain $driverOption")(_.filterKeys(_ != driverOption).isEmpty)
+        external.options is isTrue(s"must only contain $driverOption")(_.view.filterKeys(_ != driverOption).isEmpty)
         external.size is isTrue("must be undefined for Docker containers")(_.isEmpty)
       }
 
 
       val validDockerExternalVolume: Validator[raml.ExternalVolumeInfo] = {
-        case csi: raml.CSIExternalVolumeInfo =>
-          ???
+        case _: raml.CSIExternalVolumeInfo =>
+          throw new IllegalStateException("This validator should only be applied to DVDI volumes")
         case dvdi: raml.GenericExternalVolumeInfo =>
           validDockerExternalVolumeInfo(dvdi)
       }
@@ -189,7 +155,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         volume.containerPath is notOneOf(DotPaths: _*)
       }
 
-      def ifDVDIVolume(vtor: Validator[AppExternalVolume]): Validator[AppExternalVolume] = conditional(matchesProviderRaml)(vtor)
+      def ifDVDIVolume(vtor: Validator[AppExternalVolume]): Validator[AppExternalVolume] = conditional(ValidationHelpers.matchesProviderRaml(name, _))(vtor)
 
       def volumeValidator(container: EngineType): Validator[AppExternalVolume] =
         container match {
@@ -229,7 +195,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       /** @return a count of volume references-by-name within an app spec */
       def volumeNameCounts(app: AppDefinition): Map[String, Int] =
-        namesOfMatchingVolumes(app).groupBy(identity).iterator.map { case (name, names) => name -> names.size }.toMap
+        ValidationHelpers.namesOfMatchingVolumes(name, app).groupBy(identity).iterator.map { case (name, names) => name -> names.size }.toMap
     }
 
     val validContainer = {
@@ -278,10 +244,10 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       validator[Container] { ct =>
         ct.volumes.collect {
-          case VolumeWithMount(ev: ExternalVolume, _) if matchesProvider(ev) => ev
+          case VolumeWithMount(ev: ExternalVolume, _) if ValidationHelpers.matchesProvider(name, ev) => ev
         } as "volumes" is every(volumeValidator(ct))
         ct.volumes.collect {
-          case VolumeWithMount(ev: ExternalVolume, mount) if matchesProvider(ev) => mount
+          case VolumeWithMount(ev: ExternalVolume, mount) if ValidationHelpers.matchesProvider(name, ev) => mount
         } as "mounts" is every(volumeMountValidator(ct))
       }
     }
@@ -374,36 +340,4 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       implied(container.`type` == EngineType.Docker)(validDockerVolume)
     )
   }
-
-  /**
-    * @return true if volume has a provider name that matches ours exactly
-    */
-  private[this] def matchesProvider(volume: ExternalVolume): Boolean = volume.external.provider == name
-  private[this] def matchesProviderRaml(volume: AppExternalVolume): Boolean = ExternalVolumeRamlHelpers.getProvider(volume.external).contains(name)
-
-  private[this] def isForUniquenessCheck(volume: ExternalVolume): Boolean = volume.external match {
-    case csi: CSIExternalVolumeInfo =>
-      true
-    case v: GenericExternalVolumeInfo =>
-      !v.shared
-  }
-  private[this] def isForUniquenessCheckRaml(volume: AppExternalVolume): Boolean = volume.external match {
-    case external: raml.GenericExternalVolumeInfo =>
-      !external.shared
-    case csi: raml.CSIExternalVolumeInfo =>
-      true
-  }
-
-  private[this] def namesOfMatchingVolumes(app: AppDefinition): Seq[String] =
-    app.externalVolumes
-      .withFilter(matchesProvider)
-      .withFilter(isForUniquenessCheck)
-      .map(_.external.name)
-
-  private[this] def namesOfMatchingVolumes(app: App): Seq[String] =
-    app.container
-      .fold(Seq.empty[AppExternalVolume])(_.volumes.collect { case v: AppExternalVolume => v })
-      .withFilter(matchesProviderRaml)
-      .withFilter(isForUniquenessCheckRaml)
-      .flatMap { v => ExternalVolumeRamlHelpers.getName(v.external) }
 }
