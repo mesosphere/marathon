@@ -1,7 +1,8 @@
 package mesosphere.marathon.core.externalvolume.impl.providers
 
+import scala.jdk.CollectionConverters._
 import com.wix.accord._
-import mesosphere.marathon.api.serialization.ExternalVolumeInfoSerializer
+import mesosphere.marathon.api.serialization.{ExternalVolumeInfoSerializer, SecretSerializer}
 import mesosphere.marathon.core.externalvolume.impl.{ExternalVolumeProvider, ExternalVolumeValidations}
 import mesosphere.marathon.raml.{App, AppExternalVolume, Container => AppContainer}
 import mesosphere.marathon.state._
@@ -28,6 +29,9 @@ private[externalvolume] case object CSIProvider extends ExternalVolumeProvider {
             .setVolumeId(info.name)
             .setReadonly(info.accessMode.readOnly)
             .setVolumeCapability(ExternalVolumeInfoSerializer.toProtoVolumeCapability(info))
+            .putAllNodeStageSecrets(info.nodeStageSecret.view.mapValues(SecretSerializer.toSecretReference).toMap.asJava)
+            .putAllNodePublishSecrets(info.nodePublishSecret.view.mapValues(SecretSerializer.toSecretReference).toMap.asJava)
+            .putAllVolumeContext(info.volumeContext.asJava)
 
           val volBuilder = CSIVolume.newBuilder
               .setPluginName(info.pluginName)

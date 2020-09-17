@@ -9,7 +9,7 @@ import mesosphere.marathon.core.pod.{Network, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.raml.{App, Apps, Resources}
 import mesosphere.marathon.state.RootGroup.NewGroupStrategy
-import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, BackoffStrategy, CSIExternalVolumeInfo, EnvVarValue, Group, KillSelection, PortDefinition, ResourceLimits, Role, RootGroup, Secret, Timestamp, UnreachableStrategy, UpgradeStrategy, VersionInfo}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, BackoffStrategy, CSIExternalVolumeInfo, EnvVarValue, Group, KillSelection, PortDefinition, ResourceLimits, Role, RootGroup, Secret, Timestamp, UnreachableStrategy, UpgradeStrategy, VersionInfo, VolumeMount}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -128,6 +128,10 @@ object Builders {
         resourceLimits = resourceLimits
       )
     }
+  }
+
+  def newVolumeMount(volumeName: Option[String] = Some("name"), mountPath: String = "/path", readOnly: Boolean = false): VolumeMount = {
+    VolumeMount(volumeName, mountPath, readOnly)
   }
 
   def newCSIExternalVolumeInfo(name: String = "csi-volume-name",

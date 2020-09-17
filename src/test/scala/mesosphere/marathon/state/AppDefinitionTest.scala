@@ -173,6 +173,31 @@ class AppDefinitionTest extends UnitTest {
       read should be(app)
     }
 
+    "csi volumes to proto and back again" in {
+      val app = AppDefinition(
+        id = AbsolutePathId("/app-with-csi-volumes"),
+        role = "*",
+        cmd = Some("sleep 30"),
+        portDefinitions = Nil,
+        networks = Seq(BridgeNetwork()),
+        container = Some(
+          Container.Docker(
+            image = "image",
+            volumes = Seq(
+              VolumeWithMount(
+                ExternalVolume(None, Builders.newCSIExternalVolumeInfo(
+                  nodeStageSecret = Map("state" -> "secret-ref"),
+                  nodePublishSecret = Map("state" -> "publish-ref"),
+                  volumeContext = Map("context" -> "a"))),
+                Builders.newVolumeMount(volumeName = None))))))
+
+      val proto = app.toProto
+      proto.getId should be("/app-with-csi-volumes")
+
+      val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(proto)
+      read.container.get.volumes.head should be(app.container.get.volumes.head)
+    }
+
     "ipAddress to proto and back again w/ Docker container w/ bridge" in {
       val app = AppDefinition(
         id = AbsolutePathId("/app-with-ip-address"),

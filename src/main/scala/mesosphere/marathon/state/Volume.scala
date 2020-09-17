@@ -7,6 +7,7 @@ import java.util.regex.Pattern
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.api.serialization.{ContainerSerializer, ExternalVolumeInfoSerializer}
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.state.CSIExternalVolumeInfo.{AccessMode, AccessType}
@@ -28,6 +29,8 @@ object Volume {
       PersistentVolume(name = name, persistent = PersistentVolumeInfo.fromProto(proto.getPersistent))
     else if (proto.hasExternal)
       ExternalVolume(name = name, external = GenericExternalVolumeInfo.fromProto(proto.getExternal))
+    else if (proto.hasCsiExternal)
+      ExternalVolume(name = name, external = CSIExternalVolumeInfo.fromProto(proto.getCsiExternal))
     else if (proto.hasSecret)
       SecretVolume(name = name, secret = proto.getSecret.getSecret)
     else
@@ -379,7 +382,22 @@ object CSIExternalVolumeInfo {
       override val shareable = true
       override val readOnly = false
     }
+
+    val all = Seq(
+      UNKNOWN, SINGLE_NODE_WRITER, SINGLE_NODE_READER_ONLY, MULTI_NODE_READER_ONLY, MULTI_NODE_SINGLE_WRITER, MULTI_NODE_MULTI_WRITER)
+
+    def fromString(mode: String): Option[AccessMode] = all.find(_.name == mode)
   }
+
+  def fromProto(evi: Protos.Volume.CSIVolumeInfo): ExternalVolumeInfo =
+    CSIExternalVolumeInfo(
+      name = evi.getName,
+      pluginName = evi.getPluginName,
+      accessType = ExternalVolumeInfoSerializer.fromProtoVolumeCapabilityToAccessType(evi.getVolumeCapability),
+      accessMode = ExternalVolumeInfoSerializer.csiProtoToAccessMode(evi.getVolumeCapability.getAccessMode),
+      nodeStageSecret = evi.getNodeStageSecretsMap.asScala.toMap,
+      nodePublishSecret = evi.getNodePublishSecretsMap.asScala.toMap,
+      volumeContext = evi.getVolumeContextMap.asScala.toMap)
 }
 /**
   * GenericExternalVolumeInfo captures the specification for a volume that survives task restarts.

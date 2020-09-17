@@ -205,17 +205,21 @@ object PersistentVolumeInfoSerializer {
 
 object ExternalVolumeInfoSerializer {
   def csiAccessModeToProto(accessMode: CSIExternalVolumeInfo.AccessMode): MesosCSIVolume.VolumeCapability.AccessMode = {
-    import CSIExternalVolumeInfo.{AccessMode => StateAccessMode}
-    import MesosCSIVolume.VolumeCapability.AccessMode.{Mode => MesosAccessMode}
-    val mode = accessMode match {
-      case StateAccessMode.UNKNOWN => MesosAccessMode.UNKNOWN
-      case StateAccessMode.SINGLE_NODE_WRITER => MesosAccessMode.SINGLE_NODE_WRITER
-      case StateAccessMode.SINGLE_NODE_READER_ONLY => MesosAccessMode.SINGLE_NODE_READER_ONLY
-      case StateAccessMode.MULTI_NODE_READER_ONLY => MesosAccessMode.MULTI_NODE_READER_ONLY
-      case StateAccessMode.MULTI_NODE_SINGLE_WRITER => MesosAccessMode.MULTI_NODE_SINGLE_WRITER
-      case StateAccessMode.MULTI_NODE_MULTI_WRITER => MesosAccessMode.MULTI_NODE_MULTI_WRITER
+    val mode = MesosCSIVolume.VolumeCapability.AccessMode.Mode.values().find { _.name() == accessMode.name }.getOrElse {
+      // Bug. We should not get here.
+      throw new IllegalStateException(s"There is no corresponding Mesos CSI Access mode for ${accessMode.name}")
     }
     MesosCSIVolume.VolumeCapability.AccessMode.newBuilder().setMode(mode).build
+  }
+
+  def csiProtoToAccessMode(accessMode: MesosCSIVolume.VolumeCapability.AccessMode): CSIExternalVolumeInfo.AccessMode = {
+    import CSIExternalVolumeInfo.{AccessMode => StateAccessMode}
+    import MesosCSIVolume.VolumeCapability.AccessMode.{Mode => MesosAccessMode}
+    val accessModeName = accessMode.getMode().name
+    CSIExternalVolumeInfo.AccessMode.fromString(accessModeName).getOrElse {
+      // Bug. We should not get here.
+      throw new IllegalStateException(s"There is no corresponding Marathon CSI access mode for: ${accessModeName}")
+    }
   }
 
   def toProtoVolumeCapability(info: CSIExternalVolumeInfo): MesosCSIVolume.VolumeCapability = {
@@ -235,13 +239,27 @@ object ExternalVolumeInfoSerializer {
     vc.build()
   }
 
+  def fromProtoVolumeCapabilityToAccessType(proto: MesosCSIVolume.VolumeCapability): CSIExternalVolumeInfo.AccessType = {
+    if (proto.hasMount) {
+      CSIExternalVolumeInfo.MountAccessType(
+        proto.getMount.getFsType,
+        proto.getMount.getMountFlagsList.asScala.toSeq)
+    } else {
+      CSIExternalVolumeInfo.BlockAccessType
+    }
+  }
+
   def toProtoCSI(info: CSIExternalVolumeInfo): Protos.Volume.CSIVolumeInfo = {
     Protos.Volume.CSIVolumeInfo.newBuilder()
       .setName(info.name)
       .setPluginName(info.pluginName)
       .setVolumeCapability(toProtoVolumeCapability(info))
+      .putAllNodePublishSecrets(info.nodePublishSecret.asJava)
+      .putAllNodeStageSecrets(info.nodeStageSecret.asJava)
+      .putAllVolumeContext(info.volumeContext.asJava)
       .build
   }
+
 
   def toGenericProto(info: GenericExternalVolumeInfo): Protos.Volume.ExternalVolumeInfo = {
     val builder = Protos.Volume.ExternalVolumeInfo
