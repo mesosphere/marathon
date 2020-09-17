@@ -3,7 +3,7 @@ package raml
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.VolumeSerializer
-import mesosphere.marathon.state.{DiskType, Volume}
+import mesosphere.marathon.state.{DiskType, ExternalVolume, Volume, VolumeWithMount}
 import org.scalatest.Inside
 import org.scalatest.prop.TableDrivenPropertyChecks
 
@@ -74,7 +74,44 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks with 
     }
   }
 
-  "RAML external volume conversion" when {
+  "RAML CSI external volume conversion" should {
+    val volumeInfo = CSIExternalVolumeInfo(
+      name = "csi-volume",
+      provider = "csi",
+      options = CSIExternalVolumeInfoOptions(
+        pluginName = "csi-plugin",
+        access = CSIAccess(mode = "MULTI_NODE_READER_ONLY", `type` = "block"),
+        nodeStageSecret = Map("key" -> "secret-stage-key"),
+        nodePublishSecret = Map("key" -> "secret-publish-key"),
+        volumeContext = Map("a" -> "context")))
+
+    val volume = AppExternalVolume(
+      "/container",
+      volumeInfo,
+      ReadMode.Rw // TODO this should be optional
+    )
+
+    "convert a CSI block volume properly" in {
+      inside(volume.fromRaml) {
+        case VolumeWithMount(ExternalVolume(_, external: state.CSIExternalVolumeInfo), _) =>
+          external.name shouldBe(volumeInfo.name)
+          external.provider shouldBe "csi"
+          external.pluginName shouldBe volumeInfo.options.pluginName
+          external.accessType shouldBe state.CSIExternalVolumeInfo.BlockAccessType
+          external.accessMode shouldBe state.CSIExternalVolumeInfo.AccessMode.MULTI_NODE_READER_ONLY
+          external.nodeStageSecret shouldBe volumeInfo.options.nodeStageSecret
+          external.nodePublishSecret shouldBe volumeInfo.options.nodePublishSecret
+          external.volumeContext shouldBe volumeInfo.options.volumeContext
+      }
+    }
+
+    "preserve all values during round-trip conversion" in {
+      val roundTripConverted = volume.fromRaml.toRaml
+      roundTripConverted shouldBe volume
+    }
+  }
+
+  "RAML generic external volume conversion" when {
     val volumeInfo = GenericExternalVolumeInfo(Some(1L), Some("vol-name"), Some("provider"), Map("foo" -> "bla"), shared = true)
     val volume = AppExternalVolume(
       "/container",

@@ -4,6 +4,7 @@ package raml
 import mesosphere.marathon.state.{DiskType, Volume}
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.{Protos => Mesos}
+
 import scala.jdk.CollectionConverters._
 
 trait VolumeConversion extends ConstraintConversion with DefaultConversions {
@@ -101,13 +102,20 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       case ev: state.GenericExternalVolumeInfo =>
         raml.GenericExternalVolumeInfo(size = ev.size, name = Some(ev.name), provider = Some(ev.provider), options = ev.options, shared = ev.shared)
       case ev: state.CSIExternalVolumeInfo =>
-        val accessType = ev.accessType match {
+        val access = ev.accessType match {
           case state.CSIExternalVolumeInfo.BlockAccessType =>
-            raml.CSIAccess(mode = ???, `type` = "block", fsType = None, mountFlags = Nil)
+            raml.CSIAccess(mode = ev.accessMode.name, `type` = "block", fsType = None, mountFlags = Nil)
           case mount: state.CSIExternalVolumeInfo.MountAccessType =>
-            raml.CSIAccess(mode = ???, `type` = "mount", fsType = Some(mount.fsType), mountFlags = mount.mountFlags)
+            raml.CSIAccess(mode = ev.accessMode.name, `type` = "mount", fsType = Some(mount.fsType), mountFlags = mount.mountFlags)
         }
-        ???
+        val options = raml.CSIExternalVolumeInfoOptions(
+          pluginName = ev.pluginName,
+          access = access,
+          nodeStageSecret = ev.nodeStageSecret,
+          nodePublishSecret = ev.nodePublishSecret,
+          volumeContext = ev.volumeContext
+        )
+        raml.CSIExternalVolumeInfo(name = ev.name, provider = ev.provider, options = options)
     }
 
     val volume = volumeWithMount.volume
@@ -145,7 +153,23 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
           shared = external.shared
         )
       case csi: raml.CSIExternalVolumeInfo =>
-        ???
+        val accessType = csi.options.access.`type` match {
+          case "block" =>
+            state.CSIExternalVolumeInfo.BlockAccessType
+          case "mount" =>
+            state.CSIExternalVolumeInfo.MountAccessType(
+              fsType = csi.options.access.fsType.getOrElse(throw new IllegalStateException("fsType must be specified with mount access type CSI volumes. This is a bug. Validation should have prevented this")),
+              mountFlags = csi.options.access.mountFlags)
+        }
+        state.CSIExternalVolumeInfo(
+          name = csi.name,
+          pluginName = csi.options.pluginName,
+          accessType = accessType,
+          accessMode = state.CSIExternalVolumeInfo.AccessMode.fromString(csi.options.access.mode).getOrElse(throw new IllegalStateException("CSI options.access.mode is invalid. This is a bug. Validation should have prevented this.")),
+          nodeStageSecret = csi.options.nodeStageSecret,
+          nodePublishSecret = csi.options.nodePublishSecret,
+          volumeContext = csi.options.volumeContext
+        )
     }
     val volume = state.ExternalVolume(name = None, external = info)
     val mount = state.VolumeMount(volumeName = None, mountPath = volumeRaml.containerPath, readOnly = volumeRaml.mode.fromRaml)
