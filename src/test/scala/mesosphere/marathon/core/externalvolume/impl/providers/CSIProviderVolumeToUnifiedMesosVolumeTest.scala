@@ -27,6 +27,9 @@ class CSIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
     val csiProto = vol.getSource.getCsiVolume
     csiProto.getPluginName shouldBe volInfo.pluginName
     csiProto.getStaticProvisioning.getVolumeId shouldBe volInfo.name
+
+    csiProto.getStaticProvisioning.getReadonly shouldBe true withClue("readonly-ness should be set by Volume mount mode")
+
     val capability = csiProto.getStaticProvisioning.getVolumeCapability
     capability.getAccessMode.getMode shouldBe MesosCSIVolume.VolumeCapability.AccessMode.Mode.SINGLE_NODE_WRITER
 
