@@ -5,9 +5,11 @@ import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork, HostNetwork, Network}
 import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state._
+
 import scala.jdk.CollectionConverters._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos
+import org.apache.mesos.Protos.Volume.Source.{CSIVolume => MesosCSIVolume}
 
 object ContainerSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container = {
@@ -149,7 +151,7 @@ object VolumeSerializer {
       case e: ExternalVolume =>
         e.external match {
           case generic: GenericExternalVolumeInfo =>
-            volumeBuilder.setExternal(ExternalVolumeInfoSerializer.toProto(generic))
+            volumeBuilder.setExternal(ExternalVolumeInfoSerializer.toGenericProto(generic))
           case csi: CSIExternalVolumeInfo =>
             volumeBuilder.setCsiExternal(ExternalVolumeInfoSerializer.toProtoCSI(csi))
         }
@@ -202,11 +204,46 @@ object PersistentVolumeInfoSerializer {
 }
 
 object ExternalVolumeInfoSerializer {
-  def toProtoCSI(info: CSIExternalVolumeInfo): mesos.Protos.Volume.Source.CSIVolume = {
-    ???
+  def csiAccessModeToProto(accessMode: CSIExternalVolumeInfo.AccessMode): MesosCSIVolume.VolumeCapability.AccessMode = {
+    import CSIExternalVolumeInfo.{AccessMode => StateAccessMode}
+    import MesosCSIVolume.VolumeCapability.AccessMode.{Mode => MesosAccessMode}
+    val mode = accessMode match {
+      case StateAccessMode.UNKNOWN => MesosAccessMode.UNKNOWN
+      case StateAccessMode.SINGLE_NODE_WRITER => MesosAccessMode.SINGLE_NODE_WRITER
+      case StateAccessMode.SINGLE_NODE_READER_ONLY => MesosAccessMode.SINGLE_NODE_READER_ONLY
+      case StateAccessMode.MULTI_NODE_READER_ONLY => MesosAccessMode.MULTI_NODE_READER_ONLY
+      case StateAccessMode.MULTI_NODE_SINGLE_WRITER => MesosAccessMode.MULTI_NODE_SINGLE_WRITER
+      case StateAccessMode.MULTI_NODE_MULTI_WRITER => MesosAccessMode.MULTI_NODE_MULTI_WRITER
+    }
+    MesosCSIVolume.VolumeCapability.AccessMode.newBuilder().setMode(mode).build
   }
 
-  def toProto(info: GenericExternalVolumeInfo): Protos.Volume.ExternalVolumeInfo = {
+  def toProtoVolumeCapability(info: CSIExternalVolumeInfo): MesosCSIVolume.VolumeCapability = {
+    val vc = MesosCSIVolume.VolumeCapability.newBuilder()
+      .setAccessMode(csiAccessModeToProto(info.accessMode))
+
+    info.accessType match {
+      case CSIExternalVolumeInfo.BlockAccessType =>
+        vc.setBlock(MesosCSIVolume.VolumeCapability.BlockVolume.newBuilder().build)
+      case CSIExternalVolumeInfo.MountAccessType(fsType, flags) =>
+
+        val mountProto = MesosCSIVolume.VolumeCapability.MountVolume.newBuilder()
+          .setFsType(fsType)
+          .addAllMountFlags(flags.asJava)
+        vc.setMount(mountProto)
+    }
+    vc.build()
+  }
+
+  def toProtoCSI(info: CSIExternalVolumeInfo): Protos.Volume.CSIVolumeInfo = {
+    Protos.Volume.CSIVolumeInfo.newBuilder()
+      .setName(info.name)
+      .setPluginName(info.pluginName)
+      .setVolumeCapability(toProtoVolumeCapability(info))
+      .build
+  }
+
+  def toGenericProto(info: GenericExternalVolumeInfo): Protos.Volume.ExternalVolumeInfo = {
     val builder = Protos.Volume.ExternalVolumeInfo
       .newBuilder()
       .setName(info.name)

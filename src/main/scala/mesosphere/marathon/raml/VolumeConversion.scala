@@ -101,6 +101,12 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
       case ev: state.GenericExternalVolumeInfo =>
         raml.GenericExternalVolumeInfo(size = ev.size, name = Some(ev.name), provider = Some(ev.provider), options = ev.options, shared = ev.shared)
       case ev: state.CSIExternalVolumeInfo =>
+        val accessType = ev.accessType match {
+          case state.CSIExternalVolumeInfo.BlockAccessType =>
+            raml.CSIAccess(mode = ???, `type` = "block", fsType = None, mountFlags = Nil)
+          case mount: state.CSIExternalVolumeInfo.MountAccessType =>
+            raml.CSIAccess(mode = ???, `type` = "mount", fsType = Some(mount.fsType), mountFlags = mount.mountFlags)
+        }
         ???
     }
 

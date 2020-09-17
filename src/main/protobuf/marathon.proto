@@ -347,6 +347,12 @@ message Volume {
     optional bool shared = 5 [default = false];
   }
 
+  message CSIVolumeInfo {
+    required string name = 1;
+    required string plugin_name = 2;
+    required mesos.Volume.Source.CSIVolume.VolumeCapability volume_capability = 3;
+  }
+
   // Defining properties of secret volumes
   message SecretVolumeInfo {
     required string secret = 1;
@@ -377,7 +383,7 @@ message Volume {
   // Defines an External Volume; implies no hostPath or persistent.
   optional ExternalVolumeInfo external = 6;
 
-  optional mesos.Volume.Source.CSIVolume csiExternal = 8;
+  optional CSIVolumeInfo csiExternal = 8;
 
   // Defines a SecretVolume; implies no hostPath, persistent or external.
   optional SecretVolumeInfo secret = 7;
