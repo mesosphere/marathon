@@ -183,18 +183,22 @@ sealed trait DiskType {
 }
 
 object DiskType {
+
   case object Root extends DiskType {
     override def toString: String = "root"
+
     def toMesos: Option[Source.Type] = None
   }
 
   case object Path extends DiskType {
     override def toString: String = "path"
+
     def toMesos: Option[Source.Type] = Some(Source.Type.PATH)
   }
 
   case object Mount extends DiskType {
     override def toString: String = "mount"
+
     def toMesos: Option[Source.Type] = Some(Source.Type.MOUNT)
   }
 
@@ -228,7 +232,9 @@ object PersistentVolumeInfo {
     )
 
   private val complyWithVolumeConstraintRules: Validator[Constraint] = new Validator[Constraint] {
+
     import Constraint.Operator._
+
     override def apply(c: Constraint): Result = {
       if (!c.hasField || !c.hasOperator) {
         Failure(Set(RuleViolation(c, "Missing field and operator")))
@@ -291,6 +297,7 @@ object PersistentVolumeInfo {
 case class PersistentVolume(name: Option[String], persistent: PersistentVolumeInfo) extends Volume
 
 object PersistentVolume {
+
   import PathPatterns._
 
   implicit val validPersistentVolume: Validator[PersistentVolume] = validator[PersistentVolume] { vol =>
@@ -313,6 +320,7 @@ object PathPatterns {
 
 sealed trait ExternalVolumeInfo {
   def name: String
+
   def provider: String
 }
 
@@ -327,20 +335,24 @@ object ExternalVolumeInfo {
   }
 }
 
-case class CSIExternalVolumeInfo(name: String,
-                                 pluginName: String,
-                                 accessType: AccessType,
-                                 accessMode: AccessMode,
-                                 nodeStageSecret: Map[String, String],
-                                 nodePublishSecret: Map[String, String],
-                                 volumeContext: Map[String, String]) extends ExternalVolumeInfo {
+case class CSIExternalVolumeInfo(
+    name: String,
+    pluginName: String,
+    accessType: AccessType,
+    accessMode: AccessMode,
+    nodeStageSecret: Map[String, String],
+    nodePublishSecret: Map[String, String],
+    volumeContext: Map[String, String]
+) extends ExternalVolumeInfo {
   val provider = "csi"
 }
 
 object CSIExternalVolumeInfo {
+
   sealed trait AccessType
 
   case object BlockAccessType extends AccessType
+
   case class MountAccessType(fsType: String, mountFlags: Seq[String]) extends AccessType
 
   sealed trait AccessMode {
@@ -348,17 +360,21 @@ object CSIExternalVolumeInfo {
     val shareable: Boolean
     val readOnly: Boolean
   }
+
   object AccessMode {
+
     case object UNKNOWN extends AccessMode {
       override val name = "UNKNOWN"
       override val shareable = false
       override val readOnly = true
     }
+
     case object SINGLE_NODE_WRITER extends AccessMode {
       override val name = "SINGLE_NODE_WRITER"
       override val shareable = false
       override val readOnly = false
     }
+
     case object SINGLE_NODE_READER_ONLY extends AccessMode {
       override val name = "SINGLE_NODE_READER_ONLY"
       override val shareable = false
@@ -383,8 +399,8 @@ object CSIExternalVolumeInfo {
       override val readOnly = false
     }
 
-    val all = Seq(
-      UNKNOWN, SINGLE_NODE_WRITER, SINGLE_NODE_READER_ONLY, MULTI_NODE_READER_ONLY, MULTI_NODE_SINGLE_WRITER, MULTI_NODE_MULTI_WRITER)
+    val all =
+      Seq(UNKNOWN, SINGLE_NODE_WRITER, SINGLE_NODE_READER_ONLY, MULTI_NODE_READER_ONLY, MULTI_NODE_SINGLE_WRITER, MULTI_NODE_MULTI_WRITER)
 
     def fromString(mode: String): Option[AccessMode] = all.find(_.name == mode)
   }
@@ -397,8 +413,10 @@ object CSIExternalVolumeInfo {
       accessMode = ExternalVolumeInfoSerializer.csiProtoToAccessMode(evi.getVolumeCapability.getAccessMode),
       nodeStageSecret = evi.getNodeStageSecretsMap.asScala.toMap,
       nodePublishSecret = evi.getNodePublishSecretsMap.asScala.toMap,
-      volumeContext = evi.getVolumeContextMap.asScala.toMap)
+      volumeContext = evi.getVolumeContextMap.asScala.toMap
+    )
 }
+
 /**
   * GenericExternalVolumeInfo captures the specification for a volume that survives task restarts.
   *
@@ -408,11 +426,11 @@ object CSIExternalVolumeInfo {
   * than 31 characters. YMMV. Although `name` is optional, some storage providers may require it.
   *
   * `name` uniqueness:
-  *  <li> A volume name MUST be unique within the scope of a volume provider.
-  *  <li> A fully-qualified volume name is expected to be unique across the cluster and may formed, for example,
-  *       by concatenating the volume provider name with the volume name. E.g “dvdi.volume123”
-  *  <li> As there are multiple providers that allow shared access to the same volume, there is
-  *       a parameter `shared` that excludes that volume from the uniqueness check.
+  * <li> A volume name MUST be unique within the scope of a volume provider.
+  * <li> A fully-qualified volume name is expected to be unique across the cluster and may formed, for example,
+  * by concatenating the volume provider name with the volume name. E.g “dvdi.volume123”
+  * <li> As there are multiple providers that allow shared access to the same volume, there is
+  * a parameter `shared` that excludes that volume from the uniqueness check.
   *
   * `provider` is optional; if specified it indicates which storage provider will implement volume
   * lifecycle management operations for the external volume. if unspecified, “agent” is assumed.
@@ -426,11 +444,11 @@ object CSIExternalVolumeInfo {
   * future DCOS-specific options will be prefixed with “dcos/”. an example of a DCOS option might be
   * “dcos/label”, a user-assigned, human-friendly label that appears in a UI.
   *
-  * @param size absolute size of the volume (MB)
-  * @param name identifies the volume within the context of the storage provider.
+  * @param size     absolute size of the volume (MB)
+  * @param name     identifies the volume within the context of the storage provider.
   * @param provider identifies the storage provider responsible for volume lifecycle operations.
-  * @param options contains storage provider-specific configuration configuration
-  * @param shared if true, this volume is excluded from the uniqueness check
+  * @param options  contains storage provider-specific configuration configuration
+  * @param shared   if true, this volume is excluded from the uniqueness check
   */
 case class GenericExternalVolumeInfo(
     size: Option[Long] = None,
@@ -449,6 +467,7 @@ object OptionLabelPatterns {
 }
 
 object GenericExternalVolumeInfo {
+
   import OptionLabelPatterns._
 
   implicit val validOptions = validator[Map[String, String]] { option =>

@@ -14,6 +14,7 @@ import mesosphere.marathon.state.{AppDefinition, PathId, ResourceRole}
 import scala.util.Try
 
 trait AppValidation {
+
   import ArtifactValidation._
   import EnvVarValidation._
   import NetworkValidation._
@@ -104,6 +105,7 @@ trait AppValidation {
         container.docker is optional(oldMesosDockerContainerAPI)
       }
     }
+
     override def apply(container: Container): Result = {
       (container.docker, container.`type`) match {
         case (Some(_), EngineType.Docker) => validate(container)(forDockerContainerizer)
@@ -152,7 +154,9 @@ trait AppValidation {
 
   def validVolume(container: Container, enabledFeatures: Set[String], secrets: Map[String, SecretDef]): Validator[AppVolume] =
     new Validator[AppVolume] {
+
       import state.PathPatterns._
+
       val validHostVolume = validator[AppHostVolume] { v =>
         v.containerPath is notEmpty
         v.hostPath is notEmpty
@@ -235,13 +239,16 @@ trait AppValidation {
             v.containerPath is notEmpty
             v.external is validExternalVolume
           },
-          { v: AppExternalVolume => ExternalVolumeRamlHelpers.getProvider(v.external).nonEmpty } -> ExternalVolumes.validRamlVolume(container),
+          { v: AppExternalVolume => ExternalVolumeRamlHelpers.getProvider(v.external).nonEmpty } -> ExternalVolumes.validRamlVolume(
+            container
+          ),
           featureEnabled[AppVolume](enabledFeatures, Features.EXTERNAL_VOLUMES)
         )
       }
       val validSecretVolume: Validator[AppSecretVolume] = {
         isTrue("volume.secret must refer to an existing secret")(vol => secrets.contains(vol.secret))
       }
+
       override def apply(v: AppVolume): Result = {
         v match {
           case v: AppHostVolume => validate(v)(validHostVolume)
@@ -256,11 +263,14 @@ trait AppValidation {
   def readinessCheckValidator(app: App): Validator[ReadinessCheck] = {
     // we expect that the deprecated API has already been translated into canonical form
     def namesFromDefinitions = app.portDefinitions.fold(Set.empty[String])(_.iterator.flatMap(_.name).toSet)
+
     def portNames = app.container.flatMap(_.portMappings).fold(namesFromDefinitions) { l => l.iterator.flatMap(_.name).toSet }
+
     def portNameExists =
       isTrue[String] { name: String => s"No port definition reference for portName $name" } { name =>
         portNames.contains(name)
       }
+
     validator[ReadinessCheck] { rc =>
       rc.portName is portNameExists
       rc.timeoutSeconds should be < rc.intervalSeconds
@@ -293,10 +303,12 @@ trait AppValidation {
     },
     isTrue("cannot specify both an IP address and port") { app =>
       def appWithoutPorts = !(app.ports.exists(_.nonEmpty) || app.portDefinitions.exists(_.nonEmpty))
+
       app.ipAddress.isEmpty || appWithoutPorts
     },
     isTrue("cannot specify both ports and port definitions") { app =>
       def portDefinitionsIsEquivalentToPorts = app.portDefinitions.map(_.map(_.port)) == app.ports
+
       app.ports.isEmpty || app.portDefinitions.isEmpty || portDefinitionsIsEquivalentToPorts
     }
   )
@@ -331,6 +343,7 @@ trait AppValidation {
             case x: Some[Any] => x == update.version || x == update.id // linter:ignore UnlikelyEquality
             case _ => true
           }
+
         update.version.isEmpty || onlyVersionOrIdSet
       }
     )
@@ -481,7 +494,9 @@ trait AppValidation {
           case AppHealthCheckProtocol.MesosHttp | AppHealthCheckProtocol.MesosHttps | AppHealthCheckProtocol.MesosTcp => true
           case _ => false
         }
+
       def isDockerContainer = container.exists(c => c.`type` == EngineType.Docker)
+
       val hasDefaultIpProtocol = healthCheck.ipProtocol == IpProtocol.Ipv4
 
       hasDefaultIpProtocol || (isMesosHttpHealthCheck && isDockerContainer)

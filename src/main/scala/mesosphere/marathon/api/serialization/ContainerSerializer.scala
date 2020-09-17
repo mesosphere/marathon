@@ -156,7 +156,6 @@ object VolumeSerializer {
             volumeBuilder.setCsiExternal(ExternalVolumeInfoSerializer.toProtoCSI(csi))
         }
 
-
       case d: HostVolume =>
         volumeBuilder.setHostPath(d.hostPath)
 
@@ -205,10 +204,15 @@ object PersistentVolumeInfoSerializer {
 
 object ExternalVolumeInfoSerializer {
   def csiAccessModeToProto(accessMode: CSIExternalVolumeInfo.AccessMode): MesosCSIVolume.VolumeCapability.AccessMode = {
-    val mode = MesosCSIVolume.VolumeCapability.AccessMode.Mode.values().find { _.name() == accessMode.name }.getOrElse {
-      // Bug. We should not get here.
-      throw new IllegalStateException(s"There is no corresponding Mesos CSI Access mode for ${accessMode.name}")
-    }
+    val mode = MesosCSIVolume.VolumeCapability.AccessMode.Mode
+      .values()
+      .find {
+        _.name() == accessMode.name
+      }
+      .getOrElse {
+        // Bug. We should not get here.
+        throw new IllegalStateException(s"There is no corresponding Mesos CSI Access mode for ${accessMode.name}")
+      }
     MesosCSIVolume.VolumeCapability.AccessMode.newBuilder().setMode(mode).build
   }
 
@@ -223,15 +227,16 @@ object ExternalVolumeInfoSerializer {
   }
 
   def toProtoVolumeCapability(info: CSIExternalVolumeInfo): MesosCSIVolume.VolumeCapability = {
-    val vc = MesosCSIVolume.VolumeCapability.newBuilder()
+    val vc = MesosCSIVolume.VolumeCapability
+      .newBuilder()
       .setAccessMode(csiAccessModeToProto(info.accessMode))
 
     info.accessType match {
       case CSIExternalVolumeInfo.BlockAccessType =>
         vc.setBlock(MesosCSIVolume.VolumeCapability.BlockVolume.newBuilder().build)
       case CSIExternalVolumeInfo.MountAccessType(fsType, flags) =>
-
-        val mountProto = MesosCSIVolume.VolumeCapability.MountVolume.newBuilder()
+        val mountProto = MesosCSIVolume.VolumeCapability.MountVolume
+          .newBuilder()
           .setFsType(fsType)
           .addAllMountFlags(flags.asJava)
         vc.setMount(mountProto)
@@ -241,16 +246,15 @@ object ExternalVolumeInfoSerializer {
 
   def fromProtoVolumeCapabilityToAccessType(proto: MesosCSIVolume.VolumeCapability): CSIExternalVolumeInfo.AccessType = {
     if (proto.hasMount) {
-      CSIExternalVolumeInfo.MountAccessType(
-        proto.getMount.getFsType,
-        proto.getMount.getMountFlagsList.asScala.toSeq)
+      CSIExternalVolumeInfo.MountAccessType(proto.getMount.getFsType, proto.getMount.getMountFlagsList.asScala.toSeq)
     } else {
       CSIExternalVolumeInfo.BlockAccessType
     }
   }
 
   def toProtoCSI(info: CSIExternalVolumeInfo): Protos.Volume.CSIVolumeInfo = {
-    Protos.Volume.CSIVolumeInfo.newBuilder()
+    Protos.Volume.CSIVolumeInfo
+      .newBuilder()
       .setName(info.name)
       .setPluginName(info.pluginName)
       .setVolumeCapability(toProtoVolumeCapability(info))
@@ -259,7 +263,6 @@ object ExternalVolumeInfoSerializer {
       .putAllVolumeContext(info.volumeContext.asJava)
       .build
   }
-
 
   def toGenericProto(info: GenericExternalVolumeInfo): Protos.Volume.ExternalVolumeInfo = {
     val builder = Protos.Volume.ExternalVolumeInfo
@@ -365,11 +368,11 @@ object PortMappingSerializer {
   /**
     * Build the representation of the PortMapping as a Port proto.
     *
-    * @param name The Port Mapping name
-    * @param labels The labels to be attached to the Port proto
-    * @param protocol The labels to be attached to the Port proto
+   * @param name          The Port Mapping name
+    * @param labels        The labels to be attached to the Port proto
+    * @param protocol      The labels to be attached to the Port proto
     * @param effectivePort the effective Mesos Agent port allocated for
-    *                          this port mapping.
+    *                      this port mapping.
     * @return the representation of provided input to be included in the task's DiscoveryInfo
     */
   def toMesosPort(name: Option[String], labels: Map[String, String], protocol: String, effectivePort: Int): mesos.Protos.Port = {

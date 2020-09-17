@@ -9,6 +9,7 @@ object ExternalVolumeRamlHelpers {
       case generic: GenericExternalVolumeInfo => generic.name
     }
   }
+
   def getProvider(externalVolume: ExternalVolumeInfo): Option[String] =
     externalVolume match {
       case csi: CSIExternalVolumeInfo => Some(csi.provider)

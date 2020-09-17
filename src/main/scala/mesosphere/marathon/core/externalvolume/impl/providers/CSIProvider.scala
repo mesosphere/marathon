@@ -16,6 +16,7 @@ private[externalvolume] case object CSIProvider extends ExternalVolumeProvider {
   override val name: String = "csi"
 
   override def validations: ExternalVolumeValidations = CSIProviderValidations
+
   import MesosVolume.Source.CSIVolume
 
   object Builders {
@@ -24,8 +25,8 @@ private[externalvolume] case object CSIProvider extends ExternalVolumeProvider {
         case _: GenericExternalVolumeInfo =>
           throw new IllegalStateException("Bug: DVDIProviderValidations should be used for GenericExternalVolumeInfo")
         case info: CSIExternalVolumeInfo =>
-
-          val staticProvisioning = CSIVolume.StaticProvisioning.newBuilder()
+          val staticProvisioning = CSIVolume.StaticProvisioning
+            .newBuilder()
             .setVolumeId(info.name)
             .setReadonly(info.accessMode.readOnly)
             .setVolumeCapability(ExternalVolumeInfoSerializer.toProtoVolumeCapability(info))
@@ -34,8 +35,8 @@ private[externalvolume] case object CSIProvider extends ExternalVolumeProvider {
             .putAllVolumeContext(info.volumeContext.asJava)
 
           val volBuilder = CSIVolume.newBuilder
-              .setPluginName(info.pluginName)
-              .setStaticProvisioning(staticProvisioning)
+            .setPluginName(info.pluginName)
+            .setStaticProvisioning(staticProvisioning)
 
           // TODO validate that Volume.readOnly is unset for RAML (we may need to make this optional for internal model)
           val mode = VolumeMount.readOnlyToProto(mount.readOnly)
