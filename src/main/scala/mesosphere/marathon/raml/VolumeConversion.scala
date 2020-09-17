@@ -108,15 +108,15 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
           shared = ev.shared
         )
       case ev: state.CSIExternalVolumeInfo =>
-        val access = ev.accessType match {
+        val capability = ev.accessType match {
           case state.CSIExternalVolumeInfo.BlockAccessType =>
-            raml.CSIAccess(mode = ev.accessMode.name, `type` = "block", fsType = None, mountFlags = Nil)
+            raml.CSICapability(accessMode = ev.accessMode.name, accessType = "block", fsType = None, mountFlags = Nil)
           case mount: state.CSIExternalVolumeInfo.MountAccessType =>
-            raml.CSIAccess(mode = ev.accessMode.name, `type` = "mount", fsType = Some(mount.fsType), mountFlags = mount.mountFlags)
+            raml.CSICapability(accessMode = ev.accessMode.name, accessType = "mount", fsType = Some(mount.fsType), mountFlags = mount.mountFlags)
         }
         val options = raml.CSIExternalVolumeInfoOptions(
           pluginName = ev.pluginName,
-          access = access,
+          capability = capability,
           nodeStageSecret = ev.nodeStageSecret,
           nodePublishSecret = ev.nodePublishSecret,
           volumeContext = ev.volumeContext
@@ -159,17 +159,17 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
           shared = external.shared
         )
       case csi: raml.CSIExternalVolumeInfo =>
-        val accessType = csi.options.access.`type` match {
+        val accessType = csi.options.capability.accessType match {
           case "block" =>
             state.CSIExternalVolumeInfo.BlockAccessType
           case "mount" =>
             state.CSIExternalVolumeInfo.MountAccessType(
-              fsType = csi.options.access.fsType.getOrElse(
+              fsType = csi.options.capability.fsType.getOrElse(
                 throw new IllegalStateException(
                   "fsType must be specified with mount access type CSI volumes. This is a bug. Validation should have prevented this"
                 )
               ),
-              mountFlags = csi.options.access.mountFlags
+              mountFlags = csi.options.capability.mountFlags
             )
         }
         state.CSIExternalVolumeInfo(
@@ -177,7 +177,7 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
           pluginName = csi.options.pluginName,
           accessType = accessType,
           accessMode = state.CSIExternalVolumeInfo.AccessMode
-            .fromString(csi.options.access.mode)
+            .fromString(csi.options.capability.accessMode)
             .getOrElse(
               throw new IllegalStateException("CSI options.access.mode is invalid. This is a bug. Validation should have prevented this.")
             ),

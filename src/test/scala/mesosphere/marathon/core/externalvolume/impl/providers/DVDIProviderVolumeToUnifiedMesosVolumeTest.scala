@@ -18,10 +18,7 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
     TestParameters(
       ExternalVolume(None, GenericExternalVolumeInfo(None, "foo", "dvdi", Map("dvdi/driver" -> "bar"))),
       VolumeMount(None, mountPath, readOnly),
-      newVolume(
-        containerPath = "/path",
-        mode = Volume.Mode.RO,
-        source = newVolumeSource.docker(driver = "bar", name = "foo"))
+      newVolume(containerPath = "/path", mode = Volume.Mode.RO, source = newVolumeSource.docker(driver = "bar", name = "foo"))
     ),
     TestParameters(
       ExternalVolume(None, GenericExternalVolumeInfo(Some(1L), "foo", "dvdi", Map("dvdi/driver" -> "bar"))),
@@ -29,10 +26,8 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
       newVolume(
         containerPath = "/path",
         mode = Volume.Mode.RO,
-        source = newVolumeSource.docker(
-          driver = "bar",
-          name = "foo",
-          options = Map("size" -> "1")))
+        source = newVolumeSource.docker(driver = "bar", name = "foo", options = Map("size" -> "1"))
+      )
     ),
     TestParameters(
       ExternalVolume(None, GenericExternalVolumeInfo(Some(1L), "foo", "dvdi", Map("dvdi/driver" -> "bar", "dvdi/size" -> "2"))),
@@ -40,10 +35,8 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
       newVolume(
         containerPath = "/path",
         mode = Volume.Mode.RO,
-        source = newVolumeSource.docker(
-          driver = "bar",
-          name = "foo",
-          options = Map("size" -> "1")))
+        source = newVolumeSource.docker(driver = "bar", name = "foo", options = Map("size" -> "1"))
+      )
     ),
     TestParameters(
       ExternalVolume(
@@ -62,10 +55,8 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
       newVolume(
         containerPath = "/path",
         mode = Volume.Mode.RO,
-        source = newVolumeSource.docker(
-          driver = "bar",
-          name = "foo",
-          options = Map("size" -> "abc")))
+        source = newVolumeSource.docker(driver = "bar", name = "foo", options = Map("size" -> "abc"))
+      )
     ) // TestParameters
   )
 

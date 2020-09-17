@@ -8,11 +8,9 @@ object MesosProtoBuilders {
   def newAgentId(agentId: String): SlaveID =
     SlaveID.newBuilder().setValue(agentId).build
 
-  def newVolume(
-                 mode: Volume.Mode,
-                 containerPath: String,
-                 source: Volume.Source) = {
-    Volume.newBuilder()
+  def newVolume(mode: Volume.Mode, containerPath: String, source: Volume.Source) = {
+    Volume
+      .newBuilder()
       .setMode(mode)
       .setContainerPath(containerPath)
       .setSource(source)
@@ -20,10 +18,7 @@ object MesosProtoBuilders {
   }
 
   object newVolumeSource {
-    def docker(
-        driver: String = "",
-        name: String = "",
-        options: Map[String, String] = Map.empty): Volume.Source = {
+    def docker(driver: String = "", name: String = "", options: Map[String, String] = Map.empty): Volume.Source = {
 
       val b = Volume.Source.newBuilder
         .setType(Volume.Source.Type.DOCKER_VOLUME)

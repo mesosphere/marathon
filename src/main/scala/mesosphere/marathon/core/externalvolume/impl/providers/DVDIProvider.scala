@@ -4,7 +4,6 @@ package core.externalvolume.impl.providers
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.validation.SchedulingValidation
-import mesosphere.marathon.core.externalvolume.ExternalVolumeRamlHelpers
 import mesosphere.marathon.core.externalvolume.impl.providers.OptionSupport._
 import mesosphere.marathon.core.externalvolume.impl.{ExternalVolumeProvider, ExternalVolumeValidations}
 import mesosphere.marathon.raml.{App, AppExternalVolume, EngineType, ReadMode, Container => AppContainer}
@@ -12,7 +11,6 @@ import mesosphere.marathon.state._
 
 import scala.jdk.CollectionConverters._
 import org.apache.mesos.Protos.{Parameter, Parameters, Volume => MesosVolume}
-import org.apache.zookeeper.KeeperException.BadArgumentsException
 
 /**
   * DVDIProvider (Docker Volume Driver Interface provider) handles external volumes allocated
@@ -63,7 +61,7 @@ private[externalvolume] case object DVDIProvider extends ExternalVolumeProvider 
 
     def toUnifiedContainerVolume(volume: ExternalVolume, mount: VolumeMount): MesosVolume = {
       volume.external match {
-        case info: CSIExternalVolumeInfo =>
+        case _: CSIExternalVolumeInfo =>
           throw new IllegalStateException("Bug: CSIProvider should be used for CSIExternalVolumeInfo")
         case info: GenericExternalVolumeInfo =>
           val driverName = info.options(driverOption)
@@ -115,7 +113,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
     case object haveUniqueExternalVolumeNames extends Validator[App] {
       override def apply(app: App): Result = {
-        val conflicts = volumeNameCounts(app).filter { case (volumeName, number) => number > 1 }.keys
+        val conflicts = volumeNameCounts(app).filter { case (_, number) => number > 1 }.keys
         group(
           conflicts.toSet[String].map { e =>
             RuleViolation(app.id, s"Requested DVDI volume '$e' is declared more than once within app ${app.id}")
@@ -224,9 +222,10 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
         external.size is isTrue("must be undefined for Docker containers")(_.isEmpty)
       }
 
-      val validCSIExternalVolumeInfo = validator[CSIExternalVolumeInfo] { external => }
       val validExternalVolumeInfo: Validator[ExternalVolumeInfo] = {
         case volume: GenericExternalVolumeInfo => validGenericExternalVolumeInfo(volume)
+        case _: CSIExternalVolumeInfo =>
+          throw new IllegalStateException("Bug. DVDI validator used for CSI data structure. We should not get here.")
       }
 
       val validExternalVolume = validator[ExternalVolume] { volume =>
@@ -292,7 +291,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     }
 
     val validateExternalVolumeInfo: Validator[ExternalVolumeInfo] = {
-      case csi: CSIExternalVolumeInfo =>
+      case _: CSIExternalVolumeInfo =>
         ???
       case genericExternalVolumeInfo: GenericExternalVolumeInfo =>
         validateGenericExternalVolumeInfo(genericExternalVolumeInfo)
@@ -318,7 +317,8 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     }
     val dockerVolumeInfo: Validator[raml.ExternalVolumeInfo] = {
       case v: raml.GenericExternalVolumeInfo => dockerGenericVolumeInfo(v)
-      case v: raml.CSIExternalVolumeInfo => ???
+      case _: raml.CSIExternalVolumeInfo =>
+        throw new IllegalStateException("Bug. DVDI validator used for CSI data structure. We should not get here.")
     }
 
     val validDockerVolume = validator[AppExternalVolume] { volume =>
@@ -336,8 +336,8 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     val volumeInfo: Validator[raml.ExternalVolumeInfo] = {
       case v: raml.GenericExternalVolumeInfo =>
         genericVolumeInfo(v)
-      case v: raml.CSIExternalVolumeInfo =>
-        ???
+      case _: raml.CSIExternalVolumeInfo =>
+        throw new IllegalStateException("Bug. DVDIProvider volume logic applied for CSI data structure. We should not get here.")
     }
 
     forAll(

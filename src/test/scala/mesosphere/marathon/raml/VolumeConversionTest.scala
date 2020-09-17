@@ -80,21 +80,23 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks with 
       provider = "csi",
       options = CSIExternalVolumeInfoOptions(
         pluginName = "csi-plugin",
-        access = CSIAccess(mode = "MULTI_NODE_READER_ONLY", `type` = "block"),
+        capability = CSICapability(accessMode = "MULTI_NODE_READER_ONLY", accessType = "block"),
         nodeStageSecret = Map("key" -> "secret-stage-key"),
         nodePublishSecret = Map("key" -> "secret-publish-key"),
-        volumeContext = Map("a" -> "context")))
+        volumeContext = Map("a" -> "context")
+      )
+    )
 
     val volume = AppExternalVolume(
       "/container",
       volumeInfo,
-      ReadMode.Rw // TODO this should be optional
+      ReadMode.Ro
     )
 
     "convert a CSI block volume properly" in {
       inside(volume.fromRaml) {
         case VolumeWithMount(ExternalVolume(_, external: state.CSIExternalVolumeInfo), _) =>
-          external.name shouldBe(volumeInfo.name)
+          external.name shouldBe (volumeInfo.name)
           external.provider shouldBe "csi"
           external.pluginName shouldBe volumeInfo.options.pluginName
           external.accessType shouldBe state.CSIExternalVolumeInfo.BlockAccessType

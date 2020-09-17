@@ -27,7 +27,7 @@ private[externalvolume] case object CSIProvider extends ExternalVolumeProvider {
           val staticProvisioning = CSIVolume.StaticProvisioning
             .newBuilder()
             .setVolumeId(info.name)
-            .setReadonly(info.accessMode.readOnly)
+            .setReadonly(mount.readOnly)
             .setVolumeCapability(ExternalVolumeInfoSerializer.toProtoVolumeCapability(info))
             .putAllNodeStageSecrets(info.nodeStageSecret.view.mapValues(SecretSerializer.toSecretReference).toMap.asJava)
             .putAllNodePublishSecrets(info.nodePublishSecret.view.mapValues(SecretSerializer.toSecretReference).toMap.asJava)
@@ -61,7 +61,10 @@ object CSIProviderValidations extends ExternalVolumeValidations {
 
   override def app: Validator[AppDefinition] = { _ => Success }
 
-  override def volume: Validator[ExternalVolume] = { _ => Success }
+  override def volume: Validator[ExternalVolume] = { _ =>
+    // TODO - we need to validate that the volume mode agrees with the access mode
+    Success
+  }
 
   override def ramlVolume(container: AppContainer): Validator[AppExternalVolume] = { _ => Success }
 

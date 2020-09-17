@@ -7,10 +7,10 @@ uses:
   secrets: secrets.raml
 
 types:
-  CSIAccess:
+  CSICapability:
     type: object
     properties:
-      mode:
+      accessMode:
         type: string
         enum: [ SINGLE_NODE_WRITER , SINGLE_NODE_READER_ONLY , MULTI_NODE_READER_ONLY , MULTI_NODE_SINGLE_WRITER , MULTI_NODE_MULTI_WRITER ]
         description: |
@@ -19,7 +19,7 @@ types:
           * `MULTI_NODE_READER_ONLY`   - Can be published as readonly at multiple nodes simultaneously.
           * `MULTI_NODE_SINGLE_WRITER` - Can be published at multiple nodes simultaneously. Only one of the node can be used as read/write. The rest will be readonly.
           * `MULTI_NODE_MULTI_WRITER`  - Can be published as read/write at multiple nodes simultaneously.
-      type:
+      accessType:
         type: string
         enum: [ block, mount ]
         description: Indicates whether a block volume with no FS, or a mount volume is to be obtained. The optional fields fsType and mountFlags
@@ -43,8 +43,8 @@ types:
         type: string
         minLength: 1
         description: The name of the CSI plugin
-      access:
-        type: CSIAccess
+      capability:
+        type: CSICapability
       nodeStageSecret?:
         type: label.KVLabels
         description: |

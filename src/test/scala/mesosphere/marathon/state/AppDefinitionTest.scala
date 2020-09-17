@@ -185,11 +185,20 @@ class AppDefinitionTest extends UnitTest {
             image = "image",
             volumes = Seq(
               VolumeWithMount(
-                ExternalVolume(None, Builders.newCSIExternalVolumeInfo(
-                  nodeStageSecret = Map("state" -> "secret-ref"),
-                  nodePublishSecret = Map("state" -> "publish-ref"),
-                  volumeContext = Map("context" -> "a"))),
-                Builders.newVolumeMount(volumeName = None))))))
+                ExternalVolume(
+                  None,
+                  Builders.newCSIExternalVolumeInfo(
+                    nodeStageSecret = Map("state" -> "secret-ref"),
+                    nodePublishSecret = Map("state" -> "publish-ref"),
+                    volumeContext = Map("context" -> "a")
+                  )
+                ),
+                Builders.newVolumeMount(volumeName = None)
+              )
+            )
+          )
+        )
+      )
 
       val proto = app.toProto
       proto.getId should be("/app-with-csi-volumes")

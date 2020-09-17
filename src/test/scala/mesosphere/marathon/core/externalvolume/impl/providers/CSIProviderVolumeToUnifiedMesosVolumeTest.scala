@@ -17,7 +17,8 @@ class CSIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
       accessMode = CSIExternalVolumeInfo.AccessMode.SINGLE_NODE_WRITER,
       nodePublishSecret = Map("key" -> "publish-secret-key"),
       nodeStageSecret = Map("key" -> "stage-secret-key"),
-      volumeContext = Map("volume" -> "context"))
+      volumeContext = Map("volume" -> "context")
+    )
 
     val extVol = ExternalVolume(None, volInfo)
 
@@ -29,14 +30,13 @@ class CSIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
     val capability = csiProto.getStaticProvisioning.getVolumeCapability
     capability.getAccessMode.getMode shouldBe MesosCSIVolume.VolumeCapability.AccessMode.Mode.SINGLE_NODE_WRITER
 
-
     val stageSecrets = csiProto.getStaticProvisioning.getNodeStageSecretsMap.asScala.toMap
     stageSecrets.keySet shouldBe Set("key")
-    stageSecrets("key").getReference.getName shouldBe("stage-secret-key")
+    stageSecrets("key").getReference.getName shouldBe ("stage-secret-key")
 
     val publishSecrets = csiProto.getStaticProvisioning.getNodePublishSecretsMap.asScala.toMap
     publishSecrets.keySet shouldBe Set("key")
-    publishSecrets("key").getReference.getName shouldBe("publish-secret-key")
+    publishSecrets("key").getReference.getName shouldBe ("publish-secret-key")
 
     csiProto.getStaticProvisioning.getVolumeContextMap.asScala.toMap shouldBe volInfo.volumeContext
   }

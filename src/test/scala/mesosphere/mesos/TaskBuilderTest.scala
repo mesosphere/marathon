@@ -611,14 +611,20 @@ class TaskBuilderTest extends UnitTest {
             Docker(
               volumes = Seq(
                 VolumeWithMount(
-                  volume =
-                    ExternalVolume(None, GenericExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map("dvdi/driver" -> "bar"))),
+                  volume = ExternalVolume(
+                    None,
+                    GenericExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map("dvdi/driver" -> "bar"))
+                  ),
                   mount = VolumeMount(None, "/container/path")
                 ),
                 VolumeWithMount(
                   ExternalVolume(
                     None,
-                    GenericExternalVolumeInfo(name = "namedEdc", provider = "dvdi", options = Map("dvdi/driver" -> "ert", "dvdi/boo" -> "baa"))
+                    GenericExternalVolumeInfo(
+                      name = "namedEdc",
+                      provider = "dvdi",
+                      options = Map("dvdi/driver" -> "ert", "dvdi/boo" -> "baa")
+                    )
                   ),
                   mount = VolumeMount(None, "/container/path2", true)
                 )
@@ -684,8 +690,10 @@ class TaskBuilderTest extends UnitTest {
             Container.Mesos(
               volumes = Seq(
                 VolumeWithMount(
-                  volume =
-                    ExternalVolume(None, GenericExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map("dvdi/driver" -> "bar"))),
+                  volume = ExternalVolume(
+                    None,
+                    GenericExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map("dvdi/driver" -> "bar"))
+                  ),
                   mount = VolumeMount(None, "/container/path")
                 ),
                 VolumeWithMount(

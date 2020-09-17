@@ -212,12 +212,10 @@ object ExternalVolumeInfoSerializer {
   }
 
   def csiProtoToAccessMode(accessMode: MesosCSIVolume.VolumeCapability.AccessMode): CSIExternalVolumeInfo.AccessMode = {
-    import CSIExternalVolumeInfo.{AccessMode => StateAccessMode}
-    import MesosCSIVolume.VolumeCapability.AccessMode.{Mode => MesosAccessMode}
     val accessModeName = accessMode.getMode().name
     CSIExternalVolumeInfo.AccessMode.fromString(accessModeName).getOrElse {
       // Bug. We should not get here.
-      throw new IllegalStateException(s"There is no corresponding Marathon CSI access mode for: ${accessModeName}")
+      throw new IllegalStateException(s"Bug. There is no corresponding Marathon CSI access mode for: ${accessModeName}")
     }
   }
 
