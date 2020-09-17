@@ -5,6 +5,7 @@ import scala.jdk.CollectionConverters._
 import mesosphere.UnitTest
 import mesosphere.marathon.state.{CSIExternalVolumeInfo, ExternalVolume, VolumeMount}
 import org.apache.mesos.Protos.Volume.Source.{CSIVolume => MesosCSIVolume}
+import org.apache.mesos
 
 class CSIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
 
@@ -42,5 +43,6 @@ class CSIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
     publishSecrets("key").getReference.getName shouldBe ("publish-secret-key")
 
     csiProto.getStaticProvisioning.getVolumeContextMap.asScala.toMap shouldBe volInfo.volumeContext
+    vol.getSource.getType shouldBe mesos.Protos.Volume.Source.Type.CSI_VOLUME
   }
 }

@@ -44,7 +44,7 @@ private[externalvolume] case object CSIProvider extends ExternalVolumeProvider {
             .setMode(mode)
             .setSource(
               MesosVolume.Source.newBuilder
-                .setType(MesosVolume.Source.Type.DOCKER_VOLUME)
+                .setType(MesosVolume.Source.Type.CSI_VOLUME)
                 .setCsiVolume(volBuilder.build)
             )
             .build
