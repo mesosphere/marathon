@@ -35,7 +35,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       auth: TestAuthFixture = new TestAuthFixture,
       instanceTracker: InstanceTracker = mock[InstanceTracker],
       taskKiller: TaskKiller = mock[TaskKiller],
-      config: MarathonConf = AllConf.withTestConfig("--deprecated_features", "text_plain_tasks"),
+      config: MarathonConf = AllConf.withTestConfig(),
       groupManager: GroupManager = mock[GroupManager],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
       implicit val identity: Identity = mock[Identity]
@@ -53,83 +53,6 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
   }
 
   "TasksResource" should {
-    "list (txt) tasks with less ports than the current app version" in new Fixture {
-      // Regression test for #234
-      Given("one app with one task with less ports than required")
-      val app =
-        AppDefinition("/foo".toAbsolutePath, portDefinitions = Seq(PortDefinition(0), PortDefinition(0)), cmd = Some("sleep"), role = "*")
-
-      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
-
-      val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(Seq(instance))
-      instanceTracker.instancesBySpec returns Future.successful(tasksByApp)
-
-      val rootGroup = createRootGroup(apps = Map(app.id -> app))
-      groupManager.rootGroup() returns rootGroup
-
-      assert(app.servicePorts.size > instance.appTask.status.networkInfo.hostPorts.size)
-
-      When("Getting the txt tasks index")
-      val response = asyncRequest { r => taskResource.indexTxt(req = auth.request, asyncResponse = r) }
-
-      Then("The status should be 200")
-      response.getStatus shouldEqual 200
-    }
-
-    def parseTxtResponse(response: String): List[List[String]] =
-      response.trim.split("\n").iterator.map(_.split("\t").toList).toList
-
-    "list (txt) tasks with  mode outputs container network ips and ports" in new Fixture {
-      Given("a running instance of an app using container networks")
-      val app = AppDefinition(
-        "/foo".toAbsolutePath,
-        role = "*",
-        networks = Seq(ContainerNetwork("weave")),
-        container = Some(
-          Container.Docker(
-            image = "alpine",
-            portMappings = Seq(
-              PortMapping(name = Some("http"), containerPort = 22, hostPort = None, servicePort = 20163),
-              PortMapping(name = Some("https"), containerPort = 6090, hostPort = None, servicePort = 13032)
-            )
-          )
-        )
-      )
-
-      val instance = TestInstanceBuilder
-        .newBuilder(app.id)
-        .addTaskWithBuilder()
-        .taskRunning()
-        .withNetworkInfo(
-          NetworkInfo(
-            hostName = "hostname",
-            hostPorts = Nil,
-            ipAddresses = Seq(mesos.Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress("10.11.12.13").build())
-          )
-        )
-        .build()
-        .getInstance()
-
-      val tasksByApp = InstanceTracker.InstancesBySpec.forInstances(Seq(instance))
-      instanceTracker.instancesBySpec returns Future.successful(tasksByApp)
-
-      val rootGroup = createRootGroup(apps = Map(app.id -> app))
-      groupManager.rootGroup() returns rootGroup
-
-      When("Getting the txt tasks index and including containerNetworks")
-      val responseLatest = asyncRequest { r => taskResource.indexTxt(containerNetworks = "*", req = auth.request, asyncResponse = r) }
-
-      Then("The status should be 200")
-      responseLatest.getStatus shouldEqual 200
-
-      And("the output should return the container ports used in container networks")
-      inside(parseTxtResponse(responseLatest.getEntity.toString)) {
-        case line1 :: line2 :: Nil =>
-          line1 shouldBe List("foo", "20163", "10.11.12.13:22")
-          line2 shouldBe List("foo", "13032", "10.11.12.13:6090")
-      }
-    }
-
     "list apps when there are no apps" in new Fixture {
       // Regression test for #4932
       Given("no apps")
@@ -339,7 +262,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       killTasks.getStatus should be(auth.NotAuthenticatedStatus)
     }
 
-    "indexTxt and IndexJson without authentication aren't allowed" in new Fixture {
+    "indexJson without authentication isn't allowed" in new Fixture {
       Given("An unauthenticated request")
       auth.authenticated = false
       val req = auth.request
@@ -347,12 +270,6 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       When("the index as json is fetched")
       val running = asyncRequest { r => taskResource.indexJson("status", Collections.emptyList(), req, r) }
       Then("we receive a NotAuthenticated response")
-      running.getStatus should be(auth.NotAuthenticatedStatus)
-
-      When("one index as txt is fetched")
-      val cancel = asyncRequest { r => taskResource.indexTxt(req = auth.request, asyncResponse = r) }
-      Then("we receive a NotAuthenticated response")
-      cancel.getStatus should be(auth.NotAuthenticatedStatus)
     }
 
     "access without authorization is denied if the affected app exists" in new Fixture {

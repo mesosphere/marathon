@@ -33,9 +33,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
   val zkURLBase = s"zk://${zkserver.connectUrl}/marathon-$suiteName"
 
-  val marathonMinus3Artifact = MarathonArtifact(SemVer(1, 7, 216, Some("9e2a9b579")))
-  val marathonMinus2Artifact = MarathonArtifact(SemVer(1, 8, 222, Some("86475ddac")))
-  val marathonMinus1Artifact = MarathonArtifact(SemVer(1, 9, 124, Some("e04033c6f")))
+  val marathonMinus3Artifact = MarathonArtifact(SemVer(1, 8, 222, Some("86475ddac")))
+  val marathonMinus2Artifact = MarathonArtifact(SemVer(1, 9, 124, Some("e04033c6f")))
+  val marathonMinus1Artifact = MarathonArtifact(SemVer(1, 10, 26, Some("0513cddca")))
 
   //   Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val agentConfig = MesosAgentConfig(
@@ -120,6 +120,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       eventually { marathonMinus3 should have (runningTasksFor(AbsolutePathId(app_nm3_fail.id), 1)) }
 
       val originalAppNm3Tasks: List[ITEnrichedTask] = marathonMinus3.client.tasks(AbsolutePathId(app_nm3.id)).value
+      val originalAppnm3TaskIds = originalAppNm3Tasks.map(_.id)
       val originalAppNm3FailedTasks: List[ITEnrichedTask] = marathonMinus3.client.tasks(AbsolutePathId(app_nm3_fail.id)).value
 
       When(s"Marathon n-3 is shut down (${marathonMinus3Artifact.version})")
@@ -149,7 +150,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       val originalAppNm2FailedTasks: List[ITEnrichedTask] = marathonMinus2.client.tasks(AbsolutePathId(app_nm2_fail.id)).value
 
       And(s"All apps from n-2 are still running (${marathonMinus2Artifact.version})")
-      marathonMinus2.client.tasks(AbsolutePathId(app_nm3.id)).value should contain theSameElementsAs (originalAppNm3Tasks)
+      marathonMinus2.client.tasks(AbsolutePathId(app_nm3.id)).value.map(_.id) should contain theSameElementsAs (originalAppnm3TaskIds)
 
       When(s"Marathon n-2 is shut down (${marathonMinus2Artifact.version})")
       marathonMinus2.stop().futureValue
@@ -206,7 +207,6 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
       Then(s"All apps from n-3 and n-2 are still running (${marathonMinus3Artifact.version} and ${marathonMinus2Artifact.version})")
-      val originalAppnm3TaskIds = originalAppNm3Tasks.map(_.id)
       val originalAppnm2TaskIds = originalAppNm2Tasks.map(_.id)
       marathonCurrent.client.tasks(AbsolutePathId(app_nm3.id)).value.map(_.id) should contain theSameElementsAs (originalAppnm3TaskIds)
       marathonCurrent.client.tasks(AbsolutePathId(app_nm2.id)).value.map(_.id) should contain theSameElementsAs (originalAppnm2TaskIds)

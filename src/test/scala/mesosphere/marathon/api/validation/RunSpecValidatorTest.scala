@@ -19,7 +19,7 @@ import scala.reflect.ClassTag
 class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
   val config =
-    AppNormalization.Configuration(None, "mesos-bridge-name", Set(), "foo", true)
+    AppNormalization.Configuration(None, "mesos-bridge-name", Set(), "foo")
   private implicit lazy val validApp = AppValidation.validateCanonicalAppAPI(Set(), () => config.defaultNetworkName, Set("foo"))
   private implicit lazy val validAppDefinition =
     AppDefinition.validAppDefinition(Set(), ValidationHelper.roleSettings("foo"))(PluginManager.None)
@@ -556,7 +556,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
       val f = new Fixture
       val app = Json.parse(f.cassandraWithoutResidency).as[App]
-      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved, true)
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved)
       val result = validAppDefinition(
         Raml.fromRaml(AppNormalization(config).normalized(validateOrThrow(AppNormalization.forDeprecated(config).normalized(app))))
       )
@@ -568,7 +568,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       val f = new Fixture
       val base = Json.parse(f.cassandraWithoutResidency).as[App]
       val app = base.copy(upgradeStrategy = Some(raml.UpgradeStrategy(0, 0)))
-      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved, true)
+      val config = AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved)
       val result = validAppDefinition(
         Raml.fromRaml(AppNormalization(config).normalized(validateOrThrow(AppNormalization.forDeprecated(config).normalized(app))))
       )

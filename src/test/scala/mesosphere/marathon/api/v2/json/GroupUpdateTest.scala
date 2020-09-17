@@ -13,7 +13,7 @@ class GroupUpdateTest extends UnitTest {
   val appConversionFunc: (App => AppDefinition) = { app =>
     // assume canonical form and that the app is valid
     Raml.fromRaml(
-      AppNormalization.apply(AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved, true)).normalized(app)
+      AppNormalization.apply(AppNormalization.Configuration(None, "bridge-name", Set(), ResourceRole.Unreserved)).normalized(app)
     )
   }
 

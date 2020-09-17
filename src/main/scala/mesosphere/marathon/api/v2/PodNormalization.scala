@@ -27,18 +27,15 @@ object PodNormalization {
   /** dynamic pod normalization configuration, useful for migration and/or testing */
   trait Config extends NetworkNormalization.Config {
     def roleSettings: RoleSettings
-    def sanitizeAcceptedResourceRoles: Boolean
   }
 
-  case class Configuration(defaultNetworkName: Option[String], roleSettings: RoleSettings, sanitizeAcceptedResourceRoles: Boolean)
-      extends Config
+  case class Configuration(defaultNetworkName: Option[String], roleSettings: RoleSettings) extends Config
 
   object Configuration {
     def apply(config: MarathonConf, roleSettings: RoleSettings): Config =
       Configuration(
         config.defaultNetworkName.toOption,
-        roleSettings,
-        config.availableDeprecatedFeatures.isEnabled(DeprecatedFeatures.sanitizeAcceptedResourceRoles)
+        roleSettings
       )
   }
 
@@ -106,13 +103,7 @@ object PodNormalization {
     val normalized = if (hasPersistentVolumes) {
       Some(normalizeUpgradeAndUnreachableStrategy(pod))
     } else pod.scheduling
-
-    // sanitize accepted resource roles if enabled
-    if (config.sanitizeAcceptedResourceRoles) {
-      normalized.map { scheduling =>
-        scheduling.copy(placement = sanitizeAcceptedResourceRoles(scheduling.placement, effectiveRole))
-      }
-    } else normalized
+    normalized
   }
 
   def apply(config: Config): Normalization[Pod] =
