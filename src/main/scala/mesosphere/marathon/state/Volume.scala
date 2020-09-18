@@ -7,8 +7,12 @@ import java.util.regex.Pattern
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.Protos.Constraint
+import mesosphere.marathon.api.serialization.{ContainerSerializer, ExternalVolumeInfoSerializer}
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
+import mesosphere.marathon.state.CSIExternalVolumeInfo.{AccessMode, AccessType}
+import mesosphere.marathon.state.DVDIExternalVolumeInfo.{csiValidExternalVolume, dvdiValidExternalVolumeInfo}
+
 import scala.jdk.CollectionConverters._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos.Protos.Resource.DiskInfo.Source
@@ -24,7 +28,9 @@ object Volume {
     if (proto.hasPersistent)
       PersistentVolume(name = name, persistent = PersistentVolumeInfo.fromProto(proto.getPersistent))
     else if (proto.hasExternal)
-      ExternalVolume(name = name, external = ExternalVolumeInfo.fromProto(proto.getExternal))
+      ExternalVolume(name = name, external = DVDIExternalVolumeInfo.fromProto(proto.getExternal))
+    else if (proto.hasCsiExternal)
+      ExternalVolume(name = name, external = CSIExternalVolumeInfo.fromProto(proto.getCsiExternal))
     else if (proto.hasSecret)
       SecretVolume(name = name, secret = proto.getSecret.getSecret)
     else
@@ -305,8 +311,100 @@ object PathPatterns {
   lazy val DotPaths: Seq[String] = Seq(".", "..")
 }
 
+sealed trait ExternalVolumeInfo {
+  def name: String
+  def provider: String
+}
+
+object ExternalVolumeInfo {
+  implicit val validExternalVolumeInfo: Validator[ExternalVolumeInfo] = { volume =>
+    volume match {
+      case dvdi: DVDIExternalVolumeInfo =>
+        dvdiValidExternalVolumeInfo(dvdi)
+      case csi: CSIExternalVolumeInfo =>
+        csiValidExternalVolume(csi)
+    }
+  }
+}
+
+case class CSIExternalVolumeInfo(
+    name: String,
+    pluginName: String,
+    accessType: AccessType,
+    accessMode: AccessMode,
+    nodeStageSecret: Map[String, String],
+    nodePublishSecret: Map[String, String],
+    volumeContext: Map[String, String]
+) extends ExternalVolumeInfo {
+  val provider = "csi"
+}
+
+object CSIExternalVolumeInfo {
+  sealed trait AccessType
+
+  case object BlockAccessType extends AccessType
+  case class MountAccessType(fsType: String, mountFlags: Seq[String]) extends AccessType
+
+  sealed trait AccessMode {
+    val name: String
+    val shareable: Boolean
+    val readOnly: Boolean
+  }
+  object AccessMode {
+    case object UNKNOWN extends AccessMode {
+      override val name = "UNKNOWN"
+      override val shareable = false
+      override val readOnly = true
+    }
+    case object SINGLE_NODE_WRITER extends AccessMode {
+      override val name = "SINGLE_NODE_WRITER"
+      override val shareable = false
+      override val readOnly = false
+    }
+    case object SINGLE_NODE_READER_ONLY extends AccessMode {
+      override val name = "SINGLE_NODE_READER_ONLY"
+      override val shareable = false
+      override val readOnly = true
+    }
+
+    case object MULTI_NODE_READER_ONLY extends AccessMode {
+      override val name = "MULTI_NODE_READER_ONLY"
+      override val shareable = true
+      override val readOnly = true
+    }
+
+    case object MULTI_NODE_SINGLE_WRITER extends AccessMode {
+      override val name = "MULTI_NODE_SINGLE_WRITER"
+      override val shareable = false
+      override val readOnly = false
+    }
+
+    case object MULTI_NODE_MULTI_WRITER extends AccessMode {
+      override val name = "MULTI_NODE_MULTI_WRITER"
+      override val shareable = true
+      override val readOnly = false
+    }
+
+    val all =
+      Seq(UNKNOWN, SINGLE_NODE_WRITER, SINGLE_NODE_READER_ONLY, MULTI_NODE_READER_ONLY, MULTI_NODE_SINGLE_WRITER, MULTI_NODE_MULTI_WRITER)
+
+    def fromString(mode: String): Option[AccessMode] = all.find(_.name == mode)
+  }
+
+  def fromProto(evi: Protos.Volume.CSIVolumeInfo): ExternalVolumeInfo =
+    CSIExternalVolumeInfo(
+      name = evi.getName,
+      pluginName = evi.getPluginName,
+      accessType = ExternalVolumeInfoSerializer.fromProtoVolumeCapabilityToAccessType(evi.getVolumeCapability),
+      accessMode = ExternalVolumeInfoSerializer.csiProtoToAccessMode(evi.getVolumeCapability.getAccessMode),
+      nodeStageSecret = evi.getNodeStageSecretsMap.asScala.toMap,
+      nodePublishSecret = evi.getNodePublishSecretsMap.asScala.toMap,
+      volumeContext = evi.getVolumeContextMap.asScala.toMap
+    )
+}
+
 /**
-  * ExternalVolumeInfo captures the specification for a volume that survives task restarts.
+  * DVDIExternalVolumeInfo captures the specification for a volume that survives task restarts.
   *
   * `name` is the *unique name* of the storage volume. names should be treated as case insensitive labels
   * derived from an alpha-numeric character range [a-z0-9]. while there is no prescribed length limit for
@@ -338,13 +436,13 @@ object PathPatterns {
   * @param options contains storage provider-specific configuration configuration
   * @param shared if true, this volume is excluded from the uniqueness check
   */
-case class ExternalVolumeInfo(
+case class DVDIExternalVolumeInfo(
     size: Option[Long] = None,
     name: String,
     provider: String,
     options: Map[String, String] = Map.empty[String, String],
     shared: Boolean = false
-)
+) extends ExternalVolumeInfo
 
 object OptionLabelPatterns {
   val OptionNamespaceSeparator = "/"
@@ -354,21 +452,25 @@ object OptionLabelPatterns {
   val OptionKeyRegex = "^" + LabelPattern + OptionNamespaceSeparator + OptionNamePattern + "$"
 }
 
-object ExternalVolumeInfo {
+object DVDIExternalVolumeInfo {
   import OptionLabelPatterns._
 
   implicit val validOptions = validator[Map[String, String]] { option =>
     option.keys.each should matchRegex(OptionKeyRegex)
   }
 
-  implicit val validExternalVolumeInfo = validator[ExternalVolumeInfo] { info =>
+  val csiValidExternalVolume = validator[CSIExternalVolumeInfo] { info =>
+    ???
+  }
+
+  val dvdiValidExternalVolumeInfo = validator[DVDIExternalVolumeInfo] { info =>
     info.size.each should be > 0L
     info.provider should matchRegex(LabelRegex)
     info.options is validOptions
   }
 
   def fromProto(evi: Protos.Volume.ExternalVolumeInfo): ExternalVolumeInfo =
-    ExternalVolumeInfo(
+    DVDIExternalVolumeInfo(
       size = if (evi.hasSize) Some(evi.getSize) else None,
       name = evi.getName,
       provider = evi.getProvider,

@@ -13,6 +13,7 @@ import mesosphere.marathon.state.{
   AbsolutePathId,
   AppDefinition,
   BackoffStrategy,
+  CSIExternalVolumeInfo,
   EnvVarValue,
   Group,
   KillSelection,
@@ -24,7 +25,8 @@ import mesosphere.marathon.state.{
   Timestamp,
   UnreachableStrategy,
   UpgradeStrategy,
-  VersionInfo
+  VersionInfo,
+  VolumeMount
 }
 
 import scala.concurrent.duration.FiniteDuration
@@ -144,5 +146,29 @@ object Builders {
         resourceLimits = resourceLimits
       )
     }
+  }
+
+  def newVolumeMount(volumeName: Option[String] = Some("name"), mountPath: String = "/path", readOnly: Boolean = false): VolumeMount = {
+    VolumeMount(volumeName, mountPath, readOnly)
+  }
+
+  def newCSIExternalVolumeInfo(
+      name: String = "csi-volume-name",
+      pluginName: String = "csi-plugin",
+      accessType: CSIExternalVolumeInfo.AccessType = CSIExternalVolumeInfo.BlockAccessType,
+      accessMode: CSIExternalVolumeInfo.AccessMode = CSIExternalVolumeInfo.AccessMode.SINGLE_NODE_WRITER,
+      nodeStageSecret: Map[String, String] = Map.empty,
+      nodePublishSecret: Map[String, String] = Map.empty,
+      volumeContext: Map[String, String] = Map.empty
+  ): CSIExternalVolumeInfo = {
+    CSIExternalVolumeInfo(
+      name = name,
+      pluginName = pluginName,
+      accessType = accessType,
+      accessMode = accessMode,
+      nodeStageSecret = nodeStageSecret,
+      nodePublishSecret = nodePublishSecret,
+      volumeContext = volumeContext
+    )
   }
 }

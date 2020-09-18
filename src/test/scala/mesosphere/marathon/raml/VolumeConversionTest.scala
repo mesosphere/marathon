@@ -3,10 +3,11 @@ package raml
 
 import mesosphere.UnitTest
 import mesosphere.marathon.api.serialization.VolumeSerializer
-import mesosphere.marathon.state.{DiskType, Volume}
+import mesosphere.marathon.state.{DiskType, ExternalVolume, Volume, VolumeWithMount}
+import org.scalatest.Inside
 import org.scalatest.prop.TableDrivenPropertyChecks
 
-class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks {
+class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks with Inside {
 
   def convertToProtobufThenToRAML(volumeWithMount: => state.VolumeWithMount[Volume], raml: => AppVolume): Unit = {
     "convert to protobuf, then to RAML" in {
@@ -49,7 +50,7 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks {
   }
 
   "core ExternalVolume conversion" when {
-    val external = state.ExternalVolumeInfo(Some(123L), "external", "foo", Map("foo" -> "bla"), shared = true)
+    val external = state.DVDIExternalVolumeInfo(Some(123L), "external", "foo", Map("foo" -> "bla"), shared = true)
     val externalVolume = state.ExternalVolume(None, external)
     val mount = state.VolumeMount(None, "/container")
     val volume = state.VolumeWithMount(externalVolume, mount)
@@ -61,19 +62,62 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks {
         val externalRaml = raml.asInstanceOf[AppExternalVolume]
         externalRaml.containerPath should be(mount.mountPath)
         externalRaml.mode should be(ReadMode.Rw)
-        externalRaml.external.name should be(Some(external.name))
-        externalRaml.external.options should be(external.options)
-        externalRaml.external.provider should be(Some(external.provider))
-        externalRaml.external.size should be(external.size)
-        externalRaml.external.shared should be(true)
+        inside(externalRaml.external) {
+          case vol: DVDIExternalVolumeInfo =>
+            vol.name should be(Some(external.name))
+            vol.options should be(external.options)
+            vol.provider should be(Some(external.provider))
+            vol.size should be(external.size)
+            vol.shared should be(true)
+        }
       }
     }
   }
 
-  "RAML external volume conversion" when {
+  "RAML CSI external volume conversion" should {
+    val volumeInfo = CSIExternalVolumeInfo(
+      name = "csi-volume",
+      provider = "csi",
+      options = CSIExternalVolumeInfoOptions(
+        pluginName = "csi-plugin",
+        capability = CSICapability(accessMode = "MULTI_NODE_READER_ONLY", accessType = "block"),
+        nodeStageSecret = Map("key" -> "secret-stage-key"),
+        nodePublishSecret = Map("key" -> "secret-publish-key"),
+        volumeContext = Map("a" -> "context")
+      )
+    )
+
     val volume = AppExternalVolume(
       "/container",
-      ExternalVolumeInfo(Some(1L), Some("vol-name"), Some("provider"), Map("foo" -> "bla"), shared = true),
+      volumeInfo,
+      ReadMode.Ro
+    )
+
+    "convert a CSI block volume properly" in {
+      inside(volume.fromRaml) {
+        case VolumeWithMount(ExternalVolume(_, external: state.CSIExternalVolumeInfo), _) =>
+          external.name shouldBe (volumeInfo.name)
+          external.provider shouldBe "csi"
+          external.pluginName shouldBe volumeInfo.options.pluginName
+          external.accessType shouldBe state.CSIExternalVolumeInfo.BlockAccessType
+          external.accessMode shouldBe state.CSIExternalVolumeInfo.AccessMode.MULTI_NODE_READER_ONLY
+          external.nodeStageSecret shouldBe volumeInfo.options.nodeStageSecret
+          external.nodePublishSecret shouldBe volumeInfo.options.nodePublishSecret
+          external.volumeContext shouldBe volumeInfo.options.volumeContext
+      }
+    }
+
+    "preserve all values during round-trip conversion" in {
+      val roundTripConverted = volume.fromRaml.toRaml
+      roundTripConverted shouldBe volume
+    }
+  }
+
+  "RAML generic external volume conversion" when {
+    val volumeInfo = DVDIExternalVolumeInfo(Some(1L), Some("vol-name"), Some("provider"), Map("foo" -> "bla"), shared = true)
+    val volume = AppExternalVolume(
+      "/container",
+      volumeInfo,
       ReadMode.Rw
     )
     "converting to core ExternalVolume" should {
@@ -83,11 +127,14 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks {
       "covert all fields from RAML to core" in {
         mount.mountPath should be(volume.containerPath)
         mount.readOnly should be(false)
-        externalVolume.external.name should be(volume.external.name.head)
-        externalVolume.external.provider should be(volume.external.provider.head)
-        externalVolume.external.size should be(volume.external.size)
-        externalVolume.external.options should be(volume.external.options)
-        externalVolume.external.shared should be(volume.external.shared)
+        inside(externalVolume.external) {
+          case vol: state.DVDIExternalVolumeInfo =>
+            vol.name should be(volumeInfo.name.head)
+            vol.provider should be(volumeInfo.provider.head)
+            vol.size should be(volumeInfo.size)
+            vol.options should be(volumeInfo.options)
+            vol.shared should be(volumeInfo.shared)
+        }
       }
     }
   }

@@ -5,9 +5,11 @@ import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.core.pod.{BridgeNetwork, ContainerNetwork, HostNetwork, Network}
 import mesosphere.marathon.state.Container.{Docker, PortMapping}
 import mesosphere.marathon.state._
+
 import scala.jdk.CollectionConverters._
 import mesosphere.mesos.protos.Implicits._
 import org.apache.mesos
+import org.apache.mesos.Protos.Volume.Source.{CSIVolume => MesosCSIVolume}
 
 object ContainerSerializer {
   def fromProto(proto: Protos.ExtendedContainerInfo): Container = {
@@ -147,7 +149,12 @@ object VolumeSerializer {
         volumeBuilder.setPersistent(PersistentVolumeInfoSerializer.toProto(p.persistent))
 
       case e: ExternalVolume =>
-        volumeBuilder.setExternal(ExternalVolumeInfoSerializer.toProto(e.external))
+        e.external match {
+          case dvdi: DVDIExternalVolumeInfo =>
+            volumeBuilder.setExternal(ExternalVolumeInfoSerializer.toProtoDVDI(dvdi))
+          case csi: CSIExternalVolumeInfo =>
+            volumeBuilder.setCsiExternal(ExternalVolumeInfoSerializer.toProtoCSI(csi))
+        }
 
       case d: HostVolume =>
         volumeBuilder.setHostPath(d.hostPath)
@@ -196,7 +203,61 @@ object PersistentVolumeInfoSerializer {
 }
 
 object ExternalVolumeInfoSerializer {
-  def toProto(info: ExternalVolumeInfo): Protos.Volume.ExternalVolumeInfo = {
+  def csiAccessModeToProto(accessMode: CSIExternalVolumeInfo.AccessMode): MesosCSIVolume.VolumeCapability.AccessMode = {
+    val mode = MesosCSIVolume.VolumeCapability.AccessMode.Mode.values().find { _.name() == accessMode.name }.getOrElse {
+      // Bug. We should not get here.
+      throw new IllegalStateException(s"There is no corresponding Mesos CSI Access mode for ${accessMode.name}")
+    }
+    MesosCSIVolume.VolumeCapability.AccessMode.newBuilder().setMode(mode).build
+  }
+
+  def csiProtoToAccessMode(accessMode: MesosCSIVolume.VolumeCapability.AccessMode): CSIExternalVolumeInfo.AccessMode = {
+    val accessModeName = accessMode.getMode().name
+    CSIExternalVolumeInfo.AccessMode.fromString(accessModeName).getOrElse {
+      // Bug. We should not get here.
+      throw new IllegalStateException(s"Bug. There is no corresponding Marathon CSI access mode for: ${accessModeName}")
+    }
+  }
+
+  def toProtoVolumeCapability(info: CSIExternalVolumeInfo): MesosCSIVolume.VolumeCapability = {
+    val vc = MesosCSIVolume.VolumeCapability
+      .newBuilder()
+      .setAccessMode(csiAccessModeToProto(info.accessMode))
+
+    info.accessType match {
+      case CSIExternalVolumeInfo.BlockAccessType =>
+        vc.setBlock(MesosCSIVolume.VolumeCapability.BlockVolume.newBuilder().build)
+      case CSIExternalVolumeInfo.MountAccessType(fsType, flags) =>
+        val mountProto = MesosCSIVolume.VolumeCapability.MountVolume
+          .newBuilder()
+          .setFsType(fsType)
+          .addAllMountFlags(flags.asJava)
+        vc.setMount(mountProto)
+    }
+    vc.build()
+  }
+
+  def fromProtoVolumeCapabilityToAccessType(proto: MesosCSIVolume.VolumeCapability): CSIExternalVolumeInfo.AccessType = {
+    if (proto.hasMount) {
+      CSIExternalVolumeInfo.MountAccessType(proto.getMount.getFsType, proto.getMount.getMountFlagsList.asScala.toSeq)
+    } else {
+      CSIExternalVolumeInfo.BlockAccessType
+    }
+  }
+
+  def toProtoCSI(info: CSIExternalVolumeInfo): Protos.Volume.CSIVolumeInfo = {
+    Protos.Volume.CSIVolumeInfo
+      .newBuilder()
+      .setName(info.name)
+      .setPluginName(info.pluginName)
+      .setVolumeCapability(toProtoVolumeCapability(info))
+      .putAllNodePublishSecrets(info.nodePublishSecret.asJava)
+      .putAllNodeStageSecrets(info.nodeStageSecret.asJava)
+      .putAllVolumeContext(info.volumeContext.asJava)
+      .build
+  }
+
+  def toProtoDVDI(info: DVDIExternalVolumeInfo): Protos.Volume.ExternalVolumeInfo = {
     val builder = Protos.Volume.ExternalVolumeInfo
       .newBuilder()
       .setName(info.name)

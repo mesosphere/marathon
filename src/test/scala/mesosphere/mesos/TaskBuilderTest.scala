@@ -13,9 +13,10 @@ import mesosphere.marathon.core.task.state.NetworkInfo
 import mesosphere.marathon.raml.{App, Resources}
 import mesosphere.marathon.state.Container.{Docker, Mesos, PortMapping}
 import mesosphere.marathon.state.VersionInfo.OnlyVersion
-import mesosphere.marathon.state.{AppDefinition, Container, AbsolutePathId, Timestamp, _}
+import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, Container, Timestamp, _}
+
 import scala.jdk.CollectionConverters._
-import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
+import mesosphere.marathon.test.{MarathonTestHelper, MesosProtoBuilders, SettableClock}
 import mesosphere.marathon.{Protos, _}
 import mesosphere.mesos.protos.{Resource, _}
 import org.apache.mesos.Protos.TaskInfo
@@ -515,7 +516,6 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "build creates task for DOCKER container using host-local and external [DockerVolume] volumes" in {
-      import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProviderVolumeToUnifiedMesosVolumeTest._
       val offer = MarathonTestHelper
         .makeBasicOffer(
           cpus = 2.0,
@@ -541,7 +541,7 @@ class TaskBuilderTest extends UnitTest {
                 VolumeWithMount(
                   volume = ExternalVolume(
                     None,
-                    ExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map[String, String]("dvdi/driver" -> "bar"))
+                    DVDIExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map[String, String]("dvdi/driver" -> "bar"))
                   ),
                   mount = VolumeMount(None, "/container/path")
                 ),
@@ -572,10 +572,10 @@ class TaskBuilderTest extends UnitTest {
         s"check that container has 2 volumes declared, got instead ${taskInfo.getExecutor.getContainer.getVolumesList}"
       )
 
-      val vol1 = volumeWith(
-        containerPath("/container/path"),
-        mode(MesosProtos.Volume.Mode.RW),
-        volumeRef("bar", "namedFoo")
+      val vol1 = MesosProtoBuilders.newVolume(
+        containerPath = "/container/path",
+        mode = MesosProtos.Volume.Mode.RW,
+        source = MesosProtoBuilders.newVolumeSource.docker("bar", "namedFoo")
       )
 
       val got1 = taskInfo.getContainer.getVolumes(0)
@@ -588,7 +588,6 @@ class TaskBuilderTest extends UnitTest {
     }
 
     "build creates task for DOCKER container using external [DockerVolume] volumes" in {
-      import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProviderVolumeToUnifiedMesosVolumeTest._
       val offer = MarathonTestHelper
         .makeBasicOffer(
           cpus = 2.0,
@@ -612,14 +611,20 @@ class TaskBuilderTest extends UnitTest {
             Docker(
               volumes = Seq(
                 VolumeWithMount(
-                  volume =
-                    ExternalVolume(None, ExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map("dvdi/driver" -> "bar"))),
+                  volume = ExternalVolume(
+                    None,
+                    DVDIExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map("dvdi/driver" -> "bar"))
+                  ),
                   mount = VolumeMount(None, "/container/path")
                 ),
                 VolumeWithMount(
                   ExternalVolume(
                     None,
-                    ExternalVolumeInfo(name = "namedEdc", provider = "dvdi", options = Map("dvdi/driver" -> "ert", "dvdi/boo" -> "baa"))
+                    DVDIExternalVolumeInfo(
+                      name = "namedEdc",
+                      provider = "dvdi",
+                      options = Map("dvdi/driver" -> "ert", "dvdi/boo" -> "baa")
+                    )
                   ),
                   mount = VolumeMount(None, "/container/path2", true)
                 )
@@ -643,27 +648,25 @@ class TaskBuilderTest extends UnitTest {
         s"check that container has 2 volumes declared, got instead ${taskInfo.getExecutor.getContainer.getVolumesList}"
       )
 
-      val vol1 = volumeWith(
-        containerPath("/container/path"),
-        mode(MesosProtos.Volume.Mode.RW),
-        volumeRef("bar", "namedFoo")
+      val vol1 = MesosProtoBuilders.newVolume(
+        containerPath = "/container/path",
+        mode = MesosProtos.Volume.Mode.RW,
+        source = MesosProtoBuilders.newVolumeSource.docker("bar", "namedFoo")
       )
 
       val got1 = taskInfo.getContainer.getVolumes(0)
       assert(vol1.equals(got1), s"expected volume $vol1, got instead: $got1")
 
-      val vol2 = volumeWith(
-        containerPath("/container/path2"),
-        mode(MesosProtos.Volume.Mode.RO),
-        volumeRef("ert", "namedEdc"),
-        options(Map("boo" -> "baa"))
+      val vol2 = MesosProtoBuilders.newVolume(
+        containerPath = "/container/path2",
+        mode = MesosProtos.Volume.Mode.RO,
+        source = MesosProtoBuilders.newVolumeSource.docker("ert", "namedEdc", options = Map("boo" -> "baa"))
       )
       val got2 = taskInfo.getContainer.getVolumes(1)
       assert(vol2.equals(got2), s"expected volume $vol2, got instead: $got2")
     }
 
     "build creates task for MESOS container using named, external [ExternalVolume] volumes" in {
-      import mesosphere.marathon.core.externalvolume.impl.providers.DVDIProviderVolumeToUnifiedMesosVolumeTest._
       val offer = MarathonTestHelper
         .makeBasicOffer(
           cpus = 2.0,
@@ -687,14 +690,16 @@ class TaskBuilderTest extends UnitTest {
             Container.Mesos(
               volumes = Seq(
                 VolumeWithMount(
-                  volume =
-                    ExternalVolume(None, ExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map("dvdi/driver" -> "bar"))),
+                  volume = ExternalVolume(
+                    None,
+                    DVDIExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map("dvdi/driver" -> "bar"))
+                  ),
                   mount = VolumeMount(None, "/container/path")
                 ),
                 VolumeWithMount(
                   volume = ExternalVolume(
                     None,
-                    ExternalVolumeInfo(size = Some(2L), name = "namedEdc", provider = "dvdi", options = Map("dvdi/driver" -> "ert"))
+                    DVDIExternalVolumeInfo(size = Some(2L), name = "namedEdc", provider = "dvdi", options = Map("dvdi/driver" -> "ert"))
                   ),
                   mount = VolumeMount(None, "/container/path2")
                 )
@@ -721,19 +726,18 @@ class TaskBuilderTest extends UnitTest {
         s"check that container has 2 volumes declared, got instead ${taskInfo.getExecutor.getContainer.getVolumesList}"
       )
 
-      val vol1 = volumeWith(
-        containerPath("/container/path"),
-        mode(MesosProtos.Volume.Mode.RW),
-        volumeRef("bar", "namedFoo")
+      val vol1 = MesosProtoBuilders.newVolume(
+        containerPath = "/container/path",
+        mode = MesosProtos.Volume.Mode.RW,
+        source = MesosProtoBuilders.newVolumeSource.docker("bar", "namedFoo")
       )
       val got1 = taskInfo.getExecutor.getContainer.getVolumes(0)
       assert(vol1.equals(got1), s"expected volume $vol1, got instead: $got1")
 
-      val vol2 = volumeWith(
-        containerPath("/container/path2"),
-        mode(MesosProtos.Volume.Mode.RW),
-        volumeRef("ert", "namedEdc"),
-        options(Map("size" -> "2"))
+      val vol2 = MesosProtoBuilders.newVolume(
+        containerPath = "/container/path2",
+        mode = MesosProtos.Volume.Mode.RW,
+        source = MesosProtoBuilders.newVolumeSource.docker("ert", "namedEdc", options = Map("size" -> "2"))
       )
       val got2 = taskInfo.getExecutor.getContainer.getVolumes(1)
       assert(vol2.equals(got2), s"expected volume $vol2, got instead: $got2")
