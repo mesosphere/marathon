@@ -216,7 +216,8 @@ trait AppValidation {
           option.keys.each should matchRegex(OptionKeyRegex)
         }
         val validCsiInfo: Validator[CSIExternalVolumeInfo] = validator[CSIExternalVolumeInfo] { info =>
-          ???
+          // TODO - validation
+          Success
         }
 
         val validDVDIExternalInfo: Validator[DVDIExternalVolumeInfo] = validator[DVDIExternalVolumeInfo] { info =>
