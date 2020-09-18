@@ -60,13 +60,13 @@ private[impl] object ValidationHelpers {
     volume.external match {
       case csi: CSIExternalVolumeInfo =>
         true
-      case v: GenericExternalVolumeInfo =>
+      case v: DVDIExternalVolumeInfo =>
         !v.shared
     }
 
   def isForUniquenessCheckRaml(volume: AppExternalVolume): Boolean =
     volume.external match {
-      case external: raml.GenericExternalVolumeInfo =>
+      case external: raml.DVDIExternalVolumeInfo =>
         !external.shared
       case csi: raml.CSIExternalVolumeInfo =>
         true

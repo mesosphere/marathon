@@ -21,8 +21,8 @@ private[externalvolume] case object CSIProvider extends ExternalVolumeProvider {
   object Builders {
     def toUnifiedContainerVolume(volume: ExternalVolume, mount: VolumeMount): MesosVolume = {
       volume.external match {
-        case _: GenericExternalVolumeInfo =>
-          throw new IllegalStateException("Bug: DVDIProviderValidations should be used for GenericExternalVolumeInfo")
+        case _: DVDIExternalVolumeInfo =>
+          throw new IllegalStateException("Bug: DVDIProviderValidations should be used for DVDIExternalVolumeInfo")
         case info: CSIExternalVolumeInfo =>
           val staticProvisioning = CSIVolume.StaticProvisioning
             .newBuilder()

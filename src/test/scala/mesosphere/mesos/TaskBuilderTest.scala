@@ -541,7 +541,7 @@ class TaskBuilderTest extends UnitTest {
                 VolumeWithMount(
                   volume = ExternalVolume(
                     None,
-                    GenericExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map[String, String]("dvdi/driver" -> "bar"))
+                    DVDIExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map[String, String]("dvdi/driver" -> "bar"))
                   ),
                   mount = VolumeMount(None, "/container/path")
                 ),
@@ -613,14 +613,14 @@ class TaskBuilderTest extends UnitTest {
                 VolumeWithMount(
                   volume = ExternalVolume(
                     None,
-                    GenericExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map("dvdi/driver" -> "bar"))
+                    DVDIExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map("dvdi/driver" -> "bar"))
                   ),
                   mount = VolumeMount(None, "/container/path")
                 ),
                 VolumeWithMount(
                   ExternalVolume(
                     None,
-                    GenericExternalVolumeInfo(
+                    DVDIExternalVolumeInfo(
                       name = "namedEdc",
                       provider = "dvdi",
                       options = Map("dvdi/driver" -> "ert", "dvdi/boo" -> "baa")
@@ -692,14 +692,14 @@ class TaskBuilderTest extends UnitTest {
                 VolumeWithMount(
                   volume = ExternalVolume(
                     None,
-                    GenericExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map("dvdi/driver" -> "bar"))
+                    DVDIExternalVolumeInfo(name = "namedFoo", provider = "dvdi", options = Map("dvdi/driver" -> "bar"))
                   ),
                   mount = VolumeMount(None, "/container/path")
                 ),
                 VolumeWithMount(
                   volume = ExternalVolume(
                     None,
-                    GenericExternalVolumeInfo(size = Some(2L), name = "namedEdc", provider = "dvdi", options = Map("dvdi/driver" -> "ert"))
+                    DVDIExternalVolumeInfo(size = Some(2L), name = "namedEdc", provider = "dvdi", options = Map("dvdi/driver" -> "ert"))
                   ),
                   mount = VolumeMount(None, "/container/path2")
                 )

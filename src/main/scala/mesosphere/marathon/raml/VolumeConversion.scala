@@ -99,8 +99,8 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
 
   implicit val volumeWrites: Writes[state.VolumeWithMount[Volume], AppVolume] = Writes { volumeWithMount =>
     implicit val externalVolumeWrites: Writes[state.ExternalVolumeInfo, ExternalVolumeInfo] = Writes {
-      case ev: state.GenericExternalVolumeInfo =>
-        raml.GenericExternalVolumeInfo(
+      case ev: state.DVDIExternalVolumeInfo =>
+        raml.DVDIExternalVolumeInfo(
           size = ev.size,
           name = Some(ev.name),
           provider = Some(ev.provider),
@@ -155,8 +155,8 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
 
   implicit val volumeExternalReads: Reads[AppExternalVolume, state.VolumeWithMount[Volume]] = Reads { volumeRaml =>
     val info: state.ExternalVolumeInfo = volumeRaml.external match {
-      case external: raml.GenericExternalVolumeInfo =>
-        state.GenericExternalVolumeInfo(
+      case external: raml.DVDIExternalVolumeInfo =>
+        state.DVDIExternalVolumeInfo(
           size = external.size,
           name = external.name.getOrElse(throw SerializationFailedException("external volume requires a name")),
           provider = external.provider.getOrElse(throw SerializationFailedException("external volume requires a provider")),
@@ -249,16 +249,16 @@ trait VolumeConversion extends ConstraintConversion with DefaultConversions {
   implicit val appVolumeExternalProtoRamlWriter: Writes[Protos.Volume.ExternalVolumeInfo, ExternalVolumeInfo] =
     Writes { volume =>
       // TODO add csi volume convserion here
-      GenericExternalVolumeInfo(
-        size = volume.when(_.hasSize, _.getSize).orElse(GenericExternalVolumeInfo.DefaultSize),
-        name = volume.when(_.hasName, _.getName).orElse(GenericExternalVolumeInfo.DefaultName),
-        provider = volume.when(_.hasProvider, _.getProvider).orElse(GenericExternalVolumeInfo.DefaultProvider),
+      DVDIExternalVolumeInfo(
+        size = volume.when(_.hasSize, _.getSize).orElse(DVDIExternalVolumeInfo.DefaultSize),
+        name = volume.when(_.hasName, _.getName).orElse(DVDIExternalVolumeInfo.DefaultName),
+        provider = volume.when(_.hasProvider, _.getProvider).orElse(DVDIExternalVolumeInfo.DefaultProvider),
         options = volume.whenOrElse(
           _.getOptionsCount > 0,
           _.getOptionsList.asScala.iterator.map { x => x.getKey -> x.getValue }.toMap,
-          GenericExternalVolumeInfo.DefaultOptions
+          DVDIExternalVolumeInfo.DefaultOptions
         ),
-        shared = volume.when(_.hasShared, _.getShared).getOrElse(GenericExternalVolumeInfo.DefaultShared)
+        shared = volume.when(_.hasShared, _.getShared).getOrElse(DVDIExternalVolumeInfo.DefaultShared)
       )
     }
 

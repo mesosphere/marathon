@@ -2,7 +2,7 @@ package mesosphere.marathon
 package core.externalvolume.impl.providers
 
 import mesosphere.UnitTest
-import mesosphere.marathon.state.{ExternalVolume, GenericExternalVolumeInfo, VolumeMount}
+import mesosphere.marathon.state.{ExternalVolume, DVDIExternalVolumeInfo, VolumeMount}
 import org.apache.mesos.Protos.Volume
 import mesosphere.marathon.test.MesosProtoBuilders
 
@@ -16,12 +16,12 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
 
   val testParameters = Seq[TestParameters](
     TestParameters(
-      ExternalVolume(None, GenericExternalVolumeInfo(None, "foo", "dvdi", Map("dvdi/driver" -> "bar"))),
+      ExternalVolume(None, DVDIExternalVolumeInfo(None, "foo", "dvdi", Map("dvdi/driver" -> "bar"))),
       VolumeMount(None, mountPath, readOnly),
       newVolume(containerPath = "/path", mode = Volume.Mode.RO, source = newVolumeSource.docker(driver = "bar", name = "foo"))
     ),
     TestParameters(
-      ExternalVolume(None, GenericExternalVolumeInfo(Some(1L), "foo", "dvdi", Map("dvdi/driver" -> "bar"))),
+      ExternalVolume(None, DVDIExternalVolumeInfo(Some(1L), "foo", "dvdi", Map("dvdi/driver" -> "bar"))),
       VolumeMount(None, mountPath, readOnly),
       newVolume(
         containerPath = "/path",
@@ -30,7 +30,7 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
       )
     ),
     TestParameters(
-      ExternalVolume(None, GenericExternalVolumeInfo(Some(1L), "foo", "dvdi", Map("dvdi/driver" -> "bar", "dvdi/size" -> "2"))),
+      ExternalVolume(None, DVDIExternalVolumeInfo(Some(1L), "foo", "dvdi", Map("dvdi/driver" -> "bar", "dvdi/size" -> "2"))),
       VolumeMount(None, mountPath, readOnly),
       newVolume(
         containerPath = "/path",
@@ -41,7 +41,7 @@ class DVDIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
     TestParameters(
       ExternalVolume(
         None,
-        GenericExternalVolumeInfo(
+        DVDIExternalVolumeInfo(
           None,
           "foo",
           "dvdi",

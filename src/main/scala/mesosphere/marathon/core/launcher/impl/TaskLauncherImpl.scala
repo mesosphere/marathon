@@ -27,7 +27,7 @@ private[launcher] class TaskLauncherImpl(metrics: Metrics, marathonSchedulerDriv
       //The filter duration is set to 0, so we get the same offer in the next allocator cycle.
       val noFilter = Protos.Filters.newBuilder().setRefuseSeconds(0).build()
       val operations = taskOps.flatMap(_.offerOperations)
-      logger.debug(s"Operations on $offerID:\n${operations.mkString("\n")}")
+      logger.info(s"Operations on $offerID:\n${operations.mkString("\n")}")
 
       driver.acceptOffers(Collections.singleton(offerID), operations.asJava, noFilter)
     }

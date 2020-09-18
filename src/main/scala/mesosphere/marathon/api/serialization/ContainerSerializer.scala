@@ -150,8 +150,8 @@ object VolumeSerializer {
 
       case e: ExternalVolume =>
         e.external match {
-          case generic: GenericExternalVolumeInfo =>
-            volumeBuilder.setExternal(ExternalVolumeInfoSerializer.toGenericProto(generic))
+          case dvdi: DVDIExternalVolumeInfo =>
+            volumeBuilder.setExternal(ExternalVolumeInfoSerializer.toProtoDVDI(dvdi))
           case csi: CSIExternalVolumeInfo =>
             volumeBuilder.setCsiExternal(ExternalVolumeInfoSerializer.toProtoCSI(csi))
         }
@@ -257,7 +257,7 @@ object ExternalVolumeInfoSerializer {
       .build
   }
 
-  def toGenericProto(info: GenericExternalVolumeInfo): Protos.Volume.ExternalVolumeInfo = {
+  def toProtoDVDI(info: DVDIExternalVolumeInfo): Protos.Volume.ExternalVolumeInfo = {
     val builder = Protos.Volume.ExternalVolumeInfo
       .newBuilder()
       .setName(info.name)

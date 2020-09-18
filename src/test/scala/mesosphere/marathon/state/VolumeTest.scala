@@ -24,7 +24,7 @@ class VolumeTest extends UnitTest {
     VolumeWithMount(volume, mount)
   }
 
-  def external(info: GenericExternalVolumeInfo, mountPath: String = "cpath", readOnly: Boolean = false): VolumeWithMount[ExternalVolume] = {
+  def external(info: DVDIExternalVolumeInfo, mountPath: String = "cpath", readOnly: Boolean = false): VolumeWithMount[ExternalVolume] = {
     val volume = ExternalVolume(None, info)
     val mount = VolumeMount(None, mountPath, readOnly)
     VolumeWithMount(volume, mount)
@@ -36,12 +36,12 @@ class VolumeTest extends UnitTest {
       PersistentVolumeInfo(size = 1024, `type` = DiskType.Path, constraints = Set(constraint("path", "LIKE", Some("valid regex"))))
     val mountVolWithMaxSize = PersistentVolumeInfo(size = 1024, `type` = DiskType.Mount, maxSize = Some(2048))
     val mountVolWithProfile = PersistentVolumeInfo(size = 1024, `type` = DiskType.Mount, profileName = Some("ssd-fast"))
-    val extVolNoSize = GenericExternalVolumeInfo(
+    val extVolNoSize = DVDIExternalVolumeInfo(
       name = "volname",
       provider = "provider",
       options = Map("foo" -> "bar")
     )
-    val extVolWithSize = GenericExternalVolumeInfo(
+    val extVolWithSize = DVDIExternalVolumeInfo(
       size = Option(1),
       name = "volname",
       provider = "provider",

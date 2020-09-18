@@ -122,7 +122,7 @@ trait AppValidation {
       isTrue("Volume names must be unique") { (vols: Seq[AppVolume]) =>
         val names: Seq[String] = vols.iterator.collect { case v: AppExternalVolume => v.external }.map {
           case csi: CSIExternalVolumeInfo => Some(csi.name)
-          case generic: GenericExternalVolumeInfo => generic.name
+          case dvdi: DVDIExternalVolumeInfo => dvdi.name
         }.flatten.toSeq
         names.distinct.size == names.size
       } and every(validVolume(container, enabledFeatures, secrets))
@@ -219,7 +219,7 @@ trait AppValidation {
           ???
         }
 
-        val validGenericExternalInfo: Validator[GenericExternalVolumeInfo] = validator[GenericExternalVolumeInfo] { info =>
+        val validDVDIExternalInfo: Validator[DVDIExternalVolumeInfo] = validator[DVDIExternalVolumeInfo] { info =>
           info.name is notEmpty
           info.provider is definedAnd(matchRegex(LabelRegex))
           info.options is validOptions
@@ -227,7 +227,7 @@ trait AppValidation {
 
         val validExternalVolume: Validator[ExternalVolumeInfo] = {
           case info: CSIExternalVolumeInfo => validCsiInfo(info)
-          case info: GenericExternalVolumeInfo => validGenericExternalInfo(info)
+          case info: DVDIExternalVolumeInfo => validDVDIExternalInfo(info)
         }
 
         forAll(

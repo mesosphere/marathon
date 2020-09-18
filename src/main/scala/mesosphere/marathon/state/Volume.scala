@@ -11,7 +11,7 @@ import mesosphere.marathon.api.serialization.{ContainerSerializer, ExternalVolum
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.core.externalvolume.ExternalVolumes
 import mesosphere.marathon.state.CSIExternalVolumeInfo.{AccessMode, AccessType}
-import mesosphere.marathon.state.GenericExternalVolumeInfo.{csiValidExternalVolume, genericValidExternalVolumeInfo}
+import mesosphere.marathon.state.DVDIExternalVolumeInfo.{csiValidExternalVolume, dvdiValidExternalVolumeInfo}
 
 import scala.jdk.CollectionConverters._
 import mesosphere.mesos.protos.Implicits._
@@ -28,7 +28,7 @@ object Volume {
     if (proto.hasPersistent)
       PersistentVolume(name = name, persistent = PersistentVolumeInfo.fromProto(proto.getPersistent))
     else if (proto.hasExternal)
-      ExternalVolume(name = name, external = GenericExternalVolumeInfo.fromProto(proto.getExternal))
+      ExternalVolume(name = name, external = DVDIExternalVolumeInfo.fromProto(proto.getExternal))
     else if (proto.hasCsiExternal)
       ExternalVolume(name = name, external = CSIExternalVolumeInfo.fromProto(proto.getCsiExternal))
     else if (proto.hasSecret)
@@ -319,8 +319,8 @@ sealed trait ExternalVolumeInfo {
 object ExternalVolumeInfo {
   implicit val validExternalVolumeInfo: Validator[ExternalVolumeInfo] = { volume =>
     volume match {
-      case generic: GenericExternalVolumeInfo =>
-        genericValidExternalVolumeInfo(generic)
+      case dvdi: DVDIExternalVolumeInfo =>
+        dvdiValidExternalVolumeInfo(dvdi)
       case csi: CSIExternalVolumeInfo =>
         csiValidExternalVolume(csi)
     }
@@ -404,7 +404,7 @@ object CSIExternalVolumeInfo {
 }
 
 /**
-  * GenericExternalVolumeInfo captures the specification for a volume that survives task restarts.
+  * DVDIExternalVolumeInfo captures the specification for a volume that survives task restarts.
   *
   * `name` is the *unique name* of the storage volume. names should be treated as case insensitive labels
   * derived from an alpha-numeric character range [a-z0-9]. while there is no prescribed length limit for
@@ -436,7 +436,7 @@ object CSIExternalVolumeInfo {
   * @param options contains storage provider-specific configuration configuration
   * @param shared if true, this volume is excluded from the uniqueness check
   */
-case class GenericExternalVolumeInfo(
+case class DVDIExternalVolumeInfo(
     size: Option[Long] = None,
     name: String,
     provider: String,
@@ -452,7 +452,7 @@ object OptionLabelPatterns {
   val OptionKeyRegex = "^" + LabelPattern + OptionNamespaceSeparator + OptionNamePattern + "$"
 }
 
-object GenericExternalVolumeInfo {
+object DVDIExternalVolumeInfo {
   import OptionLabelPatterns._
 
   implicit val validOptions = validator[Map[String, String]] { option =>
@@ -463,14 +463,14 @@ object GenericExternalVolumeInfo {
     ???
   }
 
-  val genericValidExternalVolumeInfo = validator[GenericExternalVolumeInfo] { info =>
+  val dvdiValidExternalVolumeInfo = validator[DVDIExternalVolumeInfo] { info =>
     info.size.each should be > 0L
     info.provider should matchRegex(LabelRegex)
     info.options is validOptions
   }
 
   def fromProto(evi: Protos.Volume.ExternalVolumeInfo): ExternalVolumeInfo =
-    GenericExternalVolumeInfo(
+    DVDIExternalVolumeInfo(
       size = if (evi.hasSize) Some(evi.getSize) else None,
       name = evi.getName,
       provider = evi.getProvider,

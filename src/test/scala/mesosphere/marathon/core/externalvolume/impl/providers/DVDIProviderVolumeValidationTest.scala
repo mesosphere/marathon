@@ -18,7 +18,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
       Seq[ExternalVolume](
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -27,7 +27,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -36,7 +36,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -45,7 +45,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -54,7 +54,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -63,7 +63,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -72,7 +72,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -81,7 +81,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "qaz",
@@ -90,7 +90,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -99,7 +99,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -108,7 +108,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "",
@@ -117,7 +117,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "",
             provider = "dvdi",
@@ -126,7 +126,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "",
@@ -135,7 +135,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = Some(1L),
             name = "",
             provider = "",
@@ -150,7 +150,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
       Seq[ExternalVolume](
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -159,7 +159,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -168,7 +168,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -177,7 +177,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -186,7 +186,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -195,7 +195,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = Some(1L),
             name = "f",
             provider = "dvdi",
@@ -204,7 +204,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = Some(1L),
             name = "f",
             provider = "dvdi",
@@ -213,7 +213,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = None,
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",
@@ -222,7 +222,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ),
         ExternalVolume(
           name = Some("name=teamvolumename,secret_key=volume-secret-key-team,secure=true,size=5,repl=1,shared=true"),
-          external = GenericExternalVolumeInfo(
+          external = DVDIExternalVolumeInfo(
             size = None,
             name = "f",
             provider = "dvdi",

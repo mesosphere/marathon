@@ -50,7 +50,7 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks with 
   }
 
   "core ExternalVolume conversion" when {
-    val external = state.GenericExternalVolumeInfo(Some(123L), "external", "foo", Map("foo" -> "bla"), shared = true)
+    val external = state.DVDIExternalVolumeInfo(Some(123L), "external", "foo", Map("foo" -> "bla"), shared = true)
     val externalVolume = state.ExternalVolume(None, external)
     val mount = state.VolumeMount(None, "/container")
     val volume = state.VolumeWithMount(externalVolume, mount)
@@ -63,7 +63,7 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks with 
         externalRaml.containerPath should be(mount.mountPath)
         externalRaml.mode should be(ReadMode.Rw)
         inside(externalRaml.external) {
-          case vol: GenericExternalVolumeInfo =>
+          case vol: DVDIExternalVolumeInfo =>
             vol.name should be(Some(external.name))
             vol.options should be(external.options)
             vol.provider should be(Some(external.provider))
@@ -114,7 +114,7 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks with 
   }
 
   "RAML generic external volume conversion" when {
-    val volumeInfo = GenericExternalVolumeInfo(Some(1L), Some("vol-name"), Some("provider"), Map("foo" -> "bla"), shared = true)
+    val volumeInfo = DVDIExternalVolumeInfo(Some(1L), Some("vol-name"), Some("provider"), Map("foo" -> "bla"), shared = true)
     val volume = AppExternalVolume(
       "/container",
       volumeInfo,
@@ -128,7 +128,7 @@ class VolumeConversionTest extends UnitTest with TableDrivenPropertyChecks with 
         mount.mountPath should be(volume.containerPath)
         mount.readOnly should be(false)
         inside(externalVolume.external) {
-          case vol: state.GenericExternalVolumeInfo =>
+          case vol: state.DVDIExternalVolumeInfo =>
             vol.name should be(volumeInfo.name.head)
             vol.provider should be(volumeInfo.provider.head)
             vol.size should be(volumeInfo.size)
