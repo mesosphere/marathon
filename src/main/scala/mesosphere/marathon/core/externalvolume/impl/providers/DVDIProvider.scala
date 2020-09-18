@@ -292,7 +292,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
     val validateExternalVolumeInfo: Validator[ExternalVolumeInfo] = {
       case _: CSIExternalVolumeInfo =>
-        ???
+        throw new IllegalStateException("Bug. CSIProvider volume validation applied for DVDI data structure. We should not get here.")
       case dvdi: DVDIExternalVolumeInfo =>
         validateDVDIExternalVolumeInfo(dvdi)
     }
