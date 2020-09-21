@@ -113,8 +113,8 @@ class MarathonHealthCheckManager(
               instance.tasksMap.values.withFilter(_.isRunning).map(_.status.mesosStatus).foreach {
                 case Some(mesosStatus) if mesosStatus.hasHealthy =>
                   val health =
-                    if (mesosStatus.getHealthy) Healthy(instance.instanceId, instance.runSpecVersion, publishEvent = false)
-                    else Unhealthy(instance.instanceId, instance.runSpecVersion, "", publishEvent = false)
+                    if (mesosStatus.getHealthy) Healthy(instance.instanceId, instance.appTask.taskId, instance.runSpecVersion, publishEvent = false)
+                    else Unhealthy(instance.instanceId, instance.appTask.taskId, instance.runSpecVersion, "", publishEvent = false)
                   ref ! health
                 case None =>
               }
@@ -237,12 +237,13 @@ class MarathonHealthCheckManager(
   override def update(taskStatus: TaskStatus, version: Timestamp): Unit =
     appHealthChecks.readLock { ahcs =>
       // construct a health result from the incoming task status
-      val instanceId = Task.Id.parse(taskStatus.getTaskId).instanceId
+      val taskId = Task.Id.parse(taskStatus.getTaskId)
+      val instanceId = taskId.instanceId
       val maybeResult: Option[HealthResult] =
         if (taskStatus.hasHealthy) {
           val healthy = taskStatus.getHealthy
           logger.info(s"Received status for $instanceId with version [$version] and healthy [$healthy]")
-          Some(if (healthy) Healthy(instanceId, version) else Unhealthy(instanceId, version, ""))
+          Some(if (healthy) Healthy(instanceId, taskId, version) else Unhealthy(instanceId, taskId, version, ""))
         } else {
           logger.debug(s"Ignoring status for $instanceId with no health information")
           None

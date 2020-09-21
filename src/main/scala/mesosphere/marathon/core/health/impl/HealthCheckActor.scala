@@ -17,6 +17,7 @@ import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{
 }
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.instance.Instance
+import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.state.{AppDefinition, Timestamp}
@@ -40,7 +41,7 @@ private[health] class HealthCheckActor(
   implicit val mat = ActorMaterializer()
   import context.dispatcher
 
-  val healthByInstanceId = TrieMap.empty[Instance.Id, Health]
+  val healthByInstanceId = TrieMap.empty[Task.Id, Health]
 
   private case class HealthCheckStreamStopped(thisInstance: this.type)
 
@@ -83,10 +84,8 @@ private[health] class HealthCheckActor(
   def purgeStatusOfDoneInstances(instances: Seq[Instance]): Unit = {
     logger.debug(s"Purging health status of inactive instances for app ${app.id} version ${app.version} and healthCheck ${healthCheck}")
 
-    val inactiveInstanceIds: Set[Instance.Id] = instances.filterNot(_.isActive).iterator.map(_.instanceId).toSet
-    inactiveInstanceIds.foreach { inactiveId =>
-      healthByInstanceId.remove(inactiveId)
-    }
+    val activeTaskIds: Set[Task.Id] = instances.map(_.appTask).filter(_.isActive).map(_.taskId).to(Set)
+    healthByInstanceId.retain((taskId, health) => activeTaskIds(taskId))
 
     val checksToPurge = instances
       .withFilter(!_.isActive)
@@ -144,12 +143,12 @@ private[health] class HealthCheckActor(
 
   def handleHealthResult(result: HealthResult): Unit = {
     val instanceId = result.instanceId
-    val health = healthByInstanceId.getOrElse(instanceId, Health(instanceId))
+    val health = healthByInstanceId.getOrElse(result.taskId, Health(instanceId))
 
     val updatedHealth = result match {
-      case Healthy(_, _, _, _) =>
+      case Healthy(_, _, _, _, _) =>
         Future.successful(health.update(result))
-      case Unhealthy(_, _, _, _, _) =>
+      case Unhealthy(_, _, _, _, _, _) =>
         instanceTracker.instance(instanceId).map {
           case Some(instance) =>
             if (ignoreFailures(instance, health)) {
@@ -183,7 +182,7 @@ private[health] class HealthCheckActor(
     val newHealth = instanceHealth.newHealth
 
     logger.info(s"Received health result for app [${app.id}] version [${app.version}]: [$result]")
-    healthByInstanceId += (instanceId -> instanceHealth.newHealth)
+    healthByInstanceId += (result.taskId -> instanceHealth.newHealth)
     appHealthCheckActor ! HealthCheckStatusChanged(ApplicationKey(app.id, app.version), healthCheck, newHealth)
 
     if (health.alive != newHealth.alive && result.publishEvent) {
@@ -192,7 +191,9 @@ private[health] class HealthCheckActor(
   }
 
   def receive: Receive = {
-    case GetInstanceHealth(instanceId) => sender() ! healthByInstanceId.getOrElse(instanceId, Health(instanceId))
+    case GetInstanceHealth(instanceId) =>
+      sender() ! healthByInstanceId.find(_._1.instanceId == instanceId)
+      .map(_._2).getOrElse(Health(instanceId))
 
     case GetAppHealth =>
       sender() ! AppHealth(healthByInstanceId.values.to(Seq))

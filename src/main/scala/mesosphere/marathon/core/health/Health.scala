@@ -20,13 +20,13 @@ case class Health(
 
   def update(result: HealthResult): Health =
     result match {
-      case Healthy(_, _, time, _) =>
+      case Healthy(_, _, _, time, _) =>
         copy(
           firstSuccess = firstSuccess.orElse(Some(time)),
           lastSuccess = Some(time),
           consecutiveFailures = 0
         )
-      case Unhealthy(_, _, cause, time, _) =>
+      case Unhealthy(_, _, _, cause, time, _) =>
         copy(
           lastFailure = Some(time),
           lastFailureCause = Some(cause),
