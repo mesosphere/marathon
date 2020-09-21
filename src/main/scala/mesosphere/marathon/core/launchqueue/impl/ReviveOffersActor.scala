@@ -13,6 +13,7 @@ import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.{IssueR
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
 import org.apache.mesos.Protos.FrameworkInfo
+import org.apache.mesos.scheduler.Protos.OfferConstraints
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
@@ -87,7 +88,10 @@ class ReviveOffersActor(
             driverHolder.driver.foreach { d =>
               val newInfo = frameworkInfoWithRoles(frameworkInfo, roleState.keys)
               val suppressedRoles = roleState.iterator.collect { case (role, OffersNotWanted) => role }.toSeq
-              d.updateFramework(newInfo, suppressedRoles.asJava)
+              d.updateFramework(
+                  newInfo,
+                  suppressedRoles.asJava,
+                  OfferConstraints.getDefaultInstance())
             }
 
           case IssueRevive(roles) =>
