@@ -37,13 +37,13 @@ object Volume {
       HostVolume(name = name, hostPath = proto.getHostPath)
   }
 
-  def validVolume(enabledFeatures: Set[String]): Validator[Volume] =
+  def validVolume(volumeMount: VolumeMount, enabledFeatures: Set[String]): Validator[Volume] =
     new Validator[Volume] {
       override def apply(volume: Volume): Result =
         volume match {
           case pv: PersistentVolume => validate(pv)(PersistentVolume.validPersistentVolume)
           case dv: HostVolume => validate(dv)(HostVolume.validHostVolume)
-          case ev: ExternalVolume => validate(ev)(ExternalVolume.validExternalVolume(enabledFeatures))
+          case ev: ExternalVolume => validate(ev)(ExternalVolume.validExternalVolume(volumeMount, enabledFeatures))
           case _: SecretVolume => Success // validation is done in raml
         }
     }
@@ -80,7 +80,7 @@ object VolumeWithMount {
 
   def validVolumeWithMount(enabledFeatures: Set[String]): Validator[VolumeWithMount[Volume]] =
     validator[VolumeWithMount[Volume]] { vm =>
-      vm.volume is Volume.validVolume(enabledFeatures)
+      vm.volume is Volume.validVolume(vm.mount, enabledFeatures)
       vm.mount is VolumeMount.validVolumeMount
       vm.volume match {
         case _: PersistentVolume =>
@@ -375,7 +375,7 @@ object CSIExternalVolumeInfo {
 
     case object MULTI_NODE_SINGLE_WRITER extends AccessMode {
       override val name = "MULTI_NODE_SINGLE_WRITER"
-      override val shareable = false
+      override val shareable = true
       override val readOnly = false
     }
 
@@ -482,12 +482,12 @@ object DVDIExternalVolumeInfo {
 case class ExternalVolume(name: Option[String], external: ExternalVolumeInfo) extends Volume
 
 object ExternalVolume {
-  def validExternalVolume(enabledFeatures: Set[String]): Validator[ExternalVolume] =
+  def validExternalVolume(volumeMount: VolumeMount, enabledFeatures: Set[String]): Validator[ExternalVolume] =
     validator[ExternalVolume] { ev =>
       ev is featureEnabled(enabledFeatures, Features.EXTERNAL_VOLUMES)
       ev.name is optional(notEmpty)
       ev.external is ExternalVolumeInfo.validExternalVolumeInfo
-    } and ExternalVolumes.validExternalVolume
+    } and ExternalVolumes.validExternalVolume(volumeMount)
 }
 
 /**

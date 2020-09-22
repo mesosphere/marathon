@@ -277,7 +277,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
     }
   }
 
-  override lazy val volume = {
+  override def volume(volumeMount: VolumeMount) = {
     import VolumeOptions._
 
     val validateDVDIExternalVolumeInfo = validator[DVDIExternalVolumeInfo] { external =>

@@ -354,7 +354,7 @@ trait AppValidation {
       .indices
   }
 
-  def validResourceLimit(requestResource: Double): Validator[ResourceLimit] =
+  private def validResourceLimit(requestResource: Double): Validator[ResourceLimit] =
     new Validator[ResourceLimit] {
       override def apply(resourceLimit: ResourceLimit): Result = {
         resourceLimit match {
