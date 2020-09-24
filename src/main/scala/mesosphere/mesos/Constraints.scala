@@ -6,6 +6,8 @@ import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.state.RunSpec
 import mesosphere.marathon.tasks.OfferUtil
 import org.apache.mesos.Protos.{Attribute, Offer, Value}
+import org.apache.mesos.scheduler.Protos.{AttributeConstraint => MesosAttributeConstraint}
+import org.apache.mesos.scheduler.Protos.AttributeConstraint.Selector.PseudoattributeType
 
 import scala.collection.immutable.Seq
 import scala.util.Try
@@ -85,6 +87,15 @@ object Constraints extends StrictLogging {
       case `regionField` => regionReader
       case `zoneField` => zoneReader
       case _ => attributeReader(field)
+    }
+
+  // Converts a field string into a Mesos offer constraint attribute selector.
+  def buildSelectorProto(field: String, builder: MesosAttributeConstraint.Selector.Builder): Unit =
+    field match {
+      case "hostname" | `hostnameField` => builder.setPseudoattributeType(PseudoattributeType.HOSTNAME)
+      case `regionField` => builder.setPseudoattributeType(PseudoattributeType.REGION)
+      case `zoneField` => builder.setPseudoattributeType(PseudoattributeType.ZONE)
+      case _ => builder.setAttributeName(field)
     }
 
   // Regular expressions to determine type based on http://mesos.apache.org/documentation/latest/attributes-resources/

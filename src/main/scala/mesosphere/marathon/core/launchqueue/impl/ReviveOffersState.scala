@@ -4,7 +4,7 @@ package core.launchqueue.impl
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstancesSnapshot
 import mesosphere.marathon.core.instance.{Goal, Instance}
-import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.{OffersWantedInfo, OffersWantedReason, Role}
+import mesosphere.marathon.core.launchqueue.impl.ReviveOffersState.{OffersWantedInfo, OffersWantedReason, Role, shouldUnreserve}
 import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.VersionedRoleState
 import mesosphere.marathon.state.RunSpecConfigRef
 
@@ -20,11 +20,6 @@ case class ReviveOffersState(
     activeDelays: Set[RunSpecConfigRef],
     version: Long
 ) extends StrictLogging {
-
-  /** whether the instance has a reservation that should be freed. */
-  private def shouldUnreserve(instance: Instance): Boolean = {
-    instance.reservation.nonEmpty && instance.state.goal == Goal.Decommissioned && instance.state.condition.isTerminal
-  }
 
   private def copyBumpingVersion(
       instancesWantingOffers: Map[Role, Map[Instance.Id, OffersWantedInfo]] = instancesWantingOffers,
@@ -173,6 +168,12 @@ case class ReviveOffersState(
 }
 
 object ReviveOffersState {
+
+  /** whether the instance has a reservation that should be freed. */
+  def shouldUnreserve(instance: Instance): Boolean = {
+    instance.reservation.nonEmpty && instance.state.goal == Goal.Decommissioned && instance.state.condition.isTerminal
+  }
+
   private[impl] type Role = String
   def empty = ReviveOffersState(Map.empty, Set.empty, 0)
 

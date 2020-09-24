@@ -10,10 +10,11 @@ import akka.{Done, NotUsed}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.InstanceChangeOrSnapshot
 import mesosphere.marathon.core.launchqueue.impl.ReviveOffersStreamLogic.{IssueRevive, RoleDirective, UpdateFramework}
+import mesosphere.marathon.core.launchqueue.impl.OfferConstraintsStreamLogic.{offerConstraintsFlow, offerConstraintsInjectionFlow}
+
 import mesosphere.marathon.core.task.tracker.InstanceTracker
 import mesosphere.marathon.metrics.{Counter, Metrics}
 import org.apache.mesos.Protos.FrameworkInfo
-import org.apache.mesos.scheduler.Protos.OfferConstraints
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
@@ -30,6 +31,8 @@ case object OffersNotWanted extends RoleOfferState { def isWanted = false }
   * @param initialFrameworkInfo - The initial frameworkInfo used, including the frameworkId received by the registered event
   * @param defaultMesosRole - The default Mesos role as specified by --mesos_role
   * @param minReviveOffersInterval - The interval between revive repeats as defined in [[MarathonConf]]
+  * @param useOfferConstraints - Enables subscribing with offer constraints on.
+  * @param minOfferConstraintsUpdateInterval - The interval between offer constraints updates as defined in [[MarathonConf]].
   * @param instanceUpdates - Updates from the [[InstanceTracker]]
   * @param rateLimiterUpdates - Update from the [[RateLimiterActor]]
   * @param driverHolder - Mesos driver used to call revive, suppress or update the framework info
@@ -39,6 +42,8 @@ class ReviveOffersActor(
     initialFrameworkInfo: Future[FrameworkInfo],
     defaultMesosRole: String,
     minReviveOffersInterval: FiniteDuration,
+    useOfferConstraints: Boolean,
+    minOfferConstraintsUpdateInterval: FiniteDuration,
     instanceUpdates: InstanceTracker.InstanceUpdates,
     rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
     driverHolder: MarathonSchedulerDriverHolder,
@@ -77,24 +82,31 @@ class ReviveOffersActor(
       defaultMesosRole
     )
 
+    val constraintsInjectionFlow =
+      if (useOfferConstraints)
+        offerConstraintsInjectionFlow(
+          flattenedInstanceUpdates
+            .via(offerConstraintsFlow(minOfferConstraintsUpdateInterval))
+        )
+      else
+        Flow[RoleDirective].map { (_, OfferConstraints.RoleState.empty) }
+
     val done: Future[Done] = initialFrameworkInfo.flatMap { frameworkInfo =>
       flattenedInstanceUpdates
         .map(Left(_))
         .merge(delayedConfigRefs.map(Right(_)))
         .via(suppressReviveFlow)
         .via(reviveSuppressMetrics)
+        .via(constraintsInjectionFlow)
         .runWith(Sink.foreach {
-          case UpdateFramework(roleState, _, _) =>
+          case (UpdateFramework(roleState, _, _), constraints) =>
             driverHolder.driver.foreach { d =>
               val newInfo = frameworkInfoWithRoles(frameworkInfo, roleState.keys)
               val suppressedRoles = roleState.iterator.collect { case (role, OffersNotWanted) => role }.toSeq
-              d.updateFramework(
-                  newInfo,
-                  suppressedRoles.asJava,
-                  OfferConstraints.getDefaultInstance())
+              d.updateFramework(newInfo, suppressedRoles.asJava, constraints.toProto(roleState.keySet))
             }
 
-          case IssueRevive(roles) =>
+          case (IssueRevive(roles), _) =>
             driverHolder.driver.foreach { d =>
               d.reviveOffers(roles.asJava)
             }
@@ -143,6 +155,8 @@ object ReviveOffersActor {
       initialFrameworkInfo: Future[FrameworkInfo],
       defaultMesosRole: String,
       minReviveOffersInterval: FiniteDuration,
+      useOfferConstraints: Boolean,
+      minOfferConstraintsUpdateInterval: FiniteDuration,
       instanceUpdates: InstanceTracker.InstanceUpdates,
       rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
       driverHolder: MarathonSchedulerDriverHolder,
@@ -154,6 +168,8 @@ object ReviveOffersActor {
         initialFrameworkInfo,
         defaultMesosRole,
         minReviveOffersInterval,
+        useOfferConstraints,
+        minOfferConstraintsUpdateInterval,
         instanceUpdates,
         rateLimiterUpdates,
         driverHolder,

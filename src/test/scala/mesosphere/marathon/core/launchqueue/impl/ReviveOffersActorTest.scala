@@ -158,6 +158,8 @@ class ReviveOffersActorTest extends AkkaUnitTest {
         Future.successful(initialFrameworkInfo),
         defaultRole,
         minReviveOffersInterval = 500.millis,
+        useOfferConstraints = true,
+        minOfferConstraintsUpdateInterval = 500.millis,
         instanceUpdates = instanceUpdates,
         rateLimiterUpdates = delayUpdates,
         driverHolder = driverHolder,
