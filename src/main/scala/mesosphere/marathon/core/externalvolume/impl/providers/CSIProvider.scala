@@ -27,7 +27,6 @@ private[externalvolume] case object CSIProvider extends ExternalVolumeProvider {
           val staticProvisioning = CSIVolume.StaticProvisioning
             .newBuilder()
             .setVolumeId(info.name)
-            .setReadonly(mount.readOnly)
             .setVolumeCapability(ExternalVolumeInfoSerializer.toProtoVolumeCapability(info))
             .putAllNodeStageSecrets(info.nodeStageSecret.view.mapValues(SecretSerializer.toSecretReference).toMap.asJava)
             .putAllNodePublishSecrets(info.nodePublishSecret.view.mapValues(SecretSerializer.toSecretReference).toMap.asJava)
