@@ -338,8 +338,8 @@ class ZkPersistenceStore(
         case Success(_) =>
           Done
         case Failure(e: KeeperException.NodeExistsException) =>
-          throw new StoreCommandFailedException(
-            "Migration is already in progress; /migration-in-progress node already exists", e)
+          logger.warn("Warning: Migration is already in progress; /migration-in-progress node already exists")
+          Done
         case Failure(e: KeeperException) =>
           throw new StoreCommandFailedException("Failed to start migration", e)
         case Failure(e) =>
