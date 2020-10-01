@@ -11,7 +11,7 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 addCompilerPlugin(scalafixSemanticdb)
 
-val silencerVersion = "1.6.0"
+val silencerVersion = "1.7.1"
 addCompilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full)
 libraryDependencies += "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
 
@@ -67,7 +67,7 @@ val pbSettings = ProtobufPlugin.projectSettings ++ Seq(
 lazy val commonSettings = Seq(
   autoCompilerPlugins := true,
   organization := "mesosphere.marathon",
-  scalaVersion := "2.13.1",
+  scalaVersion := "2.13.3",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
     "-encoding", "UTF-8",
@@ -177,7 +177,7 @@ lazy val ammonite = (project in file("./tools/repl-server"))
   .settings(commonSettings: _*)
   .settings(
     mainClass in Compile := Some("ammoniterepl.Main"),
-    libraryDependencies += "com.lihaoyi" % "ammonite-sshd" % "2.0.4" cross CrossVersion.full
+    libraryDependencies += "com.lihaoyi" % "ammonite-sshd" % "2.2.0" cross CrossVersion.full
   )
   .dependsOn(marathon)
 

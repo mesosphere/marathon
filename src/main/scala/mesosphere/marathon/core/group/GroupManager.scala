@@ -216,7 +216,7 @@ trait GroupManager extends GroupManager.EnforceRoleSettingProvider with GroupMan
   def invalidateGroupCache(): Future[Done]
 
   override def enforceRoleSetting(id: AbsolutePathId): Boolean = {
-    rootGroup().group(id).map(_.enforceRole).getOrElse(false)
+    rootGroup().group(id).flatMap(_.enforceRole).getOrElse(false)
   }
 }
 

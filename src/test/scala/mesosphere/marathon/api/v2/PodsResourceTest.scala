@@ -1895,7 +1895,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       pod.role shouldBe "dev"
       And("the auto-created group has enforceRole enabled")
       val Some(group) = f.groupManager.group("/dev".toAbsolutePath)
-      group.enforceRole shouldBe true
+      group.enforceRole shouldBe Some(true)
     }
 
     "support versions" when {
@@ -2239,7 +2239,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     def withRealGroupManager(
-        initialRoot: Group = Group.empty("/".toAbsolutePath, enforceRole = false),
+        initialRoot: Group = Group.empty("/".toAbsolutePath),
         configArgs: Seq[String] = Seq.empty[String],
         auth: TestAuthFixture = new TestAuthFixture()
     ): Fixture = {
