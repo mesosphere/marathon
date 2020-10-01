@@ -26,6 +26,8 @@ class Group(
 
   if (!id.isTopLevel) {
     require(enforceRole.isEmpty, "Only top-level groups can specify role enforcement.")
+  } else {
+    require(enforceRole.nonEmpty, "Top-level groups must specify role enforcement.")
   }
 
   /**
@@ -206,7 +208,7 @@ object Group extends StrictLogging {
       enforceRole: Option[Boolean] = None
   ): Group = {
     if (id.isTopLevel)
-      new Group(id, apps, pods, groupsById, dependencies, version, enforceRole)
+      new Group(id, apps, pods, groupsById, dependencies, version, enforceRole.orElse(Some(false)))
     else
       new Group(id, apps, pods, groupsById, dependencies, version, None)
   }
@@ -381,7 +383,7 @@ object Group extends StrictLogging {
         val originalGroup = updatedGroupId.flatMap { id =>
           originalRootGroup.group(id)
         } // TODO: why is groupUpdate.id optional? What is the semantic there?
-        if (originalGroup.isDefined && (group.enforceRole != originalGroup.map(_.enforceRole))) {
+        if (originalGroup.isDefined && (group.enforceRole != originalGroup.flatMap(_.enforceRole))) {
           Failure(Set(RuleViolation(group.enforceRole, EnforceRoleCantBeChangedMessage, path = Path(Generic("enforceRole")))))
         } else {
           Success
