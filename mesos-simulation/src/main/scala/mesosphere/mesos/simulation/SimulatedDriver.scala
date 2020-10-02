@@ -8,6 +8,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import com.typesafe.scalalogging.StrictLogging
 import scala.jdk.CollectionConverters._
 import org.apache.mesos.Protos._
+import org.apache.mesos.scheduler.Protos.OfferConstraints
 import org.apache.mesos.SchedulerDriver
 
 import scala.concurrent.Await
@@ -124,4 +125,5 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver with StrictLog
   override def suppressOffers(roles: util.Collection[String]): Status = ???
 
   override def updateFramework(frameworkInfo: FrameworkInfo, suppressedRoles: util.Collection[String]): Status = ???
+  override def updateFramework(frameworkInfo: FrameworkInfo, suppressedRoles: util.Collection[String], offerConstraints: OfferConstraints): Status = ???
 }
