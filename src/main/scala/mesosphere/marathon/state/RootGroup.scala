@@ -164,7 +164,8 @@ class RootGroup(
         pods = group.pods,
         groupsById = group.groupsById.map { case (subGroupId, subGroup) => subGroupId -> updateApps(subGroup) },
         dependencies = group.dependencies,
-        version = version
+        version = version,
+        enforceRole = group.enforceRole
       )
     }
 
@@ -200,7 +201,8 @@ class RootGroup(
       pods = oldGroup.pods,
       groupsById = oldGroup.groupsById,
       dependencies = oldGroup.dependencies,
-      version = version
+      version = version,
+      enforceRole = oldGroup.enforceRole
     )
     putGroup(newGroup, version)
   }
