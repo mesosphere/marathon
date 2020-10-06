@@ -3,7 +3,7 @@ package stream
 
 import akka.stream.stage.{GraphStageLogic, InHandler, GraphStageWithMaterializedValue}
 import akka.stream.{Attributes, Inlet, SinkShape}
-import mesosphere.marathon.core.async.ExecutionContexts
+import com.mesosphere.usi.async.ExecutionContexts
 import scala.concurrent.{Future, Promise}
 
 import LiveFold.Folder

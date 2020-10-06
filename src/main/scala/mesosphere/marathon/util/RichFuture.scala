@@ -1,7 +1,7 @@
 package mesosphere.marathon
 package util
 
-import mesosphere.marathon.core.async.ExecutionContexts
+import com.mesosphere.usi.async.ExecutionContexts
 
 import scala.concurrent.{Future, Promise}
 import scala.util.Try

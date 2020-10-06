@@ -7,7 +7,7 @@ import akka.stream.OverflowStrategy
 import akka.stream.scaladsl.{Sink => AkkaSink, Source, SourceQueueWithComplete}
 import akka.stream.stage.{GraphStageLogic, InHandler, GraphStageWithMaterializedValue}
 import akka.stream.{Attributes, Inlet, SinkShape}
-import mesosphere.marathon.core.async.ExecutionContexts
+import com.mesosphere.usi.async.ExecutionContexts
 import mesosphere.marathon.util.CancellableOnce
 import scala.util.{Failure, Success, Try}
 
