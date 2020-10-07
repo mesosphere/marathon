@@ -8,8 +8,8 @@ import java.util.concurrent.atomic.AtomicReference
 import akka.Done
 import akka.stream.scaladsl.{Sink, Source}
 import akka.testkit.{TestFSMRef, TestKitBase}
+import com.mesosphere.usi.async.ExecutionContexts
 import mesosphere.AkkaUnitTest
-import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.pod.PodDefinition
 import mesosphere.marathon.core.storage.repository.RepositoryConstants
 import mesosphere.marathon.core.storage.store.impl.memory.{Identity, InMemoryPersistenceStore, RamId}

@@ -3,9 +3,9 @@ package api.v2
 
 import akka.Done
 import akka.actor.ActorSystem
+import com.mesosphere.usi.async.ExecutionContexts
 import mesosphere.UnitTest
 import mesosphere.marathon.api.TestAuthFixture
-import mesosphere.marathon.core.async.ExecutionContexts
 import mesosphere.marathon.core.election.ElectionService
 import mesosphere.marathon.storage.repository.RuntimeConfigurationRepository
 import mesosphere.marathon.test.{JerseyTest, SettableClock, SimulatedScheduler}

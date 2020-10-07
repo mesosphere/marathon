@@ -5,7 +5,7 @@ import java.time.OffsetDateTime
 
 import akka.stream.scaladsl.Source
 import akka.{Done, NotUsed}
-import mesosphere.marathon.core.async.ExecutionContexts
+import com.mesosphere.usi.async.ExecutionContexts
 import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.pod.PodDefinition

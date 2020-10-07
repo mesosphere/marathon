@@ -11,7 +11,7 @@ import akka.stream.ActorMaterializer
 import com.typesafe.scalalogging.StrictLogging
 import java.util.concurrent.atomic.AtomicBoolean
 
-import mesosphere.marathon.core.async.ExecutionContexts
+import com.mesosphere.usi.async.ExecutionContexts
 import mesosphere.marathon.core.base.CrashStrategy
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.metrics.current.UnitOfMeasurement

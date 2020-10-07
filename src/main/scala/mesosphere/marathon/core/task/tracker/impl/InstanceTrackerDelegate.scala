@@ -10,7 +10,7 @@ import akka.stream.scaladsl.{Keep, Sink, Source}
 import akka.stream.{Materializer, OverflowStrategy, QueueOfferResult}
 import akka.util.Timeout
 import akka.{Done, NotUsed}
-import mesosphere.marathon.core.async.ExecutionContexts
+import com.mesosphere.usi.async.ExecutionContexts
 import mesosphere.marathon.core.instance.update.{InstanceChange, InstanceUpdateEffect, InstanceUpdateOperation, InstancesSnapshot}
 import mesosphere.marathon.core.instance.{Goal, GoalChangeReason, Instance}
 import mesosphere.marathon.core.task.tracker.impl.InstanceTrackerActor.{ListBySpec, UpdateContext}

@@ -4,7 +4,7 @@ package core.appinfo
 import java.time.Clock
 
 import com.google.inject.Inject
-import com.mesosphere.usi.async.NamedExecutionContext
+import com.mesosphere.usi.async.ExecutionContexts
 import mesosphere.marathon.core.appinfo.impl.{AppInfoBaseData, DefaultInfoService}
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.health.HealthCheckManager
@@ -24,7 +24,7 @@ class AppInfoModule @Inject() (
     config: MarathonConf
 ) {
 
-  val appInfoEc = (NamedExecutionContext
+  val appInfoEc = (ExecutionContexts
     .fixedThreadPoolExecutionContext(config.asInstanceOf[AppInfoConfig].appInfoModuleExecutionContextSize(), "app-info-module"))
   private[this] val appInfoBaseData = () =>
     new AppInfoBaseData(clock, taskTracker, healthCheckManager, marathonSchedulerService, taskFailureRepository, groupManager)(appInfoEc)
@@ -33,7 +33,7 @@ class AppInfoModule @Inject() (
   def groupInfoService: GroupInfoService = infoService
   def podStatusService: PodStatusService = infoService
 
-  val defaultInfoEc = NamedExecutionContext.fixedThreadPoolExecutionContext(
+  val defaultInfoEc = ExecutionContexts.fixedThreadPoolExecutionContext(
     config.asInstanceOf[AppInfoConfig].defaultInfoServiceExecutionContextSize(),
     "default-info-service"
   )

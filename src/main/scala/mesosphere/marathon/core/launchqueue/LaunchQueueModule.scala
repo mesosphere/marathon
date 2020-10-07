@@ -9,7 +9,7 @@ import java.time.Clock
 
 import akka.actor.{ActorRef, Props}
 import akka.event.EventStream
-import mesosphere.marathon.core.async.ExecutionContexts
+import com.mesosphere.usi.async.ExecutionContexts
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.launcher.InstanceOpFactory
 import mesosphere.marathon.core.launchqueue.impl._

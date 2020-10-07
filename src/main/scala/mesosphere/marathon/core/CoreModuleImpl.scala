@@ -10,7 +10,7 @@ import com.google.inject.{Inject, Provider}
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.StrictLogging
 import javax.inject.Named
-import mesosphere.marathon.core.async.ExecutionContexts
+import com.mesosphere.usi.async.ExecutionContexts
 import mesosphere.marathon.core.auth.AuthModule
 import mesosphere.marathon.core.base.{ActorsModule, CrashStrategy, LifecycleState}
 import mesosphere.marathon.core.deployment.DeploymentModule
@@ -37,7 +37,6 @@ import mesosphere.marathon.core.task.termination.TaskTerminationModule
 import mesosphere.marathon.core.task.tracker.InstanceTrackerModule
 import mesosphere.marathon.core.task.update.TaskStatusUpdateProcessor
 import mesosphere.marathon.storage.{StorageConf, StorageConfig, StorageModule}
-import com.mesosphere.usi.async.NamedExecutionContext
 import mesosphere.util.state.MesosLeaderInfo
 import org.apache.mesos.Protos.FrameworkID
 
@@ -95,7 +94,7 @@ class CoreModuleImpl @Inject() (
   )
 
   // TASKS
-  val storageExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(
+  val storageExecutionContext = ExecutionContexts.fixedThreadPoolExecutionContext(
     marathonConf.asInstanceOf[StorageConf].storageExecutionContextSize(),
     "storage-module"
   )
@@ -230,7 +229,7 @@ class CoreModuleImpl @Inject() (
 
   // GROUP MANAGER
 
-  val groupManagerExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(
+  val groupManagerExecutionContext = ExecutionContexts.fixedThreadPoolExecutionContext(
     marathonConf.asInstanceOf[GroupManagerConfig].groupManagerExecutionContextSize(),
     "group-manager-module"
   )
@@ -298,7 +297,7 @@ class CoreModuleImpl @Inject() (
   //
   // TODO: this can be removed when MarathonSchedulerActor becomes a core component
 
-  val schedulerActionsExecutionContext = NamedExecutionContext.fixedThreadPoolExecutionContext(
+  val schedulerActionsExecutionContext = ExecutionContexts.fixedThreadPoolExecutionContext(
     marathonConf.asInstanceOf[MarathonSchedulerServiceConfig].schedulerActionsExecutionContextSize(),
     "scheduler-actions"
   )

@@ -2,7 +2,7 @@ package mesosphere.marathon
 package api
 
 import javax.servlet.http.HttpServletRequest
-import mesosphere.marathon.core.async.ExecutionContexts
+import com.mesosphere.usi.async.ExecutionContexts
 
 import mesosphere.marathon.plugin.auth._
 import scala.concurrent.Future

@@ -6,7 +6,7 @@ import akka.stream.stage._
 import akka.stream.{Attributes, FlowShape, Inlet, Outlet}
 import java.time.{Clock, Duration, Instant}
 
-import mesosphere.marathon.core.async.ExecutionContexts
+import com.mesosphere.usi.async.ExecutionContexts
 
 import scala.Exception
 import scala.concurrent.Future
