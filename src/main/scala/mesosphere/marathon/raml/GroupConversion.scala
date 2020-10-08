@@ -13,7 +13,8 @@ case class UpdateGroupStructureOp(
     current: CoreGroup,
     timestamp: Timestamp
 ) {
-  def apply(cf: App => AppDefinition): CoreGroup = UpdateGroupStructureOp.execute(groupUpdate, current, timestamp)(cf)
+  def apply(cf: App => AppDefinition): CoreGroup =
+    UpdateGroupStructureOp.execute(groupUpdate, current, timestamp)(cf)
 }
 
 object UpdateGroupStructureOp {
@@ -75,7 +76,8 @@ object UpdateGroupStructureOp {
       pods = Map.empty,
       groupsById = groupsById,
       dependencies = groupUpdate.dependencies.fold(Set.empty[AbsolutePathId])(_.map(PathId(_).canonicalPath(gid))),
-      version = version
+      version = version,
+      enforceRole = groupUpdate.enforceRole
     )
   }
 
@@ -83,8 +85,12 @@ object UpdateGroupStructureOp {
     * Main entrypoint for a group structure update operation.
     * Implements create-or-update-or-delete for a group tree or subtree.
     * Performs both normalization and conversion from RAML model to state model.
+    *
+    * Note - GroupUpdate should be normalized already and default enforceRole applied as appropriate
     */
-  private def execute(groupUpdate: GroupUpdate, current: CoreGroup, timestamp: Timestamp)(implicit cf: App => AppDefinition): CoreGroup = {
+  private def execute(groupUpdate: GroupUpdate, current: CoreGroup, timestamp: Timestamp)(implicit
+      cf: App => AppDefinition
+  ): CoreGroup = {
 
     require(groupUpdate.scaleBy.isEmpty, "For a structural update, no scale should be given.")
     require(groupUpdate.version.isEmpty, "For a structural update, no version should be given.")

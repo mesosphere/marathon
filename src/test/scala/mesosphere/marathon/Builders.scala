@@ -58,15 +58,19 @@ object Builders {
         pods: Iterable[PodDefinition] = Nil,
         groupDependencies: Map[AbsolutePathId, Set[AbsolutePathId]] = Map.empty,
         groupIds: Iterable[AbsolutePathId] = Nil,
+        groups: Iterable[Group] = Nil,
         newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior = NewGroupEnforceRoleBehavior.Top,
         version: Timestamp = Group.defaultVersion
     ): RootGroup = {
-      val newGroupStrategy = NewGroupStrategy.fromConfig(newGroupEnforceRoleBehavior)
-      val initialGroup = RootGroup(newGroupStrategy = newGroupStrategy, version = version)
+      val newGroupStrategy = NewGroupStrategy.UsingConfig(newGroupEnforceRoleBehavior)
+      val initialGroup = RootGroup.empty(newGroupStrategy = newGroupStrategy, version = version)
       val withEmptyGroups = groupIds.foldLeft(initialGroup) { (rootGroup, groupId) =>
         rootGroup.updateGroup(groupId, _.getOrElse { newGroupStrategy.newGroup(groupId) })
       }
-      val groupWithApps = apps.foldLeft(withEmptyGroups) { (rootGroup, app) =>
+      val withProvidedGroups = groups.foldLeft(withEmptyGroups) { (rootGroup, group) =>
+        rootGroup.updateGroup(group.id, { _ => group })
+      }
+      val groupWithApps = apps.foldLeft(withProvidedGroups) { (rootGroup, app) =>
         rootGroup.updateApp(app.id, _ => app, version = version)
       }
       val groupWithPods = pods.foldLeft(groupWithApps) { (rootGroup, pod) =>
@@ -82,6 +86,43 @@ object Builders {
             }
           )
       }
+    }
+
+    /** Instantiates a RootGroup directly, providing simple defaults. Does not auto-create parents. Allows creation of
+      * invalid groups */
+    def withoutParentAutocreation(
+        apps: Iterable[AppDefinition] = Nil,
+        pods: Iterable[PodDefinition] = Nil,
+        groups: Iterable[Group] = Nil,
+        dependencies: Iterable[AbsolutePathId] = Set.empty,
+        newGroupStrategy: NewGroupStrategy = NewGroupStrategy.UsingConfig(NewGroupEnforceRoleBehavior.Top),
+        version: Timestamp = Timestamp(0)
+    ): RootGroup =
+      RootGroup(
+        apps = apps.map { a => a.id -> a }.toMap,
+        pods = pods.map { p => p.id -> p }.toMap,
+        groupsById = groups.map { g => g.id -> g }.toMap,
+        dependencies = dependencies.toSet,
+        newGroupStrategy,
+        version
+      )
+  }
+
+  object newGroup {
+    def withoutParentAutocreation(
+        id: AbsolutePathId,
+        apps: Iterable[AppDefinition] = Nil,
+        pods: Iterable[PodDefinition] = Nil,
+        groups: Iterable[Group] = Nil,
+        dependencies: Iterable[AbsolutePathId] = Nil,
+        version: Timestamp = Timestamp(0),
+        enforceRole: Option[Boolean] = None
+    ) = {
+      val appsById = apps.iterator.map { app => app.id -> app }.toMap
+      val podsById = pods.iterator.map { pod => pod.id -> pod }.toMap
+      val groupsById = groups.iterator.map { group => group.id -> group }.toMap
+      val dependenciesSet = dependencies.toSet
+      Group(id, appsById, podsById, groupsById, dependenciesSet, version = version, enforceRole = enforceRole)
     }
   }
 

@@ -2181,7 +2181,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       service: MarathonSchedulerService
   ) extends GroupCreation {
 
-    def prepareGroup(groupId: String, pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods): Unit = {
+    def prepareGroup(groupId: String, pods: Map[AbsolutePathId, PodDefinition] = Map.empty): Unit = {
       val groupPath = AbsolutePathId(groupId)
 
       val group = createGroup(groupPath, pods = pods)
@@ -2250,7 +2250,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       val podStatusService = mock[PodStatusService]
 
       val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(
-        initialRoot = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.fromConfig(config.newGroupEnforceRole()))
+        initialRoot = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.UsingConfig(config.newGroupEnforceRole()))
       )
       val killService: TaskKiller = mock[TaskKiller]
       val podManager = new PodManagerImpl(groupManagerFixture.groupManager)
