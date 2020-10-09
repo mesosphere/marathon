@@ -502,18 +502,7 @@ object RootGroup {
     def fromConfig(newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior): NewGroupStrategy =
       new NewGroupStrategy {
         override def newGroup(id: AbsolutePathId): Group = {
-          newGroupEnforceRoleBehavior match {
-            case NewGroupEnforceRoleBehavior.Off =>
-              if (id.isTopLevel)
-                Group.empty(id, enforceRole = Some(false))
-              else
-                Group.empty(id, enforceRole = None)
-            case NewGroupEnforceRoleBehavior.Top =>
-              if (id.isTopLevel)
-                Group.empty(id, enforceRole = Some(true))
-              else
-                Group.empty(id, enforceRole = None)
-          }
+          Group.empty(id, enforceRole = if (id.isTopLevel) newGroupEnforceRoleBehavior.option else None)
         }
       }
   }

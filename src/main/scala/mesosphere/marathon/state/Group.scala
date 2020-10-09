@@ -24,10 +24,10 @@ class Group(
     val enforceRole: Option[Boolean]
 ) extends mesosphere.marathon.plugin.Group {
 
-  if (!id.isTopLevel) {
-    require(enforceRole.isEmpty, "Only top-level groups can specify role enforcement.")
-  } else {
+  if (id.isTopLevel) {
     require(enforceRole.nonEmpty, "Top-level groups must specify role enforcement.")
+  } else {
+    require(enforceRole.isEmpty, "Only top-level groups can specify role enforcement.")
   }
 
   /**
@@ -207,10 +207,8 @@ object Group extends StrictLogging {
       version: Timestamp = Group.defaultVersion,
       enforceRole: Option[Boolean] = None
   ): Group = {
-    if (id.isTopLevel)
-      new Group(id, apps, pods, groupsById, dependencies, version, enforceRole.orElse(Some(false)))
-    else
-      new Group(id, apps, pods, groupsById, dependencies, version, None)
+    val enforceRoleBehaviour = if (id.isTopLevel) enforceRole.orElse(Some(false)) else None
+    new Group(id, apps, pods, groupsById, dependencies, version, enforceRoleBehaviour)
   }
 
   def empty(id: AbsolutePathId, enforceRole: Option[Boolean] = None, version: Timestamp = Timestamp(0)): Group =
