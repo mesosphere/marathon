@@ -319,6 +319,23 @@ trait Validation {
         violations.to(Seq).flatMap(collectViolation(_, Nil))
     }
   }
+
+  /**
+    * Provides additional information for some validation error
+    * @param hint
+    * @param validator
+    */
+  def withHint[U](hint: String, validator: Validator[U]): Validator[U] =
+    (value: U) => {
+      validator(value).map { violations =>
+        violations.map {
+          case RuleViolation(value, constraint, path) =>
+            RuleViolation(value, constraint + " " + hint, path)
+          case GroupViolation(value, constraint, children, path) =>
+            GroupViolation(value, constraint + " " + hint, children, path)
+        }
+      }
+    }
 }
 
 object Validation extends Validation {

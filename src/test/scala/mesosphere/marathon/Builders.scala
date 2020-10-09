@@ -14,7 +14,9 @@ import mesosphere.marathon.state.{
   AppDefinition,
   BackoffStrategy,
   CSIExternalVolumeInfo,
+  Container,
   EnvVarValue,
+  ExternalVolume,
   Group,
   KillSelection,
   PortDefinition,
@@ -86,6 +88,69 @@ object Builders {
   object newAppDefinition {
     val appIdIncrementor = new AtomicInteger()
 
+    /** Return a valid app definition */
+    def apply(
+        id: AbsolutePathId = AbsolutePathId(s"/app-${appIdIncrementor.incrementAndGet()}"),
+        cmd: Option[String] = Some("sleep 3600"),
+        args: Seq[String] = App.DefaultArgs,
+        user: Option[String] = App.DefaultUser,
+        env: Map[String, EnvVarValue] = AppDefinition.DefaultEnv,
+        instances: Int = 1,
+        resources: Resources = Apps.DefaultResources,
+        constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
+        portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
+        requirePorts: Boolean = App.DefaultRequirePorts,
+        backoffStrategy: BackoffStrategy = AppDefinition.DefaultBackoffStrategy,
+        healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
+        check: Option[Check] = AppDefinition.DefaultCheck,
+        readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
+        taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
+        upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
+        labels: Map[String, String] = AppDefinition.DefaultLabels,
+        acceptedResourceRoles: Set[String] = Set("*"),
+        networks: Seq[Network] = AppDefinition.DefaultNetworks,
+        versionInfo: VersionInfo = VersionInfo.OnlyVersion(Timestamp.now()),
+        secrets: Map[String, Secret] = AppDefinition.DefaultSecrets,
+        unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
+        killSelection: KillSelection = KillSelection.DefaultKillSelection,
+        tty: Option[Boolean] = AppDefinition.DefaultTTY,
+        container: Option[Container] = Some(Container.Mesos()),
+        role: Role = "*",
+        resourceLimits: Option[ResourceLimits] = None
+    ) = {
+      AppDefinition(
+        id = id,
+        role = role,
+        cmd = cmd,
+        user = user,
+        env = env,
+        args = args,
+        container = container,
+        resources = resources,
+        instances = instances,
+        portDefinitions = portDefinitions,
+        executor = "//cmd",
+        acceptedResourceRoles = acceptedResourceRoles,
+        constraints = constraints,
+        requirePorts = requirePorts,
+        backoffStrategy = backoffStrategy,
+        healthChecks = healthChecks,
+        check = check,
+        readinessChecks = readinessChecks,
+        taskKillGracePeriod = taskKillGracePeriod,
+        upgradeStrategy = upgradeStrategy,
+        labels = labels,
+        networks = networks,
+        versionInfo = versionInfo,
+        secrets = secrets,
+        unreachableStrategy = unreachableStrategy,
+        killSelection = killSelection,
+        tty = tty,
+        resourceLimits = resourceLimits
+      )
+
+    }
+
     /** Return a valid command app definition (using command executor, not using UCR or Docker). */
     def command(
         id: AbsolutePathId = AbsolutePathId(s"/app-${appIdIncrementor.incrementAndGet()}"),
@@ -150,6 +215,12 @@ object Builders {
 
   def newVolumeMount(volumeName: Option[String] = Some("name"), mountPath: String = "/path", readOnly: Boolean = false): VolumeMount = {
     VolumeMount(volumeName, mountPath, readOnly)
+  }
+
+  object newExternalVolume {
+    def csi(csiExternalVolumeInfo: CSIExternalVolumeInfo = newCSIExternalVolumeInfo()): ExternalVolume = {
+      ExternalVolume(None, csiExternalVolumeInfo)
+    }
   }
 
   def newCSIExternalVolumeInfo(

@@ -237,7 +237,7 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
   "DVDIProviderVolumeValidation" should {
     for ((testParams, idx) <- ttValidateVolume.zipWithIndex; (v, vidx) <- testParams.volumes.zipWithIndex) {
       s"validExternalVolume ${testParams.desc},$vidx" in {
-        val result = validate(v)(DVDIProvider.validations.volume)
+        val result = validate(v)(DVDIProvider.validations.volume(Builders.newVolumeMount()))
         assert(
           result.isSuccess == testParams.wantsValid,
           s"test case $idx/$vidx expected ${testParams.wantsValid} instead of $result for volume $v"

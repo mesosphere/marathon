@@ -11,7 +11,7 @@ import org.apache.mesos.Protos
 private[externalvolume] trait ExternalVolumeValidations {
   def rootGroup: Validator[RootGroup]
   def app: Validator[AppDefinition]
-  def volume: Validator[ExternalVolume]
+  def volume(volumeMount: VolumeMount): Validator[ExternalVolume]
   def ramlVolume(container: raml.Container): Validator[raml.AppExternalVolume]
   def ramlApp: Validator[raml.App]
 }

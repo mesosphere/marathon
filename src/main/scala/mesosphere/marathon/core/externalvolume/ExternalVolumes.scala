@@ -20,10 +20,10 @@ object ExternalVolumes {
     providers.get(v.external.provider).map { _.build(v, mount) }
   }
 
-  def validExternalVolume: Validator[ExternalVolume] =
+  def validExternalVolume(volumeMount: VolumeMount): Validator[ExternalVolume] =
     (ev: ExternalVolume) =>
       providers.get(ev.external.provider) match {
-        case Some(p) => p.validations.volume(ev)
+        case Some(p) => p.validations.volume(volumeMount)(ev)
         case None => Failure(Set(RuleViolation(None, "is unknown provider", Path(Explicit("external"), Explicit("provider")))))
       }
 

@@ -1,5 +1,6 @@
 package mesosphere.mesos
 
+import mesosphere.marathon.Builders
 import mesosphere.{UnitTest, ValidationTestLike}
 import mesosphere.marathon.state._
 
@@ -11,7 +12,7 @@ class PersistentVolumeValidationTest extends UnitTest with ValidationTestLike {
 
       When("The volume is created and validation succeeded")
       volume should not be null
-      val validation = Volume.validVolume(Set())(volume)
+      val validation = Volume.validVolume(Builders.newVolumeMount(), Set())(volume)
 
       Then("A validation exists with no error message")
       validation.isSuccess should be(true)
