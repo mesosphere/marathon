@@ -128,7 +128,7 @@ object UpdateGroupStructureOp {
       groupsById = effectiveGroups,
       dependencies = effectiveDependencies,
       version = timestamp,
-      enforceRole = groupUpdate.enforceRole.get
+      enforceRole = groupUpdate.enforceRole
     )
   }
 }
