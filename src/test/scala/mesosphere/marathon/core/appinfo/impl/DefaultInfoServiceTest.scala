@@ -252,7 +252,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
         pods = Set(),
         groups = Set(),
         version = Some(nestedGroup.version.toOffsetDateTime),
-        enforceRole = Some(nestedGroup.enforceRole)
+        enforceRole = nestedGroup.enforceRole
       )
 
       result.futureValue.value.groups should have size 1

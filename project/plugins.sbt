@@ -6,7 +6,7 @@ resolvers ++= Seq(
   Resolver.jcenterRepo // needed for sbt-s3-resolver
 )
 
-addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.12")
+addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.21")
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.4.0")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
 addSbtPlugin("ohnosequences" % "sbt-s3-resolver" % "0.19.0")

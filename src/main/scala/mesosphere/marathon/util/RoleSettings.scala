@@ -46,7 +46,7 @@ object RoleSettings extends StrictLogging {
         case NewGroupEnforceRoleBehavior.Top => true
         case NewGroupEnforceRoleBehavior.Off => false
       }
-      val enforceRole = topLevelGroup.fold(defaultForEnforceFromConfig)(_.enforceRole)
+      val enforceRole = topLevelGroup.fold(defaultForEnforceFromConfig)(_.enforceRole.getOrElse(false))
 
       if (topLevelGroup.isEmpty) {
         // TODO: Fetch top-level group even if it's in the process of creation
