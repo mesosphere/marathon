@@ -27,7 +27,7 @@ class RootGroup(
     dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
     val newGroupStrategy: RootGroup.NewGroupStrategy,
     version: Timestamp = Group.defaultVersion
-) extends Group(PathId.root, apps, pods, groupsById, dependencies, version)
+) extends Group(PathId.root, apps, pods, groupsById, dependencies, version, None)
     with StrictLogging {
   require(
     groupsById.forall {
@@ -164,7 +164,8 @@ class RootGroup(
         pods = group.pods,
         groupsById = group.groupsById.map { case (subGroupId, subGroup) => subGroupId -> updateApps(subGroup) },
         dependencies = group.dependencies,
-        version = version
+        version = version,
+        enforceRole = group.enforceRole
       )
     }
 
@@ -200,7 +201,8 @@ class RootGroup(
       pods = oldGroup.pods,
       groupsById = oldGroup.groupsById,
       dependencies = oldGroup.dependencies,
-      version = version
+      version = version,
+      enforceRole = oldGroup.enforceRole
     )
     putGroup(newGroup, version)
   }
@@ -502,12 +504,7 @@ object RootGroup {
     def fromConfig(newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior): NewGroupStrategy =
       new NewGroupStrategy {
         override def newGroup(id: AbsolutePathId): Group = {
-          newGroupEnforceRoleBehavior match {
-            case NewGroupEnforceRoleBehavior.Off =>
-              Group.empty(id, enforceRole = false)
-            case NewGroupEnforceRoleBehavior.Top =>
-              Group.empty(id, enforceRole = id.isTopLevel)
-          }
+          Group.empty(id, enforceRole = if (id.isTopLevel) newGroupEnforceRoleBehavior.option else None)
         }
       }
   }

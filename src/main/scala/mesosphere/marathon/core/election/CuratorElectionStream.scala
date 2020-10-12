@@ -84,7 +84,7 @@ object CuratorElectionStream extends StrictLogging {
       /**
         * On first invocation, synchronously close the latch.
         *
-          * This allows us to remove our leadership offering before closing the zookeeper client.
+        * This allows us to remove our leadership offering before closing the zookeeper client.
         */
       lazy val closeHook: () => Unit = { () =>
         // logger.debug
@@ -191,11 +191,11 @@ object CuratorElectionStream extends StrictLogging {
                 * eventually created. There is no hook to which we can subscribe to be notified when this initial
                 * registration is completed.
                 *
-              * We retry up to 10 times, increasing the delay between retries by 10ms per loop, waiting up to a total of
+                * We retry up to 10 times, increasing the delay between retries by 10ms per loop, waiting up to a total of
                 * 450ms. If the background process does not succeed before that, we crash. (again, note, this only applies
                 * to the first boot of Marathon, ever).
                 *
-              * This retry logic is not used for any other purpose (lost connections, etc.).
+                * This retry logic is not used for any other purpose (lost connections, etc.).
                 */
               logger.info(s"Leader watch loop ${loopId} retrying; waiting for latch initialization.")
               Thread.sleep(retries * 10L)

@@ -47,7 +47,7 @@ trait GroupCreation {
       version: Timestamp = Group.defaultVersion,
       validate: Boolean = true,
       enabledFeatures: Set[String] = Set.empty,
-      enforceRole: Boolean = false
+      enforceRole: Option[Boolean] = None
   ): Group = {
     val groupsById: Map[AbsolutePathId, Group] = groups.map(group => group.id -> group)(collection.breakOut)
     val group = Group(id, apps, pods, groupsById, dependencies, version, enforceRole)
