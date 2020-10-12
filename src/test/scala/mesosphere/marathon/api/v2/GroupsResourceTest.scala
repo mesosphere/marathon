@@ -475,8 +475,10 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
     "Fail a batch update when apps are modified and enforceRole is changed for an unrelated group" in {
       new FixtureWithRealGroupManager(
-        initialRoot =
-          Group("/".toAbsolutePath, groupsById = Map("/dev".toAbsolutePath -> Group(id = AbsolutePathId("/dev"), enforceRole = false)))
+        initialRoot = Group(
+          "/".toAbsolutePath,
+          groupsById = Map("/dev".toAbsolutePath -> Group(id = AbsolutePathId("/dev"), enforceRole = Some(false)))
+        )
       ) {
         val body =
           """
@@ -510,7 +512,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "allow an update to enforceRole when id is not specified" in {
-      val group = Group("/dev".toAbsolutePath, enforceRole = false)
+      val group = Group("/dev".toAbsolutePath, enforceRole = Some(false))
       new FixtureWithRealGroupManager(initialRoot = RootGroup(groupsById = Map(group.id -> group))) {
         val body = """{"enforceRole": true}"""
         f.service.deploy(any, any).returns(Future(Done))
@@ -521,7 +523,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
         response.getStatus shouldBe 200
         inside(groupManager.rootGroup().group("/dev".toAbsolutePath)) {
           case Some(devGroup) =>
-            devGroup.enforceRole shouldBe true
+            devGroup.enforceRole shouldBe Some(true)
         }
       }
     }

@@ -16,15 +16,19 @@ import mesosphere.util.summarize
 
 class Group(
     val id: AbsolutePathId,
-    val apps: Map[AbsolutePathId, AppDefinition] = defaultApps,
-    val pods: Map[AbsolutePathId, PodDefinition] = defaultPods,
-    val groupsById: Map[AbsolutePathId, Group] = defaultGroups,
-    val dependencies: Set[AbsolutePathId] = defaultDependencies,
-    val version: Timestamp = defaultVersion,
-    val enforceRole: Boolean = false
+    val apps: Map[AbsolutePathId, AppDefinition],
+    val pods: Map[AbsolutePathId, PodDefinition],
+    val groupsById: Map[AbsolutePathId, Group],
+    val dependencies: Set[AbsolutePathId],
+    val version: Timestamp,
+    val enforceRole: Option[Boolean]
 ) extends mesosphere.marathon.plugin.Group {
 
-  require((!id.parent.isRoot && !enforceRole) || id.parent.isRoot, "Only top-level groups can enforce roles.")
+  if (id.isTopLevel) {
+    require(enforceRole.nonEmpty, "Top-level groups must specify role enforcement.")
+  } else {
+    require(enforceRole.isEmpty, "Only top-level groups can specify role enforcement.")
+  }
 
   /**
     * Get app from this group or any child group.
@@ -131,11 +135,11 @@ class Group(
 
   /** @return a copy of this group with an updated `enforceRole` field. */
   def withEnforceRole(enforceRole: Boolean): Group =
-    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, enforceRole)
+    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, Some(enforceRole))
 
   /** @return a copy of this group with the removed `enforceRole` field. */
   def withoutEnforceRole(): Group =
-    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, enforceRole = false)
+    new Group(this.id, this.apps, this.pods, this.groupsById, this.dependencies, this.version, enforceRole = Some(false))
 
   def withDependencies(dependencies: Set[AbsolutePathId]): Group =
     new Group(this.id, this.apps, this.pods, this.groupsById, dependencies, this.version, this.enforceRole)
@@ -201,12 +205,13 @@ object Group extends StrictLogging {
       groupsById: Map[AbsolutePathId, Group] = Group.defaultGroups,
       dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
       version: Timestamp = Group.defaultVersion,
-      enforceRole: Boolean = false
+      enforceRole: Option[Boolean] = None
   ): Group = {
-    new Group(id, apps, pods, groupsById, dependencies, version, enforceRole)
+    val enforceRoleBehaviour = if (id.isTopLevel) enforceRole.orElse(Some(false)) else None
+    new Group(id, apps, pods, groupsById, dependencies, version, enforceRoleBehaviour)
   }
 
-  def empty(id: AbsolutePathId, enforceRole: Boolean = false, version: Timestamp = Timestamp(0)): Group =
+  def empty(id: AbsolutePathId, enforceRole: Option[Boolean] = None, version: Timestamp = Timestamp(0)): Group =
     Group(id = id, version = version, enforceRole = enforceRole)
 
   val defaultApps = Map.empty[AbsolutePathId, AppDefinition]
@@ -376,7 +381,7 @@ object Group extends StrictLogging {
         val originalGroup = updatedGroupId.flatMap { id =>
           originalRootGroup.group(id)
         } // TODO: why is groupUpdate.id optional? What is the semantic there?
-        if (originalGroup.isDefined && (group.enforceRole != originalGroup.map(_.enforceRole))) {
+        if (originalGroup.isDefined && (group.enforceRole != originalGroup.flatMap(_.enforceRole))) {
           Failure(Set(RuleViolation(group.enforceRole, EnforceRoleCantBeChangedMessage, path = Path(Generic("enforceRole")))))
         } else {
           Success

@@ -10,16 +10,19 @@ package mesosphere.marathon
   */
 sealed trait NewGroupEnforceRoleBehavior {
   val name: String
+  val option: Option[Boolean]
   override def toString: String = name
 }
 
 object NewGroupEnforceRoleBehavior {
   case object Off extends NewGroupEnforceRoleBehavior {
     override val name: String = "Off"
+    override val option = Some(false)
   }
 
   case object Top extends NewGroupEnforceRoleBehavior {
     override val name: String = "Top"
+    override val option = Some(true)
   }
 
   val all = Seq(Off, Top)

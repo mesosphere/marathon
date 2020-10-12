@@ -179,8 +179,9 @@ case class GroupNormalization(conf: MarathonConf, originalRootGroup: RootGroup) 
         // by the configured behavior.
         (conf.mesosRole(), effectiveEnforceRole(conf.newGroupEnforceRole(), None))
       case Some(topLevelGroup) =>
-        val defaultRole = if (topLevelGroup.enforceRole) groupId.root else conf.mesosRole()
-        (defaultRole, topLevelGroup.enforceRole)
+        val topLevelEnforceRole = topLevelGroup.enforceRole.getOrElse(false)
+        val defaultRole = if (topLevelGroup.enforceRole.contains(true)) groupId.root else conf.mesosRole()
+        (defaultRole, topLevelEnforceRole)
     }
   }
 

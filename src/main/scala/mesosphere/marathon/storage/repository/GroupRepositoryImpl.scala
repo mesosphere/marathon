@@ -58,7 +58,8 @@ case class StoredGroup(
   def resolve(appRepository: AppRepository, podRepository: PodRepository)(implicit ctx: ExecutionContext): Future[Group] =
     async { // linter:ignore UnnecessaryElseBranch
 
-      require(enforceRole.isDefined, s"BUG! Group $id has no defined enforce role filed which should be done by migration.")
+      if (id.isTopLevel)
+        require(enforceRole.isDefined, s"BUG! Top-level group $id has no defined enforce role filed which should be done by migration.")
 
       val appFutures = appIds.map {
         case (appId, appVersion) =>
@@ -124,7 +125,7 @@ case class StoredGroup(
         groupsById = groups,
         dependencies = dependencies,
         version = Timestamp(version),
-        enforceRole = enforceRole.get
+        enforceRole = enforceRole
       )
     }
 
@@ -175,7 +176,7 @@ object StoredGroup {
       storedGroups = group.groupsById.iterator.map { case (_, group) => StoredGroup(group) }.toSeq,
       dependencies = group.dependencies,
       version = group.version.toOffsetDateTime,
-      enforceRole = Some(group.enforceRole)
+      enforceRole = group.enforceRole
     )
 
   def apply(proto: Protos.GroupDefinition): StoredGroup = {
