@@ -36,6 +36,9 @@ class CSIProviderVolumeToUnifiedMesosVolumeTest extends UnitTest {
     stageSecrets.keySet shouldBe Set("key")
     stageSecrets("key").getReference.getName shouldBe ("stage-secret-key")
 
+    val volumeContext = csiProto.getStaticProvisioning.getVolumeContextMap.asScala
+    volumeContext("volume") shouldBe ("context")
+
     val publishSecrets = csiProto.getStaticProvisioning.getNodePublishSecretsMap.asScala.toMap
     publishSecrets.keySet shouldBe Set("key")
     publishSecrets("key").getReference.getName shouldBe ("publish-secret-key")
