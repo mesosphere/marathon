@@ -48,7 +48,7 @@ class HealthCheckConversionTest extends UnitTest {
         core.maxConsecutiveFailures should be(check.maxConsecutiveFailures)
         core.path should be(check.path)
         core.port should be(check.port)
-        core.portIndex should be (check.portIndex)
+        core.portIndex should be(check.portIndex)
         core.timeout should be(check.timeoutSeconds.seconds)
       }
     }
@@ -83,7 +83,7 @@ class HealthCheckConversionTest extends UnitTest {
         core.interval should be(check.intervalSeconds.seconds)
         core.maxConsecutiveFailures should be(check.maxConsecutiveFailures)
         core.port should be(check.port)
-        core.portIndex should be (check.portIndex)
+        core.portIndex should be(check.portIndex)
         core.timeout should be(check.timeoutSeconds.seconds)
       }
     }
@@ -160,7 +160,7 @@ class HealthCheckConversionTest extends UnitTest {
         core.maxConsecutiveFailures should be(check.maxConsecutiveFailures)
         core.path should be(check.path)
         core.port should be(check.port)
-        core.portIndex should be (check.portIndex)
+        core.portIndex should be(check.portIndex)
         core.timeout should be(check.timeoutSeconds.seconds)
       }
     }
@@ -177,7 +177,7 @@ class HealthCheckConversionTest extends UnitTest {
         core.maxConsecutiveFailures should be(check.maxConsecutiveFailures)
         core.path should not be 'defined
         core.port should not be 'defined
-        core.portIndex should be (Some(PortReference("localhost")))
+        core.portIndex should be(Some(PortReference("localhost")))
         core.timeout should be(check.timeoutSeconds.seconds)
       }
     }

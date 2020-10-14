@@ -22,12 +22,15 @@ import scala.concurrent.{ExecutionContext, Future}
 class MigrationTo19200(
     defaultMesosRole: Role,
     instanceRepository: InstanceRepository,
-    persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]) extends MigrationStep with StrictLogging {
+    persistenceStore: PersistenceStore[ZkId, String, ZkSerialized]
+) extends MigrationStep
+    with StrictLogging {
 
-  override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = async {
-    logger.info("Starting migration to 1.9.200")
-    await(InstanceMigration.migrateInstances(instanceRepository, persistenceStore, instanceMigrationFlow))
-  }
+  override def migrate()(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] =
+    async {
+      logger.info("Starting migration to 1.9.200")
+      await(InstanceMigration.migrateInstances(instanceRepository, persistenceStore, instanceMigrationFlow))
+    }
 
   /**
     * Read format for old instance without reservation id.
@@ -38,19 +41,19 @@ class MigrationTo19200(
 
     (
       (__ \ "instanceId").read[Id] ~
-      (__ \ "agentInfo").readNullable[AgentInfo] ~
-      (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
-      (__ \ "runSpecVersion").read[Timestamp] ~
-      (__ \ "state").read[InstanceState] ~
-      (__ \ "reservation").readNullable[Reservation] ~
-      (__ \ "role").readNullable[String]
+        (__ \ "agentInfo").readNullable[AgentInfo] ~
+        (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
+        (__ \ "runSpecVersion").read[Timestamp] ~
+        (__ \ "state").read[InstanceState] ~
+        (__ \ "reservation").readNullable[Reservation] ~
+        (__ \ "role").readNullable[String]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation, persistedRole) =>
-        logger.info(s"Migrate $instanceId")
+      logger.info(s"Migrate $instanceId")
 
-        val role = persistedRole.orElse(Some(defaultMesosRole))
+      val role = persistedRole.orElse(Some(defaultMesosRole))
 
-        new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, reservation, role)
-      }
+      new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, reservation, role)
+    }
   }
 
   /**
@@ -61,11 +64,8 @@ class MigrationTo19200(
     */
   def extractInstanceFromJson(jsValue: JsValue): Instance = jsValue.as[Instance](instanceJsonReads18200)
 
-  val instanceMigrationFlow = Flow[JsValue]
-    .filter { jsValue =>
-      // Only migrate instances that don't have a role
-      (jsValue \ "role").isEmpty
-    }
-    .map(extractInstanceFromJson)
+  val instanceMigrationFlow = Flow[JsValue].filter { jsValue =>
+    // Only migrate instances that don't have a role
+    (jsValue \ "role").isEmpty
+  }.map(extractInstanceFromJson)
 }
-

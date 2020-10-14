@@ -14,32 +14,36 @@ import org.apache.mesos.Protos.TaskStatus.Reason
 import org.apache.mesos.Protos.{TaskState, TaskStatus}
 
 class TaskStatusUpdateTestHelper(val operation: InstanceUpdateOperation, val effect: InstanceUpdateEffect) {
-  def simpleName = operation match {
-    case InstanceUpdateOperation.MesosUpdate(_, marathonTaskStatus, mesosStatus, _) =>
-      mesosStatus.getState.toString
-    case _ => operation.getClass.getSimpleName
-  }
-  def status = operation match {
-    case InstanceUpdateOperation.MesosUpdate(_, marathonTaskStatus, mesosStatus, _) => mesosStatus
-    case _ => throw new scala.RuntimeException("the wrapped stateOp os no MesosUpdate!")
-  }
+  def simpleName =
+    operation match {
+      case InstanceUpdateOperation.MesosUpdate(_, marathonTaskStatus, mesosStatus, _) =>
+        mesosStatus.getState.toString
+      case _ => operation.getClass.getSimpleName
+    }
+  def status =
+    operation match {
+      case InstanceUpdateOperation.MesosUpdate(_, marathonTaskStatus, mesosStatus, _) => mesosStatus
+      case _ => throw new scala.RuntimeException("the wrapped stateOp os no MesosUpdate!")
+    }
 
   def reason: String = if (status.hasReason) status.getReason.toString else "no reason"
-  def wrapped: InstanceChange = effect match {
-    case InstanceUpdateEffect.Update(instance, old, events) => InstanceUpdated(instance, old.map(_.state), events)
-    case InstanceUpdateEffect.Expunge(instance, events) => InstanceDeleted(instance, None, events)
-    case _ => throw new scala.RuntimeException(s"The wrapped effect does not result in an update or expunge: $effect")
-  }
-  def updatedInstance: Instance = effect match {
-    case InstanceUpdateEffect.Update(instance, old, events) => instance
-    case InstanceUpdateEffect.Expunge(instance, events) => instance
-    case update: InstanceUpdateOperation.MesosUpdate => update.instance
-    case _ =>
-      operation match {
-        case update: InstanceUpdateOperation.MesosUpdate => update.instance
-        case _ => throw new RuntimeException(s"Unable to fetch instance from ${operation.getClass.getSimpleName}")
-      }
-  }
+  def wrapped: InstanceChange =
+    effect match {
+      case InstanceUpdateEffect.Update(instance, old, events) => InstanceUpdated(instance, old.map(_.state), events)
+      case InstanceUpdateEffect.Expunge(instance, events) => InstanceDeleted(instance, None, events)
+      case _ => throw new scala.RuntimeException(s"The wrapped effect does not result in an update or expunge: $effect")
+    }
+  def updatedInstance: Instance =
+    effect match {
+      case InstanceUpdateEffect.Update(instance, old, events) => instance
+      case InstanceUpdateEffect.Expunge(instance, events) => instance
+      case update: InstanceUpdateOperation.MesosUpdate => update.instance
+      case _ =>
+        operation match {
+          case update: InstanceUpdateOperation.MesosUpdate => update.instance
+          case _ => throw new RuntimeException(s"Unable to fetch instance from ${operation.getClass.getSimpleName}")
+        }
+    }
 
 }
 
@@ -57,7 +61,8 @@ object TaskStatusUpdateTestHelper {
     val effect = InstanceUpdateEffect.Update(
       provisioned,
       oldState = Some(instance),
-      events = Seq(InstanceChangedEventsGenerator.updatedCondition(provisioned)))
+      events = Seq(InstanceChangedEventsGenerator.updatedCondition(provisioned))
+    )
     TaskStatusUpdateTestHelper(operation, effect)
   }
 
@@ -117,11 +122,17 @@ object TaskStatusUpdateTestHelper {
     taskUpdateFor(instance, Condition.Finished, status)
   }
 
-  def lost(reason: Reason, instance: Instance = defaultInstance, maybeMessage: Option[String] = None, timestamp: Timestamp = defaultTimestamp) = {
+  def lost(
+      reason: Reason,
+      instance: Instance = defaultInstance,
+      maybeMessage: Option[String] = None,
+      timestamp: Timestamp = defaultTimestamp
+  ) = {
     val taskId = instance.appTask.taskId
     val mesosStatus = MesosTaskStatusTestHelper.mesosStatus(
       state = TaskState.TASK_LOST,
-      maybeReason = Some(reason), maybeMessage = maybeMessage,
+      maybeReason = Some(reason),
+      maybeMessage = maybeMessage,
       taskId = taskId,
       timestamp = timestamp
     )

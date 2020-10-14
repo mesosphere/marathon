@@ -15,10 +15,7 @@ import scala.concurrent.Future
 import scala.util.Try
 import scala.util.control.NonFatal
 
-class HttpEventStreamHandleActor(
-    handle: HttpEventStreamHandle,
-    stream: EventStream,
-    maxOutStanding: Int) extends Actor with StrictLogging {
+class HttpEventStreamHandleActor(handle: HttpEventStreamHandle, stream: EventStream, maxOutStanding: Int) extends Actor with StrictLogging {
 
   private[impl] var outstanding = Seq.empty[MarathonEvent]
 
@@ -42,10 +39,11 @@ class HttpEventStreamHandleActor(
       sendAllMessages()
   }
 
-  def stashEvents: Receive = handleWorkDone orElse {
-    case event: MarathonEvent if outstanding.size >= maxOutStanding => dropConnection()
-    case event: MarathonEvent => outstanding = event +: outstanding
-  }
+  def stashEvents: Receive =
+    handleWorkDone orElse {
+      case event: MarathonEvent if outstanding.size >= maxOutStanding => dropConnection()
+      case event: MarathonEvent => outstanding = event +: outstanding
+    }
 
   def handleWorkDone: Receive = {
     case WorkDone => sendAllMessages()
@@ -71,15 +69,16 @@ class HttpEventStreamHandleActor(
     }
   }
 
-  private[this] def handleException(ex: Throwable): Unit = ex match {
-    case eof: EOFException =>
-      logger.info(s"Received EOF from stream handle $handle. Ignore subsequent events.")
-      //We know the connection is dead, but it is not finalized from the container.
-      //Do not act any longer on any event.
-      context.become(Actor.emptyBehavior)
-    case NonFatal(e) =>
-      logger.warn(s"Could not send message to $handle reason:", e)
-  }
+  private[this] def handleException(ex: Throwable): Unit =
+    ex match {
+      case eof: EOFException =>
+        logger.info(s"Received EOF from stream handle $handle. Ignore subsequent events.")
+        //We know the connection is dead, but it is not finalized from the container.
+        //Do not act any longer on any event.
+        context.become(Actor.emptyBehavior)
+      case NonFatal(e) =>
+        logger.warn(s"Could not send message to $handle reason:", e)
+    }
 
   private[this] def dropConnection(): Unit = {
     logger.warn(s"Closing connection for slow event consumer $handle.")
@@ -91,4 +90,3 @@ class HttpEventStreamHandleActor(
 object HttpEventStreamHandleActor {
   object WorkDone
 }
-

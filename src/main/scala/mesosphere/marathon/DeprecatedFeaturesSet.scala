@@ -8,9 +8,8 @@ import com.typesafe.scalalogging.StrictLogging
   * @param currentVersion The current version of Marathon
   * @param deprecatedFeatureSettings Map of deprecated features specified to be enabled or disabled
   */
-case class DeprecatedFeatureConfig(
-    currentVersion: SemVer,
-    deprecatedFeatureSettings: Map[DeprecatedFeature, Boolean]) extends StrictLogging {
+case class DeprecatedFeatureConfig(currentVersion: SemVer, deprecatedFeatureSettings: Map[DeprecatedFeature, Boolean])
+    extends StrictLogging {
 
   /**
     * If a deprecated feature has not been soft-removed (still enabled by default), then return true
@@ -20,9 +19,7 @@ case class DeprecatedFeatureConfig(
   def isEnabled(df: DeprecatedFeature) =
     deprecatedFeatureSettings.getOrElse(df, currentVersion < df.softRemoveVersion)
 
-  val enabledDeprecatedFeatures: Set[DeprecatedFeature] = deprecatedFeatureSettings
-    .collect { case (df, true) => df }
-    .toSet
+  val enabledDeprecatedFeatures: Set[DeprecatedFeature] = deprecatedFeatureSettings.collect { case (df, true) => df }.toSet
 
   private def softRemovedEnabledFeatures =
     enabledDeprecatedFeatures.filter { df => currentVersion >= df.softRemoveVersion && currentVersion < df.hardRemoveVersion }
@@ -35,16 +32,20 @@ case class DeprecatedFeatureConfig(
     */
   def logDeprecationWarningsAndErrors(): Unit = {
     softRemovedEnabledFeatures.foreach { df =>
-      logger.warn(s"Deprecated feature ${df.key} is scheduled to be removed in ${df.hardRemoveVersion}. You should " +
-        "remove the deprecated feature flag as soon possible.")
+      logger.warn(
+        s"Deprecated feature ${df.key} is scheduled to be removed in ${df.hardRemoveVersion}. You should " +
+          "remove the deprecated feature flag as soon possible."
+      )
     }
 
     hardRemovedEnabledFeatures.foreach { df =>
-      logger.error(s"${df.key} has been removed as of ${df.hardRemoveVersion}. It has the following description:\n\n" +
-        df.description + "\n\n" +
-        "You should migrate back to a previous version of Marathon, remove the deprecated feature flag, ensure that " +
-        "your cluster continues to work, and then upgrade again.\n\n" +
-        "If you are confident that you no longer need the deprecated feature flag, you can simply remove it.")
+      logger.error(
+        s"${df.key} has been removed as of ${df.hardRemoveVersion}. It has the following description:\n\n" +
+          df.description + "\n\n" +
+          "You should migrate back to a previous version of Marathon, remove the deprecated feature flag, ensure that " +
+          "your cluster continues to work, and then upgrade again.\n\n" +
+          "If you are confident that you no longer need the deprecated feature flag, you can simply remove it."
+      )
     }
   }
 

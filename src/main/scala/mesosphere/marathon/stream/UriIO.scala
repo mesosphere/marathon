@@ -47,7 +47,9 @@ object UriIO extends StrictLogging {
     * @param uri the uri to read from
     * @return A source for reading the specified uri.
     */
-  def reader(uri: URI)(implicit actorSystem: ActorSystem, materializer: Materializer, ec: ExecutionContext): Source[ByteString, Future[Done]] = {
+  def reader(
+      uri: URI
+  )(implicit actorSystem: ActorSystem, materializer: Materializer, ec: ExecutionContext): Source[ByteString, Future[Done]] = {
     uri.getScheme match {
       case "file" =>
         FileIO
@@ -66,7 +68,9 @@ object UriIO extends StrictLogging {
     * @param uri the URI to write to.
     * @return the sink that can write to the defined URI.
     */
-  def writer(uri: URI)(implicit actorSystem: ActorSystem, materializer: Materializer, ec: ExecutionContext): ScalaSink[ByteString, Future[Done]] = {
+  def writer(
+      uri: URI
+  )(implicit actorSystem: ActorSystem, materializer: Materializer, ec: ExecutionContext): ScalaSink[ByteString, Future[Done]] = {
     uri.getScheme match {
       case "file" =>
         FileIO
@@ -81,7 +85,8 @@ object UriIO extends StrictLogging {
             key = uri.getPath.substring(1),
             metaHeaders = MetaHeaders(Map.empty),
             contentType = ContentTypes.`application/octet-stream`,
-            cannedAcl = CannedAcl.BucketOwnerRead)
+            cannedAcl = CannedAcl.BucketOwnerRead
+          )
           .mapMaterializedValue(_.map(_ => Done))
       case unknown => throw new RuntimeException(s"Scheme not supported: $unknown")
     }
@@ -101,7 +106,8 @@ object UriIO extends StrictLogging {
     }
   }
 
-  def valid: Validator[String] = uriIsValid and isTrue[String]{ uri: String => s"Invalid URI or unsupported scheme: $uri" }(uri => isValid(new URI(uri)))
+  def valid: Validator[String] =
+    uriIsValid and isTrue[String] { uri: String => s"Invalid URI or unsupported scheme: $uri" }(uri => isValid(new URI(uri)))
 
   /**
     * Create S3 client.
@@ -118,13 +124,13 @@ object UriIO extends StrictLogging {
     val params = parseParams(uri)
     val region = params.getOrElse("region", "us-east-1")
     val credentials: AWSCredentials = {
-      def fromURL: Option[AWSCredentials] = for {
-        accessKey <- params.get("access_key")
-        accessSecret <- params.get("secret_key")
-      } yield new BasicAWSCredentials(accessKey, accessSecret)
+      def fromURL: Option[AWSCredentials] =
+        for {
+          accessKey <- params.get("access_key")
+          accessSecret <- params.get("secret_key")
+        } yield new BasicAWSCredentials(accessKey, accessSecret)
       def fromProviderChain: Option[AWSCredentials] = {
-        Try(new DefaultAWSCredentialsProviderChain().getCredentials)
-          .toOption
+        Try(new DefaultAWSCredentialsProviderChain().getCredentials).toOption
           .map(creds => new BasicAWSCredentials(creds.getAWSAccessKeyId, creds.getAWSSecretKey))
       }
       fromURL.orElse(fromProviderChain).getOrElse {
@@ -139,9 +145,10 @@ object UriIO extends StrictLogging {
   }
 
   private[this] object QueryParam {
-    def unapply(str: String): Option[(String, String)] = str.split("=") match {
-      case Array(key: String, value: String) => Some(key -> value)
-      case _ => None
-    }
+    def unapply(str: String): Option[(String, String)] =
+      str.split("=") match {
+        case Array(key: String, value: String) => Some(key -> value)
+        case _ => None
+      }
   }
 }

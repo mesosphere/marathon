@@ -14,11 +14,12 @@ object PrometheusReporter {
   }
 
   private def report(
-    gauges: util.SortedMap[String, Gauge[_]],
-    counters: util.SortedMap[String, Counter],
-    histograms: util.SortedMap[String, Histogram],
-    meters: util.SortedMap[String, Meter],
-    timers: util.SortedMap[String, Timer]): String = {
+      gauges: util.SortedMap[String, Gauge[_]],
+      counters: util.SortedMap[String, Counter],
+      histograms: util.SortedMap[String, Histogram],
+      meters: util.SortedMap[String, Meter],
+      timers: util.SortedMap[String, Timer]
+  ): String = {
 
     val buffer = new StringBuilder
 

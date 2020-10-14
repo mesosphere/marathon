@@ -16,6 +16,7 @@ case class RejectionException(rejection: Rejection) extends Exception(s"Unhandle
   */
 sealed trait Rejection {}
 object Rejection {
+
   /**
     * The request was authenticated, but access was not allowed to the resource.
     */

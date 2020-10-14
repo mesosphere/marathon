@@ -12,7 +12,6 @@ object Dependencies {
     playJson % "compile",
     scalaLogging % "compile",
     logback % "compile",
-
     /** Marathon plugin-interface directly uses these via the interfaces exposed to plugins */
     mesos % "compile",
     guava % "compile",
@@ -60,7 +59,6 @@ object Dependencies {
     commonsCompress % "compile", // used for tar flow
     commonsIO % "compile",
     alpakkaCodes % "compile",
-
     // old Chaos deps
     guava % "compile",
     guice % "compile",
@@ -73,13 +71,9 @@ object Dependencies {
     jacksonAfterBurner % "compile",
     jacksonScala % "compile",
     jacksonJaxrs % "compile",
-
     julToSlf4j % "compile",
-
     jerseyHk2 % "compile",
-
     scallop % "compile",
-
     // test
     Test.diffson % "test",
     Test.scalatest % "test",
@@ -91,13 +85,12 @@ object Dependencies {
     Test.usiTestUtils % "test"
   ) ++ Curator.all
     ++ DropwizardMetrics.all
-    ++ Java9Compatibility.all
-    ).map(
+    ++ Java9Compatibility.all).map(
     _.excludeAll(excludeSlf4jLog4j12)
-     .excludeAll(excludeLog4j)
-     .excludeAll(excludeJCL)
-     .excludeAll(excludeAkkaHttpExperimental)
-    )
+      .excludeAll(excludeLog4j)
+      .excludeAll(excludeJCL)
+      .excludeAll(excludeAkkaHttpExperimental)
+  )
 
   val benchmark = Seq(
     Test.jmh
@@ -109,7 +102,7 @@ object Dependency {
     // runtime deps versions
     val Akka = "2.5.23"
     val AkkaHttp = "10.0.15"
-    val Alpakka  = "0.14"
+    val Alpakka = "0.14"
     val ApacheCommonsCompress = "1.13"
     val ApacheCommonsIO = "2.6"
     val AsyncAwait = "0.9.7"
@@ -141,7 +134,6 @@ object Dependency {
 
     // Version of Mesos to use when building docker image or testing packages
     val MesosDebian = "1.9.0-2.0.1"
-
 
     // test deps versions
     val JMH = "1.19"
@@ -177,12 +169,12 @@ object Dependency {
   val java8Compat = "org.scala-lang.modules" %% "scala-java8-compat" % V.Java8Compat
 
   val jerseyCore = "org.glassfish.jersey.core" % "jersey-common" % V.Jersey
-  val jerseyMultiPart =  "org.glassfish.jersey.media" % "jersey-media-multipart" % V.Jersey
+  val jerseyMultiPart = "org.glassfish.jersey.media" % "jersey-media-multipart" % V.Jersey
   val jerseyServer = "org.glassfish.jersey.core" % "jersey-server" % V.Jersey
-  val jerseyServlet =  "org.glassfish.jersey.containers" % "jersey-container-servlet" % V.Jersey
+  val jerseyServlet = "org.glassfish.jersey.containers" % "jersey-container-servlet" % V.Jersey
 
   // Jersey 2 still relies on hk2. See https://jersey.github.io/release-notes/2.26.html
-  val jerseyHk2 =  "org.glassfish.jersey.inject" % "jersey-hk2" % V.Jersey
+  val jerseyHk2 = "org.glassfish.jersey.inject" % "jersey-hk2" % V.Jersey
 
   val jettyEventSource = "org.eclipse.jetty" % "jetty-servlets" % V.JettyServlets
   val jettySecurity = "org.eclipse.jetty" % "jetty-security" % V.Jetty
@@ -218,6 +210,7 @@ object Dependency {
   val excludeZk35 = ExclusionRule(organization = "org.apache.zookeeper", name = "zookeeper")
 
   object Curator {
+
     /**
       * According to Curator's Zookeeper Compatibility Docs [http://curator.apache.org/zk-compatibility.html], 4.0.0
       * is the recommended version to use with Zookeeper 3.4.x. You do need to exclude the 3.5.x dependency and specify
@@ -232,7 +225,8 @@ object Dependency {
       "org.apache.curator" % "curator-client" % Version % "compile",
       "org.apache.curator" % "curator-framework" % Version % "compile",
       "org.apache.curator" % "curator-x-async" % Version % "compile",
-      "org.apache.curator" % "curator-test" % TestVersion % "test").map(_.excludeAll(excludeZk35))
+      "org.apache.curator" % "curator-test" % TestVersion % "test"
+    ).map(_.excludeAll(excludeZk35))
 
     val zk = Seq("org.apache.zookeeper" % "zookeeper" % "3.4.11")
     val all = curator ++ zk

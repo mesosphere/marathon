@@ -8,27 +8,17 @@ trait HttpConf extends ScallopConf {
     "disable_http",
     descr = "Disable listening for HTTP requests completely. HTTPS is unaffected.",
     noshort = true,
-    default = Some(false))
+    default = Some(false)
+  )
 
-  lazy val httpAddress = opt[String](
-    "http_address",
-    descr = "The address to listen on for HTTP requests", default = None,
-    noshort = true)
+  lazy val httpAddress = opt[String]("http_address", descr = "The address to listen on for HTTP requests", default = None, noshort = true)
 
-  lazy val httpPort = opt[Int](
-    "http_port",
-    descr = "The port to listen on for HTTP requests", default = Some(8080),
-    noshort = true)
+  lazy val httpPort = opt[Int]("http_port", descr = "The port to listen on for HTTP requests", default = Some(8080), noshort = true)
 
-  lazy val httpsAddress = opt[String](
-    "https_address",
-    descr = "The address to listen on for HTTPS requests.", default = None,
-    noshort = true)
+  lazy val httpsAddress =
+    opt[String]("https_address", descr = "The address to listen on for HTTPS requests.", default = None, noshort = true)
 
-  lazy val httpsPort = opt[Int](
-    "https_port",
-    descr = "The port to listen on for HTTPS requests", default = Some(8443),
-    noshort = true)
+  lazy val httpsPort = opt[Int]("https_port", descr = "The port to listen on for HTTPS requests", default = Some(8443), noshort = true)
 
   lazy val sslKeystorePath = opt[String](
     "ssl_keystore_path",
@@ -79,7 +69,10 @@ trait HttpConf extends ScallopConf {
     "assets_path",
     descr = "Set a local file system path to load assets from, " +
       "instead of loading them from the packaged jar.",
-    default = None, noshort = true, hidden = true)
+    default = None,
+    noshort = true,
+    hidden = true
+  )
 
   lazy val httpCredentialsEnvValue: Option[String] = sys.env.get(HttpConf.httpCredentialsEnvName)
   lazy val sslKeystorePathEnvValue: Option[String] = sys.env.get(HttpConf.sslKeystorePathEnvName)

@@ -27,8 +27,10 @@ class TaskLauncherImplTest extends UnitTest {
   private[this] val metrics: Metrics = DummyMetrics
   private[this] def launch(taskInfoBuilder: TaskInfo.Builder): InstanceOp.LaunchTask = {
     val taskInfo = taskInfoBuilder.build()
-    val instance = TestInstanceBuilder.newBuilderWithInstanceId(instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo).build().getInstance()
-    val stateOp = InstanceUpdateOperation.Provision(instanceId, instance.agentInfo.get, instance.runSpec, instance.tasksMap, Timestamp.now())
+    val instance =
+      TestInstanceBuilder.newBuilderWithInstanceId(instanceId).addTaskWithBuilder().taskFromTaskInfo(taskInfo).build().getInstance()
+    val stateOp =
+      InstanceUpdateOperation.Provision(instanceId, instance.agentInfo.get, instance.runSpec, instance.tasksMap, Timestamp.now())
     new InstanceOpFactoryHelper(metrics, Some("principal")).provision(taskInfo, stateOp)
   }
   private[this] val appId = AbsolutePathId("/test")

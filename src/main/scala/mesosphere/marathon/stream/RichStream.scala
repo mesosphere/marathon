@@ -73,8 +73,7 @@ class RichDoubleStream(val stream: DoubleStream) extends AnyVal with Traversable
   override def toTraversable: Seq[Double] = {
     val supplier = () => Vector.empty[Double]
     val accumulator = (buf: Vector[Double], v: Double) => buf :+ v
-    val collector = (b1: Vector[Double], b2: Vector[Double]) =>
-      b1 ++ b2
+    val collector = (b1: Vector[Double], b2: Vector[Double]) => b1 ++ b2
     stream.collect(supplier, accumulator, collector)
   }
 
@@ -115,8 +114,7 @@ class RichIntStream(val stream: IntStream) extends AnyVal with TraversableOnce[I
   override def toTraversable: Seq[Int] = {
     val supplier = () => Vector.empty[Int]
     val accumulator = (buf: Vector[Int], v: Int) => buf :+ v
-    val collector = (b1: Vector[Int], b2: Vector[Int]) =>
-      b1 ++ b2
+    val collector = (b1: Vector[Int], b2: Vector[Int]) => b1 ++ b2
     stream.collect(supplier, accumulator, collector)
   }
 
@@ -157,8 +155,7 @@ class RichLongStream(val stream: LongStream) extends AnyVal with TraversableOnce
   override def toTraversable: Seq[Long] = {
     val supplier = () => Vector.empty[Long]
     val accumulator = (buf: Vector[Long], v: Long) => buf :+ v
-    val collector = (b1: Vector[Long], b2: Vector[Long]) =>
-      b1 ++ b2
+    val collector = (b1: Vector[Long], b2: Vector[Long]) => b1 ++ b2
     stream.collect(supplier, accumulator, collector)
   }
 
@@ -180,11 +177,16 @@ class RichLongStream(val stream: LongStream) extends AnyVal with TraversableOnce
   */
 class RichEnumeration[T](enum: util.Enumeration[T]) extends TraversableOnce[T] {
   val stream = StreamSupport.stream(
-    Spliterators.spliteratorUnknownSize(new util.Iterator[T] {
-      override def hasNext: Boolean = enum.hasMoreElements
+    Spliterators.spliteratorUnknownSize(
+      new util.Iterator[T] {
+        override def hasNext: Boolean = enum.hasMoreElements
 
-      override def next(): T = enum.nextElement()
-    }, Spliterator.ORDERED), false)
+        override def next(): T = enum.nextElement()
+      },
+      Spliterator.ORDERED
+    ),
+    false
+  )
 
   override def foreach[U](f: (T) => U): Unit = stream.foreach(f)
 
@@ -216,4 +218,3 @@ class RichEnumeration[T](enum: util.Enumeration[T]) extends TraversableOnce[T] {
   def max()(implicit order: Ordering[T]): Option[T] = toScala(stream.max(order))
   def min()(implicit order: Ordering[T]): Option[T] = toScala(stream.min(order))
 }
-

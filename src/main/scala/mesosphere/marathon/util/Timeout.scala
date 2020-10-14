@@ -12,6 +12,7 @@ import scala.concurrent.{ExecutionContext, Future, blocking => blockingCall}
   * Function transformations to make a method timeout after a given duration.
   */
 object Timeout {
+
   /**
     * Timeout a blocking call
     * @param timeout The maximum duration the method may execute in
@@ -22,9 +23,9 @@ object Timeout {
     * @tparam T The result type of 'f'
     * @return The eventual result of calling 'f' or TimeoutException if it didn't complete in time.
     */
-  def blocking[T](timeout: FiniteDuration, name: Option[String] = None)(f: => T)(implicit
-    scheduler: Scheduler,
-    ctx: ExecutionContext): Future[T] =
+  def blocking[T](timeout: FiniteDuration, name: Option[String] = None)(
+      f: => T
+  )(implicit scheduler: Scheduler, ctx: ExecutionContext): Future[T] =
     apply(timeout, name)(Future(blockingCall(f))(ctx))(scheduler, ctx)
 
   /**
@@ -37,14 +38,17 @@ object Timeout {
     * @tparam T The result type of 'f'
     * @return The eventual result of calling 'f' or TimeoutException if it didn't complete
     */
-  def apply[T](timeout: Duration, name: Option[String] = None)(f: => Future[T])(implicit
-    scheduler: Scheduler,
-    ctx: ExecutionContext): Future[T] = {
+  def apply[T](timeout: Duration, name: Option[String] = None)(
+      f: => Future[T]
+  )(implicit scheduler: Scheduler, ctx: ExecutionContext): Future[T] = {
     require(timeout != Duration.Zero)
 
     timeout match {
       case duration: FiniteDuration =>
-        def t: Future[T] = after(duration, scheduler)(Future.failed(new TimeoutException(s"${name.getOrElse("None")} timed out after ${timeout.toHumanReadable}")))
+        def t: Future[T] =
+          after(duration, scheduler)(
+            Future.failed(new TimeoutException(s"${name.getOrElse("None")} timed out after ${timeout.toHumanReadable}"))
+          )
         Future.firstCompletedOf(Seq(f, t))
       case _ => f
     }

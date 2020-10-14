@@ -33,24 +33,23 @@ trait ExpungeOverdueLostTasksActorLogic extends StrictLogging {
     * @return instances that should be expunged according to the RunSpec definition.
     */
   def filterUnreachableForExpunge(instances: Map[AbsolutePathId, SpecInstances], now: Timestamp) =
-    instances.values.
-      flatMap(_.instances).
-      withFilter { i => shouldExpunge(i, now) }
+    instances.values.flatMap(_.instances).withFilter { i => shouldExpunge(i, now) }
 
-  private[impl] def shouldExpunge(instance: Instance, now: Timestamp): Boolean = instance.unreachableStrategy match {
-    case UnreachableDisabled =>
-      false
-    case unreachableEnabled: UnreachableEnabled =>
-      // Instances configured to expunge immediately will be expunged in response to the Mesos TASK_UNREACHABLE
-      instance.isUnreachableInactive &&
-        instance.tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, unreachableEnabled.expungeAfter))
-  }
+  private[impl] def shouldExpunge(instance: Instance, now: Timestamp): Boolean =
+    instance.unreachableStrategy match {
+      case UnreachableDisabled =>
+        false
+      case unreachableEnabled: UnreachableEnabled =>
+        // Instances configured to expunge immediately will be expunged in response to the Mesos TASK_UNREACHABLE
+        instance.isUnreachableInactive &&
+          instance.tasksMap.valuesIterator.exists(_.isUnreachableExpired(now, unreachableEnabled.expungeAfter))
+    }
 }
 
-class ExpungeOverdueLostTasksActor(
-    val clock: Clock,
-    val config: TaskJobsConfig,
-    val instanceTracker: InstanceTracker) extends Actor with StrictLogging with ExpungeOverdueLostTasksActorLogic {
+class ExpungeOverdueLostTasksActor(val clock: Clock, val config: TaskJobsConfig, val instanceTracker: InstanceTracker)
+    extends Actor
+    with StrictLogging
+    with ExpungeOverdueLostTasksActorLogic {
 
   import ExpungeOverdueLostTasksActor._
   implicit val ec = context.dispatcher
@@ -59,9 +58,7 @@ class ExpungeOverdueLostTasksActor(
 
   override def preStart(): Unit = {
     logger.info("ExpungeOverdueLostTasksActor has started")
-    tickTimer = Some(context.system.scheduler.schedule(
-      config.taskLostExpungeInitialDelay,
-      config.taskLostExpungeInterval, self, Tick))
+    tickTimer = Some(context.system.scheduler.schedule(config.taskLostExpungeInitialDelay, config.taskLostExpungeInterval, self, Tick))
   }
 
   override def postStop(): Unit = {

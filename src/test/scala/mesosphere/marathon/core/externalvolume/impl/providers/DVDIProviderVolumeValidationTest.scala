@@ -19,100 +19,126 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driverNam" -> "rexray", "dvdi/volumetype" -> "io1")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driver" -> "rexray", "dvdi/volumetype" -> "io1 ")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driver" -> "rexray", "dvdi/newfstype" -> " xfs")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driver" -> "rexray", "dvdi/newfstype" -> "")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driver" -> "rexray", "dvdi/iops" -> "0")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driver" -> "rexray", "dvdi/iops" -> "b")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driver" -> "rexray", "dvdi/overwritefs" -> "b")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "qaz",
+            size = None,
+            name = "f",
+            provider = "qaz",
             options = Map("dvdi/driver" -> "bar")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driver" -> "")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("driver" -> "bar")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "",
-            options = Map("dvdi/driver" -> "bar"
-            )
+            size = None,
+            name = "f",
+            provider = "",
+            options = Map("dvdi/driver" -> "bar")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "", provider = "dvdi",
-            options = Map("dvdi/driver" -> "bar"
-            )
+            size = None,
+            name = "",
+            provider = "dvdi",
+            options = Map("dvdi/driver" -> "bar")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "",
+            size = None,
+            name = "f",
+            provider = "",
             options = Map.empty[String, String]
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = Some(1L), name = "", provider = "",
+            size = Some(1L),
+            name = "",
+            provider = "",
             options = Map.empty[String, String]
           )
         )
@@ -125,65 +151,82 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driver" -> "bar", "dvdi/volumetype" -> "io1")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driver" -> "bar", "dvdi/newfstype" -> "xfs")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driver" -> "bar", "dvdi/iops" -> "1")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driver" -> "bar", "dvdi/overwritefs" -> "true")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
+            size = None,
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driver" -> "bar", "dvdi/overwritefs" -> "false")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = Some(1L), name = "f", provider = "dvdi",
+            size = Some(1L),
+            name = "f",
+            provider = "dvdi",
             options = Map("dvdi/driver" -> "bar", "a" -> "b")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = Some(1L), name = "f", provider = "dvdi", options = Map("dvdi/driver" -> "bar")
+            size = Some(1L),
+            name = "f",
+            provider = "dvdi",
+            options = Map("dvdi/driver" -> "bar")
           )
         ),
         ExternalVolume(
           name = None,
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
-            options = Map("dvdi/driver" -> "bar"
-            )
+            size = None,
+            name = "f",
+            provider = "dvdi",
+            options = Map("dvdi/driver" -> "bar")
           )
         ),
         ExternalVolume(
           name = Some("name=teamvolumename,secret_key=volume-secret-key-team,secure=true,size=5,repl=1,shared=true"),
           external = ExternalVolumeInfo(
-            size = None, name = "f", provider = "dvdi",
-            options = Map("dvdi/driver" -> "bar"
-            )
+            size = None,
+            name = "f",
+            provider = "dvdi",
+            options = Map("dvdi/driver" -> "bar")
           )
         )
       ),
@@ -197,7 +240,8 @@ class DVDIProviderVolumeValidationTest extends UnitTest {
         val result = validate(v)(DVDIProvider.validations.volume)
         assert(
           result.isSuccess == testParams.wantsValid,
-          s"test case $idx/$vidx expected ${testParams.wantsValid} instead of $result for volume $v")
+          s"test case $idx/$vidx expected ${testParams.wantsValid} instead of $result for volume $v"
+        )
       }
     }
   }

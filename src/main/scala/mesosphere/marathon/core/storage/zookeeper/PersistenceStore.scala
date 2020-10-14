@@ -92,6 +92,7 @@ trait PersistenceStore {
 }
 
 object PersistenceStore {
+
   /**
     * Main storage unit: it's a key-value like structure, where the key is the path
     * to the node e.g. `/app1` which can also be nested e.g. `/apps/app1` and the data

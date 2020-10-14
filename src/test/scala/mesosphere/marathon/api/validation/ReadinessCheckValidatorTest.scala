@@ -120,11 +120,8 @@ class ReadinessCheckValidatorTest extends UnitTest {
     }
   }
   class Fixture {
-    val app = MarathonTestHelper.makeBasicApp().withPortDefinitions(
-      Seq(
-        PortDefinition(
-          port = 123,
-          name = Some(ReadinessCheck.DefaultPortName))))
+    val app =
+      MarathonTestHelper.makeBasicApp().withPortDefinitions(Seq(PortDefinition(port = 123, name = Some(ReadinessCheck.DefaultPortName))))
     implicit val readinessCheckValidator: Validator[ReadinessCheck] = ReadinessCheck.readinessCheckValidator(app)
   }
 }

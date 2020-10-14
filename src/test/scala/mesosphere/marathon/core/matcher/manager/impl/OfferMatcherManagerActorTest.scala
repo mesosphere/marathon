@@ -153,7 +153,9 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       offerMatch2.future.futureValue.opsWithSource should be('empty)
     }
 
-    "overdue offers are rejected after the deadline" in new Fixture(Seq("--max_parallel_offers", "1", "--max_queued_offers", "100", "--offer_matching_timeout", "10")) {
+    "overdue offers are rejected after the deadline" in new Fixture(
+      Seq("--max_parallel_offers", "1", "--max_queued_offers", "100", "--offer_matching_timeout", "10")
+    ) {
       Given("OfferMatcher with one matcher")
       val offer1 = offer()
       val offer2 = offer()
@@ -181,7 +183,9 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       offerMatch1.isCompleted should be(false)
     }
 
-    "offers are rejected if the matcher does not respond in time" in new Fixture(Seq("--max_parallel_offers", "1", "--max_queued_offers", "100", "--offer_matching_timeout", "10")) {
+    "offers are rejected if the matcher does not respond in time" in new Fixture(
+      Seq("--max_parallel_offers", "1", "--max_queued_offers", "100", "--offer_matching_timeout", "10")
+    ) {
       Given("OfferMatcher with one matcher")
       val offer1 = offer()
       val offerMatch1 = Promise[OfferMatcher.MatchedInstanceOps]
@@ -209,7 +213,8 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
     object Config extends ScallopConf(config) with OfferMatcherManagerConfig {
       verify()
     }
-    val offerMatcherManager = TestActorRef[OfferMatcherManagerActor](OfferMatcherManagerActor.props(actorMetrics, random, clock, Config, observer))
+    val offerMatcherManager =
+      TestActorRef[OfferMatcherManagerActor](OfferMatcherManagerActor.props(actorMetrics, random, clock, Config, observer))
 
     def matcher(precedence: Option[PathId] = None): OfferMatcher = {
       val matcher = mock[OfferMatcher]
@@ -228,7 +233,8 @@ class OfferMatcherManagerActorTest extends AkkaUnitTest with Eventually {
       matcher
     }
 
-    def offer(): Offer = MarathonTestHelper.makeBasicOffer().setId(org.apache.mesos.Protos.OfferID.newBuilder().setValue("offer-" + idGen.next())).build()
+    def offer(): Offer =
+      MarathonTestHelper.makeBasicOffer().setId(org.apache.mesos.Protos.OfferID.newBuilder().setValue("offer-" + idGen.next())).build()
     def reservedOffer(appId: PathId, path: String = "test"): Offer = {
       import MarathonTestHelper._
       makeBasicOffer().addResources(reservedDisk(LocalVolumeId(appId, path, "uuid").idString, containerPath = path)).build()

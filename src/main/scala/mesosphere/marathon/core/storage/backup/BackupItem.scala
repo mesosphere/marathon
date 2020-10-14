@@ -14,4 +14,3 @@ import akka.util.ByteString
   * @param data the data as bytes to backup.
   */
 case class BackupItem(category: String, key: String, version: Option[OffsetDateTime], data: ByteString)
-

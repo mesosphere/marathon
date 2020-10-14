@@ -17,10 +17,9 @@ import scala.concurrent.duration._
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
-private[launchqueue] class LaunchQueueDelegate(
-    config: LaunchQueueConfig,
-    launchQueueActor: ActorRef,
-    rateLimiterActor: ActorRef) extends LaunchQueue with StrictLogging {
+private[launchqueue] class LaunchQueueDelegate(config: LaunchQueueConfig, launchQueueActor: ActorRef, rateLimiterActor: ActorRef)
+    extends LaunchQueue
+    with StrictLogging {
 
   // When purging, we wait for the TaskLauncherActor to shut down. This actor will wait for
   // in-flight task op notifications before complying, therefore we need to adjust the timeout accordingly.
@@ -35,9 +34,9 @@ private[launchqueue] class LaunchQueueDelegate(
     askQueueActorFuture[LaunchQueueDelegate.Request, Done]("add")(LaunchQueueDelegate.Add(runSpec, count))
   }
 
-  private[this] def askQueueActorFuture[T, R: ClassTag](
-    method: String,
-    timeout: Timeout = launchQueueRequestTimeout)(message: T): Future[R] = {
+  private[this] def askQueueActorFuture[T, R: ClassTag](method: String, timeout: Timeout = launchQueueRequestTimeout)(
+      message: T
+  ): Future[R] = {
     askActorFuture[T, R](method, timeout)(launchQueueActor, message)
   }
 
@@ -51,8 +50,7 @@ private[launchqueue] class LaunchQueueDelegate(
 
   override def advanceDelay(spec: RunSpec): Unit = rateLimiterActor ! RateLimiterActor.AdvanceDelay(spec)
 
-  private[this] def askActorFuture[T, R: ClassTag](
-    method: String, timeout: Timeout)(actorRef: ActorRef, message: T): Future[R] = {
+  private[this] def askActorFuture[T, R: ClassTag](method: String, timeout: Timeout)(actorRef: ActorRef, message: T): Future[R] = {
 
     implicit val timeoutImplicit: Timeout = timeout
     val answerFuture = actorRef ? message

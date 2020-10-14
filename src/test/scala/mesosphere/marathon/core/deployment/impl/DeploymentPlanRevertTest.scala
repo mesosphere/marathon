@@ -55,11 +55,17 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
     }
   }
   private[this] def removeApp(appId: String) = Deployment(s"remove app '$appId'", _.removeApp(appId.toAbsolutePath))
-  private[this] def addApp(appId: String) = Deployment(s"add app '$appId'", _.updateApp(appId.toAbsolutePath, _ => AppDefinition(appId.toAbsolutePath, cmd = Some("sleep"), role = "*"), Timestamp.now()))
+  private[this] def addApp(appId: String) =
+    Deployment(
+      s"add app '$appId'",
+      _.updateApp(appId.toAbsolutePath, _ => AppDefinition(appId.toAbsolutePath, cmd = Some("sleep"), role = "*"), Timestamp.now())
+    )
   private[this] def addGroup(groupId: String) = Deployment(s"add group '$groupId'", _.makeGroup(groupId.toAbsolutePath))
   private[this] def removeGroup(groupId: String) = Deployment(s"remove group '$groupId'", _.removeGroup(groupId.toAbsolutePath))
 
-  private[this] def testWithConcurrentChange(originalBeforeChanges: RootGroup, changesBeforeTest: Deployment*)(deployments: Deployment*)(expectedReverted: RootGroup): Unit = {
+  private[this] def testWithConcurrentChange(originalBeforeChanges: RootGroup, changesBeforeTest: Deployment*)(
+      deployments: Deployment*
+  )(expectedReverted: RootGroup): Unit = {
     val firstDeployment = deployments.head
 
     def performDeployments(orig: RootGroup, deployments: Seq[Deployment]): RootGroup = {
@@ -79,10 +85,8 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
 
       When("reverting the first one while we reset the versions before that")
       val newVersion = Timestamp(1)
-      val deploymentReverterForFirst = DeploymentPlanReverter.revert(
-        original.withNormalizedVersions,
-        firstDeployment.change(original).withNormalizedVersions,
-        newVersion)
+      val deploymentReverterForFirst =
+        DeploymentPlanReverter.revert(original.withNormalizedVersions, firstDeployment.change(original).withNormalizedVersions, newVersion)
       val reverted = deploymentReverterForFirst(targetWithAllDeployments.withNormalizedVersions)
 
       Then("The result should only contain items with the prior or the new version")
@@ -115,12 +119,13 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
     val addedIds = add.map(_.toAbsolutePath)
     val removedIds = remove.map(_.toAbsolutePath)
 
-    val name = if (removedIds.isEmpty)
-      s"group '$groupId' add deps {${addedIds.mkString(", ")}}"
-    else if (addedIds.isEmpty)
-      s"group '$groupId' remove deps {${removedIds.mkString(", ")}}"
-    else
-      s"group '$groupId' change deps -{${removedIds.mkString(", ")}} +{${addedIds.mkString(", ")}}"
+    val name =
+      if (removedIds.isEmpty)
+        s"group '$groupId' add deps {${addedIds.mkString(", ")}}"
+      else if (addedIds.isEmpty)
+        s"group '$groupId' remove deps {${removedIds.mkString(", ")}}"
+      else
+        s"group '$groupId' change deps -{${removedIds.mkString(", ")}} +{${addedIds.mkString(", ")}}"
 
     Deployment(name, _.updateDependencies(groupId.toAbsolutePath, _ ++ addedIds -- removedIds, Timestamp.now()))
   }
@@ -144,7 +149,9 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
       val original = createRootGroup(groups = Set(unrelatedGroup))
 
       When("we add an unrelated app and try to revert that without concurrent changes")
-      val target = original.updatedWith(original.updateApp("test".toAbsolutePath, _ => AppDefinition("test".toAbsolutePath, role = "*"), Timestamp.now()))
+      val target = original.updatedWith(
+        original.updateApp("test".toAbsolutePath, _ => AppDefinition("test".toAbsolutePath, role = "*"), Timestamp.now())
+      )
       val plan = DeploymentPlan(original, target)
       val revertToOriginal = plan.revert(target)
 
@@ -251,7 +258,8 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
       val target = original.updateDependencies(
         existingGroup.id,
         _ => Set("othergroup2".toAbsolutePath, "othergroup3".toAbsolutePath),
-        original.version)
+        original.version
+      )
       val plan = DeploymentPlan(original, target)
       val revertToOriginal = plan.revert(target)
 
@@ -292,186 +300,179 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
       addApp("/other/app4"),
       removeApp("/changeme/app2")
     ) {
-        createRootGroup(
-          groups = Set(
-            createGroup("othergroup1".toAbsolutePath),
-            createGroup("othergroup2".toAbsolutePath),
-            createGroup("othergroup3".toAbsolutePath),
-            {
-              val id = "other".toAbsolutePath
-              val app4 = AppDefinition(id / "app4", cmd = Some("sleep"), role = "*")
-              createGroup(
-                id,
-                apps = Map(app4.id -> app4) // app4 was added
+      createRootGroup(
+        groups = Set(
+          createGroup("othergroup1".toAbsolutePath),
+          createGroup("othergroup2".toAbsolutePath),
+          createGroup("othergroup3".toAbsolutePath), {
+            val id = "other".toAbsolutePath
+            val app4 = AppDefinition(id / "app4", cmd = Some("sleep"), role = "*")
+            createGroup(
+              id,
+              apps = Map(app4.id -> app4) // app4 was added
+            )
+          }, {
+            val id = "changeme".toAbsolutePath
+            val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+            val app3 = AppDefinition(id / "app3", cmd = Some("sleep"), role = "*")
+            createGroup(
+              id,
+              dependencies = Set(
+                "othergroup1".toAbsolutePath,
+                "othergroup2".toAbsolutePath
+              ),
+              apps = Map(
+                app1.id -> app1, // app1 was kept
+                // app2 was removed
+                app3.id -> app3 // app3 was added
               )
-            },
-            {
-              val id = "changeme".toAbsolutePath
-              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
-              val app3 = AppDefinition(id / "app3", cmd = Some("sleep"), role = "*")
-              createGroup(
-                id,
-                dependencies = Set(
-                  "othergroup1".toAbsolutePath,
-                  "othergroup2".toAbsolutePath
-                ),
-                apps = Map(
-                  app1.id -> app1, // app1 was kept
-                  // app2 was removed
-                  app3.id -> app3 // app3 was added
-                )
-              )
-            }
-          )
+            )
+          }
         )
-      }
+      )
+    }
 
     testWithConcurrentChange(original)(
       changeGroupDependencies("/withdeps", add = Seq("/a", "/b", "/c")),
       // cannot delete /withdeps in revert
       addGroup("/withdeps/some")
     ) {
-        // expected outcome after revert of first deployment
-        createRootGroup(
-          groups = Set(
-            createGroup("othergroup1".toAbsolutePath),
-            createGroup("othergroup2".toAbsolutePath),
-            createGroup("othergroup3".toAbsolutePath),
-            {
-              val id = "/withdeps".toAbsolutePath // withdeps still exists because of the subgroup
-              createGroup(
-                id,
-                apps = Group.defaultApps,
-                groups = Set(createGroup(id / "some")),
-                dependencies = Set() // dependencies were introduce with first deployment, should be gone now
+      // expected outcome after revert of first deployment
+      createRootGroup(
+        groups = Set(
+          createGroup("othergroup1".toAbsolutePath),
+          createGroup("othergroup2".toAbsolutePath),
+          createGroup("othergroup3".toAbsolutePath), {
+            val id = "/withdeps".toAbsolutePath // withdeps still exists because of the subgroup
+            createGroup(
+              id,
+              apps = Group.defaultApps,
+              groups = Set(createGroup(id / "some")),
+              dependencies = Set() // dependencies were introduce with first deployment, should be gone now
+            )
+          }, {
+            val id = "changeme".toAbsolutePath
+            val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+            val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
+            createGroup(
+              id,
+              dependencies = Set(
+                "othergroup1".toAbsolutePath,
+                "othergroup2".toAbsolutePath
+              ),
+              apps = Map(
+                app1.id -> app1,
+                app2.id -> app2
               )
-            },
-            {
-              val id = "changeme".toAbsolutePath
-              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
-              val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
-              createGroup(
-                id,
-                dependencies = Set(
-                  "othergroup1".toAbsolutePath,
-                  "othergroup2".toAbsolutePath
-                ),
-                apps = Map(
-                  app1.id -> app1,
-                  app2.id -> app2
-                )
-              )
-            }
-          )
+            )
+          }
         )
-      }
+      )
+    }
 
     testWithConcurrentChange(original)(
       changeGroupDependencies("/changeme", remove = Seq("/othergroup1"), add = Seq("/othergroup3")),
       // "conflicting" dependency changes
       changeGroupDependencies("/changeme", remove = Seq("/othergroup2"), add = Seq("/othergroup4"))
     ) {
-        // expected outcome after revert of first deployment
-        createRootGroup(
-          groups = Set(
-            createGroup("othergroup1".toAbsolutePath),
-            createGroup("othergroup2".toAbsolutePath),
-            createGroup("othergroup3".toAbsolutePath),
-            {
-              val id = "changeme".toAbsolutePath
-              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
-              val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
-              createGroup(
-                id,
-                dependencies = Set(
-                  // othergroup2 was removed and othergroup4 added
-                  "othergroup1".toAbsolutePath,
-                  "othergroup4".toAbsolutePath
-                ),
-                apps = Map(
-                  app1.id -> app1,
-                  app2.id -> app2
-                )
+      // expected outcome after revert of first deployment
+      createRootGroup(
+        groups = Set(
+          createGroup("othergroup1".toAbsolutePath),
+          createGroup("othergroup2".toAbsolutePath),
+          createGroup("othergroup3".toAbsolutePath), {
+            val id = "changeme".toAbsolutePath
+            val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+            val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
+            createGroup(
+              id,
+              dependencies = Set(
+                // othergroup2 was removed and othergroup4 added
+                "othergroup1".toAbsolutePath,
+                "othergroup4".toAbsolutePath
+              ),
+              apps = Map(
+                app1.id -> app1,
+                app2.id -> app2
               )
-            }
-          )
+            )
+          }
         )
-      }
+      )
+    }
 
     testWithConcurrentChange(original)(
       removeGroup("/othergroup3"),
       // unrelated dependency changes
       changeGroupDependencies("/changeme", remove = Seq("/othergroup2"), add = Seq("/othergroup4"))
     ) {
-        // expected outcome after revert of first deployment
-        createRootGroup(
-          groups = Set(
-            createGroup("othergroup1".toAbsolutePath),
-            createGroup("othergroup2".toAbsolutePath),
-            createGroup("othergroup3".toAbsolutePath),
-            {
-              val id = "changeme".toAbsolutePath
-              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
-              val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
-              createGroup(
-                id,
-                dependencies = Set(
-                  // othergroup2 was removed and othergroup4 added
-                  "othergroup1".toAbsolutePath,
-                  "othergroup4".toAbsolutePath
-                ),
-                apps = Map(
-                  app1.id -> app1,
-                  app2.id -> app2
-                )
+      // expected outcome after revert of first deployment
+      createRootGroup(
+        groups = Set(
+          createGroup("othergroup1".toAbsolutePath),
+          createGroup("othergroup2".toAbsolutePath),
+          createGroup("othergroup3".toAbsolutePath), {
+            val id = "changeme".toAbsolutePath
+            val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+            val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
+            createGroup(
+              id,
+              dependencies = Set(
+                // othergroup2 was removed and othergroup4 added
+                "othergroup1".toAbsolutePath,
+                "othergroup4".toAbsolutePath
+              ),
+              apps = Map(
+                app1.id -> app1,
+                app2.id -> app2
               )
-            }
-          )
+            )
+          }
         )
-      }
+      )
+    }
 
     testWithConcurrentChange(
       original,
       addGroup("/changeme/some")
     )(
-        // revert first
-        addGroup("/changeme/some/a"),
-        // concurrent deployments
-        addGroup("/changeme/some/b")
-      ) {
-          // expected outcome after revert
-          createRootGroup(
-            groups = Set(
-              createGroup("othergroup1".toAbsolutePath),
-              createGroup("othergroup2".toAbsolutePath),
-              createGroup("othergroup3".toAbsolutePath),
-              {
-                val id = "changeme".toAbsolutePath
-                val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
-                val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
+      // revert first
+      addGroup("/changeme/some/a"),
+      // concurrent deployments
+      addGroup("/changeme/some/b")
+    ) {
+      // expected outcome after revert
+      createRootGroup(
+        groups = Set(
+          createGroup("othergroup1".toAbsolutePath),
+          createGroup("othergroup2".toAbsolutePath),
+          createGroup("othergroup3".toAbsolutePath), {
+            val id = "changeme".toAbsolutePath
+            val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+            val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
+            createGroup(
+              id,
+              dependencies = Set(
+                "othergroup1".toAbsolutePath,
+                "othergroup2".toAbsolutePath
+              ),
+              apps = Map(
+                app1.id -> app1,
+                app2.id -> app2
+              ),
+              groups = Set(
                 createGroup(
-                  id,
-                  dependencies = Set(
-                    "othergroup1".toAbsolutePath,
-                    "othergroup2".toAbsolutePath
-                  ),
-                  apps = Map(
-                    app1.id -> app1,
-                    app2.id -> app2
-                  ),
+                  id / "some",
                   groups = Set(
-                    createGroup(
-                      id / "some",
-                      groups = Set(
-                        createGroup(id / "some" / "b")
-                      )
-                    )
+                    createGroup(id / "some" / "b")
                   )
                 )
-              }
+              )
             )
-          )
-        }
+          }
+        )
+      )
+    }
 
     testWithConcurrentChange(
       original
@@ -483,49 +484,48 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
       addApp("/changeme/some/b/b"),
       addApp("/changeme/some/b/c")
     ) {
-        // expected outcome after revert
-        createRootGroup(
-          groups = Set(
-            createGroup("othergroup1".toAbsolutePath),
-            createGroup("othergroup2".toAbsolutePath),
-            createGroup("othergroup3".toAbsolutePath),
-            {
-              val id = "changeme".toAbsolutePath
-              val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
-              val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
-              val appBA = AppDefinition(id / "some" / "b" / "a", cmd = Some("sleep"), role = "*")
-              val appBB = AppDefinition(id / "some" / "b" / "b", cmd = Some("sleep"), role = "*")
-              val appBC = AppDefinition(id / "some" / "b" / "c", cmd = Some("sleep"), role = "*")
-              createGroup(
-                id,
-                dependencies = Set(
-                  "othergroup1".toAbsolutePath,
-                  "othergroup2".toAbsolutePath
-                ),
-                apps = Map(
-                  app1.id -> app1,
-                  app2.id -> app2
-                ),
-                groups = Set(
-                  createGroup(
-                    id / "some",
-                    groups = Set(
-                      createGroup(
-                        id / "some" / "b",
-                        apps = Map(
-                          appBA.id -> appBA,
-                          appBB.id -> appBB,
-                          appBC.id -> appBC
-                        )
+      // expected outcome after revert
+      createRootGroup(
+        groups = Set(
+          createGroup("othergroup1".toAbsolutePath),
+          createGroup("othergroup2".toAbsolutePath),
+          createGroup("othergroup3".toAbsolutePath), {
+            val id = "changeme".toAbsolutePath
+            val app1 = AppDefinition(id / "app1", cmd = Some("sleep"), role = "*")
+            val app2 = AppDefinition(id / "app2", cmd = Some("sleep"), role = "*")
+            val appBA = AppDefinition(id / "some" / "b" / "a", cmd = Some("sleep"), role = "*")
+            val appBB = AppDefinition(id / "some" / "b" / "b", cmd = Some("sleep"), role = "*")
+            val appBC = AppDefinition(id / "some" / "b" / "c", cmd = Some("sleep"), role = "*")
+            createGroup(
+              id,
+              dependencies = Set(
+                "othergroup1".toAbsolutePath,
+                "othergroup2".toAbsolutePath
+              ),
+              apps = Map(
+                app1.id -> app1,
+                app2.id -> app2
+              ),
+              groups = Set(
+                createGroup(
+                  id / "some",
+                  groups = Set(
+                    createGroup(
+                      id / "some" / "b",
+                      apps = Map(
+                        appBA.id -> appBA,
+                        appBB.id -> appBB,
+                        appBC.id -> appBC
                       )
                     )
                   )
                 )
               )
-            }
-          )
+            )
+          }
         )
-      }
+      )
+    }
 
   }
 }

@@ -71,14 +71,37 @@ class ConstraintTest extends UnitTest {
         JsonTestHelper.assertThatJsonOf(constraint).correspondsToJsonString(expected)
       }
 
-      shouldMatch("""["hostname","UNIQUE"]""", Constraint.newBuilder.setField("hostname")
-        .setOperator(Constraint.Operator.UNIQUE).build)
-      shouldMatch("""["rackid","GROUP_BY","1"]""", Constraint.newBuilder.setField("rackid")
-        .setOperator(Constraint.Operator.GROUP_BY).setValue("1").build)
-      shouldMatch("""["jdk","LIKE","7"]""", Constraint.newBuilder.setField("jdk")
-        .setOperator(Constraint.Operator.LIKE).setValue("7").build)
-      shouldMatch("""["jdk","UNLIKE","7"]""", Constraint.newBuilder.setField("jdk")
-        .setOperator(Constraint.Operator.UNLIKE).setValue("7").build)
+      shouldMatch(
+        """["hostname","UNIQUE"]""",
+        Constraint.newBuilder
+          .setField("hostname")
+          .setOperator(Constraint.Operator.UNIQUE)
+          .build
+      )
+      shouldMatch(
+        """["rackid","GROUP_BY","1"]""",
+        Constraint.newBuilder
+          .setField("rackid")
+          .setOperator(Constraint.Operator.GROUP_BY)
+          .setValue("1")
+          .build
+      )
+      shouldMatch(
+        """["jdk","LIKE","7"]""",
+        Constraint.newBuilder
+          .setField("jdk")
+          .setOperator(Constraint.Operator.LIKE)
+          .setValue("7")
+          .build
+      )
+      shouldMatch(
+        """["jdk","UNLIKE","7"]""",
+        Constraint.newBuilder
+          .setField("jdk")
+          .setOperator(Constraint.Operator.UNLIKE)
+          .setValue("7")
+          .build
+      )
     }
   }
 }

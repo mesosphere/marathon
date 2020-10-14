@@ -26,7 +26,8 @@ import scala.concurrent.{ExecutionContext, Future}
   */
 class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
   override lazy val akkaConfig =
-    ConfigFactory.parseString(""" akka.actor.guardian-supervisor-strategy = "akka.actor.StoppingSupervisorStrategy" """)
+    ConfigFactory
+      .parseString(""" akka.actor.guardian-supervisor-strategy = "akka.actor.StoppingSupervisorStrategy" """)
       .withFallback(ConfigFactory.load())
 
   val metricsModules = Table(
@@ -34,7 +35,7 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
     ("dropwizard", MetricsModule(AllConf.withTestConfig()))
   )
 
-  forAll (metricsModules) { (name: String, metricsModule: MetricsModule) =>
+  forAll(metricsModules) { (name: String, metricsModule: MetricsModule) =>
     s"InstanceTrackerActor (metrics = $name)" should {
       "failures while loading the initial data are escalated" in {
         val f = new Fixture
@@ -342,7 +343,9 @@ class InstanceTrackerActorTest extends AkkaUnitTest with Eventually {
 
       stepProcessor.process(any)(any[ExecutionContext]) returns Future.successful(Done)
 
-      lazy val instanceTrackerActor = TestActorRef[InstanceTrackerActor](Props(new InstanceTrackerActor(actorMetrics, instancesLoader, stepProcessor, updateResolver, repository, clock, crashStrategy)))
+      lazy val instanceTrackerActor = TestActorRef[InstanceTrackerActor](
+        Props(new InstanceTrackerActor(actorMetrics, instancesLoader, stepProcessor, updateResolver, repository, clock, crashStrategy))
+      )
 
       def verifyNoMoreInteractions(): Unit = {
         noMoreInteractions(instancesLoader)

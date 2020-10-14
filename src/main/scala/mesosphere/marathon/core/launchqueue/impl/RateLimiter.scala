@@ -59,8 +59,7 @@ private[launchqueue] class RateLimiter(clock: Clock) extends StrictLogging {
     val now: Timestamp = clock.now()
     val timeLeft = (now until newDelay.deadline).toHumanReadable
 
-    logger.info(
-      s"$message. Task launch delay for [${spec.id} - ${spec.versionInfo.lastConfigChangeVersion}] is set to $timeLeft")
+    logger.info(s"$message. Task launch delay for [${spec.id} - ${spec.versionInfo.lastConfigChangeVersion}] is set to $timeLeft")
     taskLaunchDelays += (spec.configRef -> newDelay)
     newDelay.deadline
   }
@@ -86,16 +85,12 @@ object RateLimiter {
 
   case class DelayUpdate(ref: RunSpecConfigRef, delay: Option[Delay])
 
-  case class Delay(
-      referenceTimestamp: Timestamp,
-      currentDelay: FiniteDuration,
-      maxLaunchDelay: FiniteDuration) {
+  case class Delay(referenceTimestamp: Timestamp, currentDelay: FiniteDuration, maxLaunchDelay: FiniteDuration) {
 
     def deadline: Timestamp = referenceTimestamp + currentDelay
 
     def increased(clock: Clock, runSpec: RunSpec): Delay = {
-      val delayTimesFactor = FiniteDuration(
-        (currentDelay.toNanos * runSpec.backoffStrategy.factor).toLong, TimeUnit.NANOSECONDS)
+      val delayTimesFactor = FiniteDuration((currentDelay.toNanos * runSpec.backoffStrategy.factor).toLong, TimeUnit.NANOSECONDS)
       val newDelay: FiniteDuration = runSpec.backoffStrategy.maxLaunchDelay.min(delayTimesFactor)
       Delay(clock.now(), newDelay, runSpec.backoffStrategy.maxLaunchDelay)
     }

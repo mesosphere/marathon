@@ -34,7 +34,8 @@ class ElectionModule(
           config.zooKeeperLeaderUrl.path,
           config.zooKeeperConnectionTimeout().millis,
           hostPort,
-          electionEC)
+          electionEC
+        )
       case backend: Option[String] =>
         throw new IllegalArgumentException(s"Leader election backend $backend not known!")
     }
@@ -42,6 +43,7 @@ class ElectionModule(
     PsuedoElectionStream()
   }
 
-  lazy val service: ElectionService = new ElectionServiceImpl(metrics, eventStream, hostPort, electionBackend,
-    crashStrategy, electionEC)(system)
+  lazy val service: ElectionService = new ElectionServiceImpl(metrics, eventStream, hostPort, electionBackend, crashStrategy, electionEC)(
+    system
+  )
 }

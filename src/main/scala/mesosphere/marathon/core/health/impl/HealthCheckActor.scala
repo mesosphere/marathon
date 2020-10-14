@@ -9,7 +9,12 @@ import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.event._
 import mesosphere.marathon.core.health._
-import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{ApplicationKey, HealthCheckStatusChanged, InstanceKey, PurgeHealthCheckStatuses}
+import mesosphere.marathon.core.health.impl.AppHealthCheckActor.{
+  ApplicationKey,
+  HealthCheckStatusChanged,
+  InstanceKey,
+  PurgeHealthCheckStatuses
+}
 import mesosphere.marathon.core.health.impl.HealthCheckActor._
 import mesosphere.marathon.core.instance.Instance
 import mesosphere.marathon.core.task.termination.{KillReason, KillService}
@@ -28,8 +33,9 @@ private[health] class HealthCheckActor(
     healthCheck: HealthCheck,
     instanceTracker: InstanceTracker,
     eventBus: EventStream,
-    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed])
-  extends Actor with StrictLogging {
+    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed]
+) extends Actor
+    with StrictLogging {
 
   implicit val mat = ActorMaterializer()
   import context.dispatcher
@@ -58,7 +64,7 @@ private[health] class HealthCheckActor(
             }
           }
           .mapConcat(identity)
-          .watchTermination(){ (_, done) =>
+          .watchTermination() { (_, done) =>
             done.onComplete {
               case Success(_) =>
                 logger.info(s"HealthCheck stream for app ${app.id} version ${app.version} and healthCheck $healthCheck was stopped")
@@ -82,10 +88,12 @@ private[health] class HealthCheckActor(
       healthByInstanceId.remove(inactiveId)
     }
 
-    val checksToPurge = instances.withFilter(!_.isActive).map(instance => {
-      val instanceKey = InstanceKey(ApplicationKey(instance.runSpecId, instance.runSpecVersion), instance.instanceId)
-      (instanceKey, healthCheck)
-    })
+    val checksToPurge = instances
+      .withFilter(!_.isActive)
+      .map(instance => {
+        val instanceKey = InstanceKey(ApplicationKey(instance.runSpecId, instance.runSpecVersion), instance.instanceId)
+        (instanceKey, healthCheck)
+      })
     appHealthCheckActor ! PurgeHealthCheckStatuses(checksToPurge)
   }
 
@@ -205,22 +213,16 @@ private[health] class HealthCheckActor(
 
 object HealthCheckActor {
   def props(
-    app: AppDefinition,
-    appHealthCheckActor: ActorRef,
-    killService: KillService,
-    healthCheck: HealthCheck,
-    instanceTracker: InstanceTracker,
-    eventBus: EventStream,
-    healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed]): Props = {
+      app: AppDefinition,
+      appHealthCheckActor: ActorRef,
+      killService: KillService,
+      healthCheck: HealthCheck,
+      instanceTracker: InstanceTracker,
+      eventBus: EventStream,
+      healthCheckHub: Sink[(AppDefinition, Instance, MarathonHealthCheck, ActorRef), NotUsed]
+  ): Props = {
 
-    Props(new HealthCheckActor(
-      app,
-      appHealthCheckActor,
-      killService,
-      healthCheck,
-      instanceTracker,
-      eventBus,
-      healthCheckHub))
+    Props(new HealthCheckActor(app, appHealthCheckActor, killService, healthCheck, instanceTracker, eventBus, healthCheckHub))
   }
 
   // self-sent every healthCheck.intervalSeconds

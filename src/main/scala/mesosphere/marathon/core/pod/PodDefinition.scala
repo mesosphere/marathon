@@ -35,7 +35,9 @@ case class PodDefinition(
     override val unreachableStrategy: UnreachableStrategy = PodDefinition.DefaultUnreachableStrategy,
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
     role: Role
-) extends RunSpec with plugin.PodSpec with MarathonState[Protos.Json, PodDefinition] {
+) extends RunSpec
+    with plugin.PodSpec
+    with MarathonState[Protos.Json, PodDefinition] {
 
   /**
     * As an optimization, we precompute and cache the hash of this object
@@ -56,20 +58,22 @@ case class PodDefinition(
 
   override val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
-  def aggregateResources(filter: MesosContainer => Boolean = _ => true) = Resources(
-    cpus = (BigDecimal(executorResources.cpus) + containers.withFilter(filter).map(r => BigDecimal(r.resources.cpus)).sum).doubleValue(),
-    mem = (BigDecimal(executorResources.mem) + containers.withFilter(filter).map(r => BigDecimal(r.resources.mem)).sum).doubleValue(),
-    disk = (BigDecimal(executorResources.disk) + containers.withFilter(filter).map(r => BigDecimal(r.resources.disk)).sum).doubleValue(),
-    gpus = executorResources.gpus + containers.withFilter(filter).map(_.resources.gpus).sum
-  )
+  def aggregateResources(filter: MesosContainer => Boolean = _ => true) =
+    Resources(
+      cpus = (BigDecimal(executorResources.cpus) + containers.withFilter(filter).map(r => BigDecimal(r.resources.cpus)).sum).doubleValue(),
+      mem = (BigDecimal(executorResources.mem) + containers.withFilter(filter).map(r => BigDecimal(r.resources.mem)).sum).doubleValue(),
+      disk = (BigDecimal(executorResources.disk) + containers.withFilter(filter).map(r => BigDecimal(r.resources.disk)).sum).doubleValue(),
+      gpus = executorResources.gpus + containers.withFilter(filter).map(_.resources.gpus).sum
+    )
 
   override def withInstances(instances: Int): RunSpec = copy(instances = instances)
 
   // scalastyle:off cyclomatic.complexity
-  override def isUpgrade(to: RunSpec): Boolean = to match {
-    case to: PodDefinition =>
-      id == to.id && {
-        user != to.user ||
+  override def isUpgrade(to: RunSpec): Boolean =
+    to match {
+      case to: PodDefinition =>
+        id == to.id && {
+          user != to.user ||
           env != to.env ||
           labels != to.labels ||
           acceptedResourceRoles != to.acceptedResourceRoles ||
@@ -82,19 +86,20 @@ case class PodDefinition(
           upgradeStrategy != to.upgradeStrategy ||
           role != to.role ||
           linuxInfo != to.linuxInfo
-      }
-    case _ =>
-      // A validation rule will ensure, this can not happen
-      throw new IllegalStateException("Can't change pod to app")
-  }
+        }
+      case _ =>
+        // A validation rule will ensure, this can not happen
+        throw new IllegalStateException("Can't change pod to app")
+    }
   // scalastyle:on
 
   override def needsRestart(to: RunSpec): Boolean = this.version != to.version || isUpgrade(to)
 
-  override def isOnlyScaleChange(to: RunSpec): Boolean = to match {
-    case to: PodDefinition => !isUpgrade(to) && (instances != to.instances)
-    case _ => throw new IllegalStateException("Can't change pod to app")
-  }
+  override def isOnlyScaleChange(to: RunSpec): Boolean =
+    to match {
+      case to: PodDefinition => !isUpgrade(to) && (instances != to.instances)
+      case _ => throw new IllegalStateException("Can't change pod to app")
+    }
 
   override val version: Timestamp = versionInfo.version
 
@@ -114,8 +119,9 @@ case class PodDefinition(
   def container(name: String): Option[MesosContainer] = containers.find(_.name == name)
   def container(taskId: Task.Id): Option[MesosContainer] = taskId.containerName.flatMap(container(_))
   def volume(volumeName: String): Volume =
-    volumes.find(_.name.contains(volumeName)).getOrElse(
-      throw new IllegalArgumentException(s"volume named $volumeName is unknown to this pod"))
+    volumes
+      .find(_.name.contains(volumeName))
+      .getOrElse(throw new IllegalArgumentException(s"volume named $volumeName is unknown to this pod"))
 }
 
 object PodDefinition {

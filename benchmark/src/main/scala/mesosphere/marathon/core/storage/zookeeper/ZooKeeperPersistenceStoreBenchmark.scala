@@ -58,11 +58,16 @@ object ZooKeeperPersistenceStoreBenchmark extends StrictLogging {
     Conf.zooKeeperUrl().hostsString,
     Conf.zooKeeperSessionTimeout().toInt,
     Conf.zooKeeperConnectionTimeout().toInt,
-    new BoundedExponentialBackoffRetry(Conf.zooKeeperOperationBaseRetrySleepMs(), Conf.zooKeeperTimeout().toInt, Conf.zooKeeperOperationMaxRetries())
+    new BoundedExponentialBackoffRetry(
+      Conf.zooKeeperOperationBaseRetrySleepMs(),
+      Conf.zooKeeperTimeout().toInt,
+      Conf.zooKeeperOperationMaxRetries()
+    )
   )
   curator.start()
 
-  lazy val settings: AsyncCuratorBuilderSettings = new AsyncCuratorBuilderSettings(createOptions = Set(CreateOption.createParentsIfNeeded), compressedData = false)
+  lazy val settings: AsyncCuratorBuilderSettings =
+    new AsyncCuratorBuilderSettings(createOptions = Set(CreateOption.createParentsIfNeeded), compressedData = false)
   lazy val factory: AsyncCuratorBuilderFactory = AsyncCuratorBuilderFactory(curator, settings)
   lazy val metrics: Metrics = DummyMetrics
   lazy val store: ZooKeeperPersistenceStore = new ZooKeeperPersistenceStore(metrics, factory, parallelism = 16)
@@ -89,11 +94,13 @@ object ZooKeeperPersistenceStoreBenchmark extends StrictLogging {
     }
 
     Await.result(
-      Source.fromIterator(() => params.iterator)
-        .map{ p => logger.info(s"Creating ${p._2} nodes with ${p._1}b data"); p }
-        .mapAsync(1){ case (size, num) => populate(size, num) }
+      Source
+        .fromIterator(() => params.iterator)
+        .map { p => logger.info(s"Creating ${p._2} nodes with ${p._1}b data"); p }
+        .mapAsync(1) { case (size, num) => populate(size, num) }
         .runWith(Sink.ignore),
-      Duration.Inf)
+      Duration.Inf
+    )
 
     logger.info("Zookeeper successfully populated with data")
     system.terminate()
@@ -127,32 +134,40 @@ class ZooKeeperPersistenceStoreBenchmark {
       Source(1 to num)
         .map(_ => Node(randomPath("/tests"), ByteString(Random.alphanumeric.take(size).mkString)))
         .via(store.createFlow)
-        .runWith(Sink.ignore), Duration.Inf)
+        .runWith(Sink.ignore),
+      Duration.Inf
+    )
 
     hole.consume(res)
   }
 
   @Benchmark
   def read(hole: Blackhole) = {
-    def paths = Source(1 to num)
-      .map(_ => s"/tests/$size/node${Random.nextInt(params(size)) + 1}")
+    def paths =
+      Source(1 to num)
+        .map(_ => s"/tests/$size/node${Random.nextInt(params(size)) + 1}")
 
     val res = Await.result(
       paths
         .via(store.readFlow)
-        .runWith(Sink.ignore), Duration.Inf)
+        .runWith(Sink.ignore),
+      Duration.Inf
+    )
     hole.consume(res)
   }
 
   @Benchmark
   def delete(hole: Blackhole) = {
-    def paths = Source(1 to num)
-      .map(_ => s"/tests/$size/node${Random.nextInt(params(size)) + 1}")
+    def paths =
+      Source(1 to num)
+        .map(_ => s"/tests/$size/node${Random.nextInt(params(size)) + 1}")
 
     val res = Await.result(
       paths
         .via(store.deleteFlow)
-        .runWith(Sink.ignore), Duration.Inf)
+        .runWith(Sink.ignore),
+      Duration.Inf
+    )
     hole.consume(res)
   }
 
@@ -162,7 +177,9 @@ class ZooKeeperPersistenceStoreBenchmark {
       Source(1 to num)
         .map(_ => Node(s"/tests/$size/node${Random.nextInt(params(size)) + 1}", ByteString(Random.alphanumeric.take(size).mkString)))
         .via(store.updateFlow)
-        .runWith(Sink.ignore), Duration.Inf)
+        .runWith(Sink.ignore),
+      Duration.Inf
+    )
     hole.consume(res)
   }
 

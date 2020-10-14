@@ -11,8 +11,7 @@ import mesosphere.marathon.state.{RunSpec, RunSpecConfigRef}
 import scala.concurrent.duration._
 
 private[launchqueue] object RateLimiterActor {
-  def props(
-    rateLimiter: RateLimiter): Props =
+  def props(rateLimiter: RateLimiter): Props =
     Props(new RateLimiterActor(rateLimiter))
 
   private[impl] case class AddDelay(runSpec: RunSpec)
@@ -33,8 +32,7 @@ private class RateLimiterActor private (rateLimiter: RateLimiter) extends Actor 
   override def preStart(): Unit = {
     import context.dispatcher
     val overdueDelayCleanupInterval = 10.seconds
-    cleanup = context.system.scheduler.schedule(
-      overdueDelayCleanupInterval, overdueDelayCleanupInterval, self, CleanupOverdueDelays)
+    cleanup = context.system.scheduler.schedule(overdueDelayCleanupInterval, overdueDelayCleanupInterval, self, CleanupOverdueDelays)
     logger.info("started RateLimiterActor")
   }
 
@@ -42,12 +40,13 @@ private class RateLimiterActor private (rateLimiter: RateLimiter) extends Actor 
     cleanup.cancel()
   }
 
-  override def receive: Receive = LoggingReceive {
-    Seq[Receive](
-      receiveCleanup,
-      receiveDelayOps
-    ).reduceLeft(_.orElse[Any, Unit](_))
-  }
+  override def receive: Receive =
+    LoggingReceive {
+      Seq[Receive](
+        receiveCleanup,
+        receiveDelayOps
+      ).reduceLeft(_.orElse[Any, Unit](_))
+    }
 
   private[this] def receiveCleanup: Receive = {
     case CleanupOverdueDelays =>

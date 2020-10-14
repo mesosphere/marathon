@@ -16,10 +16,12 @@ case class FetchUri(
     extract: Boolean = FetchUri.defaultExtract,
     executable: Boolean = FetchUri.defaultExecutable,
     cache: Boolean = FetchUri.defaultCache,
-    outputFile: Option[String] = FetchUri.defaultOutputFile) {
+    outputFile: Option[String] = FetchUri.defaultOutputFile
+) {
 
   def toProto: mesos.CommandInfo.URI = {
-    val builder = mesos.CommandInfo.URI.newBuilder()
+    val builder = mesos.CommandInfo.URI
+      .newBuilder()
       .setValue(uri)
       .setExecutable(executable)
       .setExtract(extract)

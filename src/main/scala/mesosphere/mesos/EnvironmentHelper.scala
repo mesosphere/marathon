@@ -31,9 +31,7 @@ object EnvironmentHelper {
   // @param effectivePorts resolved non-dynamic host ports allocated from Mesos resource offers
   // @return a dictionary of variables that should be added to a tasks environment
   //scalastyle:off cyclomatic.complexity method.length
-  def portsEnv(
-    requestedPorts: Seq[PortRequest],
-    hostPorts: Seq[Option[Int]]): Map[String, String] = {
+  def portsEnv(requestedPorts: Seq[PortRequest], hostPorts: Seq[Option[Int]]): Map[String, String] = {
     if (hostPorts.isEmpty) {
       Map.empty
     } else {
@@ -110,8 +108,10 @@ object EnvironmentHelper {
     def escape(name: String): String = name.replaceAll("[^a-zA-Z0-9_]+", "_").toUpperCase
 
     val validLabels = labels.collect {
-      case (key, value) if key.length < maxVariableLength
-        && value.length < maxEnvironmentVarLength => escape(key) -> value
+      case (key, value)
+          if key.length < maxVariableLength
+            && value.length < maxEnvironmentVarLength =>
+        escape(key) -> value
     }
 
     val names = Map("MARATHON_APP_LABELS" -> validLabels.keys.mkString(" "))

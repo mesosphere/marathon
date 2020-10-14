@@ -22,25 +22,27 @@ private class SubjectInternalLogic[T](queueSize: Int, overflowStrategy: Overflow
   @volatile private[this] var elementPushed = false
   @volatile private[this] var completionResult: Option[Try[Done]] = None
 
-  def onElement(t: T): Unit = synchronized {
-    elementPushed = true
-    lastElement = t
-    subscribers.foreach(_.offer(t))
-  }
-
-  private def addSubscriber(sq: SourceQueueWithComplete[T]): Unit = synchronized {
-    completionResult match {
-      case Some(r) =>
-        if (r.isSuccess && elementPushed)
-          sq.offer(lastElement)
-
-        propagateCompletion(sq, r)
-
-      case None =>
-        if (elementPushed) sq.offer(lastElement)
-        subscribers += sq
+  def onElement(t: T): Unit =
+    synchronized {
+      elementPushed = true
+      lastElement = t
+      subscribers.foreach(_.offer(t))
     }
-  }
+
+  private def addSubscriber(sq: SourceQueueWithComplete[T]): Unit =
+    synchronized {
+      completionResult match {
+        case Some(r) =>
+          if (r.isSuccess && elementPushed)
+            sq.offer(lastElement)
+
+          propagateCompletion(sq, r)
+
+        case None =>
+          if (elementPushed) sq.offer(lastElement)
+          subscribers += sq
+      }
+    }
 
   private[this] def propagateCompletion(sq: SourceQueueWithComplete[T], result: Try[Done]) =
     result match {
@@ -48,15 +50,17 @@ private class SubjectInternalLogic[T](queueSize: Int, overflowStrategy: Overflow
       case Failure(ex) => sq.fail(ex)
     }
 
-  private def removeSubscriber(sq: SourceQueueWithComplete[T]): Unit = synchronized {
-    subscribers -= sq
-  }
+  private def removeSubscriber(sq: SourceQueueWithComplete[T]): Unit =
+    synchronized {
+      subscribers -= sq
+    }
 
-  def complete(result: Try[Done]): Unit = synchronized {
-    completionResult = Some(result)
-    subscribers.foreach(propagateCompletion(_, result))
-    subscribers = Set.empty
-  }
+  def complete(result: Try[Done]): Unit =
+    synchronized {
+      completionResult = Some(result)
+      subscribers.foreach(propagateCompletion(_, result))
+      subscribers = Set.empty
+    }
 
   val newSubscriberSource = Source.queue[T](queueSize, overflowStrategy).mapMaterializedValue { sq =>
     addSubscriber(sq)
@@ -69,7 +73,7 @@ private class SubjectInternalLogic[T](queueSize: Int, overflowStrategy: Overflow
   * See Subject.apply for docs
   */
 class Subject[T](queueSize: Int, overflowStrategy: OverflowStrategy)
-  extends GraphStageWithMaterializedValue[SinkShape[T], Source[T, Cancellable]] {
+    extends GraphStageWithMaterializedValue[SinkShape[T], Source[T, Cancellable]] {
   val input = Inlet[T]("Subject.in")
 
   override def shape: SinkShape[T] = new SinkShape(input)
@@ -80,15 +84,18 @@ class Subject[T](queueSize: Int, overflowStrategy: OverflowStrategy)
       override def preStart(): Unit =
         pull(input)
 
-      setHandler(input, new InHandler {
-        override def onPush(): Unit = {
-          internalLogic.onElement(grab(input))
-          pull(input)
-        }
+      setHandler(
+        input,
+        new InHandler {
+          override def onPush(): Unit = {
+            internalLogic.onElement(grab(input))
+            pull(input)
+          }
 
-        override def onUpstreamFinish(): Unit = internalLogic.complete(Success(Done))
-        override def onUpstreamFailure(ex: Throwable): Unit = internalLogic.complete(Failure(ex))
-      })
+          override def onUpstreamFinish(): Unit = internalLogic.complete(Success(Done))
+          override def onUpstreamFailure(ex: Throwable): Unit = internalLogic.complete(Failure(ex))
+        }
+      )
     }
 
     val internalLogic = new SubjectInternalLogic[T](queueSize, overflowStrategy)
@@ -97,6 +104,7 @@ class Subject[T](queueSize: Int, overflowStrategy: OverflowStrategy)
 }
 
 object Subject {
+
   /**
     * Sink which works similar to BroadcastHub, but does not back-pressure and will emit the last element recieved to
     * any new subscribers. If there are no subscribers, then it behaves similar to Sink.ignore, except it continually

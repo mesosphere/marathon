@@ -53,7 +53,8 @@ object ContainerSerializer {
   def toMesos(networks: Seq[Network], container: Container, mesosBridgeName: String): mesos.Protos.ContainerInfo = {
 
     def portMappingToMesos(mapping: PortMapping) = {
-      val portBuilder = mesos.Protos.NetworkInfo.PortMapping.newBuilder()
+      val portBuilder = mesos.Protos.NetworkInfo.PortMapping
+        .newBuilder()
         .setContainerPort(mapping.containerPort)
         .setProtocol(mapping.protocol)
       mapping.hostPort.foreach(portBuilder.setHostPort)
@@ -115,7 +116,8 @@ object ContainerSerializer {
 
             val portMappings = container.portMappings.withFilter(qualifiedPortMapping)
 
-            mesos.Protos.NetworkInfo.newBuilder()
+            mesos.Protos.NetworkInfo
+              .newBuilder()
               .addIpAddresses(mesos.Protos.NetworkInfo.IPAddress.getDefaultInstance)
               .setLabels(networkLabels)
               .setName(networkName)
@@ -135,7 +137,8 @@ object VolumeSerializer {
     val mount = volumeWithMount.mount
     val mode = VolumeMount.readOnlyToProto(mount.readOnly)
 
-    val volumeBuilder = Protos.Volume.newBuilder()
+    val volumeBuilder = Protos.Volume
+      .newBuilder()
       .setContainerPath(mount.mountPath)
       .setMode(mode)
 
@@ -194,13 +197,14 @@ object PersistentVolumeInfoSerializer {
 
 object ExternalVolumeInfoSerializer {
   def toProto(info: ExternalVolumeInfo): Protos.Volume.ExternalVolumeInfo = {
-    val builder = Protos.Volume.ExternalVolumeInfo.newBuilder()
+    val builder = Protos.Volume.ExternalVolumeInfo
+      .newBuilder()
       .setName(info.name)
       .setProvider(info.provider)
       .setShared(info.shared)
 
     info.size.foreach(builder.setSize)
-    info.options.map{
+    info.options.map {
       case (key, value) => mesos.Protos.Label.newBuilder().setKey(key).setValue(value).build
     }.foreach(builder.addOptions)
 
@@ -279,7 +283,7 @@ object PortMappingSerializer {
   def toMesos(mapping: Container.PortMapping): Seq[mesos.Protos.ContainerInfo.DockerInfo.PortMapping] = {
     def mesosPort(protocol: String, hostPort: Int) = {
       mesos.Protos.ContainerInfo.DockerInfo.PortMapping.newBuilder
-        .setContainerPort (mapping.containerPort)
+        .setContainerPort(mapping.containerPort)
         .setHostPort(hostPort)
         .setProtocol(protocol)
         .build
@@ -346,34 +350,41 @@ object CredentialSerializer {
 
 object DockerPullConfigSerializer {
   def fromProto(pullConfig: Protos.ExtendedContainerInfo.DockerInfo.ImagePullConfig): Container.DockerPullConfig = {
-    pullConfig.when(_.getType == Protos.ExtendedContainerInfo.DockerInfo.ImagePullConfig.Type.SECRET, _ => {
-      pullConfig.when(_.hasSecret, _.getSecret).flatMap { secret =>
-        secret.when(_.hasType, _.getType).flatMap {
-          case mesos.Protos.Secret.Type.REFERENCE =>
-            secret.when(_.hasReference, _.getReference.getName).map(Container.DockerPullConfig)
-          case _ => None
+    pullConfig
+      .when(
+        _.getType == Protos.ExtendedContainerInfo.DockerInfo.ImagePullConfig.Type.SECRET,
+        _ => {
+          pullConfig.when(_.hasSecret, _.getSecret).flatMap { secret =>
+            secret.when(_.hasType, _.getType).flatMap {
+              case mesos.Protos.Secret.Type.REFERENCE =>
+                secret.when(_.hasReference, _.getReference.getName).map(Container.DockerPullConfig)
+              case _ => None
+            }
+          }
         }
-      }
-    }).flatten match {
+      )
+      .flatten match {
       case Some(deserializedPullConfig) => deserializedPullConfig
       case _ =>
         throw SerializationFailedException(s"Failed to deserialize a docker pull config: $pullConfig")
     }
   }
 
-  def toProto(pullConfig: Container.DockerPullConfig): Protos.ExtendedContainerInfo.DockerInfo.ImagePullConfig = pullConfig match {
-    case Container.DockerPullConfig(secret) =>
-      val builder = Protos.ExtendedContainerInfo.DockerInfo.ImagePullConfig.newBuilder
-      builder.setType(Protos.ExtendedContainerInfo.DockerInfo.ImagePullConfig.Type.SECRET)
-      val secretProto = SecretSerializer.toSecretReference(secret)
-      builder.setSecret(secretProto)
-      builder.build
-  }
+  def toProto(pullConfig: Container.DockerPullConfig): Protos.ExtendedContainerInfo.DockerInfo.ImagePullConfig =
+    pullConfig match {
+      case Container.DockerPullConfig(secret) =>
+        val builder = Protos.ExtendedContainerInfo.DockerInfo.ImagePullConfig.newBuilder
+        builder.setType(Protos.ExtendedContainerInfo.DockerInfo.ImagePullConfig.Type.SECRET)
+        val secretProto = SecretSerializer.toSecretReference(secret)
+        builder.setSecret(secretProto)
+        builder.build
+    }
 
-  def toMesos(pullConfig: Container.DockerPullConfig): mesos.Protos.Secret = pullConfig match {
-    case Container.DockerPullConfig(secret) =>
-      SecretSerializer.toSecretReference(secret)
-  }
+  def toMesos(pullConfig: Container.DockerPullConfig): mesos.Protos.Secret =
+    pullConfig match {
+      case Container.DockerPullConfig(secret) =>
+        SecretSerializer.toSecretReference(secret)
+    }
 }
 
 object MesosDockerSerializer {
@@ -457,7 +468,6 @@ object LinuxInfoSerializer {
     val builder = Protos.ExtendedContainerInfo.LinuxInfo.newBuilder
 
     linuxInfo.seccomp.foreach { seccomp =>
-
       val seccompBuilder = Protos.ExtendedContainerInfo.LinuxInfo.Seccomp.newBuilder
       seccompBuilder.setUnconfined(seccomp.unconfined)
       seccomp.profileName.foreach(seccompBuilder.setProfileName)
@@ -466,7 +476,6 @@ object LinuxInfoSerializer {
     }
 
     linuxInfo.ipcInfo.foreach { ipcInfo =>
-
       val ipcInfoBuilder = Protos.ExtendedContainerInfo.LinuxInfo.IpcInfo.newBuilder
       ipcInfoBuilder.setIpcMode(ipcInfo.ipcMode.toProto)
       ipcInfo.shmSize.foreach(ipcInfoBuilder.setShmSize)

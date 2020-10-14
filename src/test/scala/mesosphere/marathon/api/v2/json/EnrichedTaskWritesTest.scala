@@ -25,14 +25,16 @@ class EnrichedTaskWritesTest extends UnitTest {
     val agentInfo = Instance.AgentInfo(hostName, Some(agentId), None, None, attributes = Seq.empty)
 
     val networkInfos = Seq(
-      MesosProtos.NetworkInfo.newBuilder()
+      MesosProtos.NetworkInfo
+        .newBuilder()
         .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.newBuilder().setIpAddress("123.123.123.123"))
         .addIpAddresses(MesosProtos.NetworkInfo.IPAddress.newBuilder().setIpAddress("123.123.123.124"))
         .build()
     )
 
     val taskWithoutIp = {
-      val instance = TestInstanceBuilder.newBuilder(runSpecId = runSpecId, version = time)
+      val instance = TestInstanceBuilder
+        .newBuilder(runSpecId = runSpecId, version = time)
         .withAgentInfo(agentInfo)
         .addTaskStaging(since = time)
         .getInstance()
@@ -40,23 +42,28 @@ class EnrichedTaskWritesTest extends UnitTest {
     }
 
     def mesosStatus(taskId: Task.Id) = {
-      MesosProtos.TaskStatus.newBuilder()
+      MesosProtos.TaskStatus
+        .newBuilder()
         .setTaskId(taskId.mesosTaskId)
         .setState(MesosProtos.TaskState.TASK_STAGING)
         .setContainerStatus(
           MesosProtos.ContainerStatus.newBuilder().addAllNetworkInfos(networkInfos.asJava)
-        ).build
+        )
+        .build
     }
 
     val taskWithMultipleIPs = {
       val instanceId = Instance.Id.forRunSpec(AbsolutePathId("/foo/bar"))
       val taskStatus = mesosStatus(Task.Id(instanceId))
       val networkInfo = NetworkInfo(hostName, hostPorts = Nil, ipAddresses = Nil).update(taskStatus)
-      val instance = TestInstanceBuilder.newBuilder(runSpecId = runSpecId, version = time)
+      val instance = TestInstanceBuilder
+        .newBuilder(runSpecId = runSpecId, version = time)
         .withAgentInfo(agentInfo)
-        .addTaskWithBuilder().taskStaging(since = time)
+        .addTaskWithBuilder()
+        .taskStaging(since = time)
         .withNetworkInfo(networkInfo)
-        .build().getInstance()
+        .build()
+        .getInstance()
       EnrichedTask(instance.runSpecId, instance.appTask, agentInfo, Nil, Nil, None, "*")
     }
   }

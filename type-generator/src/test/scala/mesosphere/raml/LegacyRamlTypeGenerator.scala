@@ -85,9 +85,13 @@ object LegacyRamlTypeGenerator {
 
   def camelify(name: String): String = name.toLowerCase.capitalize
 
-  def underscoreToCamel(name: String) = "(/|_|\\,)([a-z\\d])".r.replaceAllIn(name, { m =>
-    m.group(2).toUpperCase()
-  })
+  def underscoreToCamel(name: String) =
+    "(/|_|\\,)([a-z\\d])".r.replaceAllIn(
+      name,
+      { m =>
+        m.group(2).toUpperCase()
+      }
+    )
 
   def enumName(s: StringTypeDeclaration, default: Option[String] = None): String = {
     s.annotations().asScala.find(_.name() == "(pragma.scalaType)").fold(default.getOrElse(s.name()).capitalize) { annotation =>
@@ -128,7 +132,7 @@ object LegacyRamlTypeGenerator {
     if (o.`type`() == "object" && !isUpdateType(o)) {
       // use the attribute value as the type name if specified ala enumName; otherwise just append "Update"
       o.annotations().asScala.find(_.name() == "(pragma.generateUpdateType)").map { annotation =>
-        Option(annotation.structuredValue().value()).fold(o.name()+"Update")(_.toString)
+        Option(annotation.structuredValue().value()).fold(o.name() + "Update")(_.toString)
       }
     } else {
       None
@@ -176,7 +180,7 @@ object LegacyRamlTypeGenerator {
     override def toString: String = s"Enum($name, $values)"
 
     override def toTree(): Seq[Tree] = {
-      val baseTrait = TRAITDEF(name) withParents("Product", "Serializable", "RamlGenerated") withFlags Flags.SEALED := BLOCK(
+      val baseTrait = TRAITDEF(name) withParents ("Product", "Serializable", "RamlGenerated") withFlags Flags.SEALED := BLOCK(
         VAL("value", StringClass),
         DEF("toString", StringClass) withFlags Flags.OVERRIDE := REF("value")
       )
@@ -192,16 +196,19 @@ object LegacyRamlTypeGenerator {
       }
 
       val playWildcard = CASE(WILDCARD) ==>
-        (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY(LIT("error.unknown.enum.literal"), LIT(s"$name (${sortedValues.mkString(", ")})"))))
+        (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY (LIT("error.unknown.enum.literal"), LIT(
+          s"$name (${sortedValues.mkString(", ")})"
+        ))))
       val playPatternMatches = sortedValues.map { enumValue =>
         CASE(LIT(enumValue.toLowerCase)) ==> (REF(PlayJsSuccess) APPLY REF(underscoreToCamel(camelify(enumValue))))
       }
 
       val playJsonFormat = (OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT) := BLOCK(
         DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
-          REF("json") MATCH(
-            CASE(REF(PlayJsString) UNAPPLY ID("s")) ==> (REF("s") DOT "toLowerCase" MATCH (playPatternMatches ++ Vector(playWildcard))),
-            playWildcard)
+          REF("json") MATCH (CASE(REF(PlayJsString) UNAPPLY ID("s")) ==> (REF("s") DOT "toLowerCase" MATCH (playPatternMatches ++ Vector(
+            playWildcard
+          ))),
+          playWildcard)
         },
         DEF("writes", PlayJsValue) withParams PARAM("o", name) := {
           REF(PlayJsString) APPLY (REF("o") DOT "value")
@@ -211,13 +218,14 @@ object LegacyRamlTypeGenerator {
       val obj = OBJECTDEF(name) := BLOCK(
         enumObjects ++ Seq(
           playJsonFormat,
-          VAL("StringToValue") withType(TYPE_MAP(StringClass, name)) withFlags(Flags.PRIVATE) := REF("Map") APPLY(sortedValues.map { enumValue =>
-            TUPLE(LIT(enumValue), REF(underscoreToCamel(camelify(enumValue))))
+          VAL("StringToValue") withType (TYPE_MAP(StringClass, name)) withFlags (Flags.PRIVATE) := REF("Map") APPLY (sortedValues.map {
+            enumValue =>
+              TUPLE(LIT(enumValue), REF(underscoreToCamel(camelify(enumValue))))
           }),
           DEF("all", IterableClass TYPE_OF name) := REF("StringToValue") DOT "values",
-          DEF("fromString", TYPE_OPTION(name)) withParams(PARAM("v", StringClass)) := REF("StringToValue") DOT "get" APPLY(REF("v"))
+          DEF("fromString", TYPE_OPTION(name)) withParams (PARAM("v", StringClass)) := REF("StringToValue") DOT "get" APPLY (REF("v"))
         ) ++ default.map { defaultValue =>
-          VAL("DefaultValue") withType(name) := REF(underscoreToCamel(camelify(defaultValue)))
+          VAL("DefaultValue") withType (name) := REF(underscoreToCamel(camelify(defaultValue)))
         }
       )
       Seq(baseTrait.withDoc(comments), obj)
@@ -252,29 +260,30 @@ object LegacyRamlTypeGenerator {
 
     // built-in playJS validators
 
-    def MaxLength(len: Integer) = Constraint("maxLength", len, builtIn = true) { REF(_) APPLYTYPE StringClass APPLY(_) }
-    def MinLength(len: Integer) = Constraint("minLength", len, builtIn = true) { REF(_) APPLYTYPE StringClass APPLY(_) }
+    def MaxLength(len: Integer) = Constraint("maxLength", len, builtIn = true) { REF(_) APPLYTYPE StringClass APPLY (_) }
+    def MinLength(len: Integer) = Constraint("minLength", len, builtIn = true) { REF(_) APPLYTYPE StringClass APPLY (_) }
 
-    def Pattern(p: String) = Constraint("pattern", p, builtIn = true, (c: String) => LIT(c) DOT "r") { REF(_) APPLY(_) }
+    def Pattern(p: String) = Constraint("pattern", p, builtIn = true, (c: String) => LIT(c) DOT "r") { REF(_) APPLY (_) }
 
-    def MaxItems(len: Integer, t: Type) = Constraint("maxLength", len, builtIn = true) { REF(_) APPLYTYPE t APPLY(_) }
-    def MinItems(len: Integer, t: Type) = Constraint("minLength", len, builtIn = true) { REF(_) APPLYTYPE t APPLY(_) }
+    def MaxItems(len: Integer, t: Type) = Constraint("maxLength", len, builtIn = true) { REF(_) APPLYTYPE t APPLY (_) }
+    def MinItems(len: Integer, t: Type) = Constraint("minLength", len, builtIn = true) { REF(_) APPLYTYPE t APPLY (_) }
 
-    def Max(v: Number, t: Type) = Constraint("max", v, builtIn = true) { REF(_) APPLYTYPE t APPLY(_) }
-    def Min(v: Number, t: Type) = Constraint("min", v, builtIn = true) { REF(_) APPLYTYPE t APPLY(_) }
+    def Max(v: Number, t: Type) = Constraint("max", v, builtIn = true) { REF(_) APPLYTYPE t APPLY (_) }
+    def Min(v: Number, t: Type) = Constraint("min", v, builtIn = true) { REF(_) APPLYTYPE t APPLY (_) }
 
     // custom validator implementations follow
 
     def KeyPattern(p: String, mapValType: Type) =
-      Constraint("keyPattern", p, builtIn = false, (c: String) => LIT(c) DOT "r") { REF(_) APPLYTYPE mapValType APPLY(_) }
+      Constraint("keyPattern", p, builtIn = false, (c: String) => LIT(c) DOT "r") { REF(_) APPLYTYPE mapValType APPLY (_) }
 
     case class BasicConstraint[C](
-      override val name: String,
-      override val constraint: C,
-      override val constraintToValue: C => Tree,
-      val validateFunc: (String, Tree) => Tree,
-      override val builtIn: Boolean,
-      override val limitField: Option[Tree] = None) extends Constraint[C] {
+        override val name: String,
+        override val constraint: C,
+        override val constraintToValue: C => Tree,
+        val validateFunc: (String, Tree) => Tree,
+        override val builtIn: Boolean,
+        override val limitField: Option[Tree] = None
+    ) extends Constraint[C] {
       override def validate(): Tree = validateFunc(name, constraintToValue(constraint))
       override def copyWith(lf: Option[Tree] = limitField): Constraint[C] = copy(limitField = lf)
     }
@@ -288,10 +297,11 @@ object LegacyRamlTypeGenerator {
           exp
         } else {
           @tailrec
-          def buildChain(constraints: List[Constraint[_]], chain: Tree): Tree = constraints match {
-            case Nil => chain
-            case c :: rs => buildChain(rs, chain INFIX("keepAnd", c.validate()))
-          }
+          def buildChain(constraints: List[Constraint[_]], chain: Tree): Tree =
+            constraints match {
+              case Nil => chain
+              case c :: rs => buildChain(rs, chain INFIX ("keepAnd", c.validate()))
+            }
 
           exp APPLY buildChain(c.tail.to[List], c.head.validate())
         }
@@ -315,8 +325,17 @@ object LegacyRamlTypeGenerator {
     }
   }
 
-  case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constraints: Seq[Constraint[_]], required: Boolean,
-                    default: Option[String], repeated: Boolean = false, forceOptional: Boolean = false, omitEmpty: Boolean = false) {
+  case class FieldT(
+      rawName: String,
+      `type`: Type,
+      comments: Seq[String],
+      constraints: Seq[Constraint[_]],
+      required: Boolean,
+      default: Option[String],
+      repeated: Boolean = false,
+      forceOptional: Boolean = false,
+      omitEmpty: Boolean = false
+  ) {
 
     val name = scalaFieldName(rawName)
     override def toString: String = s"$name: ${`type`}"
@@ -374,10 +393,14 @@ object LegacyRamlTypeGenerator {
       if (required && !forceOptional) {
         TUPLE(REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type`
       } else if (repeated && !forceOptional) {
-        TUPLE(REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type` DOT "orElse" APPLY(REF(PlayReads) DOT "pure" APPLY(`type` APPLY()))
+        TUPLE(REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type` DOT "orElse" APPLY (REF(
+          PlayReads
+        ) DOT "pure" APPLY (`type` APPLY ()))
       } else {
         if (defaultValue.isDefined && !forceOptional) {
-          TUPLE((REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type`) DOT "orElse" APPLY (REF(PlayReads) DOT "pure" APPLY defaultValue.get)
+          TUPLE((REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type`) DOT "orElse" APPLY (REF(
+            PlayReads
+          ) DOT "pure" APPLY defaultValue.get)
         } else {
           TUPLE((REF("__") DOT "\\" APPLY LIT(rawName)) DOT "readNullable" APPLYTYPE `type`)
         }
@@ -387,16 +410,18 @@ object LegacyRamlTypeGenerator {
     val playValidator = {
       def reads = constraints.validate(PlayPath DOT "read" APPLYTYPE `type`)
       def validate =
-        REF("json") DOT "\\" APPLY(LIT(rawName)) DOT "validate" APPLYTYPE `type` APPLY(reads)
+        REF("json") DOT "\\" APPLY (LIT(rawName)) DOT "validate" APPLYTYPE `type` APPLY (reads)
       def validateOpt =
-        REF("json") DOT "\\" APPLY(LIT(rawName)) DOT "validateOpt" APPLYTYPE `type` APPLY(reads)
+        REF("json") DOT "\\" APPLY (LIT(rawName)) DOT "validateOpt" APPLYTYPE `type` APPLY (reads)
       def validateOptWithDefault(defaultValue: Tree) =
-        REF("json") DOT "\\" APPLY(LIT(rawName)) DOT "validateOpt" APPLYTYPE `type` APPLY(reads) DOT "map" APPLY (REF("_") DOT "getOrElse" APPLY defaultValue)
+        REF("json") DOT "\\" APPLY (LIT(rawName)) DOT "validateOpt" APPLYTYPE `type` APPLY (reads) DOT "map" APPLY (REF(
+          "_"
+        ) DOT "getOrElse" APPLY defaultValue)
 
       if (required && !forceOptional) {
         validate
       } else if (repeated && !forceOptional) {
-        validateOptWithDefault(`type` APPLY())
+        validateOptWithDefault(`type` APPLY ())
       } else {
         if (defaultValue.isDefined && !forceOptional) {
           validateOptWithDefault(defaultValue.get)
@@ -407,39 +432,54 @@ object LegacyRamlTypeGenerator {
     }
   }
 
-  case class ObjectT(name: String, fields: Seq[FieldT], parentType: Option[String], comments: Seq[String], childTypes: Seq[ObjectT] = Nil, discriminator: Option[String] = None, discriminatorValue: Option[String] = None, serializeOnly: Boolean = false) extends GeneratedClass {
-    override def toString: String = parentType.fold(s"$name(${fields.mkString(", ")})")(parent => s"$name(${fields.mkString(" , ")}) extends $parent")
+  case class ObjectT(
+      name: String,
+      fields: Seq[FieldT],
+      parentType: Option[String],
+      comments: Seq[String],
+      childTypes: Seq[ObjectT] = Nil,
+      discriminator: Option[String] = None,
+      discriminatorValue: Option[String] = None,
+      serializeOnly: Boolean = false
+  ) extends GeneratedClass {
+    override def toString: String =
+      parentType.fold(s"$name(${fields.mkString(", ")})")(parent => s"$name(${fields.mkString(" , ")}) extends $parent")
 
     override def toTree(): Seq[Tree] = {
       val actualFields = fields.filter(_.rawName != discriminator.getOrElse(""))
       val params = actualFields.map(_.param)
       val klass = if (childTypes.nonEmpty) {
         if (params.nonEmpty) {
-          parentType.fold(TRAITDEF(name) withParents("RamlGenerated", "Product", "Serializable") := BLOCK(params))(parent =>
-            TRAITDEF(name) withParents(parent, "Product", "Serializable") := BLOCK(params)
+          parentType.fold(TRAITDEF(name) withParents ("RamlGenerated", "Product", "Serializable") := BLOCK(params))(parent =>
+            TRAITDEF(name) withParents (parent, "Product", "Serializable") := BLOCK(params)
           )
         } else {
-          parentType.fold((TRAITDEF(name) withParents("RamlGenerated", "Product", "Serializable")).tree)(parent =>
-            (TRAITDEF(name) withParents(parent, "Product", "Serializable")).tree
+          parentType.fold((TRAITDEF(name) withParents ("RamlGenerated", "Product", "Serializable")).tree)(parent =>
+            (TRAITDEF(name) withParents (parent, "Product", "Serializable")).tree
           )
         }
       } else {
-        parentType.fold(CASECLASSDEF(name) withParents("RamlGenerated") withParams params)(parent =>
-          CASECLASSDEF(name) withParams params withParents parent
-        ).tree
+        parentType
+          .fold(CASECLASSDEF(name) withParents ("RamlGenerated") withParams params)(parent =>
+            CASECLASSDEF(name) withParams params withParents parent
+          )
+          .tree
       }
 
       val playFormat = if (discriminator.isDefined) {
         Seq(
           IMPORT("play.api.libs.json._"),
-
           OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
             DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
               if (actualFields.size > 1) {
-                Seq(IMPORT("play.api.libs.functional.syntax._"),
-                  actualFields.map(_.playReader).reduce(_ DOT "and" APPLY _) DOT "apply" APPLY (REF(name) DOT "apply _") DOT "reads" APPLY REF("json"))
+                Seq(
+                  IMPORT("play.api.libs.functional.syntax._"),
+                  actualFields.map(_.playReader).reduce(_ DOT "and" APPLY _) DOT "apply" APPLY (REF(
+                    name
+                  ) DOT "apply _") DOT "reads" APPLY REF("json")
+                )
               } else if (actualFields.size == 1) {
-                Seq(actualFields.head.playReader DOT "map" APPLY(REF(name) DOT "apply _") DOT "reads" APPLY REF("json"))
+                Seq(actualFields.head.playReader DOT "map" APPLY (REF(name) DOT "apply _") DOT "reads" APPLY REF("json"))
               } else {
                 Seq(REF(name))
               }
@@ -448,15 +488,26 @@ object LegacyRamlTypeGenerator {
               REF(PlayJson) DOT "obj" APPLY
                 fields.map { field =>
                   if (field.rawName == discriminator.get) {
-                    TUPLE(LIT(field.rawName), REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY(PlayJson DOT "toJson" APPLY LIT(discriminatorValue.getOrElse(name))))
+                    TUPLE(
+                      LIT(field.rawName),
+                      REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY (PlayJson DOT "toJson" APPLY LIT(
+                        discriminatorValue.getOrElse(name)
+                      ))
+                    )
                   } else {
-                    TUPLE(LIT(field.rawName), REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY(PlayJson DOT "toJson" APPLY (REF("o") DOT field.rawName)))
+                    TUPLE(
+                      LIT(field.rawName),
+                      REF(PlayJson) DOT "toJsFieldJsValueWrapper" APPLY (PlayJson DOT "toJson" APPLY (REF("o") DOT field.rawName))
+                    )
                   }
                 }
             }
           )
         )
-      } else if (actualFields.nonEmpty && actualFields.exists(_.default.nonEmpty) && !actualFields.exists(f => f.repeated || f.omitEmpty || f.constraints.nonEmpty)) {
+      } else if (
+        actualFields.nonEmpty && actualFields.exists(_.default.nonEmpty) && !actualFields
+          .exists(f => f.repeated || f.omitEmpty || f.constraints.nonEmpty)
+      ) {
         Seq(
           IMPORT("play.api.libs.json._"),
           IMPORT("play.api.libs.functional.syntax._"),
@@ -466,70 +517,76 @@ object LegacyRamlTypeGenerator {
           VAL("playJsonWriter") withType PLAY_JSON_WRITES(name) := REF(PlayJson) DOT "writes" APPLYTYPE (name),
           OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
             DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := BLOCK(
-              REF("playJsonReader") DOT "reads" APPLY(REF("json"))
+              REF("playJsonReader") DOT "reads" APPLY (REF("json"))
             ),
             DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
               REF("playJsonWriter") DOT "writes" APPLY REF("o")
             )
           )
         )
-      } else if (actualFields.size > 22 || actualFields.exists(f => f.repeated || f.omitEmpty || f.constraints.nonEmpty) ||
-        actualFields.map(_.toString).exists(t => t.toString.startsWith(name) || t.toString.contains(s"[$name]"))) {
+      } else if (
+        actualFields.size > 22 || actualFields.exists(f => f.repeated || f.omitEmpty || f.constraints.nonEmpty) ||
+        actualFields.map(_.toString).exists(t => t.toString.startsWith(name) || t.toString.contains(s"[$name]"))
+      ) {
         actualFields.map(_.constraints).requiredImports ++ Seq(
-          OBJECTDEF("playJsonFormat") withParents (if (serializeOnly) PLAY_JSON_WRITES(name) else PLAY_JSON_FORMAT(name)) withFlags Flags.IMPLICIT := BLOCK(
+          OBJECTDEF("playJsonFormat") withParents (if (serializeOnly) PLAY_JSON_WRITES(name)
+                                                   else PLAY_JSON_FORMAT(name)) withFlags Flags.IMPLICIT := BLOCK(
             if (serializeOnly) {
               Seq()
-            } else  Seq(DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
+            } else
+              Seq(DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
                 BLOCK(
                   actualFields.map { field =>
                     VAL(field.name) := field.playValidator
                   } ++ Seq(
                     VAL("_errors") := SEQ(actualFields.map(f => TUPLE(LIT(f.rawName), REF(f.name)))) DOT "collect" APPLY BLOCK(
-                      CASE(REF(s"(field, e:$PlayJsError)")) ==> (REF("e") DOT "repath" APPLY (REF(PlayPath) DOT "\\" APPLY REF("field"))) DOT s"asInstanceOf[$PlayJsError]"),
+                      CASE(REF(s"(field, e:$PlayJsError)")) ==> (REF("e") DOT "repath" APPLY (REF(PlayPath) DOT "\\" APPLY REF(
+                        "field"
+                      ))) DOT s"asInstanceOf[$PlayJsError]"
+                    ),
                     IF(REF("_errors") DOT "nonEmpty") THEN (
-                      REF("_errors") DOT "reduceOption" APPLYTYPE PlayJsError APPLY (REF("_") DOT "++" APPLY REF("_")) DOT "getOrElse" APPLY (REF("_errors") DOT "head")
-                      ) ELSE (
-                      REF(PlayJsSuccess) APPLY (REF(name) APPLY
-                        actualFields.map { field =>
-                          REF(field.name) := (REF(field.name) DOT "get")
-                        }))
+                      REF("_errors") DOT "reduceOption" APPLYTYPE PlayJsError APPLY (REF("_") DOT "++" APPLY REF(
+                        "_"
+                      )) DOT "getOrElse" APPLY (REF("_errors") DOT "head")
+                    ) ELSE (REF(PlayJsSuccess) APPLY (REF(name) APPLY
+                      actualFields.map { field =>
+                        REF(field.name) := (REF(field.name) DOT "get")
+                      }))
                   )
                 )
-            }) ++ Seq(
-              DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
-                actualFields.withFilter(_.name != AdditionalProperties).map { field =>
-                  val serialized = REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
-                  if (field.omitEmpty && field.repeated && !field.forceOptional) {
-                    VAL(field.name) := IF(REF("o") DOT field.name DOT "nonEmpty") THEN (
-                      serialized
+              }) ++ Seq(
+                DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
+                  actualFields.withFilter(_.name != AdditionalProperties).map { field =>
+                    val serialized = REF(PlayJson) DOT "toJson" APPLY (REF("o") DOT field.name)
+                    if (field.omitEmpty && field.repeated && !field.forceOptional) {
+                      VAL(field.name) := IF(REF("o") DOT field.name DOT "nonEmpty") THEN (
+                        serialized
                       ) ELSE (
-                      PlayJsNull
+                        PlayJsNull
                       )
-                  } else if(field.omitEmpty && !field.repeated && !builtInTypes.contains(field.`type`.toString())) {
-                    // earlier "require" check ensures that we won't see a field w/ omitEmpty that is not optional.
-                    // see buildTypes
-                    VAL(field.name) := serialized MATCH(
-                      // avoid serializing JS objects w/o any fields
-                      CASE(ID("obj") withType (PlayJsObject),
-                        IF(REF("obj.fields") DOT "isEmpty")) ==> PlayJsNull,
-                      CASE(ID("rs")) ==> REF("rs")
-                    )
-                  } else {
-                    VAL(field.name) := serialized
-                  }
-                } ++
-                  Seq(
-                    REF(PlayJsObject) APPLY (SEQ(
-                      actualFields.withFilter(_.name != AdditionalProperties).map { field =>
+                    } else if (field.omitEmpty && !field.repeated && !builtInTypes.contains(field.`type`.toString())) {
+                      // earlier "require" check ensures that we won't see a field w/ omitEmpty that is not optional.
+                      // see buildTypes
+                      VAL(field.name) := serialized MATCH (
+                        // avoid serializing JS objects w/o any fields
+                        CASE(ID("obj") withType (PlayJsObject), IF(REF("obj.fields") DOT "isEmpty")) ==> PlayJsNull,
+                        CASE(ID("rs")) ==> REF("rs")
+                      )
+                    } else {
+                      VAL(field.name) := serialized
+                    }
+                  } ++
+                    Seq(
+                      REF(PlayJsObject) APPLY (SEQ(actualFields.withFilter(_.name != AdditionalProperties).map { field =>
                         TUPLE(LIT(field.rawName), REF(field.name))
-                      }) DOT "filter" APPLY (REF("_._2") INFIX("!=") APPLY PlayJsNull) DOT("++") APPLY(
-                        actualFields.find(_.name == AdditionalProperties).fold(REF("Seq") DOT "empty") { extraPropertiesField =>
-                        REF("o.additionalProperties") DOT "fields"
-                      })
+                      }) DOT "filter" APPLY (REF("_._2") INFIX ("!=") APPLY PlayJsNull) DOT ("++") APPLY (actualFields
+                        .find(_.name == AdditionalProperties)
+                        .fold(REF("Seq") DOT "empty") { extraPropertiesField =>
+                          REF("o.additionalProperties") DOT "fields"
+                        }))
                     )
-                  )
+                )
               )
-            )
           )
         )
       } else {
@@ -541,12 +598,12 @@ object LegacyRamlTypeGenerator {
         val fieldName = (
           if (f.name.contains("-")) underscoreToCamel(f.name.replace('-', '_')) else f.name
         ).replace("`", "").capitalize
-        Seq(VAL(s"Default${fieldName}") withType(dType) := dValue)
+        Seq(VAL(s"Default${fieldName}") withType (dType) := dValue)
       }
 
       val defaultInstance: Seq[Tree] =
         if (fields.forall(f => f.defaultValue.nonEmpty || f.forceOptional || (f.repeated && !f.required))) {
-          Seq(VAL("Default") withType (name) := REF(name) APPLY())
+          Seq(VAL("Default") withType (name) := REF(name) APPLY ())
         } else Nil
 
       val obj = if (childTypes.isEmpty || serializeOnly) {
@@ -556,30 +613,39 @@ object LegacyRamlTypeGenerator {
           }
         )
       } else if (discriminator.isDefined) {
-        val childDiscriminators: Map[String, ObjectT] = childTypes.map(ct => ct.discriminatorValue.getOrElse(ct.name) -> ct)(collection.breakOut)
+        val childDiscriminators: Map[String, ObjectT] =
+          childTypes.map(ct => ct.discriminatorValue.getOrElse(ct.name) -> ct)(collection.breakOut)
         OBJECTDEF(name) := BLOCK(
-          Seq(OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
-            DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
-              TUPLE(REF("json") DOT "\\" APPLY LIT(discriminator.get)) DOT "validate" APPLYTYPE (StringClass) MATCH (
-                childDiscriminators.map { case (k, v) =>
-                  CASE(PlayJsSuccess APPLY(LIT(k), REF("_"))) ==> (REF("json") DOT "validate" APPLYTYPE (v.name))
-                } ++
-                  Seq(
-                    CASE(WILDCARD) ==> (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY(LIT("error.expected.jsstring"), LIT(s"expected one of (${childDiscriminators.keys.mkString(", ")})"))))
-                  )
+          Seq(
+            OBJECTDEF("PlayJsonFormat") withParents PLAY_JSON_FORMAT(name) withFlags Flags.IMPLICIT := BLOCK(
+              DEF("reads", PLAY_JSON_RESULT(name)) withParams PARAM("json", PlayJsValue) := {
+                TUPLE(REF("json") DOT "\\" APPLY LIT(discriminator.get)) DOT "validate" APPLYTYPE (StringClass) MATCH (
+                  childDiscriminators.map {
+                    case (k, v) =>
+                      CASE(PlayJsSuccess APPLY (LIT(k), REF("_"))) ==> (REF("json") DOT "validate" APPLYTYPE (v.name))
+                  } ++
+                    Seq(
+                      CASE(WILDCARD) ==> (REF(PlayJsError) APPLY (REF(PlayValidationError) APPLY (LIT("error.expected.jsstring"), LIT(
+                        s"expected one of (${childDiscriminators.keys.mkString(", ")})"
+                      ))))
+                    )
                 )
-            },
-            DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
-              REF("o") MATCH
-                childDiscriminators.map { case (k, v) =>
-                  CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY(REF(v.name) DOT "playJsonFormat"))
-                }
+              },
+              DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
+                REF("o") MATCH
+                  childDiscriminators.map {
+                    case (k, v) =>
+                      CASE(REF(s"f:${v.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY (REF(v.name) DOT "playJsonFormat"))
+                  }
+              )
             )
-          )) ++ defaultFields ++ defaultInstance
+          ) ++ defaultFields ++ defaultInstance
         )
       } else {
-        System.err.println(s"[WARNING] $name uses subtyping but has no discriminator. If it is not a union type when it is" +
-          " used, it will not be able to be deserialized at this time")
+        System.err.println(
+          s"[WARNING] $name uses subtyping but has no discriminator. If it is not a union type when it is" +
+            " used, it will not be able to be deserialized at this time"
+        )
         OBJECTDEF(name) := BLOCK(defaultFields ++ defaultInstance)
       }
 
@@ -596,7 +662,7 @@ object LegacyRamlTypeGenerator {
     override def toString: String = s"Union($name, $childTypes)"
 
     override def toTree(): Seq[Tree] = {
-      val base = (TRAITDEF(name) withParents("RamlGenerated", "Product", "Serializable")).tree.withDoc(comments)
+      val base = (TRAITDEF(name) withParents ("RamlGenerated", "Product", "Serializable")).tree.withDoc(comments)
       val childJson: Seq[GenericApply] = childTypes.map { child =>
         REF("json") DOT s"validate" APPLYTYPE (child.name)
       }
@@ -609,7 +675,7 @@ object LegacyRamlTypeGenerator {
           DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
             REF("o") MATCH
               childTypes.map { child =>
-                CASE(REF(s"f:${child.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY(REF(child.name) DOT "playJsonFormat"))
+                CASE(REF(s"f:${child.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY (REF(child.name) DOT "playJsonFormat"))
               }
           )
         )
@@ -617,19 +683,21 @@ object LegacyRamlTypeGenerator {
       val children = childTypes.flatMap {
         case s: StringT =>
           Seq[Tree](
-            CASECLASSDEF(s.name) withParents name withParams s.defaultValue.fold(PARAM("value", StringClass).tree){ defaultValue =>
+            CASECLASSDEF(s.name) withParents name withParams s.defaultValue.fold(PARAM("value", StringClass).tree) { defaultValue =>
               PARAM("value", StringClass) := LIT(defaultValue)
             },
             OBJECTDEF(s.name) := BLOCK(
-              Seq(OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
-                DEF("reads", PLAY_JSON_RESULT(s.name)) withParams PARAM("json", PlayJsValue) := BLOCK(
-                  REF("json") DOT "validate" APPLYTYPE StringClass DOT "map" APPLY (REF(s.name) DOT "apply")
-                ),
-                DEF("writes", PlayJsValue) withParams PARAM("o", s.name) := BLOCK(
-                  REF(PlayJsString) APPLY (REF("o") DOT "value")
+              Seq(
+                OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
+                  DEF("reads", PLAY_JSON_RESULT(s.name)) withParams PARAM("json", PlayJsValue) := BLOCK(
+                    REF("json") DOT "validate" APPLYTYPE StringClass DOT "map" APPLY (REF(s.name) DOT "apply")
+                  ),
+                  DEF("writes", PlayJsValue) withParams PARAM("o", s.name) := BLOCK(
+                    REF(PlayJsString) APPLY (REF("o") DOT "value")
+                  )
                 )
-              )) ++ s.defaultValue.map{ defaultValue =>
-                VAL("DefaultValue") withType(s.name) := REF(s.name) APPLY()
+              ) ++ s.defaultValue.map { defaultValue =>
+                VAL("DefaultValue") withType (s.name) := REF(s.name) APPLY ()
               }
             )
           )
@@ -665,35 +733,41 @@ object LegacyRamlTypeGenerator {
 
     t match {
       case a: ArrayTypeDeclaration =>
-        Seq(escapeDesc(Option(a.description()).map(_.value)),
+        Seq(
+          escapeDesc(Option(a.description()).map(_.value)),
           Option(a.minItems()).map(i => s"minItems: $i"),
-          Option(a.maxItems()).map(i => s"maxItems: $i")).flatten
+          Option(a.maxItems()).map(i => s"maxItems: $i")
+        ).flatten
       case o: ObjectTypeDeclaration =>
-        Seq(escapeDesc(Option(o.description()).map(_.value)),
-          Option(o.example()).map(e => s"Example: <pre>${e.value}</pre>")).flatten
+        Seq(escapeDesc(Option(o.description()).map(_.value)), Option(o.example()).map(e => s"Example: <pre>${e.value}</pre>")).flatten
       case s: StringTypeDeclaration =>
-        Seq(escapeDesc(Option(s.description()).map(_.value)),
+        Seq(
+          escapeDesc(Option(s.description()).map(_.value)),
           Option(s.maxLength()).map(i => s"maxLength: $i"),
           Option(s.minLength()).map(i => s"minLength: $i"),
-          Option(s.pattern()).map(i => s"pattern: <pre>$i</pre>")).flatten
+          Option(s.pattern()).map(i => s"pattern: <pre>$i</pre>")
+        ).flatten
       case n: NumberTypeDeclaration =>
-        Seq(escapeDesc(Option(n.description()).map(_.value)),
+        Seq(
+          escapeDesc(Option(n.description()).map(_.value)),
           Option(n.minimum()).map(i => s"minimum: $i"),
           Option(n.maximum()).map(i => s"maximum: $i"),
-          Option(n.multipleOf()).map(i => s"multipleOf: $i")).flatten
+          Option(n.multipleOf()).map(i => s"multipleOf: $i")
+        ).flatten
       case _ =>
         Seq(escapeDesc(Option(t.description()).map(_.value()))).flatten
     }
   }
 
-  def typeIsActuallyAMap(t: TypeDeclaration): Boolean = t match {
-    case o: ObjectTypeDeclaration =>
-      o.properties.asScala.toList match {
-        case field :: Nil if field.name().startsWith('/') && field.name().endsWith('/') => true
-        case _ => false
-      }
-    case _ => false
-  }
+  def typeIsActuallyAMap(t: TypeDeclaration): Boolean =
+    t match {
+      case o: ObjectTypeDeclaration =>
+        o.properties.asScala.toList match {
+          case field :: Nil if field.name().startsWith('/') && field.name().endsWith('/') => true
+          case _ => false
+        }
+      case _ => false
+    }
 
   def buildTypes(typeTable: Map[String, Symbol], allTypes: Set[TypeDeclaration]): Set[GeneratedClass] = {
     @tailrec def buildTypes(types: Set[TypeDeclaration], results: Set[GeneratedClass] = Set.empty[GeneratedClass]): Set[GeneratedClass] = {
@@ -712,12 +786,13 @@ object LegacyRamlTypeGenerator {
             ).flatten
           case n: NumberTypeDeclaration =>
             // convert numbers so that constraints are appropriately rendered
-            def toNum(v: Double): Number = fieldType match {
-              case DoubleClass => v
-              case FloatClass => v.toFloat
-              case LongClass => v.toLong
-              case _ => v.toInt
-            }
+            def toNum(v: Double): Number =
+              fieldType match {
+                case DoubleClass => v
+                case FloatClass => v.toFloat
+                case LongClass => v.toLong
+                case _ => v.toInt
+              }
 
             Seq(
               Option(n.maximum()).map(v => Constraint.Max(toNum(v), fieldType)),
@@ -727,7 +802,7 @@ object LegacyRamlTypeGenerator {
             // last field of map-types has the pattern-matching spec that defines the key space, see typeIsActuallyAMap
             val pattern = o.properties.asScala.last.name
             val valueType = typeTable(o.properties.asScala.last.`type`)
-            if(pattern != "/.*/" && pattern != "/^.*$/") {
+            if (pattern != "/.*/" && pattern != "/^.*$/") {
               Seq(Constraint.KeyPattern(pattern.substring(1, pattern.length() - 1), valueType))
             } else Nil
         }.getOrElse(Nil)
@@ -741,8 +816,10 @@ object LegacyRamlTypeGenerator {
         val omitEmpty = isOmitEmpty(field)
 
         // see ObjectT.playFormat
-        require(!(((required || defaultValue.nonEmpty) && !forceOptional) && omitEmpty),
-          s"field $fieldOwner.${field.name()} specifies omitEmpty but is required or provides a default value")
+        require(
+          !(((required || defaultValue.nonEmpty) && !forceOptional) && omitEmpty),
+          s"field $fieldOwner.${field.name()} specifies omitEmpty but is required or provides a default value"
+        )
 
         def arrayType(a: ArrayTypeDeclaration): Type =
           if (scala.util.Try[Boolean](a.uniqueItems()).getOrElse(false)) SetClass else SeqClass
@@ -765,10 +842,29 @@ object LegacyRamlTypeGenerator {
             // reducing with TYPE_OF doesn't work, you'd expect Seq[Seq[X]] but only get Seq[X]
             // https://github.com/eed3si9n/treehugger/issues/38
             val finalType = typeList.reduce((a, b) => s"$b[$a]")
-            FieldT(a.name(), finalType, comments, buildConstraints(field, finalType), required, defaultValue, true, forceOptional, omitEmpty = omitEmpty)
+            FieldT(
+              a.name(),
+              finalType,
+              comments,
+              buildConstraints(field, finalType),
+              required,
+              defaultValue,
+              true,
+              forceOptional,
+              omitEmpty = omitEmpty
+            )
           case n: NumberTypeDeclaration =>
             val fieldType = typeTable(Option(n.format()).getOrElse("double"))
-            FieldT(n.name(), fieldType, comments, buildConstraints(field, fieldType), required, defaultValue, forceOptional = forceOptional, omitEmpty = omitEmpty)
+            FieldT(
+              n.name(),
+              fieldType,
+              comments,
+              buildConstraints(field, fieldType),
+              required,
+              defaultValue,
+              forceOptional = forceOptional,
+              omitEmpty = omitEmpty
+            )
           case o: ObjectTypeDeclaration if typeIsActuallyAMap(o) =>
             val fieldType = o.properties.asScala.head match {
               case n: NumberTypeDeclaration =>
@@ -777,14 +873,33 @@ object LegacyRamlTypeGenerator {
                 TYPE_MAP(StringClass, typeTable(t.`type`()))
             }
             val constraints = buildConstraints(o, fieldType)
-            FieldT(o.name(), fieldType, comments, constraints, false, defaultValue, true, forceOptional = forceOptional, omitEmpty = omitEmpty)
+            FieldT(
+              o.name(),
+              fieldType,
+              comments,
+              constraints,
+              false,
+              defaultValue,
+              true,
+              forceOptional = forceOptional,
+              omitEmpty = omitEmpty
+            )
           case t: TypeDeclaration =>
             val (name, fieldType) = if (t.`type`() != "object") {
               t.name() -> typeTable(t.`type`())
             } else {
               AdditionalProperties -> PlayJsObject
             }
-            FieldT(name, fieldType, comments, buildConstraints(field, fieldType), required, defaultValue, forceOptional = forceOptional, omitEmpty = omitEmpty)
+            FieldT(
+              name,
+              fieldType,
+              comments,
+              buildConstraints(field, fieldType),
+              required,
+              defaultValue,
+              forceOptional = forceOptional,
+              omitEmpty = omitEmpty
+            )
         }
       }
 
@@ -800,8 +915,17 @@ object LegacyRamlTypeGenerator {
                 val subTypes = subTypeDeclarations.map {
                   case o: ObjectTypeDeclaration =>
                     val (name, parent) = objectName(o)
-                    val fields: Seq[FieldT] = o.properties.asScala.withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
-                    ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()), serializeOnly = pragmaSerializeOnly(o))
+                    val fields: Seq[FieldT] =
+                      o.properties.asScala.withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
+                    ObjectT(
+                      name,
+                      fields,
+                      parent,
+                      comment(o),
+                      discriminator = Option(o.discriminator()),
+                      discriminatorValue = Option(o.discriminatorValue()),
+                      serializeOnly = pragmaSerializeOnly(o)
+                    )
                   case s: StringTypeDeclaration =>
                     StringT(s.name, Option(s.defaultValue()))
                   case t =>
@@ -815,12 +939,29 @@ object LegacyRamlTypeGenerator {
             case o: ObjectTypeDeclaration if !typeIsActuallyAMap(o) =>
               if (!results.exists(_.name == o.name())) {
                 val (name, parent) = objectName(o)
-                val fields: Seq[FieldT] = o.properties().asScala.withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
+                val fields: Seq[FieldT] =
+                  o.properties().asScala.withFilter(_.`type`() != "nil").map(f => createField(name, f))(collection.breakOut)
                 if (isUpdateType(o)) {
-                  val objectType = ObjectT(name, fields.map(_.copy(forceOptional = true)), parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()), serializeOnly = pragmaSerializeOnly(o))
+                  val objectType = ObjectT(
+                    name,
+                    fields.map(_.copy(forceOptional = true)),
+                    parent,
+                    comment(o),
+                    discriminator = Option(o.discriminator()),
+                    discriminatorValue = Option(o.discriminatorValue()),
+                    serializeOnly = pragmaSerializeOnly(o)
+                  )
                   buildTypes(s.tail, results + objectType)
                 } else {
-                  val objectType = ObjectT(name, fields, parent, comment(o), discriminator = Option(o.discriminator()), discriminatorValue = Option(o.discriminatorValue()), serializeOnly = pragmaSerializeOnly(o))
+                  val objectType = ObjectT(
+                    name,
+                    fields,
+                    parent,
+                    comment(o),
+                    discriminator = Option(o.discriminator()),
+                    discriminatorValue = Option(o.discriminatorValue()),
+                    serializeOnly = pragmaSerializeOnly(o)
+                  )
                   val updateType = generateUpdateTypeName(o).withFilter(n => !results.exists(_.name == n)).map { updateName =>
                     objectType.copy(name = updateName, fields = fields.map(_.copy(forceOptional = true)))
                   }
@@ -832,10 +973,7 @@ object LegacyRamlTypeGenerator {
             case o: ObjectTypeDeclaration if typeIsActuallyAMap(o) =>
               buildTypes(s.tail, results)
             case e: StringTypeDeclaration if e.enumValues().asScala.nonEmpty =>
-              val enumType = EnumT(e.name(),
-                e.enumValues().asScala.toSet,
-                Option(e.defaultValue()),
-                comment(e))
+              val enumType = EnumT(e.name(), e.enumValues().asScala.toSet, Option(e.defaultValue()), comment(e))
               buildTypes(s.tail, results + enumType)
             case _ =>
               buildTypes(s.tail, results)
@@ -845,26 +983,27 @@ object LegacyRamlTypeGenerator {
       }
     }
     val all = buildTypes(allTypes)
-    val childTypes: Map[String, Set[ObjectT]] = all.collect { case obj: ObjectT if obj.parentType.isDefined => obj }.groupBy(_.parentType.get)
+    val childTypes: Map[String, Set[ObjectT]] =
+      all.collect { case obj: ObjectT if obj.parentType.isDefined => obj }.groupBy(_.parentType.get)
     val childNames = childTypes.values.flatMap(_.map(_.name)).toSet
-
 
     val unionTypeNames = all.collect { case u: UnionT => u }.flatMap { t => t.childTypes.map(_.name) }
 
     // Reduce the list so that union types and type hierarchies are now all included from just the top-level type
-    val filterPhase1 = all.withFilter(t => !unionTypeNames.contains(t.name) && !childNames.contains(t.name) && !t.isInstanceOf[StringT]).map {
-      case u: UnionT =>
-        val children = u.childTypes.map {
-          case o: ObjectT =>
-            o.copy(parentType = Some(u.name))
-          case t => t
-        }
-        u.copy(childTypes = children)
-      case obj: ObjectT if childTypes.contains(obj.name) =>
-        val children = childTypes(obj.name)
-        obj.copy(childTypes = children.to[Seq])
-      case t => t
-    }
+    val filterPhase1 =
+      all.withFilter(t => !unionTypeNames.contains(t.name) && !childNames.contains(t.name) && !t.isInstanceOf[StringT]).map {
+        case u: UnionT =>
+          val children = u.childTypes.map {
+            case o: ObjectT =>
+              o.copy(parentType = Some(u.name))
+            case t => t
+          }
+          u.copy(childTypes = children)
+        case obj: ObjectT if childTypes.contains(obj.name) =>
+          val children = childTypes(obj.name)
+          obj.copy(childTypes = children.to[Seq])
+        case t => t
+      }
     filterPhase1.filter {
       case o: ObjectT =>
         !o.childTypes.map(_.name).exists(unionTypeNames.contains)
@@ -873,33 +1012,43 @@ object LegacyRamlTypeGenerator {
   }
 
   def generateBuiltInTypes(pkg: String): Map[String, Tree] = {
-    val baseType = TRAITDEF("RamlGenerated").tree.withDoc("Marker trait indicating generated code.")
+    val baseType = TRAITDEF("RamlGenerated").tree
+      .withDoc("Marker trait indicating generated code.")
       .inPackage(pkg)
     val ramlConstraints = BLOCK(
       (TRAITDEF("RamlConstraints") := BLOCK(
         DEF("keyPattern")
-          withTypeParams(TYPEVAR(RootClass.newAliasType("T")))
-          withParams(
+          withTypeParams (TYPEVAR(RootClass.newAliasType("T")))
+          withParams (
             PARAM("regex", "=> scala.util.matching.Regex"),
             PARAM("error", StringClass) := LIT("error.pattern")
-          )
-          withParams(
-            PARAM("reads", PLAY_JSON_READS("Map[String,T]"))
-          ).withFlags(Flags.IMPLICIT) := PLAY_JSON_READS("Map[String,T]").APPLY(LAMBDA(PARAM("js")) ==> BLOCK(
-              ((REF("reads") DOT "reads") APPLY(REF("js")) DOT "flatMap").APPLY(LAMBDA(PARAM("m")) ==> BLOCK(
+        )
+          withParams (
+            PARAM(
+              "reads",
+              PLAY_JSON_READS("Map[String,T]")
+            )
+          ).withFlags(Flags.IMPLICIT) := PLAY_JSON_READS("Map[String,T]").APPLY(
+          LAMBDA(PARAM("js")) ==> BLOCK(
+            ((REF("reads") DOT "reads") APPLY (REF("js")) DOT "flatMap").APPLY(
+              LAMBDA(PARAM("m")) ==> BLOCK(
                 VAL("errors") := (REF("m") DOT "map" APPLY (BLOCK(
                   CASE(TUPLE(REF("o"), WILDCARD)) ==>
-                    (((REF("regex") DOT "unapplySeq") APPLY REF("o")) DOT "map" APPLY(
+                    (((REF("regex") DOT "unapplySeq") APPLY REF("o")) DOT "map" APPLY (
                       LAMBDA(PARAM(WILDCARD)) ==> (PlayJsSuccess APPLY REF("o"))
-                    )) DOT "getOrElse" APPLY (PlayJsError APPLY(PlayPath DOT "\\" APPLY(REF("o")), PlayValidationError APPLY(REF("error"), REF("regex") DOT "regex")))
-                ))) DOT "collect" APPLY(BLOCK(
-                  CASE(ID("err") withType(PlayJsError)) ==> REF("err")
+                    )) DOT "getOrElse" APPLY (PlayJsError APPLY (PlayPath DOT "\\" APPLY (REF("o")), PlayValidationError APPLY (REF(
+                    "error"
+                  ), REF("regex") DOT "regex")))
+                ))) DOT "collect" APPLY (BLOCK(
+                  CASE(ID("err") withType (PlayJsError)) ==> REF("err")
                 )),
-                IF(REF("errors") DOT "isEmpty") THEN(PlayJsSuccess APPLY(REF("m")))
-                  ELSE(REF("errors") DOT "fold" APPLY(PlayJsError APPLY(REF("Nil"))) APPLY(WILDCARD DOT "++" APPLY WILDCARD))
-              ))
-            ))
-        )).withDoc("Validation helpers for generated RAML code."),
+                IF(REF("errors") DOT "isEmpty") THEN (PlayJsSuccess APPLY (REF("m")))
+                  ELSE (REF("errors") DOT "fold" APPLY (PlayJsError APPLY (REF("Nil"))) APPLY (WILDCARD DOT "++" APPLY WILDCARD))
+              )
+            )
+          )
+        )
+      )).withDoc("Validation helpers for generated RAML code."),
       CASEOBJECTDEF("RamlConstraints").withParents("RamlConstraints").tree
     ).inPackage(pkg)
     Map(
@@ -916,10 +1065,13 @@ object LegacyRamlTypeGenerator {
     generateBuiltInTypes(pkg) ++ types.map { tpe =>
       val tree = tpe.toTree()
       if (tree.nonEmpty) {
-        tpe.name -> BLOCK(tree).inPackage(pkg)
+        tpe.name -> BLOCK(tree)
+          .inPackage(pkg)
           .withComment(NoScalaFormat)
       } else {
-        tpe.name -> BLOCK().withComment(s"Unsupported: $tpe").inPackage(pkg)
+        tpe.name -> BLOCK()
+          .withComment(s"Unsupported: $tpe")
+          .inPackage(pkg)
           .withComment(NoScalaFormat)
       }
     }(collection.breakOut)

@@ -11,9 +11,7 @@ import scala.collection.immutable.Seq
 
 object SchedulerActor {
 
-  case class Registered(
-      frameworkId: FrameworkID,
-      master: MasterInfo)
+  case class Registered(frameworkId: FrameworkID, master: MasterInfo)
 
   case class ResourceOffers(offers: Seq[Offer])
 }
@@ -25,26 +23,28 @@ class SchedulerActor(scheduler: Scheduler) extends Actor with Stash with StrictL
 
   def receive: Receive = waitForDriver
 
-  def waitForDriver: Receive = LoggingReceive.withLabel("waitForDriver") {
-    case driver: SchedulerDriver =>
-      logger.info("received driver")
-      driverOpt = Some(driver)
-      context.become(handleCmds(driver))
-      unstashAll()
+  def waitForDriver: Receive =
+    LoggingReceive.withLabel("waitForDriver") {
+      case driver: SchedulerDriver =>
+        logger.info("received driver")
+        driverOpt = Some(driver)
+        context.become(handleCmds(driver))
+        unstashAll()
 
-    case _ => stash()
-  }
+      case _ => stash()
+    }
 
-  def handleCmds(driver: SchedulerDriver): Receive = LoggingReceive.withLabel("handleCmds") {
-    case Registered(frameworkId, masterInfo) =>
-      scheduler.registered(driver, frameworkId, masterInfo)
+  def handleCmds(driver: SchedulerDriver): Receive =
+    LoggingReceive.withLabel("handleCmds") {
+      case Registered(frameworkId, masterInfo) =>
+        scheduler.registered(driver, frameworkId, masterInfo)
 
-    case ResourceOffers(offers) =>
-      scheduler.resourceOffers(driver, offers.asJava)
+      case ResourceOffers(offers) =>
+        scheduler.resourceOffers(driver, offers.asJava)
 
-    case status: TaskStatus =>
-      scheduler.statusUpdate(driver, status)
-  }
+      case status: TaskStatus =>
+        scheduler.statusUpdate(driver, status)
+    }
 
   override def postStop(): Unit = {
     driverOpt.foreach { driver => scheduler.disconnected(driver) }

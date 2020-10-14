@@ -9,6 +9,7 @@ import mesosphere.marathon.core.event.MarathonEvent
 import scala.collection.immutable.Seq
 
 class CaptureEvents(eventStream: EventStream) {
+
   /**
     * Captures the events send to the EventStream while the block is executing.
     */

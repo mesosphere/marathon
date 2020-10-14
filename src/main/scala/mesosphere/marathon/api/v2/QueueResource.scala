@@ -31,42 +31,43 @@ class QueueResource @Inject() (
     val authorizer: Authorizer,
     val config: MarathonConf,
     launchStats: LaunchStats
-)(implicit val executionContext: ExecutionContext) extends AuthResource {
+)(implicit val executionContext: ExecutionContext)
+    extends AuthResource {
 
   import QueueResource._
 
   @GET
   @Produces(Array(MediaType.APPLICATION_JSON))
   def index(
-    @Context req: HttpServletRequest,
-    @QueryParam("embed") embed: java.util.Set[String],
-    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
-    async {
-      implicit val identity = await(authenticatedAsync(req))
-      val embedLastUnusedOffers = embed.contains(QueueResource.EmbedLastUnusedOffers)
-      val allStats = await(launchStats.getStatistics())
-      val stats = allStats.filter(t => isAuthorized(ViewRunSpec, t.runSpec))
-      ok(Raml.toRaml((stats, embedLastUnusedOffers, clock)))
+      @Context req: HttpServletRequest,
+      @QueryParam("embed") embed: java.util.Set[String],
+      @Suspended asyncResponse: AsyncResponse
+  ): Unit =
+    sendResponse(asyncResponse) {
+      async {
+        implicit val identity = await(authenticatedAsync(req))
+        val embedLastUnusedOffers = embed.contains(QueueResource.EmbedLastUnusedOffers)
+        val allStats = await(launchStats.getStatistics())
+        val stats = allStats.filter(t => isAuthorized(ViewRunSpec, t.runSpec))
+        ok(Raml.toRaml((stats, embedLastUnusedOffers, clock)))
+      }
     }
-  }
 
   @DELETE
   @Path("""{runSpecId:.+}/delay""")
-  def resetDelay(
-    @PathParam("runSpecId") id: String,
-    @Context req: HttpServletRequest,
-    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
-    async {
-      implicit val identity = await(authenticatedAsync(req))
-      val runSpecId = id.toAbsolutePath
-      val runSpecScheduled = await(instanceTracker.specInstances(runSpecId)).exists(_.isScheduled)
-      val maybeRunSpec = if (runSpecScheduled) groupManager.runSpec(runSpecId) else None
-      withAuthorization(UpdateRunSpec, maybeRunSpec, notFound(runSpecNotFoundTasksQueue(runSpecId))) { runSpec =>
-        launchQueue.resetDelay(runSpec)
-        noContent
+  def resetDelay(@PathParam("runSpecId") id: String, @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit =
+    sendResponse(asyncResponse) {
+      async {
+        implicit val identity = await(authenticatedAsync(req))
+        val runSpecId = id.toAbsolutePath
+        val runSpecScheduled = await(instanceTracker.specInstances(runSpecId)).exists(_.isScheduled)
+        val maybeRunSpec = if (runSpecScheduled) groupManager.runSpec(runSpecId) else None
+        withAuthorization(UpdateRunSpec, maybeRunSpec, notFound(runSpecNotFoundTasksQueue(runSpecId))) { runSpec =>
+          launchQueue.resetDelay(runSpec)
+          noContent
+        }
       }
     }
-  }
 }
 
 object QueueResource {

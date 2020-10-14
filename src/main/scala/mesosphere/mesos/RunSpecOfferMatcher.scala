@@ -21,8 +21,15 @@ object RunSpecOfferMatcher extends StrictLogging {
     * @param knownInstances All instances associated with the given runSpec, needed to validate constraints
     * @param givenAcceptedResourceRoles The resource roles for which to look.
     */
-  def matchOffer(runSpec: RunSpec, offer: Offer, knownInstances: Seq[Instance],
-    givenAcceptedResourceRoles: Set[String], conf: MatcherConf, schedulerPlugins: Seq[SchedulerPlugin], localRegion: Option[Region] = None)(implicit clock: Clock): ResourceMatchResponse = {
+  def matchOffer(
+      runSpec: RunSpec,
+      offer: Offer,
+      knownInstances: Seq[Instance],
+      givenAcceptedResourceRoles: Set[String],
+      conf: MatcherConf,
+      schedulerPlugins: Seq[SchedulerPlugin],
+      localRegion: Option[Region] = None
+  )(implicit clock: Clock): ResourceMatchResponse = {
     val acceptedResourceRoles: Set[String] = {
       val roles = if (runSpec.acceptedResourceRoles.isEmpty) {
         givenAcceptedResourceRoles
@@ -34,7 +41,15 @@ object RunSpecOfferMatcher extends StrictLogging {
     }
 
     val resourceMatchResponse =
-      ResourceMatcher.matchResources(offer, runSpec, knownInstances, ResourceSelector.any(acceptedResourceRoles), conf, schedulerPlugins, localRegion = localRegion)
+      ResourceMatcher.matchResources(
+        offer,
+        runSpec,
+        knownInstances,
+        ResourceSelector.any(acceptedResourceRoles),
+        conf,
+        schedulerPlugins,
+        localRegion = localRegion
+      )
 
     def logInsufficientResources(): Unit = {
       val runSpecHostPorts = runSpec match {

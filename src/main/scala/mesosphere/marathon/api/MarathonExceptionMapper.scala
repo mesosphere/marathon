@@ -48,15 +48,16 @@ class MarathonExceptionMapper extends ExceptionMapper[JavaException] with Strict
       .build
   }
 
-  private def rejectionToResponse(rejection: Rejection): Response = rejection match {
-    case Rejection.AccessDeniedRejection(authorizer, identity) =>
-      ResponseFacade(authorizer.handleNotAuthorized(identity, _))
-    case Rejection.NotAuthenticatedRejection(authenticator, request) =>
-      val requestWrapper = new RequestFacade(request)
-      ResponseFacade(authenticator.handleNotAuthenticated(requestWrapper, _))
-    case Rejection.ServiceUnavailableRejection =>
-      Response.status(Response.Status.SERVICE_UNAVAILABLE).build()
-  }
+  private def rejectionToResponse(rejection: Rejection): Response =
+    rejection match {
+      case Rejection.AccessDeniedRejection(authorizer, identity) =>
+        ResponseFacade(authorizer.handleNotAuthorized(identity, _))
+      case Rejection.NotAuthenticatedRejection(authenticator, request) =>
+        val requestWrapper = new RequestFacade(request)
+        ResponseFacade(authenticator.handleNotAuthenticated(requestWrapper, _))
+      case Rejection.ServiceUnavailableRejection =>
+        Response.status(Response.Status.SERVICE_UNAVAILABLE).build()
+    }
 
   def toResponse(exception: JavaException): Response = {
     exception match {
@@ -72,34 +73,21 @@ class MarathonExceptionMapper extends ExceptionMapper[JavaException] with Strict
     exception match {
       case _: BadRequestException => (BadRequest.intValue, defaultEntity)
       case e: NotFoundException =>
-        (
-          InternalServerError.intValue,
-          Json.obj("message" -> "URI not found"))
+        (InternalServerError.intValue, Json.obj("message" -> "URI not found"))
       case e: AppLockedException =>
-        (
-          Conflict.intValue,
-          Json.obj(
-            "message" -> e.getMessage,
-            "deployments" -> e.deploymentIds.map(id => Json.obj("id" -> id))))
+        (Conflict.intValue, Json.obj("message" -> e.getMessage, "deployments" -> e.deploymentIds.map(id => Json.obj("id" -> id))))
       case e: JsonParseException =>
-        (
-          BadRequest.intValue,
-          Json.obj(
-            "message" -> "Invalid JSON",
-            "details" -> e.getOriginalMessage))
+        (BadRequest.intValue, Json.obj("message" -> "Invalid JSON", "details" -> e.getOriginalMessage))
       case e: JsonMappingException =>
-        (
-          BadRequest.intValue,
-          Json.obj(
-            "message" -> "Please specify data in JSON format",
-            "details" -> e.getMessage))
+        (BadRequest.intValue, Json.obj("message" -> "Please specify data in JSON format", "details" -> e.getMessage))
       case e: JsResultException =>
-        val status = if (e.errors.nonEmpty && e.errors.forall { case (_, validationErrors) => validationErrors.nonEmpty })
-          // if all of the nested errors are validation-related then generate
-          // an error code consistent with that generated for ValidationFailedException
-          UnprocessableEntity.intValue
-        else
-          BadRequest.intValue
+        val status =
+          if (e.errors.nonEmpty && e.errors.forall { case (_, validationErrors) => validationErrors.nonEmpty })
+            // if all of the nested errors are validation-related then generate
+            // an error code consistent with that generated for ValidationFailedException
+            UnprocessableEntity.intValue
+          else
+            BadRequest.intValue
 
         (status, RestResource.entity(e.errors))
       case e: WebApplicationException =>
@@ -112,9 +100,7 @@ class MarathonExceptionMapper extends ExceptionMapper[JavaException] with Strict
         (e.getResponse.getStatus(), entity)
 
       case ValidationFailedException(_, failure) =>
-        (
-          UnprocessableEntity.intValue,
-          Json.toJson(failure))
+        (UnprocessableEntity.intValue, Json.toJson(failure))
 
       case _: TimeoutException => (ServiceUnavailable.intValue, defaultEntity)
       case _: PathNotFoundException => (NotFound.intValue, defaultEntity)

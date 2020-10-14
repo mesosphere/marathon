@@ -30,7 +30,6 @@ private def findMarathonRoot(path: Path): Path = {
 
 val marathonRoot = findMarathonRoot(pwd)
 
-
 def ciLogFile(name: String): File = {
   val log = new File(name)
   if (!log.exists())
@@ -73,28 +72,27 @@ def printStageTitle(name: String): Unit = {
 }
 
 case class BuildException(val cmd: String, val exitValue: Int, private val cause: Throwable = None.orNull)
-  extends Exception(s"'$cmd' exited with $exitValue", cause)
-case class StageException(private val message: String = "", private val cause: Throwable = None.orNull)
-  extends Exception(message, cause)
+    extends Exception(s"'$cmd' exited with $exitValue", cause)
+case class StageException(private val message: String = "", private val cause: Throwable = None.orNull) extends Exception(message, cause)
 def stage[T](name: String)(block: => T): T = {
   printStageTitle(name)
 
   try {
     block
-  }
-  catch { case NonFatal(e) =>
-    throw new StageException(s"Stage $name failed.", e)
+  } catch {
+    case NonFatal(e) =>
+      throw new StageException(s"Stage $name failed.", e)
   }
 }
 
 /**
- * Run a process with given commands and time out it runs too long.
- *
+  * Run a process with given commands and time out it runs too long.
+  *
  * @param timeout The maximum time to wait.
- * @param logFileName Name of file which collects all logs.
- * @param commands The commands that are executed in a process. E.g. "sbt",
- *  "compile".
- */
+  * @param logFileName Name of file which collects all logs.
+  * @param commands The commands that are executed in a process. E.g. "sbt",
+  *  "compile".
+  */
 def runWithTimeout(timeout: FiniteDuration, logFileName: String, workDirectory: Path = pwd)(commands: Seq[String]): Unit = {
 
   val builder = new java.lang.ProcessBuilder()
@@ -105,20 +103,20 @@ def runWithTimeout(timeout: FiniteDuration, logFileName: String, workDirectory: 
     .redirectOutput(ProcessBuilder.Redirect.appendTo(ciLogFile(logFileName)))
     .start()
 
-    val exited = buildProcess.waitFor(timeout.length, timeout.unit)
+  val exited = buildProcess.waitFor(timeout.length, timeout.unit)
 
-    if (exited) {
-      val exitValue = buildProcess.exitValue
-      if(buildProcess.exitValue != 0) {
-        val cmd = commands.mkString(" ")
-        throw new utils.BuildException(cmd, exitValue)
-      }
-    } else {
-      // The process timed out. Try to kill it.
-      buildProcess.destroyForcibly().waitFor()
+  if (exited) {
+    val exitValue = buildProcess.exitValue
+    if (buildProcess.exitValue != 0) {
       val cmd = commands.mkString(" ")
-      throw new java.util.concurrent.TimeoutException(s"'$cmd' timed out after $timeout.")
+      throw new utils.BuildException(cmd, exitValue)
     }
+  } else {
+    // The process timed out. Try to kill it.
+    buildProcess.destroyForcibly().waitFor()
+    val cmd = commands.mkString(" ")
+    throw new java.util.concurrent.TimeoutException(s"'$cmd' timed out after $timeout.")
+  }
 }
 
 /**
@@ -129,14 +127,15 @@ def getJobName(): Option[String] = sys.env.get("JOB_NAME")
 // The name of the build loop.
 lazy val loopName: String = {
   val loopNamePattern = """marathon-sandbox/(.*)""".r
-  sys.env.get("JOB_NAME")
+  sys.env
+    .get("JOB_NAME")
     .collect { case loopNamePattern(name) => name }
     .getOrElse("loop")
 }
 
 /**
- * @return Name for build loops.
- */
+  * @return Name for build loops.
+  */
 def loopBuildName(): String = {
   val buildNumber = sys.env.get("BUILD_NUMBER").getOrElse("0")
   s"$loopName-$buildNumber"
@@ -160,8 +159,8 @@ case class SemVer(major: Int, minor: Int, build: Int, commit: String) {
   def toTagString(): String = s"v$major.$minor.$build"
 
   /**
-   * Release bucket keys are not prefixed.
-   */
+    * Release bucket keys are not prefixed.
+    */
   def toReleaseString(): String = s"$major.$minor.$build"
 }
 
@@ -190,9 +189,10 @@ object SemVer {
 
   // Matches e.g. 1.7.42
   val versionPattern = """^(\d+)\.(\d+)\.(\d+)$""".r
+
   /**
-   * Create SemVer from string which has the form if 1.7.42 and the commit.
-   */
+    * Create SemVer from string which has the form if 1.7.42 and the commit.
+    */
   def apply(version: String, commit: String): SemVer =
     version match {
       case versionPattern(major, minor, build) =>
@@ -208,8 +208,8 @@ object SemVer {
   val versionTagPattern = """^v?(\d+)\.(\d+)\.(\d+)$""".r
 
   /**
-   * Create SemVer from string which has the form if 1.7.42-deadbeef.
-   */
+    * Create SemVer from string which has the form if 1.7.42-deadbeef.
+    */
   def apply(version: String): SemVer =
     version match {
       case versionCommitPattern(major, minor, build, commit) =>

@@ -40,4 +40,3 @@ object IpcMode {
   def fromMesos(proto: mesos.LinuxInfo.IpcMode): IpcMode = mesos2Model(proto)
 
 }
-

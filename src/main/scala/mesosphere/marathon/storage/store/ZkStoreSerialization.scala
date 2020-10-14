@@ -19,12 +19,10 @@ import mesosphere.util.state.FrameworkId
 import play.api.libs.json.Json
 
 trait ZkStoreSerialization {
+
   /** General id resolver for a key of Path.Id */
-  class ZkPathIdResolver[T](
-      val category: String,
-      val hasVersions: Boolean,
-      getVersion: (T) => OffsetDateTime)
-    extends IdResolver[AbsolutePathId, T, String, ZkId] {
+  class ZkPathIdResolver[T](val category: String, val hasVersions: Boolean, getVersion: (T) => OffsetDateTime)
+      extends IdResolver[AbsolutePathId, T, String, ZkId] {
     override def toStorageId(id: AbsolutePathId, version: Option[OffsetDateTime]): ZkId =
       ZkId(category, id.path.mkString("_"), version)
     override def fromStorageId(key: ZkId): AbsolutePathId = AbsolutePathId(key.id.split("_").toList)

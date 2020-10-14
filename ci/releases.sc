@@ -38,15 +38,12 @@ object ReleaseTarget {
 implicit val SemVerRead: scopt.Read[SemVer] = scopt.Read.reads(SemVer(_))
 
 /** Configration for a release
- *
+  *
  * @param version The version that will be released.
- * @param targets All release targets that should be executed.
- * @param runTests indicates whether to run tests of builds before a release.
- */
-case class Config(
-  version: SemVer = SemVer.empty,
-  targets: List[ReleaseTarget] = Nil,
-  runTests: Boolean = true)
+  * @param targets All release targets that should be executed.
+  * @param runTests indicates whether to run tests of builds before a release.
+  */
+case class Config(version: SemVer = SemVer.empty, targets: List[ReleaseTarget] = Nil, runTests: Boolean = true)
 
 // Scopt parser for release config
 val parser = new scopt.OptionParser[Config]("scopt") {
@@ -62,22 +59,24 @@ val parser = new scopt.OptionParser[Config]("scopt") {
     ReleaseTarget.all.find(_.name == target) match {
       case Some(rt) => c.copy(targets = rt :: c.targets)
       case None =>
-        throw new RuntimeException(s"${target} is not a known release target; valid options are:\n* ${ReleaseTarget.all.map(_.name).mkString("\n* ")}")
+        throw new RuntimeException(
+          s"${target} is not a known release target; valid options are:\n* ${ReleaseTarget.all.map(_.name).mkString("\n* ")}"
+        )
     }
   }.text(s"targets to release: ${ReleaseTarget.all.map(_.name).mkString(", ")}")
 }
 
 /**
- * Assert that version exists in builds.
- */
+  * Assert that version exists in builds.
+  */
 def verify(version: SemVer): Unit = {
   val build = awsClient.s3PathFor(s"builds/$version/marathon-$version.tgz")
   require(awsClient.doesS3FileExist(build), s"Build $version does not exist.")
 }
 
 /**
- * Copies tarball builds on S3 from `builds/<version>` to `releases/<version>.
- */
+  * Copies tarball builds on S3 from `builds/<version>` to `releases/<version>.
+  */
 def copyTarballBuildsToReleases(version: SemVer): Unit = {
   val from = awsClient.s3PathFor(s"builds/$version")
   val to = awsClient.s3PathFor(s"releases/${version.toReleaseString}")
@@ -89,9 +88,9 @@ def copyTarballBuildsToReleases(version: SemVer): Unit = {
 }
 
 /**
- * Publish native Linx packages to package server.
- */
+  * Publish native Linx packages to package server.
+  */
 def uploadLinuxPackagesToRepos(packageVersion: String): Unit = {
-  val toolPath = pwd/'tools/'packager
+  val toolPath = pwd / 'tools / 'packager
   %('make, "upload-packages")(toolPath)
 }

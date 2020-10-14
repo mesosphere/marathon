@@ -6,4 +6,5 @@ case class TaskStatus(
     message: String = "",
     data: Array[Byte] = Array(),
     slaveId: SlaveID = SlaveID(""),
-    timestamp: Double = 0)
+    timestamp: Double = 0
+)

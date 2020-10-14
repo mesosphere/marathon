@@ -12,10 +12,11 @@ object Executable {
     if (proto.getShell) Command("").mergeFromProto(proto)
     else ArgvList(Seq.empty).mergeFromProto(proto)
 
-  def toProto(e: Executable): MesosProtos.CommandInfo = e match {
-    case c: Command => c.toProto
-    case a: ArgvList => a.toProto
-  }
+  def toProto(e: Executable): MesosProtos.CommandInfo =
+    e match {
+      case c: Command => c.toProto
+      case a: ArgvList => a.toProto
+    }
 }
 
 // TODO (if supported in the future):

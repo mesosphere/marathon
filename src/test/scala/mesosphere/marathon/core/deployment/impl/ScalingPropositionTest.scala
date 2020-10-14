@@ -260,7 +260,8 @@ class ScalingPropositionTest extends UnitTest {
         ScalingProposition.sortByConditionAndDate(KillSelection.DefaultKillSelection)(stagingInstance, stagingInstanceOlder) shouldBe true
       }
       "put younger starting before older starting" in {
-        ScalingProposition.sortByConditionAndDate(KillSelection.DefaultKillSelection)(startingInstanceOlder, startingInstance) shouldBe false
+        ScalingProposition
+          .sortByConditionAndDate(KillSelection.DefaultKillSelection)(startingInstanceOlder, startingInstance) shouldBe false
         ScalingProposition.sortByConditionAndDate(KillSelection.DefaultKillSelection)(startingInstance, startingInstanceOlder) shouldBe true
       }
       "put younger running before older running " in {
@@ -286,7 +287,10 @@ class ScalingPropositionTest extends UnitTest {
     val appId = AbsolutePathId("/test")
 
     def createInstance(index: Long) = {
-      val instance = TestInstanceBuilder.newBuilder(appId, version = Timestamp(index)).addTaskRunning(startedAt = Timestamp.now().+(index.hours)).getInstance()
+      val instance = TestInstanceBuilder
+        .newBuilder(appId, version = Timestamp(index))
+        .addTaskRunning(startedAt = Timestamp.now().+(index.hours))
+        .getInstance()
       val state = instance.state.copy(condition = Condition.Running)
       instance.copy(state = state)
     }

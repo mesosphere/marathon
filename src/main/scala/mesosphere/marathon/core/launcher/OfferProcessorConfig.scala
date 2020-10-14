@@ -9,5 +9,6 @@ trait OfferProcessorConfig extends ScallopConf {
     "decline_offer_duration",
     descr = "(Default: 120 seconds) " +
       "The duration (milliseconds) for which to decline offers by default",
-    default = Some(120000))
+    default = Some(120000)
+  )
 }

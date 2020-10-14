@@ -10,8 +10,7 @@ class EnrichedSourceTest extends AkkaUnitTest {
 
   "eventBusSource receives items matching the specified runtime class" in {
     val bus = new EventStream(system)
-    val source = EnrichedSource.eventBusSource(
-      classOf[String], bus, bufferSize = Int.MaxValue, overflowStrategy = OverflowStrategy.fail)
+    val source = EnrichedSource.eventBusSource(classOf[String], bus, bufferSize = Int.MaxValue, overflowStrategy = OverflowStrategy.fail)
 
     val result = source.take(5).runWith(Sink.seq)
     val data = Seq("a", "b", "c", "d", "e")

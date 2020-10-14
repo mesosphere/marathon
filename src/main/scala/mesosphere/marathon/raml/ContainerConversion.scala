@@ -52,7 +52,6 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
   }
 
   implicit val containerWrites: Writes[state.Container, Container] = Writes { container =>
-
     implicit val credentialWrites: Writes[state.Container.Credential, DockerCredentials] = Writes { credentials =>
       DockerCredentials(credentials.principal, credentials.secret)
     }
@@ -66,7 +65,8 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
         forcePullImage = container.forcePullImage,
         image = container.image,
         parameters = container.parameters.toRaml,
-        privileged = container.privileged)
+        privileged = container.privileged
+      )
     }
 
     implicit val mesosDockerContainerWrites: Writes[state.Container.MesosDocker, DockerContainer] = Writes { container =>
@@ -74,11 +74,15 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
         image = container.image,
         credential = container.credential.toRaml,
         pullConfig = container.pullConfig.toRaml,
-        forcePullImage = container.forcePullImage)
+        forcePullImage = container.forcePullImage
+      )
     }
 
     def create(kind: EngineType, docker: Option[DockerContainer] = None, linuxInfo: Option[LinuxInfo]): Container = {
-      Container(kind, docker = docker, volumes = container.volumes.toRaml,
+      Container(
+        kind,
+        docker = docker,
+        volumes = container.volumes.toRaml,
         portMappings = Option(container.portMappings.toRaml), // this might need to be None, but we can't check networking here
         linuxInfo = linuxInfo
       )
@@ -86,7 +90,8 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
 
     container match {
       case docker: state.Container.Docker => create(EngineType.Docker, docker = Some(docker.toRaml[DockerContainer]), linuxInfo = None)
-      case mesos: state.Container.MesosDocker => create(EngineType.Mesos, docker = Some(mesos.toRaml[DockerContainer]), linuxInfo = container.linuxInfo.toRaml)
+      case mesos: state.Container.MesosDocker =>
+        create(EngineType.Mesos, docker = Some(mesos.toRaml[DockerContainer]), linuxInfo = container.linuxInfo.toRaml)
       case _: state.Container.Mesos => create(EngineType.Mesos, linuxInfo = container.linuxInfo.toRaml)
     }
   }
@@ -154,9 +159,16 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       forcePullImage = docker.when(_.hasForcePullImage, _.getForcePullImage).getOrElse(DockerContainer.DefaultForcePullImage),
       image = docker.getImage,
       network = docker.when(_.hasOBSOLETENetwork, _.getOBSOLETENetwork.toRaml).orElse(DockerContainer.DefaultNetwork),
-      parameters = docker.whenOrElse(_.getParametersCount > 0, _.getParametersList.map(_.toRaml)(collection.breakOut), DockerContainer.DefaultParameters),
-      portMappings = Option.empty[Seq[ContainerPortMapping]].unless(
-        docker.when(_.getOBSOLETENetwork != Mesos.ContainerInfo.DockerInfo.Network.HOST, _.getOBSOLETEPortMappingsList.map(_.toRaml)(collection.breakOut))),
+      parameters = docker
+        .whenOrElse(_.getParametersCount > 0, _.getParametersList.map(_.toRaml)(collection.breakOut), DockerContainer.DefaultParameters),
+      portMappings = Option
+        .empty[Seq[ContainerPortMapping]]
+        .unless(
+          docker.when(
+            _.getOBSOLETENetwork != Mesos.ContainerInfo.DockerInfo.Network.HOST,
+            _.getOBSOLETEPortMappingsList.map(_.toRaml)(collection.breakOut)
+          )
+        ),
       privileged = docker.when(_.hasPrivileged, _.getPrivileged).getOrElse(DockerContainer.DefaultPrivileged)
     )
   }
@@ -168,20 +180,26 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
     )
   }
 
-  implicit val dockerPullConfigProtoRamlWriter: Writes[Protos.ExtendedContainerInfo.DockerInfo.ImagePullConfig, DockerPullConfig] = Writes { pullConfig =>
-    pullConfig.when(_.getType == Protos.ExtendedContainerInfo.DockerInfo.ImagePullConfig.Type.SECRET, _ => {
-      pullConfig.when(_.hasSecret, _.getSecret).flatMap { secret =>
-        secret.when(_.hasType, _.getType).flatMap {
-          case Mesos.Secret.Type.REFERENCE =>
-            secret.when(_.hasReference, _.getReference.getName).map(DockerPullConfig(_))
-          case _ => None
-        }
+  implicit val dockerPullConfigProtoRamlWriter: Writes[Protos.ExtendedContainerInfo.DockerInfo.ImagePullConfig, DockerPullConfig] = Writes {
+    pullConfig =>
+      pullConfig
+        .when(
+          _.getType == Protos.ExtendedContainerInfo.DockerInfo.ImagePullConfig.Type.SECRET,
+          _ => {
+            pullConfig.when(_.hasSecret, _.getSecret).flatMap { secret =>
+              secret.when(_.hasType, _.getType).flatMap {
+                case Mesos.Secret.Type.REFERENCE =>
+                  secret.when(_.hasReference, _.getReference.getName).map(DockerPullConfig(_))
+                case _ => None
+              }
+            }
+          }
+        )
+        .flatten match {
+        case Some(deserializedPullConfig) => deserializedPullConfig
+        case _ =>
+          throw SerializationFailedException(s"Failed to deserialize a docker pull config: $pullConfig")
       }
-    }).flatten match {
-      case Some(deserializedPullConfig) => deserializedPullConfig
-      case _ =>
-        throw SerializationFailedException(s"Failed to deserialize a docker pull config: $pullConfig")
-    }
   }
 
   implicit val mesosDockerProtoToRamlWriter: Writes[Protos.ExtendedContainerInfo.MesosDockerInfo, DockerContainer] = Writes { docker =>
@@ -190,22 +208,21 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
       pullConfig = docker.when(_.hasPullConfig, _.getPullConfig.toRaml).orElse(DockerContainer.DefaultPullConfig),
       forcePullImage = docker.when(_.hasForcePullImage, _.getForcePullImage).getOrElse(DockerContainer.DefaultForcePullImage),
       image = docker.getImage
-    // was never stored for mesos containers:
-    // - network
-    // - parameters
-    // - portMappings
-    // - privileged
+      // was never stored for mesos containers:
+      // - network
+      // - parameters
+      // - portMappings
+      // - privileged
     )
   }
 
   implicit val containerProtoToRamlWriter: Writes[Protos.ExtendedContainerInfo, Container] = Writes { container =>
     Container(
       `type` = container.when(_.hasType, _.getType.toRaml).getOrElse(Container.DefaultType),
-      docker =
-        container.collect {
-          case x if x.hasDocker => x.getDocker.toRaml
-          case x if x.hasMesosDocker => x.getMesosDocker.toRaml
-        }.orElse(Container.DefaultDocker),
+      docker = container.collect {
+        case x if x.hasDocker => x.getDocker.toRaml
+        case x if x.hasMesosDocker => x.getMesosDocker.toRaml
+      }.orElse(Container.DefaultDocker),
       volumes = container.whenOrElse(_.getVolumesCount > 0, _.getVolumesList.map(_.toRaml)(collection.breakOut), Container.DefaultVolumes),
       portMappings = container.collect {
         case x if !x.hasDocker || x.getDocker.getOBSOLETEPortMappingsCount == 0 =>
@@ -222,7 +239,9 @@ trait ContainerConversion extends HealthCheckConversion with VolumeConversion wi
   implicit val volumeMountRamlWrites: Writes[state.VolumeMount, raml.VolumeMount] = Writes { volMnt =>
     raml.VolumeMount(
       volMnt.volumeName.getOrElse(throw new IllegalArgumentException("volumeName must not be empty")),
-      volMnt.mountPath, Some(volMnt.readOnly))
+      volMnt.mountPath,
+      Some(volMnt.readOnly)
+    )
   }
 
 }

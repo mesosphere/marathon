@@ -12,8 +12,7 @@ class NetworkTest extends UnitTest with ValidationTestLike {
   "it should not allow network names with special chars" in {
     val cn = Raml.toRaml(ContainerNetwork(name = "invalid^name"))
 
-    networkValidator(cn) should haveViolations(
-      "/name" -> "error.pattern")
+    networkValidator(cn) should haveViolations("/name" -> "error.pattern")
   }
 
   "it should allow network names with underscores, numbers" in {

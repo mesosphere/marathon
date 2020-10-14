@@ -5,6 +5,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.Source
 
 object StreamHelpers {
+
   /**
     * Source which conforms to any type; never completes and never emits anything.
     */

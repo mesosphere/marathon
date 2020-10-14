@@ -19,13 +19,11 @@ class FlowModule(leadershipModule: LeadershipModule) extends StrictLogging {
     * The reasoning is that getting infos about running tasks signals that the Mesos infrastructure is working
     * and not yet completely overloaded.
     */
-  def refillOfferMatcherManagerLaunchTokens(
-    conf: LaunchTokenConfig,
-    offerMatcherManager: OfferMatcherManager): Unit =
-    {
-      lazy val offerMatcherLaunchTokensProps = OfferMatcherLaunchTokensActor.props(
-        conf, offerMatcherManager
-      )
-      leadershipModule.startWhenLeader(offerMatcherLaunchTokensProps, "offerMatcherLaunchTokens")
-    }
+  def refillOfferMatcherManagerLaunchTokens(conf: LaunchTokenConfig, offerMatcherManager: OfferMatcherManager): Unit = {
+    lazy val offerMatcherLaunchTokensProps = OfferMatcherLaunchTokensActor.props(
+      conf,
+      offerMatcherManager
+    )
+    leadershipModule.startWhenLeader(offerMatcherLaunchTokensProps, "offerMatcherLaunchTokens")
+  }
 }

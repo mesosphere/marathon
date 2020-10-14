@@ -30,55 +30,64 @@ class LaunchStats private[launchqueue] (
     delays: LiveFold.Folder[Map[RunSpecConfigRef, Timestamp]],
     launchingInstances: LiveFold.Folder[Map[Instance.Id, LaunchStats.LaunchingInstance]],
     runSpecStatistics: LiveFold.Folder[Map[AbsolutePathId, RunSpecOfferStatistics]],
-    noMatchStatistics: LiveFold.Folder[Map[AbsolutePathId, Map[String, OfferMatchResult.NoMatch]]])(implicit ec: ExecutionContext) {
+    noMatchStatistics: LiveFold.Folder[Map[AbsolutePathId, Map[String, OfferMatchResult.NoMatch]]]
+)(implicit ec: ExecutionContext) {
 
-  def getStatistics(): Future[Seq[LaunchStats.QueuedInstanceInfoWithStatistics]] = async {
-    /**
-      * Quick sanity check. These streams should run for the duration of Marathon. In the off chance they aren't, make
-      * it obvious.
-      */
-    require(!launchingInstances.finalResult.isCompleted, s"Launching Instances should not be completed; ${launchingInstances.finalResult}")
-    require(!runSpecStatistics.finalResult.isCompleted, s"RunSpecStatistics should not be completed; ${runSpecStatistics.finalResult}")
-    require(!noMatchStatistics.finalResult.isCompleted, s"NoMatchStatistics should not be completed, ${noMatchStatistics.finalResult}")
-    require(!delays.finalResult.isCompleted, s"Delays should not be completed; ${delays.finalResult}")
+  def getStatistics(): Future[Seq[LaunchStats.QueuedInstanceInfoWithStatistics]] =
+    async {
 
-    val launchingInstancesByRunSpec = await(launchingInstances.readCurrentResult()).values.groupBy { _.instance.runSpecId }
-    val currentDelays = await(delays.readCurrentResult())
-    val lastNoMatches = await(noMatchStatistics.readCurrentResult())
-    val currentRunSpecStatistics = await(runSpecStatistics.readCurrentResult())
+      /**
+        * Quick sanity check. These streams should run for the duration of Marathon. In the off chance they aren't, make
+        * it obvious.
+        */
+      require(
+        !launchingInstances.finalResult.isCompleted,
+        s"Launching Instances should not be completed; ${launchingInstances.finalResult}"
+      )
+      require(!runSpecStatistics.finalResult.isCompleted, s"RunSpecStatistics should not be completed; ${runSpecStatistics.finalResult}")
+      require(!noMatchStatistics.finalResult.isCompleted, s"NoMatchStatistics should not be completed, ${noMatchStatistics.finalResult}")
+      require(!delays.finalResult.isCompleted, s"Delays should not be completed; ${delays.finalResult}")
 
-    val results = for {
-      (path, allInstances) <- launchingInstancesByRunSpec
-      (role, instances) <- allInstances.groupBy(_.instance.role)
-      runSpec <- getRunSpec(path)
-    } yield {
-      val lastOffers: Seq[OfferMatchResult.NoMatch] = lastNoMatches.get(path).map(_.values.toVector).getOrElse(Nil)
-      val statistics = currentRunSpecStatistics.getOrElse(path, RunSpecOfferStatistics.empty)
-      val startedAt = if (instances.nonEmpty) instances.iterator.map(_.since).min else Timestamp.now()
+      val launchingInstancesByRunSpec = await(launchingInstances.readCurrentResult()).values.groupBy { _.instance.runSpecId }
+      val currentDelays = await(delays.readCurrentResult())
+      val lastNoMatches = await(noMatchStatistics.readCurrentResult())
+      val currentRunSpecStatistics = await(runSpecStatistics.readCurrentResult())
 
-      LaunchStats.QueuedInstanceInfoWithStatistics(
-        runSpec = runSpec,
-        role = role,
-        inProgress = true,
-        finalInstanceCount = runSpec.instances,
-        instancesLeftToLaunch = instances.size,
-        backOffUntil = currentDelays.get(runSpec.configRef),
-        startedAt = startedAt,
-        rejectSummaryLastOffers = lastOfferSummary(lastOffers),
-        rejectSummaryLaunchAttempt = statistics.rejectSummary,
-        processedOffersCount = statistics.processedOfferCount,
-        unusedOffersCount = statistics.unusedOfferCount,
-        lastMatch = statistics.lastMatch,
-        lastNoMatch = statistics.lastNoMatch,
-        lastNoMatches = lastOffers)
+      val results = for {
+        (path, allInstances) <- launchingInstancesByRunSpec
+        (role, instances) <- allInstances.groupBy(_.instance.role)
+        runSpec <- getRunSpec(path)
+      } yield {
+        val lastOffers: Seq[OfferMatchResult.NoMatch] = lastNoMatches.get(path).map(_.values.toVector).getOrElse(Nil)
+        val statistics = currentRunSpecStatistics.getOrElse(path, RunSpecOfferStatistics.empty)
+        val startedAt = if (instances.nonEmpty) instances.iterator.map(_.since).min else Timestamp.now()
+
+        LaunchStats.QueuedInstanceInfoWithStatistics(
+          runSpec = runSpec,
+          role = role,
+          inProgress = true,
+          finalInstanceCount = runSpec.instances,
+          instancesLeftToLaunch = instances.size,
+          backOffUntil = currentDelays.get(runSpec.configRef),
+          startedAt = startedAt,
+          rejectSummaryLastOffers = lastOfferSummary(lastOffers),
+          rejectSummaryLaunchAttempt = statistics.rejectSummary,
+          processedOffersCount = statistics.processedOfferCount,
+          unusedOffersCount = statistics.unusedOfferCount,
+          lastMatch = statistics.lastMatch,
+          lastNoMatch = statistics.lastNoMatch,
+          lastNoMatches = lastOffers
+        )
+      }
+      results.toList
     }
-    results.toList
-  }
 
   private def lastOfferSummary(lastOffers: Seq[OfferMatchResult.NoMatch]): Map[NoOfferMatchReason, Int] = {
-    lastOffers.withFilter(_.reasons.nonEmpty)
+    lastOffers
+      .withFilter(_.reasons.nonEmpty)
       .map(_.reasons.minBy(OfferMatchStatistics.reasonFunnelPriority))
-      .groupBy(identity).map { case (id, reasons) => id -> reasons.size }
+      .groupBy(identity)
+      .map { case (id, reasons) => id -> reasons.size }
   }
 }
 
@@ -99,14 +108,15 @@ object LaunchStats extends StrictLogging {
     * Current known list of active instances
     */
 
-  private[launchqueue] val launchingInstancesFold: Sink[(Timestamp, InstanceChange), LiveFold.Folder[Map[Instance.Id, LaunchStats.LaunchingInstance]]] =
+  private[launchqueue] val launchingInstancesFold
+      : Sink[(Timestamp, InstanceChange), LiveFold.Folder[Map[Instance.Id, LaunchStats.LaunchingInstance]]] =
     EnrichedSink.liveFold(Map.empty[Instance.Id, LaunchingInstance])({
       case (instances, (timestamp, change)) =>
         change match {
           case InstanceUpdated(newInstance, _, _) if newInstance.isScheduled || newInstance.isProvisioned =>
-            val newRecord = instances.get(change.id)
-              .map { launchingInstance => launchingInstance.copy(instance = newInstance) }
-              .getOrElse { LaunchingInstance(timestamp, newInstance) }
+            val newRecord = instances.get(change.id).map { launchingInstance => launchingInstance.copy(instance = newInstance) }.getOrElse {
+              LaunchingInstance(timestamp, newInstance)
+            }
             instances + (change.id -> newRecord)
           case _ =>
             instances - change.id
@@ -126,21 +136,19 @@ object LaunchStats extends StrictLogging {
     * @return LaunchStats instance used to query the current aggregate match state
     */
   def apply(
-    runSpecProvider: GroupManager.RunSpecProvider,
-    clock: Clock,
-    instanceUpdates: Source[(InstancesSnapshot, Source[InstanceChange, NotUsed]), NotUsed],
-    delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
-    offerMatchUpdates: Source[OfferMatchStatistics.OfferMatchUpdate, NotUsed]
+      runSpecProvider: GroupManager.RunSpecProvider,
+      clock: Clock,
+      instanceUpdates: Source[(InstancesSnapshot, Source[InstanceChange, NotUsed]), NotUsed],
+      delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
+      offerMatchUpdates: Source[OfferMatchStatistics.OfferMatchUpdate, NotUsed]
   )(implicit mat: Materializer, ec: ExecutionContext): LaunchStats = {
 
     val delays = delayUpdates.runWith(delayFold)
 
-    val launchingInstances = instanceUpdates.
-      flatMapConcat {
-        case (snapshot, updates) =>
-          Source(snapshot.instances.map { i => InstanceUpdated(i, None, Nil) }).concat(updates)
-      }.
-      map { i => (clock.now(), i) }.runWith(launchingInstancesFold)
+    val launchingInstances = instanceUpdates.flatMapConcat {
+      case (snapshot, updates) =>
+        Source(snapshot.instances.map { i => InstanceUpdated(i, None, Nil) }).concat(updates)
+    }.map { i => (clock.now(), i) }.runWith(launchingInstancesFold)
 
     val (runSpecStatistics, noMatchStatistics) =
       offerMatchUpdates

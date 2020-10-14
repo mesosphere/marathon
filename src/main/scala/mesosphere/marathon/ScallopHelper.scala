@@ -3,6 +3,7 @@ package mesosphere.marathon
 import org.rogach.scallop.{ScallopConf, ScallopOption}
 
 object ScallopHelper {
+
   /**
     * Return all defined options for a Scallop config; uses Java reflection to search for and invoke the
     * appropriate methods

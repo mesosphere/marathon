@@ -15,7 +15,30 @@ import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.core.plugin.PluginManager
 import mesosphere.marathon.core.pod.ContainerNetwork
 import mesosphere.marathon.plugin.auth.{Authenticator, Authorizer}
-import mesosphere.marathon.raml.{App, AppPersistentVolume, AppSecretVolume, AppUpdate, ContainerPortMapping, DockerContainer, DockerNetwork, DockerPullConfig, EngineType, EnvVarSecret, EnvVarValueOrSecret, IpAddress, IpDiscovery, IpDiscoveryPort, LinuxInfo, Network, NetworkMode, Raml, ReadMode, Seccomp, SecretDef, Container => RamlContainer}
+import mesosphere.marathon.raml.{
+  App,
+  AppPersistentVolume,
+  AppSecretVolume,
+  AppUpdate,
+  ContainerPortMapping,
+  DockerContainer,
+  DockerNetwork,
+  DockerPullConfig,
+  EngineType,
+  EnvVarSecret,
+  EnvVarValueOrSecret,
+  IpAddress,
+  IpDiscovery,
+  IpDiscoveryPort,
+  LinuxInfo,
+  Network,
+  NetworkMode,
+  Raml,
+  ReadMode,
+  Seccomp,
+  SecretDef,
+  Container => RamlContainer
+}
 import mesosphere.marathon.state.PathId._
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
@@ -38,7 +61,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
       appInfoService: AppInfoService = mock[AppInfoService],
       configArgs: Seq[String] = Seq("--enable_features", "external_volumes"),
-      groupManager: GroupManager = mock[GroupManager]) {
+      groupManager: GroupManager = mock[GroupManager]
+  ) {
     val config: AllConf = AllConf.withTestConfig(configArgs: _*)
     val appsResource: AppsResource = new AppsResource(
       clock,
@@ -55,7 +79,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     implicit val authorizer: Authorizer = auth.auth
 
     val normalizationConfig = AppNormalization.Configuration(config, config.mesosRole())
-    implicit lazy val appDefinitionValidator = AppDefinition.validAppDefinition(config.availableFeatures, ValidationHelper.roleSettings())(PluginManager.None)
+    implicit lazy val appDefinitionValidator =
+      AppDefinition.validAppDefinition(config.availableFeatures, ValidationHelper.roleSettings())(PluginManager.None)
 
     implicit val validateAndNormalizeApp: Normalization[raml.App] =
       AppHelpers.appNormalization(normalizationConfig, Set(ResourceRole.Unreserved))(AppNormalization.withCanonizedIds())
@@ -68,10 +93,20 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       AppNormalization(normalizationConfig).normalized(migrated)
     }
 
-    def prepareApp(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
+    def prepareApp(
+        app: App,
+        groupManager: GroupManager,
+        validate: Boolean = true,
+        enabledFeatures: Set[String] = Set.empty
+    ): (Array[Byte], DeploymentPlan) = {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
-      val rootGroup = createRootGroup(Map(appDef.id -> appDef), validate = validate, enabledFeatures = enabledFeatures, newGroupEnforceRole = config.newGroupEnforceRole())
+      val rootGroup = createRootGroup(
+        Map(appDef.id -> appDef),
+        validate = validate,
+        enabledFeatures = enabledFeatures,
+        newGroupEnforceRole = config.newGroupEnforceRole()
+      )
       val plan = DeploymentPlan(rootGroup, rootGroup)
       val body = Json.stringify(Json.toJson(normed)).getBytes("UTF-8")
       groupManager.updateApp(any, any, any, any, any) returns Future.successful(plan)
@@ -80,7 +115,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       (body, plan)
     }
 
-    def prepareAppInGroup(app: App, groupManager: GroupManager, validate: Boolean = true, enabledFeatures: Set[String] = Set.empty): (Array[Byte], DeploymentPlan) = {
+    def prepareAppInGroup(
+        app: App,
+        groupManager: GroupManager,
+        validate: Boolean = true,
+        enabledFeatures: Set[String] = Set.empty
+    ): (Array[Byte], DeploymentPlan) = {
       val normed = normalize(app)
       val appDef = Raml.fromRaml(normed)
 
@@ -130,14 +170,21 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       groupManager.rootGroup() returns rootGroup
     }
 
-    def createAppWithVolumes(`type`: String, volumes: String, groupManager: GroupManager, appsResource: AppsResource, auth: TestAuthFixture): Response = {
-      val app = App(id = "/app", cmd = Some(
-        "foo"))
+    def createAppWithVolumes(
+        `type`: String,
+        volumes: String,
+        groupManager: GroupManager,
+        appsResource: AppsResource,
+        auth: TestAuthFixture
+    ): Response = {
+      val app = App(id = "/app", cmd = Some("foo"))
 
       prepareApp(app, groupManager)
 
-      val docker = if (`type` == "DOCKER")
-        """"docker": {"image": "fop"},""" else ""
+      val docker =
+        if (`type` == "DOCKER")
+          """"docker": {"image": "fop"},"""
+        else ""
       val body =
         s"""
            |{
@@ -167,11 +214,13 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       auth: TestAuthFixture = new TestAuthFixture,
       appTaskResource: AppTasksResource = mock[AppTasksResource],
       appInfoService: AppInfoService = mock[AppInfoService],
-      configArgs: Seq[String] = Seq("--enable_features", "external_volumes")) {
+      configArgs: Seq[String] = Seq("--enable_features", "external_volumes")
+  ) {
 
     val config: AllConf = AllConf.withTestConfig(configArgs: _*)
     val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(
-      initialRoot = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.fromConfig(config.newGroupEnforceRole())))
+      initialRoot = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.fromConfig(config.newGroupEnforceRole()))
+    )
     val groupManager: GroupManager = groupManagerFixture.groupManager
     val groupRepository: GroupRepository = groupManagerFixture.groupRepository
     val service = groupManagerFixture.service
@@ -208,9 +257,13 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         And("the JSON is as expected, including a newly generated version")
         val expected = raml.AppInfo.fromParent(
           // TODO: The raml conversion sets the upgrade startegy to 1, 1. This should probably happen during the normalization
-          parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some("*"), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+          parent = normalize(app)
+            .copy(version = Some(clock.now().toOffsetDateTime), role = Some("*"), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
           tasks = None,
-          tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+          tasksStaged = Some(0),
+          tasksRunning = Some(0),
+          tasksUnhealthy = Some(0),
+          tasksHealthy = Some(0),
           deployments = Some(Seq(raml.Identifiable(plan.id)))
         )
         JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
@@ -225,16 +278,15 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
     }
 
-    "Create a new app with w/ Mesos containerizer and a Docker config.json" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Create a new app with w/ Mesos containerizer and a Docker config.json" in new Fixture(
+      configArgs = Seq("--enable_features", "secrets")
+    ) {
       Given("An app with a Docker config.json")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Some(DockerContainer(
-          image = "private/image",
-          pullConfig = Some(DockerPullConfig("pullConfigSecret")))))
-      val app = App(
-        id = "/app", cmd = Some("cmd"), container = Some(container),
-        secrets = Map("pullConfigSecret" -> SecretDef("/config")))
+        docker = Some(DockerContainer(image = "private/image", pullConfig = Some(DockerPullConfig("pullConfigSecret"))))
+      )
+      val app = App(id = "/app", cmd = Some("cmd"), container = Some(container), secrets = Map("pullConfigSecret" -> SecretDef("/config")))
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -248,16 +300,15 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       assert(response.getStatus == 201, s"body=${new String(body)}, response=${response.getEntity.toString}")
     }
 
-    "Creating a new app with w/ Docker containerizer and a Docker config.json should fail" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Creating a new app with w/ Docker containerizer and a Docker config.json should fail" in new Fixture(
+      configArgs = Seq("--enable_features", "secrets")
+    ) {
       Given("An app with a Docker config.json")
       val container = RamlContainer(
         `type` = EngineType.Docker,
-        docker = Some(DockerContainer(
-          image = "private/image",
-          pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
-      val app = App(
-        id = "/app", cmd = Some("cmd"), container = Some(container),
-        secrets = Map("pullConfigSecret" -> SecretDef("/config")))
+        docker = Some(DockerContainer(image = "private/image", pullConfig = Option(DockerPullConfig("pullConfigSecret"))))
+      )
+      val app = App(id = "/app", cmd = Some("cmd"), container = Some(container), secrets = Map("pullConfigSecret" -> SecretDef("/config")))
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -272,15 +323,15 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getEntity.toString should include("pullConfig is not supported with Docker containerizer")
     }
 
-    "Creating a new app with non-existing Docker config.json secret should fail" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
+    "Creating a new app with non-existing Docker config.json secret should fail" in new Fixture(
+      configArgs = Seq("--enable_features", "secrets")
+    ) {
       Given("An app with a Docker config.json")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Some(DockerContainer(
-          image = "private/image",
-          pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
-      val app = App(
-        id = "/app", cmd = Some("cmd"), container = Some(container))
+        docker = Some(DockerContainer(image = "private/image", pullConfig = Option(DockerPullConfig("pullConfigSecret"))))
+      )
+      val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -299,9 +350,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("An app with a Docker config.json")
       val container = RamlContainer(
         `type` = EngineType.Mesos,
-        docker = Some(DockerContainer(
-          image = "private/image",
-          pullConfig = Option(DockerPullConfig("pullConfigSecret")))))
+        docker = Some(DockerContainer(image = "private/image", pullConfig = Option(DockerPullConfig("pullConfigSecret"))))
+      )
       val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
       val (body, _) = prepareApp(app, groupManager)
 
@@ -313,7 +363,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Try(prepareApp(app, groupManager))
 
       Then("It is successful")
-      response.getStatus should be (422) withClue s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}"
+      response.getStatus should be(422) withClue s"body=${new String(body)}, response=${response.getEntity.asInstanceOf[String]}"
 
       val responseStr = response.getEntity.toString
       responseStr should include("/container/docker/pullConfig")
@@ -326,12 +376,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val container = RamlContainer(
         `type` = EngineType.Mesos,
         docker = Some(DockerContainer(image = "private/image")),
-        linuxInfo = Some(LinuxInfo(
-          seccomp = Some(Seccomp(
-            profileName = Some("foo"),
-            unconfined = false
-          ))
-        ))
+        linuxInfo = Some(
+          LinuxInfo(
+            seccomp = Some(
+              Seccomp(
+                profileName = Some("foo"),
+                unconfined = false
+              )
+            )
+          )
+        )
       )
 
       val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
@@ -351,11 +405,15 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val container = RamlContainer(
         `type` = EngineType.Mesos,
         docker = Some(DockerContainer(image = "private/image")),
-        linuxInfo = Some(LinuxInfo(
-          seccomp = Some(Seccomp(
-            unconfined = true
-          ))
-        ))
+        linuxInfo = Some(
+          LinuxInfo(
+            seccomp = Some(
+              Seccomp(
+                unconfined = true
+              )
+            )
+          )
+        )
       )
 
       val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
@@ -375,12 +433,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val container = RamlContainer(
         `type` = EngineType.Mesos,
         docker = Some(DockerContainer(image = "private/image")),
-        linuxInfo = Some(LinuxInfo(
-          seccomp = Some(Seccomp(
-            profileName = Some("foo"),
-            unconfined = true
-          ))
-        ))
+        linuxInfo = Some(
+          LinuxInfo(
+            seccomp = Some(
+              Seccomp(
+                profileName = Some("foo"),
+                unconfined = true
+              )
+            )
+          )
+        )
       )
 
       val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
@@ -403,11 +465,15 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val container = RamlContainer(
         `type` = EngineType.Mesos,
         docker = Some(DockerContainer(image = "private/image")),
-        linuxInfo = Some(LinuxInfo(
-          seccomp = Some(Seccomp(
-            unconfined = false
-          ))
-        ))
+        linuxInfo = Some(
+          LinuxInfo(
+            seccomp = Some(
+              Seccomp(
+                unconfined = false
+              )
+            )
+          )
+        )
       )
 
       val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
@@ -430,12 +496,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val container = RamlContainer(
         `type` = EngineType.Mesos,
         docker = Some(DockerContainer(image = "private/image")),
-        linuxInfo = Some(LinuxInfo(
-          ipcInfo = Some(raml.IPCInfo(
-            mode = raml.IPCMode.Private,
-            shmSize = Some(16)
-          ))
-        ))
+        linuxInfo = Some(
+          LinuxInfo(
+            ipcInfo = Some(
+              raml.IPCInfo(
+                mode = raml.IPCMode.Private,
+                shmSize = Some(16)
+              )
+            )
+          )
+        )
       )
 
       val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
@@ -455,11 +525,15 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val container = RamlContainer(
         `type` = EngineType.Mesos,
         docker = Some(DockerContainer(image = "private/image")),
-        linuxInfo = Some(LinuxInfo(
-          ipcInfo = Some(raml.IPCInfo(
-            mode = raml.IPCMode.Private
-          ))
-        ))
+        linuxInfo = Some(
+          LinuxInfo(
+            ipcInfo = Some(
+              raml.IPCInfo(
+                mode = raml.IPCMode.Private
+              )
+            )
+          )
+        )
       )
 
       val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
@@ -479,12 +553,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val container = RamlContainer(
         `type` = EngineType.Mesos,
         docker = Some(DockerContainer(image = "private/image")),
-        linuxInfo = Some(LinuxInfo(
-          ipcInfo = Some(raml.IPCInfo(
-            mode = raml.IPCMode.ShareParent,
-            shmSize = Some(16)
-          ))
-        ))
+        linuxInfo = Some(
+          LinuxInfo(
+            ipcInfo = Some(
+              raml.IPCInfo(
+                mode = raml.IPCMode.ShareParent,
+                shmSize = Some(16)
+              )
+            )
+          )
+        )
       )
 
       val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
@@ -507,11 +585,15 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val container = RamlContainer(
         `type` = EngineType.Mesos,
         docker = Some(DockerContainer(image = "private/image")),
-        linuxInfo = Some(LinuxInfo(
-          ipcInfo = Some(raml.IPCInfo(
-            mode = raml.IPCMode.ShareParent
-          ))
-        ))
+        linuxInfo = Some(
+          LinuxInfo(
+            ipcInfo = Some(
+              raml.IPCInfo(
+                mode = raml.IPCMode.ShareParent
+              )
+            )
+          )
+        )
       )
 
       val app = App(id = "/app", cmd = Some("cmd"), container = Some(container))
@@ -598,9 +680,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
-        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        parent = normalize(app).copy(
+          version = Some(clock.now().toOffsetDateTime),
+          role = Some(ResourceRole.Unreserved),
+          upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))
+        ),
         tasks = None,
-        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        tasksStaged = Some(0),
+        tasksRunning = Some(0),
+        tasksUnhealthy = Some(0),
+        tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
@@ -628,9 +717,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
-        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        parent = normalize(app).copy(
+          version = Some(clock.now().toOffsetDateTime),
+          role = Some(ResourceRole.Unreserved),
+          upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))
+        ),
         tasks = None,
-        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        tasksStaged = Some(0),
+        tasksRunning = Some(0),
+        tasksUnhealthy = Some(0),
+        tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
@@ -659,9 +755,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     }
 
     "Create a new app with IP/CT on virtual network foo, then update it to nothing" in new FixtureWithRealGroupManager(
-      initialRoot = createRootGroup(apps = Map(
-        "/app".toAbsolutePath -> AppDefinition("/app".toAbsolutePath, cmd = Some("cmd"), networks = Seq(ContainerNetwork("foo")), role = "*")
-      ))
+      initialRoot = createRootGroup(apps =
+        Map(
+          "/app".toAbsolutePath -> AppDefinition(
+            "/app".toAbsolutePath,
+            cmd = Some("cmd"),
+            networks = Seq(ContainerNetwork("foo")),
+            role = "*"
+          )
+        )
+      )
     ) {
       Given("An app and group")
       val updatedApp = App(
@@ -703,21 +806,27 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
-        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        parent = normalize(app).copy(
+          version = Some(clock.now().toOffsetDateTime),
+          role = Some(ResourceRole.Unreserved),
+          upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))
+        ),
         tasks = None,
-        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        tasksStaged = Some(0),
+        tasksRunning = Some(0),
+        tasksUnhealthy = Some(0),
+        tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
     }
 
-    "Create a new app with IP/CT when default virtual network is bar, Alice did not specify network name" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
+    "Create a new app with IP/CT when default virtual network is bar, Alice did not specify network name" in new Fixture(
+      configArgs = Seq("--default_network_name", "bar")
+    ) {
       Given("An app and group")
 
-      val app = App(
-        id = "/app",
-        cmd = Some("cmd"),
-        networks = Seq(Network(mode = NetworkMode.Container)))
+      val app = App(id = "/app", cmd = Some("cmd"), networks = Seq(Network(mode = NetworkMode.Container)))
       val (body, plan) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -739,13 +848,18 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))
         ),
         tasks = None,
-        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        tasksStaged = Some(0),
+        tasksRunning = Some(0),
+        tasksUnhealthy = Some(0),
+        tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
     }
 
-    "Create a new app with IP/CT when default virtual network is bar, but Alice specified foo" in new Fixture(configArgs = Seq("--default_network_name", "bar")) {
+    "Create a new app with IP/CT when default virtual network is bar, but Alice specified foo" in new Fixture(
+      configArgs = Seq("--default_network_name", "bar")
+    ) {
       Given("An app and group")
 
       val app = App(
@@ -767,9 +881,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
-        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        parent = normalize(app).copy(
+          version = Some(clock.now().toOffsetDateTime),
+          role = Some(ResourceRole.Unreserved),
+          upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))
+        ),
         tasks = None,
-        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        tasksStaged = Some(0),
+        tasksRunning = Some(0),
+        tasksUnhealthy = Some(0),
+        tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
@@ -782,15 +903,18 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         id = "/app",
         cmd = Some("cmd"),
         ipAddress = Some(IpAddress(networkName = Some("foo"))),
-        container = Some(raml.Container(
-          `type` = EngineType.Docker,
-          docker = Some(DockerContainer(
-            portMappings = Some(Seq(
-              ContainerPortMapping(containerPort = 0))),
-            image = "jdef/helpme",
-            network = Some(DockerNetwork.User)
-          ))
-        ))
+        container = Some(
+          raml.Container(
+            `type` = EngineType.Docker,
+            docker = Some(
+              DockerContainer(
+                portMappings = Some(Seq(ContainerPortMapping(containerPort = 0))),
+                image = "jdef/helpme",
+                network = Some(DockerNetwork.User)
+              )
+            )
+          )
+        )
       )
       val (body, plan) = prepareApp(app, groupManager)
 
@@ -806,9 +930,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
-        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        parent = normalize(app).copy(
+          version = Some(clock.now().toOffsetDateTime),
+          role = Some(ResourceRole.Unreserved),
+          upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))
+        ),
         tasks = None,
-        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        tasksStaged = Some(0),
+        tasksRunning = Some(0),
+        tasksUnhealthy = Some(0),
+        tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
@@ -819,9 +950,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val container = DockerContainer(
         network = Some(DockerNetwork.Bridge),
         image = "jdef/helpme",
-        portMappings = Some(Seq(
-          ContainerPortMapping(containerPort = 0)
-        ))
+        portMappings = Some(
+          Seq(
+            ContainerPortMapping(containerPort = 0)
+          )
+        )
       )
 
       val app = App(
@@ -852,16 +985,24 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("the JSON is as expected, including a newly generated version")
       val containerDef = appDef.container
       val expected = raml.AppInfo.fromParent(
-        parent = Raml.toRaml(appDef.copy(
-          versionInfo = VersionInfo.OnlyVersion(clock.now()), role = ResourceRole.Unreserved,
-          container = containerDef.map(_.copyWith(
-            portMappings = Seq(
-              Container.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
+        parent = Raml.toRaml(
+          appDef.copy(
+            versionInfo = VersionInfo.OnlyVersion(clock.now()),
+            role = ResourceRole.Unreserved,
+            container = containerDef.map(
+              _.copyWith(
+                portMappings = Seq(
+                  Container.PortMapping(containerPort = 0, hostPort = Some(0), protocol = "tcp")
+                )
+              )
             )
-          ))
-        )),
+          )
+        ),
         tasks = None,
-        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        tasksStaged = Some(0),
+        tasksRunning = Some(0),
+        tasksUnhealthy = Some(0),
+        tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
@@ -911,19 +1052,29 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val app = App(
         id = "/app",
         cmd = Some("cmd"),
-        ipAddress = Some(IpAddress(
-          networkName = Some("foo"),
-          discovery = Some(IpDiscovery(ports = Seq(
-            IpDiscoveryPort(number = 1, name = "bob")
-          )))
-        )),
-        container = Some(raml.Container(
-          `type` = EngineType.Docker,
-          docker = Some(DockerContainer(
-            network = Some(DockerNetwork.Host),
-            image = "jdef/helpme"
-          ))
-        )),
+        ipAddress = Some(
+          IpAddress(
+            networkName = Some("foo"),
+            discovery = Some(
+              IpDiscovery(ports =
+                Seq(
+                  IpDiscoveryPort(number = 1, name = "bob")
+                )
+              )
+            )
+          )
+        ),
+        container = Some(
+          raml.Container(
+            `type` = EngineType.Docker,
+            docker = Some(
+              DockerContainer(
+                network = Some(DockerNetwork.Host),
+                image = "jdef/helpme"
+              )
+            )
+          )
+        ),
         role = Some("someRole")
       )
       // mixing ipAddress with Docker containers is not allowed by validation; API migration fails it too
@@ -934,9 +1085,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("The secrets feature is enabled")
 
       And("An app with a secret and an envvar secret-ref")
-      val app = App(id = "/app", cmd = Some("cmd"),
+      val app = App(
+        id = "/app",
+        cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo"))
+      )
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -951,9 +1105,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
-        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        parent = normalize(app).copy(
+          version = Some(clock.now().toOffsetDateTime),
+          role = Some(ResourceRole.Unreserved),
+          upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))
+        ),
         tasks = None,
-        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        tasksStaged = Some(0),
+        tasksRunning = Some(0),
+        tasksUnhealthy = Some(0),
+        tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
@@ -963,8 +1124,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("The secrets feature is enabled")
 
       And("An app with an envvar secret-ref that does not point to an undefined secret")
-      val app = App(id = "/app", cmd = Some("cmd"),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
+      val app = App(id = "/app", cmd = Some("cmd"), env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
       When("The create request is made")
@@ -983,9 +1143,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("The secrets feature is enabled")
 
       And("An app with a secret and an envvar secret-ref")
-      val app = App(id = "/app", cmd = Some("cmd"),
+      val app = App(
+        id = "/app",
+        cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo")))))
+        container = Some(raml.Container(`type` = EngineType.Mesos, volumes = Seq(AppSecretVolume("/path", "foo"))))
+      )
       val (body, plan) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -1000,9 +1163,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
-        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        parent = normalize(app).copy(
+          version = Some(clock.now().toOffsetDateTime),
+          role = Some(ResourceRole.Unreserved),
+          upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))
+        ),
         tasks = None,
-        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        tasksStaged = Some(0),
+        tasksRunning = Some(0),
+        tasksUnhealthy = Some(0),
+        tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
@@ -1014,9 +1184,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       config.isFeatureSet(Features.SECRETS) should be(false)
 
       And("An app with an envvar secret-ref that does not point to an undefined secret")
-      val app = App(id = "/app", cmd = Some("cmd"),
+      val app = App(
+        id = "/app",
+        cmd = Some("cmd"),
         secrets = Map[String, SecretDef]("foo" -> SecretDef("/bar")),
-        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo")))
+        env = Map[String, EnvVarValueOrSecret]("NAMED_FOO" -> raml.EnvVarSecret("foo"))
+      )
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -1038,10 +1211,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       And("An app with an envvar secret-def")
       val secretVolume = AppSecretVolume("/path", "bar")
       val containers = raml.Container(`type` = EngineType.Mesos, volumes = Seq(secretVolume))
-      val app = App(id = "/app", cmd = Some("cmd"),
-        container = Some(containers),
-        secrets = Map("bar" -> SecretDef("foo"))
-      )
+      val app = App(id = "/app", cmd = Some("cmd"), container = Some(containers), secrets = Map("bar" -> SecretDef("foo")))
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -1059,8 +1229,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("An app with negative resources")
 
       {
-        val app = App(id = "/app", cmd = Some("cmd"),
-          mem = -128)
+        val app = App(id = "/app", cmd = Some("cmd"), mem = -128)
         val (body, plan) = prepareApp(app, groupManager, validate = false)
 
         Then("A constraint violation exception is thrown")
@@ -1071,8 +1240,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       {
-        val app = App(id = "/app", cmd = Some("cmd"),
-          cpus = -1)
+        val app = App(id = "/app", cmd = Some("cmd"), cpus = -1)
         val (body, _) = prepareApp(app, groupManager, validate = false)
 
         val response = asyncRequest { r =>
@@ -1082,8 +1250,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
 
       {
-        val app = App(id = "/app", cmd = Some("cmd"),
-          instances = -1)
+        val app = App(id = "/app", cmd = Some("cmd"), instances = -1)
         val (body, _) = prepareApp(app, groupManager, validate = false)
 
         val response = asyncRequest { r =>
@@ -1116,9 +1283,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       And("the JSON is as expected, including a newly generated version")
       val expected = raml.AppInfo.fromParent(
-        parent = normalize(app).copy(version = Some(clock.now().toOffsetDateTime), role = Some(ResourceRole.Unreserved), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+        parent = normalize(app).copy(
+          version = Some(clock.now().toOffsetDateTime),
+          role = Some(ResourceRole.Unreserved),
+          upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))
+        ),
         tasks = None,
-        tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+        tasksStaged = Some(0),
+        tasksRunning = Some(0),
+        tasksUnhealthy = Some(0),
+        tasksHealthy = Some(0),
         deployments = Some(Seq(raml.Identifiable(plan.id)))
       )
       JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
@@ -1202,8 +1376,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |  "container": {
           |    "type": "DOCKER"
           |  }
-          |}""".
-          stripMargin.getBytes("UTF-8")
+          |}""".stripMargin.getBytes("UTF-8")
 
       Then("A validation exception is thrown")
       val response = asyncRequest { r =>
@@ -1226,7 +1399,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |      },
           |      "mode": "RW"
           |    }]
-        """.stripMargin, groupManager, appsResource, auth)
+        """.stripMargin,
+        groupManager,
+        appsResource,
+        auth
+      )
 
       Then("The return code indicates that the hostPath of volumes[0] is missing")
       // although the wrong field should fail
@@ -1249,7 +1426,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |      },
           |      "mode": "RW"
           |    }]
-        """.stripMargin, groupManager, appsResource, auth
+        """.stripMargin,
+        groupManager,
+        appsResource,
+        auth
       )
 
       Then("The return code indicates that the hostPath of volumes[0] is missing") // although the wrong field should fail
@@ -1271,7 +1451,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |      },
           |      "mode": "RW"
           |    }]
-        """.stripMargin, groupManager, appsResource, auth
+        """.stripMargin,
+          groupManager,
+          appsResource,
+          auth
         )
 
       Then("The return code indicates create failure")
@@ -1296,7 +1479,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |      },
           |      "mode": "RW"
           |    }]
-        """.stripMargin, groupManager, appsResource, auth
+        """.stripMargin,
+        groupManager,
+        appsResource,
+        auth
       )
 
       Then("The return code indicates create failure")
@@ -1319,7 +1505,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |      },
           |      "mode": "RW"
           |    }]
-        """.stripMargin, groupManager, appsResource, auth
+        """.stripMargin,
+        groupManager,
+        appsResource,
+        auth
       )
 
       Then("The return code indicates create failure")
@@ -1342,7 +1531,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |      },
           |      "mode": "RW"
           |    }]
-        """.stripMargin, groupManager, appsResource, auth
+        """.stripMargin,
+        groupManager,
+        appsResource,
+        auth
       )
 
       Then("The return code indicates create failure")
@@ -1365,7 +1557,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |      },
           |      "mode": "RW"
           |    }]
-        """.stripMargin, groupManager, appsResource, auth
+        """.stripMargin,
+        groupManager,
+        appsResource,
+        auth
       )
 
       Then("The return code indicates create success")
@@ -1388,7 +1583,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |      },
           |      "mode": "RW"
           |    }]
-        """.stripMargin, groupManager, appsResource, auth
+        """.stripMargin,
+        groupManager,
+        appsResource,
+        auth
       )
 
       Then("The return code indicates validation error")
@@ -1410,7 +1608,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |      },
           |      "mode": "RW"
           |    }]
-        """.stripMargin, groupManager, appsResource, auth
+        """.stripMargin,
+        groupManager,
+        appsResource,
+        auth
       )
 
       Then("The return code indicates create failed")
@@ -1431,7 +1632,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |      },
           |      "mode": "RW"
           |    }]
-        """.stripMargin, groupManager, appsResource, auth
+        """.stripMargin,
+        groupManager,
+        appsResource,
+        auth
       )
 
       Then("The return code indicates create success")
@@ -1444,7 +1648,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val response =
         createAppWithVolumes(
           "DOCKER",
-
           """
             |    "volumes": [{
             |      "containerPath": "/var",
@@ -1455,7 +1658,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
             |      },
             |      "mode": "RW"
             |    }]
-          """.stripMargin, groupManager, appsResource, auth
+          """.stripMargin,
+          groupManager,
+          appsResource,
+          auth
         )
 
       Then("The return code indicates create failure")
@@ -1481,7 +1687,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |      },
           |      "mode": "RW"
           |    }]
-        """.stripMargin, groupManager, appsResource, auth
+        """.stripMargin,
+        groupManager,
+        appsResource,
+        auth
       )
 
       withClue(response.getEntity.toString) {
@@ -1509,7 +1718,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |      "containerPath": "/ert",
           |      "mode": "RW"
           |    }]
-        """.stripMargin, groupManager, appsResource, auth
+        """.stripMargin,
+        groupManager,
+        appsResource,
+        auth
       )
 
       Then("The return code indicates create success")
@@ -1523,7 +1735,6 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("An app with DOCKER containerizer and multiple references to the same named volume")
       val response = createAppWithVolumes(
         "DOCKER",
-
         """
           |    "volumes": [{
           |      "containerPath": "/var",
@@ -1538,7 +1749,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
           |      "containerPath": "/ert",
           |      "mode": "RW"
           |    }]
-        """.stripMargin, groupManager, appsResource, auth
+        """.stripMargin,
+        groupManager,
+        appsResource,
+        auth
       )
 
       Then("The return code indicates create success")
@@ -1575,7 +1789,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     "Replacing an existing docker application, upgrading from host to user networking" in new Fixture {
       Given("a docker app using host networking and non-empty port definitions")
       val app = AppDefinition(
-        id = AbsolutePathId("/app"), container = Some(Container.Docker(image = "foo")), portDefinitions = PortDefinitions(0), role = "*")
+        id = AbsolutePathId("/app"),
+        container = Some(Container.Docker(image = "foo")),
+        portDefinitions = PortDefinitions(0),
+        role = "*"
+      )
 
       When("upgraded to user networking using full-replacement semantics (no port definitions)")
       val body =
@@ -1595,12 +1813,26 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Then("the application is updated")
       implicit val identity = auth.identity
       val app1 = AppHelpers.updateOrCreate(
-        app.id, Some(app), appUpdate, partialUpdate = false, allowCreation = true, now = clock.now(), service = service)
+        app.id,
+        Some(app),
+        appUpdate,
+        partialUpdate = false,
+        allowCreation = true,
+        now = clock.now(),
+        service = service
+      )
 
       And("also works when the update operation uses partial-update semantics, dropping portDefinitions")
       val partUpdate = appsResource.canonicalAppUpdateFromJson(app.id, body, PartialUpdate(app), false)
       val app2 = AppHelpers.updateOrCreate(
-        app.id, Some(app), partUpdate, partialUpdate = true, allowCreation = false, now = clock.now(), service = service)
+        app.id,
+        Some(app),
+        partUpdate,
+        partialUpdate = true,
+        allowCreation = false,
+        now = clock.now(),
+        service = service
+      )
 
       app1 should be(app2)
     }
@@ -1636,8 +1868,14 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       Given("An app and group")
       val app = raml.App(id = "/app", cmd = Some("foo"), role = Some("*"))
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments)
-      val appInfo = raml.AppInfo.fromParent(parent = app, deployments = Some(Seq(raml.Identifiable("deployment-123"))),
-        tasksStaged = Some(1), tasksRunning = Some(2), tasksHealthy = Some(3), tasksUnhealthy = Some(4))
+      val appInfo = raml.AppInfo.fromParent(
+        parent = app,
+        deployments = Some(Seq(raml.Identifiable("deployment-123"))),
+        tasksStaged = Some(1),
+        tasksRunning = Some(2),
+        tasksHealthy = Some(3),
+        tasksUnhealthy = Some(4)
+      )
       appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
 
       When("The the index is fetched without any filters")
@@ -1655,8 +1893,13 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       val expectedEmbeds: Set[Embed] = Set(Embed.Counts, Embed.Deployments, Embed.LastTaskFailure)
       val appInfo = raml.AppInfo.fromParent(
         parent = app,
-        lastTaskFailure = Some(raml.TaskFailure("/", "", "", "TASK_STAGING", "", Timestamp.now().toOffsetDateTime, Timestamp.now().toOffsetDateTime)),
-        tasksStaged = Some(1), tasksRunning = Some(2), tasksHealthy = Some(3), tasksUnhealthy = Some(4))
+        lastTaskFailure =
+          Some(raml.TaskFailure("/", "", "", "TASK_STAGING", "", Timestamp.now().toOffsetDateTime, Timestamp.now().toOffsetDateTime)),
+        tasksStaged = Some(1),
+        tasksRunning = Some(2),
+        tasksHealthy = Some(3),
+        tasksUnhealthy = Some(4)
+      )
       appInfoService.selectAppsBy(any, Matchers.eq(expectedEmbeds)) returns Future.successful(Seq(appInfo))
 
       When("The the index is fetched with last  task failure")
@@ -1671,8 +1914,10 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     }
 
     "Search apps can be filtered" in new Fixture {
-      val app1 = AppDefinition(id = AbsolutePathId("/app/service-a"), cmd = Some("party hard"), labels = Map("a" -> "1", "b" -> "2"), role = "*")
-      val app2 = AppDefinition(id = AbsolutePathId("/app/service-b"), cmd = Some("work hard"), labels = Map("a" -> "1", "b" -> "3"), role = "*")
+      val app1 =
+        AppDefinition(id = AbsolutePathId("/app/service-a"), cmd = Some("party hard"), labels = Map("a" -> "1", "b" -> "2"), role = "*")
+      val app2 =
+        AppDefinition(id = AbsolutePathId("/app/service-b"), cmd = Some("work hard"), labels = Map("a" -> "1", "b" -> "3"), role = "*")
       val apps = Set(app1, app2)
 
       def search(cmd: Option[String], id: Option[String], label: Option[String]): Set[AppDefinition] = {
@@ -1763,7 +2008,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       restart.getStatus should be(auth.NotAuthenticatedStatus)
     }
 
-    "access without authorization is denied" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(apps = Map("/a".toAbsolutePath -> AppDefinition("/a".toAbsolutePath, cmd = Some("sleep"), role = "*")))) {
+    "access without authorization is denied" in new FixtureWithRealGroupManager(
+      initialRoot = createRootGroup(apps = Map("/a".toAbsolutePath -> AppDefinition("/a".toAbsolutePath, cmd = Some("sleep"), role = "*")))
+    ) {
       Given("An unauthorized request")
       auth.authenticated = true
       auth.authorized = false
@@ -1917,7 +2164,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       response.getStatus should be(201)
       val appJson = Json.parse(response.getEntity.toString)
       // TODO: are we violating appInfo here?
-      (appJson \ "fetch" \ 0 \ "uri" get) should be (JsString("file:///bin/bash"))
+      (appJson \ "fetch" \ 0 \ "uri" get) should be(JsString("file:///bin/bash"))
       (appJson \ "fetch" \ 0 \ "extract" get) should be(JsBoolean(false))
       (appJson \ "fetch" \ 0 \ "executable" get) should be(JsBoolean(true))
       (appJson \ "fetch" \ 0 \ "cache" get) should be(JsBoolean(false))
@@ -1926,13 +2173,13 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     "Allow creating app with network name with underscore" in new Fixture {
       Given("An app with a network name with underscore")
-      val container = RamlContainer(
-        `type` = EngineType.Mesos,
-        docker = Some(DockerContainer(
-          image = "image")))
+      val container = RamlContainer(`type` = EngineType.Mesos, docker = Some(DockerContainer(image = "image")))
       val app = App(
-        id = "/app", cmd = Some("cmd"), container = Some(container),
-        networks = Seq(Network(name = Some("name_with_underscore"), mode = NetworkMode.Container)))
+        id = "/app",
+        cmd = Some("cmd"),
+        container = Some(container),
+        networks = Seq(Network(name = Some("name_with_underscore"), mode = NetworkMode.Container))
+      )
       val (body, _) = prepareApp(app, groupManager)
 
       When("The create request is made")
@@ -1947,7 +2194,12 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     "Allow editing a env configuration without sending secrets" in new Fixture(configArgs = Seq("--enable_features", "secrets")) {
       Given("An app with a secret")
-      val app = App(id = "/app", cmd = Some("cmd"), env = Map("DATABASE_PW" -> EnvVarSecret("database")), secrets = Map("database" -> SecretDef("dbpassword")))
+      val app = App(
+        id = "/app",
+        cmd = Some("cmd"),
+        env = Map("DATABASE_PW" -> EnvVarSecret("database")),
+        secrets = Map("database" -> SecretDef("dbpassword"))
+      )
       val (body, _) = prepareApp(app, groupManager, enabledFeatures = Set("secrets"))
 
       When("The create request is made")
@@ -2002,9 +2254,16 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
         And("the JSON is as expected, including a defined role")
         val expected = raml.AppInfo.fromParent(
-          parent = normalize(app).copy(role = Some(ResourceRole.Unreserved), version = Some(clock.now().toOffsetDateTime), upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))),
+          parent = normalize(app).copy(
+            role = Some(ResourceRole.Unreserved),
+            version = Some(clock.now().toOffsetDateTime),
+            upgradeStrategy = Some(raml.UpgradeStrategy(1.0, 1.0))
+          ),
           tasks = None,
-          tasksStaged = Some(0), tasksRunning = Some(0), tasksUnhealthy = Some(0), tasksHealthy = Some(0),
+          tasksStaged = Some(0),
+          tasksRunning = Some(0),
+          tasksUnhealthy = Some(0),
+          tasksHealthy = Some(0),
           deployments = Some(Seq(raml.Identifiable(plan.id)))
         )
         JsonTestHelper.assertThatJsonString(response.getEntity.toString).correspondsToJsonOf(expected)
@@ -2038,7 +2297,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
     }
 
-    "Create a new top-level app with the mesos_role role defined should accept " in new Fixture(configArgs = Seq("--mesos_role", "customMesosRole")) {
+    "Create a new top-level app with the mesos_role role defined should accept " in new Fixture(
+      configArgs = Seq("--mesos_role", "customMesosRole")
+    ) {
       Given("An app with the mesos_role role")
       val app = App(id = "/app", cmd = Some("cmd"), role = Some("customMesosRole"))
       val (body, _) = prepareApp(app, groupManager, validate = false)
@@ -2122,7 +2383,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
     }
 
-    "Create a new app inside a group with the mesos_role role defined should accept " in new Fixture(configArgs = Seq("--mesos_role", "customMesosRole")) {
+    "Create a new app inside a group with the mesos_role role defined should accept " in new Fixture(
+      configArgs = Seq("--mesos_role", "customMesosRole")
+    ) {
       Given("An app with the mesos_role role")
       val app = App(id = "/dev/app", cmd = Some("cmd"), role = Some("customMesosRole"))
       val (body, _) = prepareAppInGroup(app, groupManager, validate = false)
@@ -2196,7 +2459,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       }
     }
 
-    "causes auto-created groups to respect the --new_group_enforce_role=top setting" in new FixtureWithRealGroupManager(configArgs = Seq("--new_group_enforce_role", "top")) {
+    "causes auto-created groups to respect the --new_group_enforce_role=top setting" in new FixtureWithRealGroupManager(
+      configArgs = Seq("--new_group_enforce_role", "top")
+    ) {
       service.deploy(any, any) returns Future.successful(Done)
 
       Given("Empty Marathon with --new_group_enforce_role=top setting")
@@ -2233,7 +2498,8 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
     "Create a new app inside a top-level group with enforceRole disabled but --new_group_enforce_role=top" in new FixtureWithRealGroupManager(
       configArgs = Seq("--new_group_enforce_role", "top"),
-      initialRoot = createRootGroup(groups = Set(createGroup("/dev".toAbsolutePath, enforceRole = false)))) {
+      initialRoot = createRootGroup(groups = Set(createGroup("/dev".toAbsolutePath, enforceRole = false)))
+    ) {
 
       service.deploy(any, any) returns Future.successful(Done)
 
@@ -2264,7 +2530,9 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       app.role shouldBe "*"
     }
 
-    "Create a new app inside a top-level group with enforceRole applies the proper group-role default" in new FixtureWithRealGroupManager(initialRoot = createRootGroup(groups = Set(createGroup("/dev".toAbsolutePath, enforceRole = true)))) {
+    "Create a new app inside a top-level group with enforceRole applies the proper group-role default" in new FixtureWithRealGroupManager(
+      initialRoot = createRootGroup(groups = Set(createGroup("/dev".toAbsolutePath, enforceRole = true)))
+    ) {
       service.deploy(any, any) returns Future.successful(Done)
 
       Given("group /dev with enforceRole: true")
@@ -2291,12 +2559,11 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
       app.role shouldBe "dev"
     }
 
-    "Create an app in root with acceptedResourceRoles = default Mesos role" in new Fixture(configArgs = Seq("--mesos_role", "customMesosRole")) {
+    "Create an app in root with acceptedResourceRoles = default Mesos role" in new Fixture(
+      configArgs = Seq("--mesos_role", "customMesosRole")
+    ) {
       Given("An app with the mesos_role role")
-      val app = App(
-        id = "/app-with-accepted-default-mesos-role",
-        cmd = Some("cmd"),
-        acceptedResourceRoles = Some(Set("customMesosRole")))
+      val app = App(id = "/app-with-accepted-default-mesos-role", cmd = Some("cmd"), acceptedResourceRoles = Some(Set("customMesosRole")))
 
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
@@ -2317,10 +2584,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     ) {
 
       Given("An app with an unknown acceptedResourceRole")
-      val app = App(
-        id = "/app-with-accepted-unknown-mesos-role",
-        cmd = Some("cmd"),
-        acceptedResourceRoles = Some(Set("customMesosRole")))
+      val app = App(id = "/app-with-accepted-unknown-mesos-role", cmd = Some("cmd"), acceptedResourceRoles = Some(Set("customMesosRole")))
 
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
@@ -2337,17 +2601,15 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       And("resulting app has acceptedResourceRoles sanitized (equals default one)")
       val appJson = Json.parse(response.getEntity.toString)
-      (appJson \ "acceptedResourceRoles" \ 0) should be (JsDefined(JsString(ResourceRole.Unreserved)))
+      (appJson \ "acceptedResourceRoles" \ 0) should be(JsDefined(JsString(ResourceRole.Unreserved)))
     }
 
     "Create an app in root with acceptedResourceRoles = customMesosRole and sanitize_accepted_resource_roles is disabled" in new Fixture(
       configArgs = Seq("--deprecated_features", "disable_sanitize_accepted_resource_roles")
     ) {
       Given("An app with an unknown acceptedResourceRole")
-      val app = App(
-        id = "/app-with-not-accepted-unknown-mesos-role",
-        cmd = Some("cmd"),
-        acceptedResourceRoles = Some(Set("customMesosRole")))
+      val app =
+        App(id = "/app-with-not-accepted-unknown-mesos-role", cmd = Some("cmd"), acceptedResourceRoles = Some(Set("customMesosRole")))
 
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
@@ -2371,18 +2633,18 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
         id = "/dev/app",
         role = Some("*"),
         cmd = Some("cmd"),
-        container = Some(raml.Container(
-          docker = Some(DockerContainer(
-            image = "someimage")
-          ),
-          volumes = Seq(
-            AppPersistentVolume(
-              containerPath = "helloworld",
-              mode = ReadMode.Rw,
-              persistent = raml.PersistentVolumeInfo(size = 10)
+        container = Some(
+          raml.Container(
+            docker = Some(DockerContainer(image = "someimage")),
+            volumes = Seq(
+              AppPersistentVolume(
+                containerPath = "helloworld",
+                mode = ReadMode.Rw,
+                persistent = raml.PersistentVolumeInfo(size = 10)
+              )
             )
           )
-        ))
+        )
       )
 
       prepareGroup("/dev", groupManager)
@@ -2479,7 +2741,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
 
       And("the resulting app has the given volume name")
       val appJson = Json.parse(response.getEntity.toString)
-      (appJson \ "container" \ "volumes" \ 0 \ "external" \ "name") should be (JsDefined(JsString(volumeName)))
+      (appJson \ "container" \ "volumes" \ 0 \ "external" \ "name") should be(JsDefined(JsString(volumeName)))
     }
   }
 }

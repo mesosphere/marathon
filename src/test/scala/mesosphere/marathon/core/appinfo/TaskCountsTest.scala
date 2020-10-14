@@ -117,7 +117,10 @@ class TaskCountsTest extends UnitTest {
       val instance3 = TestTaskBuilder.Helper.runningTaskForApp(f.runSpecId).toInstance
       val instance4 = TestTaskBuilder.Helper.runningTaskForApp(f.runSpecId).toInstance
       val oneStagedTask = Seq(
-        instance1, instance2, instance3, instance4
+        instance1,
+        instance2,
+        instance3,
+        instance4
       )
       When("getting counts")
       val counts = TaskCounts(
@@ -128,12 +131,14 @@ class TaskCountsTest extends UnitTest {
         )
       )
       Then("all counts are 0 except staged")
-      counts should be(TaskCounts.zero.copy(
-        tasksStaged = 1,
-        tasksRunning = 3,
-        tasksHealthy = 1,
-        tasksUnhealthy = 1
-      ))
+      counts should be(
+        TaskCounts.zero.copy(
+          tasksStaged = 1,
+          tasksRunning = 3,
+          tasksHealthy = 1,
+          tasksUnhealthy = 1
+        )
+      )
     }
 
     "task count difference" in {
@@ -195,10 +200,13 @@ object Fixture {
       new Instance(
         instanceId = task.taskId.instanceId,
         agentInfo = Some(AgentInfo(host = "host", agentId = Some("agent"), region = None, zone = None, attributes = Nil)),
-        state = Instance.InstanceState.transitionTo(None, tasksMap, task.status.startedAt.getOrElse(task.status.stagedAt), app.unreachableStrategy, Goal.Running),
+        state = Instance.InstanceState
+          .transitionTo(None, tasksMap, task.status.startedAt.getOrElse(task.status.stagedAt), app.unreachableStrategy, Goal.Running),
         tasksMap = tasksMap,
         app,
-        None, "*")
+        None,
+        "*"
+      )
     }
   }
 }

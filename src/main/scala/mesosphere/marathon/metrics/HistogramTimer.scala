@@ -26,27 +26,33 @@ private[metrics] class TimedStage[T](timer: TimerAdapter, clock: Clock) extends 
     val logic = new GraphStageLogic(shape) {
       private val start: Instant = clock.instant
 
-      setHandler(in, new InHandler {
-        @scala.throws[Exception](classOf[Exception])
-        override def onPush(): Unit = push(out, grab(in))
+      setHandler(
+        in,
+        new InHandler {
+          @scala.throws[Exception](classOf[Exception])
+          override def onPush(): Unit = push(out, grab(in))
 
-        @scala.throws[Exception](classOf[Exception])
-        override def onUpstreamFinish(): Unit = {
-          timer.update(Duration.between(start, clock.instant).toNanos)
-          super.onUpstreamFinish()
+          @scala.throws[Exception](classOf[Exception])
+          override def onUpstreamFinish(): Unit = {
+            timer.update(Duration.between(start, clock.instant).toNanos)
+            super.onUpstreamFinish()
+          }
+
+          @scala.throws[Exception](classOf[Exception])
+          override def onUpstreamFailure(ex: Throwable): Unit = {
+            timer.update(Duration.between(start, clock.instant).toNanos)
+            super.onUpstreamFailure(ex)
+          }
         }
+      )
 
-        @scala.throws[Exception](classOf[Exception])
-        override def onUpstreamFailure(ex: Throwable): Unit = {
-          timer.update(Duration.between(start, clock.instant).toNanos)
-          super.onUpstreamFailure(ex)
+      setHandler(
+        out,
+        new OutHandler {
+          @scala.throws[Exception](classOf[Exception])
+          override def onPull(): Unit = pull(in)
         }
-      })
-
-      setHandler(out, new OutHandler {
-        @scala.throws[Exception](classOf[Exception])
-        override def onPull(): Unit = pull(in)
-      })
+      )
     }
     logic
   }
@@ -54,18 +60,18 @@ private[metrics] class TimedStage[T](timer: TimerAdapter, clock: Clock) extends 
   override def shape: FlowShape[T, T] = FlowShape.of(in, out)
 }
 
-private[metrics] case class HistogramTimer(timer: TimerAdapter)
-  extends Timer {
+private[metrics] case class HistogramTimer(timer: TimerAdapter) extends Timer {
 
   def apply[T](f: => Future[T]): Future[T] = {
     val start = System.nanoTime()
-    val future = try {
-      f
-    } catch {
-      case NonFatal(e) =>
-        timer.update(System.nanoTime() - start)
-        throw e
-    }
+    val future =
+      try {
+        f
+      } catch {
+        case NonFatal(e) =>
+          timer.update(System.nanoTime() - start)
+          throw e
+      }
     future.onComplete(_ => timer.update(System.nanoTime() - start))(ExecutionContexts.callerThread)
     future
   }

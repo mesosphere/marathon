@@ -5,14 +5,15 @@ import mesosphere.marathon.core.plugin.PluginManagerConfiguration
 import mesosphere.marathon.metrics.MetricsConf
 import org.rogach.scallop.ScallopConf
 
-class AllConf(args: Seq[String] = Nil) extends ScallopConf(args)
-  with MetricsConf
-  with HttpConf
-  with MarathonConf
-  with EventConf
-  with DebugConf
-  with PluginManagerConfiguration
-  with FeaturesConf {
+class AllConf(args: Seq[String] = Nil)
+    extends ScallopConf(args)
+    with MetricsConf
+    with HttpConf
+    with MarathonConf
+    with EventConf
+    with DebugConf
+    with PluginManagerConfiguration
+    with FeaturesConf {
   helpWidth(160)
   verify()
 }

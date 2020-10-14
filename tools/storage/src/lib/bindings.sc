@@ -3,7 +3,7 @@ import $file.version
 
 import version.StorageToolVersion
 
-import akka.actor.{ ActorSystem, ActorRefFactory, Scheduler }
+import akka.actor.{ActorSystem, ActorRefFactory, Scheduler}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Source, Sink}
 import akka.util.Timeout
@@ -29,15 +29,15 @@ import mesosphere.marathon.storage.migration.{Migration, StorageVersions}
 import mesosphere.marathon.storage.repository._
 
 case class StorageToolModule(
-  appRepository: AppRepository,
-  podRepository: PodRepository,
-  instanceRepository: InstanceRepository,
-  deploymentRepository: DeploymentRepository,
-  taskFailureRepository: TaskFailureRepository,
-  groupRepository: GroupRepository,
-  frameworkIdRepository: FrameworkIdRepository,
-  runtimeConfigurationRepository: RuntimeConfigurationRepository,
-  migration: Migration
+    appRepository: AppRepository,
+    podRepository: PodRepository,
+    instanceRepository: InstanceRepository,
+    deploymentRepository: DeploymentRepository,
+    taskFailureRepository: TaskFailureRepository,
+    groupRepository: GroupRepository,
+    frameworkIdRepository: FrameworkIdRepository,
+    runtimeConfigurationRepository: RuntimeConfigurationRepository,
+    migration: Migration
 )
 
 class MarathonStorage(args: List[String] = helpers.InternalHelpers.argsFromEnv) {
@@ -46,28 +46,34 @@ class MarathonStorage(args: List[String] = helpers.InternalHelpers.argsFromEnv) 
   implicit val actorMaterializer = ActorMaterializer()
   implicit val scheduler: Scheduler = actorSystem.scheduler
   implicit val timeout = Timeout(5.seconds)
-  /*private*/ class ScallopStub[A](name: String, value: Option[A]) extends ScallopOption[A](name) {
+  /*private*/
+  class ScallopStub[A](name: String, value: Option[A]) extends ScallopOption[A](name) {
     override def get = value
     override def apply() = value.get
   }
 
-  /*private*/ object ScallopStub {
+  /*private*/
+  object ScallopStub {
     def apply[A](value: Option[A]): ScallopStub[A] = new ScallopStub("", value)
     def apply[A](name: String, value: Option[A]): ScallopStub[A] = new ScallopStub(name, value)
   }
 
-  /*private*/ class MyStorageConf(args: List[String] = Nil, override val availableFeatures: Set[String] = Set.empty) extends org.rogach.scallop.ScallopConf(args) with StorageConf {
+  /*private*/
+  class MyStorageConf(args: List[String] = Nil, override val availableFeatures: Set[String] = Set.empty)
+      extends org.rogach.scallop.ScallopConf(args)
+      with StorageConf {
     val current = StorageVersions(Migration.steps)
     import org.rogach.scallop.exceptions._
 
     version(s"Marathon Storage Tool ${StorageToolVersion} for storage version ${current.getMajor}.${current.getMinor}.${current.getPatch}")
 
-    override def onError(e: Throwable): Unit = e match {
-      case Help("") =>
-        builder.printHelp
-        sys.exit(0)
-      case e => println(e)
-    }
+    override def onError(e: Throwable): Unit =
+      e match {
+        case Help("") =>
+          builder.printHelp
+          sys.exit(0)
+        case e => println(e)
+      }
 
     override lazy val storeCache = ScallopStub(Some(false))
     override lazy val versionCacheEnabled = ScallopStub(Some(false))
@@ -98,7 +104,8 @@ class MarathonStorage(args: List[String] = helpers.InternalHelpers.argsFromEnv) 
     groupRepository = underlyingModule.groupRepository,
     frameworkIdRepository = underlyingModule.frameworkIdRepository,
     runtimeConfigurationRepository = underlyingModule.runtimeConfigurationRepository,
-    migration = underlyingModule.migration)
+    migration = underlyingModule.migration
+  )
 
   implicit lazy val module = {
     assertStoreCompat(fail = true)
@@ -116,9 +123,11 @@ class MarathonStorage(args: List[String] = helpers.InternalHelpers.argsFromEnv) 
       sys.error(s"Could not determine current storage version!")
     }
     val currentVersion = StorageVersions(Migration.steps)
-    if ((storageVersion.getMajor == currentVersion.getMajor) &&
-        (storageVersion.getMinor == currentVersion.getMinor) &&
-        (storageVersion.getPatch == currentVersion.getPatch)) {
+    if (
+      (storageVersion.getMajor == currentVersion.getMajor) &&
+      (storageVersion.getMinor == currentVersion.getMinor) &&
+      (storageVersion.getPatch == currentVersion.getPatch)
+    ) {
       println(s"Storage version ${formattedVersion(storageVersion)} matches tool version ${currentVersion}.")
     } else {
       val message = s"Storage version ${formattedVersion(storageVersion)} does not match tool version! Current version: ${currentVersion}"

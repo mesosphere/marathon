@@ -19,7 +19,6 @@ import scala.io.Source
 
 class RamlTypeGeneratorTest extends WordSpec with GivenWhenThen with Inspectors with StrictLogging {
 
-
   /**
     * A Scalatest be matcher that compares a string to a reference. It will print the line diffs if there are deltas.
     * @param ref Path to the reference in the Jar resources.
@@ -82,7 +81,7 @@ class RamlTypeGeneratorTest extends WordSpec with GivenWhenThen with Inspectors 
       val legacyTypesAsStr: Map[String, String] = legacyTypes.mapValues(treehugger.forest.treeToString(_))
 
       forEvery(typesAsStr.keys) { typeName =>
-        legacyTypesAsStr should contain key(typeName)
+        legacyTypesAsStr should contain key (typeName)
         typesAsStr(typeName) should be(equalToCode(legacyTypesAsStr(typeName)))
       }
     }

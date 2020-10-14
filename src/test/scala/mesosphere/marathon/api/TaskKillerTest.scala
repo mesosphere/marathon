@@ -72,12 +72,9 @@ class TaskKillerTest extends AkkaUnitTest {
       val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])
       val toKillCaptor = ArgumentCaptor.forClass(classOf[Map[AbsolutePathId, Seq[Instance]]])
       val expectedDeploymentPlan = DeploymentPlan.empty
-      when(f.groupManager.updateRoot(
-        any[AbsolutePathId],
-        groupUpdateCaptor.capture(),
-        any[Timestamp],
-        forceCaptor.capture(),
-        toKillCaptor.capture())
+      when(
+        f.groupManager
+          .updateRoot(any[AbsolutePathId], groupUpdateCaptor.capture(), any[Timestamp], forceCaptor.capture(), toKillCaptor.capture())
       ).thenReturn(Future.successful(expectedDeploymentPlan))
 
       val result = f.taskKiller.killAndScale(appId, (tasks) => tasksToKill, force = true)
@@ -95,10 +92,13 @@ class TaskKillerTest extends AkkaUnitTest {
       when(f.groupManager.runSpec(appId)).thenReturn(Some(AppDefinition(appId, role = "*")))
       when(f.tracker.specInstances(appId)).thenReturn(Future.successful(tasksToKill))
 
-      val result = f.taskKiller.kill(appId, { tasks =>
-        tasks should equal(tasksToKill)
-        tasksToKill
-      })
+      val result = f.taskKiller.kill(
+        appId,
+        { tasks =>
+          tasks should equal(tasksToKill)
+          tasksToKill
+        }
+      )
 
       result.futureValue shouldEqual tasksToKill
       verify(f.killService, times(1)).killInstancesAndForget(tasksToKill, KillReason.KillingTasksViaApi)
@@ -117,13 +117,15 @@ class TaskKillerTest extends AkkaUnitTest {
       when(f.groupManager.group(appId.parent)).thenReturn(Some(Group.empty(appId.parent)))
       val groupUpdateCaptor = ArgumentCaptor.forClass(classOf[(RootGroup) => RootGroup])
       val forceCaptor = ArgumentCaptor.forClass(classOf[Boolean])
-      when(f.groupManager.updateRoot(
-        any[AbsolutePathId],
-        groupUpdateCaptor.capture(),
-        any[Timestamp],
-        forceCaptor.capture(),
-        any[Map[AbsolutePathId, Seq[Instance]]]
-      )).thenReturn(Future.failed(AppLockedException()))
+      when(
+        f.groupManager.updateRoot(
+          any[AbsolutePathId],
+          groupUpdateCaptor.capture(),
+          any[Timestamp],
+          forceCaptor.capture(),
+          any[Map[AbsolutePathId, Seq[Instance]]]
+        )
+      ).thenReturn(Future.failed(AppLockedException()))
 
       val result = f.taskKiller.killAndScale(appId, (tasks) => tasksToKill, force = false)
       result.failed.futureValue shouldEqual AppLockedException()
@@ -144,10 +146,14 @@ class TaskKillerTest extends AkkaUnitTest {
       when(f.tracker.forceExpunge(runningInstance.instanceId)).thenReturn(Future.successful(Done))
       when(f.tracker.forceExpunge(reservedInstance.instanceId)).thenReturn(Future.successful(Done))
 
-      val result = f.taskKiller.kill(appId, { instances =>
-        instances should equal(instancesToKill)
-        instancesToKill
-      }, wipe = true)
+      val result = f.taskKiller.kill(
+        appId,
+        { instances =>
+          instances should equal(instancesToKill)
+          instancesToKill
+        },
+        wipe = true
+      )
       result.futureValue shouldEqual instancesToKill
       // all found instances are expunged and the launched instance is eventually expunged again
       verify(f.tracker, atLeastOnce).forceExpunge(runningInstance.instanceId)
@@ -177,9 +183,7 @@ class TaskKillerTest extends AkkaUnitTest {
     }
   }
 
-  class FixtureWithRealInstanceTracker(
-      initialRoot: RootGroup = RootGroup.empty(),
-      authFn: Any => Boolean = _ => true) {
+  class FixtureWithRealInstanceTracker(initialRoot: RootGroup = RootGroup.empty(), authFn: Any => Boolean = _ => true) {
     val testInstanceTrackerFixture = new TestInstanceTrackerFixture(initialRoot, authFn = authFn)
     val instanceTracker = testInstanceTrackerFixture.instanceTracker
     val killService: KillService = mock[KillService]
@@ -188,7 +192,12 @@ class TaskKillerTest extends AkkaUnitTest {
 
     testInstanceTrackerFixture.service.deploy(any, any).returns(Future(Done))
     val taskKiller: TaskKiller = new TaskKiller(
-      instanceTracker, testInstanceTrackerFixture.groupManager, testInstanceTrackerFixture.authFixture.auth, testInstanceTrackerFixture.authFixture.auth, killService)
+      instanceTracker,
+      testInstanceTrackerFixture.groupManager,
+      testInstanceTrackerFixture.authFixture.auth,
+      testInstanceTrackerFixture.authFixture.auth,
+      killService
+    )
   }
 
   class Fixture {
@@ -204,7 +213,6 @@ class TaskKillerTest extends AkkaUnitTest {
     def materializerSettings = ActorMaterializerSettings(system)
 
     implicit val mat = ActorMaterializer(materializerSettings)
-    val taskKiller: TaskKiller = new TaskKiller(
-      tracker, groupManager, auth.auth, auth.auth, killService)
+    val taskKiller: TaskKiller = new TaskKiller(tracker, groupManager, auth.auth, auth.auth, killService)
   }
 }

@@ -84,7 +84,8 @@ class DriverActor(schedulerProps: Props) extends Actor with StrictLogging {
   private[this] var scheduler: ActorRef = _
 
   private[this] var tasks: Map[String, TaskStatus] = Map.empty.withDefault { taskId =>
-    TaskStatus.newBuilder()
+    TaskStatus
+      .newBuilder()
       .setSource(TaskStatus.Source.SOURCE_SLAVE)
       .setTaskId(TaskID.newBuilder().setValue(taskId).build())
       .setState(TaskState.TASK_LOST)
@@ -93,30 +94,36 @@ class DriverActor(schedulerProps: Props) extends Actor with StrictLogging {
 
   private[this] def offer(index: Int): Offer = {
     def resource(name: String, value: Double): Resource = {
-      Resource.newBuilder()
+      Resource
+        .newBuilder()
         .setName(name)
         .setType(Value.Type.SCALAR)
         .setScalar(Value.Scalar.newBuilder().setValue(value))
         .build()
     }
-    Offer.newBuilder()
+    Offer
+      .newBuilder()
       .setId(OfferID.newBuilder().setValue(UUID.randomUUID().toString))
       .setFrameworkId(FrameworkID.newBuilder().setValue("notanidframework"))
       .setSlaveId(SlaveID.newBuilder().setValue(s"notanidslave-$index"))
       .setHostname("hostname")
-      .addAllResources(Seq(
-        resource("cpus", 100),
-        resource("mem", 500000),
-        resource("disk", 1000000000),
-        Resource.newBuilder()
-          .setName("ports")
-          .setType(Value.Type.RANGES)
-          .setRanges(
-            Value.Ranges
-              .newBuilder()
-              .addRange(Value.Range.newBuilder().setBegin(10000).setEnd(20000)))
-          .build()
-      ).asJava)
+      .addAllResources(
+        Seq(
+          resource("cpus", 100),
+          resource("mem", 500000),
+          resource("disk", 1000000000),
+          Resource
+            .newBuilder()
+            .setName("ports")
+            .setType(Value.Type.RANGES)
+            .setRanges(
+              Value.Ranges
+                .newBuilder()
+                .addRange(Value.Range.newBuilder().setBegin(10000).setEnd(20000))
+            )
+            .build()
+        ).asJava
+      )
       .build()
   }
   private[this] def offers: ResourceOffers =
@@ -139,45 +146,46 @@ class DriverActor(schedulerProps: Props) extends Actor with StrictLogging {
     super.postStop()
   }
 
-  override def receive: Receive = LoggingReceive {
-    case driver: SchedulerDriver =>
-      logger.debug(s"pass on driver to scheduler $scheduler")
-      scheduler ! driver
+  override def receive: Receive =
+    LoggingReceive {
+      case driver: SchedulerDriver =>
+        logger.debug(s"pass on driver to scheduler $scheduler")
+        scheduler ! driver
 
-    case LaunchTasks(offers, tasks) =>
-      simulateTaskLaunch(offers, tasks)
+      case LaunchTasks(offers, tasks) =>
+        simulateTaskLaunch(offers, tasks)
 
-    case AcceptOffers(offers, ops, filters) =>
-      val taskInfos = extractTaskInfos(ops)
-      simulateTaskLaunch(offers, taskInfos)
+      case AcceptOffers(offers, ops, filters) =>
+        val taskInfos = extractTaskInfos(ops)
+        simulateTaskLaunch(offers, taskInfos)
 
-    case KillTask(taskId) =>
-      logger.debug(s"kill task $taskId")
+      case KillTask(taskId) =>
+        logger.debug(s"kill task $taskId")
 
-      tasks.get(taskId.getValue) match {
-        case Some(task) =>
-          scheduleStatusChange(toState = TaskState.TASK_KILLED, afterDuration = 2.seconds)(taskID = taskId)
-        case None =>
-          scheduleStatusChange(toState = TaskState.TASK_LOST, afterDuration = 1.second)(taskID = taskId)
-      }
+        tasks.get(taskId.getValue) match {
+          case Some(task) =>
+            scheduleStatusChange(toState = TaskState.TASK_KILLED, afterDuration = 2.seconds)(taskID = taskId)
+          case None =>
+            scheduleStatusChange(toState = TaskState.TASK_LOST, afterDuration = 1.second)(taskID = taskId)
+        }
 
-    case SuppressOffers => ()
+      case SuppressOffers => ()
 
-    case ReviveOffers =>
-      scheduler ! offers
+      case ReviveOffers =>
+        scheduler ! offers
 
-    case TaskStateTick =>
-      val (sendNow, later) = taskUpdates.partition(_.at.isOverdue())
-      sendNow.foreach(update => changeTaskStatus(update.taskStatus, update.create))
-      taskUpdates = later
+      case TaskStateTick =>
+        val (sendNow, later) = taskUpdates.partition(_.at.isOverdue())
+        sendNow.foreach(update => changeTaskStatus(update.taskStatus, update.create))
+        taskUpdates = later
 
-    case ReconcileTask(taskStatuses) =>
-      if (taskStatuses.isEmpty) {
-        tasks.values.foreach(scheduler ! _)
-      } else {
-        taskStatuses.view.map(_.getTaskId.getValue).map(tasks).foreach(scheduler ! _)
-      }
-  }
+      case ReconcileTask(taskStatuses) =>
+        if (taskStatuses.isEmpty) {
+          tasks.values.foreach(scheduler ! _)
+        } else {
+          taskStatuses.view.map(_.getTaskId.getValue).map(tasks).foreach(scheduler ! _)
+        }
+    }
 
   private[this] def extractTaskInfos(ops: Seq[Offer.Operation]): Seq[TaskInfo] = {
     ops.withFilter(_.getType == Offer.Operation.Type.LAUNCH).flatMap { op =>
@@ -222,12 +230,12 @@ class DriverActor(schedulerProps: Props) extends Actor with StrictLogging {
     }
   }
 
-  private[this] def scheduleStatusChange(
-    toState: TaskState,
-    afterDuration: FiniteDuration,
-    create: Boolean = false)(taskID: TaskID): Unit = {
+  private[this] def scheduleStatusChange(toState: TaskState, afterDuration: FiniteDuration, create: Boolean = false)(
+      taskID: TaskID
+  ): Unit = {
 
-    val newStatus = TaskStatus.newBuilder()
+    val newStatus = TaskStatus
+      .newBuilder()
       .setSource(TaskStatus.Source.SOURCE_EXECUTOR)
       .setTaskId(taskID)
       .setState(toState)

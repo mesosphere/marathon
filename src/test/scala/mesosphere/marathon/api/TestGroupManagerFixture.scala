@@ -21,7 +21,9 @@ class TestGroupManagerFixture(
     authenticated: Boolean = true,
     authorized: Boolean = true,
     authFn: Any => Boolean = _ => true,
-    val config: AllConf = AllConf.withTestConfig("--zk_timeout", "3000"))(implicit as: ActorSystem, ec: ExecutionContext) extends Mockito {
+    val config: AllConf = AllConf.withTestConfig("--zk_timeout", "3000")
+)(implicit as: ActorSystem, ec: ExecutionContext)
+    extends Mockito {
   implicit val mat = ActorMaterializer()
   val service = mock[MarathonSchedulerService]
   val metrics = DummyMetrics
@@ -32,7 +34,8 @@ class TestGroupManagerFixture(
 
   val appRepository = AppRepository.inMemRepository(store)
   val podRepository = PodRepository.inMemRepository(store)
-  val groupRepository = GroupRepository.inMemRepository(store, appRepository, podRepository, maxVersionsCacheSize, initialRoot.newGroupStrategy)
+  val groupRepository =
+    GroupRepository.inMemRepository(store, appRepository, podRepository, maxVersionsCacheSize, initialRoot.newGroupStrategy)
   val instanceRepository = InstanceRepository.inMemRepository(store)
   groupRepository.storeRoot(initialRoot, Nil, Nil, Nil, Nil)
   val eventBus = mock[EventStream]
@@ -52,11 +55,12 @@ class TestGroupManagerFixture(
 
   schedulerProvider.get().listRunningDeployments() returns Future.successful(Seq.empty)
 
-  private[this] val groupManagerModule = new GroupManagerModule(
-    metrics = metrics,
-    config = config,
-    scheduler = schedulerProvider,
-    groupRepo = groupRepository)(ExecutionContext.Implicits.global, eventBus, authenticator)
+  private[this] val groupManagerModule =
+    new GroupManagerModule(metrics = metrics, config = config, scheduler = schedulerProvider, groupRepo = groupRepository)(
+      ExecutionContext.Implicits.global,
+      eventBus,
+      authenticator
+    )
 
   val groupManager = groupManagerModule.groupManager
 }

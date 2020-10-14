@@ -53,6 +53,7 @@ object Reservation {
 
     private val SimplifiedIdRegex = """^(.+)\.(instance-|marathon-)([^\.]+)$""".r
     private val LegacyIdRegex = """^(.+)([\._])([^_\.]+)$""".r
+
     /**
       * Parse reservation id from task label.
       *
@@ -60,16 +61,17 @@ object Reservation {
       * @return LegacyId for old task or SimplifiedId for new tasks.
       * @throws MatchError
       */
-    def apply(label: String): Id = label match {
-      case SimplifiedIdRegex(safeRunSpecId, prefix, uuid) =>
-        val runSpec = PathId.fromSafePath(safeRunSpecId)
-        val instanceId = Instance.Id(runSpec, Prefix.fromString(prefix), UUID.fromString(uuid))
-        SimplifiedId(instanceId)
-      case LegacyIdRegex(safeRunSpecId, separator, uuid) =>
-        val runSpecId = PathId.fromSafePath(safeRunSpecId)
-        LegacyId(runSpecId, separator, UUID.fromString(uuid))
-      case _ => throw new MatchError(s"reservation id $label does not include a valid instance identifier")
-    }
+    def apply(label: String): Id =
+      label match {
+        case SimplifiedIdRegex(safeRunSpecId, prefix, uuid) =>
+          val runSpec = PathId.fromSafePath(safeRunSpecId)
+          val instanceId = Instance.Id(runSpec, Prefix.fromString(prefix), UUID.fromString(uuid))
+          SimplifiedId(instanceId)
+        case LegacyIdRegex(safeRunSpecId, separator, uuid) =>
+          val runSpecId = PathId.fromSafePath(safeRunSpecId)
+          LegacyId(runSpecId, separator, UUID.fromString(uuid))
+        case _ => throw new MatchError(s"reservation id $label does not include a valid instance identifier")
+      }
 
   }
 
@@ -85,8 +87,10 @@ object Reservation {
   object Timeout {
     sealed trait Reason
     object Reason {
+
       /** A timeout because the instance could not be relaunched */
       case object RelaunchEscalationTimeout extends Reason
+
       /** A timeout because we got no ack for reserved resources or persistent volumes */
       case object ReservationTimeout extends Reason
     }
@@ -108,17 +112,21 @@ object Reservation {
   }
 
   sealed trait State extends Product with Serializable {
+
     /** Defines when this state should time out and for which reason */
     def timeout: Option[Timeout]
   }
 
   object State {
+
     /** A newly reserved resident instance */
     case class New(timeout: Option[Timeout]) extends State
+
     /** A launched resident instance, never has a timeout */
     case object Launched extends State {
       override def timeout: Option[Timeout] = None
     }
+
     /** A resident instance that has been running before but terminated and can be relaunched */
     case object Suspended extends State {
       override def timeout: Option[Timeout] = None

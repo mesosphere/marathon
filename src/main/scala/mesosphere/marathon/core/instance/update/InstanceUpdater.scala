@@ -29,17 +29,23 @@ object InstanceUpdater extends StrictLogging {
 
     // We need to suspend reservation on already launched reserved instances
     // to prevent reservations being destroyed/unreserved.
-    val updatedReservation = if (updatedTask.status.condition.isTerminal && instance.hasReservation && !instance.reservation.exists(r => r.state.isInstanceOf[Reservation.State.Suspended.type])) {
-      val suspendedState = Reservation.State.Suspended
-      instance.reservation.map(_.copy(state = suspendedState))
-    } else {
-      instance.reservation
-    }
+    val updatedReservation =
+      if (
+        updatedTask.status.condition.isTerminal && instance.hasReservation && !instance.reservation
+          .exists(r => r.state.isInstanceOf[Reservation.State.Suspended.type])
+      ) {
+        val suspendedState = Reservation.State.Suspended
+        instance.reservation.map(_.copy(state = suspendedState))
+      } else {
+        instance.reservation
+      }
 
     instance.copy(
       tasksMap = updatedTasks,
-      state = Instance.InstanceState.transitionTo(Some(instance.state), updatedTasks, now, instance.unreachableStrategy, instance.state.goal),
-      reservation = updatedReservation)
+      state =
+        Instance.InstanceState.transitionTo(Some(instance.state), updatedTasks, now, instance.unreachableStrategy, instance.state.goal),
+      reservation = updatedReservation
+    )
   }
 
   private[marathon] def reserve(instance: Instance, op: Reserve, now: Timestamp): InstanceUpdateEffect = {
@@ -49,10 +55,12 @@ object InstanceUpdater extends StrictLogging {
   }
 
   private[marathon] def unreserve(instance: Instance, now: Timestamp): InstanceUpdateEffect = {
-    require(instance.state.condition.isTerminal && instance.state.goal == Goal.Decommissioned, s"Cannot unreserve non-terminal resident $instance")
+    require(
+      instance.state.condition.isTerminal && instance.state.goal == Goal.Decommissioned,
+      s"Cannot unreserve non-terminal resident $instance"
+    )
     val updatedInstance = instance.copy(state = instance.state.copy(condition = Condition.Killed))
-    val events = eventsGenerator.events(
-      updatedInstance, task = None, now, previousState = Some(instance.state))
+    val events = eventsGenerator.events(updatedInstance, task = None, now, previousState = Some(instance.state))
     InstanceUpdateEffect.Expunge(instance, events)
   }
 
@@ -61,15 +69,17 @@ object InstanceUpdater extends StrictLogging {
 
   private def shouldAbandonReservation(instance: Instance): Boolean = {
 
-    def allAreTerminal = instance.tasksMap.values.iterator.forall { task =>
-      task.status.condition.isTerminal
-    }
-
-    def anyAreGoneByOperator = instance.tasksMap.values.iterator
-      .flatMap(_.status.mesosStatus)
-      .exists { status =>
-        status.getState == MesosProtos.TaskState.TASK_GONE_BY_OPERATOR
+    def allAreTerminal =
+      instance.tasksMap.values.iterator.forall { task =>
+        task.status.condition.isTerminal
       }
+
+    def anyAreGoneByOperator =
+      instance.tasksMap.values.iterator
+        .flatMap(_.status.mesosStatus)
+        .exists { status =>
+          status.getState == MesosProtos.TaskState.TASK_GONE_BY_OPERATOR
+        }
 
     instance.reservation.nonEmpty && anyAreGoneByOperator && allAreTerminal
   }
@@ -95,7 +105,8 @@ object InstanceUpdater extends StrictLogging {
         logger.info("Requesting to expunge {}, all tasks are terminal, instance has no reservation and is not Stopped", updated.instanceId)
         InstanceUpdateEffect.Expunge(updated, events)
       } else if (shouldAbandonReservation(updated)) {
-        val withoutReservation = updated.copy(agentInfo = None, reservation = None, state = updated.state.copy(condition = Condition.Scheduled))
+        val withoutReservation =
+          updated.copy(agentInfo = None, reservation = None, state = updated.state.copy(condition = Condition.Scheduled))
         InstanceUpdateEffect.Update(withoutReservation, oldState = Some(instance), events)
       } else {
         InstanceUpdateEffect.Update(updated, oldState = Some(instance), events)
@@ -106,42 +117,48 @@ object InstanceUpdater extends StrictLogging {
   private[marathon] def mesosUpdate(instance: Instance, op: MesosUpdate): InstanceUpdateEffect = {
     val now = op.now
     val taskId = Task.Id.parse(op.mesosStatus.getTaskId)
-    instance.tasksMap.get(taskId).map { task =>
-      val taskEffect = task.update(instance, op.condition, op.mesosStatus, now)
-      taskEffect match {
-        case TaskUpdateEffect.Update(updatedTask) =>
-          instanceUpdateEffectForTask(instance, updatedTask, now)
+    instance.tasksMap
+      .get(taskId)
+      .map { task =>
+        val taskEffect = task.update(instance, op.condition, op.mesosStatus, now)
+        taskEffect match {
+          case TaskUpdateEffect.Update(updatedTask) =>
+            instanceUpdateEffectForTask(instance, updatedTask, now)
 
-        // We might still become UnreachableInactive.
-        case TaskUpdateEffect.Noop if op.condition == Condition.Unreachable &&
-          instance.state.condition != Condition.UnreachableInactive =>
-          val u = instanceUpdateEffectForTask(instance, task, now)
-          u match {
-            case noop: InstanceUpdateEffect.Noop =>
-              noop
-            case update: InstanceUpdateEffect.Update =>
-              if (update.instance.state.condition == Condition.UnreachableInactive) {
-                update.instance.unreachableStrategy match {
-                  case u: UnreachableEnabled =>
-                    logger.info(
-                      s"${update.instance.instanceId} is updated to UnreachableInactive after being Unreachable for more than ${u.inactiveAfter.toSeconds} seconds.")
-                  case _ =>
-                    // We shouldn't get here
-                    logger.error(
-                      s"${update.instance.instanceId} is updated to UnreachableInactive in spite of there being no UnreachableStrategy")
+          // We might still become UnreachableInactive.
+          case TaskUpdateEffect.Noop
+              if op.condition == Condition.Unreachable &&
+                instance.state.condition != Condition.UnreachableInactive =>
+            val u = instanceUpdateEffectForTask(instance, task, now)
+            u match {
+              case noop: InstanceUpdateEffect.Noop =>
+                noop
+              case update: InstanceUpdateEffect.Update =>
+                if (update.instance.state.condition == Condition.UnreachableInactive) {
+                  update.instance.unreachableStrategy match {
+                    case u: UnreachableEnabled =>
+                      logger.info(
+                        s"${update.instance.instanceId} is updated to UnreachableInactive after being Unreachable for more than ${u.inactiveAfter.toSeconds} seconds."
+                      )
+                    case _ =>
+                      // We shouldn't get here
+                      logger.error(
+                        s"${update.instance.instanceId} is updated to UnreachableInactive in spite of there being no UnreachableStrategy"
+                      )
 
+                  }
                 }
-              }
-              update
-          }
+                update
+            }
 
-        case TaskUpdateEffect.Noop =>
-          InstanceUpdateEffect.Noop(instance.instanceId)
+          case TaskUpdateEffect.Noop =>
+            InstanceUpdateEffect.Noop(instance.instanceId)
 
-        case TaskUpdateEffect.Failure(cause) =>
-          InstanceUpdateEffect.Failure(cause)
+          case TaskUpdateEffect.Failure(cause) =>
+            InstanceUpdateEffect.Failure(cause)
+        }
       }
-    }.getOrElse(InstanceUpdateEffect.Failure(s"$taskId not found in ${instance.instanceId}: ${instance.tasksMap.keySet}"))
+      .getOrElse(InstanceUpdateEffect.Failure(s"$taskId not found in ${instance.instanceId}: ${instance.tasksMap.keySet}"))
   }
 
   private[marathon] def reservationTimeout(instance: Instance, now: Timestamp): InstanceUpdateEffect = {
@@ -165,8 +182,7 @@ object InstanceUpdater extends StrictLogging {
       // TODO(cleanup): Using Killed for now; we have no specific state yet bit this must be considered Terminal
       state = instance.state.copy(condition = Condition.Killed)
     )
-    val events = eventsGenerator.events(
-      updatedInstance, task = None, now, previousState = Some(instance.state))
+    val events = eventsGenerator.events(updatedInstance, task = None, now, previousState = Some(instance.state))
 
     logger.debug(s"Force expunge ${instance.instanceId}")
 
@@ -182,10 +198,14 @@ object InstanceUpdater extends StrictLogging {
     val events = eventsGenerator.events(updatedInstance, task = None, now, previousState = Some(instance.state))
 
     if (InstanceUpdater.isTerminalDecomissionedAndEphemeral(updatedInstance)) {
-      logger.info(s"Instance ${instance.instanceId} with current condition ${instance.state.condition} has it's goal updated from ${instance.state.goal} to ${op.goal}. Because of that instance should be expunged now.")
+      logger.info(
+        s"Instance ${instance.instanceId} with current condition ${instance.state.condition} has it's goal updated from ${instance.state.goal} to ${op.goal}. Because of that instance should be expunged now."
+      )
       InstanceUpdateEffect.Expunge(updatedInstance, events = events)
     } else {
-      logger.info(s"Instance ${instance.instanceId} with current condition ${instance.state.condition} has it's goal updated from ${instance.state.goal} to ${op.goal}.")
+      logger.info(
+        s"Instance ${instance.instanceId} with current condition ${instance.state.condition} has it's goal updated from ${instance.state.goal} to ${op.goal}."
+      )
       InstanceUpdateEffect.Update(updatedInstance, oldState = Some(instance), events = events)
     }
   }

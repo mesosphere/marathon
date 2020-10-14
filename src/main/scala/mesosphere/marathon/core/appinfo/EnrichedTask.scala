@@ -14,7 +14,8 @@ case class EnrichedTask(
     healthCheckResults: Seq[Health],
     servicePorts: Seq[Int],
     reservation: Option[Reservation],
-    role: Role)
+    role: Role
+)
 
 object EnrichedTask {
 

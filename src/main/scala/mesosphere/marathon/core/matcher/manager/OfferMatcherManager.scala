@@ -11,6 +11,7 @@ trait OfferMatcherManager {
 
   /** Increases the number of allowed future instance matches by the given number. */
   def addLaunchTokens(tokens: Int): Unit
+
   /** Sets the number of allowed future instance matches to the given number. */
   def setLaunchTokens(tokens: Int): Unit
 }

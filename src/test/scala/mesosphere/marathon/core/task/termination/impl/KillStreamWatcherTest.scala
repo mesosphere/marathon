@@ -13,7 +13,9 @@ import mesosphere.marathon.state.AbsolutePathId
 import mesosphere.marathon.util.StreamHelpers
 
 class KillStreamWatcherTest extends AkkaUnitTest {
-  val instancesTerminalFlow = Flow[Instance].map { i => InstanceUpdated(i.copy(state = i.state.copy(condition = Condition.Finished)), Some(i.state), Nil) }
+  val instancesTerminalFlow = Flow[Instance].map { i =>
+    InstanceUpdated(i.copy(state = i.state.copy(condition = Condition.Finished)), Some(i.state), Nil)
+  }
 
   val instancesExpungedFlow = Flow[Instance].map { i =>
     InstanceDeleted(i, None, Nil)
@@ -36,7 +38,8 @@ class KillStreamWatcherTest extends AkkaUnitTest {
 
     "completes immediately if provided instances are already terminal and no updates arrive" in {
       val terminalInstance = TestInstanceBuilder.newBuilder(AbsolutePathId("/test")).addTaskKilled().instance
-      val emptyUpdates: InstanceTracker.InstanceUpdates = Source.single((InstancesSnapshot(Seq(terminalInstance)), StreamHelpers.sourceNever))
+      val emptyUpdates: InstanceTracker.InstanceUpdates =
+        Source.single((InstancesSnapshot(Seq(terminalInstance)), StreamHelpers.sourceNever))
 
       val result = KillStreamWatcher
         .watchForKilledTasks(emptyUpdates, Seq(terminalInstance))
@@ -59,7 +62,8 @@ class KillStreamWatcherTest extends AkkaUnitTest {
 
     "completes with Set.empty when all instance Ids are seen" in {
       val instances = List("/a", "/b", "/c").map(appId => TestInstanceBuilder.newBuilder(AbsolutePathId(appId)).addTaskRunning().instance)
-      val otherInstance = List("/e", "/g", "/f").map(appId => TestInstanceBuilder.newBuilder(AbsolutePathId(appId)).addTaskRunning().instance)
+      val otherInstance =
+        List("/e", "/g", "/f").map(appId => TestInstanceBuilder.newBuilder(AbsolutePathId(appId)).addTaskRunning().instance)
 
       val instanceUpdates = Source.single(InstancesSnapshot(instances ++ otherInstance) -> Source(instances).via(instancesTerminalFlow))
 
@@ -119,8 +123,8 @@ class KillStreamWatcherTest extends AkkaUnitTest {
     "not treat instances as terminal until they are both decommissioned and expunged" in {
       val instance = TestInstanceBuilder.newBuilder(AbsolutePathId("/a")).addTaskRunning().instance
 
-      val instanceUpdatesTerminalNonDecomissioned = Source.single(
-        InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesTerminalFlow))
+      val instanceUpdatesTerminalNonDecomissioned =
+        Source.single(InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesTerminalFlow))
 
       val result1 = KillStreamWatcher
         .watchForDecommissionedInstances(instanceUpdatesTerminalNonDecomissioned, Seq(instance))
@@ -129,8 +133,8 @@ class KillStreamWatcherTest extends AkkaUnitTest {
 
       result1.map(_.runSpecId) shouldBe Set(AbsolutePathId("/a"))
 
-      val instanceUpdatesTerminalAndDecommissioned = Source.single(
-        InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesExpungedFlow))
+      val instanceUpdatesTerminalAndDecommissioned =
+        Source.single(InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesExpungedFlow))
 
       val result2 = KillStreamWatcher
         .watchForDecommissionedInstances(instanceUpdatesTerminalAndDecommissioned, Seq(instance))
@@ -143,8 +147,7 @@ class KillStreamWatcherTest extends AkkaUnitTest {
     "treats unreachable instances with goal decommissioned as terminal" in {
       val instance = TestInstanceBuilder.newBuilder(AbsolutePathId("/a")).addTaskUnreachable().instance
 
-      val instanceUpdates = Source.single(
-        InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesDecommissionedFlow))
+      val instanceUpdates = Source.single(InstancesSnapshot(Seq(instance)) -> Source.single(instance).via(instancesDecommissionedFlow))
 
       val result = KillStreamWatcher
         .watchForDecommissionedInstances(instanceUpdates, Seq(instance))
@@ -159,9 +162,11 @@ class KillStreamWatcherTest extends AkkaUnitTest {
 
       val instanceUpdates = Source.single(
         InstancesSnapshot(Seq(scheduledInstance)) ->
-          Source.single(scheduledInstance)
-          .via(instancesExpungedFlow)
-          .concat(StreamHelpers.sourceNever))
+          Source
+            .single(scheduledInstance)
+            .via(instancesExpungedFlow)
+            .concat(StreamHelpers.sourceNever)
+      )
 
       val result = KillStreamWatcher
         .watchForDecommissionedInstances(instanceUpdates, Seq(scheduledInstance))

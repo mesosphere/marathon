@@ -14,10 +14,11 @@ object SSLContextUtil {
   /**
     * Create an SSLContext which accepts the certificates in the given key store (if any).
     */
-  def createSSLContext(keyStoreOpt: Option[String], passwordOpt: Option[String]): SSLContext = keyStoreOpt match {
-    case Some(keystorePath) => createSSLContext(keystorePath, passwordOpt)
-    case None => SSLContext.getDefault
-  }
+  def createSSLContext(keyStoreOpt: Option[String], passwordOpt: Option[String]): SSLContext =
+    keyStoreOpt match {
+      case Some(keystorePath) => createSSLContext(keystorePath, passwordOpt)
+      case None => SSLContext.getDefault
+    }
 
   private[this] def createSSLContext(keyStorePath: String, passwordOpt: Option[String]): SSLContext = {
     def getX509TrustManager(tmf: TrustManagerFactory): X509TrustManager = {

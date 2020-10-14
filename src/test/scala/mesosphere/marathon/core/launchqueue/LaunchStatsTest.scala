@@ -22,8 +22,11 @@ class LaunchStatsTest extends AkkaUnitTest {
 
   class Fixture {
     val runSpecA = MarathonTestHelper.makeBasicApp(id = AbsolutePathId("/a"))
-    def offerFrom(agent: String, cpus: Double = 4) = MarathonTestHelper.makeBasicOffer(cpus = cpus)
-      .setSlaveId(Mesos.SlaveID.newBuilder().setValue(agent)).build()
+    def offerFrom(agent: String, cpus: Double = 4) =
+      MarathonTestHelper
+        .makeBasicOffer(cpus = cpus)
+        .setSlaveId(Mesos.SlaveID.newBuilder().setValue(agent))
+        .build()
     val instanceOp = mock[InstanceOp]
     import mesosphere.mesos.NoOfferMatchReason._
     val reasonA = Seq(InsufficientCpus, InsufficientPorts, InsufficientMemory)
@@ -46,10 +49,9 @@ class LaunchStatsTest extends AkkaUnitTest {
 
   "launchingInstancesFold" should {
     "keeps track of the first time the instance was reported as scheduled or provisioned" in new Fixture {
-      val fold = Source(List[(Timestamp, InstanceChange)](
-        ts1 -> InstanceUpdated(scheduled, None, Nil),
-        ts2 -> InstanceUpdated(provisioned, None, Nil)))
-        .runWith(LaunchStats.launchingInstancesFold)
+      val fold = Source(
+        List[(Timestamp, InstanceChange)](ts1 -> InstanceUpdated(scheduled, None, Nil), ts2 -> InstanceUpdated(provisioned, None, Nil))
+      ).runWith(LaunchStats.launchingInstancesFold)
 
       val result = fold.finalResult.futureValue
       result(instance.instanceId).since shouldBe ts1
@@ -57,11 +59,13 @@ class LaunchStatsTest extends AkkaUnitTest {
     }
 
     "clears instances from the map when they are neither scheduled or provisioned" in new Fixture {
-      val fold = Source(List[(Timestamp, InstanceChange)](
-        ts1 -> InstanceUpdated(scheduled, None, Nil),
-        ts2 -> InstanceUpdated(provisioned, None, Nil),
-        ts3 -> InstanceUpdated(running, None, Nil)))
-        .runWith(LaunchStats.launchingInstancesFold)
+      val fold = Source(
+        List[(Timestamp, InstanceChange)](
+          ts1 -> InstanceUpdated(scheduled, None, Nil),
+          ts2 -> InstanceUpdated(provisioned, None, Nil),
+          ts3 -> InstanceUpdated(running, None, Nil)
+        )
+      ).runWith(LaunchStats.launchingInstancesFold)
 
       val result = fold.finalResult.futureValue
       result.shouldBe(empty)
@@ -77,11 +81,14 @@ class LaunchStatsTest extends AkkaUnitTest {
     val stats = new LaunchStats(
       getRunSpec = runSpecs.get(_),
       delays = FoldFixture(Map(runSpecA.configRef -> ts2)),
-      launchingInstances = FoldFixture(Map(
-        instanceId -> LaunchingInstance(ts1, scheduled),
-      )),
+      launchingInstances = FoldFixture(
+        Map(
+          instanceId -> LaunchingInstance(ts1, scheduled)
+        )
+      ),
       runSpecStatistics = FoldFixture(Map.empty),
-      noMatchStatistics = FoldFixture(Map.empty))
+      noMatchStatistics = FoldFixture(Map.empty)
+    )
 
     val Seq(stat) = stats.getStatistics().futureValue
     stat.backOffUntil shouldBe Some(ts2)
@@ -91,18 +98,19 @@ class LaunchStatsTest extends AkkaUnitTest {
     val stats = new LaunchStats(
       getRunSpec = runSpecs.get(_),
       delays = FoldFixture(Map.empty),
-      launchingInstances = FoldFixture(Map(
-        instanceId -> LaunchingInstance(ts1, scheduled),
-      )),
-      runSpecStatistics = FoldFixture(Map(
-        runSpecA.id -> OfferMatchStatistics.RunSpecOfferStatistics.apply(
-          rejectSummary = Map(),
-          processedOfferCount = 4,
-          unusedOfferCount = 8,
-          lastMatch = None,
-          lastNoMatch = Some(noMatchA))
-      )),
-      noMatchStatistics = FoldFixture(Map.empty))
+      launchingInstances = FoldFixture(
+        Map(
+          instanceId -> LaunchingInstance(ts1, scheduled)
+        )
+      ),
+      runSpecStatistics = FoldFixture(
+        Map(
+          runSpecA.id -> OfferMatchStatistics.RunSpecOfferStatistics
+            .apply(rejectSummary = Map(), processedOfferCount = 4, unusedOfferCount = 8, lastMatch = None, lastNoMatch = Some(noMatchA))
+        )
+      ),
+      noMatchStatistics = FoldFixture(Map.empty)
+    )
 
     val Seq(stat) = stats.getStatistics().futureValue
     stat.inProgress shouldBe true

@@ -12,12 +12,13 @@ case class ScalingProposition(toDecommission: Seq[Instance], toStart: Int)
 object ScalingProposition extends StrictLogging {
 
   def propose(
-    instances: Seq[Instance],
-    toDecommission: Seq[Instance],
-    meetConstraints: ((Seq[Instance], Int) => Seq[Instance]),
-    scaleTo: Int,
-    killSelection: KillSelection,
-    runSpecId: AbsolutePathId): ScalingProposition = {
+      instances: Seq[Instance],
+      toDecommission: Seq[Instance],
+      meetConstraints: ((Seq[Instance], Int) => Seq[Instance]),
+      scaleTo: Int,
+      killSelection: KillSelection,
+      runSpecId: AbsolutePathId
+  ): ScalingProposition = {
 
     val instancesGoalRunning: Map[Instance.Id, Instance] = instances
       .filter(_.state.goal == Goal.Running)
@@ -50,8 +51,10 @@ object ScalingProposition extends StrictLogging {
       logger.info(s"Need to scale $runSpecId from ${instancesGoalRunning.size} up to $scaleTo instances")
     }
     if (instancesToDecommission.nonEmpty) {
-      logger.info(s"Going to decommission instances '${instancesToDecommission.map(_.instanceId).mkString(",")}'." +
-        s" of runspec $runSpecId. We have ${instancesGoalRunning.size} and we need $scaleTo instances.")
+      logger.info(
+        s"Going to decommission instances '${instancesToDecommission.map(_.instanceId).mkString(",")}'." +
+          s" of runspec $runSpecId. We have ${instancesGoalRunning.size} and we need $scaleTo instances."
+      )
     }
 
     ScalingProposition(instancesToDecommission, numberOfInstancesToStart)
@@ -93,11 +96,9 @@ object ScalingProposition extends StrictLogging {
   }
 
   /** tasks with lower weight should be killed first */
-  private val weight: Map[Condition, Int] = Map[Condition, Int](
-    Condition.Unreachable -> 1,
-    Condition.Staging -> 2,
-    Condition.Starting -> 3,
-    Condition.Running -> 4).withDefaultValue(5)
+  private val weight: Map[Condition, Int] =
+    Map[Condition, Int](Condition.Unreachable -> 1, Condition.Staging -> 2, Condition.Starting -> 3, Condition.Running -> 4)
+      .withDefaultValue(5)
 
   private def stagedAt(instance: Instance): Timestamp = {
     val stagedTasks = instance.tasksMap.values.map(_.status.stagedAt)

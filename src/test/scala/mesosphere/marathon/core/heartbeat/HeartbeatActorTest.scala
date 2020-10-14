@@ -22,55 +22,55 @@ class HeartbeatActorTest extends AkkaUnitTest with TestKitBase with ImplicitSend
 
     "initialize to inactive state" in {
       val fsm = TestFSMRef(new HeartbeatActor(fakeConfig))
-      fsm.stateName should be (StateInactive)
-      fsm.stateData should be (DataNone)
+      fsm.stateName should be(StateInactive)
+      fsm.stateData should be(DataNone)
     }
 
     "ignore non-activation messages when inactive" in {
       val fsm = TestFSMRef(new HeartbeatActor(fakeConfig))
       fsm ! MessageDeactivate(None)
       fsm ! MessagePulse
-      fsm.stateName should be (StateInactive)
-      fsm.stateData should be (DataNone)
+      fsm.stateName should be(StateInactive)
+      fsm.stateData should be(DataNone)
     }
 
     "activate upon receipt of an activation message" in {
       val fsm = TestFSMRef(new HeartbeatActor(fakeConfig))
       fsm ! MessageActivate(FakeReactor, FakeSessionToken)
-      fsm.stateName should be (StateActive)
-      fsm.stateData should be (DataActive(FakeReactor, FakeSessionToken))
+      fsm.stateName should be(StateActive)
+      fsm.stateData should be(DataActive(FakeReactor, FakeSessionToken))
     }
 
     "reset missed upon receipt of a pulse message" in {
       val fsm = TestFSMRef(new HeartbeatActor(fakeConfig))
       fsm.setState(stateName = StateActive, stateData = DataActive(FakeReactor, FakeSessionToken, missed = 1))
       fsm ! MessagePulse
-      fsm.stateName should be (StateActive)
-      fsm.stateData should be (DataActive(FakeReactor, FakeSessionToken))
+      fsm.stateName should be(StateActive)
+      fsm.stateData should be(DataActive(FakeReactor, FakeSessionToken))
     }
 
     "reactivate when active, upon receipt of a valid activation message" in {
       val fsm = TestFSMRef(new HeartbeatActor(fakeConfig))
       fsm.setState(stateName = StateActive, stateData = DataActive(FakeReactor, FakeSessionToken, missed = 1))
       fsm ! MessageActivate(FakeReactor, AnotherFakeSessionToken)
-      fsm.stateName should be (StateActive)
-      fsm.stateData should be (DataActive(FakeReactor, AnotherFakeSessionToken))
+      fsm.stateName should be(StateActive)
+      fsm.stateData should be(DataActive(FakeReactor, AnotherFakeSessionToken))
     }
 
     "deactivate when active, upon receipt of a valid deactivation message" in {
       val fsm = TestFSMRef(new HeartbeatActor(fakeConfig))
       fsm.setState(stateName = StateActive, stateData = DataActive(FakeReactor, FakeSessionToken))
       fsm ! MessageDeactivate(FakeSessionToken)
-      fsm.stateName should be (StateInactive)
-      fsm.stateData should be (DataNone)
+      fsm.stateName should be(StateInactive)
+      fsm.stateData should be(DataNone)
     }
 
     "do NOT deactivate when active, upon receipt of an invalid deactivation message" in {
       val fsm = TestFSMRef(new HeartbeatActor(fakeConfig))
       fsm.setState(stateName = StateActive, stateData = DataActive(FakeReactor, FakeSessionToken, missed = 1))
       fsm ! MessageDeactivate(InvalidSessionToken)
-      fsm.stateName should be (StateActive)
-      fsm.stateData should be (DataActive(FakeReactor, FakeSessionToken, missed = 1))
+      fsm.stateName should be(StateActive)
+      fsm.stateData should be(DataActive(FakeReactor, FakeSessionToken, missed = 1))
     }
 
     // ActorReactor translates Reactor callbacks into messages delivered to testActor (from ImplicitSender),
@@ -86,8 +86,8 @@ class HeartbeatActorTest extends AkkaUnitTest with TestKitBase with ImplicitSend
       fsm.setState(stateName = StateActive, stateData = DataActive(reactor, FakeSessionToken))
       fsm ! FSM.StateTimeout
       expectMsg(Skipped)
-      fsm.stateName should be (StateActive)
-      fsm.stateData should be (DataActive(reactor, FakeSessionToken, missed = 1))
+      fsm.stateName should be(StateActive)
+      fsm.stateData should be(DataActive(reactor, FakeSessionToken, missed = 1))
     }
 
     "trigger onFailure upon receipt of a timeout when missed is NOT less than failure threshold " in {
@@ -96,8 +96,8 @@ class HeartbeatActorTest extends AkkaUnitTest with TestKitBase with ImplicitSend
       fsm.setState(stateName = StateActive, stateData = DataActive(reactor, FakeSessionToken, missed = 1))
       fsm ! FSM.StateTimeout
       expectMsg(Failure)
-      fsm.stateName should be (StateInactive)
-      fsm.stateData should be (DataNone)
+      fsm.stateName should be(StateInactive)
+      fsm.stateData should be(DataNone)
     }
 
   }

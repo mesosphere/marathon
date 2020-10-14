@@ -23,10 +23,8 @@ import scala.concurrent.duration._
 
 class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
-  override lazy val agentConfig = MesosAgentConfig(
-    launcher = "linux",
-    isolation = Some("filesystem/linux,docker/runtime"),
-    imageProviders = Some("docker"))
+  override lazy val agentConfig =
+    MesosAgentConfig(launcher = "linux", isolation = Some("filesystem/linux,docker/runtime"), imageProviders = Some("docker"))
 
   "MesosApp" should {
     "deploy a simple Docker app using the Mesos containerizer" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
@@ -37,7 +35,6 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         container = Some(Container(`type` = EngineType.Mesos, docker = Some(DockerContainer(image = "busybox")))),
         cpus = 0.2,
         mem = 16.0
-
       )
 
       When("The app is deployed")
@@ -50,13 +47,16 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForTasks(AbsolutePathId(app.id), 1) // The app has really started
     }
 
-    "deploy a simple Docker app that uses Entrypoint/Cmd using the Mesos containerizer" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
+    "deploy a simple Docker app that uses Entrypoint/Cmd using the Mesos containerizer" taggedAs WhenEnvSet(
+      envVarRunMesosTests,
+      default = "true"
+    ) in {
       Given("a new Docker app the uses 'Cmd' in its Dockerfile")
       val app = raml.App(
         id = (testBasePath / "mesos-docker-app-with-entrypoint").toString,
-        container = Some(raml.Container(`type` = raml.EngineType.Mesos, docker = Some(raml.DockerContainer(
-          image = "hello-world")))),
-        cpus = 0.1, mem = 32.0,
+        container = Some(raml.Container(`type` = raml.EngineType.Mesos, docker = Some(raml.DockerContainer(image = "hello-world")))),
+        cpus = 0.1,
+        mem = 32.0,
         instances = 1
       )
 
@@ -69,7 +69,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForDeployment(result)
       waitForTasks(AbsolutePathId(app.id), 1) // The app has really started
 
-      marathon.deleteApp(AbsolutePathId(app.id)) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
+      marathon.deleteApp(
+        AbsolutePathId(app.id)
+      ) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
     }
 
     "deploy a simple pod" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
@@ -106,7 +108,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val pod = residentPod(
         id = "simple-persistent-pod",
         mountPath = containerPath,
-        cmd = s"""echo "data" > $containerPath/data && while test -e $containerPath/data; do sleep 5; done""")
+        cmd = s"""echo "data" > $containerPath/data && while test -e $containerPath/data; do sleep 5; done"""
+      )
 
       When("The pod is deployed")
       val createResult = marathon.createPodV2(pod)
@@ -147,7 +150,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
         ),
         volumes = Seq(
           HostVolume(Some("python"), s"$projectDir/src/test/resources/python"),
-          PersistentVolume(Some("data"), state.PersistentVolumeInfo(size = 2l))
+          PersistentVolume(Some("data"), state.PersistentVolumeInfo(size = 2L))
         ),
         unreachableStrategy = state.UnreachableDisabled,
         upgradeStrategy = state.UpgradeStrategy(0.0, 0.0),
@@ -188,8 +191,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       val podId = testBasePath / "healthy-pod-with-two-tasks"
       val containerDir = "/opt/marathon"
 
-      def appMockCommand(port: String) = """echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
-        s"""$port $podId v1 ${healthEndpointFor(podId, "v1")}"""
+      def appMockCommand(port: String) =
+        """echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
+          s"""$port $podId v1 ${healthEndpointFor(podId, "v1")}"""
 
       val pod = PodDefinition(
         id = podId,
@@ -264,11 +268,13 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
     "deploy a pod with Entrypoint/Cmd" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
       Given("A pod using the 'hello' image that sets Cmd in its Dockerfile")
       val pod = simplePod("simple-pod-with-hello-image-and-cmd").copy(
-        containers = Seq(MesosContainer(
-          name = "hello",
-          resources = raml.Resources(cpus = 0.1, mem = 32.0),
-          image = Some(raml.Image(raml.ImageType.Docker, "hello-world"))
-        ))
+        containers = Seq(
+          MesosContainer(
+            name = "hello",
+            resources = raml.Resources(cpus = 0.1, mem = 32.0),
+            image = Some(raml.Image(raml.ImageType.Docker, "hello-world"))
+          )
+        )
       )
 
       When("The pod is deployed")
@@ -279,7 +285,9 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       waitForDeployment(createResult)
       eventually { marathon.status(pod.id) should be(Stable) }
 
-      marathon.deletePod(pod.id) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
+      marathon.deletePod(
+        pod.id
+      ) // Otherwise the container will restart during the test life time since "hello-world' image exits after printing it's message to stdout
     }
 
     "deleting a group deletes pods deployed in the group" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
@@ -357,7 +365,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
     "stop (forcefully delete) a pod deployment" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
       Given("a pod with constraints that cannot be fulfilled")
-      val constraint = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Protos.Constraint.Operator.CLUSTER).setValue("na").build()
+      val constraint =
+        Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Protos.Constraint.Operator.CLUSTER).setValue("na").build()
       val pod = simplePod("simple-pod-with-impossible-constraints-force-delete").copy(
         constraints = Set(constraint)
       )
@@ -386,7 +395,8 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
 
     "rollback a pod deployment" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
       Given("a pod with constraints that cannot be fulfilled")
-      val constraint = Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Protos.Constraint.Operator.CLUSTER).setValue("na").build()
+      val constraint =
+        Protos.Constraint.newBuilder().setField("nonExistent").setOperator(Protos.Constraint.Operator.CLUSTER).setValue("na").build()
       val pod = simplePod("simple-pod-with-impossible-constraints-rollback").copy(
         constraints = Set(constraint)
       )
@@ -552,8 +562,11 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
       def queuedRunspecs = (jsQueueResult \ "queue").as[Seq[JsObject]]
       def jsonPod = queuedRunspecs.find { spec => (spec \ "pod" \ "id").as[String] == s"/$podName" }.get
 
-      def unfulfilledConstraintRejectSummary = (jsonPod \ "processedOffersSummary" \ "rejectSummaryLastOffers").as[Seq[JsObject]]
-        .find { e => (e \ "reason").as[String] == "UnfulfilledConstraint" }.get
+      def unfulfilledConstraintRejectSummary =
+        (jsonPod \ "processedOffersSummary" \ "rejectSummaryLastOffers")
+          .as[Seq[JsObject]]
+          .find { e => (e \ "reason").as[String] == "UnfulfilledConstraint" }
+          .get
 
       And("unique constraint reject must happen")
       eventually {
