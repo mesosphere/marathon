@@ -22,10 +22,7 @@ class AgentGoneByOperatorIntegrationTest extends AkkaIntegrationTest with Embedd
     Given("An app with a persistent volume")
     val containerPath = "persistent-volume"
     val id = appId("resident-task-with-persistent-volume-will-expunge-with-gone-by-operator")
-    val app = residentApp(
-      id = id,
-      containerPath = containerPath,
-      cmd = "sleep 36000")
+    val app = residentApp(id = id, containerPath = containerPath, cmd = "sleep 36000")
 
     When("a task is launched")
     createSuccessfully(app)

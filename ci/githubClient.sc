@@ -1,4 +1,4 @@
-#!/usr/bin/env amm
+#!/ usr / bin / env amm
 
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
@@ -11,16 +11,16 @@ import scalaj.http._
 import ujson._
 
 /**
- * Makes a POST request to GitHub's API with path and body.
- * E.g. "repos/mesosphere/marathon/pulls/5513/reviews" would post the body as a
- * comment.
- *
+  * Makes a POST request to GitHub's API with path and body.
+  * E.g. "repos/mesosphere/marathon/pulls/5513/reviews" would post the body as a
+  * comment.
+  *
  * @param path The API path. See path in
- *   https://developer.github.com/v3/pulls/reviews/#create-a-pull-request-review
- *   for an example.
- * @param body The body of the post request.
- */
-def execute(path:String, body: String): Unit = {
+  *   https://developer.github.com/v3/pulls/reviews/#create-a-pull-request-review
+  *   for an example.
+  * @param body The body of the post request.
+  */
+def execute(path: String, body: String): Unit = {
   val GITHUB_API_TOKEN =
     sys.env.getOrElse("GIT_PASSWORD", throw new IllegalArgumentException("GIT_PASSWORD enviroment variable was not set."))
   val GITHUB_API_USER =
@@ -35,63 +35,56 @@ def execute(path:String, body: String): Unit = {
 }
 
 /**
- * Comment with msg on pull request with pullNumber.
- */
+  * Comment with msg on pull request with pullNumber.
+  */
 def comment(pullNumber: String, msg: String, event: String = "COMMENT"): Unit = {
   val request = Js.Obj(
-    "body"  -> Js.Str(msg),
+    "body" -> Js.Str(msg),
     "event" -> Js.Str(event)
-    )
+  )
   val path = s"repos/mesosphere/marathon/pulls/$pullNumber/reviews"
   execute(path, request.toString)
 }
 
 /**
- * Creates a lightweight tag for a commit.
- *
+  * Creates a lightweight tag for a commit.
+  *
  * @param commit The commit hash to be tagged.
- * @param name The name of the tag, e.g. v1.7.42
- */
-def tag(commit: String, name: String) : Unit = {
+  * @param name The name of the tag, e.g. v1.7.42
+  */
+def tag(commit: String, name: String): Unit = {
   val fullCommitSha = %%('git, "rev-parse", commit).out.string.trim
 
   val request = Js.Obj(
-    "ref"  -> Js.Str(s"refs/tags/$name"),
-    "sha" -> Js.Str(fullCommitSha),
-    )
+    "ref" -> Js.Str(s"refs/tags/$name"),
+    "sha" -> Js.Str(fullCommitSha)
+  )
 
   val path = s"repos/mesosphere/marathon/git/refs"
   execute(path, request.toString)
 }
 
 /**
- * Reject pull request with pullNumber.
- */
-def reject(
-  pullNumber: String,
-  buildUrl: String,
-  buildTag: String): Unit = {
+  * Reject pull request with pullNumber.
+  */
+def reject(pullNumber: String, buildUrl: String, buildTag: String): Unit = {
   val msg = s"I'm building your change at [$buildTag]($buildUrl)."
 
   comment(pullNumber, msg)
 }
 
 /**
- * Report success of diff build back to GitHub.
- *
+  * Report success of diff build back to GitHub.
+  *
  * @param pullNumber The pull request of the build.
- * @param buildUrl A link back to the build on Jenkins.
- * @param buildTag Identifies build.
- * @param maybeArtifact A description of the Marathon binary that has been uploaded.
- *    It's None when now package was uploaded.
- */
-def reportSuccess(
-  pullNumber: String,
-  buildUrl: String,
-  buildTag: String,
-  maybeArtifact: Option[awsClient.Artifact]): Unit = {
+  * @param buildUrl A link back to the build on Jenkins.
+  * @param buildTag Identifies build.
+  * @param maybeArtifact A description of the Marathon binary that has been uploaded.
+  *    It's None when now package was uploaded.
+  */
+def reportSuccess(pullNumber: String, buildUrl: String, buildTag: String, maybeArtifact: Option[awsClient.Artifact]): Unit = {
 
-  val buildinfoDiff = maybeArtifact.fold(""){ artifact =>
+  val buildinfoDiff = maybeArtifact.fold("") { artifact =>
     s"""
       |You can create a DC/OS with your patched Marathon by creating a new pull
       |request with the following changes in [buildinfo.json](https://github.com/dcos/dcos/blob/master/packages/marathon/buildinfo.json):
@@ -128,18 +121,14 @@ def reportSuccess(
 }
 
 /**
- * Report failure of build back to GitHub.
- *
+  * Report failure of build back to GitHub.
+  *
  * @param pullNumber The pull request of the build.
- * @param buildUrl A link back to the build on Jenkins.
- * @param buildTag Identifies build.
- * @param msg The error message for the failure.
- */
-def reportFailure(
-  pullNumber: String,
-  buildUrl: String,
-  buildTag: String,
-  msg: String) : Unit = {
+  * @param buildUrl A link back to the build on Jenkins.
+  * @param buildTag Identifies build.
+  * @param msg The error message for the failure.
+  */
+def reportFailure(pullNumber: String, buildUrl: String, buildTag: String, msg: String): Unit = {
 
   val body = s"""
     |**\u2717 Build of #$pullNumber failed.**

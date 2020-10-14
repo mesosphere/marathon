@@ -44,8 +44,7 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver with StrictLog
     driverCmd(DriverActor.LaunchTasks(offerIds.asScala.toSeq, tasks.asScala.toSeq))
 
   // Mesos 0.23.x
-  override def acceptOffers(
-    offerIds: util.Collection[OfferID], ops: util.Collection[Offer.Operation], filters: Filters): Status =
+  override def acceptOffers(offerIds: util.Collection[OfferID], ops: util.Collection[Offer.Operation], filters: Filters): Status =
     driverCmd(DriverActor.AcceptOffers(offerIds.asScala.toSeq, ops.asScala.toSeq, filters))
 
   override def killTask(taskId: TaskID): Status = driverCmd(DriverActor.KillTask(taskId))
@@ -61,8 +60,8 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver with StrictLog
 
   override def declineOffer(offerId: OfferID, filters: Filters): Status = Status.DRIVER_RUNNING
 
-  override def launchTasks(offerIds: util.Collection[OfferID], tasks: util.Collection[TaskInfo],
-    filters: Filters): Status = launchTasks(offerIds, tasks)
+  override def launchTasks(offerIds: util.Collection[OfferID], tasks: util.Collection[TaskInfo], filters: Filters): Status =
+    launchTasks(offerIds, tasks)
   override def launchTasks(offerId: OfferID, tasks: util.Collection[TaskInfo], filters: Filters): Status =
     launchTasks(Collections.singleton(offerId), tasks)
   override def launchTasks(offerId: OfferID, tasks: util.Collection[TaskInfo]): Status =
@@ -78,10 +77,11 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver with StrictLog
   @volatile
   var driverActorRefOpt: Option[ActorRef] = None
 
-  private def status: Status = system match {
-    case None => Status.DRIVER_STOPPED
-    case Some(_) => Status.DRIVER_RUNNING
-  }
+  private def status: Status =
+    system match {
+      case None => Status.DRIVER_STOPPED
+      case Some(_) => Status.DRIVER_RUNNING
+    }
 
   override def start(): Status = {
     logger.info("Starting simulated Mesos")
@@ -125,5 +125,9 @@ class SimulatedDriver(driverProps: Props) extends SchedulerDriver with StrictLog
   override def suppressOffers(roles: util.Collection[String]): Status = ???
 
   override def updateFramework(frameworkInfo: FrameworkInfo, suppressedRoles: util.Collection[String]): Status = ???
-  override def updateFramework(frameworkInfo: FrameworkInfo, suppressedRoles: util.Collection[String], offerConstraints: OfferConstraints): Status = ???
+  override def updateFramework(
+      frameworkInfo: FrameworkInfo,
+      suppressedRoles: util.Collection[String],
+      offerConstraints: OfferConstraints
+  ): Status = ???
 }

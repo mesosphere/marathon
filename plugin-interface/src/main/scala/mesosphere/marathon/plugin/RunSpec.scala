@@ -132,6 +132,7 @@ trait PodSpec extends RunSpec {
   * name.
   */
 trait VolumeSpec {
+
   /**
     * A volume name.
     */
@@ -142,6 +143,7 @@ trait VolumeSpec {
   * A volume referring to a secret to be made available to containers.
   */
 trait SecretVolumeSpec extends VolumeSpec {
+
   /**
     * A secret name.
     */
@@ -152,6 +154,7 @@ trait SecretVolumeSpec extends VolumeSpec {
   * A volume mount specifying a path to mount a volume at.
   */
 trait VolumeMountSpec {
+
   /**
     * The volume name this mount is for.
     */

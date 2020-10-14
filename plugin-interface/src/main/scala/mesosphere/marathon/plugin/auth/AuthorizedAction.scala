@@ -36,4 +36,3 @@ case object CreateResource extends AuthorizedAction[AuthorizedResource]
 case object UpdateResource extends AuthorizedAction[AuthorizedResource]
 case object DeleteResource extends AuthorizedAction[AuthorizedResource]
 case object ViewResource extends AuthorizedAction[AuthorizedResource]
-

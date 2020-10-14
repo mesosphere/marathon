@@ -56,10 +56,13 @@ class ForwarderService extends StrictLogging {
     }
 
     val p = Promise[Done]
-    service.addListener(new Service.Listener {
-      override def failed(s: Service.State, t: Throwable): Unit = p.tryFailure(t)
-      override def running(): Unit = p.trySuccess(Done)
-    }, sameThreadExecutor)
+    service.addListener(
+      new Service.Listener {
+        override def failed(s: Service.State, t: Throwable): Unit = p.tryFailure(t)
+        override def running(): Unit = p.trySuccess(Done)
+      },
+      sameThreadExecutor
+    )
     service.startAsync()
     p.future
   }
@@ -80,9 +83,10 @@ class ForwarderService extends StrictLogging {
     *
     * @return AppInstance referring to the app launched.
     */
-  def startHelloApp(httpArg: String = "--http_port", args: Seq[String] = Nil)(
-    implicit
-    actorSystem: ActorSystem, executionContext: ExecutionContext): AppInstance = {
+  def startHelloApp(httpArg: String = "--http_port", args: Seq[String] = Nil)(implicit
+      actorSystem: ActorSystem,
+      executionContext: ExecutionContext
+  ): AppInstance = {
     launching { port =>
       ForwarderService.createHelloApp(Seq(httpArg, port.toString) ++ args)
     }
@@ -98,9 +102,10 @@ class ForwarderService extends StrictLogging {
     *
     * @return AppInstance referring to the app launched.
     */
-  def startForwarder(forwardTo: Int, httpArg: String = "--http_port", args: Seq[String] = Nil)(
-    implicit
-    actorSystem: ActorSystem, executionContext: ExecutionContext): AppInstance = {
+  def startForwarder(forwardTo: Int, httpArg: String = "--http_port", args: Seq[String] = Nil)(implicit
+      actorSystem: ActorSystem,
+      executionContext: ExecutionContext
+  ): AppInstance = {
     require(!closed)
     launching { port =>
       ForwarderService.createForwarder(forwardTo, Seq(httpArg, port.toString) ++ args)
@@ -185,7 +190,10 @@ object ForwarderService extends StrictLogging {
     startImpl(conf, new LeaderInfoModule(elected = true, leaderHostPort = None))
   }
 
-  private[setup] def createForwarder(forwardToPort: Int, args: Seq[String])(implicit actorSystem: ActorSystem, ec: ExecutionContext): Service = {
+  private[setup] def createForwarder(forwardToPort: Int, args: Seq[String])(implicit
+      actorSystem: ActorSystem,
+      ec: ExecutionContext
+  ): Service = {
     println(args.toList)
     val conf = createConf(args: _*)
     logger.info(s"Start forwarder on port ${conf.httpPort()}, forwarding to $forwardToPort")
@@ -198,7 +206,10 @@ object ForwarderService extends StrictLogging {
     }
   }
 
-  private def startImpl(conf: ForwarderConf, leaderModule: LeaderInfoModule)(implicit actorSystem: ActorSystem, ec: ExecutionContext): Service = {
+  private def startImpl(conf: ForwarderConf, leaderModule: LeaderInfoModule)(implicit
+      actorSystem: ActorSystem,
+      ec: ExecutionContext
+  ): Service = {
     val myHostPort = if (conf.disableHttp()) s"localhost:${conf.httpsPort()}" else s"localhost:${conf.httpPort()}"
 
     val sslContext = SSLContextUtil.createSSLContext(conf.sslKeystorePath.toOption, conf.sslKeystorePassword.toOption)
@@ -214,10 +225,7 @@ object ForwarderService extends StrictLogging {
     val application = new RootApplication(Nil, Seq(new DummyForwarderResource))
     val httpModule = new HttpModule(conf, new DummyMetricsModule)
     httpModule.servletContextHandler.addFilter(new FilterHolder(filter), "/*", java.util.EnumSet.allOf(classOf[DispatcherType]))
-    httpModule.servletContextHandler.addServlet(
-      new ServletHolder(
-        new ServletContainer(
-          ResourceConfig.forApplication(application))), "/*")
+    httpModule.servletContextHandler.addServlet(new ServletHolder(new ServletContainer(ResourceConfig.forApplication(application))), "/*")
     httpModule.marathonHttpService
   }
 }

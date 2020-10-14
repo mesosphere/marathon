@@ -23,12 +23,15 @@ abstract class HttpRequestHandlerBase extends HttpRequestHandler {
   }
 
   protected[this] def mediaMime(url: URL): String = {
-    url.getPath.split("\\.").lastOption.flatMap(wellKnownMimes.get)
+    url.getPath
+      .split("\\.")
+      .lastOption
+      .flatMap(wellKnownMimes.get)
       .orElse(Option(URLConnection.guessContentTypeFromName(url.toString)))
       .getOrElse("application/octet-stream")
   }
 
-  protected[this] val wellKnownMimes = Map (
+  protected[this] val wellKnownMimes = Map(
     "css" -> "text/css",
     "js" -> "application/javascript",
     "eot" -> "application/vnd.ms-fontobject",
