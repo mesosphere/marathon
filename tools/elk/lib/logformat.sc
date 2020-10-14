@@ -18,11 +18,7 @@ object DcosLogFormat extends (String => Option[LogFormat]) {
 
   override def apply(s: String): Option[LogFormat] =
     if (regex.findFirstMatchIn(s).nonEmpty)
-      Some(
-        LogFormat(
-          codec = codec,
-          example = example,
-          unframe = unframe))
+      Some(LogFormat(codec = codec, example = example, unframe = unframe))
     else
       None
 
@@ -54,11 +50,7 @@ object MomFormat extends (String => Option[LogFormat]) {
 
   override def apply(line: String): Option[LogFormat] =
     regex.findFirstMatchIn(line).map { m =>
-      LogFormat(
-        codec = codec,
-        example = example,
-        unframe = unframe,
-        host = None)
+      LogFormat(codec = codec, example = example, unframe = unframe, host = None)
     }
 
   val codec = s"""|multiline {
@@ -69,7 +61,6 @@ object MomFormat extends (String => Option[LogFormat]) {
                   |}""".stripMargin
 
   val unframe = "" // nothing to do!
-
 
 }
 
@@ -84,11 +75,7 @@ object DirectJournalFormat extends (String => Option[LogFormat]) {
 
   override def apply(line: String): Option[LogFormat] =
     regex.findFirstMatchIn(line).map { m =>
-      LogFormat(
-        codec = codec,
-        example = example,
-        unframe = unframe,
-        host = Some(m.subgroups(0)))
+      LogFormat(codec = codec, example = example, unframe = unframe, host = Some(m.subgroups(0)))
     }
 
   val codec = s"""|multiline {
@@ -108,9 +95,7 @@ object DirectJournalFormat extends (String => Option[LogFormat]) {
                     |  }
                     |}""".stripMargin
 
-
 }
-
 
 object TimezonesInDatacentersAreSadFormat extends (String => Option[LogFormat]) {
   // "2019-12-02 05:53:10.895189 -0500 EST [2019-12-02 05:53:10,885] INFO  Message"
@@ -123,11 +108,7 @@ object TimezonesInDatacentersAreSadFormat extends (String => Option[LogFormat]) 
 
   override def apply(line: String): Option[LogFormat] =
     regex.findFirstMatchIn(line).map { m =>
-      LogFormat(
-        codec = codec,
-        example = example,
-        unframe = unframe,
-        host = Some(m.subgroups(0)))
+      LogFormat(codec = codec, example = example, unframe = unframe, host = Some(m.subgroups(0)))
     }
 
   val codec = s"""|multiline {
@@ -149,10 +130,10 @@ object TimezonesInDatacentersAreSadFormat extends (String => Option[LogFormat]) 
 }
 
 case class LogFormat(
-  codec: String,
-  example: String,
-  unframe: String,
-  host: Option[String] = None
+    codec: String,
+    example: String,
+    unframe: String,
+    host: Option[String] = None
 )
 
 object LogFormat {

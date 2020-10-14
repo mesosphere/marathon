@@ -34,16 +34,11 @@ case class Histogram(
     p98: Double,
     p99: Double,
     p999: Double,
-    stddev: Double) extends Metric
+    stddev: Double
+) extends Metric
 
-case class Meter(
-    name: String,
-    count: Int,
-    m15_rate: Double,
-    m1_rate: Double,
-    m5_rate: Double,
-    mean_rate: Double,
-    units: String) extends Metric {
+case class Meter(name: String, count: Int, m15_rate: Double, m1_rate: Double, m5_rate: Double, mean_rate: Double, units: String)
+    extends Metric {
   override def mean: Double = mean_rate
 }
 
@@ -65,7 +60,8 @@ case class Timer(
     m5_rate: Double,
     mean_rate: Double,
     duration_units: String,
-    rate_units: String) extends Metric
+    rate_units: String
+) extends Metric
 
 case class MetricsSample(
     version: String,
@@ -73,34 +69,44 @@ case class MetricsSample(
     counters: Seq[Counter],
     histograms: Seq[Histogram],
     meters: Seq[Meter],
-    timers: Seq[Timer]) {
+    timers: Seq[Timer]
+) {
 
-  def all: Map[String, Seq[Metric]] = Map (
-    "gauges" -> gauges,
-    "counters" -> counters,
-    "gauges" -> gauges,
-    "histograms" -> histograms,
-    "meters" -> meters,
-    "timers" -> timers
-  )
+  def all: Map[String, Seq[Metric]] =
+    Map(
+      "gauges" -> gauges,
+      "counters" -> counters,
+      "gauges" -> gauges,
+      "histograms" -> histograms,
+      "meters" -> meters,
+      "timers" -> timers
+    )
 }
 
 object MetricsFormat {
+
   /**
     * Special Reads function, that transform reads a given json object
     *  { "a" : {}, "b" : {} } into an array of form
     *  [ { "name": "a", ... }, { "name": "b", ...} ]
     *  The given reads function is used to read the transformed json into an object.
     */
-  def objectRead[T](t: Reads[T]): Reads[Seq[T]] = new Reads[Seq[T]] {
-    override def reads(js: JsValue): JsResult[Seq[T]] = {
-      JsSuccess(js.as[JsObject].fields.iterator.map {
-        case (name, value) =>
-          val obj = JsObject(value.as[JsObject].fields :+ ("name" -> JsString(name)))
-          t.reads(obj).get
-      }.toSeq)
+  def objectRead[T](t: Reads[T]): Reads[Seq[T]] =
+    new Reads[Seq[T]] {
+      override def reads(js: JsValue): JsResult[Seq[T]] = {
+        JsSuccess(
+          js.as[JsObject]
+            .fields
+            .iterator
+            .map {
+              case (name, value) =>
+                val obj = JsObject(value.as[JsObject].fields :+ ("name" -> JsString(name)))
+                t.reads(obj).get
+            }
+            .toSeq
+        )
+      }
     }
-  }
 
   // Json Reads objects for metric structure
   implicit val gaugeReads = objectRead(Json.reads[Gauge])

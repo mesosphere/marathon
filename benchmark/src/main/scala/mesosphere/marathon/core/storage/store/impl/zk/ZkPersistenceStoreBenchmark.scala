@@ -54,7 +54,9 @@ class ZkPersistenceStoreBenchmark {
     val done = Promise[Done]
     val pipeline: Future[Done] = async {
       await(zkStore.store[AbsolutePathId, StoredGroup](storedGroup.id, storedGroup))
-      val delete = Future.sequence(rootGroup.groupsById.keys.map { id => zkStore.deleteAll[AbsolutePathId, AppDefinition](id)(appDefResolver) })
+      val delete = Future.sequence(rootGroup.groupsById.keys.map { id =>
+        zkStore.deleteAll[AbsolutePathId, AppDefinition](id)(appDefResolver)
+      })
       await(delete)
       Done
     }

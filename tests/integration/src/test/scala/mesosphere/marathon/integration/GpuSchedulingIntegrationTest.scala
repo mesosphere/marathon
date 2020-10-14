@@ -95,8 +95,8 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
       val app = residentApp(
         id = appId(Some("resident-task-with-persistent-volume-on-gpu")),
         containerPath = containerPath,
-        cmd = s"""echo data > $containerPath/data && sleep 1000""")
-        .copy(labels = Map("GPU_SCHEDULING_BEHAVIOR" -> "unrestricted"))
+        cmd = s"""echo data > $containerPath/data && sleep 1000"""
+      ).copy(labels = Map("GPU_SCHEDULING_BEHAVIOR" -> "unrestricted"))
 
       When("a task is launched")
       val result = createAsynchronously(app)
@@ -130,10 +130,7 @@ class GpuSchedulingIntegrationTest extends AkkaIntegrationTest with EmbeddedMara
       Given("An app that writes into a persistent volume")
       val containerPath = "persistent-volume"
       val applicationId = appId(Some("new-resident-task-no-match"))
-      val app = residentApp(
-        id = applicationId,
-        containerPath = containerPath,
-        cmd = s"""echo "data" > $containerPath/data""")
+      val app = residentApp(id = applicationId, containerPath = containerPath, cmd = s"""echo "data" > $containerPath/data""")
 
       When("A task is launched")
       val result = createAsynchronously(app)

@@ -45,8 +45,18 @@ case class ITListAppsResult(apps: Seq[App])
 case class ITAppVersions(versions: Seq[Timestamp])
 case class ITListTasks(tasks: Seq[ITEnrichedTask])
 case class ITDeploymentPlan(version: String, deploymentId: String)
-case class ITHealthCheckResult(firstSuccess: Option[String], lastSuccess: Option[String], lastFailure: Option[String], consecutiveFailures: Int, alive: Boolean)
-case class ITCheckResult(http: Option[ITHttpCheckStatus] = None, tcp: Option[ITTCPCheckStatus] = None, command: Option[ITCommandCheckStatus] = None)
+case class ITHealthCheckResult(
+    firstSuccess: Option[String],
+    lastSuccess: Option[String],
+    lastFailure: Option[String],
+    consecutiveFailures: Int,
+    alive: Boolean
+)
+case class ITCheckResult(
+    http: Option[ITHttpCheckStatus] = None,
+    tcp: Option[ITTCPCheckStatus] = None,
+    command: Option[ITCommandCheckStatus] = None
+)
 case class ITDeploymentResult(version: Timestamp, deploymentId: String)
 case class ITHttpCheckStatus(statusCode: Int)
 case class ITTCPCheckStatus(succeeded: Boolean)
@@ -65,7 +75,8 @@ case class ITEnrichedTask(
     zone: Option[String],
     check: Option[ITCheckResult],
     role: Option[String],
-    healthCheckResults: Seq[ITHealthCheckResult]) {
+    healthCheckResults: Seq[ITHealthCheckResult]
+) {
 
   def launched: Boolean = startedAt.nonEmpty
   def suspended: Boolean = startedAt.isEmpty
@@ -83,6 +94,7 @@ case class ITLaunchQueue(queue: List[ITQueueItem])
 case class ITDeployment(id: String, affectedApps: Seq[String], affectedPods: Seq[String])
 
 sealed trait ITSSEEvent
+
 /** Used to signal that the SSE stream is connected */
 case object ITConnected extends ITSSEEvent
 
@@ -95,11 +107,11 @@ case class ITEvent(eventType: String, info: Map[String, Any]) extends ITSSEEvent
   *
   * @param url the url of the remote marathon instance
   */
-class MarathonFacade(
-    val url: String, baseGroup: AbsolutePathId, implicit val waitTime: FiniteDuration = 30.seconds)(
-    implicit
-    val system: ActorSystem, mat: Materializer)
-  extends PodConversion with StrictLogging {
+class MarathonFacade(val url: String, baseGroup: AbsolutePathId, implicit val waitTime: FiniteDuration = 30.seconds)(implicit
+    val system: ActorSystem,
+    mat: Materializer
+) extends PodConversion
+    with StrictLogging {
   implicit val scheduler = system.scheduler
   import com.mesosphere.utils.http.AkkaHttpResponse._
 
@@ -130,25 +142,25 @@ class MarathonFacade(
   implicit lazy val itCommandCheckStatus = Json.format[ITCommandCheckStatus]
   implicit lazy val itCheckResultFormat: Format[ITCheckResult] = (
     (__ \ "http").formatNullable[ITHttpCheckStatus] ~
-    (__ \ "tcp").formatNullable[ITTCPCheckStatus] ~
-    (__ \ "command").formatNullable[ITCommandCheckStatus]
+      (__ \ "tcp").formatNullable[ITTCPCheckStatus] ~
+      (__ \ "command").formatNullable[ITCommandCheckStatus]
   )(ITCheckResult(_, _, _), unlift(ITCheckResult.unapply))
 
   implicit lazy val itEnrichedTaskFormat: Format[ITEnrichedTask] = (
     (__ \ "appId").format[String] ~
-    (__ \ "id").format[String] ~
-    (__ \ "host").format[String] ~
-    (__ \ "ports").formatNullable[Seq[Int]] ~
-    (__ \ "slaveId").formatNullable[String] ~
-    (__ \ "startedAt").formatNullable[Timestamp] ~
-    (__ \ "stagedAt").formatNullable[Timestamp] ~
-    (__ \ "state").format[String] ~
-    (__ \ "version").formatNullable[String] ~
-    (__ \ "region").formatNullable[String] ~
-    (__ \ "zone").formatNullable[String] ~
-    (__ \ "checkResult").formatNullable[ITCheckResult] ~
-    (__ \ "role").formatNullable[String] ~
-    (__ \ "healthCheckResults").formatWithDefault[Seq[ITHealthCheckResult]](Nil)
+      (__ \ "id").format[String] ~
+      (__ \ "host").format[String] ~
+      (__ \ "ports").formatNullable[Seq[Int]] ~
+      (__ \ "slaveId").formatNullable[String] ~
+      (__ \ "startedAt").formatNullable[Timestamp] ~
+      (__ \ "stagedAt").formatNullable[Timestamp] ~
+      (__ \ "state").format[String] ~
+      (__ \ "version").formatNullable[String] ~
+      (__ \ "region").formatNullable[String] ~
+      (__ \ "zone").formatNullable[String] ~
+      (__ \ "checkResult").formatNullable[ITCheckResult] ~
+      (__ \ "role").formatNullable[String] ~
+      (__ \ "healthCheckResults").formatWithDefault[Seq[ITHealthCheckResult]](Nil)
   )(ITEnrichedTask, unlift(ITEnrichedTask.unapply))
 
   def isInBaseGroup(pathId: PathId): Boolean = {
@@ -176,20 +188,22 @@ class MarathonFacade(
 
     val eventsFilter = Query(eventsType.map(eventType => "event_type" -> eventType): _*)
 
-    Http().singleRequest(Get(akka.http.scaladsl.model.Uri(s"$url/v2/events").withQuery(eventsFilter))
-      .withHeaders(Accept(MediaType.text("event-stream"))))
+    Http()
+      .singleRequest(
+        Get(akka.http.scaladsl.model.Uri(s"$url/v2/events").withQuery(eventsFilter))
+          .withHeaders(Accept(MediaType.text("event-stream")))
+      )
       .flatMap { response =>
         logger.info(s"Unmarshall SSE response from $url")
         AkkaUnmarshal(response).to[Source[ServerSentEvent, NotUsed]]
       }
       .map { stream =>
         logger.info(s"Mapping SSE stream from $url")
-        stream
-          .map { event =>
-            logger.info(s"Parsing JSON from $url")
-            val json = mapper.readValue[Map[String, Any]](event.data) // linter:ignore
-            ITEvent(event.eventType.getOrElse("unknown"), json)
-          }
+        stream.map { event =>
+          logger.info(s"Parsing JSON from $url")
+          val json = mapper.readValue[Map[String, Any]](event.data) // linter:ignore
+          ITEvent(event.eventType.getOrElse("unknown"), json)
+        }
       }
   }
 
@@ -418,7 +432,7 @@ class MarathonFacade(
     result(requestFor[List[ITDeployment]](Get(s"$url/v2/deployments")), waitTime).map { deployments =>
       deployments.filter { deployment =>
         deployment.affectedApps.map(PathId(_)).exists(id => isInBaseGroup(id)) ||
-          deployment.affectedPods.map(PathId(_)).exists(id => isInBaseGroup(id))
+        deployment.affectedPods.map(PathId(_)).exists(id => isInBaseGroup(id))
       }
     }
   }
@@ -427,7 +441,7 @@ class MarathonFacade(
     result(requestFor[List[ITDeployment]](Get(s"$url/v2/deployments")), waitTime).map { deployments =>
       deployments.filter { deployment =>
         deployment.affectedApps.map(PathId(_)).contains(pathId) ||
-          deployment.affectedPods.map(PathId(_)).contains(pathId)
+        deployment.affectedPods.map(PathId(_)).contains(pathId)
       }
     }
   }
@@ -512,6 +526,7 @@ object MarathonFacade {
     * @param response The result of an HTTP request.
     */
   implicit class DeploymentId(response: RestResult[_]) {
+
     /**
       * @return Deployment ID from headers, if any
       */

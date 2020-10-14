@@ -39,8 +39,7 @@ trait IntegrationTestLike extends UnitTestLike with RestResultMatchers {
 abstract class IntegrationTest extends WordSpec with IntegrationTestLike
 
 trait AkkaIntegrationTestLike extends AkkaUnitTestLike with IntegrationTestLike {
-  protected override lazy val akkaConfig: Config = ConfigFactory.parseString(
-    s"""
+  protected override lazy val akkaConfig: Config = ConfigFactory.parseString(s"""
        |akka.test.default-timeout=${patienceConfig.timeout.toMillis}
     """.stripMargin).withFallback(ConfigFactory.load())
 }

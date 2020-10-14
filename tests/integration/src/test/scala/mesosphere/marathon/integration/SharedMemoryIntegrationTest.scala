@@ -48,13 +48,17 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
           volumeMounts = Seq(
             VolumeMount(Some("python"), s"$containerDir/python", true)
           ),
-          linuxInfo = Some(state.LinuxInfo(
-            seccomp = None,
-            ipcInfo = Some(state.IPCInfo(
-              ipcMode = state.IpcMode.Private,
-              shmSize = Some(shmSize)
-            ))
-          ))
+          linuxInfo = Some(
+            state.LinuxInfo(
+              seccomp = None,
+              ipcInfo = Some(
+                state.IPCInfo(
+                  ipcMode = state.IpcMode.Private,
+                  shmSize = Some(shmSize)
+                )
+              )
+            )
+          )
         )
       ),
       volumes = Seq(
@@ -107,13 +111,17 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
     val pod = PodDefinition(
       id = id,
-      linuxInfo = Some(state.LinuxInfo(
-        seccomp = None,
-        ipcInfo = Some(state.IPCInfo(
-          ipcMode = state.IpcMode.Private,
-          shmSize = Some(shmSize)
-        ))
-      )),
+      linuxInfo = Some(
+        state.LinuxInfo(
+          seccomp = None,
+          ipcInfo = Some(
+            state.IPCInfo(
+              ipcMode = state.IpcMode.Private,
+              shmSize = Some(shmSize)
+            )
+          )
+        )
+      ),
       containers = Seq(
         MesosContainer(
           name = "task1",
@@ -124,13 +132,17 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
           volumeMounts = Seq(
             VolumeMount(Some("python"), s"$containerDir/python", true)
           ),
-          linuxInfo = Some(state.LinuxInfo(
-            seccomp = None,
-            ipcInfo = Some(state.IPCInfo(
-              ipcMode = state.IpcMode.ShareParent,
-              shmSize = None
-            ))
-          ))
+          linuxInfo = Some(
+            state.LinuxInfo(
+              seccomp = None,
+              ipcInfo = Some(
+                state.IPCInfo(
+                  ipcMode = state.IpcMode.ShareParent,
+                  shmSize = None
+                )
+              )
+            )
+          )
         ),
         MesosContainer(
           name = "task2",
@@ -141,13 +153,17 @@ class SharedMemoryIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
           volumeMounts = Seq(
             VolumeMount(Some("python"), s"$containerDir/python", true)
           ),
-          linuxInfo = Some(state.LinuxInfo(
-            seccomp = None,
-            ipcInfo = Some(state.IPCInfo(
-              ipcMode = state.IpcMode.ShareParent,
-              shmSize = None
-            ))
-          ))
+          linuxInfo = Some(
+            state.LinuxInfo(
+              seccomp = None,
+              ipcInfo = Some(
+                state.IPCInfo(
+                  ipcMode = state.IpcMode.ShareParent,
+                  shmSize = None
+                )
+              )
+            )
+          )
         )
       ),
       volumes = Seq(

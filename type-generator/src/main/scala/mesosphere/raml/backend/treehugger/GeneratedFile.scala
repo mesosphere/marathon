@@ -22,17 +22,17 @@ case class GeneratedFile(objects: Seq[GeneratedObject]) {
 
     val rootBlock: Tree =
       if (trees.nonEmpty) {
-          BLOCK(trees)
-            .inPackage(pkg)
-            .withComment(NoScalaFormat)
+        BLOCK(trees)
+          .inPackage(pkg)
+          .withComment(NoScalaFormat)
       } else {
-          BLOCK()
-            .withComment(s"Unsupported")
-            .inPackage(pkg)
-            .withComment(NoScalaFormat)
+        BLOCK()
+          .withComment(s"Unsupported")
+          .inPackage(pkg)
+          .withComment(NoScalaFormat)
       }
 
-      treehugger.forest.treeToString(rootBlock)
+    treehugger.forest.treeToString(rootBlock)
   }
 
 }

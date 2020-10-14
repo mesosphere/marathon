@@ -31,4 +31,3 @@ trait Authorizer extends Plugin {
     */
   def handleNotAuthorized(principal: Identity, response: HttpResponse): Unit
 }
-

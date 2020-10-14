@@ -29,7 +29,12 @@ import scala.sys.process.Process
   * This integration test starts older Marathon versions one after another and finishes this upgrade procedure with the
   * current build. In each step we verify that all apps are still up and running.
   */
-class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonAppFixtures with Eventually {
+class UpgradeIntegrationTest
+    extends AkkaIntegrationTest
+    with MesosClusterTest
+    with ZookeeperServerTest
+    with MarathonAppFixtures
+    with Eventually {
 
   val zkURLBase = s"zk://${zkserver.connectUrl}/marathon-$suiteName"
 
@@ -38,16 +43,23 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   val marathonMinus1Artifact = MarathonArtifact(SemVer(1, 9, 124, Some("e04033c6f")))
 
   //   Configure Mesos to provide the Mesos containerizer with Docker image support.
-  override lazy val agentConfig = MesosAgentConfig(
-    launcher = "linux",
-    isolation = Some("filesystem/linux,docker/runtime"),
-    imageProviders = Some("docker"))
+  override lazy val agentConfig =
+    MesosAgentConfig(launcher = "linux", isolation = Some("filesystem/linux,docker/runtime"), imageProviders = Some("docker"))
 
   override def beforeAll(): Unit = {
 
-    require(marathonMinus3Artifact.version.minor == BuildInfo.version.minor - 3, s"expected Marathon n-3 to have minor version ${BuildInfo.version.minor - 3}, but instead was ${marathonMinus3Artifact.version.minor}")
-    require(marathonMinus2Artifact.version.minor == BuildInfo.version.minor - 2, s"expected Marathon n-2 to have minor version ${BuildInfo.version.minor - 2}, but instead was ${marathonMinus2Artifact.version.minor}")
-    require(marathonMinus1Artifact.version.minor == BuildInfo.version.minor - 1, s"expected Marathon n-1 to have minor version ${BuildInfo.version.minor - 1}, but instead was ${marathonMinus1Artifact.version.minor}")
+    require(
+      marathonMinus3Artifact.version.minor == BuildInfo.version.minor - 3,
+      s"expected Marathon n-3 to have minor version ${BuildInfo.version.minor - 3}, but instead was ${marathonMinus3Artifact.version.minor}"
+    )
+    require(
+      marathonMinus2Artifact.version.minor == BuildInfo.version.minor - 2,
+      s"expected Marathon n-2 to have minor version ${BuildInfo.version.minor - 2}, but instead was ${marathonMinus2Artifact.version.minor}"
+    )
+    require(
+      marathonMinus1Artifact.version.minor == BuildInfo.version.minor - 1,
+      s"expected Marathon n-1 to have minor version ${BuildInfo.version.minor - 1}, but instead was ${marathonMinus1Artifact.version.minor}"
+    )
 
     // Download Marathon releases
     marathonMinus3Artifact.downloadAndExtract()
@@ -78,9 +90,12 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  case class PackagedMarathon(marathonBaseFolder: File, suiteName: String, masterUrl: String, zkUrl: String)(
-      implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
+  case class PackagedMarathon(marathonBaseFolder: File, suiteName: String, masterUrl: String, zkUrl: String)(implicit
+      val system: ActorSystem,
+      val mat: Materializer,
+      val ctx: ExecutionContext,
+      val scheduler: Scheduler
+  ) extends BaseMarathon {
 
     override val processBuilder = {
       val bin = new File(marathonBaseFolder, "bin/marathon").getCanonicalPath
@@ -104,7 +119,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       // Start apps in initial version
       Given(s"A Marathon n-3 is running (${marathonMinus3Artifact.version})")
-      val marathonMinus3 = PackagedMarathon(marathonMinus3Artifact.marathonBaseFolder, suiteName = s"$suiteName-n-minus-3", mesosMasterZkUrl, zkUrl)
+      val marathonMinus3 =
+        PackagedMarathon(marathonMinus3Artifact.marathonBaseFolder, suiteName = s"$suiteName-n-minus-3", mesosMasterZkUrl, zkUrl)
       marathonMinus3.start().futureValue
       (marathonMinus3.client.info.entityJson \ "version").as[String] should be(versionWithoutCommit(marathonMinus3Artifact.version))
 
@@ -116,8 +132,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathonMinus3.client.createAppV2(app_nm3) should be(Created)
 
       patienceConfig
-      eventually { marathonMinus3 should have (runningTasksFor(AbsolutePathId(app_nm3.id), 1)) }
-      eventually { marathonMinus3 should have (runningTasksFor(AbsolutePathId(app_nm3_fail.id), 1)) }
+      eventually { marathonMinus3 should have(runningTasksFor(AbsolutePathId(app_nm3.id), 1)) }
+      eventually { marathonMinus3 should have(runningTasksFor(AbsolutePathId(app_nm3_fail.id), 1)) }
 
       val originalAppNm3Tasks: List[ITEnrichedTask] = marathonMinus3.client.tasks(AbsolutePathId(app_nm3.id)).value
       val originalAppNm3FailedTasks: List[ITEnrichedTask] = marathonMinus3.client.tasks(AbsolutePathId(app_nm3_fail.id)).value
@@ -142,8 +158,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathonMinus2.client.createAppV2(app_nm2_fail) should be(Created)
 
       Then(s"All apps from ${marathonMinus2Artifact.version} are running")
-      eventually { marathonMinus2 should have (runningTasksFor(AbsolutePathId(app_nm2.id), 1)) }
-      eventually { marathonMinus2 should have (runningTasksFor(AbsolutePathId(app_nm2_fail.id), 1)) }
+      eventually { marathonMinus2 should have(runningTasksFor(AbsolutePathId(app_nm2.id), 1)) }
+      eventually { marathonMinus2 should have(runningTasksFor(AbsolutePathId(app_nm2_fail.id), 1)) }
 
       val originalAppNm2Tasks: List[ITEnrichedTask] = marathonMinus2.client.tasks(AbsolutePathId(app_nm2.id)).value
       val originalAppNm2FailedTasks: List[ITEnrichedTask] = marathonMinus2.client.tasks(AbsolutePathId(app_nm2_fail.id)).value
@@ -169,7 +185,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         containers = Seq(
           MesosContainer(
             name = "task1",
-            exec = Some(raml.MesosExec(raml.ShellCommand("cd $MESOS_SANDBOX && echo 'start' >> pst1/foo && python -m SimpleHTTPServer $ENDPOINT_TASK1"))),
+            exec = Some(
+              raml
+                .MesosExec(raml.ShellCommand("cd $MESOS_SANDBOX && echo 'start' >> pst1/foo && python -m SimpleHTTPServer $ENDPOINT_TASK1"))
+            ),
             resources = raml.Resources(cpus = 0.1, mem = 32.0),
             endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
             volumeMounts = Seq(VolumeMount(Some("pst"), "pst1", false))
@@ -192,7 +211,12 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       Then(s"pod ${resident_pod_nm1.id} can be queried on http://$resident_pod_nm1_address:$resident_pod_nm1_port")
       implicit val requestTimeout = 30.seconds
-      eventually { AkkaHttpResponse.request(Get(s"http://$resident_pod_nm1_address:$resident_pod_nm1_port/pst1/foo")).futureValue.entityString should be("start\n") }
+      eventually {
+        AkkaHttpResponse
+          .request(Get(s"http://$resident_pod_nm1_address:$resident_pod_nm1_port/pst1/foo"))
+          .futureValue
+          .entityString should be("start\n")
+      }
 
       Then(s"All apps from n-3 and n-2 are still running (${marathonMinus3Artifact.version} and ${marathonMinus2Artifact.version})")
       statusMap(marathonMinus1.client.tasks(AbsolutePathId(app_nm3.id)).value) should be(statusMap(originalAppNm3Tasks))
@@ -211,7 +235,9 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathonCurrent.client.tasks(AbsolutePathId(app_nm3.id)).value.map(_.id) should contain theSameElementsAs (originalAppnm3TaskIds)
       marathonCurrent.client.tasks(AbsolutePathId(app_nm2.id)).value.map(_.id) should contain theSameElementsAs (originalAppnm2TaskIds)
 
-      And(s"All apps from n-3 and n-2 are recovered and running again (${marathonMinus3Artifact.version} and ${marathonMinus2Artifact.version})")
+      And(
+        s"All apps from n-3 and n-2 are recovered and running again (${marathonMinus3Artifact.version} and ${marathonMinus2Artifact.version})"
+      )
       eventually { marathonCurrent should have(runningTasksFor(AbsolutePathId(app_nm3_fail.id), 1)) }
       statusMap(marathonCurrent.client.tasks(AbsolutePathId(app_nm3_fail.id)).value) shouldNot be(statusMap(originalAppNm3FailedTasks))
 
@@ -220,7 +246,12 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       And(s"All pods from n-1 are still running (${marathonMinus1Artifact.version})")
       eventually { marathonCurrent.client.status(resident_pod_nm1.id) should be(Stable) }
-      eventually { AkkaHttpResponse.request(Get(s"http://$resident_pod_nm1_address:$resident_pod_nm1_port/pst1/foo")).futureValue.entityString should be("start\n") }
+      eventually {
+        AkkaHttpResponse
+          .request(Get(s"http://$resident_pod_nm1_address:$resident_pod_nm1_port/pst1/foo"))
+          .futureValue
+          .entityString should be("start\n")
+      }
 
       marathonCurrent.close()
     }
@@ -228,7 +259,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
   "upgrade from n-3 directly to the latest" in {
     val zkUrl = s"$zkURLBase-to-latest"
-    val marathonNm3 = PackagedMarathon(marathonMinus3Artifact.marathonBaseFolder, suiteName = s"$suiteName-n-minus-3", mesosMasterZkUrl, zkUrl)
+    val marathonNm3 =
+      PackagedMarathon(marathonMinus3Artifact.marathonBaseFolder, suiteName = s"$suiteName-n-minus-3", mesosMasterZkUrl, zkUrl)
 
     // Start apps in n-3
     Given(s"A Marathon n-3 is running (${marathonMinus3Artifact.version})")
@@ -243,8 +275,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     marathonNm3.client.createAppV2(app_nm3) should be(Created)
 
     patienceConfig
-    eventually { marathonNm3 should have (runningTasksFor(AbsolutePathId(app_nm3.id), 1)) }
-    eventually { marathonNm3 should have (runningTasksFor(AbsolutePathId(app_nm3_fail.id), 1)) }
+    eventually { marathonNm3 should have(runningTasksFor(AbsolutePathId(app_nm3.id), 1)) }
+    eventually { marathonNm3 should have(runningTasksFor(AbsolutePathId(app_nm3_fail.id), 1)) }
 
     val originalAppNm3Tasks: List[ITEnrichedTask] = marathonNm3.client.tasks(AbsolutePathId(app_nm3.id)).value
     val originalAppNm3FailedTasks = marathonNm3.client.tasks(AbsolutePathId(app_nm3_fail.id)).value
@@ -272,7 +304,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
   "resident app can be restarted after upgrade from n-1" in {
     val zkUrl = s"$zkURLBase-resident-apps"
-    val marathonnm1 = PackagedMarathon(marathonMinus1Artifact.marathonBaseFolder, suiteName = s"$suiteName-n-minus-1", mesosMasterZkUrl, zkUrl)
+    val marathonnm1 =
+      PackagedMarathon(marathonMinus1Artifact.marathonBaseFolder, suiteName = s"$suiteName-n-minus-1", mesosMasterZkUrl, zkUrl)
 
     Given(s"A Marathon n-1 is running (${marathonMinus1Artifact.version})")
     marathonnm1.start().futureValue
@@ -283,11 +316,12 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     val residentApp_nm1 = residentApp(
       id = testBasePath / "resident-app-nm1",
       containerPath = containerPath,
-      cmd = s"""echo "data" >> $containerPath/data && sleep 1000""")
+      cmd = s"""echo "data" >> $containerPath/data && sleep 1000"""
+    )
     marathonnm1.client.createAppV2(residentApp_nm1) should be(Created)
 
     patienceConfig
-    eventually { marathonnm1 should have (runningTasksFor(AbsolutePathId(residentApp_nm1.id), 1)) }
+    eventually { marathonnm1 should have(runningTasksFor(AbsolutePathId(residentApp_nm1.id), 1)) }
     val originalAppnm1Tasks = marathonnm1.client.tasks(AbsolutePathId(residentApp_nm1.id)).value
 
     When("We restart the app")
@@ -296,7 +330,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     Then("We have new running tasks")
     eventually {
       marathonnm1.client.tasks(AbsolutePathId(residentApp_nm1.id)).value should not contain theSameElementsAs(originalAppnm1Tasks)
-      marathonnm1 should have (runningTasksFor(AbsolutePathId(residentApp_nm1.id), 1))
+      marathonnm1 should have(runningTasksFor(AbsolutePathId(residentApp_nm1.id), 1))
     }
 
     // Pass upgrade to current
@@ -307,7 +341,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
     Then(s"All apps from n-1 are still running (${marathonMinus1Artifact.version}")
-    marathonCurrent should have (runningTasksFor(AbsolutePathId(residentApp_nm1.id), 1))
+    marathonCurrent should have(runningTasksFor(AbsolutePathId(residentApp_nm1.id), 1))
     val restartedAppnm1Tasks = marathonCurrent.client.tasks(AbsolutePathId(residentApp_nm1.id)).value
 
     When("We restart the app again")
@@ -316,7 +350,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     Then("We have new running tasks")
     eventually {
       marathonCurrent.client.tasks(AbsolutePathId(residentApp_nm1.id)).value should not contain theSameElementsAs(restartedAppnm1Tasks)
-      marathonCurrent should have (runningTasksFor(AbsolutePathId(residentApp_nm1.id), 1))
+      marathonCurrent should have(runningTasksFor(AbsolutePathId(residentApp_nm1.id), 1))
     }
 
     marathonCurrent.close()
