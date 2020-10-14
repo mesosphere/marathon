@@ -87,7 +87,7 @@ class AuthorizedZooKeeperTest extends AkkaIntegrationTest with EmbeddedMarathonT
         val result = marathon.createAppV2(app)
 
         Then("The app is created")
-        result.code should be (201) //Created
+        result.code should be(201) //Created
         extractDeploymentIds(result) should have size 1
         waitForDeployment(result)
         waitForTasks(app.id.toPath, 1) //make sure, the app has really started

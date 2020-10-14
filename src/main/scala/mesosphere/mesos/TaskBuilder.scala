@@ -23,12 +23,14 @@ class TaskBuilder(
     runSpec: AppDefinition,
     taskId: Task.Id,
     config: MarathonConf,
-    runSpecTaskProc: RunSpecTaskProcessor = RunSpecTaskProcessor.empty) extends StrictLogging {
+    runSpecTaskProc: RunSpecTaskProcessor = RunSpecTaskProcessor.empty
+) extends StrictLogging {
 
   def build(
-    offer: Offer,
-    resourceMatch: ResourceMatch,
-    volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]): (TaskInfo, task.state.NetworkInfo) = {
+      offer: Offer,
+      resourceMatch: ResourceMatch,
+      volumeMatchOpt: Option[PersistentVolumeMatcher.VolumeMatch]
+  ): (TaskInfo, task.state.NetworkInfo) = {
 
     val executor: Executor = if (runSpec.executor == "") {
       config.executor
@@ -38,7 +40,7 @@ class TaskBuilder(
 
     val host: Option[String] = Some(offer.getHostname)
     val builder = TaskInfo.newBuilder
-      // Use a valid hostname to make service discovery easier
+    // Use a valid hostname to make service discovery easier
       .setName(runSpec.id.toHostname)
       .setTaskId(taskId.mesosTaskId)
       .setSlaveId(offer.getSlaveId)
@@ -66,16 +68,21 @@ class TaskBuilder(
         val cmd = runSpec.cmd.getOrElse(runSpec.args.mkString(" "))
         val shell = s"chmod ug+rx $executorPath && exec $executorPath $cmd"
 
-        val info = ExecutorInfo.newBuilder()
+        val info = ExecutorInfo
+          .newBuilder()
           .setExecutorId(ExecutorID.newBuilder().setValue(executorId))
 
         containerProto.foreach(info.setContainer)
 
-        runSpec.executorResources.foreach(r => info.addAllResources(Seq(
-          ScalarResource.cpus(r.cpus),
-          ScalarResource.memory(r.mem),
-          ScalarResource.disk(r.disk)
-        ).map(resourceToProto).asJava))
+        runSpec.executorResources.foreach(r =>
+          info.addAllResources(
+            Seq(
+              ScalarResource.cpus(r.cpus),
+              ScalarResource.memory(r.mem),
+              ScalarResource.disk(r.disk)
+            ).map(resourceToProto).asJava
+          )
+        )
 
         val command =
           TaskBuilder.commandInfo(runSpec, Some(taskId), host, resourceMatch.hostPorts, envPrefix).setValue(shell)
@@ -121,9 +128,7 @@ class TaskBuilder(
     builder.build -> networkInfo
   }
 
-  protected def computeDiscoveryInfo(
-    runSpec: AppDefinition,
-    hostPorts: Seq[Option[Int]]): org.apache.mesos.Protos.DiscoveryInfo = {
+  protected def computeDiscoveryInfo(runSpec: AppDefinition, hostPorts: Seq[Option[Int]]): org.apache.mesos.Protos.DiscoveryInfo = {
 
     val discoveryInfoBuilder = org.apache.mesos.Protos.DiscoveryInfo.newBuilder
     discoveryInfoBuilder.setName(runSpec.id.toHostname)
@@ -142,42 +147,44 @@ class TaskBuilder(
     } else {
       val builder = ContainerInfo.newBuilder
 
-      def boundPortMappings(container: Container) = container.portMappings.zip(hostPorts).collect {
-        case (mapping, Some(hport)) =>
-          // Use case: containerPort = 0 and hostPort = 0
-          //
-          // For apps that have their own service registry and require p2p communication, they will need to advertise
-          // the externally visible ports that their components come up on. Since they generally know there container
-          // port and advertise that, this is fixed most easily if the container port is the same as the externally
-          // visible host port.
-          //
-          // *NOTE:*
-          // We have this logic for preferring hostPort to containerPort (if containerPort == 0) in three
-          // different places:
-          // 1. Here, for the generation of the [[ContainerInfo]]
-          // 2. In [[NetworkInfo]] for generation of port assignments [[NetworkInfo.portAssignments]]. The resulting
-          //    effectivePort in the port assignments will affect e.g. [[MesosHealthCheck]]
-          // 3. In [[EnvironmentHelper]] for generating ports environment variables [[EnvironmentHelper.portsEnv]]
-          // I didn't find a way to let them all use the same logic (since all three explicitly or implicitly rely on
-          // RunSpec/Container) hence this comment.
-          if (mapping.containerPort == 0) {
-            mapping.copy(hostPort = Some(hport), containerPort = hport)
-          } else {
-            mapping.copy(hostPort = Some(hport))
-          }
-      }
+      def boundPortMappings(container: Container) =
+        container.portMappings.zip(hostPorts).collect {
+          case (mapping, Some(hport)) =>
+            // Use case: containerPort = 0 and hostPort = 0
+            //
+            // For apps that have their own service registry and require p2p communication, they will need to advertise
+            // the externally visible ports that their components come up on. Since they generally know there container
+            // port and advertise that, this is fixed most easily if the container port is the same as the externally
+            // visible host port.
+            //
+            // *NOTE:*
+            // We have this logic for preferring hostPort to containerPort (if containerPort == 0) in three
+            // different places:
+            // 1. Here, for the generation of the [[ContainerInfo]]
+            // 2. In [[NetworkInfo]] for generation of port assignments [[NetworkInfo.portAssignments]]. The resulting
+            //    effectivePort in the port assignments will affect e.g. [[MesosHealthCheck]]
+            // 3. In [[EnvironmentHelper]] for generating ports environment variables [[EnvironmentHelper.portsEnv]]
+            // I didn't find a way to let them all use the same logic (since all three explicitly or implicitly rely on
+            // RunSpec/Container) hence this comment.
+            if (mapping.containerPort == 0) {
+              mapping.copy(hostPort = Some(hport), containerPort = hport)
+            } else {
+              mapping.copy(hostPort = Some(hport))
+            }
+        }
 
       // Fill in container details if necessary
       runSpec.container.foreach { c =>
         val containerWithPortMappings = c.copyWith(portMappings = boundPortMappings(c)) match {
-          case d: Container.Docker => d.copy(parameters = d.parameters :+
-            state.Parameter("label", s"MESOS_TASK_ID=${taskId.mesosTaskId.getValue}")
-          )
+          case d: Container.Docker =>
+            d.copy(parameters =
+              d.parameters :+
+                state.Parameter("label", s"MESOS_TASK_ID=${taskId.mesosTaskId.getValue}")
+            )
           case a: Container.MesosAppC => a.copy(labels = a.labels + ("MESOS_TASK_ID" -> taskId.mesosTaskId.getValue))
           case c => c
         }
-        builder.mergeFrom(
-          ContainerSerializer.toMesos(runSpec.networks, containerWithPortMappings, config.mesosBridgeName()))
+        builder.mergeFrom(ContainerSerializer.toMesos(runSpec.networks, containerWithPortMappings, config.mesosBridgeName()))
       }
 
       // attach a tty if specified
@@ -200,25 +207,33 @@ class TaskBuilder(
 object TaskBuilder {
 
   def commandInfo(
-    runSpec: AppDefinition,
-    taskId: Option[Task.Id],
-    host: Option[String],
-    hostPorts: Seq[Option[Int]],
-    envPrefix: Option[String]): CommandInfo.Builder = {
+      runSpec: AppDefinition,
+      taskId: Option[Task.Id],
+      host: Option[String],
+      hostPorts: Seq[Option[Int]],
+      envPrefix: Option[String]
+  ): CommandInfo.Builder = {
 
-    val declaredPorts = runSpec.container.withFilter(_.portMappings.nonEmpty).map(
-      _.portMappings.map(pm => EnvironmentHelper.PortRequest(pm.name, pm.containerPort))
-    ).getOrElse(
+    val declaredPorts = runSpec.container
+      .withFilter(_.portMappings.nonEmpty)
+      .map(
+        _.portMappings.map(pm => EnvironmentHelper.PortRequest(pm.name, pm.containerPort))
+      )
+      .getOrElse(
         runSpec.portDefinitions.map(pd => EnvironmentHelper.PortRequest(pd.name, pd.port))
       )
 
     val envMap: Map[String, String] =
       taskContextEnv(runSpec, taskId) ++
-        addPrefix(envPrefix, EnvironmentHelper.portsEnv(declaredPorts, hostPorts) ++
-          host.map("HOST" -> _).toMap) ++
-        runSpec.env.collect{ case (k: String, v: EnvVarString) => k -> v.value }
+        addPrefix(
+          envPrefix,
+          EnvironmentHelper.portsEnv(declaredPorts, hostPorts) ++
+            host.map("HOST" -> _).toMap
+        ) ++
+        runSpec.env.collect { case (k: String, v: EnvVarString) => k -> v.value }
 
-    val builder = CommandInfo.newBuilder()
+    val builder = CommandInfo
+      .newBuilder()
       .setEnvironment(environment(envMap))
 
     runSpec.cmd match {
@@ -280,8 +295,8 @@ object TaskBuilder {
         "MARATHON_APP_RESOURCE_DISK" -> Some(runSpec.resources.disk.toString),
         "MARATHON_APP_RESOURCE_GPUS" -> Some(runSpec.resources.gpus.toString)
       ).collect {
-          case (key, Some(value)) => key -> value
-        }(collection.breakOut)
+        case (key, Some(value)) => key -> value
+      }(collection.breakOut)
       envVars ++ EnvironmentHelper.labelsToEnvVars(runSpec.labels)
     }
   }

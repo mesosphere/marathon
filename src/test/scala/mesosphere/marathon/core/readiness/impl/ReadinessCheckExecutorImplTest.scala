@@ -32,10 +32,11 @@ class ReadinessCheckExecutorImplTest extends AkkaUnitTest {
 
     "terminates on eventual readiness" in {
       val f = new Fixture {
-        override def httpResponse: AkkaHttpResponse = synchronized {
-          if (httpGetCalls < 5) httpNotOkResponse
-          else httpOkResponse
-        }
+        override def httpResponse: AkkaHttpResponse =
+          synchronized {
+            if (httpGetCalls < 5) httpNotOkResponse
+            else httpOkResponse
+          }
       }
 
       When("querying readiness")
@@ -54,11 +55,12 @@ class ReadinessCheckExecutorImplTest extends AkkaUnitTest {
 
     "continue on error" in {
       val f = new Fixture {
-        override def testableAkkaHttpGet(check: ReadinessCheckSpec): Future[AkkaHttpResponse] = synchronized {
-          httpGetCalls += 1
-          if (httpGetCalls < 5) Future.failed(new RuntimeException("temporary failure"))
-          else Future.successful(httpOkResponse)
-        }
+        override def testableAkkaHttpGet(check: ReadinessCheckSpec): Future[AkkaHttpResponse] =
+          synchronized {
+            httpGetCalls += 1
+            if (httpGetCalls < 5) Future.failed(new RuntimeException("temporary failure"))
+            else Future.successful(httpOkResponse)
+          }
 
       }
 
@@ -126,17 +128,19 @@ class ReadinessCheckExecutorImplTest extends AkkaUnitTest {
     }
 
     def hiBody = synchronized { HttpEntity(s"Hi $httpGetCalls") }
-    def httpOkResponse = AkkaHttpResponse(
-      headers = Seq[HttpHeader](akka.http.scaladsl.model.headers.`Content-Type`(ContentTypes.`text/plain(UTF-8)`)),
-      entity = hiBody
-    )
+    def httpOkResponse =
+      AkkaHttpResponse(
+        headers = Seq[HttpHeader](akka.http.scaladsl.model.headers.`Content-Type`(ContentTypes.`text/plain(UTF-8)`)),
+        entity = hiBody
+      )
     def httpNotOkResponse = httpOkResponse.copy(status = StatusCodes.InternalServerError)
     def httpResponse = httpOkResponse
 
     var httpGetCalls = 0
-    def testableAkkaHttpGet(check: ReadinessCheckSpec): Future[AkkaHttpResponse] = synchronized { // linter:ignore:UnusedParameter
-      httpGetCalls += 1
-      Future.successful(httpResponse)
-    }
+    def testableAkkaHttpGet(check: ReadinessCheckSpec): Future[AkkaHttpResponse] =
+      synchronized { // linter:ignore:UnusedParameter
+        httpGetCalls += 1
+        Future.successful(httpResponse)
+      }
   }
 }

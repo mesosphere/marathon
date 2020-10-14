@@ -10,9 +10,7 @@ import mesosphere.marathon.state.Timestamp
   *
   * The task life times are measured relative to the stagedAt time.
   */
-case class TaskLifeTime(
-    averageSeconds: Double,
-    medianSeconds: Double)
+case class TaskLifeTime(averageSeconds: Double, medianSeconds: Double)
 
 object TaskLifeTime {
   def forSomeTasks(now: Timestamp, instances: Seq[Instance]): Option[TaskLifeTime] = {
@@ -34,4 +32,3 @@ object TaskLifeTime {
     }
   }
 }
-

@@ -18,7 +18,8 @@ case class ReviveOffersState(
     scheduledInstances: Map[Instance.Id, RunSpecConfigRef],
     terminalReservations: Set[Instance.Id],
     activeDelays: Set[RunSpecConfigRef],
-    forceExpungedResidentInstances: Long) extends StrictLogging {
+    forceExpungedResidentInstances: Long
+) extends StrictLogging {
 
   /** whether the instance has a reservation that should be freed. */
   private def shouldUnreserve(instance: Instance): Boolean = {
@@ -28,7 +29,8 @@ case class ReviveOffersState(
   def withSnapshot(snapshot: InstancesSnapshot): ReviveOffersState = {
     copy(
       scheduledInstances = snapshot.instances.view.filter(_.isScheduled).map(i => i.instanceId -> i.runSpec.configRef).toMap,
-      terminalReservations = snapshot.instances.view.filter(shouldUnreserve).map(_.instanceId).toSet)
+      terminalReservations = snapshot.instances.view.filter(shouldUnreserve).map(_.instanceId).toSet
+    )
   }
 
   /** @return this state updated with an instance. */
@@ -51,7 +53,11 @@ case class ReviveOffersState(
     logger.debug(s"${instance.instanceId} deleted.")
     if (instance.reservation.nonEmpty) {
       logger.debug(s"Resident ${instance.instanceId} was force expunged.")
-      copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId, forceExpungedResidentInstances = forceExpungedResidentInstances + 1)
+      copy(
+        scheduledInstances - instance.instanceId,
+        terminalReservations - instance.instanceId,
+        forceExpungedResidentInstances = forceExpungedResidentInstances + 1
+      )
     } else {
       copy(scheduledInstances - instance.instanceId, terminalReservations - instance.instanceId)
     }

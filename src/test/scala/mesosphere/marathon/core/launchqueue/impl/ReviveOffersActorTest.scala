@@ -60,13 +60,14 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       Given("some initial instances")
       val (instanceChangesInput, instanceChanges) = Source.queue[InstanceChange](16, OverflowStrategy.fail).preMaterialize()
       val testInstanceScheduled = Instance.scheduled(testApp)
-      val snapshot = InstancesSnapshot(Seq(
-        TestInstanceBuilder.newBuilder(testApp.id).addTaskStaged(Timestamp.now()).getInstance(),
-        testInstanceScheduled,
-        TestInstanceBuilder.newBuilder(testApp.id).addTaskRunning().getInstance()))
-      val f = new Fixture(
-        instancesSnapshot = snapshot,
-        instanceChanges = instanceChanges)
+      val snapshot = InstancesSnapshot(
+        Seq(
+          TestInstanceBuilder.newBuilder(testApp.id).addTaskStaged(Timestamp.now()).getInstance(),
+          testInstanceScheduled,
+          TestInstanceBuilder.newBuilder(testApp.id).addTaskRunning().getInstance()
+        )
+      )
+      val f = new Fixture(instancesSnapshot = snapshot, instanceChanges = instanceChanges)
 
       When("the actor initializes")
       f.actorRef.start()
@@ -87,9 +88,7 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       Given("no initial instances")
       val (instanceChangesInput, instanceChanges) = Source.queue[InstanceChange](16, OverflowStrategy.fail).preMaterialize()
       val snapshot = InstancesSnapshot(Nil)
-      val f = new Fixture(
-        instancesSnapshot = snapshot,
-        instanceChanges = instanceChanges)
+      val f = new Fixture(instancesSnapshot = snapshot, instanceChanges = instanceChanges)
 
       When("the actor initializes")
       f.actorRef.start()
@@ -128,7 +127,8 @@ class ReviveOffersActorTest extends AkkaUnitTest {
       instancesSnapshot: InstancesSnapshot = InstancesSnapshot(Nil),
       instanceChanges: Source[InstanceChange, NotUsed] = StreamHelpers.sourceNever,
       delayUpdates: Source[RateLimiter.DelayUpdate, NotUsed] = StreamHelpers.sourceNever,
-      enableSuppress: Boolean = true) {
+      enableSuppress: Boolean = true
+  ) {
 
     val instanceUpdates: InstanceTracker.InstanceUpdates = Source.single(instancesSnapshot -> instanceChanges)
     implicit val mat: ActorMaterializer = ActorMaterializer()
@@ -141,8 +141,14 @@ class ReviveOffersActorTest extends AkkaUnitTest {
     val metrics: Metrics = DummyMetrics
 
     lazy val actorRef: TestActorRef[ReviveOffersActor] = TestActorRef[ReviveOffersActor](
-      ReviveOffersActor.props(metrics, minReviveOffersInterval = 100.millis,
-        instanceUpdates = instanceUpdates, rateLimiterUpdates = delayUpdates, driverHolder = driverHolder, enableSuppress = enableSuppress)
+      ReviveOffersActor.props(
+        metrics,
+        minReviveOffersInterval = 100.millis,
+        instanceUpdates = instanceUpdates,
+        rateLimiterUpdates = delayUpdates,
+        driverHolder = driverHolder,
+        enableSuppress = enableSuppress
+      )
     )
 
     val invocationTimeout: VerificationWithTimeout = Mockito.timeout(1000)

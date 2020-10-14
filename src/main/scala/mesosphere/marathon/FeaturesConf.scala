@@ -37,7 +37,8 @@ trait FeaturesConf extends ScallopConf {
     required = false,
     default = Some(DeprecatedFeatureSet(BuildInfo.version, Set.empty)),
     noshort = true,
-    validate = { dfs => dfs.isValid() })(deprecatedFeatureParser)
+    validate = { dfs => dfs.isValid() }
+  )(deprecatedFeatureParser)
 
   def availableFeatures: Set[String] = features()
   def availableDeprecatedFeatures: DeprecatedFeatureSet = deprecatedFeatures()

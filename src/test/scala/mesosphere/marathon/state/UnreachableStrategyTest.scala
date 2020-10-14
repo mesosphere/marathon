@@ -27,7 +27,9 @@ class UnreachableStrategyTest extends UnitTest with ValidationTestLike {
 
     "fail when time until expunge is smaller" in {
       val strategy = UnreachableEnabled(inactiveAfter = 2.seconds, expungeAfter = 1.second)
-      validator(strategy) should haveViolations("/inactiveAfterSeconds" -> "inactiveAfterSeconds (2) must be less or equal to expungeAfterSeconds, which is 1")
+      validator(strategy) should haveViolations(
+        "/inactiveAfterSeconds" -> "inactiveAfterSeconds (2) must be less or equal to expungeAfterSeconds, which is 1"
+      )
     }
 
     "succeed when time until expunge is equal to time until inactive" in {
@@ -37,13 +39,10 @@ class UnreachableStrategyTest extends UnitTest with ValidationTestLike {
   }
 
   "toProto" should {
-    Seq(
-      UnreachableDisabled,
-      UnreachableEnabled(inactiveAfter = 10.seconds, expungeAfter = 20.seconds)).foreach { unreachableStrategy =>
-
-        s"round trip serializes ${unreachableStrategy}" in {
-          UnreachableStrategy.fromProto(unreachableStrategy.toProto) shouldBe (unreachableStrategy)
-        }
+    Seq(UnreachableDisabled, UnreachableEnabled(inactiveAfter = 10.seconds, expungeAfter = 20.seconds)).foreach { unreachableStrategy =>
+      s"round trip serializes ${unreachableStrategy}" in {
+        UnreachableStrategy.fromProto(unreachableStrategy.toProto) shouldBe (unreachableStrategy)
       }
+    }
   }
 }

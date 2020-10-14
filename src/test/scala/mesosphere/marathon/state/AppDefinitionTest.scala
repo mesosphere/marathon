@@ -145,18 +145,18 @@ class AppDefinitionTest extends UnitTest {
               "baz" -> "buzz"
             ),
             name = "blahze"
-          )),
-
-        container = Some(Container.Docker(
-          image = "jdef/foo",
-
-          portMappings = Seq(
-            Container.PortMapping(hostPort = None),
-            Container.PortMapping(hostPort = Some(123)),
-            Container.PortMapping(
-              containerPort = 1, hostPort = Some(234), protocol = "udp", networkNames = List("blahze"))
           )
-        ))
+        ),
+        container = Some(
+          Container.Docker(
+            image = "jdef/foo",
+            portMappings = Seq(
+              Container.PortMapping(hostPort = None),
+              Container.PortMapping(hostPort = Some(123)),
+              Container.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp", networkNames = List("blahze"))
+            )
+          )
+        )
       )
 
       val proto = app.toProto
@@ -172,15 +172,17 @@ class AppDefinitionTest extends UnitTest {
         id = "app-with-ip-address".toPath,
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
-        networks = Seq(BridgeNetwork()), container = Some(Container.Docker(
-          image = "jdef/foo",
-
-          portMappings = Seq(
-            Container.PortMapping(hostPort = Some(0)),
-            Container.PortMapping(hostPort = Some(123)),
-            Container.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
+        networks = Seq(BridgeNetwork()),
+        container = Some(
+          Container.Docker(
+            image = "jdef/foo",
+            portMappings = Seq(
+              Container.PortMapping(hostPort = Some(0)),
+              Container.PortMapping(hostPort = Some(123)),
+              Container.PortMapping(containerPort = 1, hostPort = Some(234), protocol = "udp")
+            )
           )
-        ))
+        )
       )
 
       val proto = app.toProto
@@ -195,16 +197,20 @@ class AppDefinitionTest extends UnitTest {
         id = "app-with-ip-address".toPath,
         cmd = Some("sleep 30"),
         portDefinitions = Nil,
-        networks = Seq(ContainerNetwork(
-          name = "whatever",
-          labels = Map(
-            "foo" -> "bar",
-            "baz" -> "buzz"
+        networks = Seq(
+          ContainerNetwork(
+            name = "whatever",
+            labels = Map(
+              "foo" -> "bar",
+              "baz" -> "buzz"
+            )
           )
-        )),
-        container = Some(Container.Mesos(
-          portMappings = Seq(Container.PortMapping(name = Some("http"), containerPort = 80, protocol = "tcp"))
-        ))
+        ),
+        container = Some(
+          Container.Mesos(
+            portMappings = Seq(Container.PortMapping(name = Some("http"), containerPort = 80, protocol = "tcp"))
+          )
+        )
       )
 
       val proto: Protos.ServiceDefinition = app.toProto
@@ -321,9 +327,13 @@ class AppDefinitionTest extends UnitTest {
         id = runSpecId,
         cmd = Some("true"),
         versionInfo = fullVersion,
-        executorResources = Some(Resources(
-          cpus = 0.1, mem = 32.0, disk = 10
-        ))
+        executorResources = Some(
+          Resources(
+            cpus = 0.1,
+            mem = 32.0,
+            disk = 10
+          )
+        )
       )
       val result = AppDefinition(id = runSpecId).mergeFromProto(app.toProto)
       assert(result == app, s"expected $app instead of $result")
@@ -332,9 +342,13 @@ class AppDefinitionTest extends UnitTest {
     "Proto round trip for executor resources left untouched" in {
       val app = AppDefinition(
         id = runSpecId,
-        executorResources = Some(Resources(
-          cpus = 0.1, mem = 32.0, disk = 10
-        ))
+        executorResources = Some(
+          Resources(
+            cpus = 0.1,
+            mem = 32.0,
+            disk = 10
+          )
+        )
       )
       val result = app.mergeFromProto(AppDefinition(id = runSpecId).toProto)
       assert(result.executorResources == app.executorResources, s"expected $app instead of $result")
@@ -343,15 +357,21 @@ class AppDefinitionTest extends UnitTest {
     "Proto round trip for executor resources CPU upgrade" in {
       val app = AppDefinition(
         id = runSpecId,
-        executorResources = Some(Resources(
-          cpus = 0.1, mem = 32.0, disk = 10
-        ))
+        executorResources = Some(
+          Resources(
+            cpus = 0.1,
+            mem = 32.0,
+            disk = 10
+          )
+        )
       )
       val update = AppDefinition(
         id = runSpecId,
-        executorResources = Some(Resources(
-          cpus = 0.2
-        ))
+        executorResources = Some(
+          Resources(
+            cpus = 0.2
+          )
+        )
       )
       val result = app.mergeFromProto(update.toProto)
       assert(result == update, s"expected $update instead of $result")
@@ -361,6 +381,8 @@ class AppDefinitionTest extends UnitTest {
   def getScalarResourceValue(proto: ServiceDefinition, name: String) = {
     proto.getResourcesList
       .find(_.getName == name)
-      .get.getScalar.getValue
+      .get
+      .getScalar
+      .getValue
   }
 }

@@ -25,7 +25,8 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val app = residentApp(
         id = appId("resident-task-can-be-deployed-and-write-to-persistent-volume"),
         containerPath = containerPath,
-        cmd = s"""echo "data" > $containerPath/data""")
+        cmd = s"""echo "data" > $containerPath/data"""
+      )
 
       When("A task is launched")
       val result = createAsynchronously(app)
@@ -52,7 +53,8 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
         id = appId("resident-task-that-uses-hostname-unique"),
         containerPath = containerPath,
         cmd = """sleep 1""",
-        constraints = unique)
+        constraints = unique
+      )
 
       When("A task is launched")
       val result = createAsynchronously(app)
@@ -68,7 +70,8 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       val app = residentApp(
         id = appId("resident-task-with-persistent-volume-will-be-reattached-and-keep-state"),
         containerPath = containerPath,
-        cmd = s"""echo data > $containerPath/data && sleep 1000""")
+        cmd = s"""echo data > $containerPath/data && sleep 1000"""
+      )
 
       When("deployment is successful")
       val result = createAsynchronously(app)
@@ -145,8 +148,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       cleanUp()
 
       And("A resident app")
-      val app = residentApp(
-        id = appId("resident-task-is-launched-completely-on-reserved-resources"))
+      val app = residentApp(id = appId("resident-task-is-launched-completely-on-reserved-resources"))
 
       When("A task is launched")
       createSuccessfully(app)
@@ -181,9 +183,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
     "Scale Up" in new Fixture {
       Given("A resident app with 0 instances")
-      val app = createSuccessfully(residentApp(
-        id = appId("scale-up-resident-app-with-zero-instances"),
-        instances = 0))
+      val app = createSuccessfully(residentApp(id = appId("scale-up-resident-app-with-zero-instances"), instances = 0))
 
       When("We scale up to 5 instances")
       scaleToSuccessfully(PathId(app.id), 5)
@@ -195,9 +195,7 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
 
     "Scale Down" in new Fixture {
       Given("a resident app with 5 instances")
-      val app = createSuccessfully(residentApp(
-        id = appId("scale-down-resident-app-with-five-instances"),
-        instances = 5))
+      val app = createSuccessfully(residentApp(id = appId("scale-down-resident-app-with-five-instances"), instances = 5))
 
       When("we scale down to 0 instances")
       suspendSuccessfully(PathId(app.id))
@@ -234,7 +232,9 @@ class ResidentTaskIntegrationTest extends AkkaIntegrationTest with EmbeddedMarat
       all.count(_.launched) shouldBe 5 withClue (s"${all.count(_.launched)} launched tasks (should be 5)")
 
       And("all 5 tasks are restarted and of the new version")
-      all.map(_.version).forall(_.contains(newVersion)) shouldBe true withClue (s"5 launched tasks should have new version ${newVersion}: ${all}")
+      all
+        .map(_.version)
+        .forall(_.contains(newVersion)) shouldBe true withClue (s"5 launched tasks should have new version ${newVersion}: ${all}")
     }
 
     "Config Change" in new Fixture {

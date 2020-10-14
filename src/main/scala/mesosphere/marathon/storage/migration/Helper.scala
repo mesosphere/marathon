@@ -12,7 +12,11 @@ import mesosphere.marathon.core.instance.Instance.Id
 import mesosphere.marathon.core.instance.Reservation.{LegacyId, SimplifiedId}
 import mesosphere.marathon.core.instance.{LocalVolumeId, Reservation}
 import mesosphere.marathon.core.storage.store.{IdResolver, PersistenceStore}
-import mesosphere.marathon.core.storage.store.impl.cache.{LazyCachingPersistenceStore, LazyVersionCachingPersistentStore, LoadTimeCachingPersistenceStore}
+import mesosphere.marathon.core.storage.store.impl.cache.{
+  LazyCachingPersistenceStore,
+  LazyVersionCachingPersistentStore,
+  LoadTimeCachingPersistenceStore
+}
 import mesosphere.marathon.core.storage.store.impl.zk.{ZkId, ZkPersistenceStore, ZkSerialized}
 import mesosphere.marathon.core.task.Task
 import mesosphere.marathon.state.Instance
@@ -61,15 +65,15 @@ object InstanceMigration extends MaybeStore with StrictLogging {
     * This function traverses all instances in ZK and passes them through the migration flow before saving the updates.
     */
   def migrateInstances(
-    instanceRepository: InstanceRepository,
-    persistenceStore: PersistenceStore[_, _, _],
-    migrationFlow: Flow[JsValue, Instance, NotUsed])(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
+      instanceRepository: InstanceRepository,
+      persistenceStore: PersistenceStore[_, _, _],
+      migrationFlow: Flow[JsValue, Instance, NotUsed]
+  )(implicit ctx: ExecutionContext, mat: Materializer): Future[Done] = {
 
-    val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }
-      .mapMaterializedValue { f =>
-        f.map(i => logger.info(s"$i instances migrated"))
-        NotUsed
-      }
+    val countingSink: Sink[Done, NotUsed] = Sink.fold[Int, Done](0) { case (count, Done) => count + 1 }.mapMaterializedValue { f =>
+      f.map(i => logger.info(s"$i instances migrated"))
+      NotUsed
+    }
 
     maybeStore(persistenceStore).map { store =>
       instanceRepository
@@ -127,12 +131,12 @@ object InstanceMigration extends MaybeStore with StrictLogging {
   def legacyReservationReads(tasksMap: Map[Task.Id, Task], instanceId: Id): Reads[Reservation] = {
     (
       (__ \ "volumeIds").read[Seq[LocalVolumeId]] ~
-      (__ \ "state").read[Reservation.State] ~
-      (__ \ "id").readNullable[Reservation.Id]
+        (__ \ "state").read[Reservation.State] ~
+        (__ \ "id").readNullable[Reservation.Id]
     ) { (volumesIds, state, maybeId) =>
-        val reservationId = maybeId.getOrElse(inferReservationId(tasksMap, instanceId))
-        Reservation(volumesIds, state, reservationId)
-      }
+      val reservationId = maybeId.getOrElse(inferReservationId(tasksMap, instanceId))
+      Reservation(volumesIds, state, reservationId)
+    }
   }
 
   /**

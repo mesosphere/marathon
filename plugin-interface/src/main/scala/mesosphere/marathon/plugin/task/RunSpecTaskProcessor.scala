@@ -9,6 +9,7 @@ import org.apache.mesos.Protos.{ExecutorInfo, TaskGroupInfo, TaskInfo}
   * RunSpecTaskProcessor mutates a Mesos task info given some app specification.
   */
 trait RunSpecTaskProcessor extends Plugin {
+
   /**
     * Customize task info (launch a single task)
     *
@@ -33,4 +34,3 @@ object RunSpecTaskProcessor {
     override def taskGroup(podSpec: PodSpec, exec: ExecutorInfo.Builder, taskGroup: TaskGroupInfo.Builder): Unit = {}
   }
 }
-

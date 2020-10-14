@@ -26,13 +26,13 @@ class MesosFormatsTest extends UnitTest {
       And("resources of that agent are correct")
 
       /*
-      * "resources": {
+       * "resources": {
           "cpus": 8.0,
           "disk": 52830.0,
           "mem": 5078.0,
           "ports": "[31000-32000]"
         },
-      */
+       */
       agent.resources should equal(
         ITResources(
           "cpus" -> 8.0,
@@ -61,7 +61,7 @@ class MesosFormatsTest extends UnitTest {
         "disk": 0.0,
         "mem": 0.0
       },
-     */
+       */
       agent.offeredResources should equal(
         ITResources(
           "cpus" -> 0.0,
@@ -78,7 +78,7 @@ class MesosFormatsTest extends UnitTest {
           "ports": "[31903-31903]"
         }
       },
-     */
+       */
       agent.reservedResourcesByRole should equal(
         Map(
           "marathon" -> ITResources(
@@ -96,7 +96,7 @@ class MesosFormatsTest extends UnitTest {
         "mem": 4934.0,
         "ports": "[31000-31902, 31904-32000]"
       },
-    */
+       */
       agent.unreservedResources should equal(
         ITResources(
           "cpus" -> 6.9,

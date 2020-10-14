@@ -43,8 +43,7 @@ class JsonSerializeDeserializeState {
     val group: RootGroup = RootGroup()
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
 
-    Raml.fromRaml(
-      GroupConversion(groupUpdate, group, Timestamp.zero) -> appConversionFunc)
+    Raml.fromRaml(GroupConversion(groupUpdate, group, Timestamp.zero) -> appConversionFunc)
   }
 
 }
@@ -75,8 +74,7 @@ class JsonSerializeDeserializeBenchmark extends JsonSerializeDeserializeState {
 
     val group: RootGroup = RootGroup()
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
-    val updatedGroup: Group = Raml.fromRaml(
-      GroupConversion(groupUpdate, rootGroupMock, Timestamp.now()) -> appConversionFunc)
+    val updatedGroup: Group = Raml.fromRaml(GroupConversion(groupUpdate, rootGroupMock, Timestamp.now()) -> appConversionFunc)
 
     hole.consume(updatedGroup)
   }

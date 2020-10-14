@@ -50,7 +50,7 @@ class AuthorizedZooKeeperInfoIntegrationTest extends AkkaIntegrationTest with Em
       val response = marathon.info
 
       Then("the response should be successful")
-      response.code should be (200)
+      response.code should be(200)
 
       val info = response.entityJson
 

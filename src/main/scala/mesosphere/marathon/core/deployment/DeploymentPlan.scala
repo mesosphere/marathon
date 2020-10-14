@@ -47,10 +47,7 @@ case class StartApplication(runSpec: RunSpec) extends DeploymentAction {
 }
 
 // runnable spec is started, but the instance count should be changed
-case class ScaleApplication(
-    runSpec: RunSpec,
-    scaleTo: Int,
-    sentencedToDeath: Seq[Instance] = Seq.empty) extends DeploymentAction
+case class ScaleApplication(runSpec: RunSpec, scaleTo: Int, sentencedToDeath: Seq[Instance] = Seq.empty) extends DeploymentAction
 
 // runnable spec is started, but shall be completely stopped
 case class StopApplication(runSpec: RunSpec) extends DeploymentAction
@@ -70,6 +67,7 @@ case class DeploymentStep(actions: Seq[DeploymentAction]) {
 }
 
 object DeploymentStep {
+
   /**
     * We need to have a placeholder step for a situation when deployment is saved but we did not start processing steps
     * In that point in time, user have to still be able to query /deployments endpoint and have that deployment visible in there
@@ -90,7 +88,8 @@ case class DeploymentStepInfo(
     plan: DeploymentPlan,
     step: DeploymentStep,
     stepIndex: Int,
-    readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty) {
+    readinessChecks: Map[Task.Id, ReadinessCheckResult] = Map.empty
+) {
   lazy val readinessChecksByApp: Map[PathId, Seq[ReadinessCheckResult]] = {
     readinessChecks.values.groupBy(_.taskId.runSpecId).map { case (k, v) => k -> v.to[Seq] }.withDefaultValue(Seq.empty)
   }
@@ -107,12 +106,7 @@ case class DeploymentStepInfo(
   * understand how we can guarantee that all dependencies for a step are fulfilled
   * by prior steps.
   */
-case class DeploymentPlan(
-    id: String,
-    original: RootGroup,
-    target: RootGroup,
-    steps: Seq[DeploymentStep],
-    version: Timestamp) {
+case class DeploymentPlan(id: String, original: RootGroup, target: RootGroup, steps: Seq[DeploymentStep], version: Timestamp) {
 
   /**
     * Reverts this plan by applying the reverse changes to the given Group.
@@ -128,8 +122,8 @@ case class DeploymentPlan(
   /** @return all ids of apps which are referenced in any deployment actions */
   lazy val affectedRunSpecIds: Set[PathId] = steps.flatMap(_.actions.map(_.runSpec.id))(collection.breakOut)
 
-  def affectedAppIds: Set[PathId] = affectedRunSpecs.collect{ case app: AppDefinition => app.id }
-  def affectedPodIds: Set[PathId] = affectedRunSpecs.collect{ case pod: PodDefinition => pod.id }
+  def affectedAppIds: Set[PathId] = affectedRunSpecs.collect { case app: AppDefinition => app.id }
+  def affectedPodIds: Set[PathId] = affectedRunSpecs.collect { case pod: PodDefinition => pod.id }
 
   def isAffectedBy(other: DeploymentPlan): Boolean =
     // FIXME: check for group change conflicts?
@@ -153,17 +147,18 @@ case class DeploymentPlan(
   }
 
   override def toString: String = {
-    def specString(spec: RunSpec): String = spec match {
-      case app: AppDefinition => appString(app)
-      case pod: PodDefinition => podString(pod)
+    def specString(spec: RunSpec): String =
+      spec match {
+        case app: AppDefinition => appString(app)
+        case pod: PodDefinition => podString(pod)
 
-    }
+      }
     def podString(pod: PodDefinition): String = {
       val containers = pod.containers.map(containerString).mkString(", ")
       s"""Pod(id="${pod.id}", containers=[$containers])"""
     }
     def containerString(container: MesosContainer): String = {
-      val command = container.exec.map{
+      val command = container.exec.map {
         _.command match {
           case ShellCommand(shell) => s""", cmd="$shell""""
           case ArgvCommand(args) => s""", args="${args.mkString(", ")}""""
@@ -180,21 +175,20 @@ case class DeploymentPlan(
 
       s"App(${app.id}$dockerImageString$cmdString$argsString))"
     }
-    def actionString(a: DeploymentAction): String = a match {
-      case StartApplication(spec) => s"Start(${specString(spec)}, instances=0)"
-      case StopApplication(spec) => s"Stop(${specString(spec)})"
-      case ScaleApplication(spec, scale, toKill) =>
-        val killTasksString = if (toKill.isEmpty) "" else ", killTasks=" + toKill.map(_.instanceId.idString).mkString(",")
-        s"Scale(${specString(spec)}, instances=$scale$killTasksString)"
-      case RestartApplication(app) => s"Restart(${specString(app)})"
-    }
+    def actionString(a: DeploymentAction): String =
+      a match {
+        case StartApplication(spec) => s"Start(${specString(spec)}, instances=0)"
+        case StopApplication(spec) => s"Stop(${specString(spec)})"
+        case ScaleApplication(spec, scale, toKill) =>
+          val killTasksString = if (toKill.isEmpty) "" else ", killTasks=" + toKill.map(_.instanceId.idString).mkString(",")
+          s"Scale(${specString(spec)}, instances=$scale$killTasksString)"
+        case RestartApplication(app) => s"Restart(${specString(app)})"
+      }
     val stepString =
       if (steps.nonEmpty) {
-        steps
-          .map { _.actions.map(actionString).mkString("  * ", "\n  * ", "") }
-          .zipWithIndex
-          .map { case (stepsString, index) => s"step ${index + 1}:\n$stepsString" }
-          .mkString("\n", "\n", "")
+        steps.map { _.actions.map(actionString).mkString("  * ", "\n  * ", "") }.zipWithIndex.map {
+          case (stepsString, index) => s"step ${index + 1}:\n$stepsString"
+        }.mkString("\n", "\n", "")
       } else " NO STEPS"
     s"DeploymentPlan id=$id,$version$stepString\n"
   }
@@ -212,8 +206,9 @@ object DeploymentPlan {
     * The "layered" aspect groups the run specs that have the same length of dependencies for parallel deployment.
     */
   private[deployment] def runSpecsGroupedByLongestPath(
-    affectedRunSpecIds: Set[PathId],
-    rootGroup: RootGroup): SortedMap[Int, Iterable[RunSpec]] = {
+      affectedRunSpecIds: Set[PathId],
+      rootGroup: RootGroup
+  ): SortedMap[Int, Iterable[RunSpec]] = {
 
     import org.jgrapht.DirectedGraph
     import org.jgrapht.graph.DefaultEdge
@@ -227,7 +222,6 @@ object DeploymentPlan {
 
       if (outgoingEdges.isEmpty)
         Seq(vertex)
-
       else
         outgoingEdges.map { e =>
           vertex +: longestPathFromVertex(g, g.getEdgeTarget(e))
@@ -246,8 +240,12 @@ object DeploymentPlan {
     * Returns a sequence of deployment steps, the order of which is derived
     * from the topology of the target group's dependency graph.
     */
-  def dependencyOrderedSteps(original: RootGroup, target: RootGroup, affectedIds: Set[PathId],
-    toKill: Map[PathId, Seq[Instance]]): Seq[DeploymentStep] = {
+  def dependencyOrderedSteps(
+      original: RootGroup,
+      target: RootGroup,
+      affectedIds: Set[PathId],
+      toKill: Map[PathId, Seq[Instance]]
+  ): Seq[DeploymentStep] = {
 
     val runsByLongestPath: SortedMap[Int, Iterable[RunSpec]] = runSpecsGroupedByLongestPath(affectedIds, target)
 
@@ -284,29 +282,34 @@ object DeploymentPlan {
     * @return The deployment plan containing the steps necessary to get from the original to the target group definition
     */
   def apply(
-    original: RootGroup,
-    target: RootGroup,
-    version: Timestamp = Timestamp.now(),
-    toKill: Map[PathId, Seq[Instance]] = Map.empty,
-    id: Option[String] = None): DeploymentPlan = {
+      original: RootGroup,
+      target: RootGroup,
+      version: Timestamp = Timestamp.now(),
+      toKill: Map[PathId, Seq[Instance]] = Map.empty,
+      id: Option[String] = None
+  ): DeploymentPlan = {
 
     // A collection of deployment steps for this plan.
     val steps = Seq.newBuilder[DeploymentStep]
 
     // 1. Destroy run specs that do not exist in the target.
     steps += DeploymentStep(
-      original.transitiveRunSpecs.filter(oldRun => !target.exists(oldRun.id)).map { oldRun =>
-        StopApplication(oldRun)
-      }(collection.breakOut)
+      original.transitiveRunSpecs
+        .filter(oldRun => !target.exists(oldRun.id))
+        .map { oldRun =>
+          StopApplication(oldRun)
+        }(collection.breakOut)
     )
 
     // 2. Start run specs that do not exist in the original, requiring only 0
     //    instances.  These are scaled as needed in the dependency-ordered
     //    steps that follow.
     steps += DeploymentStep(
-      target.transitiveRunSpecs.filter(run => !original.exists(run.id)).map { newRun =>
-        StartApplication(newRun)
-      }(collection.breakOut)
+      target.transitiveRunSpecs
+        .filter(run => !original.exists(run.id))
+        .map { newRun =>
+          StartApplication(newRun)
+        }(collection.breakOut)
     )
 
     // applications that are either new or the specs are different should be considered for the dependency graph

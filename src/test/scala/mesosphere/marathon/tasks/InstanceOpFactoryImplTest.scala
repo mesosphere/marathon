@@ -30,7 +30,8 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val f = new Fixture
 
       val appId = PathId("/test")
-      val offer = MarathonTestHelper.makeBasicOffer()
+      val offer = MarathonTestHelper
+        .makeBasicOffer()
         .setHostname(f.defaultHostName)
         .setSlaveId(SlaveID("some slave ID"))
         .build()
@@ -69,7 +70,13 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       )
 
       val expectedState = instance.state.copy(condition = Condition.Provisioned)
-      val provisionOp = InstanceUpdateOperation.Provision(expectedTaskId.instanceId, expectedAgentInfo, app, Map(expectedTaskId -> expectedTask), expectedState.since)
+      val provisionOp = InstanceUpdateOperation.Provision(
+        expectedTaskId.instanceId,
+        expectedAgentInfo,
+        app,
+        Map(expectedTaskId -> expectedTask),
+        expectedState.since
+      )
       matched.instanceOp.stateOp should be(provisionOp)
     }
 
@@ -134,10 +141,12 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val reservedInstance = f.scheduledReservedInstance(app.id, localVolumeIdMatch)
       val reservedTaskId = Task.Id(reservedInstance.instanceId)
       val offer = f.offerWithVolumes(
-        reservedTaskId, localVolumeIdLaunched, localVolumeIdUnwanted, localVolumeIdMatch
+        reservedTaskId,
+        localVolumeIdLaunched,
+        localVolumeIdUnwanted,
+        localVolumeIdMatch
       )
-      val runningInstances = Instance.instancesById(Seq(
-        f.residentLaunchedInstance(app.id, localVolumeIdLaunched)))
+      val runningInstances = Instance.instancesById(Seq(f.residentLaunchedInstance(app.id, localVolumeIdLaunched)))
 
       When("We infer the taskOp")
       val request = InstanceOpFactory.Request(offer, runningInstances, scheduledInstances = NonEmptyIterable(reservedInstance))
@@ -154,7 +163,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
       val taskInfoResources = matched.instanceOp.offerOperations.head.getLaunch.getTaskInfos(0).getResourcesList
       val found = taskInfoResources.find { resource =>
         resource.hasDisk && resource.getDisk.hasPersistence &&
-          resource.getDisk.getPersistence.getId == localVolumeIdMatch.idString
+        resource.getDisk.getPersistence.getId == localVolumeIdMatch.idString
       }
       found should not be empty
     }
@@ -204,15 +213,18 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
     def normalApp = MTH.makeBasicApp()
     def residentApp = MTH.appWithPersistentVolume()
-    def residentPod = PodDefinition(
-      PathId("/test-pod"),
-      containers = Seq(MesosContainer(
-        name = "first",
-        resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
-        volumeMounts = Seq(VolumeMount(volumeName = Some("pst"), mountPath = "persistent-volume")))
-      ),
-      volumes = Seq(PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(10)))
-    )
+    def residentPod =
+      PodDefinition(
+        PathId("/test-pod"),
+        containers = Seq(
+          MesosContainer(
+            name = "first",
+            resources = Resources(cpus = 1.0, mem = 64.0, disk = 1.0),
+            volumeMounts = Seq(VolumeMount(volumeName = Some("pst"), mountPath = "persistent-volume"))
+          )
+        ),
+        volumes = Seq(PersistentVolume(name = Some("pst"), persistent = PersistentVolumeInfo(10)))
+      )
 
     def scheduledReservedInstance(appId: PathId, volumeIds: LocalVolumeId*) =
       TestInstanceBuilder.scheduledWithReservation(residentApp, Seq(volumeIds: _*))

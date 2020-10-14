@@ -22,35 +22,28 @@ trait Volume extends plugin.VolumeSpec
 object Volume {
   def apply(name: Option[String], proto: Protos.Volume): Volume = {
     if (proto.hasPersistent)
-      PersistentVolume(
-        name = name,
-        persistent = PersistentVolumeInfo.fromProto(proto.getPersistent))
+      PersistentVolume(name = name, persistent = PersistentVolumeInfo.fromProto(proto.getPersistent))
     else if (proto.hasExternal)
-      ExternalVolume(
-        name = name,
-        external = ExternalVolumeInfo.fromProto(proto.getExternal))
+      ExternalVolume(name = name, external = ExternalVolumeInfo.fromProto(proto.getExternal))
     else if (proto.hasSecret)
-      SecretVolume(
-        name = name,
-        secret = proto.getSecret.getSecret)
+      SecretVolume(name = name, secret = proto.getSecret.getSecret)
     else
-      HostVolume(
-        name = name,
-        hostPath = proto.getHostPath)
+      HostVolume(name = name, hostPath = proto.getHostPath)
   }
 
-  def validVolume(enabledFeatures: Set[String]): Validator[Volume] = new Validator[Volume] {
-    override def apply(volume: Volume): Result = volume match {
-      case pv: PersistentVolume => validate(pv)(PersistentVolume.validPersistentVolume)
-      case dv: HostVolume => validate(dv)(HostVolume.validHostVolume)
-      case ev: ExternalVolume => validate(ev)(ExternalVolume.validExternalVolume(enabledFeatures))
-      case _: SecretVolume => Success // validation is done in raml
+  def validVolume(enabledFeatures: Set[String]): Validator[Volume] =
+    new Validator[Volume] {
+      override def apply(volume: Volume): Result =
+        volume match {
+          case pv: PersistentVolume => validate(pv)(PersistentVolume.validPersistentVolume)
+          case dv: HostVolume => validate(dv)(HostVolume.validHostVolume)
+          case ev: ExternalVolume => validate(ev)(ExternalVolume.validExternalVolume(enabledFeatures))
+          case _: SecretVolume => Success // validation is done in raml
+        }
     }
-  }
 }
 
-case class VolumeMount(volumeName: Option[String], mountPath: String, readOnly: Boolean = false)
-  extends plugin.VolumeMountSpec
+case class VolumeMount(volumeName: Option[String], mountPath: String, readOnly: Boolean = false) extends plugin.VolumeMountSpec
 
 object VolumeMount {
   def apply(volumeName: Option[String], proto: Protos.Volume): VolumeMount = {
@@ -96,8 +89,7 @@ object VolumeWithMount {
   * Both paths can either refer to a directory or a file. Paths must be
   * absolute.
   */
-case class HostVolume(name: Option[String], hostPath: String)
-  extends Volume
+case class HostVolume(name: Option[String], hostPath: String) extends Volume
 
 object HostVolume {
   implicit val validHostVolume: Validator[HostVolume] = validator[HostVolume] { vol =>
@@ -106,8 +98,7 @@ object HostVolume {
   }
 }
 
-case class DiskSource(
-    diskType: DiskType, source: Option[Source]) {
+case class DiskSource(diskType: DiskType, source: Option[Source]) {
 
   lazy val id: Option[String] = source.filter(_.hasId).map(_.getId)
   lazy val path: Option[String] =
@@ -144,12 +135,19 @@ object DiskSource {
     val diskType = DiskType.fromMesosType(source.map(_.getType))
     DiskSource(diskType, source)
   }
+
   /**
     * Create a Mesos protobuf for testing purposes; We should always prefer to send the same source protobuf that Mesos
     * sends us in order to reply back with new fields Mesos introduces in the future
     */
-  def fromParams(diskType: DiskType, path: Option[String],
-    id: Option[String], metadata: Option[Map[String, String]], profileName: Option[String], vendor: Option[String]): DiskSource = {
+  def fromParams(
+      diskType: DiskType,
+      path: Option[String],
+      id: Option[String],
+      metadata: Option[Map[String, String]],
+      profileName: Option[String],
+      vendor: Option[String]
+  ): DiskSource = {
 
     val source = diskType match {
       case DiskType.Root =>
@@ -210,7 +208,8 @@ case class PersistentVolumeInfo(
     maxSize: Option[Long] = None,
     `type`: DiskType = DiskType.Root,
     profileName: Option[String] = None,
-    constraints: Set[Constraint] = Set.empty)
+    constraints: Set[Constraint] = Set.empty
+)
 
 object PersistentVolumeInfo {
   def fromProto(pvi: Protos.Volume.PersistentVolumeInfo): PersistentVolumeInfo =
@@ -237,10 +236,7 @@ object PersistentVolumeInfo {
                 case util.Success(_) =>
                   Success
                 case util.Failure(e) =>
-                  Failure(Set(RuleViolation(
-                    c,
-                    "Invalid regular expression",
-                    WixPath(Generic("value")))))
+                  Failure(Set(RuleViolation(c, "Invalid regular expression", WixPath(Generic("value")))))
               }
             } else {
               Failure(Set(RuleViolation(c, "A regular expression value must be provided", WixPath(Generic("value")))))
@@ -253,13 +249,12 @@ object PersistentVolumeInfo {
   }
 
   implicit val validPersistentVolumeInfo: Validator[PersistentVolumeInfo] = {
-    val notHaveConstraintsOnRoot = isTrue[PersistentVolumeInfo](
-      "Constraints on root volumes are not supported") { info =>
-        if (info.`type` == DiskType.Root)
-          info.constraints.isEmpty
-        else
-          true
-      }
+    val notHaveConstraintsOnRoot = isTrue[PersistentVolumeInfo]("Constraints on root volumes are not supported") { info =>
+      if (info.`type` == DiskType.Root)
+        info.constraints.isEmpty
+      else
+        true
+    }
 
     val meetMaxSizeConstraint = isTrue[PersistentVolumeInfo]("Only mount volumes can have maxSize") { info =>
       if (info.`type` == DiskType.Mount)
@@ -287,8 +282,7 @@ object PersistentVolumeInfo {
   }
 }
 
-case class PersistentVolume(name: Option[String], persistent: PersistentVolumeInfo)
-  extends Volume
+case class PersistentVolume(name: Option[String], persistent: PersistentVolumeInfo) extends Volume
 
 object PersistentVolume {
   import PathPatterns._
@@ -349,7 +343,8 @@ case class ExternalVolumeInfo(
     name: String,
     provider: String,
     options: Map[String, String] = Map.empty[String, String],
-    shared: Boolean = false)
+    shared: Boolean = false
+)
 
 object OptionLabelPatterns {
   val OptionNamespaceSeparator = "/"
@@ -362,8 +357,8 @@ object OptionLabelPatterns {
 object ExternalVolumeInfo {
   import OptionLabelPatterns._
 
-  implicit val validOptions = validator[Map[String, String]] {
-    option => option.keys.each should matchRegex(OptionKeyRegex)
+  implicit val validOptions = validator[Map[String, String]] { option =>
+    option.keys.each should matchRegex(OptionKeyRegex)
   }
 
   implicit val validExternalVolumeInfo = validator[ExternalVolumeInfo] { info =>
@@ -382,8 +377,7 @@ object ExternalVolumeInfo {
     )
 }
 
-case class ExternalVolume(name: Option[String], external: ExternalVolumeInfo)
-  extends Volume
+case class ExternalVolume(name: Option[String], external: ExternalVolumeInfo) extends Volume
 
 object ExternalVolume {
   def validExternalVolume(enabledFeatures: Set[String]): Validator[ExternalVolume] =
@@ -397,12 +391,10 @@ object ExternalVolume {
 /**
   * A volume referring to an existing secret.
   */
-case class SecretVolume(name: Option[String], secret: String)
-  extends Volume with plugin.SecretVolumeSpec
+case class SecretVolume(name: Option[String], secret: String) extends Volume with plugin.SecretVolumeSpec
 
 /**
   * Ephemeral volumes share the lifetime of the pod instance they're used within and serve to
   * provide temporary "scratch" space that sub-containers may use to share files, sockets, etc.
   */
-case class EphemeralVolume(name: Option[String])
-  extends Volume
+case class EphemeralVolume(name: Option[String]) extends Volume

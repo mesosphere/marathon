@@ -21,42 +21,42 @@ import org.apache.mesos.{Scheduler, SchedulerDriver}
   * @see org.apache.mesos.Scheduler
   * @see org.apache.mesos.SchedulerDriver
   */
-class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef) extends Scheduler with StrictLogging {
+class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEARTBEAT_ACTOR) heartbeatActor: ActorRef)
+    extends Scheduler
+    with StrictLogging {
 
   import MesosHeartbeatMonitor._
 
   logger.info(s"Created Mesos heartbeat monitor for scheduler $scheduler")
 
-  protected[marathon] def heartbeatReactor(driver: SchedulerDriver): Heartbeat.Reactor = new Heartbeat.Reactor {
-    // virtualHeartbeatTasks is sent in a reconciliation message to mesos in order to force a
-    // predictable response: the master (if we're connected) will send back a TASK_LOST because
-    // the fake task ID and agent ID that we use will never actually exist in the cluster.
-    // this is part of a short-term workaround: will no longer be needed once marathon is ported
-    // to use the new mesos v1 http API.
-    private[this] val virtualHeartbeatTasks = Collections.singletonList(fakeHeartbeatStatus)
+  protected[marathon] def heartbeatReactor(driver: SchedulerDriver): Heartbeat.Reactor =
+    new Heartbeat.Reactor {
+      // virtualHeartbeatTasks is sent in a reconciliation message to mesos in order to force a
+      // predictable response: the master (if we're connected) will send back a TASK_LOST because
+      // the fake task ID and agent ID that we use will never actually exist in the cluster.
+      // this is part of a short-term workaround: will no longer be needed once marathon is ported
+      // to use the new mesos v1 http API.
+      private[this] val virtualHeartbeatTasks = Collections.singletonList(fakeHeartbeatStatus)
 
-    override def onSkip(skipped: Int): Unit = {
-      // the first skip (skipped == 1) may be because there simply haven't been any offers or task status updates
-      // sent by the master within the heartbeat interval. that's completely normal, so we only log if skipped > 1
-      // because that means that we've prompted mesos via task reconciliation and it still hasn't responded in a
-      // timely manner.
-      if (skipped > 1) {
-        logger.warn(s"Missed ${skipped - 1} expected heartbeat(s) from Mesos master; possibly disconnected")
+      override def onSkip(skipped: Int): Unit = {
+        // the first skip (skipped == 1) may be because there simply haven't been any offers or task status updates
+        // sent by the master within the heartbeat interval. that's completely normal, so we only log if skipped > 1
+        // because that means that we've prompted mesos via task reconciliation and it still hasn't responded in a
+        // timely manner.
+        if (skipped > 1) {
+          logger.warn(s"Missed ${skipped - 1} expected heartbeat(s) from Mesos master; possibly disconnected")
+        }
+        logger.info("Prompting Mesos for a heartbeat via explicit task reconciliation")
+        driver.reconcileTasks(virtualHeartbeatTasks)
       }
-      logger.info("Prompting Mesos for a heartbeat via explicit task reconciliation")
-      driver.reconcileTasks(virtualHeartbeatTasks)
+
+      override def onFailure(): Unit = {
+        logger.warn("Too many subsequent heartbeats missed; inferring disconnected from mesos master")
+        disconnected(driver)
+      }
     }
 
-    override def onFailure(): Unit = {
-      logger.warn("Too many subsequent heartbeats missed; inferring disconnected from mesos master")
-      disconnected(driver)
-    }
-  }
-
-  override def registered(
-    driver: SchedulerDriver,
-    frameworkId: FrameworkID,
-    master: MasterInfo): Unit = {
+  override def registered(driver: SchedulerDriver, frameworkId: FrameworkID, master: MasterInfo): Unit = {
     logger.info("Registered heartbeat monitor")
     scheduler.registered(driver, frameworkId, master)
   }
@@ -95,11 +95,7 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
       status.hasSlaveId && status.getSlaveId.getValue.startsWith(FAKE_AGENT_PREFIX) &&
       status.hasTaskId && status.getTaskId.getValue.startsWith(FAKE_TASK_PREFIX)
 
-  override def frameworkMessage(
-    driver: SchedulerDriver,
-    executor: ExecutorID,
-    slave: SlaveID,
-    message: Array[Byte]): Unit = {
+  override def frameworkMessage(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, message: Array[Byte]): Unit = {
     heartbeatActor ! Heartbeat.MessagePulse
     scheduler.frameworkMessage(driver, executor, slave, message)
   }
@@ -117,11 +113,7 @@ class MesosHeartbeatMonitor(scheduler: Scheduler, @Named(ModuleNames.MESOS_HEART
     scheduler.slaveLost(driver, slave)
   }
 
-  override def executorLost(
-    driver: SchedulerDriver,
-    executor: ExecutorID,
-    slave: SlaveID,
-    code: Int): Unit = {
+  override def executorLost(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, code: Int): Unit = {
     heartbeatActor ! Heartbeat.MessagePulse
     scheduler.executorLost(driver, executor, slave, code)
   }

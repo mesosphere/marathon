@@ -86,7 +86,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
       eventually {
         val runningDeployments = (manager.actorRef ? ListRunningDeployments).mapTo[Future[Seq[DeploymentStepInfo]]].futureValue.futureValue
         runningDeployments.size should be(1)
-        runningDeployments.head.plan should be (plan)
+        runningDeployments.head.plan should be(plan)
       }
     }
 
@@ -108,8 +108,8 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       manager ! StartDeployment(plan.copy(id = "d2"), probe.ref, force = false)
       probe.expectMsgType[DeploymentFailed]
-      manager.underlyingActor.runningDeployments.size should be (1)
-      manager.underlyingActor.runningDeployments(plan.id).status should be (DeploymentStatus.Deploying)
+      manager.underlyingActor.runningDeployments.size should be(1)
+      manager.underlyingActor.runningDeployments(plan.id).status should be(DeploymentStatus.Deploying)
     }
 
     "Conflicting forced deployment" in {
@@ -130,8 +130,8 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       manager ! StartDeployment(plan.copy(id = "d2"), probe.ref, force = true)
       probe.expectMsgType[DeploymentStarted]
-      manager.underlyingActor.runningDeployments(plan.id).status should be (DeploymentStatus.Canceling)
-      eventually(manager.underlyingActor.runningDeployments("d2").status should be (DeploymentStatus.Deploying))
+      manager.underlyingActor.runningDeployments(plan.id).status should be(DeploymentStatus.Canceling)
+      eventually(manager.underlyingActor.runningDeployments("d2").status should be(DeploymentStatus.Deploying))
     }
 
     "Multiple conflicting forced deployments" in {
@@ -146,12 +146,12 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
 
       manager ! StartDeployment(plan, probe.ref)
       probe.expectMsgType[DeploymentStarted]
-      manager.underlyingActor.runningDeployments("d1").status should be (DeploymentStatus.Deploying)
+      manager.underlyingActor.runningDeployments("d1").status should be(DeploymentStatus.Deploying)
 
       manager ! StartDeployment(plan.copy(id = "d2"), probe.ref, force = true)
       probe.expectMsgType[DeploymentStarted]
-      manager.underlyingActor.runningDeployments("d1").status should be (DeploymentStatus.Canceling)
-      manager.underlyingActor.runningDeployments("d2").status should be (DeploymentStatus.Deploying)
+      manager.underlyingActor.runningDeployments("d1").status should be(DeploymentStatus.Canceling)
+      manager.underlyingActor.runningDeployments("d2").status should be(DeploymentStatus.Deploying)
 
       manager ! StartDeployment(plan.copy(id = "d3"), probe.ref, force = true)
       probe.expectMsgType[DeploymentStarted]
@@ -169,11 +169,12 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
       val probe = TestProbe()
 
       probe.setAutoPilot(new AutoPilot {
-        override def run(sender: ActorRef, msg: Any): AutoPilot = msg match {
-          case Cancel(_) =>
-            system.stop(probe.ref)
-            NoAutoPilot
-        }
+        override def run(sender: ActorRef, msg: Any): AutoPilot =
+          msg match {
+            case Cancel(_) =>
+              system.stop(probe.ref)
+              NoAutoPilot
+          }
       })
 
       val ex = new Exception("")
@@ -197,7 +198,7 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
       probe.expectMsgType[DeploymentStarted]
 
       manager ! CancelDeployment(plan)
-      eventually(manager.underlyingActor.runningDeployments(plan.id).status should be (DeploymentStatus.Canceling))
+      eventually(manager.underlyingActor.runningDeployments(plan.id).status should be(DeploymentStatus.Canceling))
     }
   }
 
@@ -222,20 +223,23 @@ class DeploymentManagerActorTest extends AkkaUnitTest with ImplicitSender with G
 
     // A method that returns dummy props. Used to control the deployments progress. Otherwise the tests become racy
     // and depending on when DeploymentActor sends DeploymentFinished message.
-    val deploymentActorProps: (Any, Any, Any, Any, Any, Any, Any, Any) => Props = (_, _, _, _, _, _, _, _) => TestActor.props(new LinkedBlockingDeque())
+    val deploymentActorProps: (Any, Any, Any, Any, Any, Any, Any, Any) => Props = (_, _, _, _, _, _, _, _) =>
+      TestActor.props(new LinkedBlockingDeque())
 
-    def deploymentManager(): TestActorRef[DeploymentManagerActor] = TestActorRef (
-      DeploymentManagerActor.props(
-        metrics,
-        taskTracker,
-        taskKillService,
-        launchQueue,
-        hcManager,
-        eventBus,
-        readinessCheckExecutor,
-        deploymentRepo,
-        deploymentActorProps)
-    )
+    def deploymentManager(): TestActorRef[DeploymentManagerActor] =
+      TestActorRef(
+        DeploymentManagerActor.props(
+          metrics,
+          taskTracker,
+          taskKillService,
+          launchQueue,
+          hcManager,
+          eventBus,
+          readinessCheckExecutor,
+          deploymentRepo,
+          deploymentActorProps
+        )
+      )
     deploymentRepo.store(any[DeploymentPlan]) returns Future.successful(Done)
     deploymentRepo.delete(any[String]) returns Future.successful(Done)
     deploymentRepo.all() returns Source.empty

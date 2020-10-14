@@ -58,7 +58,8 @@ import scala.util.{Failure, Success, Try}
   * number can be quite high (~75k) I think we are fine without implementing any guards.
   */
 class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)(implicit val mat: Materializer)
-  extends StrictLogging with TemplateRepositoryLike {
+    extends StrictLogging
+    with TemplateRepositoryLike {
 
   require(Paths.get(base).isAbsolute, "Template repository root path should be absolute")
 
@@ -100,24 +101,26 @@ class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)
     * @tparam T
     * @return
     */
-  def toTemplate[T](maybeData: Array[Byte], template: Template[T]): Try[T] = maybeData match {
-    case null => Failure(new NoNodeException(s"Template with path ${template.id} not found"))
-    case data => Try(template.mergeFromProto(data))
-  }
+  def toTemplate[T](maybeData: Array[Byte], template: Template[T]): Try[T] =
+    maybeData match {
+      case null => Failure(new NoNodeException(s"Template with path ${template.id} not found"))
+      case data => Try(template.mergeFromProto(data))
+    }
 
   /**
     * Method recursively reads the repository structure without reading node's data.
     * @param path start path. children below this path will be read recursively.
     * @return
     */
-  private[this] def tree(path: String): Future[Done] = async {
-    val Success(children) = await(store.children(path, absolute = true))
-    val grandchildren = children.map { child =>
-      trie.addPath(child)
-      tree(child)
+  private[this] def tree(path: String): Future[Done] =
+    async {
+      val Success(children) = await(store.children(path, absolute = true))
+      val grandchildren = children.map { child =>
+        trie.addPath(child)
+        tree(child)
+      }
+      await(Future.sequence(grandchildren).map(_ => Done))
     }
-    await(Future.sequence(grandchildren).map(_ => Done))
-  }
 
   /**
     * Method fetches the data for repo's leaf nodes since that is where we keep the templates.
@@ -128,8 +131,12 @@ class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)
       .via(store.readFlow)
       .map {
         case Success(node) => trie.addPath(node.path, node.data.toArray)
-        case Failure(ex) => throw new IllegalStateException("Failed to initialize template repository. " +
-          "Apparently one of the nodes was deleted during initialization.", ex)
+        case Failure(ex) =>
+          throw new IllegalStateException(
+            "Failed to initialize template repository. " +
+              "Apparently one of the nodes was deleted during initialization.",
+            ex
+          )
       }
       .runWith(Sink.ignore)
   }
@@ -141,32 +148,35 @@ class TemplateRepository(val store: ZooKeeperPersistenceStore, val base: String)
     *
     * @return
     */
-  def initialize(): Future[Done] = async {
-    await(store.createIfAbsent(Node(base, ByteString.empty))) // Create the base path if it doesn't exist
-    await(tree(base))
-    await(data())
-  }
+  def initialize(): Future[Done] =
+    async {
+      await(store.createIfAbsent(Node(base, ByteString.empty))) // Create the base path if it doesn't exist
+      await(tree(base))
+      await(data())
+    }
 
-  override def create(template: Template[_]): Future[String] = async {
-    val data = template.toProtoByteArray
-    val hash = version(data)
-    val path = storePath(template.id, hash)
-    val node = Node(path, ByteString(data))
-    await(store.create(node))
-    trie.addPath(path, data)
-    hash
-  }
+  override def create(template: Template[_]): Future[String] =
+    async {
+      val data = template.toProtoByteArray
+      val hash = version(data)
+      val path = storePath(template.id, hash)
+      val node = Node(path, ByteString(data))
+      await(store.create(node))
+      trie.addPath(path, data)
+      hash
+    }
 
   def read[T](template: Template[T], version: String): Try[T] =
     toTemplate(trie.getNodeData(storePath(template.id, version)), template)
 
   override def delete(pathId: PathId): Future[Done] = delete(pathId, version = "")
-  override def delete(pathId: PathId, version: String): Future[Done] = async {
-    val path = storePath(pathId, version)
-    await(store.delete(path))
-    trie.deletePath(path)
-    Done
-  }
+  override def delete(pathId: PathId, version: String): Future[Done] =
+    async {
+      val path = storePath(pathId, version)
+      await(store.delete(path))
+      trie.deletePath(path)
+      Done
+    }
 
   def children(pathId: PathId): Try[Seq[String]] = {
     if (exists(pathId)) {

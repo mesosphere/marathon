@@ -22,7 +22,8 @@ class InstanceTrackerModule(
     instanceRepository: InstanceRepository,
     groupRepository: GroupRepository,
     updateSteps: Seq[InstanceChangeHandler],
-    crashStrategy: CrashStrategy)(implicit mat: Materializer) {
+    crashStrategy: CrashStrategy
+)(implicit mat: Materializer) {
   lazy val instanceTracker: InstanceTracker =
     new InstanceTrackerDelegate(metrics, clock, config, instanceTrackerActorRef)
   lazy val instanceTrackerUpdateStepProcessor: InstanceTrackerUpdateStepProcessor =
@@ -34,9 +35,11 @@ class InstanceTrackerModule(
     steps = updateSteps,
     repository = InstanceView(instanceRepository, groupRepository),
     clock = clock,
-    crashStrategy = crashStrategy)
+    crashStrategy = crashStrategy
+  )
   protected lazy val instanceTrackerActorName = "instanceTracker"
   private[this] lazy val instanceTrackerActorRef = leadershipModule.startWhenLeader(
-    instanceTrackerActorProps, instanceTrackerActorName
+    instanceTrackerActorProps,
+    instanceTrackerActorName
   )
 }

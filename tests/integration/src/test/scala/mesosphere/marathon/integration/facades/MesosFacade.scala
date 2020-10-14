@@ -26,7 +26,8 @@ object MesosFacade {
       agents: Seq[ITAgent],
       frameworks: Seq[ITFramework],
       completed_frameworks: Seq[ITFramework],
-      unregistered_framework_ids: Seq[String])
+      unregistered_framework_ids: Seq[String]
+  )
 
   case class ITAgent(
       id: String,
@@ -35,7 +36,8 @@ object MesosFacade {
       usedResources: ITResources,
       offeredResources: ITResources,
       reservedResourcesByRole: Map[String, ITResources],
-      unreservedResources: ITResources)
+      unreservedResources: ITResources
+  )
 
   case class ITAttributes(attributes: Map[String, ITResourceValue])
 
@@ -58,9 +60,12 @@ object MesosFacade {
     def nonEmpty: Boolean = !isEmpty
 
     override def toString: String = {
-      "{" + resources.toSeq.sortBy(_._1).map {
-        case (k, v) => s"$k: $v"
-      }.mkString(", ") + " }"
+      "{" + resources.toSeq
+        .sortBy(_._1)
+        .map {
+          case (k, v) => s"$k: $v"
+        }
+        .mkString(", ") + " }"
     }
   }
 
@@ -97,10 +102,7 @@ object MesosFacade {
 
   case class ITFramework(id: String, name: String, tasks: Seq[ITask], unreachable_tasks: Seq[ITask])
 
-  case class ITFrameworks(
-      frameworks: Seq[ITFramework],
-      completed_frameworks: Seq[ITFramework],
-      unregistered_frameworks: Seq[ITFramework])
+  case class ITFrameworks(frameworks: Seq[ITFramework], completed_frameworks: Seq[ITFramework], unregistered_frameworks: Seq[ITFramework])
 
   case class ITFaultDomain(region: String, Zone: String)
 
@@ -110,11 +112,13 @@ object MesosFacade {
       hostname: String,
       capabilities: Seq[String],
       domain: Option[ITFaultDomain],
-      flags: Map[String, String])
+      flags: Map[String, String]
+  )
 }
 
 class MesosFacade(val url: String, val waitTime: FiniteDuration = 30.seconds)(implicit val system: ActorSystem, materializer: Materializer)
-  extends PlayJsonSupport with StrictLogging {
+    extends PlayJsonSupport
+    with StrictLogging {
 
   import MesosFacade._
   import MesosFormats._
@@ -155,10 +159,15 @@ class MesosFacade(val url: String, val waitTime: FiniteDuration = 30.seconds)(im
     * @return Right(Done) on success, Left(errorString) otherwise
     */
   def markAgentGone(agentId: String): RestResult[Done] = {
-    val response = result(request(Post(s"$url/api/v1", Json.obj(
-      "type" -> "MARK_AGENT_GONE",
-      "mark_agent_gone" -> Json.obj(
-        "agent_id" -> Json.obj("value" -> agentId))))), waitTime)
+    val response = result(
+      request(
+        Post(
+          s"$url/api/v1",
+          Json.obj("type" -> "MARK_AGENT_GONE", "mark_agent_gone" -> Json.obj("agent_id" -> Json.obj("value" -> agentId)))
+        )
+      ),
+      waitTime
+    )
     response.map { _ =>
       Done
     }

@@ -13,13 +13,14 @@ import org.apache.mesos.Protos.{TaskState, TaskStatus, TimeInfo, SlaveID}
 
 object MesosTaskStatusTestHelper {
   def mesosStatus(
-    state: TaskState,
-    maybeHealthy: Option[Boolean] = None,
-    maybeReason: Option[Reason] = None,
-    maybeMessage: Option[String] = None,
-    timestamp: Timestamp = Timestamp.zero,
-    maybeAgentId: Option[SlaveID] = None,
-    taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)): TaskStatus = {
+      state: TaskState,
+      maybeHealthy: Option[Boolean] = None,
+      maybeReason: Option[Reason] = None,
+      maybeMessage: Option[String] = None,
+      timestamp: Timestamp = Timestamp.zero,
+      maybeAgentId: Option[SlaveID] = None,
+      taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)
+  ): TaskStatus = {
 
     val mesosStatus = TaskStatus.newBuilder
       .setTaskId(taskId.mesosTaskId)
@@ -54,13 +55,17 @@ object MesosTaskStatusTestHelper {
   private def newInstanceId() = Instance.Id(PathId("/my/app"), PrefixInstance, UUID.randomUUID())
 
   def running(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_RUNNING, taskId = taskId)
-  def runningHealthy(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_RUNNING, maybeHealthy = Some(true), taskId = taskId)
-  def runningUnhealthy(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_RUNNING, maybeHealthy = Some(false), taskId = taskId)
-  def starting(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_STARTING, taskId = taskId)
+  def runningHealthy(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) =
+    mesosStatus(state = TaskState.TASK_RUNNING, maybeHealthy = Some(true), taskId = taskId)
+  def runningUnhealthy(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) =
+    mesosStatus(state = TaskState.TASK_RUNNING, maybeHealthy = Some(false), taskId = taskId)
+  def starting(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) =
+    mesosStatus(state = TaskState.TASK_STARTING, taskId = taskId)
   def staging(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_STAGING, taskId = taskId)
   def dropped(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_DROPPED, taskId = taskId)
   def failed(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_FAILED, taskId = taskId)
-  def finished(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_FINISHED, taskId = taskId)
+  def finished(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) =
+    mesosStatus(state = TaskState.TASK_FINISHED, taskId = taskId)
   def gone(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None)) = mesosStatus(state = TaskState.TASK_GONE, taskId = taskId)
   def goneByOperator(taskId: Task.Id = Task.EphemeralTaskId(newInstanceId(), None), agentId: Option[SlaveID] = None) =
     mesosStatus(state = TaskState.TASK_GONE_BY_OPERATOR, taskId = taskId, maybeAgentId = agentId)

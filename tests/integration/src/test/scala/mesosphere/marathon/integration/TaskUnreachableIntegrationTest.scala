@@ -70,7 +70,11 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       }
 
       And("the task is declared unreachable inactive")
-      waitForEventWith("instance_changed_event", _.info("condition") == "UnreachableInactive", s"event instance_changed_event (UnreachableInactive) to arrive")
+      waitForEventWith(
+        "instance_changed_event",
+        _.info("condition") == "UnreachableInactive",
+        s"event instance_changed_event (UnreachableInactive) to arrive"
+      )
 
       And("a replacement task is started on a different slave")
       mesosCluster.agents(1).start() // Start an alternative slave
@@ -143,12 +147,16 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
       waitForDeployment(marathon.createAppV2(app))
       val enrichedTasks = waitForTasks(app.id.toPath, num = 2)
       val clusterState = mesosCluster.state.value
-      val slaveId = clusterState.agents.find(_.attributes.attributes("node").toString.toDouble.toInt == 0).getOrElse(
-        throw new RuntimeException(s"failed to find agent1: attributes by agent=${clusterState.agents.map(_.attributes.attributes)}")
-      )
-      val task = enrichedTasks.find(t => t.slaveId.contains(slaveId.id)).getOrElse(
-        throw new RuntimeException("No matching task found on slave1")
-      )
+      val slaveId = clusterState.agents
+        .find(_.attributes.attributes("node").toString.toDouble.toInt == 0)
+        .getOrElse(
+          throw new RuntimeException(s"failed to find agent1: attributes by agent=${clusterState.agents.map(_.attributes.attributes)}")
+        )
+      val task = enrichedTasks
+        .find(t => t.slaveId.contains(slaveId.id))
+        .getOrElse(
+          throw new RuntimeException("No matching task found on slave1")
+        )
 
       When("agent1 is stopped")
       mesosCluster.agents.head.stop()
@@ -300,7 +308,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
   def matchEvent(status: String, app: App): CallbackEvent => Boolean = { event =>
     event.info.get("taskStatus").contains(status) &&
-      event.info.get("appId").contains(app.id)
+    event.info.get("appId").contains(app.id)
   }
 
   def matchUnknownTerminatedEvent(instanceId: Instance.Id): CallbackEvent => Boolean = { event =>
@@ -311,7 +319,7 @@ class TaskUnreachableIntegrationTest extends AkkaIntegrationTest with EmbeddedMa
 
   def matchEvent(status: String, taskId: String): CallbackEvent => Boolean = { event =>
     event.info.get("taskStatus").contains(status) &&
-      event.info.get("taskId").contains(taskId)
+    event.info.get("taskId").contains(taskId)
   }
 
   private def matchDeploymentStart(appId: String): CallbackEvent => Boolean = { event =>

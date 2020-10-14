@@ -19,8 +19,16 @@ object BasicLintingPlugin extends AutoPlugin {
   override lazy val projectSettings = Seq(
     compile in Compile := (compile in Compile).dependsOn(basicLintCheck in Compile).value,
     doublePackageRoot := "mesosphere.marathon",
-    basicLintCheck in Compile := checkBasicLinting(streams.value.log, doublePackageRoot.value, (sourceDirectories in Compile).value.filter(_ != (sourceManaged in Compile).value)),
-    basicLintCheck in Test := checkBasicLinting(streams.value.log, doublePackageRoot.value, (sourceDirectories in Test).value.filter(_ != (sourceManaged in Test).value)),
+    basicLintCheck in Compile := checkBasicLinting(
+      streams.value.log,
+      doublePackageRoot.value,
+      (sourceDirectories in Compile).value.filter(_ != (sourceManaged in Compile).value)
+    ),
+    basicLintCheck in Test := checkBasicLinting(
+      streams.value.log,
+      doublePackageRoot.value,
+      (sourceDirectories in Test).value.filter(_ != (sourceManaged in Test).value)
+    ),
     compile in Test := (compile in Test).dependsOn(basicLintCheck in Test).value
   )
 
@@ -38,8 +46,7 @@ object BasicLintingPlugin extends AutoPlugin {
           pkgFound = true
           if (line.startsWith(s"package $doublePackageRoot.")) {
             val pkg = line.replaceAll("package ", "")
-            logger.error(
-              s"""$file:$lineNumber does not use double package notation. (is: $pkg) e.g.:
+            logger.error(s"""$file:$lineNumber does not use double package notation. (is: $pkg) e.g.:
                  |package $doublePackageRoot
                  |package ${pkg.replaceAll(s"package $doublePackageRoot.", "")}
               """.stripMargin)

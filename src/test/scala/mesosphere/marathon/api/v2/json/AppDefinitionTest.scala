@@ -23,8 +23,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
   implicit val validator = AppDefinition.validAppDefinition(enabledFeatures)(PluginManager.None)
 
   private[this] def appNormalization(app: raml.App): raml.App =
-    AppHelpers.appNormalization(
-      enabledFeatures, AppNormalization.Configuration(None, "mesos-bridge-name")).normalized(app)
+    AppHelpers.appNormalization(enabledFeatures, AppNormalization.Configuration(None, "mesos-bridge-name")).normalized(app)
 
   private[this] def fromJson(json: String): AppDefinition = {
     val raw: raml.App = Json.parse(json).as[raml.App]
@@ -34,7 +33,8 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
   "AppDefinition" should {
     "Validation" in {
       var app = AppDefinition(id = "a b".toRootPath)
-      val idError = "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'"
+      val idError =
+        "must fully match regular expression '^(([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])\\.)*([a-z0-9]|[a-z0-9][a-z0-9\\-]*[a-z0-9])|(\\.|\\.\\.)$'"
       validator(app) should haveViolations("/id" -> idError)
 
       app = app.copy(id = "a#$%^&*b".toRootPath)
@@ -52,118 +52,114 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       val correct = AppDefinition(id = "test".toRootPath)
 
       app = correct.copy(
-        networks = Seq(ContainerNetwork("whatever")), container = Some(Docker(
-          image = "mesosphere/marathon",
-
-          portMappings = Seq(
-            PortMapping(8080, None, 0, "tcp", Some("foo"))
-          )
-        )),
-        portDefinitions = Nil)
-      validator(app) shouldNot haveViolations(
-        "/container/portMappings(0)" -> "hostPort is required for BRIDGE mode.")
-
-      val caught = intercept[IllegalArgumentException] {
-        correct.copy(
-          networks = Seq(BridgeNetwork()),
-          container = Some(Docker(
+        networks = Seq(ContainerNetwork("whatever")),
+        container = Some(
+          Docker(
             image = "mesosphere/marathon",
             portMappings = Seq(
               PortMapping(8080, None, 0, "tcp", Some("foo"))
             )
-          )),
-          portDefinitions = Nil)
+          )
+        ),
+        portDefinitions = Nil
+      )
+      validator(app) shouldNot haveViolations("/container/portMappings(0)" -> "hostPort is required for BRIDGE mode.")
+
+      val caught = intercept[IllegalArgumentException] {
+        correct.copy(
+          networks = Seq(BridgeNetwork()),
+          container = Some(
+            Docker(
+              image = "mesosphere/marathon",
+              portMappings = Seq(
+                PortMapping(8080, None, 0, "tcp", Some("foo"))
+              )
+            )
+          ),
+          portDefinitions = Nil
+        )
       }
       caught.getMessage should include("bridge networking requires that every host-port in a port-mapping is non-empty (but may be zero)")
 
       app = correct.copy(executor = "//cmd")
-      validator(app) shouldNot haveViolations(
-        "/executor" -> "{javax.validation.constraints.Pattern.message}")
+      validator(app) shouldNot haveViolations("/executor" -> "{javax.validation.constraints.Pattern.message}")
 
       app = correct.copy(executor = "some/relative/path.mte")
-      validator(app) shouldNot haveViolations(
-        "/executor" -> "{javax.validation.constraints.Pattern.message}")
+      validator(app) shouldNot haveViolations("/executor" -> "{javax.validation.constraints.Pattern.message}")
 
       app = correct.copy(executor = "/some/absolute/path")
-      validator(app) shouldNot haveViolations(
-        "/executor" -> "{javax.validation.constraints.Pattern.message}")
+      validator(app) shouldNot haveViolations("/executor" -> "{javax.validation.constraints.Pattern.message}")
 
       app = correct.copy(executor = "")
-      validator(app) shouldNot haveViolations(
-        "/executor" -> "{javax.validation.constraints.Pattern.message}")
+      validator(app) shouldNot haveViolations("/executor" -> "{javax.validation.constraints.Pattern.message}")
 
       app = correct.copy(executor = "/test/")
-      validator(app) should haveViolations(
-        "/executor" -> "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'")
+      validator(app) should haveViolations("/executor" -> "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'")
 
       app = correct.copy(executor = "/test//path")
-      validator(app) should haveViolations(
-        "/executor" -> "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'")
+      validator(app) should haveViolations("/executor" -> "must fully match regular expression '^(//cmd)|(/?[^/]+(/[^/]+)*)|$'")
 
       app = correct.copy(cmd = Some("command"), args = Seq("a", "b", "c"))
-      validator(app) should haveViolations(
-        "/" -> "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.")
+      validator(app) should haveViolations("/" -> "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.")
 
       app = correct.copy(cmd = None, args = Seq("a", "b", "c"))
-      validator(app) shouldNot haveViolations(
-        "/" -> "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.")
+      validator(app) shouldNot haveViolations("/" -> "AppDefinition must either contain one of 'cmd' or 'args', and/or a 'container'.")
 
       app = correct.copy(upgradeStrategy = UpgradeStrategy(1.2))
-      validator(app) should haveViolations(
-        "/upgradeStrategy/minimumHealthCapacity" -> "got 1.2, expected between 0.0 and 1.0")
+      validator(app) should haveViolations("/upgradeStrategy/minimumHealthCapacity" -> "got 1.2, expected between 0.0 and 1.0")
 
       app = correct.copy(upgradeStrategy = UpgradeStrategy(0.5, 1.2))
-      validator(app) should haveViolations(
-        "/upgradeStrategy/maximumOverCapacity" -> "got 1.2, expected between 0.0 and 1.0")
+      validator(app) should haveViolations("/upgradeStrategy/maximumOverCapacity" -> "got 1.2, expected between 0.0 and 1.0")
 
       app = correct.copy(upgradeStrategy = UpgradeStrategy(-1.2))
-      validator(app) should haveViolations(
-        "/upgradeStrategy/minimumHealthCapacity" -> "got -1.2, expected between 0.0 and 1.0")
+      validator(app) should haveViolations("/upgradeStrategy/minimumHealthCapacity" -> "got -1.2, expected between 0.0 and 1.0")
 
       app = correct.copy(upgradeStrategy = UpgradeStrategy(0.5, -1.2))
-      validator(app) should haveViolations(
-        "/upgradeStrategy/maximumOverCapacity" -> "got -1.2, expected between 0.0 and 1.0")
+      validator(app) should haveViolations("/upgradeStrategy/maximumOverCapacity" -> "got -1.2, expected between 0.0 and 1.0")
 
       app = correct.copy(
-        networks = Seq(BridgeNetwork()), container = Some(Docker(
-
-          portMappings = Seq(
-            PortMapping(8080, Some(0), 0, "tcp"),
-            PortMapping(8081, Some(0), 0, "tcp")
+        networks = Seq(BridgeNetwork()),
+        container = Some(
+          Docker(
+            portMappings = Seq(
+              PortMapping(8080, Some(0), 0, "tcp"),
+              PortMapping(8081, Some(0), 0, "tcp")
+            )
           )
-        )),
+        ),
         portDefinitions = Nil,
         healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(1))))
       )
       validator(app) shouldNot haveViolations(
-        "/healthChecks(0)" -> "Health check port indices must address an element of the ports array or container port mappings.")
+        "/healthChecks(0)" -> "Health check port indices must address an element of the ports array or container port mappings."
+      )
 
       app = correct.copy(
-        networks = Seq(BridgeNetwork()), container = Some(Docker()),
+        networks = Seq(BridgeNetwork()),
+        container = Some(Docker()),
         portDefinitions = Nil,
         healthChecks = Set(MarathonHttpHealthCheck(port = Some(80)))
       )
       validator(app) shouldNot haveViolations(
-        "/healthChecks(0)" -> "Health check port indices must address an element of the ports array or container port mappings.")
+        "/healthChecks(0)" -> "Health check port indices must address an element of the ports array or container port mappings."
+      )
 
       app = correct.copy(
         healthChecks = Set(MarathonHttpHealthCheck(portIndex = Some(PortReference(1))))
       )
       validator(app) should haveViolations(
-        "/healthChecks(0)" -> "Health check port indices must address an element of the ports array or container port mappings.")
+        "/healthChecks(0)" -> "Health check port indices must address an element of the ports array or container port mappings."
+      )
 
       app = correct.copy(
         fetch = Seq(FetchUri(uri = "http://example.com/valid"), FetchUri(uri = "d://\not-a-uri"))
       )
 
-      validator(app) should haveViolations(
-        "/fetch(1)/uri" -> "URI has invalid syntax.")
+      validator(app) should haveViolations("/fetch(1)/uri" -> "URI has invalid syntax.")
 
-      app = correct.copy(
-        unreachableStrategy = UnreachableDisabled)
+      app = correct.copy(unreachableStrategy = UnreachableDisabled)
 
-      app = correct.copy(
-        fetch = Seq(FetchUri(uri = "http://example.com/valid"), FetchUri(uri = "/root/file")))
+      app = correct.copy(fetch = Seq(FetchUri(uri = "http://example.com/valid"), FetchUri(uri = "/root/file")))
 
       validator(app) shouldNot haveViolations("/fetch(1)" -> "URI has invalid syntax.")
 
@@ -173,17 +169,18 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       validator(app.copy(resources = Resources(gpus = -3))) should haveViolations("/gpus" -> "got -3, expected 0 or more")
       validator(app.copy(instances = -3)) should haveViolations("/instances" -> "got -3, expected 0 or more")
 
-      validator(app.copy(resources = Resources(gpus = 1))) should haveViolations("/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
+      validator(app.copy(resources = Resources(gpus = 1))) should haveViolations(
+        "/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)"
+      )
 
       {
         val appValidator = AppDefinition.validAppDefinition(Set("gpu_resources"))(PluginManager.None)
         appValidator(app.copy(resources = Resources(gpus = 1))) shouldNot haveViolations(
-          "/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)")
+          "/" -> "Feature gpu_resources is not enabled. Enable with --enable_features gpu_resources)"
+        )
       }
 
-      app = correct.copy(
-        resources = Resources(gpus = 1),
-        container = Some(Container.Docker()))
+      app = correct.copy(resources = Resources(gpus = 1), container = Some(Container.Docker()))
 
       validator(app) should haveViolations("/" -> "GPU resources only work with the Mesos containerizer")
 
@@ -215,9 +212,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
 
       validator(app) shouldNot haveViolations("/" -> "GPU resources only work with the Mesos containerizer")
 
-      app = correct.copy(
-        check = Some(MesosCommandCheck(command = Command("foo"))),
-        container = Some(Container.Docker()))
+      app = correct.copy(check = Some(MesosCommandCheck(command = Command("foo"))), container = Some(Container.Docker()))
 
       validator(app) should haveViolations("/" -> "AppDefinition must not use 'checks' if using docker")
 
@@ -259,9 +254,7 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       """
       val readResult2 = fromJson(json2)
       assert(readResult2.healthChecks.nonEmpty, readResult2)
-      assert(
-        readResult2.healthChecks.head == MesosCommandHealthCheck(command = Command("env && http http://$HOST:$PORT0/")),
-        readResult2)
+      assert(readResult2.healthChecks.head == MesosCommandHealthCheck(command = Command("env && http http://$HOST:$PORT0/")), readResult2)
     }
 
     "Reading app definition with command check" in {
@@ -367,7 +360,8 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         id = PathId("/prod/product/frontend/my-app"),
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
-        networks = Seq(ContainerNetwork("whatever")), container = Some(
+        networks = Seq(ContainerNetwork("whatever")),
+        container = Some(
           Docker(
             image = "foo",
             portMappings = Seq(Container.PortMapping(containerPort = 1))
@@ -422,7 +416,8 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         id = PathId("/prod/product/frontend/my-app"),
         cmd = Some("sleep 30"),
         portDefinitions = Seq.empty,
-        networks = Seq(ContainerNetwork("whatever")), container = Some(
+        networks = Seq(ContainerNetwork("whatever")),
+        container = Some(
           Docker(
             image = "abc",
             portMappings = Seq(Container.PortMapping(containerPort = 1))
@@ -461,13 +456,15 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       val app4 = AppDefinition(
         id = "bridged-webapp".toRootPath,
         cmd = Some("python3 -m http.server 8080"),
-        networks = Seq(BridgeNetwork()), container = Some(Docker(
-          image = "python:3",
-
-          portMappings = Seq(
-            PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
+        networks = Seq(BridgeNetwork()),
+        container = Some(
+          Docker(
+            image = "python:3",
+            portMappings = Seq(
+              PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 9000, protocol = "tcp")
+            )
           )
-        ))
+        )
       )
 
       val json4 =
@@ -498,12 +495,11 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         id = "app-with-fetch".toRootPath,
         cmd = Some("brew update"),
         fetch = Seq(
-          new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true,
-            outputFile = None),
-          new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false,
-            outputFile = None)
+          new FetchUri(uri = "http://example.com/file1", executable = false, extract = true, cache = true, outputFile = None),
+          new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false, outputFile = None)
         ),
-        portDefinitions = Seq(state.PortDefinition(0, name = Some("default"))))
+        portDefinitions = Seq(state.PortDefinition(0, name = Some("default")))
+      )
 
       val json =
         """
@@ -575,10 +571,14 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
         id = "app-with-fetch".toPath,
         cmd = Some("brew update"),
         fetch = Seq(
-          new FetchUri(uri = "http://example.com/file1?foo=10&bar=meh", executable = false, extract = true, cache = true,
-            outputFile = None),
-          new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false,
-            outputFile = None)
+          new FetchUri(
+            uri = "http://example.com/file1?foo=10&bar=meh",
+            executable = false,
+            extract = true,
+            cache = true,
+            outputFile = None
+          ),
+          new FetchUri(uri = "http://example.com/file2", executable = true, extract = false, cache = false, outputFile = None)
         )
       )
 
@@ -601,17 +601,20 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       val app = AppDefinition(
         id = "app-with-ip-address".toRootPath,
         cmd = Some("python3 -m http.server 8080"),
-        networks = Seq(ContainerNetwork(
-          name = "whatever",
-          labels = Map(
-            "foo" -> "bar",
-            "baz" -> "buzz"
+        networks = Seq(
+          ContainerNetwork(
+            name = "whatever",
+            labels = Map(
+              "foo" -> "bar",
+              "baz" -> "buzz"
+            )
           )
-        )),
-        container = Some(Container.Mesos(
-          portMappings = Seq(Container.PortMapping(name = Some("http"), containerPort = 80, protocol = "tcp")
+        ),
+        container = Some(
+          Container.Mesos(
+            portMappings = Seq(Container.PortMapping(name = Some("http"), containerPort = 80, protocol = "tcp"))
           )
-        )),
+        ),
         backoffStrategy = BackoffStrategy(maxLaunchDelay = 300.seconds)
       )
 
@@ -646,14 +649,17 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       val app = AppDefinition(
         id = "app-with-ip-address".toRootPath,
         cmd = Some("python3 -m http.server 8080"),
-        container = Some(state.Container.Mesos(portMappings = Seq(Container.PortMapping.defaultInstance))), portDefinitions = Nil,
-        networks = Seq(ContainerNetwork(
-          "whatever",
-          labels = Map(
-            "foo" -> "bar",
-            "baz" -> "buzz"
-
-          ))),
+        container = Some(state.Container.Mesos(portMappings = Seq(Container.PortMapping.defaultInstance))),
+        portDefinitions = Nil,
+        networks = Seq(
+          ContainerNetwork(
+            "whatever",
+            labels = Map(
+              "foo" -> "bar",
+              "baz" -> "buzz"
+            )
+          )
+        ),
         backoffStrategy = BackoffStrategy(maxLaunchDelay = 300.seconds)
       )
 
@@ -765,10 +771,15 @@ class AppDefinitionTest extends UnitTest with ValidationTestLike {
       """
 
       val result = fromJson(json)
-      assert(result.env.equals(Map[String, EnvVarValue](
-        "qwe" -> "rty".toEnvVar,
-        "ssh" -> EnvVarSecretRef("psst")
-      )), result.env)
+      assert(
+        result.env.equals(
+          Map[String, EnvVarValue](
+            "qwe" -> "rty".toEnvVar,
+            "ssh" -> EnvVarSecretRef("psst")
+          )
+        ),
+        result.env
+      )
     }
 
     "container port mappings when empty stays empty" in {

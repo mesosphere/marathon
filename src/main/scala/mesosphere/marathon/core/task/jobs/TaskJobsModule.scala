@@ -13,10 +13,7 @@ import mesosphere.marathon.metrics.Metrics
   * This module contains periodically running jobs interacting with the task tracker.
   */
 class TaskJobsModule(config: MarathonConf, leadershipModule: LeadershipModule, clock: Clock) {
-  def handleOverdueTasks(
-    instanceTracker: InstanceTracker,
-    killService: KillService,
-    metrics: Metrics): Unit = {
+  def handleOverdueTasks(instanceTracker: InstanceTracker, killService: KillService, metrics: Metrics): Unit = {
     leadershipModule.startWhenLeader(
       OverdueInstancesActor.props(
         config,
@@ -25,7 +22,8 @@ class TaskJobsModule(config: MarathonConf, leadershipModule: LeadershipModule, c
         metrics,
         clock
       ),
-      "killOverdueStagedTasks")
+      "killOverdueStagedTasks"
+    )
   }
 
   def expungeOverdueLostTasks(instanceTracker: InstanceTracker): Unit = {

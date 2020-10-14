@@ -15,7 +15,8 @@ class AppVersionsResourceTest extends UnitTest with JerseyTest {
       auth: TestAuthFixture = new TestAuthFixture,
       config: MarathonConf = mock[MarathonConf],
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
-      groupManager: GroupManager = mock[GroupManager]) {
+      groupManager: GroupManager = mock[GroupManager]
+  ) {
     val appsVersionsResource = new AppVersionsResource(service, groupManager, auth.auth, auth.auth, config)
   }
 

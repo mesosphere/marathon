@@ -52,7 +52,9 @@ private[launcher] class OfferProcessorImpl(
     conf: OfferProcessorConfig,
     offerMatcher: OfferMatcher,
     taskLauncher: TaskLauncher,
-    instanceTracker: InstanceTracker) extends OfferProcessor with StrictLogging {
+    instanceTracker: InstanceTracker
+) extends OfferProcessor
+    with StrictLogging {
   import scala.concurrent.ExecutionContext.Implicits.global
 
   private[this] val incomingOffersMetric =
@@ -67,14 +69,12 @@ private[launcher] class OfferProcessorImpl(
     metrics.counter("debug.mesos.offers.saving-tasks-errors")
 
   private def warnOnZeroResource(offer: Offer): Unit = {
-    val resourcesWithZeroValues = offer
-      .getResourcesList.asScala
-      .collect {
-        case resource if resource.hasScalar && resource.getScalar.getValue.ceil.toLong == 0 =>
-          resource.getName
-        case resource if resource.hasRanges && resource.getRanges.getRangeCount == 0 =>
-          resource.getName
-      }
+    val resourcesWithZeroValues = offer.getResourcesList.asScala.collect {
+      case resource if resource.hasScalar && resource.getScalar.getValue.ceil.toLong == 0 =>
+        resource.getName
+      case resource if resource.hasRanges && resource.getRanges.getRangeCount == 0 =>
+        resource.getName
+    }
     if (resourcesWithZeroValues.nonEmpty) {
       logger.warn(s"Offer ${offer.getId.getValue} has zero-valued resources: ${resourcesWithZeroValues.mkString(", ")}")
     }
@@ -96,24 +96,23 @@ private[launcher] class OfferProcessorImpl(
       offerMatcher.matchOffer(offer)
     }
 
-    matchFuture
-      .recover {
-        case NonFatal(e) =>
-          matchErrorsMetric.increment()
-          logger.error(s"Could not process offer '${offer.getId.getValue}'", e)
-          MatchedInstanceOps.noMatch(offer.getId, resendThisOffer = true)
-      }.flatMap {
-        case MatchedInstanceOps(offerId, opsWithSource, resendThisOffer) =>
-          savingTasksTimeMetric {
-            saveTasks(opsWithSource).map { savedTasks =>
-              def notAllSaved: Boolean = savedTasks.size != opsWithSource.size
-              MatchedInstanceOps(offerId, savedTasks, resendThisOffer || notAllSaved)
-            }
+    matchFuture.recover {
+      case NonFatal(e) =>
+        matchErrorsMetric.increment()
+        logger.error(s"Could not process offer '${offer.getId.getValue}'", e)
+        MatchedInstanceOps.noMatch(offer.getId, resendThisOffer = true)
+    }.flatMap {
+      case MatchedInstanceOps(offerId, opsWithSource, resendThisOffer) =>
+        savingTasksTimeMetric {
+          saveTasks(opsWithSource).map { savedTasks =>
+            def notAllSaved: Boolean = savedTasks.size != opsWithSource.size
+            MatchedInstanceOps(offerId, savedTasks, resendThisOffer || notAllSaved)
           }
-      }.flatMap {
-        case MatchedInstanceOps(offerId, Nil, resendThisOffer) => declineOffer(offerId, resendThisOffer)
-        case MatchedInstanceOps(offerId, tasks, _) => acceptOffer(offerId, tasks)
-      }
+        }
+    }.flatMap {
+      case MatchedInstanceOps(offerId, Nil, resendThisOffer) => declineOffer(offerId, resendThisOffer)
+      case MatchedInstanceOps(offerId, tasks, _) => acceptOffer(offerId, tasks)
+    }
   }
 
   private[this] def declineOffer(offerId: OfferID, resendThisOffer: Boolean): Future[Done] = {
@@ -138,27 +137,28 @@ private[launcher] class OfferProcessorImpl(
   /** Revert the effects of the task ops on the task state. */
   private[this] def revertTaskOps(ops: Seq[InstanceOp]): Future[Done] = {
     val done: Future[Done] = Future.successful(Done)
-    ops.foldLeft(done) { (terminatedFuture, nextOp) =>
-      terminatedFuture.flatMap { _ =>
-        nextOp.oldInstance match {
-          case Some(existingInstance) =>
-            instanceTracker.revert(existingInstance)
-          case None =>
-            instanceTracker.forceExpunge(nextOp.instanceId)
+    ops
+      .foldLeft(done) { (terminatedFuture, nextOp) =>
+        terminatedFuture.flatMap { _ =>
+          nextOp.oldInstance match {
+            case Some(existingInstance) =>
+              instanceTracker.revert(existingInstance)
+            case None =>
+              instanceTracker.forceExpunge(nextOp.instanceId)
+          }
         }
       }
-    }.recover {
-      case NonFatal(e) =>
-        throw new RuntimeException("while reverting task ops", e)
-    }
+      .recover {
+        case NonFatal(e) =>
+          throw new RuntimeException("while reverting task ops", e)
+      }
   }
 
   /**
     * Saves the given tasks sequentially, evaluating before each save whether the given deadline has been reached
     * already.
     */
-  private[this] def saveTasks(
-    ops: Seq[InstanceOpWithSource]): Future[Seq[InstanceOpWithSource]] = {
+  private[this] def saveTasks(ops: Seq[InstanceOpWithSource]): Future[Seq[InstanceOpWithSource]] = {
 
     def saveTask(taskOpWithSource: InstanceOpWithSource): Future[Option[InstanceOpWithSource]] = {
       val taskId = taskOpWithSource.instanceId
@@ -172,7 +172,8 @@ private[launcher] class OfferProcessorImpl(
             taskOpWithSource.reject(s"storage error: $e")
             logger.warn(s"error while storing task $taskId for app [${taskId.runSpecId}]", e)
             revertTaskOps(Seq(taskOpWithSource.op))
-        }.map { _ => Some(taskOpWithSource) }
+        }
+        .map { _ => Some(taskOpWithSource) }
     }
 
     ops.foldLeft(Future.successful(Vector.empty[InstanceOpWithSource])) { (savedTasksFuture, nextTask) =>

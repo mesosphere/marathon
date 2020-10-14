@@ -27,10 +27,12 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
     case head +: rest => PathId(path.init, absolute)
   }
 
-  def allParents: List[PathId] = if (isRoot) Nil else {
-    val p = parent
-    p :: p.allParents
-  }
+  def allParents: List[PathId] =
+    if (isRoot) Nil
+    else {
+      val p = parent
+      p :: p.allParents
+    }
 
   def child: PathId = PathId(tail)
 
@@ -56,12 +58,13 @@ case class PathId(path: Seq[String], absolute: Boolean = true) extends Ordered[P
    */
   def canonicalPath(base: PathId = PathId(Nil, absolute = true)): PathId = {
     require(base.absolute, "Base path is not absolute, canonical path can not be computed!")
-    @tailrec def in(remaining: Seq[String], result: Seq[String] = Nil): Seq[String] = remaining match {
-      case head +: tail if head == "." => in(tail, result)
-      case head +: tail if head == ".." => in(tail, if (result.nonEmpty) result.tail else Nil)
-      case head +: tail => in(tail, head +: result)
-      case Nil => result.reverse
-    }
+    @tailrec def in(remaining: Seq[String], result: Seq[String] = Nil): Seq[String] =
+      remaining match {
+        case head +: tail if head == "." => in(tail, result)
+        case head +: tail if head == ".." => in(tail, if (result.nonEmpty) result.tail else Nil)
+        case head +: tail => in(tail, head +: result)
+        case Nil => result.reverse
+      }
     if (absolute) PathId(in(path)) else PathId(in(base.path ++ path))
   }
 
@@ -139,9 +142,10 @@ object PathId {
 
   private val reservedKeywords = Seq("restart", "tasks", "versions")
 
-  private val withoutReservedKeywords = isTrue[PathId](s"must not end with any of the following reserved keywords: ${reservedKeywords.mkString(", ")}") { id =>
-    id.path.lastOption.forall(last => !reservedKeywords.contains(id.path.last))
-  }
+  private val withoutReservedKeywords =
+    isTrue[PathId](s"must not end with any of the following reserved keywords: ${reservedKeywords.mkString(", ")}") { id =>
+      id.path.lastOption.forall(last => !reservedKeywords.contains(id.path.last))
+    }
 
   /**
     * For external usage. Needed to overwrite the whole description, e.g. id.path -> id.
@@ -156,10 +160,11 @@ object PathId {
     * Validate path with regards to some parent path.
     * @param base Path of parent.
     */
-  def validPathWithBase(base: PathId): Validator[PathId] = validator[PathId] { path =>
-    path is childOf(base)
-    path is validPathChars
-  }
+  def validPathWithBase(base: PathId): Validator[PathId] =
+    validator[PathId] { path =>
+      path is childOf(base)
+      path is validPathChars
+    }
 
   /**
     * Make sure that the given path is a child of the defined parent path.

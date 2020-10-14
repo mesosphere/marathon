@@ -80,17 +80,23 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
     }
 
     def taskString(i: Instance.Id, condition: String) = {
-      val taskStatus = Json.toJson(Task.Status(
-        stagedAt = Timestamp.now(),
-        condition = Condition.Running,
-        networkInfo = NetworkInfo(
-          "127.0.0.1",
-          8888 :: Nil,
-          mesos.Protos.NetworkInfo.IPAddress.newBuilder()
-            .setProtocol(Protocol.IPv4)
-            .setIpAddress("127.0.0.1")
-            .build() :: Nil)
-      )).as[JsObject] + ("condition" -> JsString(condition))
+      val taskStatus = Json
+        .toJson(
+          Task.Status(
+            stagedAt = Timestamp.now(),
+            condition = Condition.Running,
+            networkInfo = NetworkInfo(
+              "127.0.0.1",
+              8888 :: Nil,
+              mesos.Protos.NetworkInfo.IPAddress
+                .newBuilder()
+                .setProtocol(Protocol.IPv4)
+                .setIpAddress("127.0.0.1")
+                .build() :: Nil
+            )
+          )
+        )
+        .as[JsObject] + ("condition" -> JsString(condition))
 
       s"""
          |{
@@ -103,8 +109,7 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
 
     def created(i: Instance.Id): JsObject = {
 
-      Json.parse(
-        s"""
+      Json.parse(s"""
            |{
            |  "instanceId": { "idString": "${i.idString}" },
            |  "tasksMap": {
@@ -118,8 +123,7 @@ class MigrationTo18Test extends AkkaUnitTest with StrictLogging with Inspectors 
 
     def provisioned(i: Instance.Id): JsObject = {
 
-      Json.parse(
-        s"""
+      Json.parse(s"""
            |{
            |  "instanceId": { "idString": "${i.idString}" },
            |  "tasksMap": {

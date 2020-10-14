@@ -6,7 +6,19 @@ import java.util.regex.Pattern
 import com.wix.accord._
 import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation
-import mesosphere.marathon.raml.{App, Apps, Constraint, ConstraintOperator, Pod, PodPersistentVolume, PodPlacementPolicy, PodSchedulingBackoffStrategy, PodSchedulingPolicy, PodUpgradeStrategy, UpgradeStrategy}
+import mesosphere.marathon.raml.{
+  App,
+  Apps,
+  Constraint,
+  ConstraintOperator,
+  Pod,
+  PodPersistentVolume,
+  PodPlacementPolicy,
+  PodSchedulingBackoffStrategy,
+  PodSchedulingPolicy,
+  PodUpgradeStrategy,
+  UpgradeStrategy
+}
 import mesosphere.marathon.state.ResourceRole
 
 import scala.util.Try
@@ -115,7 +127,10 @@ trait SchedulingValidation {
   }
 
   val placementStrategyValidator = validator[PodPlacementPolicy] { ppp =>
-    ppp.acceptedResourceRoles.toSet is empty or ResourceRole.validAcceptedResourceRoles("pod", false) // TODO(jdef) assumes pods!! change this to properly support apps
+    ppp.acceptedResourceRoles.toSet is empty or ResourceRole.validAcceptedResourceRoles(
+      "pod",
+      false
+    ) // TODO(jdef) assumes pods!! change this to properly support apps
     ppp.constraints is empty or every(complyWithConstraintRules)
   }
 
@@ -132,20 +147,21 @@ trait SchedulingValidation {
       def badConstraint(reason: String): Result =
         Failure(Set(RuleViolation(c, reason)))
       if (c.length < 2 || c.length > 3) badConstraint("Each constraint must have either 2 or 3 fields")
-      else (c.headOption, c.lift(1), c.lift(2)) match {
-        case (None, None, _) =>
-          badConstraint("Missing field and operator")
-        case (Some(field), Some(op), value) if field.nonEmpty =>
-          ConstraintOperator.fromString(op.toUpperCase) match {
-            case Some(operator) =>
-              // reuse the rules from pod constraint validation so that we're not maintaining redundant rule sets
-              complyWithConstraintRules(Constraint(fieldName = field, operator = operator, value = value))
-            case _ =>
-              failureIllegalOperator(c)
-          }
-        case _ =>
-          badConstraint(IllegalConstraintSpecification)
-      }
+      else
+        (c.headOption, c.lift(1), c.lift(2)) match {
+          case (None, None, _) =>
+            badConstraint("Missing field and operator")
+          case (Some(field), Some(op), value) if field.nonEmpty =>
+            ConstraintOperator.fromString(op.toUpperCase) match {
+              case Some(operator) =>
+                // reuse the rules from pod constraint validation so that we're not maintaining redundant rule sets
+                complyWithConstraintRules(Constraint(fieldName = field, operator = operator, value = value))
+              case _ =>
+                failureIllegalOperator(c)
+            }
+          case _ =>
+            badConstraint(IllegalConstraintSpecification)
+        }
     }
   }
 }
@@ -157,7 +173,8 @@ object SchedulingValidationMessages {
    * without breaking the API. */
   val MesosLiteralOrFloatValue = "^[a-zA-Z0-9_/.-]*$".r
 
-  val IsOnlySupportsText = "IS only supports Mesos text and float values (see http://mesos.apache.org/documentation/latest/attributes-resources/)"
+  val IsOnlySupportsText =
+    "IS only supports Mesos text and float values (see http://mesos.apache.org/documentation/latest/attributes-resources/)"
   val InOnlySupportsSets = "IN value expects a Mesos set value (see http://mesos.apache.org/documentation/latest/attributes-resources/)"
 
   val ConstraintRequiresField = "missing field for constraint declaration"

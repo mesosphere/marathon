@@ -24,14 +24,12 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val update = GroupUpdate(
         Some(PathId.empty.toString),
         Some(Set.empty[App]),
-        Some(Set(
-          GroupUpdate(
-            Some("test"), Some(Set.empty[App]), Some(Set(Group.emptyUpdate("foo".toPath)))),
-          GroupUpdate(
-            Some("apps"), Some(Set(
-              App("app1", cmd = Some("foo"),
-                dependencies = Set("d1", "../test/foo", "/test")))))
-        ))
+        Some(
+          Set(
+            GroupUpdate(Some("test"), Some(Set.empty[App]), Some(Set(Group.emptyUpdate("foo".toPath)))),
+            GroupUpdate(Some("apps"), Some(Set(App("app1", cmd = Some("foo"), dependencies = Set("d1", "../test/foo", "/test")))))
+          )
+        )
       )
       val timestamp = Timestamp.now()
 
@@ -50,38 +48,40 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       apps should be('defined)
       apps.get.apps should have size 1
       val app = apps.get.apps.head
-      app._1.toString should be ("/apps/app1")
-      app._2.dependencies should be (Set("/apps/d1".toPath, "/test/foo".toPath, "/test".toPath))
+      app._1.toString should be("/apps/app1")
+      app._2.dependencies should be(Set("/apps/d1".toPath, "/test/foo".toPath, "/test".toPath))
     }
 
     "A group update can be applied to existing entries" in {
       Given("A group with updates of existing nodes")
       val blaApp = AppDefinition("/test/bla".toPath, Some("foo"))
-      val actual = createRootGroup(groups = Set(
-        createGroup("/test".toPath, apps = Map(blaApp.id -> blaApp)),
-        createGroup("/apps".toPath, groups = Set(createGroup("/apps/foo".toPath)))
-      ))
+      val actual = createRootGroup(groups =
+        Set(
+          createGroup("/test".toPath, apps = Map(blaApp.id -> blaApp)),
+          createGroup("/apps".toPath, groups = Set(createGroup("/apps/foo".toPath)))
+        )
+      )
       val update = GroupUpdate(
         Some(PathId.empty.toString),
         Some(Set.empty[App]),
-        Some(Set(
-          GroupUpdate(
-            Some("test"),
-            None,
-            Some(Set(Group.emptyUpdate("foo".toPath)))
-          ),
-          GroupUpdate(
-            Some("apps"),
-            Some(Set(App("app1", cmd = Some("foo"),
-              dependencies = Set("d1", "../test/foo", "/test"))))
+        Some(
+          Set(
+            GroupUpdate(
+              Some("test"),
+              None,
+              Some(Set(Group.emptyUpdate("foo".toPath)))
+            ),
+            GroupUpdate(
+              Some("apps"),
+              Some(Set(App("app1", cmd = Some("foo"), dependencies = Set("d1", "../test/foo", "/test"))))
+            )
           )
-        ))
+        )
       )
       val timestamp = Timestamp.now()
 
       When("The update is performed")
-      val result: RootGroup = RootGroup.fromGroup(Raml.fromRaml(
-        GroupConversion(update, actual, timestamp) -> appConversionFunc))
+      val result: RootGroup = RootGroup.fromGroup(Raml.fromRaml(GroupConversion(update, actual, timestamp) -> appConversionFunc))
 
       validate(result)(RootGroup.rootGroupValidator(Set())).isSuccess should be(true)
 
@@ -97,8 +97,8 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       apps.get.groupsById should have size 1
       apps.get.apps should have size 1
       val app = apps.get.apps.head
-      app._1.toString should be ("/apps/app1")
-      app._2.dependencies should be (Set("/apps/d1".toPath, "/test/foo".toPath, "/test".toPath))
+      app._1.toString should be("/apps/app1")
+      app._2.dependencies should be(Set("/apps/d1".toPath, "/test/foo".toPath, "/test".toPath))
     }
 
     "GroupUpdate will update a Group correctly" in {
@@ -117,16 +117,16 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val update = GroupUpdate(
         Some("/test"),
         Some(Set.empty[App]),
-        Some(Set(
-          GroupUpdate(Some("/test/group1"), Some(Set(App("/test/group1/app3", cmd = Some("foo"))))),
-          GroupUpdate(
-            Some("/test/group3"),
-            Some(Set.empty[App]),
-            Some(Set(GroupUpdate(Some("/test/group3/sub1"), Some(Set(App(
-              "/test/group3/sub1/app4", cmd =
-                Some("foo")))))))
+        Some(
+          Set(
+            GroupUpdate(Some("/test/group1"), Some(Set(App("/test/group1/app3", cmd = Some("foo"))))),
+            GroupUpdate(
+              Some("/test/group3"),
+              Some(Set.empty[App]),
+              Some(Set(GroupUpdate(Some("/test/group3/sub1"), Some(Set(App("/test/group3/sub1/app4", cmd = Some("foo")))))))
+            )
           )
-        ))
+        )
       )
 
       val timestamp = Timestamp.now()
@@ -166,18 +166,21 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
 
     "Relative path of a dependency, should be relative to group and not to the app" in {
       Given("A group with two apps. Second app is dependend of first.")
-      val update = GroupUpdate(Some(PathId.empty.toString), Some(Set.empty[App]), Some(Set(
-        GroupUpdate(
-          Some("test-group"),
-          Some(Set(
-            App("test-app1", cmd = Some("foo")),
-            App("test-app2", cmd = Some("foo"), dependencies = Set("test-app1"))))
+      val update = GroupUpdate(
+        Some(PathId.empty.toString),
+        Some(Set.empty[App]),
+        Some(
+          Set(
+            GroupUpdate(
+              Some("test-group"),
+              Some(Set(App("test-app1", cmd = Some("foo")), App("test-app2", cmd = Some("foo"), dependencies = Set("test-app1"))))
+            )
+          )
         )
-      )))
+      )
 
       When("The update is performed")
-      val result = Raml.fromRaml(
-        GroupConversion(update, createRootGroup(), Timestamp.now()) -> appConversionFunc)
+      val result = Raml.fromRaml(GroupConversion(update, createRootGroup(), Timestamp.now()) -> appConversionFunc)
 
       validate(RootGroup.fromGroup(result))(RootGroup.rootGroupValidator(noEnabledFeatures)).isSuccess should be(true)
 
@@ -186,7 +189,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       group should be('defined)
       group.get.apps should have size 2
       val dependentApp = group.get.app("/test-group/test-app2".toPath).get
-      dependentApp.dependencies should be (Set("/test-group/test-app1".toPath))
+      dependentApp.dependencies should be(Set("/test-group/test-app1".toPath))
     }
   }
 }

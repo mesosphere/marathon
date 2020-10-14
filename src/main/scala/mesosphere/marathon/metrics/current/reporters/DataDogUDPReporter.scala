@@ -42,18 +42,17 @@ class DataDogUDPReporter(metricsConf: MetricsConf, registry: MetricRegistry) ext
   }
 
   private def report(socket: ActorRef): Unit = {
-    report(
-      socket,
-      registry.getGauges, registry.getCounters, registry.getHistograms, registry.getMeters, registry.getTimers)
+    report(socket, registry.getGauges, registry.getCounters, registry.getHistograms, registry.getMeters, registry.getTimers)
   }
 
   private def report(
-    socket: ActorRef,
-    gauges: util.SortedMap[String, Gauge[_]],
-    counters: util.SortedMap[String, Counter],
-    histograms: util.SortedMap[String, Histogram],
-    meters: util.SortedMap[String, Meter],
-    timers: util.SortedMap[String, Timer]): Unit = {
+      socket: ActorRef,
+      gauges: util.SortedMap[String, Gauge[_]],
+      counters: util.SortedMap[String, Counter],
+      histograms: util.SortedMap[String, Histogram],
+      meters: util.SortedMap[String, Meter],
+      timers: util.SortedMap[String, Timer]
+  ): Unit = {
 
     gauges.asScala.foreach { case (name, value) => reportGauge(socket, sanitizeName(name), value) }
     counters.asScala.foreach { case (name, value) => reportCounter(socket, sanitizeName(name), value) }
@@ -84,10 +83,8 @@ class DataDogUDPReporter(metricsConf: MetricsConf, registry: MetricRegistry) ext
     maybeSendAndAppend(socket, s"$name:${counter.getCount}|g\n")
 
   private val histogramSnapshotSuffixes =
-    Seq("min", "average", "median", "75percentile", "95percentile", "98percentile",
-      "99percentile", "999percentile", "max", "stddev")
-  private def reportSnapshot(socket: ActorRef, name: String, snapshot: Snapshot,
-    scaleMetrics: Boolean): Unit = {
+    Seq("min", "average", "median", "75percentile", "95percentile", "98percentile", "99percentile", "999percentile", "max", "stddev")
+  private def reportSnapshot(socket: ActorRef, name: String, snapshot: Snapshot, scaleMetrics: Boolean): Unit = {
     val values = Seq(
       snapshot.getMin.toDouble,
       snapshot.getMean,
@@ -98,7 +95,8 @@ class DataDogUDPReporter(metricsConf: MetricsConf, registry: MetricRegistry) ext
       snapshot.get99thPercentile(),
       snapshot.get999thPercentile(),
       snapshot.getMax.toDouble,
-      snapshot.getStdDev)
+      snapshot.getStdDev
+    )
     val scaledValues = if (scaleMetrics) values.map(_ * durationFactor) else values
 
     histogramSnapshotSuffixes.zip(scaledValues).foreach {
@@ -119,7 +117,8 @@ class DataDogUDPReporter(metricsConf: MetricsConf, registry: MetricRegistry) ext
       meter.getMeanRate * rateFactor,
       meter.getOneMinuteRate * rateFactor,
       meter.getFiveMinuteRate * rateFactor,
-      meter.getFifteenMinuteRate * rateFactor)
+      meter.getFifteenMinuteRate * rateFactor
+    )
     meteredSuffixes.zip(values).foreach {
       case (suffix, value) => maybeSendAndAppend(socket, s"$name.$suffix:$value|g\n")
     }

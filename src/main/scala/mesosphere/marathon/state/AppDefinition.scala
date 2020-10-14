@@ -28,65 +28,38 @@ import mesosphere.marathon.core.check.{PortReference => CheckPortReference}
 import scala.concurrent.duration._
 
 case class AppDefinition(
-
     id: PathId,
-
     override val cmd: Option[String] = App.DefaultCmd,
-
     override val args: Seq[String] = App.DefaultArgs,
-
     user: Option[String] = App.DefaultUser,
-
     env: Map[String, EnvVarValue] = AppDefinition.DefaultEnv,
-
     instances: Int = App.DefaultInstances,
-
     resources: Resources = Apps.DefaultResources,
-
     executor: String = App.DefaultExecutor,
-
     executorResources: Option[Resources] = AppDefinition.DefaultExecutorResources,
-
     constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
-
     fetch: Seq[FetchUri] = AppDefinition.DefaultFetch,
-
     portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
-
     requirePorts: Boolean = App.DefaultRequirePorts,
-
     backoffStrategy: BackoffStrategy = AppDefinition.DefaultBackoffStrategy,
-
     override val container: Option[Container] = AppDefinition.DefaultContainer,
-
     healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
-
     check: Option[Check] = AppDefinition.DefaultCheck,
-
     readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
-
     taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
-
     dependencies: Set[PathId] = AppDefinition.DefaultDependencies,
-
     upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
-
     labels: Map[String, String] = AppDefinition.DefaultLabels,
-
     acceptedResourceRoles: Set[String] = AppDefinition.DefaultAcceptedResourceRoles,
-
     networks: Seq[Network] = AppDefinition.DefaultNetworks,
-
     versionInfo: VersionInfo = VersionInfo.OnlyVersion(Timestamp.now()),
-
     secrets: Map[String, Secret] = AppDefinition.DefaultSecrets,
-
     override val unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
-
     override val killSelection: KillSelection = KillSelection.DefaultKillSelection,
-
-    tty: Option[Boolean] = AppDefinition.DefaultTTY) extends RunSpec
-  with plugin.ApplicationSpec with MarathonState[Protos.ServiceDefinition, AppDefinition] {
+    tty: Option[Boolean] = AppDefinition.DefaultTTY
+) extends RunSpec
+    with plugin.ApplicationSpec
+    with MarathonState[Protos.ServiceDefinition, AppDefinition] {
 
   /**
     * As an optimization, we precompute and cache the hash of this object
@@ -102,11 +75,13 @@ case class AppDefinition(
 
   require(
     (!networks.exists(!_.eq(HostNetwork))) || portDefinitions.isEmpty,
-    s"non-host-mode networking ($networks) and ports/portDefinitions ($portDefinitions) are not allowed at the same time")
+    s"non-host-mode networking ($networks) and ports/portDefinitions ($portDefinitions) are not allowed at the same time"
+  )
 
   require(
     !(networks.exists(_.eq(HostNetwork)) && container.fold(false)(c => c.portMappings.nonEmpty)),
-    "port-mappings may not be used in conjunction with host networking")
+    "port-mappings may not be used in conjunction with host networking"
+  )
 
   require(
     !(portDefinitions.nonEmpty && container.fold(false)(_.portMappings.nonEmpty)),
@@ -116,7 +91,8 @@ case class AppDefinition(
   // Our normalization layer replaces hostPort None to Some(0) for bridge networking
   require(
     !(networks.hasBridgeNetworking && container.fold(false)(c => c.portMappings.exists(_.hostPort.isEmpty))),
-    "bridge networking requires that every host-port in a port-mapping is non-empty (but may be zero)")
+    "bridge networking requires that every host-port in a port-mapping is non-empty (but may be zero)"
+  )
 
   val portNumbers: Seq[Int] = portDefinitions.map(_.port)
 
@@ -139,9 +115,11 @@ case class AppDefinition(
   override val diskForPersistentVolumes: Double = persistentVolumes.map(_.persistent.size).sum.toDouble
 
   private[state] val persistentVolumesWithMounts: Seq[VolumeWithMount[PersistentVolume]] =
-    container.map(_.volumes.collect {
-      case vm @ VolumeWithMount(_: PersistentVolume, _) => vm.asInstanceOf[VolumeWithMount[PersistentVolume]]
-    }).getOrElse(Seq.empty)
+    container
+      .map(_.volumes.collect {
+        case vm @ VolumeWithMount(_: PersistentVolume, _) => vm.asInstanceOf[VolumeWithMount[PersistentVolume]]
+      })
+      .getOrElse(Seq.empty)
 
   def toProto: Protos.ServiceDefinition = {
     val commandInfo = TaskBuilder.commandInfo(
@@ -221,22 +199,21 @@ case class AppDefinition(
   override def withInstances(instances: Int): RunSpec = copy(instances = instances)
 
   def mergeFromProto(proto: Protos.ServiceDefinition): AppDefinition = {
-    val envMap: Map[String, EnvVarValue] = EnvVarValue(
-      proto.getCmd.getEnvironment.getVariablesList.map {
-        v => v.getName -> v.getValue
-      }(collection.breakOut))
+    val envMap: Map[String, EnvVarValue] = EnvVarValue(proto.getCmd.getEnvironment.getVariablesList.map { v =>
+      v.getName -> v.getValue
+    }(collection.breakOut))
 
     val envRefs: Map[String, EnvVarValue] =
       proto.getEnvVarReferencesList.flatMap(EnvVarRefSerializer.fromProto)(collection.breakOut)
 
     val resourcesMap: Map[String, Double] =
-      proto.getResourcesList.map {
-        r => r.getName -> (r.getScalar.getValue: Double)
+      proto.getResourcesList.map { r =>
+        r.getName -> (r.getScalar.getValue: Double)
       }(collection.breakOut)
 
     val executorResourcesMap: Map[String, Double] =
-      proto.getExecutorResourcesList.map {
-        r => r.getName -> (r.getScalar.getValue: Double)
+      proto.getExecutorResourcesList.map { r =>
+        r.getName -> (r.getScalar.getValue: Double)
       }(collection.breakOut)
 
     val argsOption = proto.getCmd.getArgumentsList.toSeq
@@ -269,16 +246,19 @@ case class AppDefinition(
       else
         UnreachableStrategy.default(isResident)
 
-    val executorRes: Option[Resources] = if (this.executorResources.isEmpty && executorResourcesMap.isEmpty)
-      None
-    else {
-      val r = this.executorResources.getOrElse(AppDefinition.MinimalExecutorResources)
-      Some(Resources(
-        cpus = executorResourcesMap.getOrElse(Resource.CPUS, r.cpus),
-        mem = executorResourcesMap.getOrElse(Resource.MEM, r.mem),
-        disk = executorResourcesMap.getOrElse(Resource.DISK, r.disk)
-      ))
-    }
+    val executorRes: Option[Resources] =
+      if (this.executorResources.isEmpty && executorResourcesMap.isEmpty)
+        None
+      else {
+        val r = this.executorResources.getOrElse(AppDefinition.MinimalExecutorResources)
+        Some(
+          Resources(
+            cpus = executorResourcesMap.getOrElse(Resource.CPUS, r.cpus),
+            mem = executorResourcesMap.getOrElse(Resource.MEM, r.mem),
+            disk = executorResourcesMap.getOrElse(Resource.DISK, r.disk)
+          )
+        )
+      }
 
     AppDefinition(
       id = PathId(proto.getId),
@@ -293,7 +273,8 @@ case class AppDefinition(
       backoffStrategy = BackoffStrategy(
         backoff = proto.getBackoff.milliseconds,
         factor = proto.getBackoffFactor,
-        maxLaunchDelay = proto.getMaxLaunchDelay.milliseconds),
+        maxLaunchDelay = proto.getMaxLaunchDelay.milliseconds
+      ),
       constraints = proto.getConstraintsList.toSet,
       acceptedResourceRoles = acceptedResourceRoles,
       resources = Resources(
@@ -307,10 +288,10 @@ case class AppDefinition(
       container = containerOption,
       healthChecks = proto.getHealthChecksList.map(HealthCheck.fromProto).toSet,
       check = if (proto.hasCheck) Some(Check.fromProto(proto.getCheck)) else None,
-      readinessChecks =
-        proto.getReadinessCheckDefinitionList.map(ReadinessCheckSerializer.fromProto)(collection.breakOut),
-      taskKillGracePeriod = if (proto.hasTaskKillGracePeriod) Some(proto.getTaskKillGracePeriod.milliseconds)
-      else None,
+      readinessChecks = proto.getReadinessCheckDefinitionList.map(ReadinessCheckSerializer.fromProto)(collection.breakOut),
+      taskKillGracePeriod =
+        if (proto.hasTaskKillGracePeriod) Some(proto.getTaskKillGracePeriod.milliseconds)
+        else None,
       labels = proto.getLabelsList.map { p => p.getKey -> p.getValue }(collection.breakOut),
       versionInfo = versionInfoFromProto,
       upgradeStrategy =
@@ -350,10 +331,11 @@ case class AppDefinition(
     * True if the given app definition is a change to the current one in terms of runtime characteristics
     * of all deployed tasks of the current app, otherwise false.
     */
-  def isUpgrade(to: RunSpec): Boolean = to match {
-    case to: AppDefinition =>
-      id == to.id && {
-        cmd != to.cmd ||
+  def isUpgrade(to: RunSpec): Boolean =
+    to match {
+      case to: AppDefinition =>
+        id == to.id && {
+          cmd != to.cmd ||
           args != to.args ||
           user != to.user ||
           env != to.env ||
@@ -378,11 +360,11 @@ case class AppDefinition(
           unreachableStrategy != to.unreachableStrategy ||
           killSelection != to.killSelection ||
           tty != to.tty
-      }
-    case _ =>
-      // A validation rule will ensure, this can not happen
-      throw new IllegalStateException("Can't change app to pod")
-  }
+        }
+      case _ =>
+        // A validation rule will ensure, this can not happen
+        throw new IllegalStateException("Can't change app to pod")
+    }
 
   /**
     * Returns the changed app definition that is marked for restarting.
@@ -423,8 +405,8 @@ object AppDefinition extends GeneralPurposeCombinators {
 
   val DefaultPortDefinitions: Seq[PortDefinition] = Nil
 
-  val DefaultBackoffStrategy = BackoffStrategy(
-    App.DefaultBackoffSeconds.seconds, App.DefaultMaxLaunchDelaySeconds.seconds, App.DefaultBackoffFactor)
+  val DefaultBackoffStrategy =
+    BackoffStrategy(App.DefaultBackoffSeconds.seconds, App.DefaultMaxLaunchDelaySeconds.seconds, App.DefaultBackoffFactor)
 
   val DefaultContainer = Option.empty[Container]
 
@@ -485,8 +467,7 @@ object AppDefinition extends GeneralPurposeCombinators {
     * Until the user changed all invalid apps, the user would get weird validation
     * errors for every deployment potentially unrelated to the deployed apps.
     */
-  def validAppDefinition(
-    enabledFeatures: Set[String])(implicit pluginManager: PluginManager): Validator[AppDefinition] =
+  def validAppDefinition(enabledFeatures: Set[String])(implicit pluginManager: PluginManager): Validator[AppDefinition] =
     validator[AppDefinition] { app =>
       app.id is valid and PathId.absolutePathValidator and PathId.nonEmptyPath
       app.dependencies is every(PathId.pathIdValidator)
@@ -523,8 +504,10 @@ object AppDefinition extends GeneralPurposeCombinators {
     }
 
   private val complyWithMigrationAPI: Validator[AppDefinition] =
-    isTrue("DCOS_PACKAGE_FRAMEWORK_NAME and DCOS_MIGRATION_API_PATH must be defined" +
-      " when using DCOS_MIGRATION_API_VERSION") { app =>
+    isTrue(
+      "DCOS_PACKAGE_FRAMEWORK_NAME and DCOS_MIGRATION_API_PATH must be defined" +
+        " when using DCOS_MIGRATION_API_VERSION"
+    ) { app =>
       val understandsMigrationProtocol = app.labels.get(Apps.LabelDcosMigrationApiVersion).exists(_.nonEmpty)
 
       // if the api version IS NOT set, we're ok
@@ -532,8 +515,8 @@ object AppDefinition extends GeneralPurposeCombinators {
       def compliesWithMigrationApi =
         app.labels.get(Apps.LabelDcosMigrationApiVersion).fold(true) { apiVersion =>
           apiVersion == "v1" &&
-            app.labels.get(Apps.LabelDcosPackageFrameworkName).exists(_.nonEmpty) &&
-            app.labels.get(Apps.LabelDcosMigrationApiPath).exists(_.nonEmpty)
+          app.labels.get(Apps.LabelDcosPackageFrameworkName).exists(_.nonEmpty) &&
+          app.labels.get(Apps.LabelDcosMigrationApiPath).exists(_.nonEmpty)
         }
 
       !understandsMigrationProtocol || (understandsMigrationProtocol && compliesWithMigrationApi)
@@ -580,39 +563,40 @@ object AppDefinition extends GeneralPurposeCombinators {
         true
     }
 
-  def validBasicAppDefinition(enabledFeatures: Set[String]) = validator[AppDefinition] { appDef =>
-    appDef.upgradeStrategy is valid
-    appDef.container is optional(Container.validContainer(appDef.networks, enabledFeatures))
-    appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
-    appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
-    appDef must containsCmdArgsOrContainer
-    appDef must containsNoChecksWithDocker
-    appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
-    appDef must haveAtMostOneMesosHealthCheck
-    if (appDef.check.isDefined) {
-      appDef.check.get is checkPortIndexIsValid(appDef.portIndices)
-    }
-    appDef.instances should be >= 0
-    appDef.fetch is every(fetchUriIsValid)
-    appDef.resources.mem as "mem" should be >= 0.0
-    appDef.resources.cpus as "cpus" should be >= 0.0
-    appDef.instances should be >= 0
-    appDef.resources.disk as "disk" should be >= 0.0
-    appDef.resources.gpus as "gpus" should be >= 0
-    appDef.secrets is valid(Secret.secretsValidator)
-    appDef.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
-    appDef.env is valid(EnvVarValue.envValidator)
-    appDef.acceptedResourceRoles is empty or valid(ResourceRole.validAcceptedResourceRoles("app", appDef.isResident))
-    appDef must complyWithGpuRules(enabledFeatures)
-    appDef must complyWithMigrationAPI
-    appDef must complyWithReadinessCheckRules
-    appDef must complyWithSingleInstanceLabelRules
-    appDef must complyWithUpgradeStrategyRules
-    appDef should requireUnreachableDisabledForResidentTasks
-    // constraints are validated in AppValidation
-    appDef.unreachableStrategy is valid
-    appDef.networks is valid(NetworkValidation.modelNetworksValidator)
-  } and ExternalVolumes.validApp and EnvVarValue.validApp
+  def validBasicAppDefinition(enabledFeatures: Set[String]) =
+    validator[AppDefinition] { appDef =>
+      appDef.upgradeStrategy is valid
+      appDef.container is optional(Container.validContainer(appDef.networks, enabledFeatures))
+      appDef.portDefinitions is PortDefinitions.portDefinitionsValidator
+      appDef.executor should matchRegexFully("^(//cmd)|(/?[^/]+(/[^/]+)*)|$")
+      appDef must containsCmdArgsOrContainer
+      appDef must containsNoChecksWithDocker
+      appDef.healthChecks is every(portIndexIsValid(appDef.portIndices))
+      appDef must haveAtMostOneMesosHealthCheck
+      if (appDef.check.isDefined) {
+        appDef.check.get is checkPortIndexIsValid(appDef.portIndices)
+      }
+      appDef.instances should be >= 0
+      appDef.fetch is every(fetchUriIsValid)
+      appDef.resources.mem as "mem" should be >= 0.0
+      appDef.resources.cpus as "cpus" should be >= 0.0
+      appDef.instances should be >= 0
+      appDef.resources.disk as "disk" should be >= 0.0
+      appDef.resources.gpus as "gpus" should be >= 0
+      appDef.secrets is valid(Secret.secretsValidator)
+      appDef.secrets is empty or featureEnabled(enabledFeatures, Features.SECRETS)
+      appDef.env is valid(EnvVarValue.envValidator)
+      appDef.acceptedResourceRoles is empty or valid(ResourceRole.validAcceptedResourceRoles("app", appDef.isResident))
+      appDef must complyWithGpuRules(enabledFeatures)
+      appDef must complyWithMigrationAPI
+      appDef must complyWithReadinessCheckRules
+      appDef must complyWithSingleInstanceLabelRules
+      appDef must complyWithUpgradeStrategyRules
+      appDef should requireUnreachableDisabledForResidentTasks
+      // constraints are validated in AppValidation
+      appDef.unreachableStrategy is valid
+      appDef.networks is valid(NetworkValidation.modelNetworksValidator)
+    } and ExternalVolumes.validApp and EnvVarValue.validApp
 
   private def portIndexIsValid(hostPortsIndices: Range): Validator[HealthCheck] =
     isTrue("Health check port indices must address an element of the ports array or container port mappings.") {
@@ -641,9 +625,10 @@ object AppDefinition extends GeneralPurposeCombinators {
         val fromVolumes = from.persistentVolumesWithMounts
         val toVolumes = to.persistentVolumesWithMounts
         def sameSize = fromVolumes.size == toVolumes.size
-        def noChange = fromVolumes.forall { fromVolume =>
-          toVolumes.find(_.mount.mountPath == fromVolume.mount.mountPath).contains(fromVolume)
-        }
+        def noChange =
+          fromVolumes.forall { fromVolume =>
+            toVolumes.find(_.mount.mountPath == fromVolume.mount.mountPath).contains(fromVolume)
+          }
         sameSize && noChange
       }
 

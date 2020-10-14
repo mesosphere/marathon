@@ -20,7 +20,9 @@ class TestGroupManagerFixture(
     initialRoot: RootGroup = RootGroup.empty,
     authenticated: Boolean = true,
     authorized: Boolean = true,
-    authFn: Any => Boolean = _ => true)(implicit as: ActorSystem, ec: ExecutionContext) extends Mockito {
+    authFn: Any => Boolean = _ => true
+)(implicit as: ActorSystem, ec: ExecutionContext)
+    extends Mockito {
   implicit val mat = ActorMaterializer()
   val service = mock[MarathonSchedulerService]
   val metrics = DummyMetrics
@@ -52,11 +54,12 @@ class TestGroupManagerFixture(
 
   schedulerProvider.get().listRunningDeployments() returns Future.successful(Seq.empty)
 
-  private[this] val groupManagerModule = new GroupManagerModule(
-    metrics = metrics,
-    config = config,
-    scheduler = schedulerProvider,
-    groupRepo = groupRepository)(ExecutionContext.Implicits.global, eventBus, authenticator)
+  private[this] val groupManagerModule =
+    new GroupManagerModule(metrics = metrics, config = config, scheduler = schedulerProvider, groupRepo = groupRepository)(
+      ExecutionContext.Implicits.global,
+      eventBus,
+      authenticator
+    )
 
   val groupManager = groupManagerModule.groupManager
 }

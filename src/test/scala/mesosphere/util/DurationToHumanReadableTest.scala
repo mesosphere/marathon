@@ -25,4 +25,3 @@ class DurationToHumanReadableTest extends UnitTest {
     }
   }
 }
-

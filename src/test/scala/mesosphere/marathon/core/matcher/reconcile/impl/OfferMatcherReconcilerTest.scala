@@ -132,7 +132,9 @@ class OfferMatcherReconcilerTest extends UnitTest with GroupCreation {
       f.groupRepository.root() returns Future.successful(createRootGroup(apps = Map(app.id -> app)))
       And("a matching bogus task")
       f.taskTracker.instancesBySpec()(any) returns Future.successful(
-        InstancesBySpec.forInstances(TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance().copy(instanceId = taskId.instanceId))
+        InstancesBySpec.forInstances(
+          TestInstanceBuilder.newBuilderWithLaunchedTask(appId).getInstance().copy(instanceId = taskId.instanceId)
+        )
       )
 
       When("reconciling")

@@ -12,7 +12,7 @@ object UnionVisitor {
   def visit(unionT: UnionT): Seq[Tree] = {
     val UnionT(name, childTypes, comments) = unionT
 
-    val base = (TRAITDEF(name) withParents("RamlGenerated", "Product", "Serializable")).tree.withDoc(comments)
+    val base = (TRAITDEF(name) withParents ("RamlGenerated", "Product", "Serializable")).tree.withDoc(comments)
     val childJson: Seq[GenericApply] = childTypes.map { child =>
       REF("json") DOT s"validate" APPLYTYPE (child.name)
     }
@@ -25,7 +25,7 @@ object UnionVisitor {
         DEF("writes", PlayJsValue) withParams PARAM("o", name) := BLOCK(
           REF("o") MATCH
             childTypes.map { child =>
-              CASE(REF(s"f:${child.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY(REF(child.name) DOT "playJsonFormat"))
+              CASE(REF(s"f:${child.name}")) ==> (REF(PlayJson) DOT "toJson" APPLY REF("f") APPLY (REF(child.name) DOT "playJsonFormat"))
             }
         )
       )
@@ -33,19 +33,21 @@ object UnionVisitor {
     val children = childTypes.flatMap {
       case s: StringT =>
         Seq[Tree](
-          CASECLASSDEF(s.name) withParents name withParams s.defaultValue.fold(PARAM("value", StringClass).tree){ defaultValue =>
+          CASECLASSDEF(s.name) withParents name withParams s.defaultValue.fold(PARAM("value", StringClass).tree) { defaultValue =>
             PARAM("value", StringClass) := LIT(defaultValue)
           },
           OBJECTDEF(s.name) := BLOCK(
-            Seq(OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
-              DEF("reads", PLAY_JSON_RESULT(s.name)) withParams PARAM("json", PlayJsValue) := BLOCK(
-                REF("json") DOT "validate" APPLYTYPE StringClass DOT "map" APPLY (REF(s.name) DOT "apply")
-              ),
-              DEF("writes", PlayJsValue) withParams PARAM("o", s.name) := BLOCK(
-                REF(PlayJsString) APPLY (REF("o") DOT "value")
+            Seq(
+              OBJECTDEF("playJsonFormat") withParents PLAY_JSON_FORMAT(s.name) withFlags Flags.IMPLICIT := BLOCK(
+                DEF("reads", PLAY_JSON_RESULT(s.name)) withParams PARAM("json", PlayJsValue) := BLOCK(
+                  REF("json") DOT "validate" APPLYTYPE StringClass DOT "map" APPLY (REF(s.name) DOT "apply")
+                ),
+                DEF("writes", PlayJsValue) withParams PARAM("o", s.name) := BLOCK(
+                  REF(PlayJsString) APPLY (REF("o") DOT "value")
+                )
               )
-            )) ++ s.defaultValue.map{ defaultValue =>
-              VAL("DefaultValue") withType(s.name) := REF(s.name) APPLY()
+            ) ++ s.defaultValue.map { defaultValue =>
+              VAL("DefaultValue") withType (s.name) := REF(s.name) APPLY ()
             }
           )
         )

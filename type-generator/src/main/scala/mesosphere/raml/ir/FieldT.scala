@@ -6,8 +6,17 @@ import treehugger.forest._
 import definitions._
 import treehuggerDSL._
 
-case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constraints: Seq[ConstraintT[_]], required: Boolean,
-                  default: Option[String], repeated: Boolean = false, forceOptional: Boolean = false, omitEmpty: Boolean = false) {
+case class FieldT(
+    rawName: String,
+    `type`: Type,
+    comments: Seq[String],
+    constraints: Seq[ConstraintT[_]],
+    required: Boolean,
+    default: Option[String],
+    repeated: Boolean = false,
+    forceOptional: Boolean = false,
+    omitEmpty: Boolean = false
+) {
 
   val name = scalaFieldName(rawName)
   override def toString: String = s"$name: ${`type`}"
@@ -62,10 +71,14 @@ case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constrai
     if (required && !forceOptional) {
       TUPLE(REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type`
     } else if (repeated && !forceOptional) {
-      TUPLE(REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type` DOT "orElse" APPLY(REF(PlayReads) DOT "pure" APPLY(`type` APPLY()))
+      TUPLE(REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type` DOT "orElse" APPLY (REF(
+        PlayReads
+      ) DOT "pure" APPLY (`type` APPLY ()))
     } else {
       if (defaultValue.isDefined && !forceOptional) {
-        TUPLE((REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type`) DOT "orElse" APPLY (REF(PlayReads) DOT "pure" APPLY defaultValue.get)
+        TUPLE((REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type`) DOT "orElse" APPLY (REF(
+          PlayReads
+        ) DOT "pure" APPLY defaultValue.get)
       } else {
         TUPLE((REF("__") DOT "\\" APPLY LIT(rawName)) DOT "readNullable" APPLYTYPE `type`)
       }

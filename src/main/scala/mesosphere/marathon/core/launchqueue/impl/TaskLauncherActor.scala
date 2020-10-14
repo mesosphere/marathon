@@ -29,21 +29,28 @@ import scala.concurrent.duration._
 
 private[launchqueue] object TaskLauncherActor {
   def props(
-    config: LaunchQueueConfig,
-    offerMatcherManager: OfferMatcherManager,
-    clock: Clock,
-    taskOpFactory: InstanceOpFactory,
-    instanceTracker: InstanceTracker,
-    rateLimiterActor: ActorRef,
-    offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
-    localRegion: () => Option[Region])(
-    runSpecId: PathId): Props = {
-    Props(new TaskLauncherActor(
-      config,
-      offerMatcherManager,
-      clock, taskOpFactory,
-      instanceTracker, rateLimiterActor, offerMatchStatistics,
-      runSpecId, localRegion))
+      config: LaunchQueueConfig,
+      offerMatcherManager: OfferMatcherManager,
+      clock: Clock,
+      taskOpFactory: InstanceOpFactory,
+      instanceTracker: InstanceTracker,
+      rateLimiterActor: ActorRef,
+      offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
+      localRegion: () => Option[Region]
+  )(runSpecId: PathId): Props = {
+    Props(
+      new TaskLauncherActor(
+        config,
+        offerMatcherManager,
+        clock,
+        taskOpFactory,
+        instanceTracker,
+        rateLimiterActor,
+        offerMatchStatistics,
+        runSpecId,
+        localRegion
+      )
+    )
   }
 
   sealed trait Requests
@@ -70,7 +77,10 @@ private class TaskLauncherActor(
     rateLimiterActor: ActorRef,
     offerMatchStatistics: SourceQueue[OfferMatchStatistics.OfferMatchUpdate],
     runSpecId: PathId,
-    localRegion: () => Option[Region]) extends Actor with StrictLogging with Stash {
+    localRegion: () => Option[Region]
+) extends Actor
+    with StrictLogging
+    with Stash {
   // scalastyle:on parameter.number
 
   /** instances that are in the tracker */
@@ -124,15 +134,16 @@ private class TaskLauncherActor(
 
   override def receive: Receive = active
 
-  private[this] def active: Receive = LoggingReceive.withLabel("active") {
-    Seq(
-      receiveDelayUpdate,
-      receiveTaskLaunchNotification,
-      receiveInstanceUpdate,
-      receiveProcessOffers,
-      receiveUnknown
-    ).reduce(_.orElse[Any, Unit](_))
-  }
+  private[this] def active: Receive =
+    LoggingReceive.withLabel("active") {
+      Seq(
+        receiveDelayUpdate,
+        receiveTaskLaunchNotification,
+        receiveInstanceUpdate,
+        receiveProcessOffers,
+        receiveUnknown
+      ).reduce(_.orElse[Any, Unit](_))
+    }
 
   private[this] def receiveUnknown: Receive = {
     case Status.Failure(ex) =>
@@ -169,8 +180,7 @@ private class TaskLauncherActor(
     val pendingBackOffs = launchAllowedAt.values.filter { _ > now }
     if (pendingBackOffs.nonEmpty) {
       val nextCheck = pendingBackOffs.min
-      recheckBackOff =
-        context.system.scheduler.scheduleOnce(now.until(nextCheck), self, RecheckIfBackOffUntilReached)(context.dispatcher)
+      recheckBackOff = context.system.scheduler.scheduleOnce(now.until(nextCheck), self, RecheckIfBackOffUntilReached)(context.dispatcher)
     }
   }
 
@@ -217,7 +227,7 @@ private class TaskLauncherActor(
 
     case ActorOfferMatcher.MatchOffer(offer, promise) =>
       logger.info(s"Matching offer ${offer.getId.getValue} and need to launch $instancesToLaunch tasks.")
-      val reachableInstances = instanceMap.filterNotAs{
+      val reachableInstances = instanceMap.filterNotAs {
         case (_, instance) => instance.state.condition.isLost || instance.isScheduled
       }
       scheduledInstances.filter(i => launchAllowed(clock.now(), i.runSpec.configRef)) match {
@@ -242,7 +252,9 @@ private class TaskLauncherActor(
   def syncInstances(): Unit = {
     instanceMap = instanceTracker.instancesBySpecSync.instancesMap(runSpecId).instanceMap
     val readable = instanceMap.values
-      .map(i => s"${i.instanceId}:{condition: ${i.state.condition}, goal: ${i.state.goal}, version: ${i.runSpecVersion}, reservation: ${i.reservation}}")
+      .map(i =>
+        s"${i.instanceId}:{condition: ${i.state.condition}, goal: ${i.state.goal}, version: ${i.runSpecVersion}, reservation: ${i.reservation}}"
+      )
       .mkString(", ")
     logger.info(s"Synced instance map to $readable")
   }
@@ -320,17 +332,15 @@ private class TaskLauncherActor(
     promise.trySuccess(MatchedInstanceOps(offer.getId, Seq(InstanceOpWithSource(myselfAsLaunchSource, instanceOp))))
   }
 
-  private[this] def scheduleTaskOpTimeout(
-    context: ActorContext,
-    instanceOp: InstanceOp): Unit =
-    {
-      import context.dispatcher
-      val message: InstanceOpSourceDelegate.InstanceOpRejected = InstanceOpSourceDelegate.InstanceOpRejected(
-        instanceOp, TaskLauncherActor.OfferOperationRejectedTimeoutReason
-      )
-      val scheduledProvisionTimeout = context.system.scheduler.scheduleOnce(config.taskOpNotificationTimeout().milliseconds, self, message)
-      offerOperationAcceptTimeout += instanceOp.instanceId -> scheduledProvisionTimeout
-    }
+  private[this] def scheduleTaskOpTimeout(context: ActorContext, instanceOp: InstanceOp): Unit = {
+    import context.dispatcher
+    val message: InstanceOpSourceDelegate.InstanceOpRejected = InstanceOpSourceDelegate.InstanceOpRejected(
+      instanceOp,
+      TaskLauncherActor.OfferOperationRejectedTimeoutReason
+    )
+    val scheduledProvisionTimeout = context.system.scheduler.scheduleOnce(config.taskOpNotificationTimeout().milliseconds, self, message)
+    offerOperationAcceptTimeout += instanceOp.instanceId -> scheduledProvisionTimeout
+  }
 
   /**
     * Returns the time at which we know we can launch this instance
@@ -341,7 +351,9 @@ private class TaskLauncherActor(
   private[this] def launchAllowed(now: Timestamp, configRef: RunSpecConfigRef): Boolean = launchAllowedAt.get(configRef).exists(_ <= now)
   private[this] def shouldLaunchInstances(now: Timestamp): Boolean = {
     if (scheduledInstances.nonEmpty || launchAllowedAt.nonEmpty)
-      logger.info(s"Found scheduled instances: ${scheduledInstances.map(_.instanceId).mkString(",")} and current back-off map: $launchAllowedAt")
+      logger.info(
+        s"Found scheduled instances: ${scheduledInstances.map(_.instanceId).mkString(",")} and current back-off map: $launchAllowedAt"
+      )
     scheduledInstances.nonEmpty && scheduledVersions.exists { configRef => launchAllowed(now, configRef) }
   }
 

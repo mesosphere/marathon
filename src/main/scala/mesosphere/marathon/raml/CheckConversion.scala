@@ -30,7 +30,6 @@ trait CheckConversion {
    */
   implicit val checkRamlReader: Reads[Check, MesosCheck] = Reads {
     case Check(Some(httpCheck), None, None, interval, timeout, delay) =>
-
       MesosHttpCheck(
         interval = interval.seconds,
         timeout = timeout.seconds,
@@ -44,7 +43,7 @@ trait CheckConversion {
         interval = interval.seconds,
         timeout = timeout.seconds,
         delay = delay.seconds
-      // TODO: (PODs) will need to manage portIndex and named endpt references
+        // TODO: (PODs) will need to manage portIndex and named endpt references
       )
     case Check(None, None, Some(execCheck), interval, timeout, delay) =>
       MesosCommandCheck(
@@ -95,26 +94,28 @@ trait CheckConversion {
    */
   implicit val checkStatusRamlWriter: Writes[MesosProtos.CheckStatusInfo, CheckStatus] = Writes { checkStatus =>
     CheckStatus.apply()
-    val commandCheckStatus: Option[CommandCheckStatus] = if (checkStatus.hasCommand && checkStatus.getCommand.hasExitCode)
-      Some(CommandCheckStatus(checkStatus.getCommand.getExitCode))
-    else
-      None
+    val commandCheckStatus: Option[CommandCheckStatus] =
+      if (checkStatus.hasCommand && checkStatus.getCommand.hasExitCode)
+        Some(CommandCheckStatus(checkStatus.getCommand.getExitCode))
+      else
+        None
 
-    val httpCheckStatus: Option[HttpCheckStatus] = if (checkStatus.hasHttp && checkStatus.getHttp.hasStatusCode)
-      Some(HttpCheckStatus(checkStatus.getHttp.getStatusCode))
-    else
-      None
+    val httpCheckStatus: Option[HttpCheckStatus] =
+      if (checkStatus.hasHttp && checkStatus.getHttp.hasStatusCode)
+        Some(HttpCheckStatus(checkStatus.getHttp.getStatusCode))
+      else
+        None
 
-    val tcpCheckStatus: Option[TCPCheckStatus] = if (checkStatus.hasTcp && checkStatus.getTcp.hasSucceeded)
-      Some(TCPCheckStatus(checkStatus.getTcp.getSucceeded))
-    else
-      None
+    val tcpCheckStatus: Option[TCPCheckStatus] =
+      if (checkStatus.hasTcp && checkStatus.getTcp.hasSucceeded)
+        Some(TCPCheckStatus(checkStatus.getTcp.getSucceeded))
+      else
+        None
 
     CheckStatus(httpCheckStatus, tcpCheckStatus, commandCheckStatus)
   }
 
   implicit val checkRamlWriter: Writes[CoreCheck, AppCheck] = Writes { check =>
-
     check match {
       case httpCheck: MesosHttpCheck =>
         val portIndex = httpCheck.portIndex.collect { case index: PortReference.ByIndex => index.value }
@@ -123,13 +124,12 @@ trait CheckConversion {
           intervalSeconds = check.interval.toSeconds.toInt,
           timeoutSeconds = check.timeout.toSeconds.toInt,
           delaySeconds = check.delay.toSeconds.toInt,
-          http = Some(AppHttpCheck(
-            path = httpCheck.path,
-            scheme = Raml.toRaml(httpCheck.protocol),
-            port = httpCheck.port,
-            portIndex = portIndex)),
+          http = Some(
+            AppHttpCheck(path = httpCheck.path, scheme = Raml.toRaml(httpCheck.protocol), port = httpCheck.port, portIndex = portIndex)
+          ),
           tcp = None,
-          exec = None)
+          exec = None
+        )
       case tcpCheck: MesosTcpCheck =>
         val portIndex = tcpCheck.portIndex.collect { case index: PortReference.ByIndex => index.value }
 
@@ -138,10 +138,9 @@ trait CheckConversion {
           timeoutSeconds = check.timeout.toSeconds.toInt,
           delaySeconds = check.delay.toSeconds.toInt,
           http = None,
-          tcp = Some(AppTcpCheck(
-            port = tcpCheck.port,
-            portIndex = portIndex)),
-          exec = None)
+          tcp = Some(AppTcpCheck(port = tcpCheck.port, portIndex = portIndex)),
+          exec = None
+        )
       case cmdCheck: MesosCommandCheck =>
         AppCheck(
           intervalSeconds = check.interval.toSeconds.toInt,
@@ -155,7 +154,6 @@ trait CheckConversion {
   }
 
   implicit val checkProtoRamlWriter: Writes[Protos.CheckDefinition, AppCheck] = Writes { check =>
-
     val prototype = AppCheck(
       intervalSeconds = if (check.hasIntervalSeconds) check.getIntervalSeconds else AppCheck.DefaultIntervalSeconds,
       timeoutSeconds = if (check.hasTimeoutSeconds) check.getTimeoutSeconds else AppCheck.DefaultTimeoutSeconds,
@@ -163,20 +161,29 @@ trait CheckConversion {
     )
 
     check.getProtocol match {
-      case CheckDefinition.Protocol.COMMAND => prototype.copy(
-        exec = Some(CommandCheck(ShellCommand(check.getCommand.getValue)))
-      )
-      case CheckDefinition.Protocol.HTTP => prototype.copy(
-        http = Some(AppHttpCheck(
-          portIndex = if (check.hasPortIndex) Some(check.getPortIndex) else CheckWithPort.DefaultPortIndex,
-          port = if (check.hasPort) Some(check.getPort) else CheckWithPort.DefaultPort,
-          path = if (check.hasPath) Some(check.getPath) else MesosHttpCheck.DefaultPath))
-      )
-      case CheckDefinition.Protocol.TCP => prototype.copy(
-        tcp = Some(AppTcpCheck(
-          portIndex = if (check.hasPortIndex) Some(check.getPortIndex) else CheckWithPort.DefaultPortIndex,
-          port = if (check.hasPort) Some(check.getPort) else CheckWithPort.DefaultPort))
-      )
+      case CheckDefinition.Protocol.COMMAND =>
+        prototype.copy(
+          exec = Some(CommandCheck(ShellCommand(check.getCommand.getValue)))
+        )
+      case CheckDefinition.Protocol.HTTP =>
+        prototype.copy(
+          http = Some(
+            AppHttpCheck(
+              portIndex = if (check.hasPortIndex) Some(check.getPortIndex) else CheckWithPort.DefaultPortIndex,
+              port = if (check.hasPort) Some(check.getPort) else CheckWithPort.DefaultPort,
+              path = if (check.hasPath) Some(check.getPath) else MesosHttpCheck.DefaultPath
+            )
+          )
+        )
+      case CheckDefinition.Protocol.TCP =>
+        prototype.copy(
+          tcp = Some(
+            AppTcpCheck(
+              portIndex = if (check.hasPortIndex) Some(check.getPortIndex) else CheckWithPort.DefaultPortIndex,
+              port = if (check.hasPort) Some(check.getPort) else CheckWithPort.DefaultPort
+            )
+          )
+        )
     }
   }
 }

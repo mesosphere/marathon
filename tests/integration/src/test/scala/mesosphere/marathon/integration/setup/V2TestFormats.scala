@@ -23,8 +23,8 @@ object V2TestFormats {
       DeploymentPlan(
         original = RootGroup.fromGroup((js \ "original").as[Group]),
         target = RootGroup.fromGroup((js \ "target").as[Group]),
-        version = (js \ "version").as[Timestamp]).copy(id = (js \ "id").as[String]
-        )
+        version = (js \ "version").as[Timestamp]
+      ).copy(id = (js \ "id").as[String])
     )
   }
 

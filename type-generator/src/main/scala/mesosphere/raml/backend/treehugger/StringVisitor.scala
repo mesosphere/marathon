@@ -6,5 +6,5 @@ import treehugger.forest.Tree
 
 object StringVisitor {
 
-  def visit(s: StringT): Seq[Tree] =  Seq.empty[Tree]
+  def visit(s: StringT): Seq[Tree] = Seq.empty[Tree]
 }

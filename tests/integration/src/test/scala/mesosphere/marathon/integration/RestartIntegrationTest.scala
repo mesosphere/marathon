@@ -14,10 +14,17 @@ import scala.collection.immutable
   * Tests that ensure marathon continues working after restarting (for example, as a result of a leader abdication
   * while deploying)
   */
-class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonFixture with Inspectors with Eventually {
+class RestartIntegrationTest
+    extends AkkaIntegrationTest
+    with MesosClusterTest
+    with ZookeeperServerTest
+    with MarathonFixture
+    with Inspectors
+    with Eventually {
   import PathId._
 
   "Restarting Marathon" when {
+
     /**
       * Regression Test for https://github.com/mesosphere/marathon/issues/3783
       *
@@ -28,26 +35,32 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       *
       * Adapted from https://github.com/EvanKrall/reproduce_marathon_issue_3783
       */
-    "not kill a running task currently involved in a deployment" in withMarathon("RestartIntegrationTest-restart-dont-kill") { (server, f) =>
-      Given("a new app with an impossible constraint")
-      // Running locally, the constraint of a unique hostname should prevent the second instance from deploying.
-      val constraint = raml.Constraints("hostname" -> "UNIQUE")
-      val app = f.appProxy(PathId("/restart-dont-kill"), "v2", instances = 2, healthCheck = None)
-        .copy(constraints = constraint)
-      f.marathon.createAppV2(app)
+    "not kill a running task currently involved in a deployment" in withMarathon("RestartIntegrationTest-restart-dont-kill") {
+      (server, f) =>
+        Given("a new app with an impossible constraint")
+        // Running locally, the constraint of a unique hostname should prevent the second instance from deploying.
+        val constraint = raml.Constraints("hostname" -> "UNIQUE")
+        val app = f
+          .appProxy(PathId("/restart-dont-kill"), "v2", instances = 2, healthCheck = None)
+          .copy(constraints = constraint)
+        f.marathon.createAppV2(app)
 
-      When("one of the tasks is deployed")
-      val tasksBeforeAbdication = f.waitForTasks(app.id.toPath, 1)
+        When("one of the tasks is deployed")
+        val tasksBeforeAbdication = f.waitForTasks(app.id.toPath, 1)
 
-      And("the leader abdicates")
-      server.restart().futureValue
-      val tasksAfterFirstAbdication = f.waitForTasks(app.id.toPath, 1)
-      Then("the already running task should not be killed")
-      tasksBeforeAbdication should be(tasksAfterFirstAbdication) withClue (s"Tasks before (${tasksBeforeAbdication}) and after (${tasksAfterFirstAbdication}) abdication are different")
+        And("the leader abdicates")
+        server.restart().futureValue
+        val tasksAfterFirstAbdication = f.waitForTasks(app.id.toPath, 1)
+        Then("the already running task should not be killed")
+        tasksBeforeAbdication should be(
+          tasksAfterFirstAbdication
+        ) withClue (s"Tasks before (${tasksBeforeAbdication}) and after (${tasksAfterFirstAbdication}) abdication are different")
     }
 
     "readiness" should {
-      "deployment with 1 ready and 1 not ready instance is continued properly after a restart" in withMarathon("RestartIntegrationTest-readiness") { (server, f) =>
+      "deployment with 1 ready and 1 not ready instance is continued properly after a restart" in withMarathon(
+        "RestartIntegrationTest-readiness"
+      ) { (server, f) =>
         val ramlReadinessCheck = raml.ReadinessCheck(
           name = "ready",
           portName = "http",
@@ -71,7 +84,8 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         val updateApp = raml.AppUpdate(
           cmd = f.appProxy(appId, versionId = "v2", instances = 2).cmd,
           portDefinitions = Some(immutable.Seq(raml.PortDefinition(name = Some("http")))),
-          readinessChecks = Some(Seq(ramlReadinessCheck)))
+          readinessChecks = Some(Seq(ramlReadinessCheck))
+        )
         val appV2 = f.marathon.updateApp(appId, updateApp)
 
         Then("new tasks are launched")
@@ -85,7 +99,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
         And("new tasks are running")
         eventually {
-          forAll (updatedTasks) { _.state should be("TASK_RUNNING") }
+          forAll(updatedTasks) { _.state should be("TASK_RUNNING") }
         }
 
         Given("The first task is ready")
@@ -116,18 +130,21 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         val afterTaskIds = after.value.map(_.id)
 
         And("taskIds after restart should be equal to the updated taskIds (not started ones)")
-        afterTaskIds.sorted should equal (updatedTaskIds.sorted) withClue (s"App after restart: ${f.marathon.app(appId).entityPrettyJsonString}")
+        afterTaskIds.sorted should equal(updatedTaskIds.sorted) withClue (s"App after restart: ${f.marathon.app(appId).entityPrettyJsonString}")
 
       }
     }
     "health checks" should {
-      "deployment with 2 unhealthy instances is continued properly after master abdication" in withMarathon("RestartIntegrationTest-health-check") { (server, f) =>
+      "deployment with 2 unhealthy instances is continued properly after master abdication" in withMarathon(
+        "RestartIntegrationTest-health-check"
+      ) { (server, f) =>
         val ramlHealthCheck: raml.AppHealthCheck = raml.AppHealthCheck(
           path = Some("/health"),
           portIndex = Some(0),
           intervalSeconds = 2,
           timeoutSeconds = 1,
-          protocol = raml.AppHealthCheckProtocol.Http)
+          protocol = raml.AppHealthCheckProtocol.Http
+        )
 
         Given("a new simple app with 2 instances")
         val appId = f.testBasePath / "two-unhealthy-continue"
@@ -142,7 +159,8 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         val updateApp = raml.AppUpdate(
           cmd = f.appProxy(appId, versionId = "v2", instances = 2).cmd,
           portDefinitions = Some(immutable.Seq(raml.PortDefinition(name = Some("http")))),
-          healthChecks = Some(Set(ramlHealthCheck)))
+          healthChecks = Some(Set(ramlHealthCheck))
+        )
 
         And("both new task will be unhealthy")
         val healthCheck = f.registerAppProxyHealthCheck(appId, "v2", state = false)
@@ -151,7 +169,8 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         val appV2 = f.marathon.updateApp(appId, updateApp)
 
         Then("new tasks are started")
-        val updated = f.waitForTasks(appId, 4) withClue (s"The new tasks for ${appId} did not start running.") //make sure there are 2 additional tasks
+        val updated =
+          f.waitForTasks(appId, 4) withClue (s"The new tasks for ${appId} did not start running.") //make sure there are 2 additional tasks
 
         val newVersion = appV2.value.version.toString
         val updatedTasks = updated.filter(_.version.contains(newVersion))
@@ -160,7 +179,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
         And("new tasks are running")
         eventually {
-          forAll (updatedTasks) { _.state should be("TASK_RUNNING") }
+          forAll(updatedTasks) { _.state should be("TASK_RUNNING") }
         }
 
         logger.debug(s"Updated app: ${f.marathon.app(appId).entityPrettyJsonString}")
@@ -189,7 +208,7 @@ class RestartIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         logger.debug(s"App after restart: ${f.marathon.app(appId).entityPrettyJsonString}")
 
         And("taskIds after restart should be equal to the updated taskIds (not started ones)")
-        afterTaskIds.sorted should equal (updatedTaskIds.sorted)
+        afterTaskIds.sorted should equal(updatedTaskIds.sorted)
       }
     }
   }

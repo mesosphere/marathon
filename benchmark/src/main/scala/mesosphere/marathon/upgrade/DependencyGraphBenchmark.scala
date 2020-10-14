@@ -25,7 +25,6 @@ object DependencyGraphBenchmark {
   val version2 = VersionInfo.forNewConfig(Timestamp(2))
 
   val superGroups: Map[GroupKey, Group] = superGroupIds.map { superGroupId =>
-
     val paths: Vector[Vector[PathId]] =
       groupIds.map { groupId =>
         appIds.map { appId =>
@@ -64,8 +63,7 @@ object DependencyGraphBenchmark {
     )
   }(breakOut)
 
-  val rootGroup = RootGroup(
-    groupsById = superGroups)
+  val rootGroup = RootGroup(groupsById = superGroups)
 
   val upgraded = RootGroup(
     groupsById = superGroups.map {

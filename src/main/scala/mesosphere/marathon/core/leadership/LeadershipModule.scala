@@ -5,6 +5,7 @@ import akka.actor.{ActorRef, ActorRefFactory, Props}
 import mesosphere.marathon.core.leadership.impl._
 
 trait LeadershipModule {
+
   /**
     * Create a wrapper around an actor which should only be active if this instance of Marathon is the
     * current leader instance. The wrapper starts the actor with the given props when appropriate and stops
@@ -20,8 +21,7 @@ trait LeadershipModule {
 }
 
 object LeadershipModule {
-  def apply(
-    actorRefFactory: ActorRefFactory): LeadershipModule = {
+  def apply(actorRefFactory: ActorRefFactory): LeadershipModule = {
     new LeadershipModuleImpl(actorRefFactory)
   }
 }
@@ -33,8 +33,7 @@ object LeadershipModule {
   * In addition, it exports the coordinator which coordinates the activity performed when elected or stopped.
   * The leadership election logic needs to call the appropriate methods for this module to work.
   */
-private[leadership] class LeadershipModuleImpl(
-    actorRefFactory: ActorRefFactory) extends LeadershipModule {
+private[leadership] class LeadershipModuleImpl(actorRefFactory: ActorRefFactory) extends LeadershipModule {
 
   private[this] var whenLeaderRefs = Set.empty[ActorRef]
   private[this] var started: Boolean = false

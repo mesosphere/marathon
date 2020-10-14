@@ -126,28 +126,31 @@ trait GroupManager {
     * @return the deployment plan which will be executed.
     */
   final def updateRoot(
-    id: PathId,
-    fn: RootGroup => RootGroup,
-    version: Timestamp = Group.defaultVersion,
-    force: Boolean = false,
-    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan] = updateRootAsync(id, (g: RootGroup) => Future.successful(fn(g)), version, force, toKill)
+      id: PathId,
+      fn: RootGroup => RootGroup,
+      version: Timestamp = Group.defaultVersion,
+      force: Boolean = false,
+      toKill: Map[PathId, Seq[Instance]] = Map.empty
+  ): Future[DeploymentPlan] = updateRootAsync(id, (g: RootGroup) => Future.successful(fn(g)), version, force, toKill)
 
   final def updateRootAsync(
-    id: PathId,
-    fn: RootGroup => Future[RootGroup],
-    version: Timestamp = Group.defaultVersion,
-    force: Boolean = false,
-    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[DeploymentPlan] = {
+      id: PathId,
+      fn: RootGroup => Future[RootGroup],
+      version: Timestamp = Group.defaultVersion,
+      force: Boolean = false,
+      toKill: Map[PathId, Seq[Instance]] = Map.empty
+  ): Future[DeploymentPlan] = {
     updateRootEither[Nothing](id, fn(_).map(Right(_))(ExecutionContexts.callerThread), version, force, toKill)
       .map(_.right.getOrElse(throw new RuntimeException("Either must be Right here")))(ExecutionContexts.callerThread)
   }
 
   def updateRootEither[T](
-    id: PathId,
-    fn: RootGroup => Future[Either[T, RootGroup]],
-    version: Timestamp = Timestamp.now(),
-    force: Boolean = false,
-    toKill: Map[PathId, Seq[Instance]] = Map.empty): Future[Either[T, DeploymentPlan]]
+      id: PathId,
+      fn: RootGroup => Future[Either[T, RootGroup]],
+      version: Timestamp = Timestamp.now(),
+      force: Boolean = false,
+      toKill: Map[PathId, Seq[Instance]] = Map.empty
+  ): Future[Either[T, DeploymentPlan]]
 
   /**
     * Update application with given identifier and update function.
@@ -161,11 +164,12 @@ trait GroupManager {
     * @return the deployment plan which will be executed.
     */
   def updateApp(
-    appId: PathId,
-    fn: Option[AppDefinition] => AppDefinition,
-    version: Timestamp = Group.defaultVersion,
-    force: Boolean = false,
-    toKill: Seq[Instance] = Seq.empty): Future[DeploymentPlan] =
+      appId: PathId,
+      fn: Option[AppDefinition] => AppDefinition,
+      version: Timestamp = Group.defaultVersion,
+      force: Boolean = false,
+      toKill: Seq[Instance] = Seq.empty
+  ): Future[DeploymentPlan] =
     updateRoot(appId.parent, _.updateApp(appId, fn, version), version, force, Map(appId -> toKill))
 
   /**
@@ -180,13 +184,12 @@ trait GroupManager {
     * @return the deployment plan which will be executed.
     */
   def updatePod(
-    podId: PathId,
-    fn: Option[PodDefinition] => PodDefinition,
-    version: Timestamp = Group.defaultVersion,
-    force: Boolean = false,
-    toKill: Seq[Instance] = Seq.empty
-  ): Future[DeploymentPlan] = updateRoot(
-    podId.parent, _.updatePod(podId, fn, version), version, force, Map(podId -> toKill))
+      podId: PathId,
+      fn: Option[PodDefinition] => PodDefinition,
+      version: Timestamp = Group.defaultVersion,
+      force: Boolean = false,
+      toKill: Seq[Instance] = Seq.empty
+  ): Future[DeploymentPlan] = updateRoot(podId.parent, _.updatePod(podId, fn, version), version, force, Map(podId -> toKill))
 
   /**
     * Refresh the internal root group cache. When calling this function, the internal hold cached root group will be dropped

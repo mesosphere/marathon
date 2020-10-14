@@ -72,8 +72,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
   }
 
   "Yields an event that it is the leader on connection" in withFixture { f =>
-    val (cancellable, leader) = CuratorElectionStream(
-      f.metrics, f.client, f.leaderPath, 5000.millis, "host:8080", f.electionEC)
+    val (cancellable, leader) = CuratorElectionStream(f.metrics, f.client, f.leaderPath, 5000.millis, "host:8080", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
     nextKnownState(leader) shouldBe Some(LeadershipState.ElectedAsLeader)
@@ -85,15 +84,13 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
   "Abdicates leadership immediately when the client is closed" in withFixture { f =>
     // implicit val patienceConfig = PatienceConfig(30.seconds, 10.millis)
 
-    val (cancellable1, leader1) = CuratorElectionStream(
-      f.metrics, f.client, f.leaderPath, 15000.millis, "host:1", f.electionEC)
+    val (cancellable1, leader1) = CuratorElectionStream(f.metrics, f.client, f.leaderPath, 15000.millis, "host:1", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
 
     nextKnownState(leader1) shouldBe Some(LeadershipState.ElectedAsLeader)
 
-    val (cancellable2, leader2) = CuratorElectionStream(
-      f.metrics, f.client2, f.leaderPath, 15000.millis, "host:2", f.electionEC)
+    val (cancellable2, leader2) = CuratorElectionStream(f.metrics, f.client2, f.leaderPath, 15000.millis, "host:2", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
 
@@ -108,15 +105,13 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
   }
 
   "Monitors leadership changes" in withFixture { f =>
-    val (cancellable1, leader1) = CuratorElectionStream(
-      f.metrics, f.client, f.leaderPath, 15000.millis, "changehost:1", f.electionEC)
+    val (cancellable1, leader1) = CuratorElectionStream(f.metrics, f.client, f.leaderPath, 15000.millis, "changehost:1", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
 
     nextKnownState(leader1) shouldBe Some(LeadershipState.ElectedAsLeader)
 
-    val (cancellable2, leader2) = CuratorElectionStream(
-      f.metrics, f.client, f.leaderPath, 15000.millis, "changehost:2", f.electionEC)
+    val (cancellable2, leader2) = CuratorElectionStream(f.metrics, f.client, f.leaderPath, 15000.millis, "changehost:2", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
 
@@ -124,8 +119,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
 
     eventually { f.dummyLatch.getParticipants.size() shouldBe 2 } // wait for leader2 to register its leadership record
 
-    val (cancellable3, leader3) = CuratorElectionStream(
-      f.metrics, f.client, f.leaderPath, 15000.millis, "changehost:3", f.electionEC)
+    val (cancellable3, leader3) = CuratorElectionStream(f.metrics, f.client, f.leaderPath, 15000.millis, "changehost:3", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
 
@@ -140,8 +134,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
 
   "It cleans up after itself when the stream completes due to an exception" in withFixture { f =>
     val killSwitch = Promise[Unit]
-    val (cancellable, events) = CuratorElectionStream(
-      f.metrics, f.client, f.leaderPath, 15000.millis, "exceptionhost:1", f.electionEC)
+    val (cancellable, events) = CuratorElectionStream(f.metrics, f.client, f.leaderPath, 15000.millis, "exceptionhost:1", f.electionEC)
       .via(EnrichedFlow.stopOnFirst(Source.fromFuture(killSwitch.future)))
       .toMat(Sink.queue())(Keep.both)
       .run
@@ -176,8 +169,7 @@ class CuratorElectionStreamTest extends AkkaUnitTest with Inside with ZookeeperS
   }
 
   "CuratorElectionStream quickly emits uncertainty about current leader during connection troubles" in withFixture { f =>
-    val (cancellable, leader) = CuratorElectionStream(
-      f.metrics, f.client, f.leaderPath, 5000.millis, "host:8080", f.electionEC)
+    val (cancellable, leader) = CuratorElectionStream(f.metrics, f.client, f.leaderPath, 5000.millis, "host:8080", f.electionEC)
       .toMat(Sink.queue())(Keep.both)
       .run
     Given("an elected leader")

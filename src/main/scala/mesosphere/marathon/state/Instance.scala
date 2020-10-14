@@ -20,7 +20,8 @@ case class Instance(
     state: InstanceState,
     tasksMap: Map[Task.Id, Task],
     runSpecVersion: Timestamp,
-    reservation: Option[Reservation]) extends MarathonState[Protos.Json, Instance] {
+    reservation: Option[Reservation]
+) extends MarathonState[Protos.Json, Instance] {
 
   def hasReservation: Boolean = reservation.isDefined
 
@@ -60,26 +61,26 @@ object Instance {
   implicit val instanceJsonWrites: Writes[Instance] = {
     (
       (__ \ "instanceId").write[CoreInstance.Id] ~
-      (__ \ "agentInfo").writeNullable[CoreInstance.AgentInfo] ~
-      (__ \ "tasksMap").write[Map[Task.Id, Task]] ~
-      (__ \ "runSpecVersion").write[Timestamp] ~
-      (__ \ "state").write[InstanceState] ~
-      (__ \ "reservation").writeNullable[Reservation]
+        (__ \ "agentInfo").writeNullable[CoreInstance.AgentInfo] ~
+        (__ \ "tasksMap").write[Map[Task.Id, Task]] ~
+        (__ \ "runSpecVersion").write[Timestamp] ~
+        (__ \ "state").write[InstanceState] ~
+        (__ \ "reservation").writeNullable[Reservation]
     ) { (i) =>
-        (i.instanceId, i.agentInfo, i.tasksMap, i.runSpecVersion, i.state, i.reservation)
-      }
+      (i.instanceId, i.agentInfo, i.tasksMap, i.runSpecVersion, i.state, i.reservation)
+    }
   }
 
   implicit val instanceJsonReads: Reads[Instance] = {
     (
       (__ \ "instanceId").read[CoreInstance.Id] ~
-      (__ \ "agentInfo").readNullable[CoreInstance.AgentInfo] ~
-      (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
-      (__ \ "runSpecVersion").read[Timestamp] ~
-      (__ \ "state").read[InstanceState] ~
-      (__ \ "reservation").readNullable[Reservation]
+        (__ \ "agentInfo").readNullable[CoreInstance.AgentInfo] ~
+        (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
+        (__ \ "runSpecVersion").read[Timestamp] ~
+        (__ \ "state").read[InstanceState] ~
+        (__ \ "reservation").readNullable[Reservation]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation) =>
-        new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, reservation)
-      }
+      new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, reservation)
+    }
   }
 }

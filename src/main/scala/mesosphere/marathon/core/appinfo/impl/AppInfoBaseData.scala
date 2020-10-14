@@ -29,7 +29,9 @@ class AppInfoBaseData(
     healthCheckManager: HealthCheckManager,
     deploymentService: DeploymentService,
     taskFailureRepository: TaskFailureRepository,
-    groupManager: GroupManager)(implicit ec: ExecutionContext) extends StrictLogging {
+    groupManager: GroupManager
+)(implicit ec: ExecutionContext)
+    extends StrictLogging {
 
   logger.debug(s"new AppInfoBaseData $this")
 
@@ -58,8 +60,7 @@ class AppInfoBaseData(
           result + newEl
         }
       }
-      deploymentsByAppId
-        .map { case (id, deployments) => id -> deployments.map(deploymentPlan => Identifiable(deploymentPlan.id)) }
+      deploymentsByAppId.map { case (id, deployments) => id -> deployments.map(deploymentPlan => Identifiable(deploymentPlan.id)) }
         .withDefaultValue(Seq.empty)
     }
   }
@@ -69,27 +70,33 @@ class AppInfoBaseData(
     instanceTracker.instancesBySpec()
   }
 
-  def appInfoFuture(app: AppDefinition, embeds: Set[AppInfo.Embed]): Future[AppInfo] = async {
-    val appData = new AppData(app)
+  def appInfoFuture(app: AppDefinition, embeds: Set[AppInfo.Embed]): Future[AppInfo] =
+    async {
+      val appData = new AppData(app)
 
-    val taskCountsOpt: Option[TaskCounts] = if (embeds.contains(AppInfo.Embed.Counts)) Some(await(appData.taskCountsFuture)) else None
-    val readinessChecksByAppOpt: Option[Map[PathId, Seq[ReadinessCheckResult]]] = if (embeds.contains(AppInfo.Embed.Readiness)) Some(await(readinessChecksByAppFuture)) else None
-    val runningDeploymentsByAppOpt: Option[Map[PathId, Seq[Identifiable]]] = if (embeds.contains(AppInfo.Embed.Deployments)) Some(await(runningDeploymentsByAppFuture)) else None
-    val lastTaskFailureOpt: Option[TaskFailure] = if (embeds.contains(AppInfo.Embed.LastTaskFailure)) await(appData.maybeLastTaskFailureFuture) else None
-    val enrichedTasksOpt: Option[Seq[EnrichedTask]] = if (embeds.contains(AppInfo.Embed.Tasks)) Some(await(appData.enrichedTasksFuture)) else None
-    val taskStatsOpt: Option[TaskStatsByVersion] = if (embeds.contains(AppInfo.Embed.TaskStats)) Some(await(appData.taskStatsFuture)) else None
+      val taskCountsOpt: Option[TaskCounts] = if (embeds.contains(AppInfo.Embed.Counts)) Some(await(appData.taskCountsFuture)) else None
+      val readinessChecksByAppOpt: Option[Map[PathId, Seq[ReadinessCheckResult]]] =
+        if (embeds.contains(AppInfo.Embed.Readiness)) Some(await(readinessChecksByAppFuture)) else None
+      val runningDeploymentsByAppOpt: Option[Map[PathId, Seq[Identifiable]]] =
+        if (embeds.contains(AppInfo.Embed.Deployments)) Some(await(runningDeploymentsByAppFuture)) else None
+      val lastTaskFailureOpt: Option[TaskFailure] =
+        if (embeds.contains(AppInfo.Embed.LastTaskFailure)) await(appData.maybeLastTaskFailureFuture) else None
+      val enrichedTasksOpt: Option[Seq[EnrichedTask]] =
+        if (embeds.contains(AppInfo.Embed.Tasks)) Some(await(appData.enrichedTasksFuture)) else None
+      val taskStatsOpt: Option[TaskStatsByVersion] =
+        if (embeds.contains(AppInfo.Embed.TaskStats)) Some(await(appData.taskStatsFuture)) else None
 
-    val appInfo = AppInfo(
-      app = app,
-      maybeTasks = enrichedTasksOpt,
-      maybeCounts = taskCountsOpt,
-      maybeDeployments = runningDeploymentsByAppOpt.map(_.apply(app.id)),
-      maybeReadinessCheckResults = readinessChecksByAppOpt.map(_.apply(app.id)),
-      maybeLastTaskFailure = lastTaskFailureOpt,
-      maybeTaskStats = taskStatsOpt
-    )
-    appInfo
-  }
+      val appInfo = AppInfo(
+        app = app,
+        maybeTasks = enrichedTasksOpt,
+        maybeCounts = taskCountsOpt,
+        maybeDeployments = runningDeploymentsByAppOpt.map(_.apply(app.id)),
+        maybeReadinessCheckResults = readinessChecksByAppOpt.map(_.apply(app.id)),
+        maybeLastTaskFailure = lastTaskFailureOpt,
+        maybeTaskStats = taskStatsOpt
+      )
+      appInfo
+    }
 
   /**
     * Contains app-sepcific data that we need to retrieved.
@@ -159,66 +166,65 @@ class AppInfoBaseData(
     }
   }
 
-  def podStatus(podDef: PodDefinition): Future[PodStatus] = async { // linter:ignore UnnecessaryElseBranch
-    val now = clock.now().toOffsetDateTime
-    val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
-    val instanceStatus = instances
-      .filter { instance =>
+  def podStatus(podDef: PodDefinition): Future[PodStatus] =
+    async { // linter:ignore UnnecessaryElseBranch
+      val now = clock.now().toOffsetDateTime
+      val instances = await(instancesByRunSpecFuture).specInstances(podDef.id)
+      val instanceStatus = instances.filter { instance =>
         // Ignore all freshly scheduled instances but include the re-scheduled ones.
         !(instance.isScheduled && instance.agentInfo.isEmpty)
+      }.flatMap { inst => podInstanceStatus(inst) }
+      val statusSince = if (instanceStatus.isEmpty) now else instanceStatus.map(_.statusSince).max
+      val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
+
+      val taskFailureOpt: Option[TaskFailure] = await {
+        taskFailureRepository
+          .get(podDef.id)
+          .recover { case NonFatal(e) => None }
       }
-      .flatMap { inst => podInstanceStatus(inst) }
-    val statusSince = if (instanceStatus.isEmpty) now else instanceStatus.map(_.statusSince).max
-    val state = await(podState(podDef.instances, instanceStatus, isPodTerminating(podDef.id)))
-
-    val taskFailureOpt: Option[TaskFailure] = await {
-      taskFailureRepository
-        .get(podDef.id)
-        .recover { case NonFatal(e) => None }
-    }
-    val failedInstanceBundle: Option[(Instance, Task, TaskFailure)] = taskFailureOpt.flatMap { taskFailure =>
-      val failedTaskId = core.task.Task.Id.parse(taskFailure.taskId)
-      instances.collectFirst {
-        case instance if instance.tasksMap.contains(failedTaskId) =>
-          (instance, instance.tasksMap(failedTaskId), taskFailure)
+      val failedInstanceBundle: Option[(Instance, Task, TaskFailure)] = taskFailureOpt.flatMap { taskFailure =>
+        val failedTaskId = core.task.Task.Id.parse(taskFailure.taskId)
+        instances.collectFirst {
+          case instance if instance.tasksMap.contains(failedTaskId) =>
+            (instance, instance.tasksMap(failedTaskId), taskFailure)
+        }
       }
-    }
 
-    import mesosphere.mesos.protos.Implicits.taskStateToCaseClass
+      import mesosphere.mesos.protos.Implicits.taskStateToCaseClass
 
-    val terminationHistory = failedInstanceBundle.map {
-      case (instance, task, taskFailure) =>
-        raml.TerminationHistory(
-          instanceID = instance.instanceId.idString,
-          startedAt = task.status.startedAt.getOrElse {
-            // startedAt will only be set when a task turns running. In order to not break
-            // potential expectations, the property stays mandatory and is populated with the time
-            // when the now terminal task was initially staged instead.
-            logger.warn(s"${task.taskId} has no startedAt. Falling back to stagedAt.")
-            task.status.stagedAt
-          }.toOffsetDateTime,
-          terminatedAt = taskFailure.timestamp.toOffsetDateTime,
-          message = Some(taskFailure.message),
-          containers = List(
-            ContainerTerminationHistory(
-              containerId = task.taskId.idString,
-              lastKnownState = Some(taskStateToCaseClass(taskFailure.state).toString)
+      val terminationHistory = failedInstanceBundle.map {
+        case (instance, task, taskFailure) =>
+          raml.TerminationHistory(
+            instanceID = instance.instanceId.idString,
+            startedAt = task.status.startedAt.getOrElse {
+              // startedAt will only be set when a task turns running. In order to not break
+              // potential expectations, the property stays mandatory and is populated with the time
+              // when the now terminal task was initially staged instead.
+              logger.warn(s"${task.taskId} has no startedAt. Falling back to stagedAt.")
+              task.status.stagedAt
+            }.toOffsetDateTime,
+            terminatedAt = taskFailure.timestamp.toOffsetDateTime,
+            message = Some(taskFailure.message),
+            containers = List(
+              ContainerTerminationHistory(
+                containerId = task.taskId.idString,
+                lastKnownState = Some(taskStateToCaseClass(taskFailure.state).toString)
+              )
             )
           )
-        )
-    }.toList
+      }.toList
 
-    PodStatus(
-      id = podDef.id.toString,
-      spec = Raml.toRaml(podDef),
-      instances = instanceStatus,
-      status = state,
-      statusSince = statusSince,
-      lastUpdated = now,
-      lastChanged = statusSince,
-      terminationHistory = terminationHistory
-    )
-  }
+      PodStatus(
+        id = podDef.id.toString,
+        spec = Raml.toRaml(podDef),
+        instances = instanceStatus,
+        status = state,
+        statusSince = statusSince,
+        lastUpdated = now,
+        lastChanged = statusSince,
+        terminationHistory = terminationHistory
+      )
+    }
 
   def podInstanceStatus(instance: Instance): Option[PodInstanceStatus] = {
     val maybePodSpec: Option[PodDefinition] = instance.runSpec match {
@@ -227,8 +233,10 @@ class AppInfoBaseData(
     }
 
     if (maybePodSpec.isEmpty)
-      logger.warn(s"failed to generate pod instance status for instance ${instance.instanceId}, " +
-        s"pod version ${instance.runSpecVersion} failed to load from persistent store")
+      logger.warn(
+        s"failed to generate pod instance status for instance ${instance.instanceId}, " +
+          s"pod version ${instance.runSpecVersion} failed to load from persistent store"
+      )
 
     maybePodSpec.map { pod => Raml.toRaml(pod -> instance) }
   }
@@ -239,10 +247,10 @@ class AppInfoBaseData(
     }
 
   protected def podState(
-    expectedInstanceCount: Integer,
-    instanceStatus: Seq[PodInstanceStatus],
-    isPodTerminating: Future[Boolean]): Future[PodState] =
-
+      expectedInstanceCount: Integer,
+      instanceStatus: Seq[PodInstanceStatus],
+      isPodTerminating: Future[Boolean]
+  ): Future[PodState] =
     async { // linter:ignore UnnecessaryElseBranch
       val terminal = await(isPodTerminating)
       val state = if (terminal) {

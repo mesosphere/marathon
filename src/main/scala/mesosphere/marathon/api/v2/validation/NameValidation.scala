@@ -12,9 +12,7 @@ trait NameValidation {
   val NamePattern = raml.PodContainer.ConstraintNamePattern
 
   val validName: Validator[String] = validator[String] { name =>
-    name should matchRegexWithFailureMessage(
-      NamePattern,
-      "must contain only alphanumeric chars or hyphens, and must begin with a letter")
+    name should matchRegexWithFailureMessage(NamePattern, "must contain only alphanumeric chars or hyphens, and must begin with a letter")
     name.length should be >= raml.PodContainer.ConstraintNameMinlength
     name.length should be <= raml.PodContainer.ConstraintNameMaxlength
   }

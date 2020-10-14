@@ -164,8 +164,12 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       f.groupManager.group(rootGroup.id) returns Some(rootGroup)
 
       When("querying extending group information")
-      val result = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty,
-        Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
+      val result = f.infoService.selectGroup(
+        rootGroup.id,
+        GroupInfoService.Selectors.all,
+        Set.empty,
+        Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups)
+      )
 
       Then("The group info contains apps and groups")
       result.futureValue.get.maybeGroups should be(defined)
@@ -174,8 +178,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       result.futureValue.get.maybeGroups.get should have size 1
 
       When("querying extending group information without apps")
-      val result2 = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty,
-        Set(GroupInfo.Embed.Groups))
+      val result2 = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty, Set(GroupInfo.Embed.Groups))
 
       Then("The group info contains no apps but groups")
       result2.futureValue.get.maybeGroups should be(defined)
@@ -284,7 +287,8 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
         id = PathId("/nested"),
         apps = someNestedApps
       )
-    ))
+    )
+  )
 
   val nestedGroup = {
     val app1 = AppDefinition(PathId("/app1"), cmd = Some("sleep"))
@@ -295,17 +299,29 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     val otherApp1 = AppDefinition(PathId("/other/app1"), cmd = Some("sleep"))
     val otherGroupApp1 = AppDefinition(PathId("/other/group/app1"), cmd = Some("sleep"))
 
-    createRootGroup(Map(app1.id -> app1), groups = Set(
-      createGroup(PathId("/visible"), Map(visibleApp1.id -> visibleApp1), groups = Set(
-        createGroup(PathId("/visible/group"), Map(visibleGroupApp1.id -> visibleGroupApp1))
-      )),
-      createGroup(PathId("/secure"), Map(secureApp1.id -> secureApp1), groups = Set(
-        createGroup(PathId("/secure/group"), Map(secureGroupApp1.id -> secureGroupApp1))
-      )),
-      createGroup(PathId("/other"), Map(otherApp1.id -> otherApp1), groups = Set(
-        createGroup(PathId("/other/group"), Map(otherGroupApp1.id -> otherGroupApp1)
-        ))
-      )))
+    createRootGroup(
+      Map(app1.id -> app1),
+      groups = Set(
+        createGroup(
+          PathId("/visible"),
+          Map(visibleApp1.id -> visibleApp1),
+          groups = Set(
+            createGroup(PathId("/visible/group"), Map(visibleGroupApp1.id -> visibleGroupApp1))
+          )
+        ),
+        createGroup(
+          PathId("/secure"),
+          Map(secureApp1.id -> secureApp1),
+          groups = Set(
+            createGroup(PathId("/secure/group"), Map(secureGroupApp1.id -> secureGroupApp1))
+          )
+        ),
+        createGroup(
+          PathId("/other"),
+          Map(otherApp1.id -> otherApp1),
+          groups = Set(createGroup(PathId("/other/group"), Map(otherGroupApp1.id -> otherGroupApp1)))
+        )
+      )
+    )
   }
 }
-

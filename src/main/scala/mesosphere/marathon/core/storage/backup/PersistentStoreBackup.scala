@@ -34,7 +34,9 @@ trait PersistentStoreBackup {
 }
 
 object PersistentStoreBackup extends StrictLogging {
-  def apply(store: PersistenceStore[_, _, _])(implicit materializer: Materializer, actorSystem: ActorSystem, ec: ExecutionContext): PersistentStoreBackup = {
+  def apply(
+      store: PersistenceStore[_, _, _]
+  )(implicit materializer: Materializer, actorSystem: ActorSystem, ec: ExecutionContext): PersistentStoreBackup = {
     new PersistentStoreBackupImpl(store)
   }
 }

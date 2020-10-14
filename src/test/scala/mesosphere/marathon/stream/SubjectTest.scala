@@ -12,7 +12,8 @@ import scala.concurrent.duration.Duration
 
 class SubjectTest extends AkkaUnitTest {
   "it propagates results to streams that register at any time during the stream" in {
-    val (input, newSubscribers) = Source.queue[Int](32, OverflowStrategy.fail)
+    val (input, newSubscribers) = Source
+      .queue[Int](32, OverflowStrategy.fail)
       .toMat(Subject(32, OverflowStrategy.fail))(Keep.both)
       .run
 
@@ -34,7 +35,8 @@ class SubjectTest extends AkkaUnitTest {
     try {
       val s = Source(1 to 10000)
         .mapAsyncUnordered(8) { i =>
-          val (input, newSubscribers) = Source.queue[Int](32, OverflowStrategy.fail)
+          val (input, newSubscribers) = Source
+            .queue[Int](32, OverflowStrategy.fail)
             .toMat(Subject(32, OverflowStrategy.fail))(Keep.both)
             .run
 

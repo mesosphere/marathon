@@ -13,7 +13,8 @@ case class EnrichedTask(
     agentInfo: AgentInfo,
     healthCheckResults: Seq[Health],
     servicePorts: Seq[Int],
-    reservation: Option[Reservation])
+    reservation: Option[Reservation]
+)
 
 object EnrichedTask {
 

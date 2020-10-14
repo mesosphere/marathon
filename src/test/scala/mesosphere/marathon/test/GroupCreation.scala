@@ -8,13 +8,14 @@ import com.wix.accord
 trait GroupCreation {
   @deprecated("Prefer Builders.newRootGroup instead", since = "1.9")
   def createRootGroup(
-    apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PathId, PodDefinition] = Group.defaultPods,
-    groups: Set[Group] = Set.empty,
-    dependencies: Set[PathId] = Group.defaultDependencies,
-    version: Timestamp = Group.defaultVersion,
-    validate: Boolean = true,
-    enabledFeatures: Set[String] = Set.empty): RootGroup = {
+      apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
+      pods: Map[PathId, PodDefinition] = Group.defaultPods,
+      groups: Set[Group] = Set.empty,
+      dependencies: Set[PathId] = Group.defaultDependencies,
+      version: Timestamp = Group.defaultVersion,
+      validate: Boolean = true,
+      enabledFeatures: Set[String] = Set.empty
+  ): RootGroup = {
     val group = RootGroup(apps, pods, groups.map(group => group.id -> group)(collection.breakOut), dependencies, version)
 
     if (validate) {
@@ -26,22 +27,17 @@ trait GroupCreation {
   }
 
   def createGroup(
-    id: PathId,
-    apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PathId, PodDefinition] = Group.defaultPods,
-    groups: Set[Group] = Set.empty,
-    dependencies: Set[PathId] = Group.defaultDependencies,
-    version: Timestamp = Group.defaultVersion,
-    validate: Boolean = true,
-    enabledFeatures: Set[String] = Set.empty): Group = {
+      id: PathId,
+      apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
+      pods: Map[PathId, PodDefinition] = Group.defaultPods,
+      groups: Set[Group] = Set.empty,
+      dependencies: Set[PathId] = Group.defaultDependencies,
+      version: Timestamp = Group.defaultVersion,
+      validate: Boolean = true,
+      enabledFeatures: Set[String] = Set.empty
+  ): Group = {
     val groupsById: Map[Group.GroupKey, Group] = groups.map(group => group.id -> group)(collection.breakOut)
-    val group = Group(
-      id,
-      apps,
-      pods,
-      groupsById,
-      dependencies,
-      version)
+    val group = Group(id, apps, pods, groupsById, dependencies, version)
 
     if (validate) {
       val validation = accord.validate(group)(Group.validGroup(id.parent, enabledFeatures))

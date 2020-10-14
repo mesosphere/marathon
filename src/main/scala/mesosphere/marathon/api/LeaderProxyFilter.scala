@@ -21,7 +21,8 @@ class LeaderProxyFilter(
     electionService: ElectionService,
     myHostPort: String,
     forwarder: RequestForwarder
-) extends Filter with StrictLogging {
+) extends Filter
+    with StrictLogging {
 
   import LeaderProxyFilter._
 
@@ -35,22 +36,15 @@ class LeaderProxyFilter(
     buildUrl(leaderData, request.getRequestURI, Option(request.getQueryString))
   }
 
-  private[this] def buildUrl(
-    leaderData: String,
-    requestURI: String = "",
-    queryStringOpt: Option[String] = None): URL =
-    {
-      queryStringOpt match {
-        case Some(queryString) => new URL(s"$scheme://$leaderData$requestURI?$queryString")
-        case None => new URL(s"$scheme://$leaderData$requestURI")
-      }
+  private[this] def buildUrl(leaderData: String, requestURI: String = "", queryStringOpt: Option[String] = None): URL = {
+    queryStringOpt match {
+      case Some(queryString) => new URL(s"$scheme://$leaderData$requestURI?$queryString")
+      case None => new URL(s"$scheme://$leaderData$requestURI")
     }
+  }
 
   @tailrec
-  final def doFilter(
-    rawRequest: ServletRequest,
-    rawResponse: ServletResponse,
-    chain: FilterChain): Unit = {
+  final def doFilter(rawRequest: ServletRequest, rawResponse: ServletResponse, chain: FilterChain): Unit = {
 
     def waitForConsistentLeadership(): Boolean = {
       var retries = 10
@@ -71,7 +65,8 @@ class LeaderProxyFilter(
         } else {
           logger.error(
             s"inconsistent leadership state, refusing request for ourselves at $myHostPort. " +
-              s"Are we leader?: $weAreLeader, leader: $currentLeaderData")
+              s"Are we leader?: $weAreLeader, leader: $currentLeaderData"
+          )
         }
 
         retries -= 1
@@ -92,7 +87,8 @@ class LeaderProxyFilter(
         } else if (leaderDataOpt.forall(_ == myHostPort)) { // either not leader or ourselves
           logger.info(
             "Do not proxy to myself. Waiting for consistent leadership state. " +
-              s"Are we leader?: false, leader: $leaderDataOpt")
+              s"Are we leader?: false, leader: $leaderDataOpt"
+          )
           if (waitForConsistentLeadership()) {
             doFilter(rawRequest, rawResponse, chain)
           } else {

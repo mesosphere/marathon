@@ -24,7 +24,11 @@ class PodRepositoryTest extends AkkaUnitTest {
       f.repo.get(pod.id).futureValue.value should equal(pod)
     }
     "store and retrieve pods with executor resources" in {
-      val pod = PodDefinition("a".toRootPath, containers = someContainers, executorResources = PodDefinition.DefaultExecutorResources.copy(cpus = 10))
+      val pod = PodDefinition(
+        "a".toRootPath,
+        containers = someContainers,
+        executorResources = PodDefinition.DefaultExecutorResources.copy(cpus = 10)
+      )
       val f = new Fixture()
       f.repo.store(pod).futureValue
       f.repo.get(pod.id).futureValue.value should equal(pod)

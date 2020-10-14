@@ -48,8 +48,8 @@ class PostToEventStreamStepImplTest extends UnitTest {
       f.step.process(instanceChange).futureValue
 
       "post each event to the event stream and a health changed event" in {
-        val expectedHealthChange = InstanceHealthChanged(instanceChange.id, instanceChange.runSpecVersion,
-          instanceChange.runSpecId, Some(false))
+        val expectedHealthChange =
+          InstanceHealthChanged(instanceChange.id, instanceChange.runSpecVersion, instanceChange.runSpecId, Some(false))
 
         verify(f.eventStream, once).publish(f.event1)
         verify(f.eventStream, once).publish(f.event2)
@@ -68,8 +68,8 @@ class PostToEventStreamStepImplTest extends UnitTest {
       f.step.process(instanceChange).futureValue
 
       "post each event to the event stream and a health changed event" in {
-        val expectedHealthChange = InstanceHealthChanged(instanceChange.id, instanceChange.runSpecVersion,
-          instanceChange.runSpecId, Some(false))
+        val expectedHealthChange =
+          InstanceHealthChanged(instanceChange.id, instanceChange.runSpecVersion, instanceChange.runSpecId, Some(false))
 
         verify(f.eventStream, once).publish(f.event1)
         verify(f.eventStream, once).publish(f.event2)
@@ -89,8 +89,7 @@ class PostToEventStreamStepImplTest extends UnitTest {
       f.step.process(instanceChange).futureValue
 
       "post each event to the event stream and a health changed event" in {
-        val expectedHealthChange = InstanceHealthChanged(instanceChange.id, instanceChange.runSpecVersion,
-          instanceChange.runSpecId, None)
+        val expectedHealthChange = InstanceHealthChanged(instanceChange.id, instanceChange.runSpecVersion, instanceChange.runSpecId, None)
 
         verify(f.eventStream, once).publish(f.event1)
         verify(f.eventStream, once).publish(f.event2)

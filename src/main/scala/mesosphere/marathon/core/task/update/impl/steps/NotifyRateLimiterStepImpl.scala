@@ -14,9 +14,8 @@ import mesosphere.marathon.state.{PathId, RunSpec}
 import scala.async.Async._
 import scala.concurrent.Future
 
-class NotifyRateLimiterStepImpl @Inject() (
-    launchQueueProvider: Provider[LaunchQueue],
-    groupManagerProvider: Provider[GroupManager]) extends InstanceChangeHandler {
+class NotifyRateLimiterStepImpl @Inject() (launchQueueProvider: Provider[LaunchQueue], groupManagerProvider: Provider[GroupManager])
+    extends InstanceChangeHandler {
 
   import NotifyRateLimiterStep._
   import scala.concurrent.ExecutionContext.Implicits.global
@@ -55,11 +54,18 @@ class NotifyRateLimiterStepImpl @Inject() (
 private[steps] object NotifyRateLimiterStep {
   // A set of conditions that are worth rate limiting the associated runSpec
   val limitWorthy: Set[Condition] = Set(
-    Condition.Dropped, Condition.Error, Condition.Failed, Condition.Gone, Condition.Finished
+    Condition.Dropped,
+    Condition.Error,
+    Condition.Failed,
+    Condition.Gone,
+    Condition.Finished
   )
 
   // A set of conditions that are worth advancing an existing delay of the corresponding runSpec
   val advanceWorthy: Set[Condition] = Set(
-    Condition.Staging, Condition.Starting, Condition.Running, Condition.Provisioned
+    Condition.Staging,
+    Condition.Starting,
+    Condition.Running,
+    Condition.Provisioned
   )
 }

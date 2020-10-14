@@ -23,23 +23,21 @@ class TestAuthFixture() extends Mockito {
   val UnauthorizedStatus = 401
   val NotAuthenticatedStatus = 403
 
-  def auth: Auth = new Authorizer with Authenticator {
-    override def authenticate(request: HttpRequest): Future[Option[Identity]] = {
-      Future.successful(if (authenticated) Some(identity) else None)
+  def auth: Auth =
+    new Authorizer with Authenticator {
+      override def authenticate(request: HttpRequest): Future[Option[Identity]] = {
+        Future.successful(if (authenticated) Some(identity) else None)
+      }
+      override def handleNotAuthenticated(request: HttpRequest, response: HttpResponse): Unit = {
+        response.status(NotAuthenticatedStatus)
+      }
+      override def handleNotAuthorized(principal: Identity, response: HttpResponse): Unit = {
+        response.status(UnauthorizedStatus)
+      }
+      override def isAuthorized[Resource](principal: Identity, action: AuthorizedAction[Resource], resource: Resource): Boolean = {
+        authorized && authFn(resource)
+      }
     }
-    override def handleNotAuthenticated(request: HttpRequest, response: HttpResponse): Unit = {
-      response.status(NotAuthenticatedStatus)
-    }
-    override def handleNotAuthorized(principal: Identity, response: HttpResponse): Unit = {
-      response.status(UnauthorizedStatus)
-    }
-    override def isAuthorized[Resource](
-      principal: Identity,
-      action: AuthorizedAction[Resource],
-      resource: Resource): Boolean = {
-      authorized && authFn(resource)
-    }
-  }
 
   var request: HttpServletRequest = {
     val req = mock[HttpServletRequest]

@@ -18,24 +18,15 @@ import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 private[jobs] object OverdueInstancesActor {
-  def props(
-    config: MarathonConf,
-    instanceTracker: InstanceTracker,
-    killService: KillService,
-    metrics: Metrics,
-    clock: Clock): Props = {
+  def props(config: MarathonConf, instanceTracker: InstanceTracker, killService: KillService, metrics: Metrics, clock: Clock): Props = {
     Props(new OverdueInstancesActor(new Support(config, instanceTracker, killService, metrics, clock)))
   }
 
   /**
     * Contains the core logic for the KillOverdueTasksActor.
     */
-  private class Support(
-      config: MarathonConf,
-      instanceTracker: InstanceTracker,
-      killService: KillService,
-      metrics: Metrics,
-      clock: Clock) extends StrictLogging {
+  private class Support(config: MarathonConf, instanceTracker: InstanceTracker, killService: KillService, metrics: Metrics, clock: Clock)
+      extends StrictLogging {
     import scala.concurrent.ExecutionContext.Implicits.global
 
     val overdueInstancesMetric: SettableGauge = metrics.settableGauge("instances.launch-overdue")
@@ -68,13 +59,17 @@ private[jobs] object OverdueInstancesActor {
       def launchedAndExpired(task: Task): Boolean = {
         task.status.condition match {
           case Condition.Provisioned if task.status.stagedAt < unconfirmedExpire =>
-            logger.warn(s"Should kill: ${task.taskId} was launched " +
-              s"${task.status.stagedAt.until(now).toSeconds}s ago and was not confirmed yet")
+            logger.warn(
+              s"Should kill: ${task.taskId} was launched " +
+                s"${task.status.stagedAt.until(now).toSeconds}s ago and was not confirmed yet"
+            )
             true
 
           case Condition.Staging | Condition.Starting if task.status.stagedAt < stagedExpire =>
-            logger.warn(s"Should kill: ${task.taskId} was staged ${task.status.stagedAt.until(now).toSeconds}s" +
-              " ago and has not yet started")
+            logger.warn(
+              s"Should kill: ${task.taskId} was staged ${task.status.stagedAt.until(now).toSeconds}s" +
+                " ago and has not yet started"
+            )
             true
 
           case _ =>
@@ -104,7 +99,9 @@ private[jobs] object OverdueInstancesActor {
       // Usually, the instance is scheduled, but in rare cases it can get decommissioned before the reservation
       // times out, so we need to check that as well
       instances.filter { instance =>
-        (instance.isScheduled || instance.state.goal == Goal.Decommissioned) && instance.reservation.exists(_.state.timeout.exists(_.deadline <= now))
+        (instance.isScheduled || instance.state.goal == Goal.Decommissioned) && instance.reservation.exists(
+          _.state.timeout.exists(_.deadline <= now)
+        )
       }
     }
   }

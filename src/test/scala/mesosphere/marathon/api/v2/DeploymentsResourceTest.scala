@@ -18,7 +18,8 @@ class DeploymentsResourceTest extends UnitTest with GroupCreation with JerseyTes
       service: MarathonSchedulerService = mock[MarathonSchedulerService],
       groupManager: GroupManager = mock[GroupManager],
       config: MarathonConf = mock[MarathonConf],
-      auth: TestAuthFixture = new TestAuthFixture) {
+      auth: TestAuthFixture = new TestAuthFixture
+  ) {
     val deploymentsResource = new DeploymentsResource(service, groupManager, auth.auth, auth.auth, config)
   }
 

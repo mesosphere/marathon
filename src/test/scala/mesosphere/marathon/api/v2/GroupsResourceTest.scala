@@ -29,18 +29,21 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       auth: TestAuthFixture = new TestAuthFixture,
       groupInfo: GroupInfoService = mock[GroupInfoService],
       groupApiService: GroupApiService = mock[GroupApiService],
-      embed: java.util.Set[String] = Collections.emptySet[String]) {
+      embed: java.util.Set[String] = Collections.emptySet[String]
+  ) {
     config.zkTimeoutDuration returns (patienceConfig.timeout.toMillis * 2).millis
     config.availableFeatures returns Set.empty
     config.defaultNetworkName returns ScallopStub(None)
     config.mesosBridgeName returns ScallopStub(Some("default-mesos-bridge-name"))
-    val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config, groupApiService)(auth.auth, auth.auth, mat, ctx)
+    val groupsResource: GroupsResource =
+      new GroupsResource(groupManager, groupInfo, config, groupApiService)(auth.auth, auth.auth, mat, ctx)
   }
 
   case class FixtureWithRealGroupManager(
       initialRoot: RootGroup = RootGroup.empty,
       groupInfo: GroupInfoService = mock[GroupInfoService],
-      auth: TestAuthFixture = new TestAuthFixture) {
+      auth: TestAuthFixture = new TestAuthFixture
+  ) {
     val f = new TestGroupManagerFixture(initialRoot)
     val config: AllConf = f.config
     val groupRepository: GroupRepository = f.groupRepository
@@ -50,7 +53,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
     implicit val authorizer = auth.auth
 
-    val groupsResource: GroupsResource = new GroupsResource(groupManager, groupInfo, config, new GroupApiService(groupManager))(auth.auth, auth.auth, mat, ctx)
+    val groupsResource: GroupsResource =
+      new GroupsResource(groupManager, groupInfo, config, new GroupApiService(groupManager))(auth.auth, auth.auth, mat, ctx)
   }
 
   "GroupsResource" should {
@@ -262,7 +266,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       val rootVersionsResponse = asyncRequest { r => groupsResource.group("versions", embed, auth.request, r) }
 
       Then("The versions are send as simple json array")
-      rootVersionsResponse.getStatus should be (200)
+      rootVersionsResponse.getStatus should be(200)
       rootVersionsResponse.getEntity should be(Json.toJson(groupVersions).toString())
     }
 
@@ -277,7 +281,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       val rootVersionsResponse = asyncRequest { r => groupsResource.group("/foo/bla/blub/versions", embed, auth.request, r) }
 
       Then("The versions are send as simple json array")
-      rootVersionsResponse.getStatus should be (200)
+      rootVersionsResponse.getStatus should be(200)
       rootVersionsResponse.getEntity should be(Json.toJson(groupVersions).toString())
     }
 

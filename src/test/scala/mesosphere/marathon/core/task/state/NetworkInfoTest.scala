@@ -9,41 +9,46 @@ import mesosphere.marathon.state._
 class NetworkInfoTest extends UnitTest {
   val f = new Fixture
 
-  private def ipv4Address(addr: String) = org.apache.mesos.Protos.NetworkInfo.IPAddress.newBuilder()
-    .setIpAddress(addr)
-    .setProtocol(org.apache.mesos.Protos.NetworkInfo.Protocol.IPv4)
-    .build()
+  private def ipv4Address(addr: String) =
+    org.apache.mesos.Protos.NetworkInfo.IPAddress
+      .newBuilder()
+      .setIpAddress(addr)
+      .setProtocol(org.apache.mesos.Protos.NetworkInfo.Protocol.IPv4)
+      .build()
 
   "NetworkInfo" when {
     "computing PortAssignments from PortMappings (network mode BRIDGED)" should {
 
       val app = AppDefinition(
         id = PathId("test"),
-        networks = Seq(BridgeNetwork()), container = Some(Docker(
-          portMappings = Seq(
-            PortMapping(
-              containerPort = 8080,
-              hostPort = Some(0),
-              servicePort = 9000,
-              protocol = "tcp",
-              name = Some("http")
-            ),
-            PortMapping(
-              containerPort = 8081,
-              hostPort = Some(123),
-              servicePort = 9001,
-              protocol = "udp",
-              name = Some("admin")
-            ),
-            PortMapping(
-              containerPort = 0,
-              hostPort = Some(0),
-              servicePort = 9002,
-              protocol = "tcp",
-              name = Some("tcp")
+        networks = Seq(BridgeNetwork()),
+        container = Some(
+          Docker(
+            portMappings = Seq(
+              PortMapping(
+                containerPort = 8080,
+                hostPort = Some(0),
+                servicePort = 9000,
+                protocol = "tcp",
+                name = Some("http")
+              ),
+              PortMapping(
+                containerPort = 8081,
+                hostPort = Some(123),
+                servicePort = 9001,
+                protocol = "udp",
+                name = Some("admin")
+              ),
+              PortMapping(
+                containerPort = 0,
+                hostPort = Some(0),
+                servicePort = 9002,
+                protocol = "tcp",
+                name = Some("tcp")
+              )
             )
           )
-        ))
+        )
       )
       val networkInfo = NetworkInfo(
         hostName = f.hostName,
@@ -58,19 +63,22 @@ class NetworkInfoTest extends UnitTest {
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 20001,
               hostPort = Some(20001),
-              containerPort = Some(8080)),
+              containerPort = Some(8080)
+            ),
             PortAssignment(
               portName = Some("admin"),
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 123,
               hostPort = Some(123),
-              containerPort = Some(8081)),
+              containerPort = Some(8081)
+            ),
             PortAssignment(
               portName = Some("tcp"),
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 20002,
               hostPort = Some(20002),
-              containerPort = Some(20002))
+              containerPort = Some(20002)
+            )
           )
         )
       }
@@ -83,19 +91,22 @@ class NetworkInfoTest extends UnitTest {
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 20001,
               hostPort = Some(20001),
-              containerPort = Some(8080)),
+              containerPort = Some(8080)
+            ),
             PortAssignment(
               portName = Some("admin"),
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 123,
               hostPort = Some(123),
-              containerPort = Some(8081)),
+              containerPort = Some(8081)
+            ),
             PortAssignment(
               portName = Some("tcp"),
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 20002,
               hostPort = Some(20002),
-              containerPort = Some(20002))
+              containerPort = Some(20002)
+            )
           )
         )
       }
@@ -105,18 +116,18 @@ class NetworkInfoTest extends UnitTest {
 
       val app = AppDefinition(
         id = PathId("test"),
-        networks = Seq(ContainerNetwork("whatever")), container = Some(Docker(
-
-          portMappings = Seq(
-            PortMapping(containerPort = 0, hostPort = Some(31000), servicePort = 9000, protocol = "tcp"),
-            PortMapping(containerPort = 0, hostPort = None, servicePort = 9001, protocol = "tcp"),
-            PortMapping(containerPort = 0, hostPort = Some(0), servicePort = 9002, protocol = "tcp")
-
+        networks = Seq(ContainerNetwork("whatever")),
+        container = Some(
+          Docker(
+            portMappings = Seq(
+              PortMapping(containerPort = 0, hostPort = Some(31000), servicePort = 9000, protocol = "tcp"),
+              PortMapping(containerPort = 0, hostPort = None, servicePort = 9001, protocol = "tcp"),
+              PortMapping(containerPort = 0, hostPort = Some(0), servicePort = 9002, protocol = "tcp")
+            )
           )
-        ))
+        )
       )
       val networkInfo = NetworkInfo(
-
         hostName = f.hostName,
         hostPorts = Seq(31000, 31005),
         ipAddresses = Nil
@@ -130,19 +141,22 @@ class NetworkInfoTest extends UnitTest {
               effectiveIpAddress = Option(f.hostName),
               effectivePort = 31000,
               hostPort = Some(31000),
-              containerPort = Some(31000)),
+              containerPort = Some(31000)
+            ),
             PortAssignment(
               portName = None,
               effectiveIpAddress = None,
               effectivePort = PortAssignment.NoPort,
               hostPort = None,
-              containerPort = Some(0)),
+              containerPort = Some(0)
+            ),
             PortAssignment(
               portName = None,
               effectiveIpAddress = Option(f.hostName),
               effectivePort = 31005,
               hostPort = Some(31005),
-              containerPort = Some(31005))
+              containerPort = Some(31005)
+            )
           )
         )
       }
@@ -155,19 +169,22 @@ class NetworkInfoTest extends UnitTest {
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 31000,
               hostPort = Some(31000),
-              containerPort = Some(31000)),
+              containerPort = Some(31000)
+            ),
             PortAssignment(
               portName = None,
               effectiveIpAddress = Some(f.containerIp),
               effectivePort = 0,
               hostPort = None,
-              containerPort = Some(0)),
+              containerPort = Some(0)
+            ),
             PortAssignment(
               portName = None,
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 31005,
               hostPort = Some(31005),
-              containerPort = Some(31005))
+              containerPort = Some(31005)
+            )
           )
         )
       }
@@ -206,13 +223,15 @@ class NetworkInfoTest extends UnitTest {
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 31000,
               hostPort = Some(31000),
-              containerPort = None),
+              containerPort = None
+            ),
             PortAssignment(
               portName = Some("admin"),
               effectiveIpAddress = Some(f.hostName),
               effectivePort = 31005,
               hostPort = Some(31005),
-              containerPort = None)
+              containerPort = None
+            )
           )
         )
 

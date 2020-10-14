@@ -24,7 +24,10 @@ class ReviveOffersActor(
     instanceUpdates: InstanceTracker.InstanceUpdates,
     rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
     driverHolder: MarathonSchedulerDriverHolder,
-    enableSuppress: Boolean) extends Actor with Stash with StrictLogging {
+    enableSuppress: Boolean
+) extends Actor
+    with Stash
+    with StrictLogging {
 
   private[this] val reviveCountMetric: Counter = metrics.counter("mesos.calls.revive")
   private[this] val suppressCountMetric: Counter = metrics.counter("mesos.calls.suppress")
@@ -43,11 +46,11 @@ class ReviveOffersActor(
         Source.single[InstanceChangeOrSnapshot](snapshot).concat(updates)
     }
 
-    val suppressReviveFlow = ReviveOffersStreamLogic.suppressAndReviveFlow(
-      minReviveOffersInterval = minReviveOffersInterval,
-      enableSuppress = enableSuppress)
+    val suppressReviveFlow =
+      ReviveOffersStreamLogic.suppressAndReviveFlow(minReviveOffersInterval = minReviveOffersInterval, enableSuppress = enableSuppress)
 
-    val done = flattenedInstanceUpdates.map(Left(_))
+    val done = flattenedInstanceUpdates
+      .map(Left(_))
       .merge(delayedConfigRefs.map(Right(_)))
       .via(suppressReviveFlow)
       .runWith(Sink.foreach {
@@ -66,24 +69,26 @@ class ReviveOffersActor(
     done.pipeTo(self)
   }
 
-  override def receive: Receive = LoggingReceive {
-    case Status.Failure(ex) =>
-      logger.error("Unexpected termination of revive stream", ex)
-      throw ex
-    case Done =>
-      logger.error(s"Unexpected successful termination of revive stream")
-  }
+  override def receive: Receive =
+    LoggingReceive {
+      case Status.Failure(ex) =>
+        logger.error("Unexpected termination of revive stream", ex)
+        throw ex
+      case Done =>
+        logger.error(s"Unexpected successful termination of revive stream")
+    }
 
 }
 
 object ReviveOffersActor {
   def props(
-    metrics: Metrics,
-    minReviveOffersInterval: FiniteDuration,
-    instanceUpdates: InstanceTracker.InstanceUpdates,
-    rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
-    driverHolder: MarathonSchedulerDriverHolder,
-    enableSuppress: Boolean): Props = {
+      metrics: Metrics,
+      minReviveOffersInterval: FiniteDuration,
+      instanceUpdates: InstanceTracker.InstanceUpdates,
+      rateLimiterUpdates: Source[RateLimiter.DelayUpdate, NotUsed],
+      driverHolder: MarathonSchedulerDriverHolder,
+      enableSuppress: Boolean
+  ): Props = {
     Props(new ReviveOffersActor(metrics, minReviveOffersInterval, instanceUpdates, rateLimiterUpdates, driverHolder, enableSuppress))
   }
 }

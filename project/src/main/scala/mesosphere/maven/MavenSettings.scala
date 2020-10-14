@@ -32,32 +32,35 @@ object MavenSettings {
     }.toMap
   }
 
-  def loadM2Credentials(log: Logger): Seq[Credentials] = try {
-    loadM2Settings().map { m2Settings =>
-      val servers = extractM2Servers(m2Settings)
-      val mirrors = extractM2Mirrors(m2Settings)
-      servers.map { case (id, (username, password)) =>
-        val url = mirrors.getOrElse(id, "")
-        val host = new java.net.URL(url).getHost
-        // The realm is hardcoded here because there is no way to provide it
-        // in DOT_M2_SETTINGS file, and sbt demands one for HTTP basic authentication.
-        Credentials("Sonatype Nexus Repository Manager", host, username, password)
-      }
-    }.toSeq.flatten
-  } catch {
-    case NonFatal(ex) =>
-      log.error(s"Failed to load credentials from DOT_M2_SETTINGS: $ex")
-      Seq()
-  }
+  def loadM2Credentials(log: Logger): Seq[Credentials] =
+    try {
+      loadM2Settings().map { m2Settings =>
+        val servers = extractM2Servers(m2Settings)
+        val mirrors = extractM2Mirrors(m2Settings)
+        servers.map {
+          case (id, (username, password)) =>
+            val url = mirrors.getOrElse(id, "")
+            val host = new java.net.URL(url).getHost
+            // The realm is hardcoded here because there is no way to provide it
+            // in DOT_M2_SETTINGS file, and sbt demands one for HTTP basic authentication.
+            Credentials("Sonatype Nexus Repository Manager", host, username, password)
+        }
+      }.toSeq.flatten
+    } catch {
+      case NonFatal(ex) =>
+        log.error(s"Failed to load credentials from DOT_M2_SETTINGS: $ex")
+        Seq()
+    }
 
-  def loadM2Resolvers(log: Logger): Seq[Resolver] = try {
-    loadM2Settings().map { m2Settings =>
-      val mirrors = extractM2Mirrors(m2Settings)
-      mirrors.map { case (id, url) => id at url }
-    }.toSeq.flatten
-  } catch {
-    case NonFatal(ex) =>
-      log.error(s"Failed to load resolvers from DOT_M2_SETTINGS: $ex")
-      Seq()
-  }
+  def loadM2Resolvers(log: Logger): Seq[Resolver] =
+    try {
+      loadM2Settings().map { m2Settings =>
+        val mirrors = extractM2Mirrors(m2Settings)
+        mirrors.map { case (id, url) => id at url }
+      }.toSeq.flatten
+    } catch {
+      case NonFatal(ex) =>
+        log.error(s"Failed to load resolvers from DOT_M2_SETTINGS: $ex")
+        Seq()
+    }
 }

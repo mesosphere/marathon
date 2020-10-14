@@ -48,12 +48,12 @@ object Formats extends Formats {
 }
 
 trait Formats
-  extends AppAndGroupFormats
-  with HealthCheckFormats
-  with ReadinessCheckFormats
-  with DeploymentFormats
-  with EventFormats
-  with PluginFormats {
+    extends AppAndGroupFormats
+    with HealthCheckFormats
+    with ReadinessCheckFormats
+    with DeploymentFormats
+    with EventFormats
+    with PluginFormats {
 
   implicit lazy val TaskFailureWrites: Writes[TaskFailure] = Writes { failure =>
     Json.obj(
@@ -64,7 +64,7 @@ trait Formats
       "taskId" -> failure.taskId.getValue,
       "timestamp" -> failure.timestamp,
       "version" -> failure.version,
-      "slaveId" -> failure.slaveId.fold[JsValue](JsNull){ slaveId => JsString(slaveId.getValue) }
+      "slaveId" -> failure.slaveId.fold[JsValue](JsNull) { slaveId => JsString(slaveId.getValue) }
     )
   }
 
@@ -77,7 +77,6 @@ trait Formats
 
   implicit lazy val networkInfoProtocolReads = Reads[mesos.NetworkInfo.Protocol] { json =>
     json.validate[String].flatMap { protocolString: String =>
-
       Option(mesos.NetworkInfo.Protocol.valueOf(protocolString)) match {
         case Some(protocol) => JsSuccess(protocol)
         case None =>
@@ -96,7 +95,7 @@ trait Formats
 
     (
       (__ \ "ipAddress").format[String] ~
-      (__ \ "protocol").format[mesos.NetworkInfo.Protocol]
+        (__ \ "protocol").format[mesos.NetworkInfo.Protocol]
     )(toIpAddress, toTuple)
   }
 
@@ -106,8 +105,8 @@ trait Formats
 
   implicit val TaskStatusNetworkInfoFormat: Format[NetworkInfo] = (
     (__ \ "hostName").format[String] ~
-    (__ \ "hostPorts").format[Seq[Int]] ~
-    (__ \ "ipAddresses").format[Seq[mesos.NetworkInfo.IPAddress]]
+      (__ \ "hostPorts").format[Seq[Int]] ~
+      (__ \ "ipAddresses").format[Seq[mesos.NetworkInfo.IPAddress]]
   )(NetworkInfo(_, _, _), unlift(NetworkInfo.unapply))
 
   implicit lazy val PathIdFormat: Format[PathId] = Format(
@@ -157,7 +156,8 @@ trait DeploymentFormats {
     )
 
   implicit lazy val URLToStringMapFormat: Format[Map[java.net.URL, String]] = Format(
-    Reads.of[Map[String, String]]
+    Reads
+      .of[Map[String, String]]
       .map(
         _.map { case (k, v) => new java.net.URL(k) -> v }
       ),
@@ -166,10 +166,11 @@ trait DeploymentFormats {
     }
   )
 
-  def actionInstanceOn(runSpec: RunSpec): String = runSpec match {
-    case _: AppDefinition => "app"
-    case _: PodDefinition => "pod"
-  }
+  def actionInstanceOn(runSpec: RunSpec): String =
+    runSpec match {
+      case _: AppDefinition => "app"
+      case _: PodDefinition => "pod"
+    }
 
   implicit lazy val DeploymentActionWrites: Writes[DeploymentAction] = Writes { action =>
     Json.obj(
@@ -181,11 +182,12 @@ trait DeploymentFormats {
   implicit lazy val DeploymentStepWrites: Writes[DeploymentStep] = Json.writes[DeploymentStep]
 
   implicit lazy val DeploymentStepInfoWrites: Writes[DeploymentStepInfo] = Writes { info =>
-    def currentAction(action: DeploymentAction): JsObject = Json.obj (
-      "action" -> DeploymentAction.actionName(action),
-      actionInstanceOn(action.runSpec) -> action.runSpec.id,
-      "readinessCheckResults" -> info.readinessChecksByApp(action.runSpec.id)
-    )
+    def currentAction(action: DeploymentAction): JsObject =
+      Json.obj(
+        "action" -> DeploymentAction.actionName(action),
+        actionInstanceOn(action.runSpec) -> action.runSpec.id,
+        "readinessCheckResults" -> info.readinessChecksByApp(action.runSpec.id)
+      )
     Json.obj(
       "id" -> info.plan.id,
       "version" -> info.plan.version,
@@ -309,36 +311,37 @@ trait EventFormats {
     )
   }
 
-  def eventToJson(event: MarathonEvent): JsValue = event match {
-    case event: AppTerminatedEvent => Json.toJson(event)
-    case event: ApiPostEvent => Json.toJson(event)
-    case event: Subscribe => Json.toJson(event)
-    case event: Unsubscribe => Json.toJson(event)
-    case event: EventStreamAttached => Json.toJson(event)
-    case event: EventStreamDetached => Json.toJson(event)
-    case event: AddHealthCheck => Json.toJson(event)
-    case event: RemoveHealthCheck => Json.toJson(event)
-    case event: FailedHealthCheck => Json.toJson(event)
-    case event: HealthStatusChanged => Json.toJson(event)
-    case event: UnhealthyInstanceKillEvent => Json.toJson(event)
-    case event: GroupChangeSuccess => Json.toJson(event)
-    case event: GroupChangeFailed => Json.toJson(event)
-    case event: MesosStatusUpdateEvent => Json.toJson(event)
-    case event: MesosFrameworkMessageEvent => Json.toJson(event)
-    case event: SchedulerDisconnectedEvent => Json.toJson(event)
-    case event: SchedulerRegisteredEvent => Json.toJson(event)
-    case event: SchedulerReregisteredEvent => Json.toJson(event)
-    case event: InstanceChanged => Json.toJson(event)
-    case event: InstanceHealthChanged => Json.toJson(event)
-    case event: UnknownInstanceTerminated => Json.toJson(event)
-    case event: PodEvent => Json.toJson(event)
+  def eventToJson(event: MarathonEvent): JsValue =
+    event match {
+      case event: AppTerminatedEvent => Json.toJson(event)
+      case event: ApiPostEvent => Json.toJson(event)
+      case event: Subscribe => Json.toJson(event)
+      case event: Unsubscribe => Json.toJson(event)
+      case event: EventStreamAttached => Json.toJson(event)
+      case event: EventStreamDetached => Json.toJson(event)
+      case event: AddHealthCheck => Json.toJson(event)
+      case event: RemoveHealthCheck => Json.toJson(event)
+      case event: FailedHealthCheck => Json.toJson(event)
+      case event: HealthStatusChanged => Json.toJson(event)
+      case event: UnhealthyInstanceKillEvent => Json.toJson(event)
+      case event: GroupChangeSuccess => Json.toJson(event)
+      case event: GroupChangeFailed => Json.toJson(event)
+      case event: MesosStatusUpdateEvent => Json.toJson(event)
+      case event: MesosFrameworkMessageEvent => Json.toJson(event)
+      case event: SchedulerDisconnectedEvent => Json.toJson(event)
+      case event: SchedulerRegisteredEvent => Json.toJson(event)
+      case event: SchedulerReregisteredEvent => Json.toJson(event)
+      case event: InstanceChanged => Json.toJson(event)
+      case event: InstanceHealthChanged => Json.toJson(event)
+      case event: UnknownInstanceTerminated => Json.toJson(event)
+      case event: PodEvent => Json.toJson(event)
 
-    case event: DeploymentSuccess => Json.toJson(event)
-    case event: DeploymentFailed => Json.toJson(event)
-    case event: DeploymentStatus => Json.toJson(event)
-    case event: DeploymentStepSuccess => Json.toJson(event)
-    case event: DeploymentStepFailure => Json.toJson(event)
-  }
+      case event: DeploymentSuccess => Json.toJson(event)
+      case event: DeploymentFailed => Json.toJson(event)
+      case event: DeploymentStatus => Json.toJson(event)
+      case event: DeploymentStepSuccess => Json.toJson(event)
+      case event: DeploymentStepFailure => Json.toJson(event)
+    }
 }
 
 trait HealthCheckFormats {
@@ -408,9 +411,7 @@ trait AppAndGroupFormats {
     Writes { stats =>
       val statsJson = Json.obj("counts" -> TaskCountsWritesWithoutPrefix.writes(stats.counts))
       Json.obj(
-        "stats" -> stats.maybeLifeTime.fold(ifEmpty = statsJson)(lifeTime =>
-          statsJson ++ Json.obj("lifeTime" -> lifeTime)
-        )
+        "stats" -> stats.maybeLifeTime.fold(ifEmpty = statsJson)(lifeTime => statsJson ++ Json.obj("lifeTime" -> lifeTime))
       )
     }
 
@@ -447,14 +448,13 @@ trait AppAndGroupFormats {
 
   implicit lazy val GroupInfoWrites: Writes[GroupInfo] =
     Writes { info =>
-
       val maybeJson = Seq[Option[JsObject]](
         info.maybeApps.map(apps => Json.obj("apps" -> apps)),
         info.maybeGroups.map(groups => Json.obj("groups" -> groups)),
         info.maybePods.map(pods => Json.obj("pods" -> pods))
       ).flatten
 
-      val groupJson = Json.obj (
+      val groupJson = Json.obj(
         "id" -> info.group.id,
         "dependencies" -> info.group.dependencies,
         "version" -> info.group.version
@@ -469,11 +469,11 @@ trait PluginFormats {
 
   implicit lazy val pluginDefinitionFormat: Writes[PluginDefinition] = (
     (__ \ "id").write[String] ~
-    (__ \ "plugin").write[String] ~
-    (__ \ "implementation").write[String] ~
-    (__ \ "tags").writeNullable[Set[String]] ~
-    (__ \ "info").writeNullable[JsObject]
-  ) (d => (d.id, d.plugin, d.implementation, d.tags, d.info))
+      (__ \ "plugin").write[String] ~
+      (__ \ "implementation").write[String] ~
+      (__ \ "tags").writeNullable[Set[String]] ~
+      (__ \ "info").writeNullable[JsObject]
+  )(d => (d.id, d.plugin, d.implementation, d.tags, d.info))
 
   implicit lazy val pluginDefinitionsFormat: Writes[PluginDefinitions] = Json.writes[PluginDefinitions]
 }

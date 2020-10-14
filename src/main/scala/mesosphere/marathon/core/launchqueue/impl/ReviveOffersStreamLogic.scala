@@ -23,12 +23,10 @@ object ReviveOffersStreamLogic extends StrictLogging {
     * This allows us to receive an event when a delay's deadline expires, an removes the concern of dealing with timers
     * from the rate limiting logic itself.
     */
-  val activelyDelayedRefs: Flow[RateLimiter.DelayUpdate, DelayedStatus, NotUsed] = Flow[RateLimiter.DelayUpdate]
-    .map { delayUpdate =>
-      val deadline = delayUpdate.delay.map(_.deadline.toInstant)
-      delayUpdate.ref -> deadline
-    }
-    .via(TimedEmitter.flow)
+  val activelyDelayedRefs: Flow[RateLimiter.DelayUpdate, DelayedStatus, NotUsed] = Flow[RateLimiter.DelayUpdate].map { delayUpdate =>
+    val deadline = delayUpdate.delay.map(_.deadline.toInstant)
+    delayUpdate.ref -> deadline
+  }.via(TimedEmitter.flow)
     .map {
       case TimedEmitter.Active(ref) => Delayed(ref)
       case TimedEmitter.Inactive(ref) => NotDelayed(ref)
@@ -90,7 +88,6 @@ object ReviveOffersStreamLogic extends StrictLogging {
     .sliding(2)
     .mapConcat {
       case Seq(previous, current) =>
-
         val diffScheduled = current.scheduledInstancesWithoutBackoff -- previous.scheduledInstancesWithoutBackoff
         def diffTerminal = current.terminalReservations -- previous.terminalReservations
 
@@ -135,8 +132,9 @@ object ReviveOffersStreamLogic extends StrictLogging {
     * @return
     */
   def suppressAndReviveFlow(
-    minReviveOffersInterval: FiniteDuration,
-    enableSuppress: Boolean): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], Op, NotUsed] = {
+      minReviveOffersInterval: FiniteDuration,
+      enableSuppress: Boolean
+  ): Flow[Either[InstanceChangeOrSnapshot, DelayedStatus], Op, NotUsed] = {
 
     reviveStateFromInstancesAndDelays
       .buffer(1, OverflowStrategy.dropHead) // While we are back-pressured, we drop older interim frames

@@ -21,7 +21,8 @@ class Group(
     val pods: Map[PathId, PodDefinition] = defaultPods,
     val groupsById: Map[Group.GroupKey, Group] = defaultGroups,
     val dependencies: Set[PathId] = defaultDependencies,
-    val version: Timestamp = defaultVersion) extends IGroup {
+    val version: Timestamp = defaultVersion
+) extends IGroup {
 
   /**
     * Get app from this group or any child group.
@@ -70,13 +71,17 @@ class Group(
     */
   def group(gid: PathId): Option[Group] = transitiveGroupsById.get(gid)
 
-  def transitiveAppsIterator(): Iterator[AppDefinition] = apps.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppsIterator())
-  private def transitiveAppIdsIterator(): Iterator[PathId] = apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppIdsIterator())
+  def transitiveAppsIterator(): Iterator[AppDefinition] =
+    apps.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppsIterator())
+  private def transitiveAppIdsIterator(): Iterator[PathId] =
+    apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppIdsIterator())
   lazy val transitiveApps: Iterable[AppDefinition] = transitiveAppsIterator().toVector
   lazy val transitiveAppIds: Iterable[PathId] = transitiveAppIdsIterator().toVector
 
-  def transitivePodsIterator(): Iterator[PodDefinition] = pods.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodsIterator())
-  private def transitivePodIdsIterator(): Iterator[PathId] = pods.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodIdsIterator())
+  def transitivePodsIterator(): Iterator[PodDefinition] =
+    pods.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodsIterator())
+  private def transitivePodIdsIterator(): Iterator[PathId] =
+    pods.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodIdsIterator())
   lazy val transitivePods: Iterable[PodDefinition] = transitivePodsIterator().toVector
   lazy val transitivePodIds: Iterable[PathId] = transitivePodIdsIterator().toVector
 
@@ -99,16 +104,17 @@ class Group(
 
   def containsAppsOrPodsOrGroups: Boolean = apps.nonEmpty || groupsById.nonEmpty || pods.nonEmpty
 
-  override def equals(other: Any): Boolean = other match {
-    case that: Group =>
-      id == that.id &&
-        apps == that.apps &&
-        pods == that.pods &&
-        groupsById == that.groupsById &&
-        dependencies == that.dependencies &&
-        version == that.version
-    case _ => false
-  }
+  override def equals(other: Any): Boolean =
+    other match {
+      case that: Group =>
+        id == that.id &&
+          apps == that.apps &&
+          pods == that.pods &&
+          groupsById == that.groupsById &&
+          dependencies == that.dependencies &&
+          version == that.version
+      case _ => false
+    }
 
   override def hashCode(): Int = Objects.hash(id, apps, pods, groupsById, dependencies, version)
 
@@ -129,12 +135,13 @@ object Group extends StrictLogging {
   type GroupKey = PathId
 
   def apply(
-    id: PathId,
-    apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
-    pods: Map[PathId, PodDefinition] = Group.defaultPods,
-    groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
-    dependencies: Set[PathId] = Group.defaultDependencies,
-    version: Timestamp = Group.defaultVersion): Group =
+      id: PathId,
+      apps: Map[AppDefinition.AppKey, AppDefinition] = Group.defaultApps,
+      pods: Map[PathId, PodDefinition] = Group.defaultPods,
+      groupsById: Map[Group.GroupKey, Group] = Group.defaultGroups,
+      dependencies: Set[PathId] = Group.defaultDependencies,
+      version: Timestamp = Group.defaultVersion
+  ): Group =
     new Group(id, apps, pods, groupsById, dependencies, version)
 
   def empty(id: PathId): Group =
@@ -241,9 +248,7 @@ object Group extends StrictLogging {
       // fields. it feels like we should make an exception for "id" and always require it for non-root groups.
       group.id.map(_.toPath) as "id" is optional(valid)
 
-      group.apps is optional(every(
-        AppValidation.validNestedApp(group.id.fold(base)(PathId(_).canonicalPath(base)))))
-      group.groups is optional(every(
-        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)))))
+      group.apps is optional(every(AppValidation.validNestedApp(group.id.fold(base)(PathId(_).canonicalPath(base)))))
+      group.groups is optional(every(validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)))))
     }
 }

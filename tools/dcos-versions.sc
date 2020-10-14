@@ -1,4 +1,4 @@
-#!/usr/bin/env amm
+#!/ usr / bin / env amm
 
 import $ivy.`com.typesafe.play::play-json:2.6.0`
 

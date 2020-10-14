@@ -29,10 +29,12 @@ object ModelValidationTest {
     AppDefinition(
       id,
       networks = Seq(BridgeNetwork()),
-      container = Some(Docker(
-        image = "demothing",
-        portMappings = Seq(PortMapping(2000, Some(0), servicePort = servicePort))
-      ))
+      container = Some(
+        Docker(
+          image = "demothing",
+          portMappings = Seq(PortMapping(2000, Some(0), servicePort = servicePort))
+        )
+      )
     )
 }
 
@@ -75,14 +77,16 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
       val validApp = AppDefinition("/test/group1/valid".toPath, cmd = Some("foo"))
       val invalidApp = AppDefinition("/test/group1/invalid".toPath)
       val rootGroup = createRootGroup(
-        groups = Set(createGroup("/test".toPath, groups = Set(
-          createGroup("/test/group1".toPath, Map(
-            validApp.id -> validApp,
-            invalidApp.id -> invalidApp),
+        groups = Set(
+          createGroup(
+            "/test".toPath,
+            groups = Set(
+              createGroup("/test/group1".toPath, Map(validApp.id -> validApp, invalidApp.id -> invalidApp), validate = false),
+              createGroup("/test/group2".toPath, validate = false)
+            ),
             validate = false
-          ),
-          createGroup("/test/group2".toPath, validate = false)),
-          validate = false)),
+          )
+        ),
         validate = false
       )
 
@@ -92,7 +96,8 @@ class ModelValidationTest extends UnitTest with GroupCreation with ValidationTes
     }
 
     "PortDefinition should be allowed to contain tcp and udp as protocol." in {
-      val validApp = AppDefinition("/test/app".toPath, cmd = Some("foo"), portDefinitions = Seq(PortDefinition(port = 80, protocol = "udp,tcp")))
+      val validApp =
+        AppDefinition("/test/app".toPath, cmd = Some("foo"), portDefinitions = Seq(PortDefinition(port = 80, protocol = "udp,tcp")))
 
       val rootGroup = createRootGroup(groups = Set(createGroup("/test".toPath, apps = Map(validApp.id -> validApp))))
 

@@ -16,9 +16,5 @@ object AuthAllowEverything extends Authorizer with Authenticator {
 
   override def handleNotAuthorized(principal: Identity, response: HttpResponse): Unit = {}
 
-  override def isAuthorized[Resource](
-    principal: Identity,
-    action: AuthorizedAction[Resource],
-    resource: Resource): Boolean = true
+  override def isAuthorized[Resource](principal: Identity, action: AuthorizedAction[Resource], resource: Resource): Boolean = true
 }
-

@@ -32,8 +32,11 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val runningInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
       val stagedInstance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()
 
-      val stagedInstanceWithSlaveId = TestInstanceBuilder.newBuilder(app.id)
-        .addTaskWithBuilder().taskStaged().build()
+      val stagedInstanceWithSlaveId = TestInstanceBuilder
+        .newBuilder(app.id)
+        .addTaskWithBuilder()
+        .taskStaged()
+        .build()
         .withAgentInfo(agentId = Some("slave 1"))
         .getInstance()
 
@@ -88,7 +91,9 @@ class SchedulerActionsTest extends AkkaUnitTest {
 
       val unreachableInstances = Seq.fill(5)(TestInstanceBuilder.newBuilder(app.id).addTaskUnreachableInactive().getInstance())
       val runnningInstances = Seq.fill(10)(TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance())
-      f.instanceTracker.specInstances(eq(app.id), eq(false))(any[ExecutionContext]) returns Future.successful(unreachableInstances ++ runnningInstances)
+      f.instanceTracker.specInstances(eq(app.id), eq(false))(any[ExecutionContext]) returns Future.successful(
+        unreachableInstances ++ runnningInstances
+      )
 
       When("the app is scaled")
       f.scheduler.scale(app).futureValue
@@ -186,7 +191,10 @@ class SchedulerActionsTest extends AkkaUnitTest {
       Given("an inactive queue, running tasks and some overCapacity")
       val app: AppDefinition = MarathonTestHelper.makeBasicApp().copy(instances = 5)
       def runningInstance(stagedAt: Long) = {
-        val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning(stagedAt = Timestamp.apply(stagedAt), startedAt = Timestamp.apply(stagedAt)).getInstance()
+        val instance = TestInstanceBuilder
+          .newBuilder(app.id)
+          .addTaskRunning(stagedAt = Timestamp.apply(stagedAt), startedAt = Timestamp.apply(stagedAt))
+          .getInstance()
         val state = instance.state.copy(condition = Condition.Running)
         instance.copy(state = state)
       }
@@ -225,7 +233,10 @@ class SchedulerActionsTest extends AkkaUnitTest {
         instance.copy(state = state)
       }
       def runningInstance(stagedAt: Long) = {
-        val instance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning(stagedAt = Timestamp.apply(stagedAt), startedAt = Timestamp.apply(stagedAt)).getInstance()
+        val instance = TestInstanceBuilder
+          .newBuilder(app.id)
+          .addTaskRunning(stagedAt = Timestamp.apply(stagedAt), startedAt = Timestamp.apply(stagedAt))
+          .getInstance()
         val state = instance.state.copy(condition = Condition.Running)
         instance.copy(state = state)
       }

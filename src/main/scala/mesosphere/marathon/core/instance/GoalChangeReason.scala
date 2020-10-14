@@ -7,6 +7,7 @@ package core.instance
 sealed trait GoalChangeReason extends Product with Serializable
 
 object GoalChangeReason {
+
   /** The goal is changed because the instance count is scaled down */
   case object OverCapacity extends GoalChangeReason
 

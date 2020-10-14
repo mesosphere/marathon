@@ -29,4 +29,3 @@ object Raml {
   def toRaml[A, B](o: A)(implicit writes: Writes[A, B]): B = writes(o)
   def fromRaml[A, B](raml: A)(implicit reads: Reads[A, B]): B = reads(raml)
 }
-

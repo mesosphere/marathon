@@ -60,4 +60,3 @@ trait HttpRequest {
   def localPort: Int
 
 }
-

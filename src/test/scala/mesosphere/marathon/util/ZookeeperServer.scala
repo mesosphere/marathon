@@ -27,9 +27,9 @@ import org.apache.curator.test.TestingServer
   * @param autoStart Start zookeeper in the background
   * @param port The port to run ZK on
   */
-case class ZookeeperServer(
-    autoStart: Boolean = true,
-    val port: Int = PortAllocator.ephemeralPort()) extends AutoCloseable with StrictLogging {
+case class ZookeeperServer(autoStart: Boolean = true, val port: Int = PortAllocator.ephemeralPort())
+    extends AutoCloseable
+    with StrictLogging {
 
   private val maxClientConnections = 20
   private val config = {
@@ -48,34 +48,37 @@ case class ZookeeperServer(
   private val zkServer = new TestingServer(config, autoStart)
 
   def connectUri = zkServer.getConnectString
+
   /**
     * Starts or restarts the server. If the server is currently running it will be stopped
     * and restarted. If it's not currently running then it will be started. If
     * it has been closed (had close() called on it) then an exception will be
     * thrown.
     */
-  def start(): Unit = synchronized {
-    /* With Curator's TestingServer, if you call start() after stop() was called, then, sadly, nothing is done.
-     * However, restart works for both the first start and second start.
-     *
+  def start(): Unit =
+    synchronized {
+      /* With Curator's TestingServer, if you call start() after stop() was called, then, sadly, nothing is done.
+       * However, restart works for both the first start and second start.
+       *
      * We make the start method idempotent by only calling restart if the process isn't already running, matching the
-     * start/stop behavior of LocalMarathon.
-     */
-    if (!running) {
-      zkServer.restart()
-      running = true
+       * start/stop behavior of LocalMarathon.
+       */
+      if (!running) {
+        zkServer.restart()
+        running = true
+      }
     }
-  }
 
   /**
     * Stop the server without deleting the temp directory
     */
-  def stop(): Unit = synchronized {
-    if (running) {
-      zkServer.stop()
-      running = false
+  def stop(): Unit =
+    synchronized {
+      if (running) {
+        zkServer.stop()
+        running = false
+      }
     }
-  }
 
   /**
     * Close the server and any open clients and delete the temp directory

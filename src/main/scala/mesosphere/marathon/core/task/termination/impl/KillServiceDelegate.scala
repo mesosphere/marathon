@@ -10,7 +10,9 @@ import mesosphere.marathon.core.task.tracker.InstanceTracker
 
 import scala.collection.immutable.Seq
 
-private[termination] class KillServiceDelegate(actorRef: ActorRef, instanceTracker: InstanceTracker) extends KillService with StrictLogging {
+private[termination] class KillServiceDelegate(actorRef: ActorRef, instanceTracker: InstanceTracker)
+    extends KillService
+    with StrictLogging {
   import KillServiceActor._
 
   override def killUnknownTask(taskId: Task.Id, reason: KillReason): Unit = {

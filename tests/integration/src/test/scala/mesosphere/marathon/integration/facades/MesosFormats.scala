@@ -41,21 +41,21 @@ object MesosFormats {
 
   implicit lazy val ITAgentFormat: Format[ITAgent] = (
     (__ \ "id").format[String] ~
-    (__ \ "attributes").formatNullable[ITAttributes].withDefault(ITAttributes.empty) ~
-    (__ \ "resources").formatNullable[ITResources].withDefault(ITResources.empty) ~
-    (__ \ "used_resources").formatNullable[ITResources].withDefault(ITResources.empty) ~
-    (__ \ "offered_resources").formatNullable[ITResources].withDefault(ITResources.empty) ~
-    (__ \ "reserved_resources").formatNullable[Map[String, ITResources]].withDefault(Map.empty) ~
-    (__ \ "unreserved_resources").formatNullable[ITResources].withDefault(ITResources.empty)
+      (__ \ "attributes").formatNullable[ITAttributes].withDefault(ITAttributes.empty) ~
+      (__ \ "resources").formatNullable[ITResources].withDefault(ITResources.empty) ~
+      (__ \ "used_resources").formatNullable[ITResources].withDefault(ITResources.empty) ~
+      (__ \ "offered_resources").formatNullable[ITResources].withDefault(ITResources.empty) ~
+      (__ \ "reserved_resources").formatNullable[Map[String, ITResources]].withDefault(Map.empty) ~
+      (__ \ "unreserved_resources").formatNullable[ITResources].withDefault(ITResources.empty)
   )(ITAgent.apply, unlift(ITAgent.unapply))
 
   implicit lazy val ITStatusFormat: Format[ITMesosState] = (
     (__ \ "version").format[String] ~
-    (__ \ "git_sha").formatNullable[String] ~
-    (__ \ "slaves").format[Seq[ITAgent]] ~
-    (__ \ "frameworks").format[Seq[ITFramework]] ~
-    (__ \ "completed_frameworks").format[Seq[ITFramework]] ~
-    (__ \ "unregistered_frameworks").format[Seq[String]]
+      (__ \ "git_sha").formatNullable[String] ~
+      (__ \ "slaves").format[Seq[ITAgent]] ~
+      (__ \ "frameworks").format[Seq[ITFramework]] ~
+      (__ \ "completed_frameworks").format[Seq[ITFramework]] ~
+      (__ \ "unregistered_frameworks").format[Seq[String]]
   )(ITMesosState.apply, unlift(ITMesosState.unapply))
 
   implicit lazy val ITaskFormat: Format[ITask] = Json.format[ITask]
@@ -66,7 +66,7 @@ object MesosFormats {
 
   implicit val ITFaultDomainFormat: Format[ITFaultDomain] = (
     (__ \ "fault_domain" \ "region" \ "name").format[String] ~
-    (__ \ "fault_domain" \ "zone" \ "name").format[String]
+      (__ \ "fault_domain" \ "zone" \ "name").format[String]
   )(ITFaultDomain.apply, unlift(ITFaultDomain.unapply))
 
   implicit val ITAgentDetailsFormat: Format[ITAgentDetails] = Json.format[ITAgentDetails]

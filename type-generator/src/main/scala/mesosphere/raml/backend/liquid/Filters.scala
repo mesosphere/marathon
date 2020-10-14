@@ -8,7 +8,7 @@ import scala.collection.JavaConverters._
 
 object UpperCaseFilter extends Filter("upperCase") {
 
-  override def apply(value: Any, params: Object*): Object= {
+  override def apply(value: Any, params: Object*): Object = {
     value match {
       case s: String => s.toUpperCase
       case it: java.lang.Iterable[String] => it.asScala.map(_.toUpperCase).asJava
@@ -19,7 +19,7 @@ object UpperCaseFilter extends Filter("upperCase") {
 
 object LowerCaseFilter extends Filter("lowerCase") {
 
-  override def apply(value: Any, params: Object*): Object= {
+  override def apply(value: Any, params: Object*): Object = {
     value match {
       case s: String => s.toLowerCase
       case it: java.lang.Iterable[String] => it.asScala.map(_.toLowerCase).asJava

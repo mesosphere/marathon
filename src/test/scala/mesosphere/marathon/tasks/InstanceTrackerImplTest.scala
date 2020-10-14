@@ -43,8 +43,8 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     implicit val state: InstanceRepository = spy(InstanceRepository.inMemRepository(store))
     val config: AllConf = MarathonTestHelper.defaultConfig()
     implicit val clock: SettableClock = new SettableClock()
-    val taskTrackerModule: InstanceTrackerModule = MarathonTestHelper.createTaskTrackerModule(
-      AlwaysElectedLeadershipModule.forRefFactory(system), Some(state))
+    val taskTrackerModule: InstanceTrackerModule =
+      MarathonTestHelper.createTaskTrackerModule(AlwaysElectedLeadershipModule.forRefFactory(system), Some(state))
     implicit val instanceTracker: InstanceTracker = taskTrackerModule.instanceTracker
   }
 
@@ -152,7 +152,9 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       instanceTracker.updateStatus(sampleInstance, runningStatus, clock.now()).futureValue
       instanceTracker.specInstancesSync(TEST_APP_NAME).map(_.instanceId) should contain(sampleInstance.instanceId)
       every(instanceTracker.specInstancesSync(TEST_APP_NAME).headOption.toList) should be('active)
-      every(instanceTracker.specInstancesSync(TEST_APP_NAME).headOption.toList.flatMap(_.tasksMap.values)) should have(taskStatus(runningStatus))
+      every(instanceTracker.specInstancesSync(TEST_APP_NAME).headOption.toList.flatMap(_.tasksMap.values)) should have(
+        taskStatus(runningStatus)
+      )
 
       // TASK TERMINATED
       instanceTracker.forceExpunge(sampleInstance.instanceId).futureValue
@@ -185,7 +187,9 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
       testStatusUpdateForTerminalState(TaskState.TASK_ERROR)
     }
 
-    def testStatusUpdateForTerminalState(taskState: TaskState)(implicit instanceTracker: InstanceTracker, clock: SettableClock, state: InstanceRepository): Unit = {
+    def testStatusUpdateForTerminalState(
+        taskState: TaskState
+    )(implicit instanceTracker: InstanceTracker, clock: SettableClock, state: InstanceRepository): Unit = {
       val sampleInstance = setupTrackerWithProvisionedInstance(TEST_APP_NAME, Timestamp.now(), instanceTracker).futureValue
       val mesosStatus = makeTaskStatus(sampleInstance, taskState)
 
@@ -244,8 +248,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     "Should not store if state did not change (no health present)" in new Fixture {
       val sampleInstance = setupTrackerWithRunningInstance(TEST_APP_NAME, Timestamp.now(), instanceTracker).futureValue
       val (_, task) = sampleInstance.tasksMap.head
-      val status = task.status.mesosStatus.get
-        .toBuilder
+      val status = task.status.mesosStatus.get.toBuilder
         .setTimestamp(123)
         .build()
 
@@ -263,8 +266,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
     "Should not store if state and health did not change" in new Fixture {
       val sampleInstance = setupTrackerWithRunningInstance(TEST_APP_NAME, Timestamp.now(), instanceTracker).futureValue
       val (_, task) = sampleInstance.tasksMap.head
-      val status = task.status.mesosStatus.get
-        .toBuilder
+      val status = task.status.mesosStatus.get.toBuilder
         .setTimestamp(123)
         .build()
 
@@ -319,8 +321,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
     "Should store if state and health changed" in new Fixture {
       val sampleInstance = setupTrackerWithProvisionedInstance(TEST_APP_NAME, Timestamp.now(), instanceTracker).futureValue
-      val status = Protos.TaskStatus
-        .newBuilder
+      val status = Protos.TaskStatus.newBuilder
         .setState(Protos.TaskState.TASK_RUNNING)
         .setTaskId(Task.Id(sampleInstance.instanceId).mesosTaskId)
         .setHealthy(true)
@@ -344,8 +345,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
     "Should store if health changed (no health present at first)" in new Fixture {
       val sampleInstance = setupTrackerWithProvisionedInstance(TEST_APP_NAME, Timestamp.now(), instanceTracker).futureValue
-      val status = Protos.TaskStatus
-        .newBuilder
+      val status = Protos.TaskStatus.newBuilder
         .setState(Protos.TaskState.TASK_RUNNING)
         .setTaskId(Task.Id(sampleInstance.instanceId).mesosTaskId)
         .build()
@@ -367,8 +367,7 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
     "Should store if state and health changed (no health present at first)" in new Fixture {
       val sampleInstance = setupTrackerWithProvisionedInstance(TEST_APP_NAME, Timestamp.now(), instanceTracker).futureValue
-      val status = Protos.TaskStatus
-        .newBuilder
+      val status = Protos.TaskStatus.newBuilder
         .setState(Protos.TaskState.TASK_RUNNING)
         .setTaskId(Task.Id(sampleInstance.instanceId).mesosTaskId)
         .build()
@@ -392,43 +391,51 @@ class InstanceTrackerImplTest extends AkkaUnitTest {
 
   def makeSampleInstance(appId: PathId): Instance = {
     val hostName = "host"
-    TestInstanceBuilder.newBuilder(appId).addTaskWithBuilder().taskStaged()
+    TestInstanceBuilder
+      .newBuilder(appId)
+      .addTaskWithBuilder()
+      .taskStaged()
       .withNetworkInfo(hostName = Some(hostName), hostPorts = Seq(999))
       .build()
       .withAgentInfo(hostName = Some(hostName), attributes = Some(Seq(TextAttribute("attr1", "bar"))))
       .getInstance()
   }
 
-  def setupTrackerWithProvisionedInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
-    val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version))
-    val scheduledInstance = Instance.scheduled(app)
-    // schedule
-    await(instanceTracker.schedule(scheduledInstance))
-    // provision
-    val updateEffect = await(instanceTracker.process(
-      InstanceUpdateOperation.Provision(
-        scheduledInstance.instanceId,
-        AgentInfoPlaceholder(),
-        app,
-        Tasks.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now()),
-        Timestamp.now()))
-    ).asInstanceOf[InstanceUpdateEffect.Update]
+  def setupTrackerWithProvisionedInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] =
+    async {
+      val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version))
+      val scheduledInstance = Instance.scheduled(app)
+      // schedule
+      await(instanceTracker.schedule(scheduledInstance))
+      // provision
+      val updateEffect = await(
+        instanceTracker.process(
+          InstanceUpdateOperation.Provision(
+            scheduledInstance.instanceId,
+            AgentInfoPlaceholder(),
+            app,
+            Tasks.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), app.version, Timestamp.now()),
+            Timestamp.now()
+          )
+        )
+      ).asInstanceOf[InstanceUpdateEffect.Update]
 
-    updateEffect.instance
-  }
+      updateEffect.instance
+    }
 
-  def setupTrackerWithRunningInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
-    val instance: Instance = await(setupTrackerWithProvisionedInstance(appId, version, instanceTracker))
-    val (taskId, _) = instance.tasksMap.head
-    // update to running
-    val taskStatus = TaskStatus.newBuilder
-      .setTaskId(taskId.mesosTaskId)
-      .setState(mesos.Protos.TaskState.TASK_RUNNING)
-      .setHealthy(true)
-      .build
-    await(instanceTracker.updateStatus(instance, taskStatus, Timestamp.now()))
-    await(instanceTracker.get(instance.instanceId).map(_.get))
-  }
+  def setupTrackerWithRunningInstance(appId: PathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] =
+    async {
+      val instance: Instance = await(setupTrackerWithProvisionedInstance(appId, version, instanceTracker))
+      val (taskId, _) = instance.tasksMap.head
+      // update to running
+      val taskStatus = TaskStatus.newBuilder
+        .setTaskId(taskId.mesosTaskId)
+        .setState(mesos.Protos.TaskState.TASK_RUNNING)
+        .setHealthy(true)
+        .build
+      await(instanceTracker.updateStatus(instance, taskStatus, Timestamp.now()))
+      await(instanceTracker.get(instance.instanceId).map(_.get))
+    }
 
   def makeTaskStatus(instance: Instance, state: TaskState = TaskState.TASK_RUNNING) = {
     TaskStatus.newBuilder

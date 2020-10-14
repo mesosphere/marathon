@@ -8,7 +8,21 @@ import mesosphere.marathon.core.health.HealthCheck
 import mesosphere.marathon.core.pod.{Network, PodDefinition}
 import mesosphere.marathon.core.readiness.ReadinessCheck
 import mesosphere.marathon.raml.{App, Apps, Resources}
-import mesosphere.marathon.state.{PathId, AppDefinition, BackoffStrategy, EnvVarValue, Group, KillSelection, PortDefinition, RootGroup, Secret, Timestamp, UnreachableStrategy, UpgradeStrategy, VersionInfo}
+import mesosphere.marathon.state.{
+  PathId,
+  AppDefinition,
+  BackoffStrategy,
+  EnvVarValue,
+  Group,
+  KillSelection,
+  PortDefinition,
+  RootGroup,
+  Secret,
+  Timestamp,
+  UnreachableStrategy,
+  UpgradeStrategy,
+  VersionInfo
+}
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -24,20 +38,21 @@ import scala.concurrent.duration.FiniteDuration
 object Builders {
 
   object newRootGroup {
+
     /**
       * Construct a new rootGroup containing the specified pods and apps. Interim groups are automatically created.
       * @param apps Apps to include, in any nested path structure.
       * @param pods Pods to include, in any nested path structure.
       * @return Root group containing the apps and pods specified
       */
-    def apply( apps: Seq[AppDefinition] = Nil,
-               pods: Seq[PodDefinition] = Nil,
-               groupDependencies: Map[PathId, Set[PathId]] = Map.empty,
-               groupIds: Seq[PathId] = Nil,
-               version: Timestamp = Group.defaultVersion,
-             ): RootGroup = {
-      val initialGroup = RootGroup(
-        version = version)
+    def apply(
+        apps: Seq[AppDefinition] = Nil,
+        pods: Seq[PodDefinition] = Nil,
+        groupDependencies: Map[PathId, Set[PathId]] = Map.empty,
+        groupIds: Seq[PathId] = Nil,
+        version: Timestamp = Group.defaultVersion
+    ): RootGroup = {
+      val initialGroup = RootGroup(version = version)
       val withEmptyGroups = groupIds.foldLeft(initialGroup) { (rootGroup, groupId) =>
         rootGroup.updateGroup(groupId, _.getOrElse { new Group(groupId, version = version) })
       }
@@ -47,11 +62,15 @@ object Builders {
       val groupWithPods = pods.foldLeft(groupWithApps) { (rootGroup, pod) =>
         rootGroup.updatePod(pod.id, _ => pod, version = version)
       }
-      groupDependencies.foldLeft(groupWithPods) { case (rootGroup, (groupId, dependencies)) =>
-        rootGroup.updateGroup(groupId, {
-          case Some(group) => group.withDependencies(dependencies)
-          case None => new Group(groupId, version = version)
-        })
+      groupDependencies.foldLeft(groupWithPods) {
+        case (rootGroup, (groupId, dependencies)) =>
+          rootGroup.updateGroup(
+            groupId,
+            {
+              case Some(group) => group.withDependencies(dependencies)
+              case None => new Group(groupId, version = version)
+            }
+          )
       }
     }
   }
@@ -61,30 +80,31 @@ object Builders {
 
     /** Return a valid command app definition (using command executor, not using UCR or Docker). */
     def command(
-      id: PathId = PathId(s"/app-${appIdIncrementor.incrementAndGet()}"),
-      cmd: Option[String] = Some("sleep 3600"),
-      args: Seq[String] = App.DefaultArgs,
-      user: Option[String] = App.DefaultUser,
-      env: Map[String, EnvVarValue] = AppDefinition.DefaultEnv,
-      instances: Int = 1,
-      resources: Resources = Apps.DefaultResources,
-      constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
-      portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
-      requirePorts: Boolean = App.DefaultRequirePorts,
-      backoffStrategy: BackoffStrategy = AppDefinition.DefaultBackoffStrategy,
-      healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
-      check: Option[Check] = AppDefinition.DefaultCheck,
-      readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
-      taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
-      upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
-      labels: Map[String, String] = AppDefinition.DefaultLabels,
-      acceptedResourceRoles: Set[String] = Set("*"),
-      networks: Seq[Network] = AppDefinition.DefaultNetworks,
-      versionInfo: VersionInfo = VersionInfo.OnlyVersion(Timestamp.now()),
-      secrets: Map[String, Secret] = AppDefinition.DefaultSecrets,
-      unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
-      killSelection: KillSelection = KillSelection.DefaultKillSelection,
-      tty: Option[Boolean] = AppDefinition.DefaultTTY): AppDefinition = {
+        id: PathId = PathId(s"/app-${appIdIncrementor.incrementAndGet()}"),
+        cmd: Option[String] = Some("sleep 3600"),
+        args: Seq[String] = App.DefaultArgs,
+        user: Option[String] = App.DefaultUser,
+        env: Map[String, EnvVarValue] = AppDefinition.DefaultEnv,
+        instances: Int = 1,
+        resources: Resources = Apps.DefaultResources,
+        constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
+        portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
+        requirePorts: Boolean = App.DefaultRequirePorts,
+        backoffStrategy: BackoffStrategy = AppDefinition.DefaultBackoffStrategy,
+        healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
+        check: Option[Check] = AppDefinition.DefaultCheck,
+        readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
+        taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
+        upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
+        labels: Map[String, String] = AppDefinition.DefaultLabels,
+        acceptedResourceRoles: Set[String] = Set("*"),
+        networks: Seq[Network] = AppDefinition.DefaultNetworks,
+        versionInfo: VersionInfo = VersionInfo.OnlyVersion(Timestamp.now()),
+        secrets: Map[String, Secret] = AppDefinition.DefaultSecrets,
+        unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
+        killSelection: KillSelection = KillSelection.DefaultKillSelection,
+        tty: Option[Boolean] = AppDefinition.DefaultTTY
+    ): AppDefinition = {
       AppDefinition(
         id = id,
         cmd = cmd,
@@ -111,7 +131,8 @@ object Builders {
         secrets = secrets,
         unreachableStrategy = unreachableStrategy,
         killSelection = killSelection,
-        tty = tty)
+        tty = tty
+      )
     }
   }
 }

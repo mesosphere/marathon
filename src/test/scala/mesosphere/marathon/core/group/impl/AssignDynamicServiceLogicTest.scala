@@ -22,11 +22,13 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
       val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0), cmd = Some("sleep"))
       val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(1, 2, 3), cmd = Some("sleep"))
       val app3 = AppDefinition("/app3".toPath, portDefinitions = PortDefinitions(0, 2, 0), cmd = Some("sleep"))
-      val rootGroup = createRootGroup(Map(
-        app1.id -> app1,
-        app2.id -> app2,
-        app3.id -> app3
-      ))
+      val rootGroup = createRootGroup(
+        Map(
+          app1.id -> app1,
+          app2.id -> app2,
+          app3.id -> app3
+        )
+      )
       "have real ports assigned for all of the original dynamic ports in their definitions" in {
         val update = AssignDynamicServiceLogic.assignDynamicServicePorts(10.to(20), createRootGroup(), rootGroup)
         update.transitiveApps.filter(_.hasDynamicServicePorts) should be(empty)
@@ -52,10 +54,12 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
       val servicePortsRange = 10.to(20)
       val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0), cmd = Some("sleep"))
       val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(0, 2, 0), cmd = Some("sleep"))
-      val rootGroup = createRootGroup(Map(
-        app1.id -> app1,
-        app2.id -> app2
-      ))
+      val rootGroup = createRootGroup(
+        Map(
+          app1.id -> app1,
+          app2.id -> app2
+        )
+      )
       val update = AssignDynamicServiceLogic.assignDynamicServicePorts(servicePortsRange, createRootGroup(), rootGroup)
       update.transitiveApps.filter(_.hasDynamicServicePorts) should be(empty)
       update.transitiveApps.flatMap(_.portNumbers.filter(servicePortsRange.contains)) should have size 5
@@ -86,10 +90,12 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
     "If there are not enough ports, a PortExhausted exception is thrown" in {
       val app1 = AppDefinition("/app1".toPath, portDefinitions = PortDefinitions(0, 0, 0), cmd = Some("sleep"))
       val app2 = AppDefinition("/app2".toPath, portDefinitions = PortDefinitions(0, 0, 0), cmd = Some("sleep"))
-      val rootGroup = createRootGroup(Map(
-        app1.id -> app1,
-        app2.id -> app2
-      ))
+      val rootGroup = createRootGroup(
+        Map(
+          app1.id -> app1,
+          app2.id -> app2
+        )
+      )
       val ex = intercept[PortRangeExhaustedException] {
         AssignDynamicServiceLogic.assignDynamicServicePorts(10.to(14), createRootGroup(), rootGroup)
       }
@@ -104,86 +110,128 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
     s"withContainerNetworking using $containerization" should {
       "Assign dynamic service ports specified in the container" in {
         val servicePortsRange = 10.to(14)
-        val container = prototype.copyWith(portMappings = Seq(
-          PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 0, protocol = "tcp"),
-          PortMapping(containerPort = 9000, hostPort = Some(10555), servicePort = 10555, protocol = "udp"),
-          PortMapping(containerPort = 9001, hostPort = Some(31337), servicePort = 0, protocol = "udp"),
-          PortMapping(containerPort = 9002, hostPort = Some(0), servicePort = 0, protocol = "tcp")
-        )
+        val container = prototype.copyWith(portMappings =
+          Seq(
+            PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 0, protocol = "tcp"),
+            PortMapping(containerPort = 9000, hostPort = Some(10555), servicePort = 10555, protocol = "udp"),
+            PortMapping(containerPort = 9001, hostPort = Some(31337), servicePort = 0, protocol = "udp"),
+            PortMapping(containerPort = 9002, hostPort = Some(0), servicePort = 0, protocol = "tcp")
+          )
         )
         val virtualNetwork = Seq(ContainerNetwork(name = "whatever"))
-        val app = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = Some(container), networks = virtualNetwork, cmd = Some("sleep"))
+        val app = AppDefinition(
+          "/app1".toPath,
+          portDefinitions = Seq(),
+          container = Some(container),
+          networks = virtualNetwork,
+          cmd = Some("sleep")
+        )
         val rootGroup = createRootGroup(Map(app.id -> app))
         val updatedGroup = AssignDynamicServiceLogic.assignDynamicServicePorts(servicePortsRange, createRootGroup(), rootGroup)
         val updatedApp = updatedGroup.transitiveApps.head
-        updatedApp.hasDynamicServicePorts should be (false)
+        updatedApp.hasDynamicServicePorts should be(false)
         updatedApp.hostPorts should have size 4
         updatedApp.servicePorts should have size 4
         updatedApp.servicePorts.filter(servicePortsRange.contains) should have size 3
       }
 
       "Assign dynamic service ports specified in multiple containers" in {
-        val c1 = Some(prototype.copyWith(portMappings = Seq(
-          PortMapping(containerPort = 8080)
+        val c1 = Some(
+          prototype.copyWith(portMappings =
+            Seq(
+              PortMapping(containerPort = 8080)
+            )
+          )
         )
-        ))
-        val c2 = Some(prototype.copyWith(portMappings = Seq(
-          PortMapping(containerPort = 8081)
+        val c2 = Some(
+          prototype.copyWith(portMappings =
+            Seq(
+              PortMapping(containerPort = 8081)
+            )
+          )
         )
-        ))
         val virtualNetwork = Seq(ContainerNetwork(name = "whatever"))
         val app1 = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1, networks = virtualNetwork, cmd = Some("sleep"))
         val app2 = AppDefinition("/app2".toPath, portDefinitions = Seq(), container = c2, networks = virtualNetwork, cmd = Some("sleep"))
-        val rootGroup = createRootGroup(Map(
-          app1.id -> app1,
-          app2.id -> app2
-        ))
+        val rootGroup = createRootGroup(
+          Map(
+            app1.id -> app1,
+            app2.id -> app2
+          )
+        )
         val servicePortsRange = 10.to(12)
         val update = AssignDynamicServiceLogic.assignDynamicServicePorts(servicePortsRange, createRootGroup(), rootGroup)
-        update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
-        update.transitiveApps.flatMap(_.hostPorts.flatten.filter(servicePortsRange.contains)) should have size 0 // linter:ignore:AvoidOptionMethod
-        update.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 2 // linter:ignore:AvoidOptionMethod
+        update.transitiveApps.filter(_.hasDynamicServicePorts) should be(empty)
+        update.transitiveApps.flatMap(
+          _.hostPorts.flatten.filter(servicePortsRange.contains)
+        ) should have size 0 // linter:ignore:AvoidOptionMethod
+        update.transitiveApps.flatMap(
+          _.servicePorts.filter(servicePortsRange.contains)
+        ) should have size 2 // linter:ignore:AvoidOptionMethod
       }
 
       "Assign dynamic service ports w/ both BRIDGE and USER containers" in {
         val servicePortsRange = 0.until(12)
-        val bridgeModeContainer = Some(prototype.copyWith(portMappings = Seq(
-          PortMapping(containerPort = 8080, hostPort = Some(0))
+        val bridgeModeContainer = Some(
+          prototype.copyWith(portMappings =
+            Seq(
+              PortMapping(containerPort = 8080, hostPort = Some(0))
+            )
+          )
         )
-        ))
-        val userModeContainer = Some(prototype.copyWith(portMappings = Seq(
-          PortMapping(containerPort = 8081),
-          PortMapping(containerPort = 8082, hostPort = Some(0))
+        val userModeContainer = Some(
+          prototype.copyWith(portMappings =
+            Seq(
+              PortMapping(containerPort = 8081),
+              PortMapping(containerPort = 8082, hostPort = Some(0))
+            )
+          )
         )
-        ))
-        val bridgeModeApp = AppDefinition("/bridgemodeapp".toPath, container = bridgeModeContainer, networks = Seq(BridgeNetwork()), cmd = Some("sleep"))
-        val userModeApp = AppDefinition("/usermodeapp".toPath, container = userModeContainer, networks = Seq(ContainerNetwork("whatever")), cmd = Some("sleep"))
+        val bridgeModeApp =
+          AppDefinition("/bridgemodeapp".toPath, container = bridgeModeContainer, networks = Seq(BridgeNetwork()), cmd = Some("sleep"))
+        val userModeApp = AppDefinition(
+          "/usermodeapp".toPath,
+          container = userModeContainer,
+          networks = Seq(ContainerNetwork("whatever")),
+          cmd = Some("sleep")
+        )
         val fromGroup = createRootGroup(Map(bridgeModeApp.id -> bridgeModeApp))
-        val toGroup = createRootGroup(Map(
-          bridgeModeApp.id -> bridgeModeApp,
-          userModeApp.id -> userModeApp
-        ))
+        val toGroup = createRootGroup(
+          Map(
+            bridgeModeApp.id -> bridgeModeApp,
+            userModeApp.id -> userModeApp
+          )
+        )
 
         val groupsV1 = AssignDynamicServiceLogic.assignDynamicServicePorts(servicePortsRange, createRootGroup(), fromGroup)
-        groupsV1.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
+        groupsV1.transitiveApps.filter(_.hasDynamicServicePorts) should be(empty)
         groupsV1.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 1
 
         val groupsV2 = AssignDynamicServiceLogic.assignDynamicServicePorts(servicePortsRange, groupsV1, toGroup)
-        groupsV2.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
+        groupsV2.transitiveApps.filter(_.hasDynamicServicePorts) should be(empty)
         val assignedServicePorts = groupsV2.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains))
         assignedServicePorts should have size 3
       }
 
       "Assign a service port for an app using Docker USER networking with a default port mapping" in {
         val servicePortsRange = 10.to(11)
-        val c1 = Some(prototype.copyWith(portMappings = Seq(
-          PortMapping()
+        val c1 = Some(
+          prototype.copyWith(portMappings =
+            Seq(
+              PortMapping()
+            )
+          )
         )
-        ))
-        val app1 = AppDefinition("/app1".toPath, portDefinitions = Seq(), container = c1, networks = Seq(ContainerNetwork("whatever")), cmd = Some("sleep"))
+        val app1 = AppDefinition(
+          "/app1".toPath,
+          portDefinitions = Seq(),
+          container = c1,
+          networks = Seq(ContainerNetwork("whatever")),
+          cmd = Some("sleep")
+        )
         val rootGroup = createRootGroup(Map(app1.id -> app1))
         val update = AssignDynamicServiceLogic.assignDynamicServicePorts(servicePortsRange, createRootGroup(), rootGroup)
-        update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
+        update.transitiveApps.filter(_.hasDynamicServicePorts) should be(empty)
         update.transitiveApps.flatMap(_.hostPorts.flatten) should have size 0 // linter:ignore:AvoidOptionMethod
         update.transitiveApps.flatMap(_.servicePorts.filter(servicePortsRange.contains)) should have size 1 // linter:ignore:AvoidOptionSize
       }
@@ -191,15 +239,16 @@ class AssignDynamicServiceLogicTest extends AkkaUnitTest with GroupCreation {
       // Regression test for #1365
       "Export non-dynamic service ports specified in the container to the ports field" in {
         val servicePortsRange = 10.to(20)
-        val container = prototype.copyWith(portMappings = Seq(
-          PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 80, protocol = "tcp"),
-          PortMapping(containerPort = 9000, hostPort = Some(10555), servicePort = 81, protocol = "udp")
-        )
+        val container = prototype.copyWith(portMappings =
+          Seq(
+            PortMapping(containerPort = 8080, hostPort = Some(0), servicePort = 80, protocol = "tcp"),
+            PortMapping(containerPort = 9000, hostPort = Some(10555), servicePort = 81, protocol = "udp")
+          )
         )
         val app1 = AppDefinition("/app1".toPath, container = Some(container), networks = Seq(ContainerNetwork("foo")), cmd = Some("sleep"))
         val rootGroup = createRootGroup(Map(app1.id -> app1))
         val update = AssignDynamicServiceLogic.assignDynamicServicePorts(servicePortsRange, createRootGroup(), rootGroup)
-        update.transitiveApps.filter(_.hasDynamicServicePorts) should be (empty)
+        update.transitiveApps.filter(_.hasDynamicServicePorts) should be(empty)
         update.transitiveApps.flatMap(_.servicePorts) should contain theSameElementsAs (Vector(80, 81))
       }
 

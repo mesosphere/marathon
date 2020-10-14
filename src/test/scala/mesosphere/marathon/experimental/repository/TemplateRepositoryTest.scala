@@ -21,10 +21,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.{Failure, Random, Success}
 
-class TemplateRepositoryTest
-  extends UnitTest
-  with ZookeeperServerTest
-  with StrictLogging {
+class TemplateRepositoryTest extends UnitTest with ZookeeperServerTest with StrictLogging {
 
   implicit val system: ActorSystem = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()
@@ -158,7 +155,8 @@ class TemplateRepositoryTest
         val created = appDef(randomPath()).copy( // a non-default app definition
           cmd = Some("sleep 12345"),
           instances = 2,
-          labels = Map[String, String]("FOO" -> "bar"))
+          labels = Map[String, String]("FOO" -> "bar")
+        )
 
         repo.create(created).futureValue
 

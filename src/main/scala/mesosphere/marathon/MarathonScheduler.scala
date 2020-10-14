@@ -25,7 +25,9 @@ class MarathonScheduler(
     frameworkIdRepository: FrameworkIdRepository,
     mesosLeaderInfo: MesosLeaderInfo,
     config: MarathonConf,
-    crashStrategy: CrashStrategy) extends Scheduler with StrictLogging {
+    crashStrategy: CrashStrategy
+) extends Scheduler
+    with StrictLogging {
 
   private var lastMesosMasterVersion: Option[SemanticVersion] = Option.empty
   @volatile private[this] var localFaultDomain: Option[FaultDomain] = Option.empty
@@ -34,10 +36,7 @@ class MarathonScheduler(
 
   implicit val zkTimeout = config.zkTimeoutDuration
 
-  override def registered(
-    driver: SchedulerDriver,
-    frameworkId: FrameworkID,
-    master: MasterInfo): Unit = {
+  override def registered(driver: SchedulerDriver, frameworkId: FrameworkID, master: MasterInfo): Unit = {
     logger.info(s"Registered as ${frameworkId.getValue} to master '${master.getId}'")
     masterVersionCheck(master)
     updateLocalFaultDomain(master)
@@ -69,13 +68,17 @@ class MarathonScheduler(
   }
 
   override def statusUpdate(driver: SchedulerDriver, status: TaskStatus): Unit = {
-    logger.info(s"Received status update for task ${status.getTaskId.getValue}: " +
-      s"${status.getState} (${status.getMessage}, healthy: ${status.getHealthy})")
+    logger.info(
+      s"Received status update for task ${status.getTaskId.getValue}: " +
+        s"${status.getState} (${status.getMessage}, healthy: ${status.getHealthy})"
+    )
 
     // Mesos may produce a status update with really long messages on some cases. We need to restrict
     // the message length to something we can actually store in a ZK node
     val newStatus = if (status.hasMessage && status.getMessage.length > MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH) {
-      logger.warn(s"Status update had length of ${status.getMessage.length}, longer than allowed ${MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH} characters. Using only substring")
+      logger.warn(
+        s"Status update had length of ${status.getMessage.length}, longer than allowed ${MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH} characters. Using only substring"
+      )
       status.toBuilder.setMessage(status.getMessage.substring(0, MarathonScheduler.MAX_STATUS_MESSAGE_LENGTH)).build()
     } else {
       status
@@ -87,11 +90,7 @@ class MarathonScheduler(
     }
   }
 
-  override def frameworkMessage(
-    driver: SchedulerDriver,
-    executor: ExecutorID,
-    slave: SlaveID,
-    message: Array[Byte]): Unit = {
+  override def frameworkMessage(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, message: Array[Byte]): Unit = {
     logger.info(s"Received framework message $executor $slave $message")
     eventBus.publish(MesosFrameworkMessageEvent(executor.getValue, slave.getValue, message))
   }
@@ -112,18 +111,16 @@ class MarathonScheduler(
     logger.info(s"Lost slave $slave")
   }
 
-  override def executorLost(
-    driver: SchedulerDriver,
-    executor: ExecutorID,
-    slave: SlaveID,
-    p4: Int): Unit = {
+  override def executorLost(driver: SchedulerDriver, executor: ExecutorID, slave: SlaveID, p4: Int): Unit = {
     logger.info(s"Lost executor $executor slave $p4")
   }
 
   override def error(driver: SchedulerDriver, message: String): Unit = {
-    logger.warn(s"Error: $message\n" +
-      "In case Mesos does not allow registration with the current frameworkId, " +
-      "follow the instructions for recovery here: https://mesosphere.github.io/marathon/docs/framework-id.html")
+    logger.warn(
+      s"Error: $message\n" +
+        "In case Mesos does not allow registration with the current frameworkId, " +
+        "follow the instructions for recovery here: https://mesosphere.github.io/marathon/docs/framework-id.html"
+    )
 
     if (message.contains("Framework has been removed")) {
       crashStrategy.crash(CrashStrategy.FrameworkHasBeenRemoved)
@@ -153,10 +150,12 @@ class MarathonScheduler(
 
   protected def updateLocalFaultDomain(masterInfo: MasterInfo): Unit = {
     if (masterInfo.hasDomain && masterInfo.getDomain.hasFaultDomain) {
-      localFaultDomain = Some(FaultDomain(
-        Region(masterInfo.getDomain.getFaultDomain.getRegion.getName),
-        Zone(masterInfo.getDomain.getFaultDomain.getZone.getName)
-      ))
+      localFaultDomain = Some(
+        FaultDomain(
+          Region(masterInfo.getDomain.getFaultDomain.getRegion.getName),
+          Zone(masterInfo.getDomain.getFaultDomain.getZone.getName)
+        )
+      )
     } else {
       localFaultDomain = None
     }

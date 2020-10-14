@@ -92,7 +92,8 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
     logger.debug(s"Schedule readiness check for task: ${task.taskId}")
     ReadinessCheckExecutor.ReadinessCheckSpec.readinessCheckSpecsForTask(runSpec, task).foreach { spec =>
       val subscriptionName = ReadinessCheckSubscriptionKey(task.taskId, spec.checkName)
-      val (subscription, streamDone) = readinessCheckExecutor.execute(spec)
+      val (subscription, streamDone) = readinessCheckExecutor
+        .execute(spec)
         .toMat(Sink.foreach { result: ReadinessCheckResult => self ! result })(Keep.both)
         .run
       streamDone.onComplete { doneResult =>
@@ -133,8 +134,7 @@ trait ReadinessBehavior extends StrictLogging { this: Actor =>
       def instanceIsRunning(instanceFn: Instance => Unit): Receive = {
         case InstanceChanged(_, `version`, `pathId`, Running, instance) => instanceFn(instance)
       }
-      instanceIsRunning(
-        if (!hasReadinessChecks) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
+      instanceIsRunning(if (!hasReadinessChecks) markAsHealthyAndReady else markAsHealthyAndInitiateReadinessCheck)
     }
 
     def instanceHealthBehavior: Receive = {

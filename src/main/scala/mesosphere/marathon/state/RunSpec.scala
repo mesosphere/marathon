@@ -19,10 +19,7 @@ import scala.concurrent.duration._
   * @param maxLaunchDelay The maximum backoff applied when subsequent failures are detected.
   *   minimum: 0.0
   */
-case class BackoffStrategy(
-    backoff: FiniteDuration = 1.seconds,
-    maxLaunchDelay: FiniteDuration = 5.minutes,
-    factor: Double = 1.15)
+case class BackoffStrategy(backoff: FiniteDuration = 1.seconds, maxLaunchDelay: FiniteDuration = 5.minutes, factor: Double = 1.15)
 
 /**
   * A generic spec that specifies something that Marathon is able to launch instances of.
@@ -66,6 +63,7 @@ trait RunSpec extends plugin.RunSpec {
   val networks: Seq[Network]
 
   final def ref: RunSpecRef = RunSpecRef(id, version)
+
   /**
     * Reference to the last config ref
     */
@@ -75,13 +73,9 @@ trait RunSpec extends plugin.RunSpec {
 /**
   * Points to a specific version of a runSpec
   */
-final case class RunSpecRef(
-    id: PathId,
-    version: Timestamp)
+final case class RunSpecRef(id: PathId, version: Timestamp)
 
 /**
   * Points to a runSpec at some config point in time
   */
-final case class RunSpecConfigRef(
-    id: PathId,
-    configVersion: Timestamp)
+final case class RunSpecConfigRef(id: PathId, configVersion: Timestamp)

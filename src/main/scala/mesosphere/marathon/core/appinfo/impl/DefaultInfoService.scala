@@ -15,10 +15,11 @@ import scala.collection.immutable.Seq
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
-private[appinfo] class DefaultInfoService(
-    groupManager: GroupManager,
-    newBaseData: () => AppInfoBaseData)(implicit ec: ExecutionContext)
-  extends AppInfoService with GroupInfoService with PodStatusService with StrictLogging {
+private[appinfo] class DefaultInfoService(groupManager: GroupManager, newBaseData: () => AppInfoBaseData)(implicit ec: ExecutionContext)
+    extends AppInfoService
+    with GroupInfoService
+    with PodStatusService
+    with StrictLogging {
 
   override def selectPodStatus(id: PathId, selector: PodSelector): Future[Option[PodStatus]] =
     async { // linter:ignore UnnecessaryElseBranch
@@ -54,9 +55,7 @@ private[appinfo] class DefaultInfoService(
       infos
     }
 
-  override def selectAppsInGroup(groupId: PathId, selector: AppSelector,
-    embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] =
-
+  override def selectAppsInGroup(groupId: PathId, selector: AppSelector, embed: Set[AppInfo.Embed]): Future[Seq[AppInfo]] =
     async { // linter:ignore UnnecessaryElseBranch
       logger.debug(s"queryAllInGroup $groupId")
       val maybeGroup: Option[Group] = groupManager.group(groupId)
@@ -68,16 +67,24 @@ private[appinfo] class DefaultInfoService(
       }
     }
 
-  override def selectGroup(groupId: PathId, selectors: GroupInfoService.Selectors,
-    appEmbed: Set[Embed], groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
+  override def selectGroup(
+      groupId: PathId,
+      selectors: GroupInfoService.Selectors,
+      appEmbed: Set[Embed],
+      groupEmbed: Set[GroupInfo.Embed]
+  ): Future[Option[GroupInfo]] = {
     groupManager.group(groupId) match {
       case Some(group) => queryForGroup(group, selectors, appEmbed, groupEmbed)
       case None => Future.successful(None)
     }
   }
 
-  override def selectGroupVersion(groupId: PathId, version: Timestamp, selectors: GroupInfoService.Selectors,
-    groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] = {
+  override def selectGroupVersion(
+      groupId: PathId,
+      version: Timestamp,
+      selectors: GroupInfoService.Selectors,
+      groupEmbed: Set[GroupInfo.Embed]
+  ): Future[Option[GroupInfo]] = {
     groupManager.group(groupId, version).flatMap {
       case Some(group) => queryForGroup(group, selectors, Set.empty, groupEmbed)
       case None => Future.successful(None)
@@ -87,11 +94,11 @@ private[appinfo] class DefaultInfoService(
   private case class LazyCell[T](evalution: () => T) { lazy val value = evalution() }
 
   private[this] def queryForGroup(
-    group: Group,
-    selectors: GroupInfoService.Selectors,
-    appEmbed: Set[AppInfo.Embed],
-    groupEmbed: Set[GroupInfo.Embed]): Future[Option[GroupInfo]] =
-
+      group: Group,
+      selectors: GroupInfoService.Selectors,
+      appEmbed: Set[AppInfo.Embed],
+      groupEmbed: Set[GroupInfo.Embed]
+  ): Future[Option[GroupInfo]] =
     async { // linter:ignore UnnecessaryElseBranch
       val cachedBaseData = LazyCell(() => newBaseData()) // Work around strange async/eval compile bug in Scala 2.12
 
@@ -103,8 +110,8 @@ private[appinfo] class DefaultInfoService(
         if (groupEmbedApps) {
           val filteredApps: IndexedSeq[AppDefinition] =
             group.transitiveApps.filterAs(selectors.appSelector.matches)(collection.breakOut)
-          await(resolveAppInfos(filteredApps, appEmbed, cachedBaseData.value)).map {
-            info => info.app.id -> info
+          await(resolveAppInfos(filteredApps, appEmbed, cachedBaseData.value)).map { info =>
+            info.app.id -> info
           }(collection.breakOut)
         } else {
           Map.empty[PathId, AppInfo]
@@ -130,7 +137,8 @@ private[appinfo] class DefaultInfoService(
             group.id,
             selectors.groupSelector.matches(group) ||
               group.groupsById.exists { case (_, group) => groupMatches(group) } ||
-              group.apps.keys.exists(infoById.contains)) || group.pods.keys.exists(statusById.contains)
+              group.apps.keys.exists(infoById.contains)
+          ) || group.pods.keys.exists(statusById.contains)
         }
         if (groupMatches(ref)) {
           val groups: Option[Seq[GroupInfo]] =
@@ -156,17 +164,18 @@ private[appinfo] class DefaultInfoService(
     }
 
   private[this] def resolveAppInfos(
-    specs: Seq[RunSpec],
-    embed: Set[AppInfo.Embed],
-    baseData: AppInfoBaseData = newBaseData()): Future[Seq[AppInfo]] = Future.sequence(specs.collect {
-    case app: AppDefinition =>
-      baseData.appInfoFuture(app, embed)
-  })
+      specs: Seq[RunSpec],
+      embed: Set[AppInfo.Embed],
+      baseData: AppInfoBaseData = newBaseData()
+  ): Future[Seq[AppInfo]] =
+    Future.sequence(specs.collect {
+      case app: AppDefinition =>
+        baseData.appInfoFuture(app, embed)
+    })
 
-  private[this] def resolvePodInfos(
-    specs: Seq[RunSpec],
-    baseData: AppInfoBaseData): Future[Seq[PodStatus]] = Future.sequence(specs.collect {
-    case pod: PodDefinition =>
-      baseData.podStatus(pod)
-  })
+  private[this] def resolvePodInfos(specs: Seq[RunSpec], baseData: AppInfoBaseData): Future[Seq[PodStatus]] =
+    Future.sequence(specs.collect {
+      case pod: PodDefinition =>
+        baseData.podStatus(pod)
+    })
 }

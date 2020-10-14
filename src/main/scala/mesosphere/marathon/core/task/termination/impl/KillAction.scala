@@ -16,6 +16,7 @@ import mesosphere.marathon.core.task.Task
 private[termination] sealed trait KillAction
 
 private[termination] object KillAction extends StrictLogging {
+
   /**
     * Any normal, reachable and stateless instance will simply be killed via the scheduler driver.
     */
@@ -37,14 +38,17 @@ private[termination] object KillAction extends StrictLogging {
   private val wontRespondToKill: Condition => Boolean = {
     import Condition._
     Set(
-      Unknown, Unreachable, UnreachableInactive,
+      Unknown,
+      Unreachable,
+      UnreachableInactive,
       // TODO: it should be safe to remove these from this list, because
       // 1) all taskId's should be removed at this point, because Gone & Dropped are terminal.
       // 2) Killing a Gone / Dropped task will cause it to be in a terminal state.
       // 3) Killing a Gone / Dropped task may result in no status change at all.
       // 4) Either way, we end up in a terminal state.
       // However, we didn't want to risk changing behavior in a point release. So they remain here.
-      Dropped, Gone
+      Dropped,
+      Gone
     )
   }
 

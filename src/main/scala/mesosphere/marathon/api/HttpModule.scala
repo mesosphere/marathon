@@ -59,11 +59,12 @@ class HttpModule(conf: HttpConf, metricsModule: MetricsModule) extends StrictLog
     // verify connector configuration
     (httpConnector, httpsConnector) match {
       case (Some(_), Some(_)) =>
-        logger.warn("Both HTTP and HTTPS support have been configured. " +
-          s"Consider disabling HTTP with --${conf.disableHttp.name}")
+        logger.warn(
+          "Both HTTP and HTTPS support have been configured. " +
+            s"Consider disabling HTTP with --${conf.disableHttp.name}"
+        )
       case (None, None) =>
-        throw new IllegalArgumentException(
-          "Invalid configuration: Neither HTTP nor HTTPS support has been configured.")
+        throw new IllegalArgumentException("Invalid configuration: Neither HTTP nor HTTPS support has been configured.")
       case _ => // everything seems fine
     }
 
@@ -92,9 +93,7 @@ class HttpModule(conf: HttpConf, metricsModule: MetricsModule) extends StrictLog
   private def getHTTPSConnector(server: Server, httpConfig: HttpConfiguration): Option[ServerConnector] = {
     def createHTTPSConnector(keystorePath: String, keystorePassword: String): ServerConnector = {
       val keystore = new File(keystorePath)
-      require(
-        keystore.exists() && keystore.canRead,
-        f"${conf.sslKeystorePath()} is invalid or not readable!")
+      require(keystore.exists() && keystore.canRead, f"${conf.sslKeystorePath()} is invalid or not readable!")
 
       val contextFactory = new SslContextFactory()
       contextFactory.setKeyStorePath(keystorePath)
@@ -103,7 +102,11 @@ class HttpModule(conf: HttpConf, metricsModule: MetricsModule) extends StrictLog
       val sslConfig = new HttpConfiguration(httpConfig)
       sslConfig.addCustomizer(new SecureRequestCustomizer())
 
-      val sslConnector = new ServerConnector(server, new SslConnectionFactory(contextFactory, HttpVersion.HTTP_1_1.asString()), new HttpConnectionFactory(sslConfig))
+      val sslConnector = new ServerConnector(
+        server,
+        new SslConnectionFactory(contextFactory, HttpVersion.HTTP_1_1.asString()),
+        new HttpConnectionFactory(sslConfig)
+      )
       configureConnectorAddress(sslConnector, conf.httpsAddress, conf.httpsPort)
 
       sslConnector
@@ -116,7 +119,11 @@ class HttpModule(conf: HttpConf, metricsModule: MetricsModule) extends StrictLog
     } yield connector
   }
 
-  private[this] def configureConnectorAddress(connector: ServerConnector, addressOpt: ScallopOption[String], portOpt: ScallopOption[Int]): Unit = {
+  private[this] def configureConnectorAddress(
+      connector: ServerConnector,
+      addressOpt: ScallopOption[String],
+      portOpt: ScallopOption[Int]
+  ): Unit = {
     connector.setIdleTimeout(30000)
     addressOpt.foreach(connector.setHost)
     portOpt.toOption match {

@@ -12,20 +12,20 @@ trait ReviveOffersConfig extends ScallopConf {
     descrNo = "Disable reviveOffers for new or changed apps.",
     hidden = true,
     default = Some(true),
-    prefix = "disable_")
+    prefix = "disable_"
+  )
 
   lazy val minReviveOffersInterval = opt[Long](
     "min_revive_offers_interval",
     descr = "Do not ask for all offers (also already seen ones) more often than this interval (ms).",
-    default = Some(30000))
+    default = Some(30000)
+  )
 
   /**
     * Deprecated. Has no effect
     */
-  lazy val reviveOffersRepetitions = opt[Int](
-    "revive_offers_repetitions",
-    descr = "Deprecated parameter; no longer has any effect",
-    default = Some(3))
+  lazy val reviveOffersRepetitions =
+    opt[Int]("revive_offers_repetitions", descr = "Deprecated parameter; no longer has any effect", default = Some(3))
 
   lazy val suppressOffers = toggle(
     "suppress_offers",

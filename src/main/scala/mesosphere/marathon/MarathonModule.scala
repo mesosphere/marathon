@@ -31,8 +31,7 @@ object ModuleNames {
   final val MESOS_HEARTBEAT_ACTOR = "MesosHeartbeatActor"
 }
 
-class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSystem)
-  extends AbstractModule with StrictLogging {
+class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSystem) extends AbstractModule with StrictLogging {
 
   def configure(): Unit = {
     bind(classOf[CrashStrategy]).toInstance(JvmExitsCrashStrategy)
@@ -52,10 +51,15 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
   @Provides
   @Singleton
   def provideMesosHeartbeatActor(system: ActorSystem): ActorRef = {
-    system.actorOf(Heartbeat.props(Heartbeat.Config(
-      FiniteDuration(conf.mesosHeartbeatInterval(), TimeUnit.MILLISECONDS),
-      conf.mesosHeartbeatFailureThreshold()
-    )), ModuleNames.MESOS_HEARTBEAT_ACTOR)
+    system.actorOf(
+      Heartbeat.props(
+        Heartbeat.Config(
+          FiniteDuration(conf.mesosHeartbeatInterval(), TimeUnit.MILLISECONDS),
+          conf.mesosHeartbeatFailureThreshold()
+        )
+      ),
+      ModuleNames.MESOS_HEARTBEAT_ACTOR
+    )
   }
 
   @Provides
@@ -72,37 +76,41 @@ class MarathonModule(conf: MarathonConf, http: HttpConf, actorSystem: ActorSyste
   @Singleton
   @Inject
   def provideSchedulerActor(
-    system: ActorSystem,
-    groupRepository: GroupRepository,
-    deploymentRepository: DeploymentRepository,
-    healthCheckManager: HealthCheckManager,
-    killService: KillService,
-    launchQueue: LaunchQueue,
-    driverHolder: MarathonSchedulerDriverHolder,
-    electionService: ElectionService,
-    eventBus: EventStream,
-    schedulerActions: SchedulerActions,
-    deploymentManager: DeploymentManager,
-    @Named(ModuleNames.HISTORY_ACTOR_PROPS) historyActorProps: Props)(implicit mat: Materializer): ActorRef = {
+      system: ActorSystem,
+      groupRepository: GroupRepository,
+      deploymentRepository: DeploymentRepository,
+      healthCheckManager: HealthCheckManager,
+      killService: KillService,
+      launchQueue: LaunchQueue,
+      driverHolder: MarathonSchedulerDriverHolder,
+      electionService: ElectionService,
+      eventBus: EventStream,
+      schedulerActions: SchedulerActions,
+      deploymentManager: DeploymentManager,
+      @Named(ModuleNames.HISTORY_ACTOR_PROPS) historyActorProps: Props
+  )(implicit mat: Materializer): ActorRef = {
     val supervision = OneForOneStrategy() {
       case NonFatal(_) => Restart
     }
 
     system.actorOf(
-      MarathonSchedulerActor.props(
-        groupRepository,
-        schedulerActions,
-        deploymentManager,
-        deploymentRepository,
-        historyActorProps,
-        healthCheckManager,
-        killService,
-        launchQueue,
-        driverHolder,
-        electionService.leadershipTransitionEvents,
-        eventBus
-      )(mat).withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
-      "MarathonScheduler")
+      MarathonSchedulerActor
+        .props(
+          groupRepository,
+          schedulerActions,
+          deploymentManager,
+          deploymentRepository,
+          historyActorProps,
+          healthCheckManager,
+          killService,
+          launchQueue,
+          driverHolder,
+          electionService.leadershipTransitionEvents,
+          eventBus
+        )(mat)
+        .withRouter(RoundRobinPool(nrOfInstances = 1, supervisorStrategy = supervision)),
+      "MarathonScheduler"
+    )
   }
 
   @Named(ModuleNames.HOST_PORT)

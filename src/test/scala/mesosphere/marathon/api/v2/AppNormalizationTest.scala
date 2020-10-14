@@ -106,14 +106,20 @@ class AppNormalizationTest extends UnitTest {
     def updateNormalizer(defaultNetworkName: Option[String], mesosBridgeName: String = raml.Networks.DefaultMesosBridgeName) = {
       val config = AppNormalization.Configuration(defaultNetworkName, mesosBridgeName)
       Normalization[AppUpdate] { app =>
-        AppNormalization.forUpdates(config)
+        AppNormalization
+          .forUpdates(config)
           .normalized(AppNormalization.forDeprecatedUpdates(config).normalized(app))
       }
     }
 
     "migrate legacy port definitions and mappings to canonical form" when {
       implicit val appNormalizer = normalizer()
-      def normalizeMismatchedPortDefinitionsAndMappings(subcase: String, legacyf: Fixture => App, canonicalf: Fixture => App, extraPort: ContainerPortMapping) = {
+      def normalizeMismatchedPortDefinitionsAndMappings(
+          subcase: String,
+          legacyf: Fixture => App,
+          canonicalf: Fixture => App,
+          extraPort: ContainerPortMapping
+      ) = {
         s"mismatched port defintions and port mappings are specified for a docker app ($subcase)" in new Fixture {
           val legacy: App = legacyf(this)
           // the whole point is to test migration when # of mappings != # of port definitions
@@ -130,15 +136,23 @@ class AppNormalizationTest extends UnitTest {
       }
 
       behave like normalizeMismatchedPortDefinitionsAndMappings(
-        "container-mode networking", _.legacyDockerApp, _.normalizedDockerApp, ContainerPortMapping())
+        "container-mode networking",
+        _.legacyDockerApp,
+        _.normalizedDockerApp,
+        ContainerPortMapping()
+      )
 
       behave like normalizeMismatchedPortDefinitionsAndMappings(
         "bridge-mode networking",
-        f => f.legacyDockerApp.copy(ipAddress = None, container = f.legacyDockerApp.container.map { ct =>
-          ct.copy(docker = ct.docker.map { docker =>
-            docker.copy(network = Some(DockerNetwork.Bridge))
-          })
-        }),
+        f =>
+          f.legacyDockerApp.copy(
+            ipAddress = None,
+            container = f.legacyDockerApp.container.map { ct =>
+              ct.copy(docker = ct.docker.map { docker =>
+                docker.copy(network = Some(DockerNetwork.Bridge))
+              })
+            }
+          ),
         _.normalizedDockerApp.copy(networks = Seq(Network(mode = NetworkMode.ContainerBridge))),
         ContainerPortMapping(0, hostPort = Option(0))
       )
@@ -161,8 +175,9 @@ class AppNormalizationTest extends UnitTest {
       }
 
       "using legacy IP/CT networking API without a named network" in new Fixture {
-        legacyMesosApp.copy(ipAddress = legacyMesosApp.ipAddress.map(_.copy(
-          networkName = None))).normalize should be(normalizedMesosApp.copy(networks = Seq(Network(name = defaultNetworkName))))
+        legacyMesosApp.copy(ipAddress = legacyMesosApp.ipAddress.map(_.copy(networkName = None))).normalize should be(
+          normalizedMesosApp.copy(networks = Seq(Network(name = defaultNetworkName)))
+        )
       }
 
       "fails when ipAddress discovery ports and container port mappings are both specified" in new Fixture {
@@ -177,19 +192,23 @@ class AppNormalizationTest extends UnitTest {
       "legacy docker bridge app specifies the configured mesos CNI bridge" in {
         val legacyDockerApp = App(
           "/foo",
-          container = Some(Container(
-            `type` = EngineType.Docker,
-            docker = Some(DockerContainer(image = "image0", portMappings = Some(Nil)))
-          )),
+          container = Some(
+            Container(
+              `type` = EngineType.Docker,
+              docker = Some(DockerContainer(image = "image0", portMappings = Some(Nil)))
+            )
+          ),
           ipAddress = Some(IpAddress(networkName = Some("mesos-bridge")))
         )
         val normalDockerApp = App(
           "/foo",
-          container = Some(Container(
-            `type` = EngineType.Docker,
-            docker = Some(DockerContainer(image = "image0")),
-            portMappings = Some(Nil)
-          )),
+          container = Some(
+            Container(
+              `type` = EngineType.Docker,
+              docker = Some(DockerContainer(image = "image0")),
+              portMappings = Some(Nil)
+            )
+          ),
           networks = Seq(Network(mode = NetworkMode.ContainerBridge)),
           unreachableStrategy = Some(UnreachableEnabled.Default)
         )
@@ -199,39 +218,43 @@ class AppNormalizationTest extends UnitTest {
       "preserves networkNames field" in {
         val legacyDockerApp = App(
           "/foo",
-          container = Some(Container(
-            `type` = EngineType.Docker,
-            docker = Some(DockerContainer(
-              image = "image0",
-              portMappings = Some(Seq(
-                ContainerPortMapping(
-                  containerPort = 80,
-                  networkNames = List("1"))))))
-          )),
+          container = Some(
+            Container(
+              `type` = EngineType.Docker,
+              docker = Some(
+                DockerContainer(
+                  image = "image0",
+                  portMappings = Some(Seq(ContainerPortMapping(containerPort = 80, networkNames = List("1"))))
+                )
+              )
+            )
+          ),
           networks = Seq(Network(mode = NetworkMode.Container, name = Some("1")))
         )
 
         val Some(Seq(portMapping)) = legacyDockerApp.normalize.container.flatMap(_.portMappings)
-        portMapping shouldBe ContainerPortMapping(
-          containerPort = 80,
-          networkNames = List("1"))
+        portMapping shouldBe ContainerPortMapping(containerPort = 80, networkNames = List("1"))
       }
 
       "legacy docker app specifies ipAddress and HOST networking" in {
         val legacyDockerApp = App(
           "/foo",
-          container = Some(Container(
-            `type` = EngineType.Docker,
-            docker = Some(DockerContainer(network = Some(DockerNetwork.Host), image = "image0", portMappings = Some(Nil)))
-          )),
+          container = Some(
+            Container(
+              `type` = EngineType.Docker,
+              docker = Some(DockerContainer(network = Some(DockerNetwork.Host), image = "image0", portMappings = Some(Nil)))
+            )
+          ),
           ipAddress = Some(IpAddress(networkName = Some("mesos-bridge")))
         )
         val normalDockerApp = App(
           "/foo",
-          container = Some(Container(
-            `type` = EngineType.Docker,
-            docker = Some(DockerContainer(image = "image0"))
-          )),
+          container = Some(
+            Container(
+              `type` = EngineType.Docker,
+              docker = Some(DockerContainer(image = "image0"))
+            )
+          ),
           networks = Seq(Network(mode = NetworkMode.Host)),
           unreachableStrategy = Some(UnreachableEnabled.Default),
           portDefinitions = Some(Apps.DefaultPortDefinitions)
@@ -242,19 +265,23 @@ class AppNormalizationTest extends UnitTest {
       "legacy docker app specifies ipAddress and BRIDGE networking" in {
         val legacyDockerApp = App(
           "/foo",
-          container = Some(Container(
-            `type` = EngineType.Docker,
-            docker = Some(DockerContainer(network = Some(DockerNetwork.Bridge), image = "image0", portMappings = Some(Nil)))
-          )),
+          container = Some(
+            Container(
+              `type` = EngineType.Docker,
+              docker = Some(DockerContainer(network = Some(DockerNetwork.Bridge), image = "image0", portMappings = Some(Nil)))
+            )
+          ),
           ipAddress = Some(IpAddress(networkName = Some("my-bridge")))
         )
         val normalDockerApp = App(
           "/foo",
-          container = Some(Container(
-            `type` = EngineType.Docker,
-            docker = Some(DockerContainer(image = "image0")),
-            portMappings = Some(Nil)
-          )),
+          container = Some(
+            Container(
+              `type` = EngineType.Docker,
+              docker = Some(DockerContainer(image = "image0")),
+              portMappings = Some(Nil)
+            )
+          ),
           networks = Seq(Network(mode = NetworkMode.ContainerBridge)),
           unreachableStrategy = Some(UnreachableEnabled.Default)
         )
@@ -265,20 +292,24 @@ class AppNormalizationTest extends UnitTest {
         a[NormalizationException] should be thrownBy {
           App(
             "/foo",
-            container = Some(Container(
-              `type` = EngineType.Docker,
-              docker = Some(DockerContainer(network = Some(DockerNetwork.None), image = "image0", portMappings = Some(Nil)))
-            )),
+            container = Some(
+              Container(
+                `type` = EngineType.Docker,
+                docker = Some(DockerContainer(network = Some(DockerNetwork.None), image = "image0", portMappings = Some(Nil)))
+              )
+            ),
             ipAddress = Some(IpAddress())
           ).normalize
         }
         a[NormalizationException] should be thrownBy {
           App(
             "/foo",
-            container = Some(Container(
-              `type` = EngineType.Docker,
-              docker = Some(DockerContainer(network = Some(DockerNetwork.None), image = "image0", portMappings = Some(Nil)))
-            ))
+            container = Some(
+              Container(
+                `type` = EngineType.Docker,
+                docker = Some(DockerContainer(network = Some(DockerNetwork.None), image = "image0", portMappings = Some(Nil)))
+              )
+            )
           ).normalize
         }
       }
@@ -286,30 +317,36 @@ class AppNormalizationTest extends UnitTest {
         a[NormalizationException] should be thrownBy {
           App(
             "/foo",
-            container = Some(Container(
-              `type` = EngineType.Docker,
-              docker = Some(DockerContainer(network = Some(DockerNetwork.Host), image = "image0", portMappings = Some(Nil)))
-            )),
+            container = Some(
+              Container(
+                `type` = EngineType.Docker,
+                docker = Some(DockerContainer(network = Some(DockerNetwork.Host), image = "image0", portMappings = Some(Nil)))
+              )
+            ),
             networks = Seq(Network(mode = NetworkMode.Host))
           ).normalize
         }
         a[NormalizationException] should be thrownBy {
           App(
             "/foo",
-            container = Some(Container(
-              `type` = EngineType.Docker,
-              docker = Some(DockerContainer(network = Some(DockerNetwork.Bridge), image = "image0", portMappings = Some(Nil)))
-            )),
+            container = Some(
+              Container(
+                `type` = EngineType.Docker,
+                docker = Some(DockerContainer(network = Some(DockerNetwork.Bridge), image = "image0", portMappings = Some(Nil)))
+              )
+            ),
             networks = Seq(Network(mode = NetworkMode.ContainerBridge))
           ).normalize
         }
         a[NormalizationException] should be thrownBy {
           App(
             "/foo",
-            container = Some(Container(
-              `type` = EngineType.Docker,
-              docker = Some(DockerContainer(network = Some(DockerNetwork.User), image = "image0", portMappings = Some(Nil)))
-            )),
+            container = Some(
+              Container(
+                `type` = EngineType.Docker,
+                docker = Some(DockerContainer(network = Some(DockerNetwork.User), image = "image0", portMappings = Some(Nil)))
+              )
+            ),
             networks = Seq(Network(mode = NetworkMode.Container))
           ).normalize
         }
@@ -333,11 +370,19 @@ class AppNormalizationTest extends UnitTest {
 
       "using legacy docker networking API w/ extraneous ipAddress discovery ports" in new Fixture {
         val ex = intercept[NormalizationException] {
-          legacyDockerApp.copy(ipAddress = legacyDockerApp.ipAddress.map(_.copy(discovery =
-            Option(IpDiscovery(
-              ports = Seq(IpDiscoveryPort(34, "port1"))
-            ))
-          ))).normalize
+          legacyDockerApp
+            .copy(ipAddress =
+              legacyDockerApp.ipAddress.map(
+                _.copy(discovery =
+                  Option(
+                    IpDiscovery(
+                      ports = Seq(IpDiscoveryPort(34, "port1"))
+                    )
+                  )
+                )
+              )
+            )
+            .normalize
         }
         ex.getMessage should include("discovery.ports")
       }
@@ -348,8 +393,7 @@ class AppNormalizationTest extends UnitTest {
 
       "using legacy IP/CT networking API without a named network" in new Fixture {
         val ex = intercept[NormalizationException] {
-          legacyMesosApp.copy(ipAddress = legacyMesosApp.ipAddress.map(_.copy(
-            networkName = None))).normalize
+          legacyMesosApp.copy(ipAddress = legacyMesosApp.ipAddress.map(_.copy(networkName = None))).normalize
         }
         ex.msg shouldBe NetworkNormalizationMessages.ContainerNetworkNameUnresolved
       }
@@ -365,12 +409,16 @@ class AppNormalizationTest extends UnitTest {
 
       "for an empty docker app update" in {
         val raw = AppUpdate(
-          container = Option(Container(
-            `type` = EngineType.Docker,
-            docker = Option(DockerContainer(
-              image = "image0"
-            ))
-          )),
+          container = Option(
+            Container(
+              `type` = EngineType.Docker,
+              docker = Option(
+                DockerContainer(
+                  image = "image0"
+                )
+              )
+            )
+          ),
           networks = Option(Seq(Network(name = Some("whatever"))))
         )
         raw.normalize should be(raw)
@@ -410,83 +458,100 @@ class AppNormalizationTest extends UnitTest {
           networks = Seq(Network(mode = NetworkMode.ContainerBridge)),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw.copy(container = Some(Container(
-          `type` = EngineType.Mesos,
-          portMappings = Option(Seq(
-            ContainerPortMapping(0, name = Some("default"), hostPort = Option(0))
-          ))
-        ))))
+        raw.normalize should be(
+          raw.copy(container =
+            Some(
+              Container(
+                `type` = EngineType.Mesos,
+                portMappings = Option(
+                  Seq(
+                    ContainerPortMapping(0, name = Some("default"), hostPort = Option(0))
+                  )
+                )
+              )
+            )
+          )
+        )
       }
 
       "allow a legacy docker bridge mode app to declare empty port mappings" in {
         val raw = App(
           id = "/foo",
           cmd = Option("sleep"),
-          container = Some(Container(
-            `type` = EngineType.Docker,
-            docker = Some(DockerContainer(
-              image = "image0",
-              network = Some(DockerNetwork.Bridge),
-              portMappings = Some(Nil)))
-          )),
+          container = Some(
+            Container(
+              `type` = EngineType.Docker,
+              docker = Some(DockerContainer(image = "image0", network = Some(DockerNetwork.Bridge), portMappings = Some(Nil)))
+            )
+          ),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw.copy(
-          container = Some(Container(
-            `type` = EngineType.Docker,
-            docker = Some(DockerContainer(image = "image0")),
-            portMappings = Some(Nil)
-          )),
-          networks = Seq(Network(mode = NetworkMode.ContainerBridge))
-        ))
+        raw.normalize should be(
+          raw.copy(
+            container = Some(
+              Container(
+                `type` = EngineType.Docker,
+                docker = Some(DockerContainer(image = "image0")),
+                portMappings = Some(Nil)
+              )
+            ),
+            networks = Seq(Network(mode = NetworkMode.ContainerBridge))
+          )
+        )
       }
 
       "allow a legacy docker bridge mode app to declare empty port mappings at both levels" in {
         val raw = App(
           id = "/foo",
           cmd = Option("sleep"),
-          container = Some(Container(
-            `type` = EngineType.Docker,
-            portMappings = Some(Nil),
-            docker = Some(DockerContainer(
-              image = "image0",
-              network = Some(DockerNetwork.Bridge),
-              portMappings = Some(Nil)))
-          )),
+          container = Some(
+            Container(
+              `type` = EngineType.Docker,
+              portMappings = Some(Nil),
+              docker = Some(DockerContainer(image = "image0", network = Some(DockerNetwork.Bridge), portMappings = Some(Nil)))
+            )
+          ),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw.copy(
-          container = Some(Container(
-            `type` = EngineType.Docker,
-            docker = Some(DockerContainer(image = "image0")),
-            portMappings = Some(Nil)
-          )),
-          networks = Seq(Network(mode = NetworkMode.ContainerBridge))
-        ))
+        raw.normalize should be(
+          raw.copy(
+            container = Some(
+              Container(
+                `type` = EngineType.Docker,
+                docker = Some(DockerContainer(image = "image0")),
+                portMappings = Some(Nil)
+              )
+            ),
+            networks = Seq(Network(mode = NetworkMode.ContainerBridge))
+          )
+        )
       }
 
       "allow a legacy docker bridge mode app to declare port mappings at container level if legacy mappings are empty" in {
         val raw = App(
           id = "/foo",
           cmd = Option("sleep"),
-          container = Some(Container(
-            `type` = EngineType.Docker,
-            portMappings = Some(Seq(ContainerPortMapping())),
-            docker = Some(DockerContainer(
-              image = "image0",
-              network = Some(DockerNetwork.Bridge),
-              portMappings = Some(Nil)))
-          )),
+          container = Some(
+            Container(
+              `type` = EngineType.Docker,
+              portMappings = Some(Seq(ContainerPortMapping())),
+              docker = Some(DockerContainer(image = "image0", network = Some(DockerNetwork.Bridge), portMappings = Some(Nil)))
+            )
+          ),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw.copy(
-          container = Some(Container(
-            `type` = EngineType.Docker,
-            docker = Some(DockerContainer(image = "image0")),
-            portMappings = Some(Seq(ContainerPortMapping(hostPort = Some(0))))
-          )),
-          networks = Seq(Network(mode = NetworkMode.ContainerBridge))
-        ))
+        raw.normalize should be(
+          raw.copy(
+            container = Some(
+              Container(
+                `type` = EngineType.Docker,
+                docker = Some(DockerContainer(image = "image0")),
+                portMappings = Some(Seq(ContainerPortMapping(hostPort = Some(0))))
+              )
+            ),
+            networks = Seq(Network(mode = NetworkMode.ContainerBridge))
+          )
+        )
       }
 
       "prevent a legacy docker bridge mode app from mixing empty and non-empty port mappings" in {
@@ -494,14 +559,15 @@ class AppNormalizationTest extends UnitTest {
           App(
             id = "/foo",
             cmd = Option("sleep"),
-            container = Some(Container(
-              `type` = EngineType.Docker,
-              portMappings = Some(Nil),
-              docker = Some(DockerContainer(
-                image = "image0",
-                network = Some(DockerNetwork.Bridge),
-                portMappings = Some(Seq(ContainerPortMapping()))))
-            )),
+            container = Some(
+              Container(
+                `type` = EngineType.Docker,
+                portMappings = Some(Nil),
+                docker = Some(
+                  DockerContainer(image = "image0", network = Some(DockerNetwork.Bridge), portMappings = Some(Seq(ContainerPortMapping())))
+                )
+              )
+            ),
             unreachableStrategy = Option(UnreachableEnabled.Default)
           ).normalize
         }
@@ -511,10 +577,7 @@ class AppNormalizationTest extends UnitTest {
         val raw = App(
           id = "/foo",
           cmd = Option("sleep"),
-          container = Some(Container(
-            `type` = EngineType.Mesos,
-            portMappings = Option(Seq.empty
-            ))),
+          container = Some(Container(`type` = EngineType.Mesos, portMappings = Option(Seq.empty))),
           networks = Seq(Network(mode = NetworkMode.ContainerBridge)),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
@@ -525,28 +588,36 @@ class AppNormalizationTest extends UnitTest {
         val raw = App(
           id = "/foo",
           cmd = Option("sleep"),
-          container = Some(Container(
-            `type` = EngineType.Mesos
-          )),
+          container = Some(
+            Container(
+              `type` = EngineType.Mesos
+            )
+          ),
           networks = Seq(Network(mode = NetworkMode.ContainerBridge)),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw.copy(container = raw.container.map(_.copy(
-          portMappings = Option(Seq(ContainerPortMapping(hostPort = Option(0), name = Option("default"))))))))
+        raw.normalize should be(
+          raw.copy(container =
+            raw.container.map(_.copy(portMappings = Option(Seq(ContainerPortMapping(hostPort = Option(0), name = Option("default"))))))
+          )
+        )
       }
 
       "provide default port mappings when left unspecified for an app container w/ container networking" in {
         val raw = App(
           id = "/foo",
           cmd = Option("sleep"),
-          container = Some(Container(
-            `type` = EngineType.Mesos
-          )),
+          container = Some(
+            Container(
+              `type` = EngineType.Mesos
+            )
+          ),
           networks = Seq(Network(name = Option("network1"), mode = NetworkMode.Container)),
           unreachableStrategy = Option(UnreachableEnabled.Default)
         )
-        raw.normalize should be(raw.copy(container = raw.container.map(_.copy(
-          portMappings = Option(Seq(ContainerPortMapping(name = Option("default"))))))))
+        raw.normalize should be(
+          raw.copy(container = raw.container.map(_.copy(portMappings = Option(Seq(ContainerPortMapping(name = Option("default")))))))
+        )
       }
 
       "allow an app to declare empty port definitions" in {
@@ -575,62 +646,100 @@ class AppNormalizationTest extends UnitTest {
   private class Fixture {
     val legacyDockerApp = App(
       id = "/foo",
-      container = Option(Container(
-        `type` = EngineType.Docker,
-        docker = Option(DockerContainer(
-          network = Option(DockerNetwork.User),
-          image = "image0",
-          portMappings = Option(Seq(ContainerPortMapping(
-            containerPort = 1, hostPort = Option(2), servicePort = 3, name = Option("port0"), protocol = NetworkProtocol.Udp
-          )))
-        ))
-      )),
-      ipAddress = Option(IpAddress(
-        networkName = Option("someUserNetwork")
-      ))
+      container = Option(
+        Container(
+          `type` = EngineType.Docker,
+          docker = Option(
+            DockerContainer(
+              network = Option(DockerNetwork.User),
+              image = "image0",
+              portMappings = Option(
+                Seq(
+                  ContainerPortMapping(
+                    containerPort = 1,
+                    hostPort = Option(2),
+                    servicePort = 3,
+                    name = Option("port0"),
+                    protocol = NetworkProtocol.Udp
+                  )
+                )
+              )
+            )
+          )
+        )
+      ),
+      ipAddress = Option(
+        IpAddress(
+          networkName = Option("someUserNetwork")
+        )
+      )
     )
 
     val normalizedDockerApp = App(
       id = "/foo",
-      container = Option(Container(
-        `type` = EngineType.Docker,
-        docker = Option(DockerContainer(
-          image = "image0"
-        )),
-        portMappings = Option(Seq(ContainerPortMapping(
-          containerPort = 1, hostPort = Option(2), servicePort = 3, name = Option("port0"), protocol = NetworkProtocol.Udp
-        )))
-      )),
+      container = Option(
+        Container(
+          `type` = EngineType.Docker,
+          docker = Option(
+            DockerContainer(
+              image = "image0"
+            )
+          ),
+          portMappings = Option(
+            Seq(
+              ContainerPortMapping(
+                containerPort = 1,
+                hostPort = Option(2),
+                servicePort = 3,
+                name = Option("port0"),
+                protocol = NetworkProtocol.Udp
+              )
+            )
+          )
+        )
+      ),
       networks = Seq(Network(name = Option("someUserNetwork"))),
       unreachableStrategy = Option(UnreachableEnabled.Default)
     )
 
     val legacyMesosApp = App(
       id = "/foo",
-      container = Option(Container(
-        `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(image = "image0"))
-      )),
-      ipAddress = Option(IpAddress(
-        networkName = Option("someUserNetwork"),
-        discovery = Option(IpDiscovery(
-          ports = Seq(IpDiscoveryPort(34, "port1", NetworkProtocol.Udp, labels = Map("VIP_0" -> "/namedvip:34")))
-        ))
-      ))
+      container = Option(
+        Container(
+          `type` = EngineType.Mesos,
+          docker = Option(DockerContainer(image = "image0"))
+        )
+      ),
+      ipAddress = Option(
+        IpAddress(
+          networkName = Option("someUserNetwork"),
+          discovery = Option(
+            IpDiscovery(
+              ports = Seq(IpDiscoveryPort(34, "port1", NetworkProtocol.Udp, labels = Map("VIP_0" -> "/namedvip:34")))
+            )
+          )
+        )
+      )
     )
 
     val normalizedMesosApp = App(
       id = "/foo",
-      container = Option(Container(
-        `type` = EngineType.Mesos,
-        docker = Option(DockerContainer(image = "image0")),
-        portMappings = Option(Seq(ContainerPortMapping(
-          containerPort = 34,
-          name = Option("port1"),
-          protocol = NetworkProtocol.Udp,
-          labels = Map("VIP_0" -> "/namedvip:34")
-        )))
-      )),
+      container = Option(
+        Container(
+          `type` = EngineType.Mesos,
+          docker = Option(DockerContainer(image = "image0")),
+          portMappings = Option(
+            Seq(
+              ContainerPortMapping(
+                containerPort = 34,
+                name = Option("port1"),
+                protocol = NetworkProtocol.Udp,
+                labels = Map("VIP_0" -> "/namedvip:34")
+              )
+            )
+          )
+        )
+      ),
       networks = Seq(Network(name = Option("someUserNetwork"))),
       unreachableStrategy = Option(UnreachableEnabled.Default)
     )

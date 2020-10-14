@@ -36,7 +36,8 @@ class TaskKillingIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       // elsewhere.
       val waitingFor = Map[String, CallbackEvent => Boolean](
         "status_update_event" -> (_.taskStatus == "TASK_KILLING"),
-        "unknown_instance_terminated_event" -> (_.info("instanceId").toString == app.id))
+        "unknown_instance_terminated_event" -> (_.info("instanceId").toString == app.id)
+      )
       waitForAnyEventWith(s"waiting for task ${app.id} to be removed", waitingFor)
     }
 

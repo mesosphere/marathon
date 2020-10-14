@@ -22,4 +22,3 @@ object FrameworkId {
   def fromProto(message: FrameworkID): FrameworkId = new FrameworkId(message.getValue)
   def fromProtoBytes(bytes: Array[Byte]): FrameworkId = fromProto(Protos.FrameworkID.parseFrom(bytes))
 }
-

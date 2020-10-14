@@ -12,15 +12,12 @@ import org.eclipse.jetty.server.Handler
 import org.eclipse.jetty.servlet.ServletContextHandler
 
 class DropwizardMetricsModule(val metricsConf: MetricsConf) extends MetricsModule {
-  override lazy val servletHandlers: Seq[Handler] = Seq(
-    new api.HttpTransferMetricsHandler(new api.HTTPMetricsFilter(metrics)))
+  override lazy val servletHandlers: Seq[Handler] = Seq(new api.HttpTransferMetricsHandler(new api.HTTPMetricsFilter(metrics)))
 
   private lazy val metricNamePrefix = metricsConf.metricsNamePrefix()
   private lazy val registry: MetricRegistry = {
     val r = new MetricRegistry
-    r.register(
-      s"$metricNamePrefix.jvm.buffers",
-      new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer))
+    r.register(s"$metricNamePrefix.jvm.buffers", new BufferPoolMetricSet(ManagementFactory.getPlatformMBeanServer))
     r.register(s"$metricNamePrefix.jvm.gc", new GarbageCollectorMetricSet())
     r.register(s"$metricNamePrefix.jvm.memory", new MemoryUsageGaugeSet())
     r.register(s"$metricNamePrefix.jvm.threads", new ThreadStatesGaugeSet())

@@ -126,7 +126,9 @@ class LaunchQueueModuleTest extends AkkaUnitTest with OfferMatcherSpec {
           Timestamp.now()
         ),
         oldState = None,
-        events = Nil)).wrapped
+        events = Nil
+      )
+    ).wrapped
 
     lazy val clock: Clock = Clock.systemUTC()
     val noMatchResult = OfferMatchResult.NoMatch(app, offer, Seq.empty, clock.now())

@@ -69,16 +69,18 @@ class AppDefinitionAppInfoTest extends UnitTest {
 
       Then("the result contains all fields of the app plus the deployments")
       val expectedJson = Json.toJson(app).as[JsObject] ++ Json.obj(
-        "readinessCheckResults" -> Seq(Json.obj(
-          "name" -> "foo",
-          "taskId" -> taskId.idString,
-          "ready" -> false,
-          "lastResponse" -> Json.obj(
-            "status" -> 503,
-            "contentType" -> "text/plain",
-            "body" -> "n/a"
+        "readinessCheckResults" -> Seq(
+          Json.obj(
+            "name" -> "foo",
+            "taskId" -> taskId.idString,
+            "ready" -> false,
+            "lastResponse" -> Json.obj(
+              "status" -> 503,
+              "contentType" -> "text/plain",
+              "body" -> "n/a"
+            )
           )
-        ))
+        )
       )
       JsonTestHelper.assertThatJsonOf(extended).correspondsToJsonOf(expectedJson)
     }
@@ -96,8 +98,8 @@ class AppDefinitionAppInfoTest extends UnitTest {
             "tasksHealthy" -> 4,
             "tasksUnhealthy" -> 1
           ) ++ Json.obj(
-              "deployments" -> Seq(Json.obj("id" -> "deployment1"))
-            )
+          "deployments" -> Seq(Json.obj("id" -> "deployment1"))
+        )
       JsonTestHelper.assertThatJsonOf(extended).correspondsToJsonOf(expectedJson)
     }
 
@@ -116,8 +118,7 @@ class AppDefinitionAppInfoTest extends UnitTest {
       val extended = AppInfo(app, maybeLastTaskFailure = Some(lastTaskFailure))
 
       Then("the result contains all fields of the app plus the deployments")
-      val lastTaskFailureJson = Json.parse(
-        """
+      val lastTaskFailureJson = Json.parse("""
        | {
        |   "lastTaskFailure": {
        |     "appId": "/myapp",

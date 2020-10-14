@@ -21,8 +21,10 @@ class PathTrieTest extends UnitTest {
   )
 
   val pathsWithData: Map[String, Array[Byte]] = paths
-    .zip((1 to paths.length)
-      .map(_ => "bloob".getBytes))
+    .zip(
+      (1 to paths.length)
+        .map(_ => "bloob".getBytes)
+    )
     .toMap
 
   "PathTrie" should {
@@ -101,7 +103,7 @@ class PathTrieTest extends UnitTest {
     "add nodes with data" in {
       val trie = new PathTrie()
       Given("a trie with some nodes")
-      pathsWithData.foreach{ case (p, d) => trie.addPath(p, d); }
+      pathsWithData.foreach { case (p, d) => trie.addPath(p, d); }
 
       prettyPrint(trie)
 
@@ -115,7 +117,7 @@ class PathTrieTest extends UnitTest {
       Given("a trie with empty nodes")
       paths.foreach(trie.addPath(_))
 
-      When ("set existing path with data")
+      When("set existing path with data")
       trie.addPath(paths.head, "bloob".getBytes)
 
       prettyPrint(trie)

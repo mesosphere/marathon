@@ -111,4 +111,3 @@ class JsonFormatBenchmark {
     hole.consume(json)
   }
 }
-

@@ -4,18 +4,20 @@ package mesosphere.marathon
   * Models a Marathon version
   */
 case class SemVer(major: Int, minor: Int, build: Int, commit: Option[String]) extends Ordered[SemVer] {
-  override def toString(): String = commit match {
-    case Some(c) => s"$major.$minor.$build-$c"
-    case None => s"$major.$minor.$build"
-  }
+  override def toString(): String =
+    commit match {
+      case Some(c) => s"$major.$minor.$build-$c"
+      case None => s"$major.$minor.$build"
+    }
 
-  override def compare(that: SemVer): Int = Seq(
-    major.compare(that.major),
-    minor.compare(that.minor),
-    build.compare(that.build),
-    commit.getOrElse("").compare(that.commit.getOrElse("")))
-    .find(_ != 0)
-    .getOrElse(0)
+  override def compare(that: SemVer): Int =
+    Seq(
+      major.compare(that.major),
+      minor.compare(that.minor),
+      build.compare(that.build),
+      commit.getOrElse("").compare(that.commit.getOrElse(""))
+    ).find(_ != 0)
+      .getOrElse(0)
 }
 
 object SemVer {

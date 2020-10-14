@@ -9,8 +9,14 @@ import mesosphere.marathon.state
 
 import scala.concurrent.duration._
 
-trait PodConversion extends NetworkConversion with ConstraintConversion with ContainerConversion with EnvVarConversion
-  with SecretConversion with UnreachableStrategyConversion with KillSelectionConversion {
+trait PodConversion
+    extends NetworkConversion
+    with ConstraintConversion
+    with ContainerConversion
+    with EnvVarConversion
+    with SecretConversion
+    with UnreachableStrategyConversion
+    with KillSelectionConversion {
 
   implicit val podRamlReader: Reads[Pod, PodDefinition] = Reads { podd =>
     val instances = podd.scaling.fold(DefaultInstances) {
@@ -19,7 +25,8 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
 
     val networks: Seq[pod.Network] = podd.networks.map(Raml.fromRaml[Network, pod.Network])
 
-    val resourceRoles = podd.scheduling.flatMap(_.placement)
+    val resourceRoles = podd.scheduling
+      .flatMap(_.placement)
       .fold(Set.empty[String])(_.acceptedResourceRoles.toSet)
 
     val upgradeStrategy = podd.scheduling.flatMap(_.upgrade).fold(DefaultUpgradeStrategy) { raml =>
@@ -38,7 +45,8 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
     }.getOrElse(DefaultBackoffStrategy)
 
     val constraints: Set[Protos.Constraint] =
-      podd.scheduling.flatMap(_.placement.map(_.constraints.map(Raml.fromRaml(_))))
+      podd.scheduling
+        .flatMap(_.placement.map(_.constraints.map(Raml.fromRaml(_))))
         .getOrElse(Set.empty[Protos.Constraint])
 
     val executorResources: ExecutorResources = podd.executorResources.getOrElse(PodDefinition.DefaultExecutorResources.toRaml)
@@ -65,22 +73,18 @@ trait PodConversion extends NetworkConversion with ConstraintConversion with Con
   }
 
   implicit val podRamlWriter: Writes[PodDefinition, Pod] = Writes { podDef =>
-
-    val ramlUpgradeStrategy = PodUpgradeStrategy(
-      podDef.upgradeStrategy.minimumHealthCapacity,
-      podDef.upgradeStrategy.maximumOverCapacity)
+    val ramlUpgradeStrategy = PodUpgradeStrategy(podDef.upgradeStrategy.minimumHealthCapacity, podDef.upgradeStrategy.maximumOverCapacity)
 
     val ramlBackoffStrategy = PodSchedulingBackoffStrategy(
       backoff = podDef.backoffStrategy.backoff.toMillis.toDouble / 1000.0,
       maxLaunchDelay = podDef.backoffStrategy.maxLaunchDelay.toMillis.toDouble / 1000.0,
-      backoffFactor = podDef.backoffStrategy.factor)
+      backoffFactor = podDef.backoffStrategy.factor
+    )
 
     val schedulingPolicy = PodSchedulingPolicy(
       Some(ramlBackoffStrategy),
       Some(ramlUpgradeStrategy),
-      Some(PodPlacementPolicy(
-        podDef.constraints.toRaml[Set[Constraint]],
-        podDef.acceptedResourceRoles.toIndexedSeq)),
+      Some(PodPlacementPolicy(podDef.constraints.toRaml[Set[Constraint]], podDef.acceptedResourceRoles.toIndexedSeq)),
       Some(podDef.killSelection.toRaml),
       Some(podDef.unreachableStrategy.toRaml)
     )

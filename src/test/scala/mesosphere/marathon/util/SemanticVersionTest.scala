@@ -92,22 +92,22 @@ class SemanticVersionTest extends UnitTest {
   "parsing" should {
     "work for basic" in {
       val parsed = SemanticVersion("1.2.3")
-      parsed.isDefined should be (true)
-      SemanticVersion(1, 2, 3) == parsed.get should be (true)
+      parsed.isDefined should be(true)
+      SemanticVersion(1, 2, 3) == parsed.get should be(true)
     }
     "world for postfixed" in {
       val parsed = SemanticVersion("1.2.3-SNAPSHOT")
-      parsed.isDefined should be (true)
-      SemanticVersion(1, 2, 3) == parsed.get should be (true)
+      parsed.isDefined should be(true)
+      SemanticVersion(1, 2, 3) == parsed.get should be(true)
     }
     "work for multiple digits" in {
       var parsed = SemanticVersion("11.22.33")
-      parsed.isDefined should be (true)
-      SemanticVersion(11, 22, 33) == parsed.get should be (true)
+      parsed.isDefined should be(true)
+      SemanticVersion(11, 22, 33) == parsed.get should be(true)
 
       parsed = SemanticVersion("11.22.33-SNAPSHOT")
-      parsed.isDefined should be (true)
-      SemanticVersion(11, 22, 33) == parsed.get should be (true)
+      parsed.isDefined should be(true)
+      SemanticVersion(11, 22, 33) == parsed.get should be(true)
     }
   }
 }

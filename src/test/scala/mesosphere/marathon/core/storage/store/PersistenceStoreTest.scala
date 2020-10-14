@@ -27,11 +27,11 @@ object TestClass1 {
 }
 
 private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
-  def basicPersistenceStore[K, C, Serialized](name: String, newStore: => PersistenceStore[K, C, Serialized])(
-    implicit
-    ir: IdResolver[String, TestClass1, C, K],
-    m: Marshaller[TestClass1, Serialized],
-    um: Unmarshaller[Serialized, TestClass1]): Unit = {
+  def basicPersistenceStore[K, C, Serialized](name: String, newStore: => PersistenceStore[K, C, Serialized])(implicit
+      ir: IdResolver[String, TestClass1, C, K],
+      m: Marshaller[TestClass1, Serialized],
+      um: Unmarshaller[Serialized, TestClass1]
+  ): Unit = {
 
     name should {
       "is open" in {
@@ -152,11 +152,11 @@ private[storage] trait PersistenceStoreTest { this: AkkaUnitTest =>
     }
   }
 
-  def backupRestoreStore[K, C, Serialized](name: String, newStore: => PersistenceStore[K, C, Serialized])(
-    implicit
-    ir: IdResolver[String, TestClass1, C, K],
-    m: Marshaller[TestClass1, Serialized],
-    um: Unmarshaller[Serialized, TestClass1]): Unit = {
+  def backupRestoreStore[K, C, Serialized](name: String, newStore: => PersistenceStore[K, C, Serialized])(implicit
+      ir: IdResolver[String, TestClass1, C, K],
+      m: Marshaller[TestClass1, Serialized],
+      um: Unmarshaller[Serialized, TestClass1]
+  ): Unit = {
 
     name should {
       "be able to backup and restore the state" in {

@@ -27,7 +27,12 @@ import scala.sys.process.Process
   * This integration test starts older Marathon versions one after another and finishes this upgrade procedure with the
   * current build. In each step we verfiy that all apps are still up and running.
   */
-class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest with ZookeeperServerTest with MarathonAppFixtures with Eventually {
+class UpgradeIntegrationTest
+    extends AkkaIntegrationTest
+    with MesosClusterTest
+    with ZookeeperServerTest
+    with MarathonAppFixtures
+    with Eventually {
 
   import PathId._
 
@@ -38,10 +43,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
   val marathon16549Artifact = MarathonArtifact("1.6.549", "marathon-1.6.549-aabf74302.tgz")
 
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
-  override lazy val mesosConfig = MesosConfig(
-    launcher = "linux",
-    isolation = Some("filesystem/linux,docker/runtime"),
-    imageProviders = Some("docker"))
+  override lazy val mesosConfig =
+    MesosConfig(launcher = "linux", isolation = Some("filesystem/linux,docker/runtime"), imageProviders = Some("docker"))
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -68,9 +71,12 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  case class Marathon149(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(
-      implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
+  case class Marathon149(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(implicit
+      val system: ActorSystem,
+      val mat: Materializer,
+      val ctx: ExecutionContext,
+      val scheduler: Scheduler
+  ) extends BaseMarathon {
 
     override val processBuilder = {
       val java = sys.props.get("java.home").fold("java")(_ + "/bin/java")
@@ -81,9 +87,12 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  case class Marathon1515(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(
-      implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
+  case class Marathon1515(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(implicit
+      val system: ActorSystem,
+      val mat: Materializer,
+      val ctx: ExecutionContext,
+      val scheduler: Scheduler
+  ) extends BaseMarathon {
 
     override val processBuilder = {
       val bin = new File(marathonPackage, "marathon-1.5.15/bin/marathon").getCanonicalPath
@@ -93,9 +102,12 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     }
   }
 
-  case class Marathon16549(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(
-      implicit
-      val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler) extends BaseMarathon {
+  case class Marathon16549(marathonPackage: File, suiteName: String, masterUrl: String, zkUrl: String)(implicit
+      val system: ActorSystem,
+      val mat: Materializer,
+      val ctx: ExecutionContext,
+      val scheduler: Scheduler
+  ) extends BaseMarathon {
 
     override val processBuilder = {
       val bin = new File(marathonPackage, "marathon-1.6.549-aabf74302/bin/marathon").getCanonicalPath
@@ -124,8 +136,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathon149.client.createAppV2(app_149) should be(Created)
 
       patienceConfig
-      eventually { marathon149 should have (runningTasksFor(app_149.id.toPath, 1)) }
-      eventually { marathon149 should have (runningTasksFor(app_149_fail.id.toPath, 1)) }
+      eventually { marathon149 should have(runningTasksFor(app_149.id.toPath, 1)) }
+      eventually { marathon149 should have(runningTasksFor(app_149_fail.id.toPath, 1)) }
 
       val originalApp149Tasks = marathon149.client.tasks(app_149.id.toPath).value
       val originalApp149FailedTasks = marathon149.client.tasks(app_149_fail.id.toPath).value
@@ -150,8 +162,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
       marathon1515.client.createAppV2(app_1515_fail) should be(Created)
 
       Then("All apps from 1.5.15 are running")
-      eventually { marathon1515 should have (runningTasksFor(app_1515.id.toPath, 1)) }
-      eventually { marathon1515 should have (runningTasksFor(app_1515_fail.id.toPath, 1)) }
+      eventually { marathon1515 should have(runningTasksFor(app_1515.id.toPath, 1)) }
+      eventually { marathon1515 should have(runningTasksFor(app_1515_fail.id.toPath, 1)) }
 
       val originalApp1515Tasks = marathon1515.client.tasks(app_1515.id.toPath).value
       val originalApp1515FailedTasks = marathon1515.client.tasks(app_1515_fail.id.toPath).value
@@ -177,7 +189,10 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
         containers = Seq(
           MesosContainer(
             name = "task1",
-            exec = Some(raml.MesosExec(raml.ShellCommand("cd $MESOS_SANDBOX && echo 'start' >> pst1/foo && python -m SimpleHTTPServer $ENDPOINT_TASK1"))),
+            exec = Some(
+              raml
+                .MesosExec(raml.ShellCommand("cd $MESOS_SANDBOX && echo 'start' >> pst1/foo && python -m SimpleHTTPServer $ENDPOINT_TASK1"))
+            ),
             resources = raml.Resources(cpus = 0.1, mem = 32.0),
             endpoints = Seq(raml.Endpoint(name = "task1", hostPort = Some(0))),
             volumeMounts = Seq(VolumeMount(Some("pst"), "pst1", false))
@@ -200,7 +215,12 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       Then(s"pod ${resident_pod_16549.id} can be queried on http://$resident_pod_16549_address:$resident_pod_16549_port")
       implicit val requestTimeout = 30.seconds
-      eventually { AkkaHttpResponse.request(Get(s"http://$resident_pod_16549_address:$resident_pod_16549_port/pst1/foo")).futureValue.entityString should be("start\n") }
+      eventually {
+        AkkaHttpResponse
+          .request(Get(s"http://$resident_pod_16549_address:$resident_pod_16549_port/pst1/foo"))
+          .futureValue
+          .entityString should be("start\n")
+      }
 
       Then("All apps from 1.4.9 and 1.5.15 are still running")
       marathon16549.client.tasks(app_149.id.toPath).value should contain theSameElementsAs (originalApp149Tasks)
@@ -226,7 +246,12 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
 
       And("All pods from 1.6.549 are still running")
       eventually { marathonCurrent.client.status(resident_pod_16549.id) should be(Stable) }
-      eventually { AkkaHttpResponse.request(Get(s"http://$resident_pod_16549_address:$resident_pod_16549_port/pst1/foo")).futureValue.entityString should be("start\n") }
+      eventually {
+        AkkaHttpResponse
+          .request(Get(s"http://$resident_pod_16549_address:$resident_pod_16549_port/pst1/foo"))
+          .futureValue
+          .entityString should be("start\n")
+      }
 
       marathonCurrent.close()
     }
@@ -249,8 +274,8 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     marathon16549.client.createAppV2(app_16549) should be(Created)
 
     patienceConfig
-    eventually { marathon16549 should have (runningTasksFor(app_16549.id.toPath, 1)) }
-    eventually { marathon16549 should have (runningTasksFor(app_16549_fail.id.toPath, 1)) }
+    eventually { marathon16549 should have(runningTasksFor(app_16549.id.toPath, 1)) }
+    eventually { marathon16549 should have(runningTasksFor(app_16549_fail.id.toPath, 1)) }
 
     val originalApp16549Tasks = marathon16549.client.tasks(app_16549.id.toPath).value
     val originalApp16549FailedTasks = marathon16549.client.tasks(app_16549_fail.id.toPath).value
@@ -289,11 +314,12 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     val residentApp_16549 = residentApp(
       id = testBasePath / "resident-app-16549",
       containerPath = containerPath,
-      cmd = s"""echo $$MESOS_TASK_ID >> $containerPath/data && sleep 1000""")
+      cmd = s"""echo $$MESOS_TASK_ID >> $containerPath/data && sleep 1000"""
+    )
     marathon16549.client.createAppV2(residentApp_16549) should be(Created)
 
     patienceConfig
-    eventually { marathon16549 should have (runningTasksFor(residentApp_16549.id.toPath, 1)) }
+    eventually { marathon16549 should have(runningTasksFor(residentApp_16549.id.toPath, 1)) }
     val originalApp16549Tasks = marathon16549.client.tasks(residentApp_16549.id.toPath).value
 
     When("We restart the app")
@@ -302,7 +328,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     Then("We have new running tasks")
     eventually {
       marathon16549.client.tasks(residentApp_16549.id.toPath).value should not contain theSameElementsAs(originalApp16549Tasks)
-      marathon16549 should have (runningTasksFor(residentApp_16549.id.toPath, 1))
+      marathon16549 should have(runningTasksFor(residentApp_16549.id.toPath, 1))
     }
 
     // Pass upgrade to current
@@ -313,7 +339,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     (marathonCurrent.client.info.entityJson \ "version").as[String] should be(BuildInfo.version.toString)
 
     Then("All apps from 1.6.549 are still running")
-    marathonCurrent should have (runningTasksFor(residentApp_16549.id.toPath, 1))
+    marathonCurrent should have(runningTasksFor(residentApp_16549.id.toPath, 1))
     val restartedApp16549Tasks = marathonCurrent.client.tasks(residentApp_16549.id.toPath).value
 
     When("We restart the app again")
@@ -322,7 +348,7 @@ class UpgradeIntegrationTest extends AkkaIntegrationTest with MesosClusterTest w
     Then("We have new running tasks")
     eventually {
       marathonCurrent.client.tasks(residentApp_16549.id.toPath).value should not contain theSameElementsAs(restartedApp16549Tasks)
-      marathonCurrent should have (runningTasksFor(residentApp_16549.id.toPath, 1))
+      marathonCurrent should have(runningTasksFor(residentApp_16549.id.toPath, 1))
     }
 
     marathonCurrent.close()

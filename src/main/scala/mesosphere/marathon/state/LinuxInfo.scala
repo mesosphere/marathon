@@ -32,8 +32,10 @@ object LinuxInfo {
       override def apply(linuxInfo: LinuxInfo): Result = {
         linuxInfo.seccomp match {
           case Some(seccomp) =>
-            if (seccomp.profileName.isDefined && seccomp.unconfined) Failure(Set(RuleViolation(linuxInfo, "Seccomp unconfined can NOT be true when Profile is defined")))
-            else if (seccomp.profileName.isEmpty && !seccomp.unconfined) Failure(Set(RuleViolation(linuxInfo, "Seccomp unconfined must be true when Profile is NOT defined")))
+            if (seccomp.profileName.isDefined && seccomp.unconfined)
+              Failure(Set(RuleViolation(linuxInfo, "Seccomp unconfined can NOT be true when Profile is defined")))
+            else if (seccomp.profileName.isEmpty && !seccomp.unconfined)
+              Failure(Set(RuleViolation(linuxInfo, "Seccomp unconfined must be true when Profile is NOT defined")))
             else Success
           case None => Success
         }

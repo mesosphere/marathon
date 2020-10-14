@@ -80,11 +80,11 @@ class AppDefinitionReadinessCheckValidationTest extends UnitTest {
 
     class Fixture {
       def app(
-        readinessChecks: Seq[ReadinessCheck] = Seq(ReadinessCheck()),
-        portDefinitions: Seq[PortDefinition] = Seq(
-          PortDefinition(port = 123, name = Some(ReadinessCheck.DefaultPortName))
-        )): AppDefinition =
-
+          readinessChecks: Seq[ReadinessCheck] = Seq(ReadinessCheck()),
+          portDefinitions: Seq[PortDefinition] = Seq(
+            PortDefinition(port = 123, name = Some(ReadinessCheck.DefaultPortName))
+          )
+      ): AppDefinition =
         AppDefinition(
           id = PathId("/test"),
           cmd = Some("sleep 1000"),

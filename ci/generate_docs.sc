@@ -1,14 +1,11 @@
-#!/usr/bin/env amm
+#!/ usr / bin / env amm
 
 import java.time.Instant
 import ammonite.ops._
 import $file.utils
 import utils.SemVer
 
-import $ivy.{
-  `com.typesafe.akka::akka-http:10.0.11`,
-  `com.typesafe.akka::akka-stream:2.5.9`
-}
+import $ivy.{`com.typesafe.akka::akka-http:10.0.11`, `com.typesafe.akka::akka-stream:2.5.9`}
 
 /**
   * Docs generation process:
@@ -37,11 +34,13 @@ var overrideTargetVersions = Map.empty[String, GitCheckoutable]
   * @param ignored_versions minor versions which will be ignored in docs generation process
   */
 @main
-def main(release_commits_override: Map[String, String] = Map.empty,
-         preview: Boolean = true,
-         publish: Boolean = false,
-         remote: String = "git@github.com:mesosphere/marathon.git",
-         ignored_versions: Seq[String] = Seq.empty) = {
+def main(
+    release_commits_override: Map[String, String] = Map.empty,
+    preview: Boolean = true,
+    publish: Boolean = false,
+    remote: String = "git@github.com:mesosphere/marathon.git",
+    ignored_versions: Seq[String] = Seq.empty
+) = {
 
   overrideTargetVersions = release_commits_override.mapValues(Commit)
   ignoredReleaseBranchesVersions = ignored_versions.toSet
@@ -65,7 +64,7 @@ def main(release_commits_override: Map[String, String] = Map.empty,
   val docsBuildDir = makeTmpDir()
   val marathonDir = copyMarathon(docsBuildDir)
 
-  val docsSourceDir = marathonDir/"docs"
+  val docsSourceDir = marathonDir / "docs"
 
   val siteDir = buildDocs(docsBuildDir, docsSourceDir, marathonDir)
   if (preview) {
@@ -79,8 +78,8 @@ def main(release_commits_override: Map[String, String] = Map.empty,
 
 def makeTmpDir(): Path = {
   val timestamp = Instant.now().toString.replace(':', '-')
-  val path = root/"tmp"/s"marathon-docs-build-$timestamp"
-  mkdir! path
+  val path = root / "tmp" / s"marathon-docs-build-$timestamp"
+  mkdir ! path
   path
 }
 
@@ -125,9 +124,10 @@ def docsTargetVersions(repoPath: Path): List[(String, GitCheckoutable)] = {
     .toList
     .sortBy(_._1)
     .takeRight(3)
-    .map { case (releaseVersion, tag) =>
-      val tagReplacement = overrideTargetVersions.getOrElse(releaseVersion, tag)
-      releaseVersion -> tagReplacement
+    .map {
+      case (releaseVersion, tag) =>
+        val tagReplacement = overrideTargetVersions.getOrElse(releaseVersion, tag)
+        releaseVersion -> tagReplacement
     }
 }
 
@@ -149,16 +149,17 @@ def generateDocsByDocker(docsPath: Path, maybeVersion: Option[String]): Unit = {
 // step 1: copy docs/docs to the respective dirs
 
 def checkoutDocsToTempFolder(buildDir: Path, docsDir: Path, checkedRepoDir: Path): Seq[(String, Path)] = {
-  docsTargetVersions(checkedRepoDir) map { case (releaseBranchVersion, tagVersion) =>
-    val tagName = tagVersion.gitCheckoutString
-    %('git, 'checkout, s"$tagName")(checkedRepoDir)
-    val tagBuildDir = buildDir / releaseBranchVersion
-    mkdir! tagBuildDir
-    println(s"Copying $tagName docs to: $tagBuildDir")
-    cp.into(docsDir / 'docs, tagBuildDir)
-    cp.into(docsDir / '_layouts / "docs.html", tagBuildDir)
-    println(s"Docs folder for $releaseBranchVersion is copied to ${tagBuildDir / "docs"}")
-    releaseBranchVersion -> tagBuildDir
+  docsTargetVersions(checkedRepoDir) map {
+    case (releaseBranchVersion, tagVersion) =>
+      val tagName = tagVersion.gitCheckoutString
+      %('git, 'checkout, s"$tagName")(checkedRepoDir)
+      val tagBuildDir = buildDir / releaseBranchVersion
+      mkdir ! tagBuildDir
+      println(s"Copying $tagName docs to: $tagBuildDir")
+      cp.into(docsDir / 'docs, tagBuildDir)
+      cp.into(docsDir / '_layouts / "docs.html", tagBuildDir)
+      println(s"Docs folder for $releaseBranchVersion is copied to ${tagBuildDir / "docs"}")
+      releaseBranchVersion -> tagBuildDir
   }
 }
 
@@ -182,14 +183,13 @@ def generateTopLevelDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path) = 
 
   val (_, latestReleaseVersion) = targetVersions.last
 
-
   %.git('checkout, latestReleaseVersion.gitCheckoutString)(checkedRepoDir)
 
   println(s"Copying docs for ${latestReleaseVersion.gitCheckoutString} into $buildDir")
   cp.into(docsDir, buildDir)
 
   println("Cleaning previously generated docs")
-  rm! topLevelGeneratedDocsDir / '_site
+  rm ! topLevelGeneratedDocsDir / '_site
 
   println(s"Generating root docs for ${latestReleaseVersion.gitCheckoutString}")
   println(topLevelGeneratedDocsDir)
@@ -206,19 +206,21 @@ def generateTopLevelDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path) = 
 def generateVersionedDocs(buildDir: Path, versionedDocsDirs: Seq[(String, Path)]) {
   val rootDocsDir = buildDir / 'docs
   println(s"Generating docs for versions ${versionedDocsDirs.map(_._1).mkString(", ")}")
-  versionedDocsDirs foreach { case (releaseBranchVersion, path) =>
-    println("Cleaning docs/docs")
-    rm! rootDocsDir / 'docs
-    println(s"Copying docs for $releaseBranchVersion to the docs/docs folder")
-    cp.into(path / 'docs, rootDocsDir)
-    cp.over(path / "docs.html", rootDocsDir / '_layouts / "docs.html")
-    println(s"Generation docs for $releaseBranchVersion")
-    write.over(rootDocsDir / s"_config.$releaseBranchVersion.yml",
-      s"""baseurl : /marathon/$releaseBranchVersion
+  versionedDocsDirs foreach {
+    case (releaseBranchVersion, path) =>
+      println("Cleaning docs/docs")
+      rm ! rootDocsDir / 'docs
+      println(s"Copying docs for $releaseBranchVersion to the docs/docs folder")
+      cp.into(path / 'docs, rootDocsDir)
+      cp.over(path / "docs.html", rootDocsDir / '_layouts / "docs.html")
+      println(s"Generation docs for $releaseBranchVersion")
+      write.over(
+        rootDocsDir / s"_config.$releaseBranchVersion.yml",
+        s"""baseurl : /marathon/$releaseBranchVersion
          |release_versions: [${versionedDocsDirs.reverse.map(_._1).mkString(", ")}]
        """.stripMargin
-    )
-    generateDocsByDocker(rootDocsDir, Some(releaseBranchVersion))
+      )
+      generateDocsByDocker(rootDocsDir, Some(releaseBranchVersion))
   }
 }
 
@@ -247,12 +249,11 @@ def launchPreview(siteDir: Path): Unit = {
           getFromDirectory(siteDir.toString)
         }
       } ~
-      getFromDirectory(siteDir.toString) ~
-      redirectToTrailingSlashIfMissing(StatusCodes.PermanentRedirect) {
-        getFromDirectory(siteDir.toString)
-      }
+        getFromDirectory(siteDir.toString) ~
+        redirectToTrailingSlashIfMissing(StatusCodes.PermanentRedirect) {
+          getFromDirectory(siteDir.toString)
+        }
     }
-
 
   val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
 
@@ -263,7 +264,7 @@ def launchPreview(siteDir: Path): Unit = {
 
 def copyMarathon(buildDir: Path): Path = {
   println(s"Copying marathon folder into $buildDir")
-  cp.into(pwd/up, buildDir)
+  cp.into(pwd / up, buildDir)
   println("Done.")
   buildDir / 'marathon
 }
@@ -273,19 +274,19 @@ def buildDocs(buildDir: Path, docsDir: Path, checkedRepoDir: Path): Path = {
   val versionedDocsDirs = checkoutDocsToTempFolder(buildDir, docsDir, checkedRepoDir)
   generateTopLevelDocs(buildDir, docsDir, checkedRepoDir)
   generateVersionedDocs(buildDir, versionedDocsDirs)
-  val siteDir = (buildDir/'docs/'_site)
+  val siteDir = (buildDir / 'docs / '_site)
   siteDir
 }
 
 def publishToGithub(siteDir: Path, buildDir: Path, remote: String): Unit = {
   println(s"Publishing docs to remote $remote")
   %('git, 'clone, "-b", "gh-pages", "--single-branch", remote, "marathon-gh-pages")(buildDir)
-  val ghPagesDir = buildDir/"marathon-gh-pages"
+  val ghPagesDir = buildDir / "marathon-gh-pages"
   // delete the old docs but not .git files
-  ls! ghPagesDir |? (path => !path.last.startsWith(".")) | (path => rm! path)
+  ls ! ghPagesDir |? (path => !path.last.startsWith(".")) | (path => rm ! path)
 
   // move generated docs into gh-pages
-  ls! siteDir | (path => cp.into(path, ghPagesDir))
+  ls ! siteDir | (path => cp.into(path, ghPagesDir))
 
   %('git, 'add, ".")(ghPagesDir)
   %('git, 'commit, "-m", "Syncing docs with release branch")(ghPagesDir)

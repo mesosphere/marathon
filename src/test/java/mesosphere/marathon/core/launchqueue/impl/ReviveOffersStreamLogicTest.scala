@@ -36,10 +36,10 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
       input.complete()
 
       // revives from the first instance
-      Seq.fill(3){ output.pull().futureValue }.flatten shouldBe Seq(Revive, Revive, Revive)
+      Seq.fill(3) { output.pull().futureValue }.flatten shouldBe Seq(Revive, Revive, Revive)
 
       // set of revives for instance 2 and 3
-      Seq.fill(3){ output.pull().futureValue }.flatten shouldBe Seq(Revive, Revive, Revive)
+      Seq.fill(3) { output.pull().futureValue }.flatten shouldBe Seq(Revive, Revive, Revive)
 
       output.pull().futureValue shouldBe None // should be EOS
     }
@@ -58,8 +58,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
   "Suppress and revive without throttling" should {
     // Many of these components are more easily tested without throttling logic
     val suppressReviveFlow: Flow[Either[InstanceChangeOrSnapshot, ReviveOffersStreamLogic.DelayedStatus], Op, NotUsed] =
-      ReviveOffersStreamLogic
-        .reviveStateFromInstancesAndDelays
+      ReviveOffersStreamLogic.reviveStateFromInstancesAndDelays
         .via(ReviveOffersStreamLogic.suppressOrReviveFromDiff)
         .via(ReviveOffersStreamLogic.deduplicateSuppress)
 
@@ -87,42 +86,33 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
       val instance1 = Instance.scheduled(webApp)
       val instance2 = Instance.scheduled(webApp)
 
-      val results = Source(
-        List(
-          Left(InstancesSnapshot(Nil)),
-          Left(InstanceUpdated(instance1, None, Nil)),
-          Left(InstanceUpdated(instance2, None, Nil))))
-        .via(suppressReviveFlow)
-        .runWith(Sink.seq)
-        .futureValue
+      val results =
+        Source(List(Left(InstancesSnapshot(Nil)), Left(InstanceUpdated(instance1, None, Nil)), Left(InstanceUpdated(instance2, None, Nil))))
+          .via(suppressReviveFlow)
+          .runWith(Sink.seq)
+          .futureValue
       results shouldBe Vector(Suppress, Revive, Revive, Revive, Revive, Revive, Revive)
     }
 
     "does not emit a revive for updates to existing scheduled instances" in {
       val instance1 = Instance.scheduled(webApp)
 
-      val results = Source(
-        List(
-          Left(InstancesSnapshot(Nil)),
-          Left(InstanceUpdated(instance1, None, Nil)),
-          Left(InstanceUpdated(instance1, None, Nil))))
-        .via(suppressReviveFlow)
-        .runWith(Sink.seq)
-        .futureValue
+      val results =
+        Source(List(Left(InstancesSnapshot(Nil)), Left(InstanceUpdated(instance1, None, Nil)), Left(InstanceUpdated(instance1, None, Nil))))
+          .via(suppressReviveFlow)
+          .runWith(Sink.seq)
+          .futureValue
       results shouldBe Vector(Suppress, Revive, Revive, Revive)
     }
 
     "does not revive if an instance is backed off" in {
       val instance1 = Instance.scheduled(webApp)
 
-      val results = Source(
-        List(
-          Left(InstancesSnapshot(Nil)),
-          Right(Delayed(webApp.configRef)),
-          Left(InstanceUpdated(instance1, None, Nil))))
-        .via(suppressReviveFlow)
-        .runWith(Sink.seq)
-        .futureValue
+      val results =
+        Source(List(Left(InstancesSnapshot(Nil)), Right(Delayed(webApp.configRef)), Left(InstanceUpdated(instance1, None, Nil))))
+          .via(suppressReviveFlow)
+          .runWith(Sink.seq)
+          .futureValue
       results shouldBe Vector(Suppress)
     }
 
@@ -134,8 +124,9 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
           Left(InstancesSnapshot(Nil)),
           Left(InstanceUpdated(instance1, None, Nil)),
           Right(Delayed(webApp.configRef)),
-          Right(NotDelayed(webApp.configRef))))
-        .via(suppressReviveFlow)
+          Right(NotDelayed(webApp.configRef))
+        )
+      ).via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue
       results shouldBe Vector(Suppress, Revive, Revive, Revive, Suppress, Revive, Revive, Revive)
@@ -145,10 +136,7 @@ class ReviveOffersStreamLogicTest extends AkkaUnitTest {
       val webInstance = Instance.scheduled(webApp)
       val monitoringInstance = Instance.scheduled(monitoringApp)
 
-      val results = Source(
-        List(
-          Left(InstancesSnapshot(Seq(webInstance, monitoringInstance))),
-          Right(Delayed(webApp.configRef))))
+      val results = Source(List(Left(InstancesSnapshot(Seq(webInstance, monitoringInstance))), Right(Delayed(webApp.configRef))))
         .via(suppressReviveFlow)
         .runWith(Sink.seq)
         .futureValue

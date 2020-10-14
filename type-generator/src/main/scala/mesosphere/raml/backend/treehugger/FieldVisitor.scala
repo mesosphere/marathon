@@ -16,19 +16,21 @@ object FieldVisitor {
     }
   }
 
-  def playValidator(field: FieldT) =  {
+  def playValidator(field: FieldT) = {
     def reads = validateConstraints(field.constraints)(PlayPath DOT "read" APPLYTYPE field.`type`)
     def validate =
-      REF("json") DOT "\\" APPLY(LIT(field.rawName)) DOT "validate" APPLYTYPE field.`type` APPLY(reads)
+      REF("json") DOT "\\" APPLY (LIT(field.rawName)) DOT "validate" APPLYTYPE field.`type` APPLY (reads)
     def validateOpt =
-      REF("json") DOT "\\" APPLY(LIT(field.rawName)) DOT "validateOpt" APPLYTYPE field.`type` APPLY(reads)
+      REF("json") DOT "\\" APPLY (LIT(field.rawName)) DOT "validateOpt" APPLYTYPE field.`type` APPLY (reads)
     def validateOptWithDefault(defaultValue: Tree) =
-      REF("json") DOT "\\" APPLY(LIT(field.rawName)) DOT "validateOpt" APPLYTYPE field.`type` APPLY(reads) DOT "map" APPLY (REF("_") DOT "getOrElse" APPLY defaultValue)
+      REF("json") DOT "\\" APPLY (LIT(field.rawName)) DOT "validateOpt" APPLYTYPE field.`type` APPLY (reads) DOT "map" APPLY (REF(
+        "_"
+      ) DOT "getOrElse" APPLY defaultValue)
 
     if (field.required && !field.forceOptional) {
       validate
     } else if (field.repeated && !field.forceOptional) {
-      validateOptWithDefault(field.`type` APPLY())
+      validateOptWithDefault(field.`type` APPLY ())
     } else {
       if (field.defaultValue.isDefined && !field.forceOptional) {
         validateOptWithDefault(field.defaultValue.get)
@@ -43,40 +45,43 @@ object FieldVisitor {
       exp
     } else {
       @tailrec
-      def buildChain(constraints: List[ConstraintT[_]], chain: Tree): Tree = constraints match {
-        case Nil => chain
-        case c :: rs => buildChain(rs, chain INFIX("keepAnd", validateConstraint(c)))
-      }
+      def buildChain(constraints: List[ConstraintT[_]], chain: Tree): Tree =
+        constraints match {
+          case Nil => chain
+          case c :: rs => buildChain(rs, chain INFIX ("keepAnd", validateConstraint(c)))
+        }
 
       exp APPLY buildChain(c.tail.to[List], validateConstraint(c.head))
     }
   }
 
   /** @return a code gen expression that represents a playJS reads validation */
-  def validateConstraint(c: ConstraintT[_]): Tree = c match {
-    case max @ ConstraintT.MaxLength(len) =>
-      REF(max.name) APPLYTYPE StringClass APPLY (constraintToValue(max, len))
-    case min @ ConstraintT.MinLength(len) =>
-      REF(min.name) APPLYTYPE StringClass APPLY (constraintToValue(min, len))
-    case p @ ConstraintT.Pattern(pattern) =>
-      REF(p.name) APPLY (constraintToValue(p, pattern))
-    case max @ ConstraintT.MaxItems(len, t) =>
-      REF(max.name) APPLYTYPE t APPLY(constraintToValue(max, len))
-    case min @ ConstraintT.MinItems(len, t) =>
-      REF(min.name) APPLYTYPE t APPLY(constraintToValue(min, len))
-    case max @ ConstraintT.Max(v, t) =>
-      REF(max.name) APPLYTYPE t APPLY(constraintToValue(max, v))
-    case min @ ConstraintT.Min(v, t) =>
-      REF(min.name) APPLYTYPE t APPLY(constraintToValue(min, v))
-    case keyPattern @ ConstraintT.KeyPattern(pattern, mapValType) =>
-      REF(keyPattern.name) APPLYTYPE mapValType APPLY (constraintToValue(keyPattern, pattern))
-  }
+  def validateConstraint(c: ConstraintT[_]): Tree =
+    c match {
+      case max @ ConstraintT.MaxLength(len) =>
+        REF(max.name) APPLYTYPE StringClass APPLY (constraintToValue(max, len))
+      case min @ ConstraintT.MinLength(len) =>
+        REF(min.name) APPLYTYPE StringClass APPLY (constraintToValue(min, len))
+      case p @ ConstraintT.Pattern(pattern) =>
+        REF(p.name) APPLY (constraintToValue(p, pattern))
+      case max @ ConstraintT.MaxItems(len, t) =>
+        REF(max.name) APPLYTYPE t APPLY (constraintToValue(max, len))
+      case min @ ConstraintT.MinItems(len, t) =>
+        REF(min.name) APPLYTYPE t APPLY (constraintToValue(min, len))
+      case max @ ConstraintT.Max(v, t) =>
+        REF(max.name) APPLYTYPE t APPLY (constraintToValue(max, v))
+      case min @ ConstraintT.Min(v, t) =>
+        REF(min.name) APPLYTYPE t APPLY (constraintToValue(min, v))
+      case keyPattern @ ConstraintT.KeyPattern(pattern, mapValType) =>
+        REF(keyPattern.name) APPLYTYPE mapValType APPLY (constraintToValue(keyPattern, pattern))
+    }
 
-  def constraintToValue[C](c: ConstraintT[C], v: C): Tree = c match {
-    case ConstraintT.Pattern(pattern) =>  LIT(pattern) DOT "r"
-    case ConstraintT.KeyPattern(pattern, _) =>  LIT(pattern) DOT "r"
-    case _ => LIT(v) // decent assumption for built-ins, probably not much else
-  }
+  def constraintToValue[C](c: ConstraintT[C], v: C): Tree =
+    c match {
+      case ConstraintT.Pattern(pattern) => LIT(pattern) DOT "r"
+      case ConstraintT.KeyPattern(pattern, _) => LIT(pattern) DOT "r"
+      case _ => LIT(v) // decent assumption for built-ins, probably not much else
+    }
 
   /** a code gen expression for a field that represents the constraint limit */
   def limitField[C](constraint: ConstraintT[C], field: FieldT): Option[Tree] = {

@@ -19,11 +19,11 @@ object TarFlow {
   case class TarEntry(header: TarArchiveEntry, data: ByteString)
   object TarEntry {
     def apply(
-      name: String,
-      data: ByteString,
-      mode: Int = TarArchiveEntry.DEFAULT_FILE_MODE,
-      user: String = System.getProperty("user.name"),
-      modTime: Long = System.currentTimeMillis
+        name: String,
+        data: ByteString,
+        mode: Int = TarArchiveEntry.DEFAULT_FILE_MODE,
+        user: String = System.getProperty("user.name"),
+        modTime: Long = System.currentTimeMillis
     ): TarEntry = {
       val header = new TarArchiveEntry(name)
       header.setSize(data.size.toLong)
@@ -62,7 +62,9 @@ object TarFlow {
     * @param readSoFar previous offered data which did not satisfy the amount we wanted
     */
   private case class ReadingPaddedChunk(
-      size: Int, andThen: ByteString => (ReaderStage, List[TarEntry]), readSoFar: ByteString = ByteString.empty
+      size: Int,
+      andThen: ByteString => (ReaderStage, List[TarEntry]),
+      readSoFar: ByteString = ByteString.empty
   ) extends ReaderStage {
     val paddedSize = calcPaddedSize(size, recordSize)
     def apply(data: ByteString): (ReaderStage, List[TarEntry], ByteString) = {
@@ -92,24 +94,27 @@ object TarFlow {
     */
   private object Readers {
     def reading(nameOverride: Option[String] = None) =
-      ReadingPaddedChunk(recordSize, andThen = { headerBytes =>
-        lazy val entry = new TarArchiveEntry(headerBytes.toArray)
-        if (headerBytes.forall(_ == 0)) {
-          // that's all folks!
-          (Terminal, Nil)
-        } else if (entry.isGNULongNameEntry) {
-          (ReadingPaddedChunk(entry.getSize.toInt, andThen = resumeWithLongName), Nil)
-        } else if (entry.isPaxHeader) {
-          throw new RuntimeException("Pax headers not supported")
-        } else if (entry.isGNUSparse) {
-          throw new RuntimeException("GNU Sparse headers not supported")
-        } else if (entry.getSize > Int.MaxValue) {
-          throw new RuntimeException(s"Entries larger than ${Int.MaxValue} not supported")
-        } else {
-          nameOverride.foreach(entry.setName)
-          (ReadingPaddedChunk(entry.getSize.toInt, andThen = yieldEntry(entry)), Nil)
+      ReadingPaddedChunk(
+        recordSize,
+        andThen = { headerBytes =>
+          lazy val entry = new TarArchiveEntry(headerBytes.toArray)
+          if (headerBytes.forall(_ == 0)) {
+            // that's all folks!
+            (Terminal, Nil)
+          } else if (entry.isGNULongNameEntry) {
+            (ReadingPaddedChunk(entry.getSize.toInt, andThen = resumeWithLongName), Nil)
+          } else if (entry.isPaxHeader) {
+            throw new RuntimeException("Pax headers not supported")
+          } else if (entry.isGNUSparse) {
+            throw new RuntimeException("GNU Sparse headers not supported")
+          } else if (entry.getSize > Int.MaxValue) {
+            throw new RuntimeException(s"Entries larger than ${Int.MaxValue} not supported")
+          } else {
+            nameOverride.foreach(entry.setName)
+            (ReadingPaddedChunk(entry.getSize.toInt, andThen = yieldEntry(entry)), Nil)
+          }
         }
-      })
+      )
 
     /**
       * If a name is > 100 chars, then gnu tar will output something like this:
@@ -123,10 +128,11 @@ object TarFlow {
       * should use the name read here.
       */
     private def resumeWithLongName(nameData: ByteString): (ReaderStage, List[TarEntry]) = {
-      val withoutNullTerm = if (nameData.last == 0)
-        nameData.dropRight(1)
-      else
-        nameData
+      val withoutNullTerm =
+        if (nameData.last == 0)
+          nameData.dropRight(1)
+        else
+          nameData
 
       (reading(nameOverride = Some(withoutNullTerm.utf8String)), Nil)
     }

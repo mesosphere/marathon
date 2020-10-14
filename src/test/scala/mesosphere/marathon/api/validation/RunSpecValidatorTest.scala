@@ -24,9 +24,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
   private def validContainer(networks: Seq[Network] = Nil) = Container.validContainer(networks, Set())
 
   private[this] def testValidId(id: String): Unit = {
-    val app = AppDefinition(
-      id = PathId(id),
-      cmd = Some("true"))
+    val app = AppDefinition(id = PathId(id), cmd = Some("true"))
 
     validate(app)
   }
@@ -44,9 +42,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
   "RunSpecValidator" should {
     "only cmd" in {
-      val app = AppDefinition(
-        id = PathId("/test"),
-        cmd = Some("true"))
+      val app = AppDefinition(id = PathId("/test"), cmd = Some("true"))
 
       validate(app)
     }
@@ -98,9 +94,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
     // non-absolute paths (could be allowed in some contexts)
     "relative id 'relative/asd' passes schema but not validation" in {
-      val app = AppDefinition(
-        id = PathId("relative/asd"),
-        cmd = Some("true"))
+      val app = AppDefinition(id = PathId("relative/asd"), cmd = Some("true"))
 
       validAppDefinition(app) should haveViolations("/id" -> "Path needs to be absolute")
 
@@ -108,9 +102,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
     // non-absolute paths (could be allowed in some contexts)
     "relative id '../relative' passes schema but not validation" in {
-      val app = AppDefinition(
-        id = PathId("../relative"),
-        cmd = Some("true"))
+      val app = AppDefinition(id = PathId("../relative"), cmd = Some("true"))
 
       validAppDefinition(app) should haveViolations("/id" -> "Path needs to be absolute")
     }
@@ -161,103 +153,70 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
     }
 
     "only cmd + acceptedResourceRoles" in {
-      val app = AppDefinition(
-        id = PathId("/test"),
-        cmd = Some("true"),
-        acceptedResourceRoles = Set(ResourceRole.Unreserved))
+      val app = AppDefinition(id = PathId("/test"), cmd = Some("true"), acceptedResourceRoles = Set(ResourceRole.Unreserved))
       assert(validate(app).isSuccess)
     }
 
     "only cmd + acceptedResourceRoles 2" in {
-      val app = AppDefinition(
-        id = PathId("/test"),
-        cmd = Some("true"),
-        acceptedResourceRoles = Set(ResourceRole.Unreserved, "production"))
+      val app = AppDefinition(id = PathId("/test"), cmd = Some("true"), acceptedResourceRoles = Set(ResourceRole.Unreserved, "production"))
       assert(validate(app).isSuccess)
     }
 
     "only args" in {
-      val app = AppDefinition(
-        id = PathId("/test"),
-        args = "test" :: Nil)
+      val app = AppDefinition(id = PathId("/test"), args = "test" :: Nil)
       assert(validate(app).isSuccess)
     }
 
     "only container" in {
       val f = new Fixture
-      val app = AppDefinition(
-        id = PathId("/test"),
-        container = Some(f.validDockerContainer))
+      val app = AppDefinition(id = PathId("/test"), container = Some(f.validDockerContainer))
       assert(validate(app).isSuccess)
     }
 
     "empty container is invalid" in {
-      val app = AppDefinition(
-        id = PathId("/test"),
-        container = Some(Container.Mesos()))
+      val app = AppDefinition(id = PathId("/test"), container = Some(Container.Mesos()))
       assert(validate(app).isFailure)
     }
 
     "docker container and cmd" in {
       val f = new Fixture
-      val app = AppDefinition(
-        id = PathId("/test"),
-        cmd = Some("true"),
-        container = Some(f.validDockerContainer))
+      val app = AppDefinition(id = PathId("/test"), cmd = Some("true"), container = Some(f.validDockerContainer))
       assert(validate(app).isSuccess)
     }
 
     "docker container and args" in {
       val f = new Fixture
-      val app = AppDefinition(
-        id = PathId("/test"),
-        args = "test" :: Nil,
-        container = Some(f.validDockerContainer))
+      val app = AppDefinition(id = PathId("/test"), args = "test" :: Nil, container = Some(f.validDockerContainer))
       assert(validate(app).isSuccess)
     }
 
     "mesos container only" in {
       val f = new Fixture
-      val app = AppDefinition(
-        id = PathId("/test"),
-        container = Some(f.validMesosDockerContainer))
+      val app = AppDefinition(id = PathId("/test"), container = Some(f.validMesosDockerContainer))
       assert(validate(app).isSuccess)
     }
 
     "mesos container and cmd" in {
       val f = new Fixture
-      val app = AppDefinition(
-        id = PathId("/test"),
-        cmd = Some("true"),
-        container = Some(f.validMesosDockerContainer))
+      val app = AppDefinition(id = PathId("/test"), cmd = Some("true"), container = Some(f.validMesosDockerContainer))
       assert(validate(app).isSuccess)
     }
 
     "mesos container and args" in {
       val f = new Fixture
-      val app = AppDefinition(
-        id = PathId("/test"),
-        args = "test" :: Nil,
-        container = Some(f.validMesosDockerContainer))
+      val app = AppDefinition(id = PathId("/test"), args = "test" :: Nil, container = Some(f.validMesosDockerContainer))
       assert(validate(app).isSuccess)
     }
 
     "container, cmd and args is not valid" in {
       val f = new Fixture
-      val app = AppDefinition(
-        id = PathId("/test"),
-        cmd = Some("true"),
-        args = "test" :: Nil,
-        container = Some(f.validDockerContainer))
+      val app = AppDefinition(id = PathId("/test"), cmd = Some("true"), args = "test" :: Nil, container = Some(f.validDockerContainer))
       assert(validate(app).isFailure)
     }
 
     "container with type MESOS and empty docker field is valid" in {
       val f = new Fixture
-      val app = AppDefinition(
-        id = PathId("/test"),
-        cmd = Some("true"),
-        container = Some(f.validMesosContainer))
+      val app = AppDefinition(id = PathId("/test"), cmd = Some("true"), container = Some(f.validMesosContainer))
       assert(validate(app).isSuccess)
     }
 
@@ -519,10 +478,7 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
     "readinessChecks are invalid for normal apps" in {
       Given("a normal app with a defined readinessCheck")
-      val app = AppDefinition(
-        id = PathId("/test"),
-        cmd = Some("true"),
-        readinessChecks = Seq(ReadinessCheck()))
+      val app = AppDefinition(id = PathId("/test"), cmd = Some("true"), readinessChecks = Seq(ReadinessCheck()))
 
       Then("validation fails")
       validAppDefinition(app).isFailure shouldBe true
@@ -554,9 +510,12 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
 
       val app1 = AppDefinition(
         id = PathId("/test"),
-        networks = Seq(HostNetwork), container = Some(Container.Docker(
-          image = "group/image"
-        )),
+        networks = Seq(HostNetwork),
+        container = Some(
+          Container.Docker(
+            image = "group/image"
+          )
+        ),
         portDefinitions = List.empty,
         healthChecks = Set(
           MarathonHttpHealthCheck(
@@ -576,10 +535,9 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       val f = new Fixture
       val app = Json.parse(f.cassandraWithoutResidency).as[App]
       val config = AppNormalization.Configuration(None, "bridge-name")
-      val result = validAppDefinition(Raml.fromRaml(
-        AppNormalization(config).normalized(
-          validateOrThrow(
-            AppNormalization.forDeprecated(config).normalized(app)))))
+      val result = validAppDefinition(
+        Raml.fromRaml(AppNormalization(config).normalized(validateOrThrow(AppNormalization.forDeprecated(config).normalized(app))))
+      )
       result.isSuccess shouldBe true
     }
 
@@ -589,10 +547,9 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
       val base = Json.parse(f.cassandraWithoutResidency).as[App]
       val app = base.copy(upgradeStrategy = Some(raml.UpgradeStrategy(0, 0)))
       val config = AppNormalization.Configuration(None, "bridge-name")
-      val result = validAppDefinition(Raml.fromRaml(
-        AppNormalization(config).normalized(
-          validateOrThrow(
-            AppNormalization.forDeprecated(config).normalized(app)))))
+      val result = validAppDefinition(
+        Raml.fromRaml(AppNormalization(config).normalized(validateOrThrow(AppNormalization.forDeprecated(config).normalized(app))))
+      )
       withClue(result) {
         result.isSuccess shouldBe true
       }
@@ -628,40 +585,46 @@ class RunSpecValidatorTest extends UnitTest with ValidationTestLike {
         id = PathId("/test"),
         cmd = Some("sleep 1000"),
         upgradeStrategy = UpgradeStrategy(0, 0),
-        env = EnvVarValue(Map[String, String](
-          "APP_USER" -> "admin"
-        ))
+        env = EnvVarValue(
+          Map[String, String](
+            "APP_USER" -> "admin"
+          )
+        )
       )
       Then("the validation succeeds")
       AppDefinition.validAppDefinition(Set())(pm)(app2).isSuccess shouldBe true
     }
 
     class Fixture {
-      def validDockerContainer: Container.Docker = Container.Docker(
-        volumes = Nil,
-        image = "foo/bar:latest"
-      )
+      def validDockerContainer: Container.Docker =
+        Container.Docker(
+          volumes = Nil,
+          image = "foo/bar:latest"
+        )
 
-      def validMesosContainer: Container.Mesos = Container.Mesos(
-        volumes = Nil
-      )
+      def validMesosContainer: Container.Mesos =
+        Container.Mesos(
+          volumes = Nil
+        )
 
-      def validMesosDockerContainer: Container.MesosDocker = Container.MesosDocker(
-        volumes = Nil,
-        image = "foo/bar:latest"
-      )
+      def validMesosDockerContainer: Container.MesosDocker =
+        Container.MesosDocker(
+          volumes = Nil,
+          image = "foo/bar:latest"
+        )
 
       // scalastyle:off magic.number
-      def hostVolume(hostPath: String = "/etc/foo", mountPath: String = "/test",
-        readOnly: Boolean = false): VolumeWithMount[HostVolume] =
+      def hostVolume(hostPath: String = "/etc/foo", mountPath: String = "/test", readOnly: Boolean = false): VolumeWithMount[HostVolume] =
         VolumeWithMount(
           volume = HostVolume(name = None, hostPath = hostPath),
-          mount = VolumeMount(volumeName = None, mountPath = mountPath, readOnly = readOnly))
+          mount = VolumeMount(volumeName = None, mountPath = mountPath, readOnly = readOnly)
+        )
 
       def persistentVolume(size: Long = 10, mountPath: String = "test", readOnly: Boolean = false): VolumeWithMount[PersistentVolume] =
         VolumeWithMount(
           volume = PersistentVolume(name = None, persistent = PersistentVolumeInfo(size)),
-          mount = VolumeMount(volumeName = None, mountPath = mountPath, readOnly = readOnly))
+          mount = VolumeMount(volumeName = None, mountPath = mountPath, readOnly = readOnly)
+        )
 
       val zero = UpgradeStrategy(0, 0)
 

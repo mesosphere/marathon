@@ -47,8 +47,7 @@ class DataDogAPIReporter(metricsConf: MetricsConf, registry: MetricRegistry) ext
       } else {
         entity.discardBytes()
       }
-      context.system.scheduler.scheduleOnce(
-        FiniteDuration(transmissionIntervalMs, TimeUnit.MILLISECONDS), self, Tick)
+      context.system.scheduler.scheduleOnce(FiniteDuration(transmissionIntervalMs, TimeUnit.MILLISECONDS), self, Tick)
   }
 
   private def report(): Unit = {
@@ -90,10 +89,8 @@ class DataDogAPIReporter(metricsConf: MetricsConf, registry: MetricRegistry) ext
     reportMetric(buffer, name, counter.getCount.toString, timestamp, "gauge")
 
   private val histogramSnapshotSuffixes =
-    Seq("min", "average", "median", "75percentile", "95percentile", "98percentile",
-      "99percentile", "999percentile", "max", "stddev")
-  private def reportSnapshot(buffer: StringBuilder, name: String, snapshot: Snapshot, timestamp: Long,
-    scaleMetrics: Boolean): Unit = {
+    Seq("min", "average", "median", "75percentile", "95percentile", "98percentile", "99percentile", "999percentile", "max", "stddev")
+  private def reportSnapshot(buffer: StringBuilder, name: String, snapshot: Snapshot, timestamp: Long, scaleMetrics: Boolean): Unit = {
     val values = Seq(
       snapshot.getMin.toDouble,
       snapshot.getMean,
@@ -104,7 +101,8 @@ class DataDogAPIReporter(metricsConf: MetricsConf, registry: MetricRegistry) ext
       snapshot.get99thPercentile(),
       snapshot.get999thPercentile(),
       snapshot.getMax.toDouble,
-      snapshot.getStdDev)
+      snapshot.getStdDev
+    )
     val scaledValues = if (scaleMetrics) values.map(_ * durationFactor) else values
 
     histogramSnapshotSuffixes.zip(scaledValues).foreach {
@@ -125,7 +123,8 @@ class DataDogAPIReporter(metricsConf: MetricsConf, registry: MetricRegistry) ext
       meter.getMeanRate * rateFactor,
       meter.getOneMinuteRate * rateFactor,
       meter.getFiveMinuteRate * rateFactor,
-      meter.getFifteenMinuteRate * rateFactor)
+      meter.getFifteenMinuteRate * rateFactor
+    )
     meteredSuffixes.zip(values).foreach {
       case (suffix, value) => reportMetric(buffer, s"$name.$suffix", value.toString, timestamp, "gauge")
     }
@@ -139,10 +138,11 @@ class DataDogAPIReporter(metricsConf: MetricsConf, registry: MetricRegistry) ext
     reportMetered(buffer, name, timer, timestamp)
   }
 
-  private def reportMetric(buffer: StringBuilder, name: String, value: String, timestamp: Long,
-    metricType: String): Unit = {
+  private def reportMetric(buffer: StringBuilder, name: String, value: String, timestamp: Long, metricType: String): Unit = {
     if (buffer.length() > 0) buffer.append(',')
-    buffer.append(s"""{"metric":"$name","interval":$transmissionIntervalS,"points":[[$timestamp,$value]],"type":"$metricType",host:"$host"}""")
+    buffer.append(
+      s"""{"metric":"$name","interval":$transmissionIntervalS,"points":[[$timestamp,$value]],"type":"$metricType",host:"$host"}"""
+    )
   }
 }
 

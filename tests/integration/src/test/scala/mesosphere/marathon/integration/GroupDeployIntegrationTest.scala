@@ -128,7 +128,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       waitForDeployment(marathon.updateGroup(id, GroupUpdate(Some(id.toString), Some(Set(app1V1)))))
 
       Then("There is no deployment and all tasks still live")
-      marathon.listDeploymentsForBaseGroup().value should be ('empty)
+      marathon.listDeploymentsForBaseGroup().value should be('empty)
       marathon.tasks(appId).value.toSet should be(tasks.value.toSet)
     }
 
@@ -242,7 +242,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val result = marathon.updateGroup(gid, group.copy(apps = Some(Set(appProxy(appId, "v3", 1)))))
 
       Then("An error is indicated")
-      result should be (Conflict)
+      result should be(Conflict)
       waitForEvent("group_change_failed")
 
       When("Another upgrade is triggered with force, while the old one is not completed")
@@ -253,7 +253,7 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       waitForDeployment(force)
     }
 
-    "A group with a running deployment can not be deleted without force" in temporaryGroup{ gid =>
+    "A group with a running deployment can not be deleted without force" in temporaryGroup { gid =>
       val appId = gid / nextAppId(Some("with-running-deployment-cannot-be-deleted-without-force"))
 
       Given(s"A group with one application with id $appId with an upgrade in progress")
@@ -297,11 +297,12 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       result.success should be(false) withClue s"Response code is ${result.code}: ${result.entityString}"
 
       val errors = (result.entityJson \ "details" \\ "errors").flatMap(_.as[Seq[String]])
-      errors.find(_.contains("cyclic dependencies")) shouldBe defined withClue s"""errors "$errors" did not contain "cyclic dependencies" error."""
+      errors.find(
+        _.contains("cyclic dependencies")
+      ) shouldBe defined withClue s"""errors "$errors" did not contain "cyclic dependencies" error."""
     }
 
     "Applications with dependencies get deployed in the correct order" in temporaryGroup { gid =>
-
       Given(s"A group with id $gid with 3 dependent applications")
       val db = appProxy(gid / "db", "v1", 1)
       val service = appProxy(gid / "service", "v1", 1, dependencies = Set(db.id.toPath))
@@ -328,7 +329,6 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     }
 
     "Groups with dependencies get deployed in the correct order" in temporaryGroup { gid =>
-
       Given(s"A group with id $gid with 3 dependent applications")
       val db = appProxy(gid / "db/db1", "v1", 1)
       val service = appProxy(gid / "service/service1", "v1", 1)
@@ -336,11 +336,13 @@ class GroupDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       val group = GroupUpdate(
         Option(gid.toString),
         Option(Set.empty[App]),
-        Option(Set(
-          GroupUpdate(Some("db"), apps = Some(Set(db))),
-          GroupUpdate(Some("service"), apps = Some(Set(service))).copy(dependencies = Some(Set((gid / "db").toString))),
-          GroupUpdate(Some("frontend"), apps = Some(Set(frontend))).copy(dependencies = Some(Set((gid / "service").toString)))
-        ))
+        Option(
+          Set(
+            GroupUpdate(Some("db"), apps = Some(Set(db))),
+            GroupUpdate(Some("service"), apps = Some(Set(service))).copy(dependencies = Some(Set((gid / "db").toString))),
+            GroupUpdate(Some("frontend"), apps = Some(Set(frontend))).copy(dependencies = Some(Set((gid / "service").toString)))
+          )
+        )
       )
 
       When("The group gets deployed")

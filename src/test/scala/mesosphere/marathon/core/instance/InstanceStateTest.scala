@@ -19,7 +19,8 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val f = new Fixture
 
       val startTimestamps = Seq(Some(f.clock.now()), Some(f.clock.now - 1.hour))
-      val tasks: Map[Task.Id, Task] = f.tasks(Condition.Running, Condition.Running)
+      val tasks: Map[Task.Id, Task] = f
+        .tasks(Condition.Running, Condition.Running)
         .values
         .zip(startTimestamps)
         .map {
@@ -48,7 +49,8 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val f = new Fixture
 
       val startTimestamps = Seq(Some(f.clock.now - 1.hour), None)
-      val tasks: Map[Task.Id, Task] = f.tasks(Condition.Running, Condition.Staging)
+      val tasks: Map[Task.Id, Task] = f
+        .tasks(Condition.Running, Condition.Staging)
         .values
         .zip(startTimestamps)
         .map {
@@ -67,7 +69,8 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
       val f = new Fixture
 
       val startTimestamps = Seq(Some(f.clock.now - 1.hour), None)
-      val tasks: Map[Task.Id, Task] = f.tasks(Condition.Running, Condition.Unreachable)
+      val tasks: Map[Task.Id, Task] = f
+        .tasks(Condition.Running, Condition.Unreachable)
         .values
         .zip(startTimestamps)
         .map {
@@ -117,8 +120,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
 
         val tasks = f.tasks(conditions).values
 
-        val actualCondition = Instance.InstanceState.conditionFromTasks(
-          tasks, f.clock.now, UnreachableEnabled(5.minutes))
+        val actualCondition = Instance.InstanceState.conditionFromTasks(tasks, f.clock.now, UnreachableEnabled(5.minutes))
 
         s"return condition $expected" in { actualCondition should be(expected) }
       }
@@ -129,8 +131,7 @@ class InstanceStateTest extends UnitTest with TableDrivenPropertyChecks {
   it should {
     "return Unknown for an empty task list" in {
       val f = new Fixture()
-      val result = Instance.InstanceState.conditionFromTasks(
-        Iterable.empty, f.clock.now(), UnreachableEnabled(5.minutes))
+      val result = Instance.InstanceState.conditionFromTasks(Iterable.empty, f.clock.now(), UnreachableEnabled(5.minutes))
 
       result should be(Condition.Unknown)
     }

@@ -6,11 +6,16 @@ import mesosphere.marathon.state._
 
 class RestartStrategyTest extends UnitTest {
 
-  val container = Some(Container.MesosDocker(volumes = Seq(VolumeWithMount(
-    volume = PersistentVolume(name = None, PersistentVolumeInfo(123)),
-    mount = VolumeMount(volumeName = None, mountPath = "path")
-  ))
-  ))
+  val container = Some(
+    Container.MesosDocker(volumes =
+      Seq(
+        VolumeWithMount(
+          volume = PersistentVolume(name = None, PersistentVolumeInfo(123)),
+          mount = VolumeMount(volumeName = None, mountPath = "path")
+        )
+      )
+    )
+  )
 
   import mesosphere.marathon.core.deployment.impl.TaskReplaceActor._
   "RestartStrategy" should {
@@ -20,7 +25,8 @@ class RestartStrategyTest extends UnitTest {
         id = PathId("/app"),
         instances = 1,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
-        container = container)
+        container = container
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances)
@@ -38,7 +44,8 @@ class RestartStrategyTest extends UnitTest {
         id = PathId("/app"),
         instances = 1,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
-        container = container)
+        container = container
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = 0)
@@ -56,7 +63,8 @@ class RestartStrategyTest extends UnitTest {
         id = PathId("/app"),
         instances = 5,
         upgradeStrategy = UpgradeStrategy.forResidentTasks, // UpgradeStrategy(0.5, 0)
-        container = container)
+        container = container
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances)
@@ -74,7 +82,8 @@ class RestartStrategyTest extends UnitTest {
         id = PathId("/app"),
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
-        container = container)
+        container = container
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances + 2)
@@ -92,7 +101,8 @@ class RestartStrategyTest extends UnitTest {
         id = PathId("/app"),
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
-        container = container)
+        container = container
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances - 2)
@@ -110,7 +120,8 @@ class RestartStrategyTest extends UnitTest {
         id = PathId("/app"),
         instances = 5,
         upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 0), // UpgradeStrategy(0.5, 0)
-        container = container)
+        container = container
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances)
@@ -127,7 +138,8 @@ class RestartStrategyTest extends UnitTest {
       val app = AppDefinition(
         id = PathId("/app"),
         instances = 1,
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0)
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances)
@@ -144,7 +156,8 @@ class RestartStrategyTest extends UnitTest {
       val app = AppDefinition(
         id = PathId("/app"),
         instances = 1,
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0)
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = 0)
@@ -161,7 +174,8 @@ class RestartStrategyTest extends UnitTest {
       val app = AppDefinition(
         id = PathId("/app"),
         instances = 2,
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0))
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.5, maximumOverCapacity = 0)
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = app.instances)
@@ -178,7 +192,8 @@ class RestartStrategyTest extends UnitTest {
       val app = AppDefinition(
         id = PathId("/app"),
         instances = 10,
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.1, maximumOverCapacity = 0))
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.1, maximumOverCapacity = 0)
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = 1)
@@ -195,7 +210,8 @@ class RestartStrategyTest extends UnitTest {
       val app = AppDefinition(
         id = PathId("/app"),
         instances = 10,
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.1, maximumOverCapacity = 1.0))
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 0.1, maximumOverCapacity = 1.0)
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = 10)
@@ -212,7 +228,8 @@ class RestartStrategyTest extends UnitTest {
       val app = AppDefinition(
         id = PathId("/app"),
         instances = 10,
-        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 1.0))
+        upgradeStrategy = UpgradeStrategy(minimumHealthCapacity = 1, maximumOverCapacity = 1.0)
+      )
 
       When("the ignition strategy is computed")
       val strategy = computeRestartStrategy(app, runningInstancesCount = 10)

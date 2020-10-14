@@ -31,7 +31,7 @@ class Stracer extends StrictLogging {
     * Destroys all running `strace` processes. Called automatically when using [[Stracer.withStracer()]] test fixture.
     */
   def cleanup(): Unit = {
-    straced.foreach{ p =>
+    straced.foreach { p =>
       p.destroy()
       p.exitValue()
     }

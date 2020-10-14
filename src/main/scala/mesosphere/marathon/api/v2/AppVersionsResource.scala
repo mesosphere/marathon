@@ -22,36 +22,38 @@ class AppVersionsResource(
     groupManager: GroupManager,
     val authenticator: Authenticator,
     val authorizer: Authorizer,
-    val config: MarathonConf)(implicit val executionContext: ExecutionContext) extends AuthResource {
+    val config: MarathonConf
+)(implicit val executionContext: ExecutionContext)
+    extends AuthResource {
 
   @GET
-  def index(
-    @PathParam("appId") appId: String,
-    @Context req: HttpServletRequest,
-    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
-    async {
-      implicit val identity = await(authenticatedAsync(req))
-      val id = appId.toRootPath
-      withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { _ =>
-        ok(jsonObjString("versions" -> service.listAppVersions(id)))
+  def index(@PathParam("appId") appId: String, @Context req: HttpServletRequest, @Suspended asyncResponse: AsyncResponse): Unit =
+    sendResponse(asyncResponse) {
+      async {
+        implicit val identity = await(authenticatedAsync(req))
+        val id = appId.toRootPath
+        withAuthorization(ViewRunSpec, groupManager.app(id), unknownApp(id)) { _ =>
+          ok(jsonObjString("versions" -> service.listAppVersions(id)))
+        }
       }
     }
-  }
 
   @GET
   @Path("{version}")
   def show(
-    @PathParam("appId") appId: String,
-    @PathParam("version") version: String,
-    @Context req: HttpServletRequest,
-    @Suspended asyncResponse: AsyncResponse): Unit = sendResponse(asyncResponse) {
-    async {
-      implicit val identity = await(authenticatedAsync(req))
-      val id = appId.toRootPath
-      val timestamp = Timestamp(version)
-      withAuthorization(ViewRunSpec, service.getApp(id, timestamp), unknownApp(id, Some(timestamp))) { app =>
-        ok(jsonString(app))
+      @PathParam("appId") appId: String,
+      @PathParam("version") version: String,
+      @Context req: HttpServletRequest,
+      @Suspended asyncResponse: AsyncResponse
+  ): Unit =
+    sendResponse(asyncResponse) {
+      async {
+        implicit val identity = await(authenticatedAsync(req))
+        val id = appId.toRootPath
+        val timestamp = Timestamp(version)
+        withAuthorization(ViewRunSpec, service.getApp(id, timestamp), unknownApp(id, Some(timestamp))) { app =>
+          ok(jsonString(app))
+        }
       }
     }
-  }
 }

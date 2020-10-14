@@ -33,4 +33,3 @@ object OfferMatchResult {
   case class NoMatch(runSpec: RunSpec, offer: Mesos.Offer, reasons: Seq[NoOfferMatchReason], timestamp: Timestamp) extends OfferMatchResult
 
 }
-

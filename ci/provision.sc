@@ -1,4 +1,4 @@
-#!/usr/bin/env amm
+#!/ usr / bin / env amm
 
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
@@ -6,16 +6,15 @@ import scala.util.control.NonFatal
 import scalaj.http._
 
 /**
- * Finds the version of the Mesos Debian package in "project/Dependencies.scala"
- * and installs it.
- */
+  * Finds the version of the Mesos Debian package in "project/Dependencies.scala"
+  * and installs it.
+  */
 @main
 def installMesos(): Unit = {
   // Find Mesos version
   val versionPattern = """.*MesosDebian = "(.*)"""".r
   val maybeVersion =
-      read.lines(pwd/'project/"Dependencies.scala")
-          .collectFirst { case versionPattern(v) => v }
+    read.lines(pwd / 'project / "Dependencies.scala").collectFirst { case versionPattern(v) => v }
 
   // Install Mesos
   def install_mesos(version: String): Unit = {
@@ -62,13 +61,14 @@ def eligibleProcess(proc: String): Boolean =
 /**
   * @return list of leaked process names.
   */
-def leakedProcesses() = %%('ps, 'auxww).out.lines.filter { proc =>
-  eligibleProcess(proc) && !protectedProcess(proc)
-}
+def leakedProcesses() =
+  %%('ps, 'auxww).out.lines.filter { proc =>
+    eligibleProcess(proc) && !protectedProcess(proc)
+  }
 
 /**
- * Kill stale processes from previous pipeline runs.
- */
+  * Kill stale processes from previous pipeline runs.
+  */
 @main
 def killStaleTestProcesses(): Unit = {
   val leaks = leakedProcesses()
@@ -78,7 +78,7 @@ def killStaleTestProcesses(): Unit = {
   } else {
     println("This requires root permissions. If you run this on a workstation it'll kill more than you expect.\n")
     println(s"Will kill:")
-    leaks.foreach( p => println(s"  $p"))
+    leaks.foreach(p => println(s"  $p"))
 
     val pidPattern = """([^\s]+)\s+([^\s]+)\s+.*""".r
 
@@ -96,7 +96,7 @@ def killStaleTestProcesses(): Unit = {
     val undead = leakedProcesses()
     if (undead.nonEmpty) {
       println("Couldn't kill some leaked processes:")
-      undead.foreach( p => println(s"  $p"))
+      undead.foreach(p => println(s"  $p"))
     }
   }
 }
@@ -104,7 +104,7 @@ def killStaleTestProcesses(): Unit = {
 def installDcosCli(): Unit = {
   val command = os.root / 'usr / 'local / 'bin / 'dcos
 
-  if( ! (exists! command)) {
+  if (!(exists ! command)) {
     val os = %%("uname", "-s").out.string.trim.toLowerCase
 
     val download = s"https://downloads.dcos.io/binaries/cli/$os/x86-64/latest/dcos"

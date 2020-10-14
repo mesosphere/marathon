@@ -31,18 +31,19 @@ trait RestResource extends JaxResource {
     * @param asyncResponse The AsyncResponse instance for the request to a controller method
     * @param body The response-generating code.
     */
-  def sendResponse(asyncResponse: AsyncResponse)(body: => Future[Response]) = try {
-    body.onComplete {
-      case Success(r) =>
-        asyncResponse.resume(r: Object)
-      case Failure(f: Throwable) =>
-        asyncResponse.resume(f)
-    }
-  } catch {
-    case ex: Throwable =>
-      asyncResponse.resume(ex)
+  def sendResponse(asyncResponse: AsyncResponse)(body: => Future[Response]) =
+    try {
+      body.onComplete {
+        case Success(r) =>
+          asyncResponse.resume(r: Object)
+        case Failure(f: Throwable) =>
+          asyncResponse.resume(f)
+      }
+    } catch {
+      case ex: Throwable =>
+        asyncResponse.resume(ex)
 
-  }
+    }
 
   protected def unknownGroup(id: PathId, version: Option[Timestamp] = None): Response = {
     notFound(s"Group '$id' does not exist" + version.fold("")(v => s" in version $v"))
@@ -63,7 +64,8 @@ trait RestResource extends JaxResource {
   }
 
   protected def deploymentResult(d: DeploymentPlan, response: ResponseBuilder = Response.ok()) = {
-    response.entity(jsonObjString("version" -> d.version, "deploymentId" -> d.id))
+    response
+      .entity(jsonObjString("version" -> d.version, "deploymentId" -> d.id))
       .header(RestResource.DeploymentHeader, d.id)
       .build()
   }

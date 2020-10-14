@@ -19,8 +19,7 @@ class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     "kill instance with failing Marathon health checks" in {
       Given("a deployed app with health checks")
       val id = appId(Some(s"replace-marathon-http-health-check"))
-      val app = appProxy(id, "v1", instances = 1, healthCheck = None).
-        copy(healthChecks = Set(ramlHealthCheck(AppHealthCheckProtocol.Http)))
+      val app = appProxy(id, "v1", instances = 1, healthCheck = None).copy(healthChecks = Set(ramlHealthCheck(AppHealthCheckProtocol.Http)))
       val check = registerAppProxyHealthCheck(id, "v1", state = true)
       val result = marathon.createAppV2(app)
       result should be(Created)
@@ -34,7 +33,8 @@ class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       waitForEventWith(
         "unhealthy_instance_kill_event",
         { event => event.info("taskId") == oldTaskId },
-        "Unhealthy instance killed event was not sent.")
+        "Unhealthy instance killed event was not sent."
+      )
 
       And("a replacement is started")
       check.afterDelay(1.seconds, true)
@@ -48,8 +48,8 @@ class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     "kill instance with failing Mesos health checks" in {
       Given("a deployed app with health checks")
       val id = appId(Some(s"replace-mesos-http-health-check"))
-      val app = appProxy(id, "v1", instances = 1, healthCheck = None).
-        copy(healthChecks = Set(ramlHealthCheck(AppHealthCheckProtocol.MesosHttp)))
+      val app =
+        appProxy(id, "v1", instances = 1, healthCheck = None).copy(healthChecks = Set(ramlHealthCheck(AppHealthCheckProtocol.MesosHttp)))
       val check = registerAppProxyHealthCheck(id, "v1", state = true)
       val result = marathon.createAppV2(app)
       result should be(Created)
@@ -64,7 +64,8 @@ class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
       waitForEventWith(
         "instance_changed_event",
         { event => event.info("condition") == "Killed" && event.info("instanceId") == oldInstanceId },
-        "Unhealthy instance killed event was not sent.")
+        "Unhealthy instance killed event was not sent."
+      )
 
       And("a replacement is started")
       check.afterDelay(1.seconds, true)
@@ -76,13 +77,14 @@ class HealthCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
     }
   }
 
-  private def ramlHealthCheck(protocol: AppHealthCheckProtocol) = AppHealthCheck(
-    path = Some("/health"),
-    protocol = protocol,
-    gracePeriodSeconds = 3,
-    intervalSeconds = 1,
-    maxConsecutiveFailures = 3,
-    portIndex = Some(0),
-    delaySeconds = 3
-  )
+  private def ramlHealthCheck(protocol: AppHealthCheckProtocol) =
+    AppHealthCheck(
+      path = Some("/health"),
+      protocol = protocol,
+      gracePeriodSeconds = 3,
+      intervalSeconds = 1,
+      maxConsecutiveFailures = 3,
+      portIndex = Some(0),
+      delaySeconds = 3
+    )
 }

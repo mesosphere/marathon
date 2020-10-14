@@ -20,12 +20,10 @@ import mesosphere.marathon.raml.RuntimeConfiguration
 import play.api.libs.json.Json
 
 trait ZkStoreSerialization {
+
   /** General id resolver for a key of Path.Id */
-  class ZkPathIdResolver[T](
-      val category: String,
-      val hasVersions: Boolean,
-      getVersion: (T) => OffsetDateTime)
-    extends IdResolver[PathId, T, String, ZkId] {
+  class ZkPathIdResolver[T](val category: String, val hasVersions: Boolean, getVersion: (T) => OffsetDateTime)
+      extends IdResolver[PathId, T, String, ZkId] {
     override def toStorageId(id: PathId, version: Option[OffsetDateTime]): ZkId =
       ZkId(category, id.path.mkString("_"), version)
     override def fromStorageId(key: ZkId): PathId = PathId(key.id.split("_").toList, absolute = true)

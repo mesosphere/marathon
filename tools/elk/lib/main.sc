@@ -1,4 +1,4 @@
-#!/usr/bin/env amm
+#!/ usr / bin / env amm
 
 import $file.dependencies
 import $file.util
@@ -7,7 +7,7 @@ import $file.logformat
 import logformat.{LogFormat}
 import scala.annotation.tailrec
 import akka.actor.ActorSystem
-import akka.stream.{ ActorMaterializer, Materializer }
+import akka.stream.{ActorMaterializer, Materializer}
 import akka.stream.IOResult
 import akka.util.ByteString
 import akka.NotUsed
@@ -18,27 +18,31 @@ import scala.concurrent.{Await, Future}
 import scala.util.{Try, Success, Failure}
 import scala.concurrent.ExecutionContext.Implicits.global
 
-@tailrec def await[T](f: Future[T]): T = f.value match {
-  case None =>
-    Thread.sleep(10)
-    await(f)
-  case Some(v) =>
-    v.get
-}
+@tailrec def await[T](f: Future[T]): T =
+  f.value match {
+    case None =>
+      Thread.sleep(10)
+      await(f)
+    case Some(v) =>
+      v.get
+  }
 
 def renderTemplate(template: Path, vars: (String, String)*): String =
-  vars.foldLeft(read!(template)) { case (str, (env, value)) =>
-    str.replace(s"%${env}%", value)
+  vars.foldLeft(read ! (template)) {
+    case (str, (env, value)) =>
+      str.replace(s"%${env}%", value)
   }
 
 def gzipSource(input: Path, maxChunkSize: Int = 1024): Source[ByteString, Future[IOResult]] = {
-  FileIO.fromPath(input.toNIO)
+  FileIO
+    .fromPath(input.toNIO)
     .via(Compression.gunzip(maxChunkSize))
     .mapMaterializedValue { resultF =>
-      resultF.andThen { case Success(result) =>
-        if (!result.wasSuccessful) {
-          println(s"WARNING! Error extracting ${input}; ${result.status}. ${result.count} bytes were written.")
-        }
+      resultF.andThen {
+        case Success(result) =>
+          if (!result.wasSuccessful) {
+            println(s"WARNING! Error extracting ${input}; ${result.status}. ${result.count} bytes were written.")
+          }
       }
     }
 }
@@ -63,19 +67,20 @@ def stripAnsiFlow(inputPath: Path): Flow[ByteString, ByteString, NotUsed] =
     .intersperse(ByteString("\n"))
 
 def unzipAndStripBundleLogs(masters: Map[String, Path])(implicit mat: Materializer): Map[String, Path] = {
-  masters.map { case (master, masterPath) =>
-    val gunzippedFilePath = bundleLogGunzipped(masterPath)
-    if (!gunzippedFilePath.toIO.exists) {
+  masters.map {
+    case (master, masterPath) =>
+      val gunzippedFilePath = bundleLogGunzipped(masterPath)
+      if (!gunzippedFilePath.toIO.exists) {
 
-      val gzippedFilePath = bundleLogGzipped(masterPath)
-      println(s"Extracting ${gzippedFilePath} to ${gunzippedFilePath}")
-      val result = await {
-        gzipSource(gzippedFilePath)
-          .via(stripAnsiFlow(gzippedFilePath))
-          .runWith(FileIO.toPath(gunzippedFilePath.toNIO))
+        val gzippedFilePath = bundleLogGzipped(masterPath)
+        println(s"Extracting ${gzippedFilePath} to ${gunzippedFilePath}")
+        val result = await {
+          gzipSource(gzippedFilePath)
+            .via(stripAnsiFlow(gzippedFilePath))
+            .runWith(FileIO.toPath(gunzippedFilePath.toNIO))
+        }
       }
-    }
-    master -> gunzippedFilePath
+      master -> gunzippedFilePath
   }
 }
 
@@ -89,11 +94,13 @@ def detectLogFormat(logFiles: Seq[Path])(implicit mat: Materializer): Option[Log
     .map { input =>
       val result = Try {
         val linesSample = await(
-          FileIO.fromPath(input.toNIO)
+          FileIO
+            .fromPath(input.toNIO)
             .via(warningLineSplitter(input, 128000))
             .take(100)
             .map(_.utf8String)
-            .runWith(Sink.seq))
+            .runWith(Sink.seq)
+        )
 
         val maybeFormat = (for {
           line <- linesSample.take(100)
@@ -123,14 +130,15 @@ def setupTarget(target: Path): (Path, Path, Path, Path) = {
   val printing = target / 'printing
   val json = target / 'json
   rm(target)
-  Seq(target,loading,printing,json).foreach(mkdir!(_))
+  Seq(target, loading, printing, json).foreach(mkdir ! (_))
   (target, printing, loading, json)
 }
 
 def writeFiles(entries: (Path, String)*): Unit = {
-  entries.foreach { case (path, contents) =>
-    write.over(path, contents.trim + "\n")
-    println(s"Wrote ${path}")
+  entries.foreach {
+    case (path, contents) =>
+      write.over(path, contents.trim + "\n")
+      println(s"Wrote ${path}")
   }
 }
 
@@ -138,15 +146,14 @@ def generateLogstashConfig(inputPath: Path, targetPath: Path, logFormat: LogForm
   val (target, printing, loading, json) = setupTarget(targetPath)
 
   // Write out the debug template set
-  val tcpReader = renderTemplate(
-    pwd / "conf" / "input-tcp.conf.template",
-    "CODEC" -> logFormat.codec)
+  val tcpReader = renderTemplate(pwd / "conf" / "input-tcp.conf.template", "CODEC" -> logFormat.codec)
 
   writeFiles(
     printing / "10-input.conf" -> tcpReader,
     printing / "15-filters-format.conf" -> logFormat.unframe,
-    printing / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
-    printing / "30-output.conf" -> (read!(pwd / "conf" / "output-console.conf")))
+    printing / "20-filters.conf" -> (read ! (pwd / "conf" / "filter-marathon-1.4.x.conf")),
+    printing / "30-output.conf" -> (read ! (pwd / "conf" / "output-console.conf"))
+  )
 
   for {
     (host, logPath) <- files
@@ -167,19 +174,22 @@ def generateLogstashConfig(inputPath: Path, targetPath: Path, logFormat: LogForm
   }
 
   writeFiles(
-    loading / "11-filters-host.conf" -> (read!(pwd / "conf" / "filter-overwrite-host-with-file-host.conf")),
+    loading / "11-filters-host.conf" -> (read ! (pwd / "conf" / "filter-overwrite-host-with-file-host.conf")),
     loading / "15-filters-format.conf" -> logFormat.unframe,
-    loading / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
-    loading / "30-output.conf" -> (read!(pwd / "conf" / "output-elasticsearch.conf")),
-    target / "data-path.txt" -> inputPath.toString)
+    loading / "20-filters.conf" -> (read ! (pwd / "conf" / "filter-marathon-1.4.x.conf")),
+    loading / "30-output.conf" -> (read ! (pwd / "conf" / "output-elasticsearch.conf")),
+    target / "data-path.txt" -> inputPath.toString
+  )
 
   writeFiles(
-    json / "11-filters-host.conf" -> (read!(pwd / "conf" / "filter-overwrite-host-with-file-host.conf")),
+    json / "11-filters-host.conf" -> (read ! (pwd / "conf" / "filter-overwrite-host-with-file-host.conf")),
     json / "15-filters-format.conf" -> logFormat.unframe,
-    json / "20-filters.conf" -> (read!(pwd / "conf" / "filter-marathon-1.4.x.conf")),
+    json / "20-filters.conf" -> (read ! (pwd / "conf" / "filter-marathon-1.4.x.conf")),
     json / "30-output.conf" -> renderTemplate(
       pwd / "conf" / "output-json-ld.conf.template",
-      "FILE" ->  util.escapeString((target / "output.json.ld").toString)))
+      "FILE" -> util.escapeString((target / "output.json.ld").toString)
+    )
+  )
 }
 
 /**
@@ -192,7 +202,7 @@ def generateTargetBundle(bundlePath: Path, targetPath: Path): Unit = {
   implicit val mat = ActorMaterializer()
   println(s"Generating logstash config for DCOS bundle ${bundlePath}")
 
-  val entries = ls!(bundlePath)
+  val entries = ls ! (bundlePath)
   val masterPaths = entries.filter(_.last.endsWith("_master"))
   val masters = masterPaths.map { path => path.last.takeWhile(_ != '_') -> path }.toMap
 
@@ -209,7 +219,6 @@ def generateTargetBundle(bundlePath: Path, targetPath: Path): Unit = {
   println(s"All Done")
 }
 
-
 def generateTargetFile(input: Path, targetPath: Path): Unit = {
   implicit val as = ActorSystem()
   implicit val mat = ActorMaterializer()
@@ -220,10 +229,11 @@ def generateTargetFile(input: Path, targetPath: Path): Unit = {
   if (!strippedPath.toIO.exists) {
     val isGzip = input.last.split('.').last == "gz"
 
-    val source = if (isGzip)
-      gzipSource(input)
-    else
-      FileIO.fromPath(input.toNIO)
+    val source =
+      if (isGzip)
+        gzipSource(input)
+      else
+        FileIO.fromPath(input.toNIO)
 
     println(s"Stripping ansi and writing to ${strippedPath}")
     val result = await {
@@ -255,15 +265,12 @@ implicit val KindRead: scopt.Read[Kind] = scopt.Read.reads {
 }
 
 /** Configration for the build
- *
+  *
  * @param kind target or
- * @param targets All release targets that should be executed.
- * @param runTests indicates whether to run tests of builds before a release.
- */
-case class Config(
-  kind: Kind,
-  path: Path,
-  targetPath: Path)
+  * @param targets All release targets that should be executed.
+  * @param runTests indicates whether to run tests of builds before a release.
+  */
+case class Config(kind: Kind, path: Path, targetPath: Path)
 
 // Scopt parser for release config
 val parser = new scopt.OptionParser[Config]("target") {

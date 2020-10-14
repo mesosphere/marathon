@@ -9,10 +9,8 @@ import scala.concurrent.duration._
 trait ZookeeperConf extends ScallopConf {
   import ZookeeperConf._
 
-  lazy val zooKeeperTimeout = opt[Long](
-    "zk_timeout",
-    descr = "The timeout for ZooKeeper operations in milliseconds.",
-    default = Some(Duration(10, SECONDS).toMillis))
+  lazy val zooKeeperTimeout =
+    opt[Long]("zk_timeout", descr = "The timeout for ZooKeeper operations in milliseconds.", default = Some(Duration(10, SECONDS).toMillis))
 
   lazy val zooKeeperSessionTimeout = opt[Long](
     "zk_session_timeout",
@@ -29,13 +27,14 @@ trait ZookeeperConf extends ScallopConf {
   lazy val zooKeeperUrl = opt[ZkUrl](
     "zk",
     descr = "ZooKeeper URL for storing state. Format: zk://host1:port1,host2:port2,.../path",
-    default = Some(ZkUrl.parse("zk://localhost:2181/marathon") match { case Right(u) => u; case _ => ??? /* because scapegoat thought this was better than .right.get */ })
+    default = Some(ZkUrl.parse("zk://localhost:2181/marathon") match {
+      case Right(u) => u; case _ => ??? /* because scapegoat thought this was better than .right.get */
+    })
   )(scallopZkUrlParser)
 
   lazy val zooKeeperCompressionEnabled = toggle(
     "zk_compression",
-    descrYes =
-      "(Default) Enable compression of zk nodes, if the size of the node is bigger than the configured threshold.",
+    descrYes = "(Default) Enable compression of zk nodes, if the size of the node is bigger than the configured threshold.",
     descrNo = "Disable compression of zk nodes",
     noshort = true,
     prefix = "disable_",
@@ -81,10 +80,11 @@ trait ZookeeperConf extends ScallopConf {
   def zooKeeperLeaderUrl: ZkUrl = zooKeeperUrl() / "leader"
   def zooKeeperLeaderCuratorUrl: ZkUrl = zooKeeperUrl() / "leader-curator"
 
-  lazy val zkDefaultCreationACL = if (zooKeeperUrl().credentials.nonEmpty)
-    ZooDefs.Ids.CREATOR_ALL_ACL
-  else
-    ZooDefs.Ids.OPEN_ACL_UNSAFE
+  lazy val zkDefaultCreationACL =
+    if (zooKeeperUrl().credentials.nonEmpty)
+      ZooDefs.Ids.CREATOR_ALL_ACL
+    else
+      ZooDefs.Ids.OPEN_ACL_UNSAFE
 
   lazy val zkTimeoutDuration = Duration(zooKeeperTimeout(), MILLISECONDS)
   lazy val zkSessionTimeoutDuration = Duration(zooKeeperSessionTimeout(), MILLISECONDS)
@@ -108,26 +108,26 @@ object ZookeeperConf {
   /**
     * Class which contains a parse zkUrl
     */
-  case class ZkUrl(
-      credentials: Option[ZkCreds],
-      hosts: Seq[String],
-      path: String) {
+  case class ZkUrl(credentials: Option[ZkCreds], hosts: Seq[String], path: String) {
 
-    private def redactedAuthSection = if (credentials.nonEmpty)
-      "xxxxxxxx:xxxxxxxx@"
-    else
-      ""
-
-    private def unredactedAuthSection = credentials match {
-      case Some(ZkCreds(username, password)) =>
-        s"${username}:${password}@"
-      case _ =>
+    private def redactedAuthSection =
+      if (credentials.nonEmpty)
+        "xxxxxxxx:xxxxxxxx@"
+      else
         ""
-    }
+
+    private def unredactedAuthSection =
+      credentials match {
+        case Some(ZkCreds(username, password)) =>
+          s"${username}:${password}@"
+        case _ =>
+          ""
+      }
 
     def /(subpath: String): ZkUrl = copy(path = path + "/" + subpath)
 
     def hostsString = hosts.mkString(",")
+
     /**
       * Render this zkUrl to a string. In order to prevent accidental logging of sensitive credentials in the log, we
       * redact user and password from toString.
@@ -146,29 +146,34 @@ object ZookeeperConf {
   val scallopZkUrlParser = new ValueConverter[ZkUrl] {
     val argType = org.rogach.scallop.ArgType.SINGLE
 
-    def parse(s: List[(String, List[String])]): Either[String, Option[ZkUrl]] = s match {
-      case (_, zkUrlString :: Nil) :: Nil =>
-        ZkUrl.parse(zkUrlString).map(Some(_))
-      case Nil =>
-        Right(None)
-      case other =>
-        Left("Expected exactly one url")
-    }
+    def parse(s: List[(String, List[String])]): Either[String, Option[ZkUrl]] =
+      s match {
+        case (_, zkUrlString :: Nil) :: Nil =>
+          ZkUrl.parse(zkUrlString).map(Some(_))
+        case Nil =>
+          Right(None)
+        case other =>
+          Left("Expected exactly one url")
+      }
   }
 
   object ZkUrl {
+
     /**
       * Parse a string formatted like zk://user:pass@host1:port,host2:port/path
       *
       * Throws if hosts are not all formatted like 'host:port'
       */
-    def parse(url: String): Either[String, ZkUrl] = url match {
-      case ZkUrlPattern(user, pass, hosts, path) =>
-        // Our regular expression does not match user but no password, or password but no user.
-        val creds = for { u <- Option(user); p <- Option(pass) } yield ZkCreds(u, p)
-        Right(ZkUrl(creds, hosts.split(",").toList, path))
-      case _ =>
-        Left(s"${url} is not a valid zk url; it should formatted like zk://user:pass@host1:port1,host2:port2/path, or zk://host1:port1,host2:port2/marathon")
-    }
+    def parse(url: String): Either[String, ZkUrl] =
+      url match {
+        case ZkUrlPattern(user, pass, hosts, path) =>
+          // Our regular expression does not match user but no password, or password but no user.
+          val creds = for { u <- Option(user); p <- Option(pass) } yield ZkCreds(u, p)
+          Right(ZkUrl(creds, hosts.split(",").toList, path))
+        case _ =>
+          Left(
+            s"${url} is not a valid zk url; it should formatted like zk://user:pass@host1:port1,host2:port2/path, or zk://host1:port1,host2:port2/marathon"
+          )
+      }
   }
 }

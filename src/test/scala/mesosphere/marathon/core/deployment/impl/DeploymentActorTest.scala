@@ -75,18 +75,19 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       InstanceChanged(instanceId, app.version, app.id, condition, instance)
     }
 
-    def deploymentActor(manager: ActorRef, plan: DeploymentPlan) = system.actorOf(
-      DeploymentActor.props(
-        manager,
-        killService,
-        plan,
-        tracker,
-        queue,
-        hcManager,
-        system.eventStream,
-        readinessCheckExecutor
+    def deploymentActor(manager: ActorRef, plan: DeploymentPlan) =
+      system.actorOf(
+        DeploymentActor.props(
+          manager,
+          killService,
+          plan,
+          tracker,
+          queue,
+          hcManager,
+          system.eventStream,
+          readinessCheckExecutor
+        )
       )
-    )
 
   }
 
@@ -97,28 +98,25 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
       val app2 = AppDefinition(id = PathId("/foo/app2"), cmd = Some("cmd"), instances = 1)
       val app3 = AppDefinition(id = PathId("/foo/app3"), cmd = Some("cmd"), instances = 1)
       val app4 = AppDefinition(id = PathId("/foo/app4"), cmd = Some("cmd"))
-      val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(
-        app1.id -> app1,
-        app2.id -> app2,
-        app4.id -> app4))))
+      val origGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app1.id -> app1, app2.id -> app2, app4.id -> app4))))
 
       val version2 = VersionInfo.forNewConfig(Timestamp(1000))
       val app1New = app1.copy(instances = 1, versionInfo = version2)
       val app2New = app2.copy(instances = 2, cmd = Some("otherCmd"), versionInfo = version2)
 
-      val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(
-        app1New.id -> app1New,
-        app2New.id -> app2New,
-        app3.id -> app3))))
+      val targetGroup =
+        createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app1New.id -> app1New, app2New.id -> app2New, app3.id -> app3))))
 
       // setting started at to 0 to make sure this survives
       val instance1_1 = {
-        val instance = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
+        val instance =
+          TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
         val state = instance.state.copy(condition = Condition.Running)
         instance.copy(state = state)
       }
       val instance1_2 = {
-        val instance = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
+        val instance =
+          TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
         val state = instance.state.copy(condition = Condition.Running)
         instance.copy(state = state)
       }
@@ -140,7 +138,9 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val plan = DeploymentPlan(origGroup, targetGroup)
 
-      tracker.specInstances(Matchers.eq(app1.id), Matchers.eq(false))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2))
+      tracker.specInstances(Matchers.eq(app1.id), Matchers.eq(false))(any[ExecutionContext]) returns Future.successful(
+        Seq(instance1_1, instance1_2)
+      )
       tracker.specInstancesSync(app2.id, readAfterWrite = true) returns Seq(instance2_1)
       tracker.specInstances(Matchers.eq(app2.id), Matchers.eq(false))(any[ExecutionContext]) returns Future.successful(Seq(instance2_1))
       tracker.specInstances(Matchers.eq(app3.id), Matchers.eq(false))(any[ExecutionContext]) returns Future.successful(Seq(instance3_1))
@@ -182,8 +182,10 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(appNew.id -> appNew))))
 
-      val instance1_1 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
-      val instance1_2 = TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
+      val instance1_1 =
+        TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
+      val instance1_2 =
+        TestInstanceBuilder.newBuilder(app.id, version = app.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
 
       tracker.specInstancesSync(app.id, readAfterWrite = true) returns Seq(instance1_1, instance1_2)
       tracker.get(instance1_1.instanceId) returns Future.successful(Some(instance1_1))
@@ -243,13 +245,18 @@ class DeploymentActorTest extends AkkaUnitTest with GroupCreation {
 
       val targetGroup = createRootGroup(groups = Set(createGroup(PathId("/foo"), Map(app1New.id -> app1New))))
 
-      val instance1_1 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
-      val instance1_2 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(500)).getInstance()
-      val instance1_3 = TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
+      val instance1_1 =
+        TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp.zero).getInstance()
+      val instance1_2 =
+        TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(500)).getInstance()
+      val instance1_3 =
+        TestInstanceBuilder.newBuilder(app1.id, version = app1.version).addTaskRunning(startedAt = Timestamp(1000)).getInstance()
 
       val plan = DeploymentPlan(original = origGroup, target = targetGroup, toKill = Map(app1.id -> Seq(instance1_2)))
 
-      tracker.specInstances(Matchers.eq(app1.id), Matchers.eq(false))(any[ExecutionContext]) returns Future.successful(Seq(instance1_1, instance1_2, instance1_3))
+      tracker.specInstances(Matchers.eq(app1.id), Matchers.eq(false))(any[ExecutionContext]) returns Future.successful(
+        Seq(instance1_1, instance1_2, instance1_3)
+      )
       tracker.get(instance1_1.instanceId).returns(Future.successful(Some(instance1_1)))
       tracker.get(instance1_2.instanceId).returns(Future.successful(Some(instance1_2)))
       tracker.get(instance1_3.instanceId).returns(Future.successful(Some(instance1_3)))

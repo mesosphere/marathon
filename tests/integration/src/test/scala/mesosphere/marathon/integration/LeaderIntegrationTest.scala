@@ -20,16 +20,19 @@ import scala.concurrent.duration._
 abstract class LeaderIntegrationTest extends AkkaIntegrationTest with MarathonClusterTest {
 
   protected def leadingServerProcess(leader: String): LocalMarathon =
-    (additionalMarathons :+ marathonServer).find(_.client.url.contains(leader)).getOrElse(
-      fail("could not determine the which marathon process was running as leader")
-    )
+    (additionalMarathons :+ marathonServer)
+      .find(_.client.url.contains(leader))
+      .getOrElse(
+        fail("could not determine the which marathon process was running as leader")
+      )
 
   protected def runningServerProcesses: Seq[LocalMarathon] =
     (additionalMarathons :+ marathonServer).filter(_.isRunning())
 
-  protected def firstRunningProcess = runningServerProcesses.headOption.getOrElse(
-    fail("there are no marathon servers running")
-  )
+  protected def firstRunningProcess =
+    runningServerProcesses.headOption.getOrElse(
+      fail("there are no marathon servers running")
+    )
 }
 
 /**
@@ -47,7 +50,7 @@ class NonDestructiveLeaderIntegrationTest extends LeaderIntegrationTest {
       val results = marathonFacades.map(marathon => marathon.leader())
 
       Then("the requests should all be successful")
-      results.foreach(_.code should be (200))
+      results.foreach(_.code should be(200))
 
       And("they should all be the same")
       results.map(_.value).distinct should have length 1
@@ -74,7 +77,12 @@ class NonDestructiveLeaderIntegrationTest extends LeaderIntegrationTest {
   }
 }
 
-class DeathUponAbdicationLeaderIntegrationTest extends AkkaIntegrationTest with MarathonFixture with MesosClusterTest with ZookeeperServerTest with Eventually {
+class DeathUponAbdicationLeaderIntegrationTest
+    extends AkkaIntegrationTest
+    with MarathonFixture
+    with MesosClusterTest
+    with ZookeeperServerTest
+    with Eventually {
   "LeaderAbdicationDeath" should {
     "the leader abdicates and dies when it receives a DELETE" in withMarathon("death-abdication") { (server, f) =>
       Given("a leader")
@@ -125,8 +133,8 @@ class ReelectionLeaderIntegrationTest extends LeaderIntegrationTest {
         val result = client.abdicate()
 
         Then("the request should be successful")
-        result.code should be (200)
-        (result.entityJson \ "message").as[String] should be ("Leadership abdicated")
+        result.code should be(200)
+        (result.entityJson \ "message").as[String] should be("Leadership abdicated")
 
         And("the leader must have died")
         WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess.isRunning() }
@@ -188,8 +196,8 @@ class KeepAppsRunningDuringAbdicationIntegrationTest extends LeaderIntegrationTe
       val abdicateResult = client.abdicate()
 
       Then("the request should be successful")
-      abdicateResult should be (OK) withClue "Leader was not abdicated"
-      (abdicateResult.entityJson \ "message").as[String] should be ("Leadership abdicated")
+      abdicateResult should be(OK) withClue "Leader was not abdicated"
+      (abdicateResult.entityJson \ "message").as[String] should be("Leadership abdicated")
 
       And("the leader must have died")
       WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess.isRunning() }
@@ -209,7 +217,9 @@ class KeepAppsRunningDuringAbdicationIntegrationTest extends LeaderIntegrationTe
       newClient.app(app.id.toPath).value.app.instances should be(1) withClue "Previously started app did not survive the abdication"
       val newInstances = newClient.tasks(app.id.toPath).value
       newInstances should have size 1 withClue "Previously started one instance did not survive the abdication"
-      newInstances.head.id should be (oldInstances.head.id) withClue "During abdication we started a new instance, instead keeping the old one."
+      newInstances.head.id should be(
+        oldInstances.head.id
+      ) withClue "During abdication we started a new instance, instead keeping the old one."
     }
   }
 }
@@ -240,7 +250,12 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
       val app2 = App("/backup-restore-integration-test-2-update", cmd = Some("sleep 1000"))
       val app3 = App("/backup-restore-integration-test-3-new", cmd = Some("sleep 1000"))
       val app4 = App("/backup-restore-integration-test-4-scale", cmd = Some("sleep 1000"))
-      val app5 = App("/backup-restore-integration-test-5-deployment", cmd = Some("sleep 1000"), constraints = Set(Seq("hostname", "UNIQUE")), instances = 2)
+      val app5 = App(
+        "/backup-restore-integration-test-5-deployment",
+        cmd = Some("sleep 1000"),
+        constraints = Set(Seq("hostname", "UNIQUE")),
+        instances = 2
+      )
 
       val tmpBackupFile = File.createTempFile("marathon", "BackupRestoreIntegrationTest")
 
@@ -263,8 +278,8 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
       val abdicateResult = client1.abdicateWithBackup(tmpBackupFile.getAbsolutePath)
 
       Then("the request should be successful")
-      abdicateResult should be (OK) withClue "Leader did not abdicate"
-      (abdicateResult.entityJson \ "message").as[String] should be ("Leadership abdicated")
+      abdicateResult should be(OK) withClue "Leader did not abdicate"
+      (abdicateResult.entityJson \ "message").as[String] should be("Leadership abdicated")
 
       And("the leader must have died")
       WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess1.isRunning() }
@@ -305,8 +320,8 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
       val abdicateResult2 = client2.abdicateWithRestore(tmpBackupFile.getAbsolutePath)
 
       Then("the request should be successful")
-      abdicateResult2 should be (OK) withClue "Leader was not abdicated"
-      (abdicateResult.entityJson \ "message").as[String] should be ("Leadership abdicated")
+      abdicateResult2 should be(OK) withClue "Leader was not abdicated"
+      (abdicateResult.entityJson \ "message").as[String] should be("Leadership abdicated")
 
       And("the leader must have changed")
       WaitTestSupport.waitUntil("the leader changes", 30.seconds) {
@@ -319,24 +334,24 @@ class BackupRestoreIntegrationTest extends LeaderIntegrationTest {
       val client3 = leadingProcess3.client
       waitForSSEConnect()
 
-      client3.app(app1.id.toPath) should be (OK) withClue "App was not restored correctly"
+      client3.app(app1.id.toPath) should be(OK) withClue "App was not restored correctly"
 
       val app2Response = client3.app(app2.id.toPath)
-      app2Response should be (OK) withClue "App2 was not restored correctly"
-      app2Response.value.app.cmd should be (app2.cmd) withClue "App2 was not restored correctly"
+      app2Response should be(OK) withClue "App2 was not restored correctly"
+      app2Response.value.app.cmd should be(app2.cmd) withClue "App2 was not restored correctly"
 
       val app3Response = client3.app(app3.id.toPath)
-      app3Response should be (NotFound) withClue "App3 was not restored correctly"
+      app3Response should be(NotFound) withClue "App3 was not restored correctly"
 
       val app4Response = client3.app(app2.id.toPath)
-      app4Response should be (OK) withClue "App4 was not restored correctly"
-      app4Response.value.app.cmd should be (app2.cmd) withClue "App4 was not restored correctly"
-      app4Response.value.app.instances should be (app2.instances) withClue "App4 was not restored correctly"
+      app4Response should be(OK) withClue "App4 was not restored correctly"
+      app4Response.value.app.cmd should be(app2.cmd) withClue "App4 was not restored correctly"
+      app4Response.value.app.instances should be(app2.instances) withClue "App4 was not restored correctly"
 
       val app5Response = client3.app(app2.id.toPath)
-      app5Response should be (OK) withClue "App5 was not restored correctly"
+      app5Response should be(OK) withClue "App5 was not restored correctly"
       // this app should still be stuck in deployment
-      client3.tasks(app5.id.toPath).value.size should be (1) withClue "App5 was not restored correctly"
+      client3.tasks(app5.id.toPath).value.size should be(1) withClue "App5 was not restored correctly"
 
     }
   }
@@ -380,8 +395,8 @@ class DeleteAppAndBackupIntegrationTest extends LeaderIntegrationTest {
       tmpBackupFile.delete()
 
       Then("the request should be successful")
-      abdicateResult should be (OK) withClue "Leader was not abdicated"
-      (abdicateResult.entityJson \ "message").as[String] should be ("Leadership abdicated")
+      abdicateResult should be(OK) withClue "Leader was not abdicated"
+      (abdicateResult.entityJson \ "message").as[String] should be("Leadership abdicated")
 
       And("the leader must have died")
       WaitTestSupport.waitUntil("the former leading marathon process dies", 30.seconds) { !leadingProcess.isRunning() }

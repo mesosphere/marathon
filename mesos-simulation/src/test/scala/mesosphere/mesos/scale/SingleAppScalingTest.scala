@@ -34,11 +34,14 @@ class SingleAppScalingTest extends AkkaIntegrationTest with ZookeeperServerTest 
 
   val maxInstancesPerOffer = Option(System.getenv("MARATHON_MAX_INSTANCES_PER_OFFER")).getOrElse("1")
 
-  lazy val marathonServer = LocalMarathon(suiteName = suiteName, "localhost:5050", zkUrl = s"zk://${zkServer.connectUri}/marathon", conf = Map(
-    "max_instances_per_offer" -> maxInstancesPerOffer,
-    "task_launch_timeout" -> "20000",
-    "task_launch_confirm_timeout" -> "1000"),
-    mainClass = "mesosphere.mesos.simulation.SimulateMesosMain")
+  lazy val marathonServer = LocalMarathon(
+    suiteName = suiteName,
+    "localhost:5050",
+    zkUrl = s"zk://${zkServer.connectUri}/marathon",
+    conf =
+      Map("max_instances_per_offer" -> maxInstancesPerOffer, "task_launch_timeout" -> "20000", "task_launch_confirm_timeout" -> "1000"),
+    mainClass = "mesosphere.mesos.simulation.SimulateMesosMain"
+  )
 
   override lazy val leadingMarathon = Future.successful(marathonServer)
 

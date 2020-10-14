@@ -39,7 +39,8 @@ case class MesosConfig(
     agentsFaultDomains: Seq[Option[FaultDomain]] = Seq.empty,
     agentsGpus: Option[Int] = None,
     agentSeccompConfigDir: Option[String] = None,
-    agentSeccompProfileName: Option[String] = None) {
+    agentSeccompProfileName: Option[String] = None
+) {
 
   require(validQuorumSize, "Mesos quorum size should be 0 or smaller than number of agents")
   require(validSeccompConfig, "To enable seccomp, agentSeccompConfigDir should be defined and isolation \"linux/seccomp\" used")
@@ -47,7 +48,8 @@ case class MesosConfig(
 
   def validQuorumSize: Boolean = quorumSize > 0 && quorumSize <= numMasters
   def validFaultDomainConfig: Boolean = agentsFaultDomains.isEmpty || agentsFaultDomains.size == numAgents
-  def validSeccompConfig: Boolean = agentSeccompConfigDir.isEmpty || (agentSeccompConfigDir.isDefined && isolation.get.contains("linux/seccomp"))
+  def validSeccompConfig: Boolean =
+    agentSeccompConfigDir.isEmpty || (agentSeccompConfigDir.isDefined && isolation.get.contains("linux/seccomp"))
 }
 
 case class MesosCluster(
@@ -55,11 +57,10 @@ case class MesosCluster(
     masterUrl: String,
     autoStart: Boolean = false,
     config: MesosConfig = MesosConfig(),
-    waitForMesosTimeout: FiniteDuration = 5.minutes)(implicit
-    system: ActorSystem,
-    mat: Materializer,
-    ctx: ExecutionContext,
-    scheduler: Scheduler) extends AutoCloseable with Eventually {
+    waitForMesosTimeout: FiniteDuration = 5.minutes
+)(implicit system: ActorSystem, mat: Materializer, ctx: ExecutionContext, scheduler: Scheduler)
+    extends AutoCloseable
+    with Eventually {
 
   lazy val masters = 0.until(config.numMasters).map { i =>
     val faultDomainJson = if (config.mastersFaultDomains.nonEmpty && config.mastersFaultDomains(i).nonEmpty) {
@@ -82,10 +83,10 @@ case class MesosCluster(
       Some(faultDomainJson)
     } else None
 
-    Master(extraArgs = Seq(
-      "--slave_ping_timeout=1secs",
-      "--max_slave_ping_timeouts=4",
-      s"--quorum=${config.quorumSize}") ++ faultDomainJson.map(fd => s"--domain=$fd"))
+    Master(extraArgs =
+      Seq("--slave_ping_timeout=1secs", "--max_slave_ping_timeouts=4", s"--quorum=${config.quorumSize}") ++ faultDomainJson
+        .map(fd => s"--domain=$fd")
+    )
   }
 
   private var initialCachedAgentDetails: Map[AgentLike, ITAgentDetails] = Map.empty
@@ -97,9 +98,10 @@ case class MesosCluster(
     // First-come-first-served task will bind successfully where the others will fail leading to a lot inconsistency and
     // flakiness in tests.
 
-    val (faultDomainAgentAttributes: Map[String, Option[String]], mesosFaultDomainAgentCmdOption) = if (config.agentsFaultDomains.nonEmpty && config.agentsFaultDomains(i).nonEmpty) {
-      val faultDomain = config.agentsFaultDomains(i).get
-      val mesosFaultDomainCmdOption = s"""
+    val (faultDomainAgentAttributes: Map[String, Option[String]], mesosFaultDomainAgentCmdOption) =
+      if (config.agentsFaultDomains.nonEmpty && config.agentsFaultDomains(i).nonEmpty) {
+        val faultDomain = config.agentsFaultDomains(i).get
+        val mesosFaultDomainCmdOption = s"""
           |{
           |  "fault_domain":
           |    {
@@ -115,22 +117,24 @@ case class MesosCluster(
           |}
         """.stripMargin
 
-      val nodeAttributes = Map(
-        "fault_domain_region" -> Some(faultDomain.region.value),
-        "fault_domain_zone" -> Some(faultDomain.zone.value))
-      (nodeAttributes, Some(mesosFaultDomainCmdOption))
-    } else Map.empty -> None
+        val nodeAttributes =
+          Map("fault_domain_region" -> Some(faultDomain.region.value), "fault_domain_zone" -> Some(faultDomain.zone.value))
+        (nodeAttributes, Some(mesosFaultDomainCmdOption))
+      } else Map.empty -> None
 
     // uniquely identify each agent node, useful for constraint matching
     val attributes: Map[String, Option[String]] = Map("node" -> Some(i.toString)) ++ faultDomainAgentAttributes
 
-    val renderedAttributes: String = attributes.map { case (key, maybeVal) => s"$key${maybeVal.map(v => s":$v").getOrElse("")}" }.mkString(";")
+    val renderedAttributes: String =
+      attributes.map { case (key, maybeVal) => s"$key${maybeVal.map(v => s":$v").getOrElse("")}" }.mkString(";")
 
-    Agent(resources = new Resources(ports = PortAllocator.portsRange(), gpus = config.agentsGpus), extraArgs = Seq(
-      s"--attributes=$renderedAttributes"
-    ) ++ mesosFaultDomainAgentCmdOption.map(fd => s"--domain=$fd")
-      ++ config.agentSeccompConfigDir.map(dir => s"--seccomp_config_dir=$dir")
-      ++ config.agentSeccompProfileName.map(prf => s"--seccomp_profile_name=$prf")
+    Agent(
+      resources = new Resources(ports = PortAllocator.portsRange(), gpus = config.agentsGpus),
+      extraArgs = Seq(
+        s"--attributes=$renderedAttributes"
+      ) ++ mesosFaultDomainAgentCmdOption.map(fd => s"--domain=$fd")
+        ++ config.agentSeccompConfigDir.map(dir => s"--seccomp_config_dir=$dir")
+        ++ config.agentSeccompProfileName.map(prf => s"--seccomp_profile_name=$prf")
     )
   }
 
@@ -138,38 +142,40 @@ case class MesosCluster(
     start()
   }
 
-  def start(): Future[String] = async {
-    masters.foreach(_.start())
-    agents.foreach(_.start())
-    val masterUri = await(waitForLeader())
-    await(waitForAgents(masterUri))
-    masterUri
-  }
+  def start(): Future[String] =
+    async {
+      masters.foreach(_.start())
+      agents.foreach(_.start())
+      val masterUri = await(waitForLeader())
+      await(waitForAgents(masterUri))
+      masterUri
+    }
 
-  def waitForLeader(): Future[String] = async {
-    val firstMaster = s"http://${masters.head.ip}:${masters.head.port}"
-    val result = Retry("wait for leader", maxAttempts = Int.MaxValue, maxDuration = waitForMesosTimeout) {
-      Http().singleRequest(Get(firstMaster + "/redirect")).map { result =>
-        result.discardEntityBytes() // forget about the body
-        if (result.status.isFailure()) {
-          throw new Exception(s"Couldn't determine leader: $result")
+  def waitForLeader(): Future[String] =
+    async {
+      val firstMaster = s"http://${masters.head.ip}:${masters.head.port}"
+      val result = Retry("wait for leader", maxAttempts = Int.MaxValue, maxDuration = waitForMesosTimeout) {
+        Http().singleRequest(Get(firstMaster + "/redirect")).map { result =>
+          result.discardEntityBytes() // forget about the body
+          if (result.status.isFailure()) {
+            throw new Exception(s"Couldn't determine leader: $result")
+          }
+          result
         }
-        result
       }
-    }
 
-    def maybeFixURI(uri: String): String = {
-      // some versions of mesos issue redirects with broken Location headers; fix them here
-      if (uri.indexOf("//") == 0) {
-        "http:" + uri
-      } else {
-        uri
+      def maybeFixURI(uri: String): String = {
+        // some versions of mesos issue redirects with broken Location headers; fix them here
+        if (uri.indexOf("//") == 0) {
+          "http:" + uri
+        } else {
+          uri
+        }
       }
-    }
 
-    val location = await(result).headers.find(_.lowercaseName() == "location").map(_.value()).getOrElse(firstMaster)
-    maybeFixURI(location)
-  }
+      val location = await(result).headers.find(_.lowercaseName() == "location").map(_.value()).getOrElse(firstMaster)
+      maybeFixURI(location)
+    }
 
   def waitForAgents(masterUri: String): Future[Done] = {
     val mesosFacade = new MesosFacade(masterUri)
@@ -200,8 +206,10 @@ case class MesosCluster(
     }
 
     val credentialsPath = write(mesosWorkDir, fileName = "credentials", content = "principal1 secret1")
-    val aclsPath = write(mesosWorkDir, fileName = "acls.json", content =
-      """
+    val aclsPath = write(
+      mesosWorkDir,
+      fileName = "acls.json",
+      content = """
         |{
         |  "run_tasks": [{
         |    "principals": { "type": "ANY" },
@@ -222,7 +230,8 @@ case class MesosCluster(
         |    "volume_types": { "type": "ANY" }
         |  }]
         |}
-      """.stripMargin)
+      """.stripMargin
+    )
     Seq(
       "MESOS_WORK_DIR" -> mesosWorkDir.getAbsolutePath,
       "MESOS_RUNTIME_DIR" -> new File(mesosWorkDir, "runtime").getAbsolutePath,
@@ -233,7 +242,8 @@ case class MesosCluster(
       "MESOS_ACLS" -> s"file://$aclsPath",
       "MESOS_CREDENTIALS" -> s"file://$credentialsPath",
       "MESOS_SYSTEMD_ENABLE_SUPPORT" -> "false",
-      "MESOS_SWITCH_USER" -> "false") ++
+      "MESOS_SWITCH_USER" -> "false"
+    ) ++
       config.isolation.map("MESOS_ISOLATION" -> _).to[Seq] ++
       config.imageProviders.map("MESOS_IMAGE_PROVIDERS" -> _).to[Seq]
   }
@@ -253,7 +263,6 @@ case class MesosCluster(
     */
   def initialAgentDetailsFor(agent: AgentLike): ITAgentDetails =
     initialCachedAgentDetails(agent)
-
 
   // format: OFF
   case class Resources(cpus: Option[Int] = None, mem: Option[Int] = None, ports: (Int, Int), gpus: Option[Int] = None) {
@@ -282,9 +291,10 @@ case class MesosCluster(
       start()
     }
 
-    def start(): Unit = if (process.isEmpty) {
-      process = Some(create())
-    }
+    def start(): Unit =
+      if (process.isEmpty) {
+        process = Some(create())
+      }
 
     def stop(): Unit = {
       process.foreach(_.destroy())
@@ -438,8 +448,7 @@ object IP {
   private def detectIpScript = {
     val resource = getClass.getClassLoader.getResource("detect-routable-ip.sh")
     Option(resource).flatMap { f => Option(f.getFile) }.getOrElse {
-      throw new RuntimeException(
-        s"Couldn't find file for detect-routable-ip.sh resource; is ${resource}. Are you running from a JAR?")
+      throw new RuntimeException(s"Couldn't find file for detect-routable-ip.sh resource; is ${resource}. Are you running from a JAR?")
     }
   }
 

@@ -39,7 +39,8 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       config: MarathonConf = mock[MarathonConf],
       groupManager: GroupManager = mock[GroupManager],
       healthCheckManager: HealthCheckManager = mock[HealthCheckManager],
-      implicit val identity: Identity = mock[Identity]) {
+      implicit val identity: Identity = mock[Identity]
+  ) {
     val killService = mock[KillService]
     val taskResource: TasksResource = new TasksResource(
       instanceTracker,
@@ -85,27 +86,28 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       val app = AppDefinition(
         "/foo".toPath,
         networks = Seq(ContainerNetwork("weave")),
-        container = Some(Container.Docker(
-          image = "alpine",
-          portMappings = Seq(
-            PortMapping(
-              name = Some("http"),
-              containerPort = 22,
-              hostPort = None,
-              servicePort = 20163),
-            PortMapping(
-              name = Some("https"),
-              containerPort = 6090,
-              hostPort = None,
-              servicePort = 13032)))))
+        container = Some(
+          Container.Docker(
+            image = "alpine",
+            portMappings = Seq(
+              PortMapping(name = Some("http"), containerPort = 22, hostPort = None, servicePort = 20163),
+              PortMapping(name = Some("https"), containerPort = 6090, hostPort = None, servicePort = 13032)
+            )
+          )
+        )
+      )
 
-      val instance = TestInstanceBuilder.newBuilder(app.id).addTaskWithBuilder()
+      val instance = TestInstanceBuilder
+        .newBuilder(app.id)
+        .addTaskWithBuilder()
         .taskRunning()
         .withNetworkInfo(
           NetworkInfo(
             hostName = "hostname",
             hostPorts = Nil,
-            ipAddresses = Seq(mesos.Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress("10.11.12.13").build())))
+            ipAddresses = Seq(mesos.Protos.NetworkInfo.IPAddress.newBuilder().setIpAddress("10.11.12.13").build())
+          )
+        )
         .build()
         .getInstance()
 
@@ -260,7 +262,9 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       val bodyBytes = body.toCharArray.map(_.toByte)
 
       When("we ask to scale AND wipe")
-      val response = asyncRequest { r => taskResource.killTasks(scale = true, force = false, wipe = true, body = bodyBytes, auth.request, r) }
+      val response = asyncRequest { r =>
+        taskResource.killTasks(scale = true, force = false, wipe = true, body = bodyBytes, auth.request, r)
+      }
 
       Then("an exception should occur")
       response.getStatus should be(400)
@@ -374,8 +378,7 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       implicit val system = ActorSystem("test")
       def materializerSettings = ActorMaterializerSettings(system)
       implicit val mat = ActorMaterializer(materializerSettings)
-      override val taskKiller = new TaskKiller(
-        instanceTracker, groupManager, auth.auth, auth.auth, killService)
+      override val taskKiller = new TaskKiller(instanceTracker, groupManager, auth.auth, auth.auth, killService)
       override val taskResource = new TasksResource(
         instanceTracker,
         taskKiller,
@@ -406,11 +409,13 @@ class TasksResourceTest extends UnitTest with GroupCreation with JerseyTest with
       val bodyBytes = body.toCharArray.map(_.toByte)
 
       When("we ask to kill those two tasks")
-      val response = asyncRequest { r => taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request, r) }
+      val response = asyncRequest { r =>
+        taskResource.killTasks(scale = false, force = false, wipe = false, body = bodyBytes, auth.request, r)
+      }
 
       Then("An exception should be thrown that points to the invalid taskId")
       response.getStatus should be(400)
-      response.getEntity.toString should include ("invalidTaskId")
+      response.getEntity.toString should include("invalidTaskId")
 
       And("the taskKiller should not be called at all")
       verifyNoMoreInteractions(taskKiller)

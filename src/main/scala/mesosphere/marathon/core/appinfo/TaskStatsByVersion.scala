@@ -11,58 +11,52 @@ case class TaskStatsByVersion(
     maybeStartedAfterLastScaling: Option[TaskStats],
     maybeWithLatestConfig: Option[TaskStats],
     maybeWithOutdatedConfig: Option[TaskStats],
-    maybeTotalSummary: Option[TaskStats])
+    maybeTotalSummary: Option[TaskStats]
+)
 
 object TaskStatsByVersion {
 
-  def apply(
-    versionInfo: VersionInfo,
-    tasks: Seq[TaskForStatistics]): TaskStatsByVersion =
-    {
-      def statsForVersion(versionTest: Timestamp => Boolean): Option[TaskStats] = {
-        TaskStats.forSomeTasks(tasks.filter(task => versionTest(task.version)))
-      }
-
-      val maybeFullVersionInfo = versionInfo match {
-        case full: FullVersionInfo => Some(full)
-        case _ => None
-      }
-
-      TaskStatsByVersion(
-        maybeTotalSummary = TaskStats.forSomeTasks(tasks),
-        maybeStartedAfterLastScaling = maybeFullVersionInfo.flatMap { vi =>
-          statsForVersion(_ >= vi.lastScalingAt)
-        },
-        maybeWithLatestConfig = maybeFullVersionInfo.flatMap { vi =>
-          statsForVersion(_ >= vi.lastConfigChangeAt)
-        },
-        maybeWithOutdatedConfig = maybeFullVersionInfo.flatMap { vi =>
-          statsForVersion(_ < vi.lastConfigChangeAt)
-        }
-      )
-
+  def apply(versionInfo: VersionInfo, tasks: Seq[TaskForStatistics]): TaskStatsByVersion = {
+    def statsForVersion(versionTest: Timestamp => Boolean): Option[TaskStats] = {
+      TaskStats.forSomeTasks(tasks.filter(task => versionTest(task.version)))
     }
 
-  def apply(
-    now: Timestamp,
-    versionInfo: VersionInfo,
-    instances: Seq[Instance],
-    statuses: Map[Instance.Id, Seq[Health]]): TaskStatsByVersion =
-    {
-      TaskStatsByVersion(versionInfo, TaskForStatistics.forInstances(now, instances, statuses))
+    val maybeFullVersionInfo = versionInfo match {
+      case full: FullVersionInfo => Some(full)
+      case _ => None
     }
+
+    TaskStatsByVersion(
+      maybeTotalSummary = TaskStats.forSomeTasks(tasks),
+      maybeStartedAfterLastScaling = maybeFullVersionInfo.flatMap { vi =>
+        statsForVersion(_ >= vi.lastScalingAt)
+      },
+      maybeWithLatestConfig = maybeFullVersionInfo.flatMap { vi =>
+        statsForVersion(_ >= vi.lastConfigChangeAt)
+      },
+      maybeWithOutdatedConfig = maybeFullVersionInfo.flatMap { vi =>
+        statsForVersion(_ < vi.lastConfigChangeAt)
+      }
+    )
+
+  }
+
+  def apply(
+      now: Timestamp,
+      versionInfo: VersionInfo,
+      instances: Seq[Instance],
+      statuses: Map[Instance.Id, Seq[Health]]
+  ): TaskStatsByVersion = {
+    TaskStatsByVersion(versionInfo, TaskForStatistics.forInstances(now, instances, statuses))
+  }
 }
 
-case class TaskStats(
-    counts: TaskCounts,
-    maybeLifeTime: Option[TaskLifeTime])
+case class TaskStats(counts: TaskCounts, maybeLifeTime: Option[TaskLifeTime])
 
 object TaskStats {
-  def forSomeTasks(
-    now: Timestamp, instances: Seq[Instance], statuses: Map[Instance.Id, Seq[Health]]): Option[TaskStats] =
-    {
-      forSomeTasks(TaskForStatistics.forInstances(now, instances, statuses))
-    }
+  def forSomeTasks(now: Timestamp, instances: Seq[Instance], statuses: Map[Instance.Id, Seq[Health]]): Option[TaskStats] = {
+    forSomeTasks(TaskForStatistics.forInstances(now, instances, statuses))
+  }
 
   def forSomeTasks(tasks: Seq[TaskForStatistics]): Option[TaskStats] = {
     if (tasks.isEmpty) {

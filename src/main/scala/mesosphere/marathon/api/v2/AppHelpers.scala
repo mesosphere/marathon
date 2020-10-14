@@ -14,19 +14,20 @@ import stream.Implicits._
 
 object AppHelpers {
 
-  def appNormalization(
-    enabledFeatures: Set[String], config: AppNormalization.Config): Normalization[raml.App] = Normalization { app =>
-    validateOrThrow(app)(AppValidation.validateOldAppAPI)
-    val migrated = AppNormalization.forDeprecated(config).normalized(app)
-    validateOrThrow(migrated)(AppValidation.validateCanonicalAppAPI(enabledFeatures, () => config.defaultNetworkName))
-    AppNormalization(config).normalized(migrated)
-  }
+  def appNormalization(enabledFeatures: Set[String], config: AppNormalization.Config): Normalization[raml.App] =
+    Normalization { app =>
+      validateOrThrow(app)(AppValidation.validateOldAppAPI)
+      val migrated = AppNormalization.forDeprecated(config).normalized(app)
+      validateOrThrow(migrated)(AppValidation.validateCanonicalAppAPI(enabledFeatures, () => config.defaultNetworkName))
+      AppNormalization(config).normalized(migrated)
+    }
 
-  def appUpdateNormalization(config: AppNormalization.Config): Normalization[raml.AppUpdate] = Normalization { app =>
-    val migrated = AppNormalization.forDeprecatedUpdates(config).normalized(app)
-    validateOrThrow(migrated)(AppValidation.validateAppUpdateVersion)
-    AppNormalization.forUpdates(config).normalized(migrated)
-  }
+  def appUpdateNormalization(config: AppNormalization.Config): Normalization[raml.AppUpdate] =
+    Normalization { app =>
+      val migrated = AppNormalization.forDeprecatedUpdates(config).normalized(app)
+      validateOrThrow(migrated)(AppValidation.validateAppUpdateVersion)
+      AppNormalization.forUpdates(config).normalized(migrated)
+    }
 
   /**
     * Create an App from an AppUpdate. This basically applies when someone uses our API to create apps
@@ -40,19 +41,22 @@ object AppHelpers {
       hasExternalVolumes = update.container.exists(_.volumes.existsAn[AppExternalVolume])
     )
     val hasPersistentVols = update.container.exists(_.volumes.existsAn[AppPersistentVolume])
-    val unreachableStrategy = update
-      .unreachableStrategy.map(Raml.fromRaml(_))
+    val unreachableStrategy = update.unreachableStrategy
+      .map(Raml.fromRaml(_))
       .getOrElse(UnreachableStrategy.default(hasPersistentVols))
-    val template = AppDefinition(
-      appId, upgradeStrategy = selectedStrategy, unreachableStrategy = unreachableStrategy)
+    val template = AppDefinition(appId, upgradeStrategy = selectedStrategy, unreachableStrategy = unreachableStrategy)
     Raml.fromRaml(update -> template)
   }
 
-  def authzSelector(implicit authz: Authorizer, identity: Identity): AppSelector = Selector[AppDefinition] { app =>
-    authz.isAuthorized(identity, ViewRunSpec, app)
-  }
+  def authzSelector(implicit authz: Authorizer, identity: Identity): AppSelector =
+    Selector[AppDefinition] { app =>
+      authz.isAuthorized(identity, ViewRunSpec, app)
+    }
 
-  private def checkAuthorization[A, B >: A](action: AuthorizedAction[B], resource: A)(implicit identity: Identity, authorizer: Authorizer): A = {
+  private def checkAuthorization[A, B >: A](action: AuthorizedAction[B], resource: A)(implicit
+      identity: Identity,
+      authorizer: Authorizer
+  ): A = {
     if (authorizer.isAuthorized(identity, action, resource)) resource
     else throw RejectionException(Rejection.AccessDeniedRejection(authorizer, identity))
   }
@@ -67,17 +71,19 @@ object AppHelpers {
     * TODO - move async concern out
     */
   def updateOrCreate(
-    appId: PathId,
-    existing: Option[AppDefinition],
-    appUpdate: raml.AppUpdate,
-    partialUpdate: Boolean,
-    allowCreation: Boolean,
-    now: Timestamp,
-    service: MarathonSchedulerService)(implicit
-    identity: Identity,
-    authorizer: Authorizer,
-    appDefinitionValidator: Validator[AppDefinition],
-    appNormalization: Normalization[raml.App]): AppDefinition = {
+      appId: PathId,
+      existing: Option[AppDefinition],
+      appUpdate: raml.AppUpdate,
+      partialUpdate: Boolean,
+      allowCreation: Boolean,
+      now: Timestamp,
+      service: MarathonSchedulerService
+  )(implicit
+      identity: Identity,
+      authorizer: Authorizer,
+      appDefinitionValidator: Validator[AppDefinition],
+      appNormalization: Normalization[raml.App]
+  ): AppDefinition = {
     import Normalization._
     def createApp(): AppDefinition = {
       val app = withoutPriorAppDefinition(appUpdate, appId).normalize
@@ -108,9 +114,10 @@ object AppHelpers {
       app
     }
 
-    def updateOrRollback(current: AppDefinition): AppDefinition = appUpdate.version
-      .map(v => rollback(current, Timestamp(v)))
-      .getOrElse(updateApp(current))
+    def updateOrRollback(current: AppDefinition): AppDefinition =
+      appUpdate.version
+        .map(v => rollback(current, Timestamp(v)))
+        .getOrElse(updateApp(current))
 
     existing match {
       case Some(app) =>

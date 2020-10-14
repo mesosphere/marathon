@@ -81,8 +81,6 @@ class LeaderResourceTest extends UnitTest with JerseyTest {
     val executionContext = ExecutionContexts.callerThread
     val clock = new SettableClock()
     val scheduler = new SimulatedScheduler(clock)
-    def leaderResource() = new LeaderResource(electionService, config, runtimeRepo, auth.auth, auth.auth, scheduler)(
-      executionContext)
+    def leaderResource() = new LeaderResource(electionService, config, runtimeRepo, auth.auth, auth.auth, scheduler)(executionContext)
   }
 }
-
