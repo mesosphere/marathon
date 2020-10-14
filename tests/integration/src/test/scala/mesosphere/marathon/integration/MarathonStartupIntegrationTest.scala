@@ -9,17 +9,22 @@ import mesosphere.AkkaIntegrationTest
 import mesosphere.marathon.integration.setup._
 import org.scalatest.concurrent.Eventually
 
-class MarathonStartupIntegrationTest extends AkkaIntegrationTest
-  with MesosClusterTest
-  with ZookeeperServerTest
-  with MarathonFixture
-  with Eventually {
+class MarathonStartupIntegrationTest
+    extends AkkaIntegrationTest
+    with MesosClusterTest
+    with ZookeeperServerTest
+    with MarathonFixture
+    with Eventually {
 
   def withBoundPort(fn: Int => Unit): Unit = {
     val port = PortAllocator.ephemeralPort()
-    val handler = Tcp().bind("127.0.0.1", port).to(Sink.foreach{ c =>
-      Source.empty.via(c.flow).runWith(Sink.ignore)
-    }).run.futureValue
+    val handler = Tcp()
+      .bind("127.0.0.1", port)
+      .to(Sink.foreach { c =>
+        Source.empty.via(c.flow).runWith(Sink.ignore)
+      })
+      .run
+      .futureValue
 
     try fn(port)
     finally {
@@ -37,10 +42,8 @@ class MarathonStartupIntegrationTest extends AkkaIntegrationTest
         s"$suiteName-conflict",
         mesosMasterZkUrl,
         s"zk://${zkserver.connectUrl}/marathon-$suiteName",
-        Map(
-          "http_port" -> port.toString,
-          "http_address" -> "127.0.0.1",
-          "zk_timeout" -> "2000"))
+        Map("http_port" -> port.toString, "http_address" -> "127.0.0.1", "zk_timeout" -> "2000")
+      )
       conflictingMarathon.start()
 
       Then("The Marathon process should exit with code > 0")
@@ -48,7 +51,9 @@ class MarathonStartupIntegrationTest extends AkkaIntegrationTest
         eventually {
           conflictingMarathon.isRunning() should be(false)
         } withClue ("The conflicting Marathon did not suicide.")
-        conflictingMarathon.exitValue().get should be > 0 withClue (s"Conflicting Marathon exited with ${conflictingMarathon.exitValue()} instead of an error code > 0.")
+        conflictingMarathon
+          .exitValue()
+          .get should be > 0 withClue (s"Conflicting Marathon exited with ${conflictingMarathon.exitValue()} instead of an error code > 0.")
       } finally {
         // Destroy process if it did not exit in time.
         conflictingMarathon.stop().futureValue

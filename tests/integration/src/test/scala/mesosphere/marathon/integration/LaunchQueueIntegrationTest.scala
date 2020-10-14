@@ -41,8 +41,8 @@ class LaunchQueueIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
         val queue = response.value.queue
         queue should have size 1
-        queue.head.app.id.toPath should be (appId)
-        queue.head.count should be (5)
+        queue.head.app.id.toPath should be(appId)
+        queue.head.count should be(5)
       }
     }
 
@@ -62,7 +62,7 @@ class LaunchQueueIntegrationTest extends AkkaIntegrationTest with EmbeddedMarath
 
         val queue = response.value.queue
         queue should have size 1
-        queue.head.app.id.toPath should be (appId)
+        queue.head.app.id.toPath should be(appId)
         queue.head.delay.timeLeftSeconds should be > 0
       }
     }

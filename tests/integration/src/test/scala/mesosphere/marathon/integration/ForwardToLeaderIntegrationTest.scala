@@ -42,7 +42,9 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
       result.entityString should be("pong\n")
       result.value.headers.exists(_.name == RequestForwarder.HEADER_VIA) should be(false)
       result.value.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) should be(1)
-      result.value.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value should be(s"http://localhost:${helloApp.port}")
+      result.value.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value should be(
+        s"http://localhost:${helloApp.port}"
+      )
     }
 
     "forward ping" in withForwarder { forwarder =>
@@ -58,15 +60,24 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
       result.value.headers.count(_.name == RequestForwarder.HEADER_VIA) should be(1)
       result.value.headers.find(_.name == RequestForwarder.HEADER_VIA).get.value should be(s"1.1 localhost:${forwardApp.port}")
       result.value.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) should be(1)
-      result.value.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value should be(s"http://localhost:${helloApp.port}")
+      result.value.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value should be(
+        s"http://localhost:${helloApp.port}"
+      )
     }
 
     "direct HTTPS ping" in withForwarder { forwarder =>
-      val helloApp = forwarder.startHelloApp("--https_port", Seq(
-        "--disable_http",
-        "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
-        "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-        "--https_address", "localhost"))
+      val helloApp = forwarder.startHelloApp(
+        "--https_port",
+        Seq(
+          "--disable_http",
+          "--ssl_keystore_path",
+          SSLContextTestUtil.selfSignedKeyStorePath,
+          "--ssl_keystore_password",
+          SSLContextTestUtil.keyStorePassword,
+          "--https_address",
+          "localhost"
+        )
+      )
       helloApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The hello app did not start in time"
 
       val pingURL = new URL(s"https://localhost:${helloApp.port}/ping")
@@ -80,18 +91,33 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
     }
 
     "forwarding HTTPS ping with a self-signed cert" in withForwarder { forwarder =>
-      val helloApp = forwarder.startHelloApp("--https_port", Seq(
-        "--disable_http",
-        "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
-        "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-        "--https_address", "localhost"))
+      val helloApp = forwarder.startHelloApp(
+        "--https_port",
+        Seq(
+          "--disable_http",
+          "--ssl_keystore_path",
+          SSLContextTestUtil.selfSignedKeyStorePath,
+          "--ssl_keystore_password",
+          SSLContextTestUtil.keyStorePassword,
+          "--https_address",
+          "localhost"
+        )
+      )
       helloApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The hello app did not start in time"
 
-      val forwardApp = forwarder.startForwarder(helloApp.port, "--https_port", args = Seq(
-        "--disable_http",
-        "--ssl_keystore_path", SSLContextTestUtil.selfSignedKeyStorePath,
-        "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-        "--https_address", "localhost"))
+      val forwardApp = forwarder.startForwarder(
+        helloApp.port,
+        "--https_port",
+        args = Seq(
+          "--disable_http",
+          "--ssl_keystore_path",
+          SSLContextTestUtil.selfSignedKeyStorePath,
+          "--ssl_keystore_password",
+          SSLContextTestUtil.keyStorePassword,
+          "--https_address",
+          "localhost"
+        )
+      )
       forwardApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The forwarder service did not start in time"
 
       val pingURL = new URL(s"https://localhost:${forwardApp.port}/ping")
@@ -105,11 +131,18 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
     }
 
     "forwarding HTTPS ping with a ca signed cert" in withForwarder { forwarder =>
-      val helloApp = forwarder.startHelloApp("--https_port", Seq(
-        "--disable_http",
-        "--ssl_keystore_path", SSLContextTestUtil.caKeyStorePath,
-        "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-        "--https_address", "localhost"))
+      val helloApp = forwarder.startHelloApp(
+        "--https_port",
+        Seq(
+          "--disable_http",
+          "--ssl_keystore_path",
+          SSLContextTestUtil.caKeyStorePath,
+          "--ssl_keystore_password",
+          SSLContextTestUtil.keyStorePassword,
+          "--https_address",
+          "localhost"
+        )
+      )
       helloApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The hello app did not start in time"
 
       val forwardApp = forwarder.startForwarder(
@@ -117,9 +150,14 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
         "--https_port",
         args = Seq(
           "--disable_http",
-          "--ssl_keystore_path", SSLContextTestUtil.caKeyStorePath,
-          "--ssl_keystore_password", SSLContextTestUtil.keyStorePassword,
-          "--https_address", "localhost"))
+          "--ssl_keystore_path",
+          SSLContextTestUtil.caKeyStorePath,
+          "--ssl_keystore_password",
+          SSLContextTestUtil.keyStorePassword,
+          "--https_address",
+          "localhost"
+        )
+      )
 
       forwardApp.launched.futureValue(forwarderStartTimeout, forwarderStartInterval) withClue "The forwarder service did not start in time"
       val forwardPort = forwardApp.port
@@ -205,7 +243,9 @@ class ForwardToLeaderIntegrationTest extends AkkaIntegrationTest with TableDrive
       result.value.headers.count(_.name == RequestForwarder.HEADER_VIA) should be(1)
       result.value.headers.find(_.name == RequestForwarder.HEADER_VIA).get.value should be(s"1.1 localhost:${forwardApp.port}")
       result.value.headers.count(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER) should be(1)
-      result.value.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value should be(s"http://localhost:${helloApp.port}")
+      result.value.headers.find(_.name == LeaderProxyFilter.HEADER_MARATHON_LEADER).get.value should be(
+        s"http://localhost:${helloApp.port}"
+      )
 
       val json = result.entityJson.asInstanceOf[JsObject]
       (json \ "Content-Type").toOption.map(_.asInstanceOf[JsString].value) shouldEqual None

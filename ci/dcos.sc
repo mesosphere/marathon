@@ -1,4 +1,4 @@
-#!/usr/bin/env amm
+#!/ usr / bin / env amm
 
 import ammonite.ops._
 import ammonite.ops.ImplicitWd._
@@ -9,13 +9,12 @@ import $file.utils
 import utils.{SemVer, SemVerRead}
 import scalaj.http._
 
-
 /**
- * Main function for building DCOS registry file that works
- * with DCOS 1.12+.
- *
+  * Main function for building DCOS registry file that works
+  * with DCOS 1.12+.
+  *
  * @param version updated in the DCOS package files
- */
+  */
 @main
 def buildRegistry(version: SemVer) = {
   val universePath = createCatalogPackage(version)
@@ -24,18 +23,18 @@ def buildRegistry(version: SemVer) = {
 }
 
 /**
- * Creates catalog package for Marathon with version info
- * replaces __FILL_IN_VERSION_HERE__ with provided version
- *
+  * Creates catalog package for Marathon with version info
+  * replaces __FILL_IN_VERSION_HERE__ with provided version
+  *
  * @param version updated in the DCOS package files
- * @param universePath location to build out the dcos universe files
- */
+  * @param universePath location to build out the dcos universe files
+  */
 def createCatalogPackage(
-  version: SemVer,
-  universePath: Path = pwd / 'target / 'dcos
+    version: SemVer,
+    universePath: Path = pwd / 'target / 'dcos
 ): Path = {
-  rm! universePath
-  mkdir! universePath
+  rm ! universePath
+  mkdir ! universePath
 
   // dcos catalog template directory
   val templateDir: Path = pwd / 'dcos
@@ -44,24 +43,27 @@ def createCatalogPackage(
   templateDir.toIO.listFiles.foreach(file => {
     val catalogFile = universePath / file.getName
 
-    Source.fromFile(file).getLines.map {
-      x => if(x.contains("__FILL_IN_VERSION_HERE__")) x.replace("__FILL_IN_VERSION_HERE__", version.toReleaseString) else x }
+    Source
+      .fromFile(file)
+      .getLines
+      .map { x =>
+        if (x.contains("__FILL_IN_VERSION_HERE__")) x.replace("__FILL_IN_VERSION_HERE__", version.toReleaseString) else x
+      }
       .foreach(x => write.append(catalogFile, x + System.lineSeparator()))
-    }
-  )
+  })
   universePath
 }
 
 /**
- * Pulls the registry build tool for the specific OS.
- * Uses the marathon version which contains the "--use-local"
- *
+  * Pulls the registry build tool for the specific OS.
+  * Uses the marathon version which contains the "--use-local"
+  *
  */
 def getPackagingTool(): Path = {
   val os = %%("uname", "-s").out.string.trim.toLowerCase
   val packageFile = s"dcos-registry-$os"
   val packagePath = pwd / packageFile
-  if( exists! packagePath) { println("using cached packing tool")}
+  if (exists ! packagePath) { println("using cached packing tool") }
   else {
     val download = s"https://downloads.mesosphere.io/package-registry/binaries/cli/$os/x86-64/latest/$packageFile"
     val binary = Http(download).asBytes.throwError.body
@@ -73,16 +75,13 @@ def getPackagingTool(): Path = {
 }
 
 /**
- * Creates DCOS package for Marathon
- * replaces __FILL_IN_VERSION_HERE__ with provided version
- *
+  * Creates DCOS package for Marathon
+  * replaces __FILL_IN_VERSION_HERE__ with provided version
+  *
  * @param packagingTool the registry build tool
- * @param version used to identify the correct build file
- */
-def buildDCOSRegistryFile(
-  packagingTool: Path,
-  universePath: Path,
-  version: SemVer) = {
+  * @param version used to identify the correct build file
+  */
+def buildDCOSRegistryFile(packagingTool: Path, universePath: Path, version: SemVer) = {
 
   // output directory for all packages going to S3
   val packageDir: Path = pwd / 'target / 'universal

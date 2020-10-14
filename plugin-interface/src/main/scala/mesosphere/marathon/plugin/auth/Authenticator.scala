@@ -41,4 +41,3 @@ trait Authenticator extends Plugin {
     */
   def handleNotAuthenticated(request: HttpRequest, response: HttpResponse): Unit
 }
-

@@ -53,11 +53,7 @@ object Main {
       }
     }
 
-    val sshConfig = SshServerConfig(
-      address = host,
-      port = port,
-      publicKeyAuthenticator = pubkeyAuth,
-      passwordAuthenticator = passAuth)
+    val sshConfig = SshServerConfig(address = host, port = port, publicKeyAuthenticator = pubkeyAuth, passwordAuthenticator = passAuth)
 
     val predef = """
 import mesosphere.marathon._

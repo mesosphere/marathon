@@ -21,7 +21,7 @@ class LimitsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
     launcher = "linux",
     containerizers = "mesos",
     isolation = Some("filesystem/linux,cgroups/cpu,cgroups/mem"),
-    cgroupsEnableCfs = true,
+    cgroupsEnableCfs = true
   )
 
   override def afterEach(): Unit = {
@@ -76,10 +76,11 @@ class LimitsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
   }
 
   def logCgroupInfo(desc: String, cgroupInfo: CgroupInfo) = {
-    val all = (cgroupInfo.cpu.map { case (k,v) => s"cpu:${k}" -> v} ++ cgroupInfo.memory.map { case (k,v) => s"mem:${k}" -> v})
+    val all = (cgroupInfo.cpu.map { case (k, v) => s"cpu:${k}" -> v } ++ cgroupInfo.memory.map { case (k, v) => s"mem:${k}" -> v })
 
-    all.toSeq.sorted.foreach { case (k, v) =>
-      println(s"${desc}\t${k}\t${v.split("\n").headOption.getOrElse("")}")
+    all.toSeq.sorted.foreach {
+      case (k, v) =>
+        println(s"${desc}\t${k}\t${v.split("\n").headOption.getOrElse("")}")
     }
   }
 
@@ -98,12 +99,11 @@ class LimitsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
       cmd = Some(appMockCmd(unlimitedAppId, "1")),
       cpus = 0.1,
       mem = 32,
-      executorResources = Some(raml.ExecutorResources(
-        cpus = 0.1,
-        mem = 32)),
-      resourceLimits = Some(raml.ResourceLimits(
-        cpus = Some(raml.ResourceLimitUnlimited("unlimited")),
-        mem = Some(raml.ResourceLimitUnlimited("unlimited")))))
+      executorResources = Some(raml.ExecutorResources(cpus = 0.1, mem = 32)),
+      resourceLimits = Some(
+        raml.ResourceLimits(cpus = Some(raml.ResourceLimitUnlimited("unlimited")), mem = Some(raml.ResourceLimitUnlimited("unlimited")))
+      )
+    )
 
     val limitedApp = raml.App(
       id = limitedAppId.toString,
@@ -111,12 +111,9 @@ class LimitsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
       cmd = Some(appMockCmd(unlimitedAppId, "1")),
       cpus = 0.1,
       mem = 32,
-      executorResources = Some(raml.ExecutorResources(
-        cpus = 0.1,
-        mem = 32)),
-      resourceLimits = Some(raml.ResourceLimits(
-        cpus = Some(raml.ResourceLimitNumber(1)),
-        mem = Some(raml.ResourceLimitNumber(128)))))
+      executorResources = Some(raml.ExecutorResources(cpus = 0.1, mem = 32)),
+      resourceLimits = Some(raml.ResourceLimits(cpus = Some(raml.ResourceLimitNumber(1)), mem = Some(raml.ResourceLimitNumber(128))))
+    )
 
     val limitsUnsetApp = raml.App(
       id = limitsUnsetAppId.toString,
@@ -124,10 +121,9 @@ class LimitsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
       cmd = Some(appMockCmd(unlimitedAppId, "1")),
       cpus = 0.1,
       mem = 32,
-      executorResources = Some(raml.ExecutorResources(
-        cpus = 0.1,
-        mem = 32)),
-      resourceLimits = None)
+      executorResources = Some(raml.ExecutorResources(cpus = 0.1, mem = 32)),
+      resourceLimits = None
+    )
 
     deployApp(unlimitedApp)
     deployApp(limitsUnsetApp)
@@ -146,13 +142,13 @@ class LimitsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
     unlimitedCgroupInfo.cpu("cpu.cfs_quota_us").toInt shouldBe -1
 
     And("the quota for the app with limits set is greater than the quota with the default limits")
-    limitedCgroupInfo.cpu("cpu.cfs_quota_us").toInt shouldBe > (limitsUnsetCgroupInfo.cpu("cpu.cfs_quota_us").toInt)
+    limitedCgroupInfo.cpu("cpu.cfs_quota_us").toInt shouldBe >(limitsUnsetCgroupInfo.cpu("cpu.cfs_quota_us").toInt)
 
     And("the unlimited app should have a substantially higher memory limit than the app with limits specified")
-    unlimitedCgroupInfo.memory("memory.limit_in_bytes").toLong shouldBe > (limitedCgroupInfo.memory("memory.limit_in_bytes").toLong)
+    unlimitedCgroupInfo.memory("memory.limit_in_bytes").toLong shouldBe >(limitedCgroupInfo.memory("memory.limit_in_bytes").toLong)
 
     And("the app with limits specified should have a a higher memory limit than the app with limits unspecified")
-    limitedCgroupInfo.memory("memory.limit_in_bytes").toLong shouldBe > (limitsUnsetCgroupInfo.memory("memory.limit_in_bytes").toLong)
+    limitedCgroupInfo.memory("memory.limit_in_bytes").toLong shouldBe >(limitsUnsetCgroupInfo.memory("memory.limit_in_bytes").toLong)
   }
 
   "launch pods with and without limits specified for memory and cpus" taggedAs WhenLinux in {
@@ -163,60 +159,70 @@ class LimitsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
     val unlimitedPod = raml.Pod(
       id = unlimitedPodId.toString,
       networks = Seq(raml.Network(mode = raml.NetworkMode.Host)),
-      executorResources = Some(raml.ExecutorResources(
-        cpus = 0.1,
-        mem = 32)),
-      containers = Seq(raml.PodContainer(
-        name = "primary",
-        exec = Some(raml.MesosExec(
-          command = raml.ShellCommand(appMockCmd(unlimitedPodId, port = "$ENDPOINT_HTTP", versionId = "1"))
-        )),
-        resources = raml.Resources(
-          cpus = 0.1,
-          mem = 32,
-        ),
-        endpoints = Seq(raml.Endpoint(name = "http", hostPort = Some(0))),
-        resourceLimits = Some(raml.ResourceLimits(
-          cpus = Some(raml.ResourceLimitUnlimited("unlimited")),
-          mem = Some(raml.ResourceLimitUnlimited("unlimited")))))))
+      executorResources = Some(raml.ExecutorResources(cpus = 0.1, mem = 32)),
+      containers = Seq(
+        raml.PodContainer(
+          name = "primary",
+          exec = Some(
+            raml.MesosExec(
+              command = raml.ShellCommand(appMockCmd(unlimitedPodId, port = "$ENDPOINT_HTTP", versionId = "1"))
+            )
+          ),
+          resources = raml.Resources(
+            cpus = 0.1,
+            mem = 32
+          ),
+          endpoints = Seq(raml.Endpoint(name = "http", hostPort = Some(0))),
+          resourceLimits = Some(
+            raml.ResourceLimits(cpus = Some(raml.ResourceLimitUnlimited("unlimited")), mem = Some(raml.ResourceLimitUnlimited("unlimited")))
+          )
+        )
+      )
+    )
 
     val limitedPod = raml.Pod(
       id = limitedPodId.toString,
       networks = Seq(raml.Network(mode = raml.NetworkMode.Host)),
-      executorResources = Some(raml.ExecutorResources(
-        cpus = 0.1,
-        mem = 32)),
-      containers = Seq(raml.PodContainer(
-        name = "primary",
-        exec = Some(raml.MesosExec(
-          command = raml.ShellCommand(appMockCmd(unlimitedPodId, port = "$ENDPOINT_HTTP", versionId = "1"))
-        )),
-        resources = raml.Resources(
-          cpus = 0.1,
-          mem = 32,
-        ),
-        endpoints = Seq(raml.Endpoint(name = "http", hostPort = Some(0))),
-        resourceLimits = Some(raml.ResourceLimits(
-          cpus = Some(raml.ResourceLimitNumber(1)),
-          mem = Some(raml.ResourceLimitNumber(128)))))))
+      executorResources = Some(raml.ExecutorResources(cpus = 0.1, mem = 32)),
+      containers = Seq(
+        raml.PodContainer(
+          name = "primary",
+          exec = Some(
+            raml.MesosExec(
+              command = raml.ShellCommand(appMockCmd(unlimitedPodId, port = "$ENDPOINT_HTTP", versionId = "1"))
+            )
+          ),
+          resources = raml.Resources(
+            cpus = 0.1,
+            mem = 32
+          ),
+          endpoints = Seq(raml.Endpoint(name = "http", hostPort = Some(0))),
+          resourceLimits = Some(raml.ResourceLimits(cpus = Some(raml.ResourceLimitNumber(1)), mem = Some(raml.ResourceLimitNumber(128))))
+        )
+      )
+    )
 
     val limitsUnsetPod = raml.Pod(
       id = limitsUnsetPodId.toString,
       networks = Seq(raml.Network(mode = raml.NetworkMode.Host)),
-      executorResources = Some(raml.ExecutorResources(
-        cpus = 0.1,
-        mem = 32)),
-      containers = Seq(raml.PodContainer(
-        name = "primary",
-        exec = Some(raml.MesosExec(
-          command = raml.ShellCommand(appMockCmd(unlimitedPodId, port = "$ENDPOINT_HTTP", versionId = "1"))
-        )),
-        resources = raml.Resources(
-          cpus = 0.1,
-          mem = 32,
-        ),
-        endpoints = Seq(raml.Endpoint(name = "http", hostPort = Some(0))),
-        resourceLimits = None)))
+      executorResources = Some(raml.ExecutorResources(cpus = 0.1, mem = 32)),
+      containers = Seq(
+        raml.PodContainer(
+          name = "primary",
+          exec = Some(
+            raml.MesosExec(
+              command = raml.ShellCommand(appMockCmd(unlimitedPodId, port = "$ENDPOINT_HTTP", versionId = "1"))
+            )
+          ),
+          resources = raml.Resources(
+            cpus = 0.1,
+            mem = 32
+          ),
+          endpoints = Seq(raml.Endpoint(name = "http", hostPort = Some(0))),
+          resourceLimits = None
+        )
+      )
+    )
 
     deployPod(unlimitedPod)
     deployPod(limitsUnsetPod)
@@ -235,12 +241,12 @@ class LimitsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
     unlimitedCgroupInfo.cpu("cpu.cfs_quota_us").toInt shouldBe -1
 
     And("the quota for the pod with limits set is greater than the quota with the default limits")
-    limitedCgroupInfo.cpu("cpu.cfs_quota_us").toInt shouldBe > (limitsUnsetCgroupInfo.cpu("cpu.cfs_quota_us").toInt)
+    limitedCgroupInfo.cpu("cpu.cfs_quota_us").toInt shouldBe >(limitsUnsetCgroupInfo.cpu("cpu.cfs_quota_us").toInt)
 
     And("the unlimited pod should have a substantially higher memory limit than the pod with limits specified")
-    unlimitedCgroupInfo.memory("memory.limit_in_bytes").toLong shouldBe > (limitedCgroupInfo.memory("memory.limit_in_bytes").toLong)
+    unlimitedCgroupInfo.memory("memory.limit_in_bytes").toLong shouldBe >(limitedCgroupInfo.memory("memory.limit_in_bytes").toLong)
 
     And("the pod with limits specified should have a a higher memory limit than the pod with limits unspecified")
-    limitedCgroupInfo.memory("memory.limit_in_bytes").toLong shouldBe > (limitsUnsetCgroupInfo.memory("memory.limit_in_bytes").toLong)
+    limitedCgroupInfo.memory("memory.limit_in_bytes").toLong shouldBe >(limitsUnsetCgroupInfo.memory("memory.limit_in_bytes").toLong)
   }
 }

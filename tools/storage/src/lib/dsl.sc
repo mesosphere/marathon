@@ -36,9 +36,10 @@ class DSL(unverifiedModule: => StorageToolModule)(implicit val mat: Materializer
 
   trait StringFormatter[T] extends (T => String) { def apply(v: T): String }
   object StringFormatter {
-    def apply[T](fn: T => String): StringFormatter[T] = new StringFormatter[T] {
-      override def apply(v: T): String = fn(v)
-    }
+    def apply[T](fn: T => String): StringFormatter[T] =
+      new StringFormatter[T] {
+        override def apply(v: T): String = fn(v)
+      }
   }
   implicit val InstanceIdFormatter = StringFormatter[InstanceId] { _.idString }
   implicit val AppIdFormatter = StringFormatter[AppId] { _.path.toString }
@@ -69,51 +70,50 @@ class DSL(unverifiedModule: => StorageToolModule)(implicit val mat: Materializer
   implicit def appIdToPath(appId: AppId): AbsolutePathId = appId.path
   implicit def podIdToPath(podId: PodId): AbsolutePathId = podId.path
 
-  def listApps(containing: String = null, limit: Int = Int.MaxValue)(
-    implicit module: StorageToolModule, timeout: Timeout): QueryResult[AppId] = {
+  def listApps(containing: String = null, limit: Int = Int.MaxValue)(implicit
+      module: StorageToolModule,
+      timeout: Timeout
+  ): QueryResult[AppId] = {
     val predicates = List(
       Option(containing).map { c => { pathId: AbsolutePathId => pathId.toString.contains(c) } }
     ).flatten
     // TODO - purge related deployments?
 
     QueryResult {
-      await(module.appRepository.ids)
-        .filter { app =>
-          predicates.forall { p => p(app) }
-        }
-        .sortBy(_.toString)
+      await(module.appRepository.ids).filter { app =>
+        predicates.forall { p => p(app) }
+      }.sortBy(_.toString)
         .take(limit)
         .map(AppId(_))
     }
   }
 
-  def listPods(containing: String = null, limit: Int = Int.MaxValue)(
-    implicit module: StorageToolModule, timeout: Timeout): QueryResult[PodId] = {
+  def listPods(containing: String = null, limit: Int = Int.MaxValue)(implicit
+      module: StorageToolModule,
+      timeout: Timeout
+  ): QueryResult[PodId] = {
     val predicates = List(
       Option(containing).map { c => { pathId: AbsolutePathId => pathId.toString.contains(c) } }
     ).flatten
     // TODO - purge related deployments?
 
     QueryResult {
-      await(module.podRepository.ids)
-        .filter { pod =>
-          predicates.forall { p => p(pod) }
-        }
-        .sortBy(_.toString)
+      await(module.podRepository.ids).filter { pod =>
+        predicates.forall { p => p(pod) }
+      }.sortBy(_.toString)
         .take(limit)
         .map(PodId(_))
     }
   }
 
-  def listInstances(
-    forApp: AppId = null,
-    forPod: PodId = null,
-    containing: String = null,
-    limit: Int = Int.MaxValue)(
-    implicit module: StorageToolModule, timeout: Timeout): QueryResult[InstanceId] = {
+  def listInstances(forApp: AppId = null, forPod: PodId = null, containing: String = null, limit: Int = Int.MaxValue)(implicit
+      module: StorageToolModule,
+      timeout: Timeout
+  ): QueryResult[InstanceId] = {
     val predicates: List[(InstanceId => Boolean)] = List(
-      Option(containing).map { c =>
-        { instanceId: InstanceId => instanceId.toString.contains(c) }
+      Option(containing).map {
+        c =>
+          { instanceId: InstanceId => instanceId.toString.contains(c) }
       }
     ).flatten
 
@@ -128,23 +128,17 @@ class DSL(unverifiedModule: => StorageToolModule)(implicit val mat: Materializer
         throw new RuntimeException("cannot specify both podId and appId")
     }
     QueryResult {
-      await(input)
-        .filter { instanceId =>
-          predicates.forall { p => p(instanceId) }
-        }
-        .sorted
+      await(input).filter { instanceId =>
+        predicates.forall { p => p(instanceId) }
+      }.sorted
         .take(limit)
     }
   }
 
-  def listDeployments(
-    limit: Int = Int.MaxValue)(
-    implicit module: StorageToolModule,
-      timeout: Timeout): QueryResult[DeploymentId] = {
+  def listDeployments(limit: Int = Int.MaxValue)(implicit module: StorageToolModule, timeout: Timeout): QueryResult[DeploymentId] = {
 
     QueryResult {
-      await(module.deploymentRepository.ids)
-        .sorted
+      await(module.deploymentRepository.ids).sorted
         .take(limit)
         .map(DeploymentId(_))
     }
@@ -156,60 +150,64 @@ class DSL(unverifiedModule: => StorageToolModule)(implicit val mat: Materializer
   }
 
   implicit def UnwrapQueryResult[T](qr: QueryResult[T]): Seq[T] = qr.values
-  implicit def DeploymentPurgeStrategy(implicit module: StorageToolModule): PurgeStrategy[DeploymentId] = new PurgeStrategy[DeploymentId] {
-    val purgeDescription = "deployments"
-    override def `purge!`(values: Seq[DeploymentId]): Unit = {
-      values.foreach { v =>
-        module.deploymentRepository.delete(v)
-        println(s"Purged deployment: ${DeploymentIdFormatter(v)}")
+  implicit def DeploymentPurgeStrategy(implicit module: StorageToolModule): PurgeStrategy[DeploymentId] =
+    new PurgeStrategy[DeploymentId] {
+      val purgeDescription = "deployments"
+      override def `purge!`(values: Seq[DeploymentId]): Unit = {
+        values.foreach { v =>
+          module.deploymentRepository.delete(v)
+          println(s"Purged deployment: ${DeploymentIdFormatter(v)}")
+        }
       }
     }
-  }
-  implicit def InstancePurgeStrategy(implicit module: StorageToolModule): PurgeStrategy[InstanceId] = new PurgeStrategy[InstanceId] {
-    val purgeDescription = "instances"
-    override def `purge!`(values: Seq[InstanceId]): Unit = {
-      values.foreach { v =>
-        module.instanceRepository.delete(v)
-        println(s"Purged instance: ${InstanceIdFormatter(v)}")
+  implicit def InstancePurgeStrategy(implicit module: StorageToolModule): PurgeStrategy[InstanceId] =
+    new PurgeStrategy[InstanceId] {
+      val purgeDescription = "instances"
+      override def `purge!`(values: Seq[InstanceId]): Unit = {
+        values.foreach { v =>
+          module.instanceRepository.delete(v)
+          println(s"Purged instance: ${InstanceIdFormatter(v)}")
+        }
       }
     }
-  }
 
-  implicit def PodPurgeStrategy(implicit module: StorageToolModule): PurgeStrategy[PodId] = new PurgeStrategy[PodId] {
-    val purgeDescription = "pods and associated instances"
-    override def `purge!`(podIds: Seq[PodId]): Unit = {
-      // Remove from rootGroup
-      val rootGroup = await(module.groupRepository.root)
-      val newGroup = podIds.foldLeft(rootGroup) { (r, podId) => r.removePod(podId.path) }
-      module.groupRepository.storeRoot(newGroup, Nil, deletedPods = podIds.map(_.path), updatedPods = Nil, deletedApps = Nil)
-      println(s"Removed ${podIds.map(PodIdFormatter).toList} from root group")
+  implicit def PodPurgeStrategy(implicit module: StorageToolModule): PurgeStrategy[PodId] =
+    new PurgeStrategy[PodId] {
+      val purgeDescription = "pods and associated instances"
+      override def `purge!`(podIds: Seq[PodId]): Unit = {
+        // Remove from rootGroup
+        val rootGroup = await(module.groupRepository.root)
+        val newGroup = podIds.foldLeft(rootGroup) { (r, podId) => r.removePod(podId.path) }
+        module.groupRepository.storeRoot(newGroup, Nil, deletedPods = podIds.map(_.path), updatedPods = Nil, deletedApps = Nil)
+        println(s"Removed ${podIds.map(PodIdFormatter).toList} from root group")
 
-      podIds.foreach { podId =>
-        val instances = await(module.instanceRepository.instances(podId.path))
-        InstancePurgeStrategy.`purge!`(instances)
-        module.podRepository.delete(podId.path)
-        println(s"Purged pod ${podId}")
+        podIds.foreach { podId =>
+          val instances = await(module.instanceRepository.instances(podId.path))
+          InstancePurgeStrategy.`purge!`(instances)
+          module.podRepository.delete(podId.path)
+          println(s"Purged pod ${podId}")
+        }
       }
     }
-  }
 
-  implicit def AppPurgeStrategy(implicit module: StorageToolModule): PurgeStrategy[AppId] = new PurgeStrategy[AppId] {
-    val purgeDescription = "apps and associated instances"
-    override def `purge!`(appIds: Seq[AppId]): Unit = {
-      // Remove from rootGroup
-      val rootGroup = await(module.groupRepository.root)
-      val newGroup = appIds.foldLeft(rootGroup) { (r, appId) => r.removeApp(appId.path) }
-      module.groupRepository.storeRoot(newGroup, Nil, deletedApps = appIds.map(_.path), updatedPods = Nil, deletedPods = Nil)
-      println(s"Removed ${appIds.map(AppIdFormatter).toList} from root group")
+  implicit def AppPurgeStrategy(implicit module: StorageToolModule): PurgeStrategy[AppId] =
+    new PurgeStrategy[AppId] {
+      val purgeDescription = "apps and associated instances"
+      override def `purge!`(appIds: Seq[AppId]): Unit = {
+        // Remove from rootGroup
+        val rootGroup = await(module.groupRepository.root)
+        val newGroup = appIds.foldLeft(rootGroup) { (r, appId) => r.removeApp(appId.path) }
+        module.groupRepository.storeRoot(newGroup, Nil, deletedApps = appIds.map(_.path), updatedPods = Nil, deletedPods = Nil)
+        println(s"Removed ${appIds.map(AppIdFormatter).toList} from root group")
 
-      appIds.foreach { appId =>
-        val instances = await(module.instanceRepository.instances(appId.path))
-        InstancePurgeStrategy.`purge!`(instances)
-        module.appRepository.delete(appId.path)
-        println(s"Purged app ${appId}")
+        appIds.foreach { appId =>
+          val instances = await(module.instanceRepository.instances(appId.path))
+          InstancePurgeStrategy.`purge!`(instances)
+          module.appRepository.delete(appId.path)
+          println(s"Purged app ${appId}")
+        }
       }
     }
-  }
 
   def confirm[T](id: Int)(default: T)(fn: => T): T = {
     print(s"To confirm the operation, please type $id: ")
@@ -218,8 +216,7 @@ class DSL(unverifiedModule: => StorageToolModule)(implicit val mat: Materializer
     if (id != confirmedId) {
       println(s"The operation has not been confirmed!")
       default
-    }
-    else {
+    } else {
       fn
     }
   }
@@ -254,7 +251,9 @@ class DSL(unverifiedModule: => StorageToolModule)(implicit val mat: Materializer
     }
 
     println()
-    println("Are you sure you wish to perform the data migration? Before proceeding please make sure there are no running Marathon instances")
+    println(
+      "Are you sure you wish to perform the data migration? Before proceeding please make sure there are no running Marathon instances"
+    )
     println()
 
     confirm(System.currentTimeMillis.hashCode)(Seq.empty[String]) {

@@ -1,4 +1,4 @@
-#!/usr/bin/env amm
+#!/ usr / bin / env amm
 
 import java.time.Instant
 import $ivy.`org.scalaj::scalaj-http:2.4.2`
@@ -6,12 +6,12 @@ import scalaj.http._
 import ujson._
 
 /**
- * Makes a POST request to DataDog's API with provided path and body.
- *
+  * Makes a POST request to DataDog's API with provided path and body.
+  *
  * @param path The API path, e.g. 'series'.
- * @param body The body of the post request.
- */
-def execute(path:String, body: String): Unit = {
+  * @param body The body of the post request.
+  */
+def execute(path: String, body: String): Unit = {
 
   val DATADOG_API_KEY = sys.env.getOrElse(
     "DATADOG_API_KEY",
@@ -28,11 +28,11 @@ def execute(path:String, body: String): Unit = {
 }
 
 /**
- * Report a metric count to DataDog.
- *
+  * Report a metric count to DataDog.
+  *
  * @param name The name of the metric, e.g. "marathon.build.loop.master.successes".
- * @param count The count of the metric.
- */
+  * @param count The count of the metric.
+  */
 @main
 def reportCount(name: String, count: Int): Unit = {
 
@@ -41,7 +41,7 @@ def reportCount(name: String, count: Int): Unit = {
     "metric" -> Js.Str(name),
     "points" -> Js.Arr(Js.Arr(Js.Num(now), Js.Num(count))),
     "type" -> Js.Str("count")
-    )
-  val request = Js.Obj("series"  -> Js.Arr(metric))
+  )
+  val request = Js.Obj("series" -> Js.Arr(metric))
   execute("series", request.toString)
 }
