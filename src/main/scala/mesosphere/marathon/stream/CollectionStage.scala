@@ -11,8 +11,7 @@ import scala.concurrent.{Future, Promise}
   * Akka Streaming Graph Stage that collects a set of values into the given collection
   * Based on akka's SeqStage
   */
-private final class CollectionStage[T, C](buf: mutable.Builder[T, C])
-  extends GraphStageWithMaterializedValue[SinkShape[T], Future[C]] {
+private final class CollectionStage[T, C](buf: mutable.Builder[T, C]) extends GraphStageWithMaterializedValue[SinkShape[T], Future[C]] {
   val in = Inlet[T]("collection.in")
 
   override def toString: String = "collectionStage"
@@ -27,22 +26,25 @@ private final class CollectionStage[T, C](buf: mutable.Builder[T, C])
 
       override def preStart(): Unit = pull(in)
 
-      setHandler(in, new InHandler {
-        override def onPush(): Unit = {
-          buf += grab(in)
-          pull(in)
-        }
+      setHandler(
+        in,
+        new InHandler {
+          override def onPush(): Unit = {
+            buf += grab(in)
+            pull(in)
+          }
 
-        override def onUpstreamFinish(): Unit = {
-          promise.trySuccess(buf.result())
-          completeStage()
-        }
+          override def onUpstreamFinish(): Unit = {
+            promise.trySuccess(buf.result())
+            completeStage()
+          }
 
-        override def onUpstreamFailure(ex: Throwable): Unit = {
-          promise.tryFailure(ex)
-          failStage(ex)
+          override def onUpstreamFailure(ex: Throwable): Unit = {
+            promise.tryFailure(ex)
+            failStage(ex)
+          }
         }
-      })
+      )
     }
     (logic, promise.future)
   }

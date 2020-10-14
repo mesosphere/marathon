@@ -33,31 +33,51 @@ class TaskStatusComparisonTest extends UnitTest with TableDrivenPropertyChecks {
     )
     // format: ON
 
-    forAll (conditions) { (condition: Condition, isError, isFailed, isFinished, isKilled, isKilling, isRunning, isStaging, isStarting, isUnreachable, isUnreachableInactive, isGone, isUnknown, isDropped, isActive, isTerminal) =>
-      s"it's condition is $condition" should {
+    forAll(conditions) {
+      (
+          condition: Condition,
+          isError,
+          isFailed,
+          isFinished,
+          isKilled,
+          isKilling,
+          isRunning,
+          isStaging,
+          isStarting,
+          isUnreachable,
+          isUnreachableInactive,
+          isGone,
+          isUnknown,
+          isDropped,
+          isActive,
+          isTerminal
+      ) =>
+        s"it's condition is $condition" should {
 
-        val status = Task.Status(Timestamp.now, None, None, condition, NetworkInfoPlaceholder())
-        val task = mock[Task]
-        task.status returns status
+          val status = Task.Status(Timestamp.now, None, None, condition, NetworkInfoPlaceholder())
+          val task = mock[Task]
+          task.status returns status
 
-        import Task._
+          import Task._
 
-        s"${if (!isError) "not" else ""} be error" in { task.isError should be(isError) }
-        s"${if (!isFailed) "not" else ""} be failed" in { task.isFailed should be(isFailed) }
-        s"${if (!isFinished) "not" else ""} be finished" in { task.isFinished should be(isFinished) }
-        s"${if (!isKilled) "not" else ""} be killed" in { task.isKilled should be(isKilled) }
-        s"${if (!isKilling) "not" else ""} be killing" in { task.isKilling should be(isKilling) }
-        s"${if (!isRunning) "not" else ""} be running" in { task.isRunning should be(isRunning) }
-        s"${if (!isStaging) "not" else ""} be staging" in { task.isStaging should be(isStaging) }
-        s"${if (!isStarting) "not" else ""} be starting" in { task.isStarting should be(isStarting) }
-        s"${if (!isUnreachable) "not" else ""} be unreachable" in { task.isUnreachable should be(isUnreachable) }
-        s"${if (!isUnreachableInactive) "not" else ""} be unreachable inactive" in { task.isUnreachableInactive should be(isUnreachableInactive) }
-        s"${if (!isGone) "not" else ""} be gone" in { task.isGone should be(isGone) }
-        s"${if (!isUnknown) "not" else ""} be unknown" in { task.isUnknown should be(isUnknown) }
-        s"${if (!isDropped) "not" else ""} be dropped" in { task.isDropped should be(isDropped) }
-        s"${if (!isActive) "not" else ""} be active" in { task.isActive should be(isActive) }
-        s"${if (!isTerminal) "not" else ""} be terminated" in { task.isTerminal should be(isTerminal) }
-      }
+          s"${if (!isError) "not" else ""} be error" in { task.isError should be(isError) }
+          s"${if (!isFailed) "not" else ""} be failed" in { task.isFailed should be(isFailed) }
+          s"${if (!isFinished) "not" else ""} be finished" in { task.isFinished should be(isFinished) }
+          s"${if (!isKilled) "not" else ""} be killed" in { task.isKilled should be(isKilled) }
+          s"${if (!isKilling) "not" else ""} be killing" in { task.isKilling should be(isKilling) }
+          s"${if (!isRunning) "not" else ""} be running" in { task.isRunning should be(isRunning) }
+          s"${if (!isStaging) "not" else ""} be staging" in { task.isStaging should be(isStaging) }
+          s"${if (!isStarting) "not" else ""} be starting" in { task.isStarting should be(isStarting) }
+          s"${if (!isUnreachable) "not" else ""} be unreachable" in { task.isUnreachable should be(isUnreachable) }
+          s"${if (!isUnreachableInactive) "not" else ""} be unreachable inactive" in {
+            task.isUnreachableInactive should be(isUnreachableInactive)
+          }
+          s"${if (!isGone) "not" else ""} be gone" in { task.isGone should be(isGone) }
+          s"${if (!isUnknown) "not" else ""} be unknown" in { task.isUnknown should be(isUnknown) }
+          s"${if (!isDropped) "not" else ""} be dropped" in { task.isDropped should be(isDropped) }
+          s"${if (!isActive) "not" else ""} be active" in { task.isActive should be(isActive) }
+          s"${if (!isTerminal) "not" else ""} be terminated" in { task.isTerminal should be(isTerminal) }
+        }
     }
   }
 }

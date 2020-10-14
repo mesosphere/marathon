@@ -33,10 +33,7 @@ class TimedEmitterTest extends AkkaUnitTest with Inside {
       f.clock.instant()
 
       val (duration, result) = measuring {
-        Source(
-          List(
-            "a" -> Some(f.clock.instant().plusSeconds(120)),
-            "a" -> Some(f.clock.instant().plusMillis(500))))
+        Source(List("a" -> Some(f.clock.instant().plusSeconds(120)), "a" -> Some(f.clock.instant().plusMillis(500))))
           .concat(StreamHelpers.sourceNever) // prevent stream from closing
           .via(f.timedEmitter)
           .take(3)

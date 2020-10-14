@@ -17,12 +17,11 @@ import scala.concurrent.Future
   * that handles all default behavior for interacting with a given persistence store
   * for that value type. This allows the implicits to be hidden from the consumer of the API.
   */
-class PersistenceStoreRepository[Id, V, K, C, S](
-    persistenceStore: PersistenceStore[K, C, S],
-    extractId: V => Id)(implicit
+class PersistenceStoreRepository[Id, V, K, C, S](persistenceStore: PersistenceStore[K, C, S], extractId: V => Id)(implicit
     ir: IdResolver[Id, V, C, K],
     marshaller: Marshaller[V, S],
-    unmarshaller: Unmarshaller[S, V]) extends Repository[Id, V] {
+    unmarshaller: Unmarshaller[S, V]
+) extends Repository[Id, V] {
 
   override def ids(): Source[Id, NotUsed] = persistenceStore.ids()
 
@@ -44,12 +43,10 @@ class PersistenceStoreRepository[Id, V, K, C, S](
 class PersistenceStoreVersionedRepository[Id, V, K, C, S](
     persistenceStore: PersistenceStore[K, C, S],
     extractId: V => Id,
-    extractVersion: V => OffsetDateTime)(implicit
-    ir: IdResolver[Id, V, C, K],
-    marshaller: Marshaller[V, S],
-    unmarshaller: Unmarshaller[S, V]) extends PersistenceStoreRepository[Id, V, K, C, S](
-  persistenceStore,
-  extractId) with VersionedRepository[Id, V] {
+    extractVersion: V => OffsetDateTime
+)(implicit ir: IdResolver[Id, V, C, K], marshaller: Marshaller[V, S], unmarshaller: Unmarshaller[S, V])
+    extends PersistenceStoreRepository[Id, V, K, C, S](persistenceStore, extractId)
+    with VersionedRepository[Id, V] {
 
   override def versions(id: Id): Source[OffsetDateTime, NotUsed] = persistenceStore.versions(id)
 

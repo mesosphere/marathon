@@ -95,8 +95,9 @@ case class MesosCommandCheck(
     interval: FiniteDuration = Check.DefaultInterval,
     timeout: FiniteDuration = Check.DefaultTimeout,
     delay: FiniteDuration = Check.DefaultDelay,
-    command: Executable)
-  extends Check with MesosCheck {
+    command: Executable
+) extends Check
+    with MesosCheck {
   override def toProto: Protos.CheckDefinition = {
     protoBuilder
       .setProtocol(Protos.CheckDefinition.Protocol.COMMAND)
@@ -105,13 +106,15 @@ case class MesosCommandCheck(
   }
 
   override def toMesos(portAssignments: Seq[PortAssignment]): Option[MesosProtos.CheckInfo] = {
-    Option(MesosProtos.CheckInfo.newBuilder
-      .setType(MesosProtos.CheckInfo.Type.COMMAND)
-      .setIntervalSeconds(this.interval.toSeconds.toDouble)
-      .setTimeoutSeconds(this.timeout.toSeconds.toDouble)
-      .setDelaySeconds(this.delay.toUnit(SECONDS))
-      .setCommand(MesosProtos.CheckInfo.Command.newBuilder().setCommand(Executable.toProto(this.command)))
-      .build())
+    Option(
+      MesosProtos.CheckInfo.newBuilder
+        .setType(MesosProtos.CheckInfo.Type.COMMAND)
+        .setIntervalSeconds(this.interval.toSeconds.toDouble)
+        .setTimeoutSeconds(this.timeout.toSeconds.toDouble)
+        .setDelaySeconds(this.delay.toUnit(SECONDS))
+        .setCommand(MesosProtos.CheckInfo.Command.newBuilder().setCommand(Executable.toProto(this.command)))
+        .build()
+    )
   }
 }
 
@@ -132,8 +135,10 @@ case class MesosHttpCheck(
     port: Option[Int] = CheckWithPort.DefaultPort,
     path: Option[String] = MesosHttpCheck.DefaultPath,
     protocol: Protocol = MesosHttpCheck.DefaultProtocol,
-    delay: FiniteDuration = Check.DefaultDelay)
-  extends Check with MesosCheck with MesosCheckWithPorts {
+    delay: FiniteDuration = Check.DefaultDelay
+) extends Check
+    with MesosCheck
+    with MesosCheckWithPorts {
   require(protocol == Protocol.HTTP)
 
   override def toProto: Protos.CheckDefinition = {
@@ -151,7 +156,8 @@ case class MesosHttpCheck(
   override def toMesos(portAssignments: Seq[PortAssignment]): Option[MesosProtos.CheckInfo] = {
     val port = effectivePort(portAssignments)
     port.map { checkPort =>
-      val httpInfoBuilder = MesosProtos.CheckInfo.Http.newBuilder()
+      val httpInfoBuilder = MesosProtos.CheckInfo.Http
+        .newBuilder()
         .setPort(checkPort)
 
       path.foreach(httpInfoBuilder.setPath)
@@ -188,8 +194,10 @@ case class MesosTcpCheck(
     timeout: FiniteDuration = Check.DefaultTimeout,
     portIndex: Option[PortReference] = CheckWithPort.DefaultPortIndex,
     port: Option[Int] = CheckWithPort.DefaultPort,
-    delay: FiniteDuration = Check.DefaultDelay)
-  extends Check with MesosCheck with MesosCheckWithPorts {
+    delay: FiniteDuration = Check.DefaultDelay
+) extends Check
+    with MesosCheck
+    with MesosCheckWithPorts {
 
   override def toProto: Protos.CheckDefinition = {
     val builder = protoBuilder

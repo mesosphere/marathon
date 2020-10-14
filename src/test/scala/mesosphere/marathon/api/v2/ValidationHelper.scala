@@ -13,15 +13,16 @@ object ValidationHelper {
 
   def getAllRuleConstraints(r: JsResult[_]): Set[ConstraintViolation] = {
     r match {
-      case f: JsError => f.errors.flatMap {
-        case (path, errors) =>
-          errors.flatMap { err =>
-            val messages = err.messages
-            messages.map { msg =>
-              ConstraintViolation(path.toString, msg)
+      case f: JsError =>
+        f.errors.flatMap {
+          case (path, errors) =>
+            errors.flatMap { err =>
+              val messages = err.messages
+              messages.map { msg =>
+                ConstraintViolation(path.toString, msg)
+              }
             }
-          }
-      }(collection.breakOut)
+        }(collection.breakOut)
       case _ => Set.empty
     }
   }

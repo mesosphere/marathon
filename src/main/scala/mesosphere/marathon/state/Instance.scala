@@ -21,7 +21,8 @@ case class Instance(
     tasksMap: Map[Task.Id, Task],
     runSpecVersion: Timestamp,
     reservation: Option[Reservation],
-    role: Option[String]) extends MarathonState[Protos.Json, Instance] {
+    role: Option[String]
+) extends MarathonState[Protos.Json, Instance] {
 
   def hasReservation: Boolean = reservation.isDefined
 
@@ -54,7 +55,15 @@ object Instance {
     * @return storage model instance of the core instance.
     */
   def fromCoreInstance(instance: CoreInstance): Instance =
-    Instance(instance.instanceId, instance.agentInfo, instance.state, instance.tasksMap, instance.runSpecVersion, instance.reservation, Some(instance.role))
+    Instance(
+      instance.instanceId,
+      instance.agentInfo,
+      instance.state,
+      instance.tasksMap,
+      instance.runSpecVersion,
+      instance.reservation,
+      Some(instance.role)
+    )
 
   // Formats
 
@@ -64,28 +73,28 @@ object Instance {
   implicit val instanceJsonWrites: Writes[Instance] = {
     (
       (__ \ "instanceId").write[CoreInstance.Id] ~
-      (__ \ "agentInfo").writeNullable[CoreInstance.AgentInfo] ~
-      (__ \ "tasksMap").write[Map[Task.Id, Task]] ~
-      (__ \ "runSpecVersion").write[Timestamp] ~
-      (__ \ "state").write[InstanceState] ~
-      (__ \ "reservation").writeNullable[Reservation] ~
-      (__ \ "role").writeNullable[String]
+        (__ \ "agentInfo").writeNullable[CoreInstance.AgentInfo] ~
+        (__ \ "tasksMap").write[Map[Task.Id, Task]] ~
+        (__ \ "runSpecVersion").write[Timestamp] ~
+        (__ \ "state").write[InstanceState] ~
+        (__ \ "reservation").writeNullable[Reservation] ~
+        (__ \ "role").writeNullable[String]
     ) { (i) =>
-        (i.instanceId, i.agentInfo, i.tasksMap, i.runSpecVersion, i.state, i.reservation, i.role)
-      }
+      (i.instanceId, i.agentInfo, i.tasksMap, i.runSpecVersion, i.state, i.reservation, i.role)
+    }
   }
 
   implicit val instanceJsonReads: Reads[Instance] = {
     (
       (__ \ "instanceId").read[CoreInstance.Id] ~
-      (__ \ "agentInfo").readNullable[CoreInstance.AgentInfo] ~
-      (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
-      (__ \ "runSpecVersion").read[Timestamp] ~
-      (__ \ "state").read[InstanceState] ~
-      (__ \ "reservation").readNullable[Reservation] ~
-      (__ \ "role").readNullable[String]
+        (__ \ "agentInfo").readNullable[CoreInstance.AgentInfo] ~
+        (__ \ "tasksMap").read[Map[Task.Id, Task]] ~
+        (__ \ "runSpecVersion").read[Timestamp] ~
+        (__ \ "state").read[InstanceState] ~
+        (__ \ "reservation").readNullable[Reservation] ~
+        (__ \ "role").readNullable[String]
     ) { (instanceId, agentInfo, tasksMap, runSpecVersion, state, reservation, role) =>
-        new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, reservation, role)
-      }
+      new Instance(instanceId, agentInfo, state, tasksMap, runSpecVersion, reservation, role)
+    }
   }
 }

@@ -15,6 +15,7 @@ sealed trait InstanceUpdateOperation {
 }
 
 object InstanceUpdateOperation {
+
   /** Revert a task to the given state. Used in case TaskOps are rejected. */
   case class Revert(instance: Instance) extends InstanceUpdateOperation {
     override def instanceId: Instance.Id = instance.instanceId
@@ -46,7 +47,8 @@ object InstanceUpdateOperation {
     * matched.
     *
     */
-  case class Provision(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Map[Task.Id, Task], now: Timestamp) extends InstanceUpdateOperation
+  case class Provision(instanceId: Instance.Id, agentInfo: Instance.AgentInfo, runSpec: RunSpec, tasks: Map[Task.Id, Task], now: Timestamp)
+      extends InstanceUpdateOperation
 
   /**
     * Describes an instance update.
@@ -56,13 +58,13 @@ object InstanceUpdateOperation {
     * @param mesosStatus New Mesos status
     * @param now Time when update was received
     */
-  case class MesosUpdate(
-      instance: Instance, condition: Condition,
-      mesosStatus: mesos.Protos.TaskStatus, now: Timestamp) extends InstanceUpdateOperation {
+  case class MesosUpdate(instance: Instance, condition: Condition, mesosStatus: mesos.Protos.TaskStatus, now: Timestamp)
+      extends InstanceUpdateOperation {
 
     override def instanceId: Instance.Id = instance.instanceId
 
-    override def shortString: String = s"${this.getClass.getSimpleName} update operation for $instanceId with new status ${mesosStatus.getState}"
+    override def shortString: String =
+      s"${this.getClass.getSimpleName} update operation for $instanceId with new status ${mesosStatus.getState}"
   }
 
   object MesosUpdate {

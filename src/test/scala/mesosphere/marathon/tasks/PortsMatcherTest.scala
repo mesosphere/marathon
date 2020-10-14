@@ -159,11 +159,18 @@ class PortsMatcherTest extends UnitTest {
     }
 
     "fail if dynamic mapped port from container cannot be satisfied" in {
-      val app = AppDefinition(id = runSpecId, role = "*", container = Some(Docker(
-        portMappings = Seq(
-          new PortMapping(containerPort = 1, hostPort = Some(0))
-        )
-      )), networks = containerNetworking)
+      val app = AppDefinition(
+        id = runSpecId,
+        role = "*",
+        container = Some(
+          Docker(
+            portMappings = Seq(
+              new PortMapping(containerPort = 1, hostPort = Some(0))
+            )
+          )
+        ),
+        networks = containerNetworking
+      )
 
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 0, endPort = -1).build
       val matcher = PortsMatcher(app, offer)
@@ -172,11 +179,18 @@ class PortsMatcherTest extends UnitTest {
     }
 
     "satisfy dynamic mapped port from container" in {
-      val app = AppDefinition(id = runSpecId, role = "*", container = Some(Docker(
-        portMappings = Seq(
-          new PortMapping(containerPort = 1, hostPort = Some(0))
-        )
-      )), networks = containerNetworking)
+      val app = AppDefinition(
+        id = runSpecId,
+        role = "*",
+        container = Some(
+          Docker(
+            portMappings = Seq(
+              new PortMapping(containerPort = 1, hostPort = Some(0))
+            )
+          )
+        ),
+        networks = containerNetworking
+      )
 
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 31000).build
       val matcher = PortsMatcher(app, offer)
@@ -186,11 +200,18 @@ class PortsMatcherTest extends UnitTest {
     }
 
     "randomly satisfy dynamic mapped port from container" in {
-      val app = AppDefinition(id = runSpecId, role = "*", container = Some(Docker(
-        portMappings = Seq(
-          new PortMapping(containerPort = 1, hostPort = Some(0))
-        )
-      )), networks = containerNetworking)
+      val app = AppDefinition(
+        id = runSpecId,
+        role = "*",
+        container = Some(
+          Docker(
+            portMappings = Seq(
+              new PortMapping(containerPort = 1, hostPort = Some(0))
+            )
+          )
+        ),
+        networks = containerNetworking
+      )
 
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
       val rand = new Random(new util.Random(0))
@@ -217,11 +238,18 @@ class PortsMatcherTest extends UnitTest {
     }
 
     "fail if fixed mapped port from container cannot be satisfied" in {
-      val app = AppDefinition(id = runSpecId, role = "*", container = Some(Docker(
-        portMappings = Seq(
-          new PortMapping(containerPort = 1, hostPort = Some(8080))
-        )
-      )), networks = containerNetworking)
+      val app = AppDefinition(
+        id = runSpecId,
+        role = "*",
+        container = Some(
+          Docker(
+            portMappings = Seq(
+              new PortMapping(containerPort = 1, hostPort = Some(8080))
+            )
+          )
+        ),
+        networks = containerNetworking
+      )
 
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
       val matcher = PortsMatcher(app, offer)
@@ -230,11 +258,18 @@ class PortsMatcherTest extends UnitTest {
     }
 
     "satisfy fixed mapped port from container" in {
-      val app = AppDefinition(id = runSpecId, role = "*", container = Some(Docker(
-        portMappings = Seq(
-          new PortMapping(containerPort = 1, hostPort = Some(31200))
-        )
-      )), networks = containerNetworking)
+      val app = AppDefinition(
+        id = runSpecId,
+        role = "*",
+        container = Some(
+          Docker(
+            portMappings = Seq(
+              new PortMapping(containerPort = 1, hostPort = Some(31200))
+            )
+          )
+        ),
+        networks = containerNetworking
+      )
 
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 32000).build
       val matcher = PortsMatcher(app, offer)
@@ -244,11 +279,18 @@ class PortsMatcherTest extends UnitTest {
     }
 
     "do not satisfy fixed mapped port from container with resource offer of incorrect role" in {
-      val app = AppDefinition(id = runSpecId, role = "*", container = Some(Docker(
-        portMappings = Seq(
-          new PortMapping(containerPort = 1, hostPort = Some(31200))
-        )
-      )), networks = containerNetworking)
+      val app = AppDefinition(
+        id = runSpecId,
+        role = "*",
+        container = Some(
+          Docker(
+            portMappings = Seq(
+              new PortMapping(containerPort = 1, hostPort = Some(31200))
+            )
+          )
+        ),
+        networks = containerNetworking
+      )
 
       val portsResource = RangesResource(
         Resource.PORTS,
@@ -263,12 +305,19 @@ class PortsMatcherTest extends UnitTest {
     }
 
     "satisfy fixed and dynamic mapped port from container from one offered range" in {
-      val app = AppDefinition(id = runSpecId, role = "*", container = Some(Docker(
-        portMappings = Seq(
-          new PortMapping(containerPort = 1, hostPort = Some(0)),
-          new PortMapping(containerPort = 1, hostPort = Some(31000))
-        )
-      )), networks = containerNetworking)
+      val app = AppDefinition(
+        id = runSpecId,
+        role = "*",
+        container = Some(
+          Docker(
+            portMappings = Seq(
+              new PortMapping(containerPort = 1, hostPort = Some(0)),
+              new PortMapping(containerPort = 1, hostPort = Some(31000))
+            )
+          )
+        ),
+        networks = containerNetworking
+      )
 
       val offer = MarathonTestHelper.makeBasicOffer(beginPort = 31000, endPort = 31001).build
       val matcher = PortsMatcher(app, offer)
@@ -278,12 +327,19 @@ class PortsMatcherTest extends UnitTest {
     }
 
     "satisfy fixed and dynamic mapped port from container from ranges with different roles" in {
-      val app = AppDefinition(id = runSpecId, role = "*", container = Some(Docker(
-        portMappings = Seq(
-          new PortMapping(containerPort = 1, hostPort = Some(0)),
-          new PortMapping(containerPort = 1, hostPort = Some(31000))
-        )
-      )), networks = containerNetworking)
+      val app = AppDefinition(
+        id = runSpecId,
+        role = "*",
+        container = Some(
+          Docker(
+            portMappings = Seq(
+              new PortMapping(containerPort = 1, hostPort = Some(0)),
+              new PortMapping(containerPort = 1, hostPort = Some(31000))
+            )
+          )
+        ),
+        networks = containerNetworking
+      )
 
       val portsResource = RangesResource(
         Resource.PORTS,
@@ -296,9 +352,12 @@ class PortsMatcherTest extends UnitTest {
 
       assert(matcher.portsMatch.isDefined)
       assert(matcher.portsMatch.get.hostPorts.flatten.toSet == Set(31000, 31001))
-      assert(matcher.portsMatch.get.hostPortsWithRole.toSet == Set( // linter:ignore:UnlikelyEquality
-        Some(PortWithRole(ResourceRole.Unreserved, 31000)), Some(PortWithRole("marathon", 31001))
-      ))
+      assert(
+        matcher.portsMatch.get.hostPortsWithRole.toSet == Set( // linter:ignore:UnlikelyEquality
+          Some(PortWithRole(ResourceRole.Unreserved, 31000)),
+          Some(PortWithRole("marathon", 31001))
+        )
+      )
     }
   }
 }

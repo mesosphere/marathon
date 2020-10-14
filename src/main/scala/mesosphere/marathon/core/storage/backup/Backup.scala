@@ -22,8 +22,7 @@ import scala.util.control.NonFatal
   */
 abstract class BackupRestoreAction extends StrictLogging {
 
-  class BackupConfig(args: Seq[String])
-    extends ScallopConf(args) with MarathonConf {
+  class BackupConfig(args: Seq[String]) extends ScallopConf(args) with MarathonConf {
     override def availableFeatures: Set[String] = Set.empty
     verify()
     require(backupLocation.isDefined, "--backup_location needs to be defined!")

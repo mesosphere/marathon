@@ -214,16 +214,17 @@ trait Implicits {
     )
   }
 
-  implicit def attributeToProto(attribute: Attribute): Protos.Attribute = attribute match {
-    case TextAttribute(name, text) =>
-      Protos.Attribute.newBuilder
-        .setType(Protos.Value.Type.TEXT)
-        .setName(name)
-        .setText(Protos.Value.Text.newBuilder.setValue(text))
-        .build
-    case unsupported: Attribute =>
-      throw new IllegalArgumentException(s"Unsupported type: $unsupported")
-  }
+  implicit def attributeToProto(attribute: Attribute): Protos.Attribute =
+    attribute match {
+      case TextAttribute(name, text) =>
+        Protos.Attribute.newBuilder
+          .setType(Protos.Value.Type.TEXT)
+          .setName(name)
+          .setText(Protos.Value.Text.newBuilder.setValue(text))
+          .build
+      case unsupported: Attribute =>
+        throw new IllegalArgumentException(s"Unsupported type: $unsupported")
+    }
 
   implicit def attributeToCaseClass(attribute: Protos.Attribute): Attribute = {
     attribute.getType match {

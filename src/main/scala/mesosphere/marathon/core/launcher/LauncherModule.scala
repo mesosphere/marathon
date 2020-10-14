@@ -21,17 +21,19 @@ class LauncherModule(
     marathonSchedulerDriverHolder: MarathonSchedulerDriverHolder,
     offerMatcher: OfferMatcher,
     pluginManager: PluginManager,
-    enforceRoleSettingProvider: GroupManager.EnforceRoleSettingProvider)(implicit clock: Clock) {
+    enforceRoleSettingProvider: GroupManager.EnforceRoleSettingProvider
+)(implicit clock: Clock) {
 
   lazy val offerProcessor: OfferProcessor =
     new OfferProcessorImpl(
-      metrics, conf,
-      offerMatcher, taskLauncher, instanceTracker
+      metrics,
+      conf,
+      offerMatcher,
+      taskLauncher,
+      instanceTracker
     )
 
-  lazy val taskLauncher: TaskLauncher = new TaskLauncherImpl(
-    metrics,
-    marathonSchedulerDriverHolder)
+  lazy val taskLauncher: TaskLauncher = new TaskLauncherImpl(metrics, marathonSchedulerDriverHolder)
 
   lazy val taskOpFactory: InstanceOpFactory = new InstanceOpFactoryImpl(metrics, conf, pluginManager, enforceRoleSettingProvider)
 }

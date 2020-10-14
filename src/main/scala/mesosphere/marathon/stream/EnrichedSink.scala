@@ -31,15 +31,15 @@ object EnrichedSink {
     Sink.fromGraph(new LiveFold(zero)(fold))
 
   def statefulForeach[T](constructor: () => T => Unit): Sink[T, Future[Done]] = {
-    Flow[T].statefulMapConcat({ () =>
-      val fn = constructor()
+    Flow[T]
+      .statefulMapConcat({ () =>
+        val fn = constructor()
 
-      { t =>
-        fn(t)
-        Nil
-      }
-    }
-    )
+        { t =>
+          fn(t)
+          Nil
+        }
+      })
       .toMat(Sink.ignore)(Keep.right)
   }
 }

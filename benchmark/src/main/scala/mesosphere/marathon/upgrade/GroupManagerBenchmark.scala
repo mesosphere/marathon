@@ -26,8 +26,7 @@ class GroupBenchmark {
       labels = Map("ID" -> path.toString),
       versionInfo = version,
       networks = Seq(BridgeNetwork()),
-      container = Some(
-        Container.Docker(Nil, "alpine", List(Container.PortMapping(2015, Some(0), 10000, "tcp", Some("thing")))))
+      container = Some(Container.Docker(Nil, "alpine", List(Container.PortMapping(2015, Some(0), 10000, "tcp", Some("thing")))))
     )
 
   def makePod(path: AbsolutePathId) =
@@ -37,18 +36,15 @@ class GroupBenchmark {
       networks = Seq(BridgeNetwork()),
       labels = Map("ID" -> path.toString),
       versionInfo = version,
-
       containers = Seq(
         MesosContainer(
           "container-1",
           resources = Resources(1.0),
           image = Some(Image(ImageType.Docker, "alpine")),
-          endpoints = List(
-            Endpoint(
-              "service",
-              Some(2015),
-              Some(0),
-              Seq("tcp"))))))
+          endpoints = List(Endpoint("service", Some(2015), Some(0), Seq("tcp")))
+        )
+      )
+    )
 
   @Param(value = Array("100", "500", "1000", "2500", "5000", "10000"))
   var numberOfSavedApps: Int = _
@@ -89,9 +85,7 @@ class GroupManagerBenchmark extends GroupBenchmark {
 
   @Benchmark
   def updateVersionInfoForChangedApps(hole: Blackhole): Unit = {
-    val newRootGroup = GroupVersioningUtil.updateVersionInfoForChangedApps(
-      Timestamp (2),
-      rootGroup, upgraded)
+    val newRootGroup = GroupVersioningUtil.updateVersionInfoForChangedApps(Timestamp(2), rootGroup, upgraded)
     hole.consume(newRootGroup)
   }
 

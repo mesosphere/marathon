@@ -25,7 +25,11 @@ class SeccompIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
 
   "An app definition WITH seccomp profile defined and unconfined = false" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
     Given("an app WITH seccomp profile defined and unconfined = false")
-    val app = seccompApp(AbsolutePathId("/app-with-seccomp-profile-and-unconfined-false"), unconfined = false, profileName = agentConfig.seccompProfileName)
+    val app = seccompApp(
+      AbsolutePathId("/app-with-seccomp-profile-and-unconfined-false"),
+      unconfined = false,
+      profileName = agentConfig.seccompProfileName
+    )
 
     When("the app is successfully deployed")
     val result = marathon.createAppV2(app)
@@ -51,7 +55,11 @@ class SeccompIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
 
   "A pod definition WITH seccomp profile defined and unconfined = false" taggedAs WhenEnvSet(envVarRunMesosTests, default = "true") in {
     Given("a pod WITH seccomp profile defined and unconfined = false")
-    val pod = seccompPod(AbsolutePathId("/pod-with-seccomp-profile-and-unconfined-false"), unconfined = false, profileName = agentConfig.seccompProfileName)
+    val pod = seccompPod(
+      AbsolutePathId("/pod-with-seccomp-profile-and-unconfined-false"),
+      unconfined = false,
+      profileName = agentConfig.seccompProfileName
+    )
 
     When("the pod is successfully deployed")
     val result = marathon.createPodV2(pod)
@@ -85,15 +93,20 @@ class SeccompIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
           name = "task1",
           exec = Some(raml.MesosExec(raml.ShellCommand("sleep 9000"))),
           resources = raml.Resources(cpus = 0.01, mem = 32.0),
-          linuxInfo = Some(state.LinuxInfo(
-            seccomp = Some(state.Seccomp(
-              profileName,
-              unconfined
-            )),
-            ipcInfo = None
-          ))
+          linuxInfo = Some(
+            state.LinuxInfo(
+              seccomp = Some(
+                state.Seccomp(
+                  profileName,
+                  unconfined
+                )
+              ),
+              ipcInfo = None
+            )
+          )
         )
-      ))
+      )
+    )
   }
 
   def seccompApp(appId: AbsolutePathId, unconfined: Boolean, profileName: Option[String] = None): App = {
@@ -106,12 +119,16 @@ class SeccompIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTe
         Container(
           `type` = EngineType.Mesos,
           docker = Some(DockerContainer(image = "busybox")),
-          linuxInfo = Some(LinuxInfo(
-            seccomp = Some(Seccomp(
-              unconfined = unconfined,
-              profileName = profileName
-            ))
-          ))
+          linuxInfo = Some(
+            LinuxInfo(
+              seccomp = Some(
+                Seccomp(
+                  unconfined = unconfined,
+                  profileName = profileName
+                )
+              )
+            )
+          )
         )
       )
     )

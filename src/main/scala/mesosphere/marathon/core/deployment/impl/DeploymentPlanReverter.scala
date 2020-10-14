@@ -35,9 +35,7 @@ private[deployment] object DeploymentPlanReverter extends StrictLogging {
     /* a sequence of tuples with the old and the new run definition */
     val runSpecChanges: Seq[(Option[RunSpec], Option[RunSpec])] = {
       val ids = original.transitiveRunSpecIds ++ target.transitiveRunSpecIds
-      ids.map { id => original.runSpec(id) -> target.runSpec(id) }
-        .filter { case (oldOpt, newOpt) => oldOpt != newOpt }
-        .toIndexedSeq
+      ids.map { id => original.runSpec(id) -> target.runSpec(id) }.filter { case (oldOpt, newOpt) => oldOpt != newOpt }.toIndexedSeq
     }
 
     // We need to revert run changes first so that runs have already been deleted when we check
@@ -51,9 +49,9 @@ private[deployment] object DeploymentPlanReverter extends StrictLogging {
     * It is more difficult than reverting any app definition changes
     * because groups are not locked by deployments and concurrent changes are allowed.
     */
-  private[this] def revertGroupChanges(
-    version: Timestamp,
-    groupChanges: Seq[(Option[Group], Option[Group])])(rootGroup: RootGroup): RootGroup = {
+  private[this] def revertGroupChanges(version: Timestamp, groupChanges: Seq[(Option[Group], Option[Group])])(
+      rootGroup: RootGroup
+  ): RootGroup = {
 
     def revertGroupRemoval(oldGroup: Group)(dependencies: Set[AbsolutePathId]): Set[AbsolutePathId] = {
       logger.debug("re-adding group {} with dependencies {}", Seq(oldGroup.id, oldGroup.dependencies): _*)
@@ -68,7 +66,8 @@ private[deployment] object DeploymentPlanReverter extends StrictLogging {
         logger.debug(
           s"revert dependency changes in group ${oldGroup.id}, " +
             s"readding removed {${removedDependencies.mkString(", ")}}, " +
-            s"removing added {${addedDependencies.mkString(", ")}}")
+            s"removing added {${addedDependencies.mkString(", ")}}"
+        )
 
         dependencies ++ removedDependencies -- addedDependencies
       } else {
@@ -93,8 +92,10 @@ private[deployment] object DeploymentPlanReverter extends StrictLogging {
           result.removeGroup(unchanged.id, version)
         case _ if newGroup.dependencies.nonEmpty =>
           // group dependencies have changed
-          logger.debug(s"group ${newGroup.id} has changed. " +
-            s"Removed added dependencies ${newGroup.dependencies.mkString(", ")}")
+          logger.debug(
+            s"group ${newGroup.id} has changed. " +
+              s"Removed added dependencies ${newGroup.dependencies.mkString(", ")}"
+          )
           result.updateDependencies(newGroup.id, _ -- newGroup.dependencies, version = version)
         case _ =>
           // still contains apps/groups, so we keep it
@@ -137,33 +138,25 @@ private[deployment] object DeploymentPlanReverter extends StrictLogging {
     * The logic is quite simple because during a deployment apps are locked which
     * prevents any concurrent changes.
     */
-  private[this] def revertRunSpecChanges(
-    version: Timestamp, changes: Seq[(Option[RunSpec], Option[RunSpec])])(
-    rootGroup: RootGroup): RootGroup = {
+  private[this] def revertRunSpecChanges(version: Timestamp, changes: Seq[(Option[RunSpec], Option[RunSpec])])(
+      rootGroup: RootGroup
+  ): RootGroup = {
 
-    def appOrPodChange(
-      runnableSpec: RunSpec,
-      appChange: AppDefinition => RootGroup,
-      podChange: PodDefinition => RootGroup): RootGroup = runnableSpec match {
-      case app: AppDefinition => appChange(app)
-      case pod: PodDefinition => podChange(pod)
-    }
+    def appOrPodChange(runnableSpec: RunSpec, appChange: AppDefinition => RootGroup, podChange: PodDefinition => RootGroup): RootGroup =
+      runnableSpec match {
+        case app: AppDefinition => appChange(app)
+        case pod: PodDefinition => podChange(pod)
+      }
 
     changes.foldLeft(rootGroup) {
       case (result, runUpdate) =>
         runUpdate match {
           case (Some(oldRun), _) => //removal or change
             logger.debug("revert to old app definition {}", oldRun.id)
-            appOrPodChange(
-              oldRun,
-              app => result.updateApp(app.id, _ => app, version),
-              pod => result.updatePod(pod.id, _ => pod, version))
+            appOrPodChange(oldRun, app => result.updateApp(app.id, _ => app, version), pod => result.updatePod(pod.id, _ => pod, version))
           case (None, Some(newRun)) =>
             logger.debug("remove app definition {}", newRun.id)
-            appOrPodChange(
-              newRun,
-              app => result.removeApp(app.id, version),
-              pod => result.removePod(pod.id, version))
+            appOrPodChange(newRun, app => result.removeApp(app.id, version), pod => result.removePod(pod.id, version))
           case (None, None) =>
             logger.warn("processing unexpected NOOP in app changes")
             result

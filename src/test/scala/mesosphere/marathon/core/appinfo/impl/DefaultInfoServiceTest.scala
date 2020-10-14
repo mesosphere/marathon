@@ -165,8 +165,12 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       f.groupManager.group(rootGroup.id) returns Some(rootGroup)
 
       When("querying extending group information")
-      val result = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty,
-        Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups))
+      val result = f.infoService.selectGroup(
+        rootGroup.id,
+        GroupInfoService.Selectors.all,
+        Set.empty,
+        Set(GroupInfo.Embed.Apps, GroupInfo.Embed.Groups)
+      )
 
       Then("The group info contains apps and groups")
       result.futureValue.value.apps should have size 3
@@ -174,8 +178,7 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
       result.futureValue.value.groups.head.apps should have size 2
 
       When("querying extending group information without apps")
-      val result2 = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty,
-        Set(GroupInfo.Embed.Groups))
+      val result2 = f.infoService.selectGroup(rootGroup.id, GroupInfoService.Selectors.all, Set.empty, Set(GroupInfo.Embed.Groups))
 
       Then("The group info contains no apps but groups")
       result2.futureValue.value.groups should be('nonEmpty)
@@ -249,7 +252,8 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
         pods = Set(),
         groups = Set(),
         version = Some(nestedGroup.version.toOffsetDateTime),
-        enforceRole = Some(nestedGroup.enforceRole))
+        enforceRole = Some(nestedGroup.enforceRole)
+      )
 
       result.futureValue.value.groups should have size 1
       result.futureValue.value.groups.head should be(expectedGroupInfo)
@@ -297,7 +301,8 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
         id = AbsolutePathId("/nested"),
         apps = someNestedApps
       )
-    ))
+    )
+  )
 
   val nestedGroup = {
     val app1 = AppDefinition(AbsolutePathId("/app1"), cmd = Some("sleep"), role = "*")
@@ -308,17 +313,29 @@ class DefaultInfoServiceTest extends UnitTest with GroupCreation {
     val otherApp1 = AppDefinition(AbsolutePathId("/other/app1"), cmd = Some("sleep"), role = "*")
     val otherGroupApp1 = AppDefinition(AbsolutePathId("/other/group/app1"), cmd = Some("sleep"), role = "*")
 
-    createRootGroup(Map(app1.id -> app1), groups = Set(
-      createGroup(AbsolutePathId("/visible"), Map(visibleApp1.id -> visibleApp1), groups = Set(
-        createGroup(AbsolutePathId("/visible/group"), Map(visibleGroupApp1.id -> visibleGroupApp1))
-      )),
-      createGroup(AbsolutePathId("/secure"), Map(secureApp1.id -> secureApp1), groups = Set(
-        createGroup(AbsolutePathId("/secure/group"), Map(secureGroupApp1.id -> secureGroupApp1))
-      )),
-      createGroup(AbsolutePathId("/other"), Map(otherApp1.id -> otherApp1), groups = Set(
-        createGroup(AbsolutePathId("/other/group"), Map(otherGroupApp1.id -> otherGroupApp1)
-        ))
-      )))
+    createRootGroup(
+      Map(app1.id -> app1),
+      groups = Set(
+        createGroup(
+          AbsolutePathId("/visible"),
+          Map(visibleApp1.id -> visibleApp1),
+          groups = Set(
+            createGroup(AbsolutePathId("/visible/group"), Map(visibleGroupApp1.id -> visibleGroupApp1))
+          )
+        ),
+        createGroup(
+          AbsolutePathId("/secure"),
+          Map(secureApp1.id -> secureApp1),
+          groups = Set(
+            createGroup(AbsolutePathId("/secure/group"), Map(secureGroupApp1.id -> secureGroupApp1))
+          )
+        ),
+        createGroup(
+          AbsolutePathId("/other"),
+          Map(otherApp1.id -> otherApp1),
+          groups = Set(createGroup(AbsolutePathId("/other/group"), Map(otherGroupApp1.id -> otherGroupApp1)))
+        )
+      )
+    )
   }
 }
-

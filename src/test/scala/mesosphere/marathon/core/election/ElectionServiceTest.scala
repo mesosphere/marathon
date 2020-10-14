@@ -16,7 +16,8 @@ class ElectionServiceTest extends AkkaUnitTest with Eventually {
   trait Fixture {
 
     @volatile var subscribed = false
-    val (input, output) = Source.queue[LeadershipState](32, OverflowStrategy.fail)
+    val (input, output) = Source
+      .queue[LeadershipState](32, OverflowStrategy.fail)
       .toMat(BroadcastHub.sink)(Keep.both)
       .run
 

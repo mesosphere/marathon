@@ -92,10 +92,7 @@ class HttpEventSSEHandleTest extends UnitTest with GroupCreation {
   val oldGroup = createRootGroup()
   val newGroup = createRootGroup(Map(app.id -> app))
   val plan = DeploymentPlan(oldGroup, newGroup)
-  val deployed: DeploymentSuccess = DeploymentSuccess(
-    id = "test-deployment",
-    Raml.toRaml(plan),
-    timestamp = "2018-01-01T00:00:00.000Z")
+  val deployed: DeploymentSuccess = DeploymentSuccess(id = "test-deployment", Raml.toRaml(plan), timestamp = "2018-01-01T00:00:00.000Z")
 
   val subscribed = Subscribe("client IP", "callback URL")
   val unsubscribe = Unsubscribe("client IP", "callback URL")

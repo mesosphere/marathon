@@ -52,7 +52,8 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
         id = (testBasePath / "simple-docker-app").toString,
         cmd = Some("sleep 600"),
         container = Some(Container(`type` = EngineType.Docker, docker = Some(DockerContainer(image = "busybox")))),
-        cpus = 0.2, mem = 16.0,
+        cpus = 0.2,
+        mem = 16.0,
         instances = 1
       )
 
@@ -73,9 +74,11 @@ class DockerAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     behave like healthyDockerApp(
       "create a simple docker app using http health checks with BRIDGE networking",
-      (app) => app.copy(
-        id = (testBasePath / "docker-http-app-with-bridge-networking").toString,
-        networks = Seq(Network(mode = NetworkMode.ContainerBridge)))
+      (app) =>
+        app.copy(
+          id = (testBasePath / "docker-http-app-with-bridge-networking").toString,
+          networks = Seq(Network(mode = NetworkMode.ContainerBridge))
+        )
     )
   }
 }

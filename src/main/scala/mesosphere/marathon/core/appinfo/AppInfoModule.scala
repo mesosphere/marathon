@@ -21,23 +21,21 @@ class AppInfoModule @Inject() (
     healthCheckManager: HealthCheckManager,
     marathonSchedulerService: MarathonSchedulerService,
     taskFailureRepository: TaskFailureRepository,
-    config: MarathonConf) {
+    config: MarathonConf
+) {
 
-  val appInfoEc = (NamedExecutionContext.fixedThreadPoolExecutionContext(config.asInstanceOf[AppInfoConfig].appInfoModuleExecutionContextSize(), "app-info-module"))
-  private[this] val appInfoBaseData = () => new AppInfoBaseData(
-    clock,
-    taskTracker,
-    healthCheckManager,
-    marathonSchedulerService,
-    taskFailureRepository,
-    groupManager)(appInfoEc)
+  val appInfoEc = (NamedExecutionContext
+    .fixedThreadPoolExecutionContext(config.asInstanceOf[AppInfoConfig].appInfoModuleExecutionContextSize(), "app-info-module"))
+  private[this] val appInfoBaseData = () =>
+    new AppInfoBaseData(clock, taskTracker, healthCheckManager, marathonSchedulerService, taskFailureRepository, groupManager)(appInfoEc)
 
   def appInfoService: AppInfoService = infoService
   def groupInfoService: GroupInfoService = infoService
   def podStatusService: PodStatusService = infoService
 
-  val defaultInfoEc = NamedExecutionContext.fixedThreadPoolExecutionContext(config.asInstanceOf[AppInfoConfig].defaultInfoServiceExecutionContextSize(), "default-info-service")
-  private[this] lazy val infoService = new DefaultInfoService(
-    groupManager,
-    appInfoBaseData)(defaultInfoEc)
+  val defaultInfoEc = NamedExecutionContext.fixedThreadPoolExecutionContext(
+    config.asInstanceOf[AppInfoConfig].defaultInfoServiceExecutionContextSize(),
+    "default-info-service"
+  )
+  private[this] lazy val infoService = new DefaultInfoService(groupManager, appInfoBaseData)(defaultInfoEc)
 }

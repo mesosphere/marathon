@@ -22,7 +22,8 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       val app = App(
         (testBasePath / "app-stopped-with-sigkill").toString,
         cmd = Some(appCommand),
-        taskKillGracePeriodSeconds = Some(taskKillGracePeriod.toSeconds.toInt))
+        taskKillGracePeriodSeconds = Some(taskKillGracePeriod.toSeconds.toInt)
+      )
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -52,7 +53,8 @@ class GracefulTaskKillIntegrationTest extends AkkaIntegrationTest with EmbeddedM
       val app = App(
         (testBasePath / "app-stopped-with-sigterm").toString,
         cmd = Some("sleep 100000"),
-        taskKillGracePeriodSeconds = Some(taskKillGracePeriod.toSeconds.toInt))
+        taskKillGracePeriodSeconds = Some(taskKillGracePeriod.toSeconds.toInt)
+      )
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)

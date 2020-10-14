@@ -18,9 +18,7 @@ object AssignDynamicServiceLogic extends StrictLogging {
     original.app(newApp.id).forall { _.isUpgrade(newApp) }
   }
 
-  private def mergeServicePortsAndPortDefinitions(
-    portDefinitions: Seq[PortDefinition],
-    servicePorts: Seq[Int]): Seq[PortDefinition] =
+  private def mergeServicePortsAndPortDefinitions(portDefinitions: Seq[PortDefinition], servicePorts: Seq[Int]): Seq[PortDefinition] =
     if (portDefinitions.nonEmpty)
       portDefinitions.zipAll(servicePorts, AppDefinition.RandomPortDefinition, AppDefinition.RandomPortValue).map {
         case (portDefinition, servicePort) => portDefinition.copy(port = servicePort)
@@ -40,8 +38,12 @@ object AssignDynamicServiceLogic extends StrictLogging {
     *
     * @return The updated app definition with assigned service ports
     */
-  private def assignPorts(newApp: AppDefinition, oldApp: Option[AppDefinition], portRange: Range,
-    unassignedPortsIterator: Iterator[Int]): AppDefinition = {
+  private def assignPorts(
+      newApp: AppDefinition,
+      oldApp: Option[AppDefinition],
+      portRange: Range,
+      unassignedPortsIterator: Iterator[Int]
+  ): AppDefinition = {
     /* All ports that are already assigned in old app definition, but not used in the new definition
      * if the app uses dynamic ports (0), it will get always the same ports assigned */
     val assignedAndAvailable: Seq[Int] =
@@ -71,7 +73,8 @@ object AssignDynamicServiceLogic extends StrictLogging {
 
     newApp.copy(
       portDefinitions = mergeServicePortsAndPortDefinitions(newApp.portDefinitions, servicePorts),
-      container = updatedContainer.orElse(newApp.container))
+      container = updatedContainer.orElse(newApp.container)
+    )
   }
 
   def assignDynamicServicePorts(portRange: Range, from: RootGroup, to: RootGroup): RootGroup = {
@@ -80,25 +83,21 @@ object AssignDynamicServiceLogic extends StrictLogging {
      */
     val usedServicePorts: Set[Int] =
       (from.transitiveApps ++ to.transitiveApps).flatMap(_.servicePorts).toSet
-    val unassignedPortsIterator = portRange.iterator
-      .filter { p => !usedServicePorts.contains(p) }
-      .map { port =>
-        logger.debug(s"Take next configured free port: $port")
-        port
-      }
+    val unassignedPortsIterator = portRange.iterator.filter { p => !usedServicePorts.contains(p) }.map { port =>
+      logger.debug(s"Take next configured free port: $port")
+      port
+    }
     val dynamicApps: Iterable[AppDefinition] =
-      to.transitiveApps
-        .filter { newApp => changedOrNew(from, newApp) }
-        .map {
-          // assign values for service ports that the user has left "blank" (set to zero)
-          case app: AppDefinition if app.hasDynamicServicePorts =>
-            assignPorts(app, from.app(app.id), portRange, unassignedPortsIterator)
-          case app: AppDefinition =>
-            // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
-            app.copy(
-              portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
-            )
-        }
+      to.transitiveApps.filter { newApp => changedOrNew(from, newApp) }.map {
+        // assign values for service ports that the user has left "blank" (set to zero)
+        case app: AppDefinition if app.hasDynamicServicePorts =>
+          assignPorts(app, from.app(app.id), portRange, unassignedPortsIterator)
+        case app: AppDefinition =>
+          // Always set the ports to service ports, even if we do not have dynamic ports in our port mappings
+          app.copy(
+            portDefinitions = mergeServicePortsAndPortDefinitions(app.portDefinitions, app.servicePorts)
+          )
+      }
 
     dynamicApps.foldLeft(to) { (rootGroup, app) =>
       rootGroup.updateApp(app.id, _ => app, app.version)

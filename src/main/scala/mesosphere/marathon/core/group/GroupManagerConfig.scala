@@ -20,7 +20,8 @@ trait GroupManagerConfig extends ScallopConf {
     "group_manager_request_timeout",
     descr = "INTERNAL TUNING PARAMETER: Timeout (in ms) for requests to the group manager actor.",
     hidden = true,
-    default = Some(10.seconds.toMillis.toInt))
+    default = Some(10.seconds.toMillis.toInt)
+  )
 
   lazy val groupManagerExecutionContextSize = opt[Int](
     "group_manager_execution_context_size",

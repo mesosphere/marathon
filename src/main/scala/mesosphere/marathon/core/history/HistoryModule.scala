@@ -9,8 +9,6 @@ import mesosphere.marathon.storage.repository.TaskFailureRepository
 /**
   * Exposes the history actor, in charge of keeping track of the task failures.
   */
-class HistoryModule(
-    eventBus: EventStream,
-    taskFailureRepository: TaskFailureRepository) {
+class HistoryModule(eventBus: EventStream, taskFailureRepository: TaskFailureRepository) {
   lazy val historyActorProps: Props = Props(new HistoryActor(eventBus, taskFailureRepository))
 }

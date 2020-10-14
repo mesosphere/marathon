@@ -13,7 +13,8 @@ object WaitTestSupport extends Eventually {
     val deadLine = until.fromNow
     def checkValid(): Boolean = {
       if (!valid) throw new IllegalStateException(s"$description not valid for $until. Give up.")
-      if (deadLine.isOverdue()) true else {
+      if (deadLine.isOverdue()) true
+      else {
         Thread.sleep(100)
         checkValid()
       }

@@ -15,7 +15,8 @@ class LiveFoldTest extends AkkaUnitTest {
   }
 
   "it provides access to the current result as each element is fed" in {
-    val (input, sum) = Source.queue[Int](16, OverflowStrategy.fail)
+    val (input, sum) = Source
+      .queue[Int](16, OverflowStrategy.fail)
       .toMat(EnrichedSink.liveFold(0)(_ + _))(Keep.both)
       .run
     sum.readCurrentResult().futureValue shouldBe 0

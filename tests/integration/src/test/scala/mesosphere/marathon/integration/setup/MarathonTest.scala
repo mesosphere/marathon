@@ -27,7 +27,24 @@ import com.typesafe.scalalogging.{Logger, StrictLogging}
 import mesosphere.marathon.Protos.Constraint
 import mesosphere.marathon.core.pod.{HostNetwork, MesosContainer, PodDefinition}
 import mesosphere.marathon.integration.facades._
-import mesosphere.marathon.raml.{App, AppCheck, AppHealthCheck, AppHostVolume, AppPersistentVolume, AppResidency, AppVolume, Container, EngineType, Network, NetworkMode, PersistentVolumeInfo, PortDefinition, ReadMode, UnreachableDisabled, UpgradeStrategy}
+import mesosphere.marathon.raml.{
+  App,
+  AppCheck,
+  AppHealthCheck,
+  AppHostVolume,
+  AppPersistentVolume,
+  AppResidency,
+  AppVolume,
+  Container,
+  EngineType,
+  Network,
+  NetworkMode,
+  PersistentVolumeInfo,
+  PortDefinition,
+  ReadMode,
+  UnreachableDisabled,
+  UpgradeStrategy
+}
 import mesosphere.marathon.state.{AbsolutePathId, PathId, PersistentVolume, VolumeMount}
 import mesosphere.marathon.test.MarathonTestHelper
 import mesosphere.marathon.util.{Lock, Retry, Timeout}
@@ -116,7 +133,8 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
 
   def create(): Process = {
     marathonProcess.getOrElse {
-      val process = processBuilder.run(ProcessOutputToLogStream(s"mesosphere.marathon.integration.process.$suiteName-LocalMarathon-$httpPort"))
+      val process =
+        processBuilder.run(ProcessOutputToLogStream(s"mesosphere.marathon.integration.process.$suiteName-LocalMarathon-$httpPort"))
       marathonProcess = Some(process)
       process
     }
@@ -126,7 +144,13 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
     create()
 
     val port = conf.get("http_port").orElse(conf.get("https_port")).map(_.toInt).getOrElse(httpPort)
-    val future = Retry(s"Waiting for Marathon on $port", maxAttempts = Int.MaxValue, minDelay = 1.milli, maxDelay = 5.seconds, maxDuration = 4.minutes) {
+    val future = Retry(
+      s"Waiting for Marathon on $port",
+      maxAttempts = Int.MaxValue,
+      minDelay = 1.milli,
+      maxDelay = 5.seconds,
+      maxDuration = 4.minutes
+    ) {
       async {
         val result = await(Http().singleRequest(Get(s"http://localhost:$port/v2/leader")))
         result.discardEntityBytes() // forget about the body
@@ -153,10 +177,10 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
   }
 
   def stop(): Future[Done] = {
-    marathonProcess.fold(Future.successful(Done)){ p =>
-      p.destroy()
-      Timeout.blocking(30.seconds, Some("Marathon")){ p.exitValue(); Done }
-        .recover {
+    marathonProcess
+      .fold(Future.successful(Done)) { p =>
+        p.destroy()
+        Timeout.blocking(30.seconds, Some("Marathon")) { p.exitValue(); Done }.recover {
           case NonFatal(e) =>
             logger.warn(s"Could not shutdown Marathon $suiteName in time", e)
             if (activePids.nonEmpty) {
@@ -164,10 +188,11 @@ trait BaseMarathon extends AutoCloseable with StrictLogging with ScalaFutures {
             }
             Done
         }
-    }.andThen {
-      case _ =>
-        marathonProcess = Option.empty[Process]
-    }
+      }
+      .andThen {
+        case _ =>
+          marathonProcess = Option.empty[Process]
+      }
   }
 
   def restart(): Future[Done] = {
@@ -212,11 +237,9 @@ case class LocalMarathon(
     masterUrl: String,
     zkUrl: String,
     override val conf: Map[String, String] = Map.empty,
-    val mainClass: String = "mesosphere.marathon.Main")(implicit
-    val system: ActorSystem,
-    val mat: Materializer,
-    val ctx: ExecutionContext,
-    val scheduler: Scheduler) extends BaseMarathon {
+    val mainClass: String = "mesosphere.marathon.Main"
+)(implicit val system: ActorSystem, val mat: Materializer, val ctx: ExecutionContext, val scheduler: Scheduler)
+    extends BaseMarathon {
 
   // it'd be great to be able to execute in memory, but we can't due to GuiceFilter using a static :(
   override val processBuilder = {
@@ -225,7 +248,8 @@ case class LocalMarathon(
 
     // Get JVM arguments, such as -javaagent:some.jar
     val runtimeMxBean = ManagementFactory.getRuntimeMXBean
-    val runtimeArguments = JavaConverters.collectionAsScalaIterable(runtimeMxBean.getInputArguments)
+    val runtimeArguments = JavaConverters
+      .collectionAsScalaIterable(runtimeMxBean.getInputArguments)
       .filterNot(_.contains("debugger-agent"))
       .filterNot(_.startsWith("-javaagent"))
       .filterNot(_.startsWith("-agentlib"))
@@ -283,9 +307,10 @@ trait HealthCheckEndpoint extends StrictLogging with ScalaFutures {
           val appId = URLDecoder.decode(uriEncodedAppId, "UTF-8").toAbsolutePath
 
           // Find a fitting registred readiness check. If the check has no task id set we ignore it.
-          def check: Option[IntegrationReadinessCheck] = registeredReadinessChecks(_.find { c =>
-            c.appId == appId && c.versionId == versionId && c.taskId.fold(true)(_ == taskId)
-          })
+          def check: Option[IntegrationReadinessCheck] =
+            registeredReadinessChecks(_.find { c =>
+              c.appId == appId && c.versionId == versionId && c.taskId.fold(true)(_ == taskId)
+            })
 
           // An app is not ready by default to avoid race conditions.
           val isReady = check.fold(false)(_.call)
@@ -382,10 +407,11 @@ trait MarathonAppFixtures {
   }
 
   def appProxyHealthCheck(
-    gracePeriod: FiniteDuration = 1.seconds,
-    interval: FiniteDuration = 1.second,
-    maxConsecutiveFailures: Int = Int.MaxValue,
-    portIndex: Option[Int] = Some(0)): AppHealthCheck =
+      gracePeriod: FiniteDuration = 1.seconds,
+      interval: FiniteDuration = 1.second,
+      maxConsecutiveFailures: Int = Int.MaxValue,
+      portIndex: Option[Int] = Some(0)
+  ): AppHealthCheck =
     raml.AppHealthCheck(
       gracePeriodSeconds = gracePeriod.toSeconds.toInt,
       intervalSeconds = interval.toSeconds.toInt,
@@ -395,10 +421,16 @@ trait MarathonAppFixtures {
       path = Some("/health")
     )
 
-  def appProxy(appId: PathId, versionId: String, instances: Int,
-    healthCheck: Option[raml.AppHealthCheck] = Some(appProxyHealthCheck()),
-    dependencies: Set[PathId] = Set.empty, gpus: Int = 0, role: Option[String] = None,
-    check: Option[AppCheck] = None): App = {
+  def appProxy(
+      appId: PathId,
+      versionId: String,
+      instances: Int,
+      healthCheck: Option[raml.AppHealthCheck] = Some(appProxyHealthCheck()),
+      dependencies: Set[PathId] = Set.empty,
+      gpus: Int = 0,
+      role: Option[String] = None,
+      check: Option[AppCheck] = None
+  ): App = {
 
     val cmd = appMockCmd(appId, versionId)
 
@@ -407,7 +439,9 @@ trait MarathonAppFixtures {
       cmd = Some(cmd),
       executor = "//cmd",
       instances = instances,
-      cpus = 0.01, mem = 32.0, gpus = gpus,
+      cpus = 0.01,
+      mem = 32.0,
+      gpus = gpus,
       healthChecks = healthCheck.toSet,
       dependencies = dependencies.map(_.toString),
       role = role,
@@ -416,14 +450,15 @@ trait MarathonAppFixtures {
   }
 
   def residentApp(
-    id: PathId,
-    containerPath: String = "persistent-volume",
-    cmd: String = "sleep 1000",
-    instances: Int = 1,
-    backoffDuration: FiniteDuration = 1.hour,
-    portDefinitions: Seq[PortDefinition] = Seq.empty, /* prevent problems by randomized port assignment */
-    constraints: Set[Seq[String]] = Set.empty,
-    role: Option[String] = None): App = {
+      id: PathId,
+      containerPath: String = "persistent-volume",
+      cmd: String = "sleep 1000",
+      instances: Int = 1,
+      backoffDuration: FiniteDuration = 1.hour,
+      portDefinitions: Seq[PortDefinition] = Seq.empty, /* prevent problems by randomized port assignment */
+      constraints: Set[Seq[String]] = Set.empty,
+      role: Option[String] = None
+  ): App = {
 
     val cpus: Double = 0.001
     val mem: Double = 1.0
@@ -441,10 +476,12 @@ trait MarathonAppFixtures {
       instances = instances,
       residency = Some(AppResidency()),
       constraints = constraints,
-      container = Some(Container(
-        `type` = EngineType.Mesos,
-        volumes = Seq(persistentVolume)
-      )),
+      container = Some(
+        Container(
+          `type` = EngineType.Mesos,
+          volumes = Seq(persistentVolume)
+        )
+      ),
       cmd = Some(cmd),
       // cpus, mem and disk are really small because otherwise we'll soon run out of reservable resources
       cpus = cpus,
@@ -460,25 +497,37 @@ trait MarathonAppFixtures {
     app
   }
 
-  def dockerAppProxy(appId: PathId, versionId: String, instances: Int, healthCheck: Option[AppHealthCheck] = Some(appProxyHealthCheck()), dependencies: Set[PathId] = Set.empty): App = {
+  def dockerAppProxy(
+      appId: PathId,
+      versionId: String,
+      instances: Int,
+      healthCheck: Option[AppHealthCheck] = Some(appProxyHealthCheck()),
+      dependencies: Set[PathId] = Set.empty
+  ): App = {
     val projectDir = sys.props.getOrElse("user.dir", ".")
     val containerDir = "/opt/marathon"
 
-    val cmd = Some("""echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
-      s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}""")
+    val cmd = Some(
+      """echo APP PROXY $$MESOS_TASK_ID RUNNING; /opt/marathon/python/app_mock.py """ +
+        s"""$$PORT0 $appId $versionId ${healthEndpointFor(appId, versionId)}"""
+    )
 
     App(
       id = appId.toString,
       cmd = cmd,
-      container = Some(raml.Container(
-        `type` = raml.EngineType.Docker,
-        docker = Some(raml.DockerContainer(
-          image = "python:3.4.6-alpine"
-        )),
-        volumes = collection.immutable.Seq(
-          AppHostVolume(hostPath = s"$projectDir/src/test/resources/python", containerPath = s"$containerDir/python", mode = ReadMode.Ro)
+      container = Some(
+        raml.Container(
+          `type` = raml.EngineType.Docker,
+          docker = Some(
+            raml.DockerContainer(
+              image = "python:3.4.6-alpine"
+            )
+          ),
+          volumes = collection.immutable.Seq(
+            AppHostVolume(hostPath = s"$projectDir/src/test/resources/python", containerPath = s"$containerDir/python", mode = ReadMode.Ro)
+          )
         )
-      )),
+      ),
       instances = instances,
       cpus = 0.5,
       mem = 128,
@@ -488,26 +537,23 @@ trait MarathonAppFixtures {
     )
   }
 
-  def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1, role: String = defaultRole): PodDefinition = PodDefinition(
-    id = testBasePath / s"$podId",
-    role = role,
-    containers = Seq(
-      MesosContainer(
-        name = "task1",
-        exec = Some(raml.MesosExec(raml.ShellCommand("sleep 1000"))),
-        resources = raml.Resources(cpus = 0.1, mem = 32.0)
-      )
-    ),
-    networks = Seq(HostNetwork),
-    instances = instances,
-    constraints = constraints
-  )
+  def simplePod(podId: String, constraints: Set[Constraint] = Set.empty, instances: Int = 1, role: String = defaultRole): PodDefinition =
+    PodDefinition(
+      id = testBasePath / s"$podId",
+      role = role,
+      containers = Seq(
+        MesosContainer(
+          name = "task1",
+          exec = Some(raml.MesosExec(raml.ShellCommand("sleep 1000"))),
+          resources = raml.Resources(cpus = 0.1, mem = 32.0)
+        )
+      ),
+      networks = Seq(HostNetwork),
+      instances = instances,
+      constraints = constraints
+    )
 
-  def residentPod(
-    id: String,
-    mountPath: String = "persistent-volume",
-    cmd: String = "sleep 1000",
-    instances: Int = 1): PodDefinition = {
+  def residentPod(id: String, mountPath: String = "persistent-volume", cmd: String = "sleep 1000", instances: Int = 1): PodDefinition = {
 
     val persistentVolumeSize = 2L
     val volumeInfo = state.PersistentVolumeInfo(size = persistentVolumeSize)
@@ -587,7 +633,9 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
 
   protected val events = new ConcurrentLinkedQueue[ITSSEEvent]()
 
-  def waitForTasks(appId: AbsolutePathId, num: Int, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis)(implicit facade: MarathonFacade = marathon): List[ITEnrichedTask] = {
+  def waitForTasks(appId: AbsolutePathId, num: Int, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis)(implicit
+      facade: MarathonFacade = marathon
+  ): List[ITEnrichedTask] = {
     eventually(timeout(Span(maxWait.toMillis, Milliseconds))) {
       val tasks = Try(facade.tasks(appId)).map(_.value).getOrElse(Nil).filter(_.launched)
       logger.info(s"${tasks.size}/$num tasks launched for $appId")
@@ -631,7 +679,9 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
         import com.mesosphere.utils.mesos.MesosFormats._
         val usedResources: String = Json.prettyPrint(Json.toJson(agent.usedResources))
         val reservedResources: String = Json.prettyPrint(Json.toJson(agent.reservedResourcesByRole))
-        logger.info(s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources"""")
+        logger.info(
+          s"""Waiting for blank slate Mesos...\n "used_resources": "$usedResources"\n"reserved_resources": "$reservedResources""""
+        )
       }
 
       if (occupiedAgents.nonEmpty) {
@@ -651,24 +701,21 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     waitForEventWith("deployment_success", _.id == deploymentId, s"event deployment_success (id: $deploymentId) to arrive", maxWait)
   }
 
-  def waitForStatusUpdates(kinds: String*): Seq[CallbackEvent] = kinds.map { kind =>
-    logger.info(s"Wait for status update event with kind: $kind")
-    waitForEventWith(
-      "status_update_event",
-      _.taskStatus == kind,
-      s"event status_update_event (${kinds.mkString(",")}) to arrive")
-  }.to[Seq]
+  def waitForStatusUpdates(kinds: String*): Seq[CallbackEvent] =
+    kinds.map { kind =>
+      logger.info(s"Wait for status update event with kind: $kind")
+      waitForEventWith("status_update_event", _.taskStatus == kind, s"event status_update_event (${kinds.mkString(",")}) to arrive")
+    }.to[Seq]
 
-  def waitForEvent(
-    kind: String,
-    maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent =
+  def waitForEvent(kind: String, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent =
     waitForEventWith(kind, _ => true, s"event $kind to arrive", maxWait)
 
   def waitForEventWith(
-    kind: String,
-    fn: CallbackEvent => Boolean,
-    description: String,
-    maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis): CallbackEvent = {
+      kind: String,
+      fn: CallbackEvent => Boolean,
+      description: String,
+      maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis
+  ): CallbackEvent = {
     waitForEventMatching(description, maxWait) { event =>
       event.eventType == kind && fn(event)
     }
@@ -680,19 +727,20 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     *
     * @param deadline The time after which to stop attempting to get an event and return None
     */
-  private def nextEvent(deadline: Deadline): Option[ITSSEEvent] = try {
-    eventually(timeout(Span(deadline.timeLeft.toMillis, Milliseconds))) {
-      val r = Option(events.poll)
-      if (r.isEmpty)
-        throw new NoSuchElementException
-      r
+  private def nextEvent(deadline: Deadline): Option[ITSSEEvent] =
+    try {
+      eventually(timeout(Span(deadline.timeLeft.toMillis, Milliseconds))) {
+        val r = Option(events.poll)
+        if (r.isEmpty)
+          throw new NoSuchElementException
+        r
+      }
+    } catch {
+      case _: NoSuchElementException =>
+        None
+      case _: TestFailedDueToTimeoutException =>
+        None
     }
-  } catch {
-    case _: NoSuchElementException =>
-      None
-    case _: TestFailedDueToTimeoutException =>
-      None
-  }
 
   /**
     * Method waits for events and calls their callbacks independently of the events order. It receives a
@@ -702,9 +750,10 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     * is removed from the map. Returns if the map is empty.
     */
   def waitForEventsWith(
-    description: String,
-    eventsMap: Map[String, CallbackEvent => Boolean],
-    maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
+      description: String,
+      eventsMap: Map[String, CallbackEvent => Boolean],
+      maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis
+  ) = {
     val waitingFor = mutable.Map(eventsMap.toSeq: _*)
     waitForEventMatching(description, maxWait) { event =>
       if (waitingFor.get(event.eventType).fold(false)(fn => fn(event))) {
@@ -721,18 +770,19 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     * Returns if event found and callback returns true.
     */
   def waitForAnyEventWith(
-    description: String,
-    eventsMap: Map[String, CallbackEvent => Boolean],
-    maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis) = {
+      description: String,
+      eventsMap: Map[String, CallbackEvent => Boolean],
+      maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis
+  ) = {
     val waitingForAny = mutable.Map(eventsMap.toSeq: _*)
     waitForEventMatching(description, maxWait) { event =>
       waitingForAny.get(event.eventType).fold(false)(fn => fn(event))
     }
   }
 
-  def waitForEventMatching(
-    description: String,
-    maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis)(fn: CallbackEvent => Boolean): CallbackEvent = {
+  def waitForEventMatching(description: String, maxWait: FiniteDuration = patienceConfig.timeout.toMillis.millis)(
+      fn: CallbackEvent => Boolean
+  ): CallbackEvent = {
     val deadline = maxWait.fromNow
     @tailrec
     def iter(): CallbackEvent = {
@@ -820,8 +870,11 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     def queuedRunspecs = (jsQueueResult \ "queue").as[Seq[JsObject]]
     def jsonApp = queuedRunspecs.find { spec => (spec \ "app" \ "id").as[String] == appId.toString }.get
 
-    def unfulfilledConstraintRejectSummary = (jsonApp \ "processedOffersSummary" \ "rejectSummaryLastOffers").as[Seq[JsObject]]
-      .find { e => (e \ "reason").as[String] == offerRejectReason }.get
+    def unfulfilledConstraintRejectSummary =
+      (jsonApp \ "processedOffersSummary" \ "rejectSummaryLastOffers")
+        .as[Seq[JsObject]]
+        .find { e => (e \ "reason").as[String] == offerRejectReason }
+        .get
 
     eventually {
       logger.info("jsApp:" + jsonApp.toString())
@@ -848,7 +901,8 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
     def iter(): Unit = {
       import akka.stream.scaladsl.Source
       logger.info("SSEStream: Connecting")
-      Source.fromFuture(leadingMarathon)
+      Source
+        .fromFuture(leadingMarathon)
         .mapAsync(1) { leader =>
           async {
             logger.info(s"SSEStream: Acquiring connection to ${leader.url}")
@@ -906,9 +960,12 @@ trait MarathonTest extends HealthCheckEndpoint with MarathonAppFixtures with Sca
 }
 
 object MarathonTest extends StrictLogging {
-  class UnexpectedConnect extends Exception("Received an unexpected SSE event stream Connection event. This is " +
-    "considered an exception because not thinking about re-connection events properly can lead to race conditions in " +
-    "the tests. You should call waitForSSEConnect() after killing a Marathon leader to ensure no events are dropped.")
+  class UnexpectedConnect
+      extends Exception(
+        "Received an unexpected SSE event stream Connection event. This is " +
+          "considered an exception because not thinking about re-connection events properly can lead to race conditions in " +
+          "the tests. You should call waitForSSEConnect() after killing a Marathon leader to ensure no events are dropped."
+      )
 }
 
 /**
@@ -917,8 +974,12 @@ object MarathonTest extends StrictLogging {
 trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with ZookeeperServerTest {
   protected def logger: Logger
   def withMarathon[T](suiteName: String, marathonArgs: Map[String, String] = Map.empty)(f: (LocalMarathon, MarathonTest) => T): T = {
-    val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterZkUrl,
-      zkUrl = s"zk://${zkserver.connectUrl}/marathon-$suiteName", conf = marathonArgs)
+    val marathonServer = LocalMarathon(
+      suiteName = suiteName,
+      masterUrl = mesosMasterZkUrl,
+      zkUrl = s"zk://${zkserver.connectUrl}/marathon-$suiteName",
+      conf = marathonArgs
+    )
     marathonServer.start().futureValue
 
     val marathonTest = new MarathonTest {
@@ -932,7 +993,8 @@ trait MarathonFixture extends AkkaUnitTestLike with MesosClusterTest with Zookee
       override implicit val ctx: ExecutionContext = MarathonFixture.this.ctx
       override implicit val scheduler: Scheduler = MarathonFixture.this.scheduler
       override val suiteName: String = MarathonFixture.this.suiteName
-      override implicit def patienceConfig: PatienceConfig = PatienceConfig(MarathonFixture.this.patienceConfig.timeout, MarathonFixture.this.patienceConfig.interval)
+      override implicit def patienceConfig: PatienceConfig =
+        PatienceConfig(MarathonFixture.this.patienceConfig.timeout, MarathonFixture.this.patienceConfig.interval)
       override def leadingMarathon = Future.successful(marathonServer)
     }
     val sseStream = marathonTest.startEventSubscriber()
@@ -964,14 +1026,12 @@ trait MarathonSuite extends Suite with StrictLogging with ScalaFutures with Befo
 /**
   * Base trait that starts a local marathon but doesn't have mesos/zookeeper yet
   */
-trait LocalMarathonTest extends MarathonTest with ScalaFutures
-  with AkkaUnitTestLike with MesosTest with ZookeeperServerTest {
+trait LocalMarathonTest extends MarathonTest with ScalaFutures with AkkaUnitTestLike with MesosTest with ZookeeperServerTest {
 
   def marathonArgs: Map[String, String] = Map.empty
 
-  lazy val marathonServer = LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterZkUrl,
-    zkUrl = s"zk://${zkserver.connectUrl}/marathon",
-    conf = marathonArgs)
+  lazy val marathonServer =
+    LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterZkUrl, zkUrl = s"zk://${zkserver.connectUrl}/marathon", conf = marathonArgs)
   lazy val marathonUrl = s"http://localhost:${marathonServer.httpPort}"
 
   val testBasePath: AbsolutePathId = AbsolutePathId("/")
@@ -1022,9 +1082,7 @@ trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServer
 trait MarathonClusterTest extends Suite with StrictLogging with ZookeeperServerTest with MesosClusterTest with LocalMarathonTest {
   val numAdditionalMarathons = 2
   lazy val additionalMarathons = 0.until(numAdditionalMarathons).map { _ =>
-    LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterZkUrl,
-      zkUrl = s"zk://${zkserver.connectUrl}/marathon",
-      conf = marathonArgs)
+    LocalMarathon(suiteName = suiteName, masterUrl = mesosMasterZkUrl, zkUrl = s"zk://${zkserver.connectUrl}/marathon", conf = marathonArgs)
   }
   lazy val marathonFacades = marathon +: additionalMarathons.map(_.client)
   lazy val allMarathonServers = marathonServer +: additionalMarathons

@@ -10,7 +10,7 @@ trait SecretConversion {
   implicit val podSecretWriter: Writes[Map[String, Secret], Map[String, SecretDef]] =
     Writes(_.map { case (name, value) => name -> SecretDef(value.source) })
 
-  implicit val secretProtoRamlWriter: Writes[Protos.Secret, (String, SecretDef)] = Writes {
-    secret => secret.getId -> SecretDef(secret.getSource)
+  implicit val secretProtoRamlWriter: Writes[Protos.Secret, (String, SecretDef)] = Writes { secret =>
+    secret.getId -> SecretDef(secret.getSource)
   }
 }

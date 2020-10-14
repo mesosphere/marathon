@@ -42,8 +42,8 @@ class MarathonSchedulerTest extends AkkaUnitTest {
       mesosLeaderInfo,
       config,
       crashStrategy,
-      Promise[FrameworkID]) {
-    }
+      Promise[FrameworkID]
+    ) {}
   }
 
   "MarathonScheduler" should {
@@ -53,7 +53,8 @@ class MarathonSchedulerTest extends AkkaUnitTest {
         .setValue("some_id")
         .build()
 
-      val masterInfo = MasterInfo.newBuilder()
+      val masterInfo = MasterInfo
+        .newBuilder()
         .setVersion(LibMesos.MesosMasterMinimumVersion.toString)
         .setId("")
         .setIp(0)
@@ -83,7 +84,8 @@ class MarathonSchedulerTest extends AkkaUnitTest {
 
     "Publishes event when reregistered" in new Fixture {
       val driver = mock[SchedulerDriver]
-      val masterInfo = MasterInfo.newBuilder()
+      val masterInfo = MasterInfo
+        .newBuilder()
         .setVersion(LibMesos.MesosMasterMinimumVersion.toString)
         .setId("")
         .setIp(0)
@@ -206,16 +208,19 @@ class MarathonSchedulerTest extends AkkaUnitTest {
       val regionName = "some_region"
       val zoneName = "some_zone"
 
-      val masterInfo = MasterInfo.newBuilder()
+      val masterInfo = MasterInfo
+        .newBuilder()
         .setVersion(LibMesos.MesosMasterMinimumVersion.toString)
         .setId("")
         .setIp(0)
         .setPort(5050)
         .setHostname("some_host")
         .setDomain(
-          DomainInfo.newBuilder()
+          DomainInfo
+            .newBuilder()
             .setFaultDomain(
-              FaultDomain.newBuilder()
+              FaultDomain
+                .newBuilder()
                 .setRegion(RegionInfo.newBuilder().setName(regionName).build())
                 .setZone(ZoneInfo.newBuilder().setName(zoneName).build())
                 .build()
@@ -237,16 +242,19 @@ class MarathonSchedulerTest extends AkkaUnitTest {
       val regionName = "some_region"
       val zoneName = "some_zone"
 
-      val masterInfo = MasterInfo.newBuilder()
+      val masterInfo = MasterInfo
+        .newBuilder()
         .setVersion(LibMesos.MesosMasterMinimumVersion.toString)
         .setId("")
         .setIp(0)
         .setPort(5050)
         .setHostname("some_host")
         .setDomain(
-          DomainInfo.newBuilder()
+          DomainInfo
+            .newBuilder()
             .setFaultDomain(
-              FaultDomain.newBuilder()
+              FaultDomain
+                .newBuilder()
                 .setRegion(RegionInfo.newBuilder().setName(regionName).build())
                 .setZone(ZoneInfo.newBuilder().setName(zoneName).build())
                 .build()
@@ -262,4 +270,3 @@ class MarathonSchedulerTest extends AkkaUnitTest {
     }
   }
 }
-

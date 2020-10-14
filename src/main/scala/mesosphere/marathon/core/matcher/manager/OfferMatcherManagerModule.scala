@@ -11,7 +11,11 @@ import akka.actor.ActorRef
 import mesosphere.marathon.core.leadership.LeadershipModule
 import mesosphere.marathon.core.matcher.base.OfferMatcher
 import mesosphere.marathon.core.matcher.base.util.ActorOfferMatcher
-import mesosphere.marathon.core.matcher.manager.impl.{OfferMatcherManagerActor, OfferMatcherManagerActorMetrics, OfferMatcherManagerDelegate}
+import mesosphere.marathon.core.matcher.manager.impl.{
+  OfferMatcherManagerActor,
+  OfferMatcherManagerActorMetrics,
+  OfferMatcherManagerDelegate
+}
 import mesosphere.marathon.metrics.Metrics
 import mesosphere.marathon.state.Region
 import mesosphere.marathon.stream.Subject
@@ -24,21 +28,23 @@ import scala.util.Random
   */
 class OfferMatcherManagerModule(
     metrics: Metrics,
-    clock: Clock, random: Random,
+    clock: Clock,
+    random: Random,
     offerMatcherConfig: OfferMatcherManagerConfig,
     leadershipModule: LeadershipModule,
     localRegion: () => Option[Region],
-    actorName: String = "offerMatcherManager")(implicit val materializer: Materializer) {
+    actorName: String = "offerMatcherManager"
+)(implicit val materializer: Materializer) {
 
-  private[this] val (inputOffersWanted, offersWanted) = Source.queue[Boolean](16, OverflowStrategy.backpressure)
+  private[this] val (inputOffersWanted, offersWanted) = Source
+    .queue[Boolean](16, OverflowStrategy.backpressure)
     .toMat(Subject[Boolean](16, OverflowStrategy.dropHead))(Keep.both)
     .run
 
   private[this] lazy val offerMatcherManagerMetrics = new OfferMatcherManagerActorMetrics(metrics)
 
   private[this] val offerMatcherMultiplexer: ActorRef = {
-    val props = OfferMatcherManagerActor.props(
-      offerMatcherManagerMetrics, random, clock, offerMatcherConfig, inputOffersWanted)
+    val props = OfferMatcherManagerActor.props(offerMatcherManagerMetrics, random, clock, offerMatcherConfig, inputOffersWanted)
     leadershipModule.startWhenLeader(props, actorName)
   }
 

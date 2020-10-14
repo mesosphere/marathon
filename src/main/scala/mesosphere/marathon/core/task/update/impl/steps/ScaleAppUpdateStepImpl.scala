@@ -16,8 +16,9 @@ import scala.concurrent.Future
 /**
   * Trigger rescale of affected app if a task died or a reserved task timed out.
   */
-class ScaleAppUpdateStepImpl @Inject() (
-    @Named("schedulerActor") schedulerActorProvider: Provider[ActorRef]) extends InstanceChangeHandler with StrictLogging {
+class ScaleAppUpdateStepImpl @Inject() (@Named("schedulerActor") schedulerActorProvider: Provider[ActorRef])
+    extends InstanceChangeHandler
+    with StrictLogging {
 
   private[this] lazy val schedulerActor = schedulerActorProvider.get()
 

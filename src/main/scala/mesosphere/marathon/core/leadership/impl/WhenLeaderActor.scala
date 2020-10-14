@@ -20,8 +20,7 @@ private[leadership] object WhenLeaderActor {
 /**
   * Wraps an actor which is only started when we are currently the leader.
   */
-private[impl] class WhenLeaderActor(childProps: => Props)
-  extends Actor with StrictLogging with Stash {
+private[impl] class WhenLeaderActor(childProps: => Props) extends Actor with StrictLogging with Stash {
 
   private[this] var leadershipCycle = 1
 
@@ -46,23 +45,25 @@ private[impl] class WhenLeaderActor(childProps: => Props)
       }
   }
 
-  private[impl] def active(childRef: ActorRef): Receive = LoggingReceive.withLabel("active") {
-    case PrepareForStart => sender() ! Prepared(self)
-    case Stop => stop(childRef)
-    case unhandled: Any => childRef.forward(unhandled)
-  }
+  private[impl] def active(childRef: ActorRef): Receive =
+    LoggingReceive.withLabel("active") {
+      case PrepareForStart => sender() ! Prepared(self)
+      case Stop => stop(childRef)
+      case unhandled: Any => childRef.forward(unhandled)
+    }
 
-  private[impl] def dying(stopAckRef: ActorRef, childRef: ActorRef): Receive = LoggingReceive.withLabel("dying") {
-    case Terminated(`childRef`) =>
-      unstashAll()
-      stopAckRef ! Stopped
-      logger.debug("becoming suspended")
-      context.become(suspended)
+  private[impl] def dying(stopAckRef: ActorRef, childRef: ActorRef): Receive =
+    LoggingReceive.withLabel("dying") {
+      case Terminated(`childRef`) =>
+        unstashAll()
+        stopAckRef ! Stopped
+        logger.debug("becoming suspended")
+        context.become(suspended)
 
-    case unhandled: Any =>
-      logger.debug(s"waiting for termination, stashing $unhandled")
-      stash()
-  }
+      case unhandled: Any =>
+        logger.debug(s"waiting for termination, stashing $unhandled")
+        stash()
+    }
 
   private[this] def stop(childRef: ActorRef): Unit = {
     context.watch(childRef)

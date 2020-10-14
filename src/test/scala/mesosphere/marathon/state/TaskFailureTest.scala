@@ -56,9 +56,9 @@ class TaskFailureTest extends UnitTest {
     }
 
     "Json serialization" in {
-      val json = Json.toJson(Raml.toRaml(taskFailure.copy(slaveId = Some(slaveIDToProto(SlaveID("slave id")))))(TaskConversion.taskFailureRamlWrite))
-      val expectedJson = Json.parse(
-        s"""
+      val json =
+        Json.toJson(Raml.toRaml(taskFailure.copy(slaveId = Some(slaveIDToProto(SlaveID("slave id")))))(TaskConversion.taskFailureRamlWrite))
+      val expectedJson = Json.parse(s"""
         |{
         |  "appId":"/group/app",
         |  "host":"slave5.mega.co",

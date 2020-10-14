@@ -13,6 +13,7 @@ import scala.collection.breakOut
   * - mapping of existing (soon-to-be deprecated) mesos.Protos.TaskStatus.TASK_LOST to the new representations
   */
 sealed trait Condition extends Product with Serializable {
+
   /**
     * @return whether condition is considered a lost state.
     *
@@ -29,18 +30,20 @@ sealed trait Condition extends Product with Serializable {
   /**
     * @return whether condition is a terminal state.
     */
-  def isTerminal: Boolean = this match {
-    case _: Condition.Terminal => true
-    case _ => false
-  }
+  def isTerminal: Boolean =
+    this match {
+      case _: Condition.Terminal => true
+      case _ => false
+    }
 
   /**
     * @return whether considered is considered active.
     */
-  def isActive: Boolean = this match {
-    case _: Condition.Active => true
-    case _ => false
-  }
+  def isActive: Boolean =
+    this match {
+      case _: Condition.Active => true
+      case _ => false
+    }
 }
 
 object Condition {
@@ -114,11 +117,27 @@ object Condition {
       UnreachableInactive -> MesosTaskState.TASK_UNREACHABLE,
       Gone -> MesosTaskState.TASK_GONE,
       Dropped -> MesosTaskState.TASK_DROPPED,
-      Unknown -> MesosTaskState.TASK_UNKNOWN)
+      Unknown -> MesosTaskState.TASK_UNKNOWN
+    )
   }
 
-  val all = Seq(Error, Failed, Finished, Killed, Killing, Running, Staging, Starting, Unreachable,
-    UnreachableInactive, Gone, Dropped, Unknown, Scheduled, Provisioned)
+  val all = Seq(
+    Error,
+    Failed,
+    Finished,
+    Killed,
+    Killing,
+    Running,
+    Staging,
+    Starting,
+    Unreachable,
+    UnreachableInactive,
+    Gone,
+    Dropped,
+    Unknown,
+    Scheduled,
+    Provisioned
+  )
 
   private val lowerCaseStringToCondition: Map[String, Condition] = all.map { c =>
     c.toString.toLowerCase -> c
@@ -148,7 +167,5 @@ object Condition {
       }
   }
 
-  implicit val conditionFormat = Format[Condition](
-    conditionReader,
-    Writes(condition => JsString(condition.toString)))
+  implicit val conditionFormat = Format[Condition](conditionReader, Writes(condition => JsString(condition.toString)))
 }

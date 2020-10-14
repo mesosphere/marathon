@@ -13,9 +13,13 @@ import mesosphere.marathon.core.storage.store.impl.zk.{RichCuratorFramework, ZkP
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.storage.store.InMemoryStoreSerialization
 
-class LoadTimeCachingPersistenceStoreTest extends AkkaUnitTest
-  with PersistenceStoreTest with ZookeeperServerTest with ZkTestClass1Serialization
-  with InMemoryStoreSerialization with InMemoryTestClass1Serialization {
+class LoadTimeCachingPersistenceStoreTest
+    extends AkkaUnitTest
+    with PersistenceStoreTest
+    with ZookeeperServerTest
+    with ZkTestClass1Serialization
+    with InMemoryStoreSerialization
+    with InMemoryTestClass1Serialization {
 
   private val metrics = DummyMetrics
 

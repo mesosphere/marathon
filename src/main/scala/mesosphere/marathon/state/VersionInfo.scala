@@ -40,10 +40,7 @@ object VersionInfo {
     * @param lastConfigChangeAt The time stamp of the last change that changed configuration
     *                           besides scaling or restarting
     */
-  case class FullVersionInfo(
-      version: Timestamp,
-      lastScalingAt: Timestamp,
-      lastConfigChangeAt: Timestamp) extends VersionInfo {
+  case class FullVersionInfo(version: Timestamp, lastScalingAt: Timestamp, lastConfigChangeAt: Timestamp) extends VersionInfo {
 
     override def lastConfigChangeVersion: Timestamp = lastConfigChangeAt
 
@@ -52,9 +49,10 @@ object VersionInfo {
     }
   }
 
-  def forNewConfig(newVersion: Timestamp): FullVersionInfo = FullVersionInfo(
-    version = newVersion,
-    lastScalingAt = newVersion,
-    lastConfigChangeAt = newVersion
-  )
+  def forNewConfig(newVersion: Timestamp): FullVersionInfo =
+    FullVersionInfo(
+      version = newVersion,
+      lastScalingAt = newVersion,
+      lastConfigChangeAt = newVersion
+    )
 }

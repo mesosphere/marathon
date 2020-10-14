@@ -33,7 +33,9 @@ import scala.concurrent.{Future, Promise}
   * is the responsible module using this sink to call asyncContext.complete() AFTER the materialized future is completed
   * (failure or success).
   */
-class ServletOutputStreamSink(outputStream: ServletOutputStream) extends GraphStageWithMaterializedValue[SinkShape[ByteString], Future[Done]] with StrictLogging {
+class ServletOutputStreamSink(outputStream: ServletOutputStream)
+    extends GraphStageWithMaterializedValue[SinkShape[ByteString], Future[Done]]
+    with StrictLogging {
 
   private val started = new AtomicBoolean(false)
   private val in: Inlet[ByteString] = Inlet("ServletOutputStreamSink")
@@ -70,25 +72,28 @@ class ServletOutputStreamSink(outputStream: ServletOutputStream) extends GraphSt
           doFail(new IllegalStateException("This sink can only be materialized once."))
         }
 
-      setHandler(in, new InHandler {
-        override def onPush(): Unit = {
-          val contents = grab(in)
-          if (contents.isEmpty)
-            outputStream.flush()
-          else
-            outputStream.write(contents.toArray)
-          if (outputStream.isReady())
-            pull(in)
-        }
+      setHandler(
+        in,
+        new InHandler {
+          override def onPush(): Unit = {
+            val contents = grab(in)
+            if (contents.isEmpty)
+              outputStream.flush()
+            else
+              outputStream.write(contents.toArray)
+            if (outputStream.isReady())
+              pull(in)
+          }
 
-        override def onUpstreamFinish(): Unit = {
-          doComplete()
-        }
+          override def onUpstreamFinish(): Unit = {
+            doComplete()
+          }
 
-        override def onUpstreamFailure(ex: Throwable): Unit = {
-          doFail(ex)
+          override def onUpstreamFailure(ex: Throwable): Unit = {
+            doFail(ex)
+          }
         }
-      })
+      )
 
       private def doComplete(): Unit = {
         promise.success(Done)
@@ -106,6 +111,7 @@ class ServletOutputStreamSink(outputStream: ServletOutputStream) extends GraphSt
 }
 
 object ServletOutputStreamSink {
+
   /**
     * Given a jax ServletOutputStream, return a Sink which writes to the Servlet request's output stream asynchronously
     *

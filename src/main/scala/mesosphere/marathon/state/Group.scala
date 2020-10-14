@@ -21,7 +21,8 @@ class Group(
     val groupsById: Map[AbsolutePathId, Group] = defaultGroups,
     val dependencies: Set[AbsolutePathId] = defaultDependencies,
     val version: Timestamp = defaultVersion,
-    val enforceRole: Boolean = false) extends mesosphere.marathon.plugin.Group {
+    val enforceRole: Boolean = false
+) extends mesosphere.marathon.plugin.Group {
 
   require((!id.parent.isRoot && !enforceRole) || id.parent.isRoot, "Only top-level groups can enforce roles.")
 
@@ -72,13 +73,17 @@ class Group(
     */
   def group(gid: AbsolutePathId): Option[Group] = transitiveGroupsById.get(gid)
 
-  def transitiveAppsIterator(): Iterator[AppDefinition] = apps.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppsIterator())
-  private def transitiveAppIdsIterator(): Iterator[AbsolutePathId] = apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppIdsIterator())
+  def transitiveAppsIterator(): Iterator[AppDefinition] =
+    apps.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppsIterator())
+  private def transitiveAppIdsIterator(): Iterator[AbsolutePathId] =
+    apps.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitiveAppIdsIterator())
   lazy val transitiveApps: Iterable[AppDefinition] = transitiveAppsIterator().toVector
   lazy val transitiveAppIds: Iterable[AbsolutePathId] = transitiveAppIdsIterator().toVector
 
-  def transitivePodsIterator(): Iterator[PodDefinition] = pods.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodsIterator())
-  private def transitivePodIdsIterator(): Iterator[AbsolutePathId] = pods.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodIdsIterator())
+  def transitivePodsIterator(): Iterator[PodDefinition] =
+    pods.valuesIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodsIterator())
+  private def transitivePodIdsIterator(): Iterator[AbsolutePathId] =
+    pods.keysIterator ++ groupsById.valuesIterator.flatMap(_.transitivePodIdsIterator())
   lazy val transitivePods: Iterable[PodDefinition] = transitivePodsIterator().toVector
   lazy val transitivePodIds: Iterable[AbsolutePathId] = transitivePodIdsIterator().toVector
 
@@ -101,16 +106,17 @@ class Group(
 
   def containsAppsOrPodsOrGroups: Boolean = apps.nonEmpty || groupsById.nonEmpty || pods.nonEmpty
 
-  override def equals(other: Any): Boolean = other match {
-    case that: Group =>
-      id == that.id &&
-        apps == that.apps &&
-        pods == that.pods &&
-        groupsById == that.groupsById &&
-        dependencies == that.dependencies &&
-        version == that.version
-    case _ => false
-  }
+  override def equals(other: Any): Boolean =
+    other match {
+      case that: Group =>
+        id == that.id &&
+          apps == that.apps &&
+          pods == that.pods &&
+          groupsById == that.groupsById &&
+          dependencies == that.dependencies &&
+          version == that.version
+      case _ => false
+    }
 
   override def hashCode(): Int = Objects.hash(id, apps, pods, groupsById, dependencies, version)
 
@@ -189,13 +195,14 @@ class Group(
 object Group extends StrictLogging {
 
   def apply(
-    id: AbsolutePathId,
-    apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
-    pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
-    groupsById: Map[AbsolutePathId, Group] = Group.defaultGroups,
-    dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
-    version: Timestamp = Group.defaultVersion,
-    enforceRole: Boolean = false): Group = {
+      id: AbsolutePathId,
+      apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
+      pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
+      groupsById: Map[AbsolutePathId, Group] = Group.defaultGroups,
+      dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
+      version: Timestamp = Group.defaultVersion,
+      enforceRole: Boolean = false
+  ): Group = {
     new Group(id, apps, pods, groupsById, dependencies, version, enforceRole)
   }
 
@@ -310,7 +317,11 @@ object Group extends StrictLogging {
   def emptyUpdate(id: PathId): raml.GroupUpdate = raml.GroupUpdate(Some(id.toString))
 
   /** requires that apps are in canonical form */
-  def validNestedGroupUpdateWithBase(base: AbsolutePathId, originalRootGroup: RootGroup, servicesGloballyModified: Boolean): Validator[raml.GroupUpdate] =
+  def validNestedGroupUpdateWithBase(
+      base: AbsolutePathId,
+      originalRootGroup: RootGroup,
+      servicesGloballyModified: Boolean
+  ): Validator[raml.GroupUpdate] =
     validator[raml.GroupUpdate] { group =>
       group is notNull
       group is definingEnforcingRoleOnlyIfItsTopLevel(base)
@@ -322,10 +333,12 @@ object Group extends StrictLogging {
       // fields. it feels like we should make an exception for "id" and always require it for non-root groups.
       group.id.map(_.toPath) as "id" is optional(valid)
 
-      group.apps is optional(every(
-        AppValidation.validNestedApp(group.id.fold(base)(PathId(_).canonicalPath(base)))))
-      group.groups is optional(every(
-        validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup, servicesGloballyModified)))
+      group.apps is optional(every(AppValidation.validNestedApp(group.id.fold(base)(PathId(_).canonicalPath(base)))))
+      group.groups is optional(
+        every(
+          validNestedGroupUpdateWithBase(group.id.fold(base)(PathId(_).canonicalPath(base)), originalRootGroup, servicesGloballyModified)
+        )
+      )
     }.and(disallowEnforceRoleChangeIfServicesChanged(originalRootGroup, base, servicesGloballyModified))
 
   private case class definingEnforcingRoleOnlyIfItsTopLevel(base: AbsolutePathId) extends Validator[raml.GroupUpdate] {
@@ -333,14 +346,26 @@ object Group extends StrictLogging {
       val groupId = group.id.fold(base) { id => PathId(id).canonicalPath(base) }
       // Only top-level groups are allowed to set the enforce role parameter.
       if (!groupId.isTopLevel && group.enforceRole.contains(true)) {
-        Failure(Set(RuleViolation(group.enforceRole, s"enforceRole can only be set for top-level groups, and ${groupId} is not top-level", Path(Generic("enforceRole")))))
+        Failure(
+          Set(
+            RuleViolation(
+              group.enforceRole,
+              s"enforceRole can only be set for top-level groups, and ${groupId} is not top-level",
+              Path(Generic("enforceRole"))
+            )
+          )
+        )
       } else {
         Success
       }
     }
   }
 
-  case class disallowEnforceRoleChangeIfServicesChanged(originalRootGroup: RootGroup, base: AbsolutePathId, servicesGloballyModified: Boolean) extends Validator[raml.GroupUpdate] {
+  case class disallowEnforceRoleChangeIfServicesChanged(
+      originalRootGroup: RootGroup,
+      base: AbsolutePathId,
+      servicesGloballyModified: Boolean
+  ) extends Validator[raml.GroupUpdate] {
     import disallowEnforceRoleChangeIfServicesChanged.EnforceRoleCantBeChangedMessage
 
     override def apply(group: raml.GroupUpdate): Result = {
@@ -348,7 +373,9 @@ object Group extends StrictLogging {
         Success
       } else {
         val updatedGroupId = group.id.map { id => id.toPath.canonicalPath(base) }
-        val originalGroup = updatedGroupId.flatMap { id => originalRootGroup.group(id) } // TODO: why is groupUpdate.id optional? What is the semantic there?
+        val originalGroup = updatedGroupId.flatMap { id =>
+          originalRootGroup.group(id)
+        } // TODO: why is groupUpdate.id optional? What is the semantic there?
         if (originalGroup.isDefined && (group.enforceRole != originalGroup.map(_.enforceRole))) {
           Failure(Set(RuleViolation(group.enforceRole, EnforceRoleCantBeChangedMessage, path = Path(Generic("enforceRole")))))
         } else {
@@ -359,7 +386,8 @@ object Group extends StrictLogging {
   }
 
   object disallowEnforceRoleChangeIfServicesChanged {
-    val EnforceRoleCantBeChangedMessage = "enforceRole cannot be modified in a request that adds, removes or modifies services; please make these changes in separate requests."
+    val EnforceRoleCantBeChangedMessage =
+      "enforceRole cannot be modified in a request that adds, removes or modifies services; please make these changes in separate requests."
   }
 
   def updateModifiesServices(update: raml.GroupUpdate): Boolean = {

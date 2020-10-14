@@ -16,8 +16,8 @@ class OfferConversionTest extends UnitTest {
       val raml = scalar.toRaml[Option[Double]]
 
       Then("The value is converted correctly")
-      raml should be (defined)
-      raml should be (Some(123L))
+      raml should be(defined)
+      raml should be(Some(123L))
     }
 
     "A Range value is converted correctly" in {
@@ -28,7 +28,7 @@ class OfferConversionTest extends UnitTest {
       val raml = range.toRaml[NumberRange]
 
       Then("The value is converted correctly")
-      raml should be (NumberRange(0L, 5L))
+      raml should be(NumberRange(0L, 5L))
     }
 
     "An OfferResource is converted correctly" in {
@@ -40,11 +40,11 @@ class OfferConversionTest extends UnitTest {
       val raml = resource.toRaml[OfferResource]
 
       Then("The value is converted correctly")
-      raml.name should be ("cpus")
-      raml.role should be ("*")
-      raml.scalar should be (Some(34L))
-      raml.ranges should be (empty)
-      raml.set should be (empty)
+      raml.name should be("cpus")
+      raml.role should be("*")
+      raml.scalar should be(Some(34L))
+      raml.ranges should be(empty)
+      raml.set should be(empty)
     }
 
     "An Offer Attribute is converted correctly" in {
@@ -56,11 +56,11 @@ class OfferConversionTest extends UnitTest {
       val raml = attribute.toRaml[AgentAttribute]
 
       Then("The value is converted correctly")
-      raml.name should be ("key")
-      raml.scalar should be (empty)
-      raml.text should be (Some("value"))
-      raml.ranges should be (empty)
-      raml.set should be (empty)
+      raml.name should be("key")
+      raml.scalar should be(empty)
+      raml.text should be(Some("value"))
+      raml.ranges should be(empty)
+      raml.set should be(empty)
     }
 
     "An Offer is converted correctly" in {
@@ -71,10 +71,10 @@ class OfferConversionTest extends UnitTest {
       val raml = offer.toRaml[Offer]
 
       Then("The value is converted correctly")
-      raml.agentId should be (offer.getSlaveId.getValue)
+      raml.agentId should be(offer.getSlaveId.getValue)
       raml.attributes should have size 0
-      raml.hostname should be (offer.getHostname)
-      raml.id should be (offer.getId.getValue)
+      raml.hostname should be(offer.getHostname)
+      raml.id should be(offer.getId.getValue)
       raml.resources should have size 5
     }
   }

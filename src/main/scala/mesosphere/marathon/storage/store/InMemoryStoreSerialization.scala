@@ -21,11 +21,8 @@ trait InMemoryStoreSerialization {
   implicit def unmarshaller[V]: Unmarshaller[Identity, V] =
     Unmarshaller.strict { a: Identity => a.value.asInstanceOf[V] }
 
-  class InMemPathIdResolver[T](
-      val category: String,
-      val hasVersions: Boolean,
-      getVersion: T => OffsetDateTime)
-    extends IdResolver[AbsolutePathId, T, String, RamId] {
+  class InMemPathIdResolver[T](val category: String, val hasVersions: Boolean, getVersion: T => OffsetDateTime)
+      extends IdResolver[AbsolutePathId, T, String, RamId] {
     override def toStorageId(id: AbsolutePathId, version: Option[OffsetDateTime]): RamId =
       RamId(category, id.path.mkString("_"), version)
 

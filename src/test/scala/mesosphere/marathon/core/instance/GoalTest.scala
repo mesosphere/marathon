@@ -15,7 +15,7 @@ class GoalTest extends UnitTest with TableDrivenPropertyChecks {
       ("Decommissioned", Goal.Decommissioned)
     )
 
-    forAll (goals) { (serialized, deserialized) =>
+    forAll(goals) { (serialized, deserialized) =>
       s"deserialize $serialized" in {
         Given(s"$serialized as JSON string")
         val json = JsString(serialized)

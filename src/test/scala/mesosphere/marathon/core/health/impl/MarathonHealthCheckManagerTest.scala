@@ -56,32 +56,35 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
     )
   }
 
-  def setupTrackerWithProvisionedInstance(appId: AbsolutePathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
-    val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version), role = "*")
-    val scheduledInstance = Instance.scheduled(app)
-    // schedule
-    await(instanceTracker.schedule(scheduledInstance))
-    // provision
-    val now = Timestamp.now()
-    val provisionedTasks = Tasks.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), version, now)
-    val updateOperation = InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), app, provisionedTasks, now)
-    val updateEffect = await(instanceTracker.process(updateOperation)).asInstanceOf[InstanceUpdateEffect.Update]
+  def setupTrackerWithProvisionedInstance(appId: AbsolutePathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] =
+    async {
+      val app = AppDefinition(appId, versionInfo = VersionInfo.OnlyVersion(version), role = "*")
+      val scheduledInstance = Instance.scheduled(app)
+      // schedule
+      await(instanceTracker.schedule(scheduledInstance))
+      // provision
+      val now = Timestamp.now()
+      val provisionedTasks = Tasks.provisioned(Task.Id(scheduledInstance.instanceId), NetworkInfoPlaceholder(), version, now)
+      val updateOperation =
+        InstanceUpdateOperation.Provision(scheduledInstance.instanceId, AgentInfoPlaceholder(), app, provisionedTasks, now)
+      val updateEffect = await(instanceTracker.process(updateOperation)).asInstanceOf[InstanceUpdateEffect.Update]
 
-    updateEffect.instance
-  }
+      updateEffect.instance
+    }
 
-  def setupTrackerWithRunningInstance(appId: AbsolutePathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] = async {
-    val instance: Instance = await(setupTrackerWithProvisionedInstance(appId, version, instanceTracker))
-    val (taskId, _) = instance.tasksMap.head
-    // update to running
-    val taskStatus = TaskStatus.newBuilder
-      .setTaskId(taskId.mesosTaskId)
-      .setState(mesos.TaskState.TASK_RUNNING)
-      .setHealthy(true)
-      .build
-    await(instanceTracker.updateStatus(instance, taskStatus, Timestamp.now()))
-    await(instanceTracker.get(instance.instanceId).map(_.get))
-  }
+  def setupTrackerWithRunningInstance(appId: AbsolutePathId, version: Timestamp, instanceTracker: InstanceTracker): Future[Instance] =
+    async {
+      val instance: Instance = await(setupTrackerWithProvisionedInstance(appId, version, instanceTracker))
+      val (taskId, _) = instance.tasksMap.head
+      // update to running
+      val taskStatus = TaskStatus.newBuilder
+        .setTaskId(taskId.mesosTaskId)
+        .setState(mesos.TaskState.TASK_RUNNING)
+        .setHealthy(true)
+        .build
+      await(instanceTracker.updateStatus(instance, taskStatus, Timestamp.now()))
+      await(instanceTracker.get(instance.instanceId).map(_.get))
+    }
 
   def updateTaskHealth(taskId: Task.Id, version: Timestamp, healthy: Boolean)(implicit hcManager: MarathonHealthCheckManager): Unit = {
     val taskStatus = mesos.TaskStatus.newBuilder
@@ -329,8 +332,10 @@ class MarathonHealthCheckManagerTest extends AkkaUnitTest with Eventually {
       hcManager.reconcile(Seq(app)).futureValue
       val health = hcManager.status(app.id, instance.instanceId).futureValue.head
 
-      health.lastFailure.isDefined should be (true) withClue (s"Expecting health lastFailure to be defined, but it was None: $health")
-      health.lastSuccess.isEmpty should be (true) withClue (s"Expecting health lastSuccess to be empty, but it was '${health.lastSuccess}': $health")
+      health.lastFailure.isDefined should be(true) withClue (s"Expecting health lastFailure to be defined, but it was None: $health")
+      health.lastSuccess.isEmpty should be(
+        true
+      ) withClue (s"Expecting health lastSuccess to be empty, but it was '${health.lastSuccess}': $health")
     }
   }
   def captureEvents(implicit eventStream: EventStream) = new CaptureEvents(eventStream)

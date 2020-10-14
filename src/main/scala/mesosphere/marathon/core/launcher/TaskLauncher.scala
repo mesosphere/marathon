@@ -7,6 +7,7 @@ import org.apache.mesos.Protos.OfferID
   * A TaskLauncher launches tasks on an offer or declines an offer.
   */
 trait TaskLauncher {
+
   /**
     * Send operations on given offer to Mesos. The offer is consumed afterwards and
     * cannot be used anymore.

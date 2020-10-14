@@ -15,19 +15,21 @@ object InstanceChangedEventsGenerator extends StrictLogging {
   def events(instance: Instance, task: Option[Task], now: Timestamp, previousState: Option[InstanceState]): Seq[MarathonEvent] = {
     val stateChanged = previousState.fold(true) { previous =>
       previous.condition != instance.state.condition ||
-        previous.goal != instance.state.goal
+      previous.goal != instance.state.goal
     }
     val runSpecId = instance.runSpecId
     val version = instance.runSpecVersion
 
     val instanceEvent: Seq[MarathonEvent] = if (stateChanged) {
-      Seq(InstanceChanged(
-        id = instance.instanceId,
-        runSpecVersion = version,
-        runSpecId = runSpecId,
-        condition = instance.state.condition,
-        instance = instance
-      ))
+      Seq(
+        InstanceChanged(
+          id = instance.instanceId,
+          runSpecVersion = version,
+          runSpecId = runSpecId,
+          condition = instance.state.condition,
+          instance = instance
+        )
+      )
     } else Nil
 
     task.fold(instanceEvent) { task =>
@@ -37,9 +39,12 @@ object InstanceChangedEventsGenerator extends StrictLogging {
       val ipAddresses = task.status.networkInfo.ipAddresses
       val slaveId = maybeTaskStatus.fold("")(_.getSlaveId.getValue)
       val message = maybeTaskStatus.fold("")(status => if (status.hasMessage) status.getMessage else "")
-      val state = task.status.
-        mesosStatus.map(_.getState).
-        getOrElse(TaskState.TASK_STAGING) // should return TASK_KILLED when resident task is killed... but TASK_STAGING if state not yet known
+      val state =
+        task.status.mesosStatus
+          .map(_.getState)
+          .getOrElse(
+            TaskState.TASK_STAGING
+          ) // should return TASK_KILLED when resident task is killed... but TASK_STAGING if state not yet known
 
       val taskEvent = MesosStatusUpdateEvent(
         slaveId,
@@ -57,11 +62,12 @@ object InstanceChangedEventsGenerator extends StrictLogging {
     }
   }
 
-  def updatedCondition(instance: Instance): InstanceChanged = InstanceChanged(
-    id = instance.instanceId,
-    runSpecVersion = instance.runSpecVersion,
-    runSpecId = instance.runSpecId,
-    condition = instance.state.condition,
-    instance = instance
-  )
+  def updatedCondition(instance: Instance): InstanceChanged =
+    InstanceChanged(
+      id = instance.instanceId,
+      runSpecVersion = instance.runSpecVersion,
+      runSpecId = instance.runSpecId,
+      condition = instance.state.condition,
+      instance = instance
+    )
 }

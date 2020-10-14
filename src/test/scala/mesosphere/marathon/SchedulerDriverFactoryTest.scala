@@ -29,12 +29,7 @@ class SchedulerDriverFactoryTest extends AkkaUnitTest with Inside {
   "getFrameworkId throws an exception and crashes if frameworkId is undefined but there are instances defined" in new Fixture {
     instanceRepository.store(state.Instance.fromCoreInstance(TestInstanceBuilder.emptyInstance(instanceId = instanceId))).futureValue
 
-    inside(Try(
-      MesosSchedulerDriverFactory.getFrameworkId(
-        crashStrategy,
-        zkTimeout,
-        frameworkIdRepository,
-        instanceRepository))) {
+    inside(Try(MesosSchedulerDriverFactory.getFrameworkId(crashStrategy, zkTimeout, frameworkIdRepository, instanceRepository))) {
       case Failure(ex: RuntimeException) =>
         ex.getMessage.should(include("Refusing"))
     }
@@ -43,10 +38,6 @@ class SchedulerDriverFactoryTest extends AkkaUnitTest with Inside {
   }
 
   "getFrameworkId returns None if frameworkId is undefined and instance repository is empty" in new Fixture {
-    MesosSchedulerDriverFactory.getFrameworkId(
-      crashStrategy,
-      zkTimeout,
-      frameworkIdRepository,
-      instanceRepository) shouldBe None
+    MesosSchedulerDriverFactory.getFrameworkId(crashStrategy, zkTimeout, frameworkIdRepository, instanceRepository) shouldBe None
   }
 }

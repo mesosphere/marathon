@@ -23,10 +23,12 @@ class MigrationTo19200Test extends AkkaUnitTest {
       val instanceId1 = Instance.Id.forRunSpec(AbsolutePathId("/app"))
       val instanceId2 = Instance.Id.forRunSpec(AbsolutePathId("/app2"))
 
-      val instances = Source(List(
-        f.legacyInstanceJson(instanceId1),
-        f.legacyInstanceJson(instanceId2) + ("role" -> JsString("someRole")),
-      ))
+      val instances = Source(
+        List(
+          f.legacyInstanceJson(instanceId1),
+          f.legacyInstanceJson(instanceId2) + ("role" -> JsString("someRole"))
+        )
+      )
 
       val migration = f.migration()
 
@@ -47,7 +49,7 @@ class MigrationTo19200Test extends AkkaUnitTest {
 
     def migration(): MigrationTo19200 = {
 
-      new MigrationTo19200(mesosDefaultRole, instanceRepository, persistenceStore )
+      new MigrationTo19200(mesosDefaultRole, instanceRepository, persistenceStore)
     }
 
     /**
@@ -55,8 +57,7 @@ class MigrationTo19200Test extends AkkaUnitTest {
       * @param i The id of the instance.
       * @return The JSON of the instance.
       */
-    def legacyInstanceJson(i: Instance.Id): JsObject = Json.parse(
-      s"""
+    def legacyInstanceJson(i: Instance.Id): JsObject = Json.parse(s"""
          |{
          |  "instanceId": { "idString": "${i.idString}" },
          |  "tasksMap": {},

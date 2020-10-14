@@ -2,7 +2,21 @@ package mesosphere.marathon
 package api.v2.normalization
 
 import mesosphere.UnitTest
-import mesosphere.marathon.raml.{Endpoint, Network, NetworkMode, PersistentVolumeInfo, Pod, PodContainer, PodPersistentVolume, PodPlacementPolicy, PodSchedulingPolicy, PodUpgradeStrategy, Resources, UnreachableDisabled, VolumeMount}
+import mesosphere.marathon.raml.{
+  Endpoint,
+  Network,
+  NetworkMode,
+  PersistentVolumeInfo,
+  Pod,
+  PodContainer,
+  PodPersistentVolume,
+  PodPlacementPolicy,
+  PodSchedulingPolicy,
+  PodUpgradeStrategy,
+  Resources,
+  UnreachableDisabled,
+  VolumeMount
+}
 import Normalization._
 import mesosphere.marathon.api.v2.{NetworkNormalizationMessages, PodNormalization, ValidationHelper}
 import mesosphere.marathon.util.RoleSettings
@@ -28,8 +42,7 @@ class PodNormalizationTest extends UnitTest with Inside {
             }
         }
 
-        val withContainerNetwork = p.copy(
-          networks = Seq(Network(mode = NetworkMode.Container, name = Some("n1")))).normalize
+        val withContainerNetwork = p.copy(networks = Seq(Network(mode = NetworkMode.Container, name = Some("n1")))).normalize
         inside(withContainerNetwork.containers) {
           case ct :: Nil =>
             inside(ct.endpoints) {
@@ -49,8 +62,7 @@ class PodNormalizationTest extends UnitTest with Inside {
       }
     }
     "normalizing network name" should {
-      val template = Pod(id = "foo", containers = Seq(PodContainer(name = "c", resources = Resources()))
-      )
+      val template = Pod(id = "foo", containers = Seq(PodContainer(name = "c", resources = Resources())))
       "without default network name" in new Fixture() {
         // no name and no default name == error?!
         val withoutNetworkName = template.copy(networks = Seq(Network()))
@@ -66,7 +78,9 @@ class PodNormalizationTest extends UnitTest with Inside {
             net.name.value shouldBe "net1"
         }
       }
-      "with default network name" in new Fixture(PodNormalization.Configuration(defaultNetworkName = Some("default1"), ValidationHelper.roleSettings(), true)) {
+      "with default network name" in new Fixture(
+        PodNormalization.Configuration(defaultNetworkName = Some("default1"), ValidationHelper.roleSettings(), true)
+      ) {
         // replace empty network name with the default
         val withoutNetworkName = template.copy(networks = Seq(Network()))
         inside(withoutNetworkName.normalize.networks) {
@@ -86,9 +100,9 @@ class PodNormalizationTest extends UnitTest with Inside {
     "normalizing a pod with a persistent volume" should {
       val template = Pod(
         id = "foo",
-        containers = Seq(PodContainer(
-          name = "c", resources = Resources(), volumeMounts = Seq(VolumeMount("foo", "foo")))),
-        volumes = Seq(PodPersistentVolume("foo", PersistentVolumeInfo(size = 1))))
+        containers = Seq(PodContainer(name = "c", resources = Resources(), volumeMounts = Seq(VolumeMount("foo", "foo")))),
+        volumes = Seq(PodPersistentVolume("foo", PersistentVolumeInfo(size = 1)))
+      )
 
       "return default scheduling for resident pods, if it is not provided" in new Fixture() {
         inside(template.normalize.scheduling) {
@@ -99,9 +113,14 @@ class PodNormalizationTest extends UnitTest with Inside {
       }
 
       "for pods without persistent volume the normalization should return the original pod" in new Fixture() {
-        val pod = template.copy(scheduling = Some(PodSchedulingPolicy(
-          upgrade = Some(PodUpgradeStrategy(minimumHealthCapacity = 0.7, maximumOverCapacity = 0.0)),
-          unreachableStrategy = Some(UnreachableDisabled()))))
+        val pod = template.copy(scheduling =
+          Some(
+            PodSchedulingPolicy(
+              upgrade = Some(PodUpgradeStrategy(minimumHealthCapacity = 0.7, maximumOverCapacity = 0.0)),
+              unreachableStrategy = Some(UnreachableDisabled())
+            )
+          )
+        )
         inside(pod.normalize.scheduling) {
           case Some(scheduling) =>
             scheduling.upgrade shouldBe Some(PodUpgradeStrategy(minimumHealthCapacity = 0.7, maximumOverCapacity = 0.0))
@@ -123,7 +142,9 @@ class PodNormalizationTest extends UnitTest with Inside {
         }
       }
 
-      "return the configured role for pods without a role" in new Fixture(config = PodNormalization.Configuration(None, RoleSettings(validRoles = Set("customDefault"), defaultRole = "customDefault"), true)) {
+      "return the configured role for pods without a role" in new Fixture(
+        config = PodNormalization.Configuration(None, RoleSettings(validRoles = Set("customDefault"), defaultRole = "customDefault"), true)
+      ) {
         inside(template.normalize.role) {
           case Some(role) =>
             role shouldBe "customDefault"

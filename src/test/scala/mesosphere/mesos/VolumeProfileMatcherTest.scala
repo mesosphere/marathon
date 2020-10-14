@@ -25,7 +25,8 @@ class VolumeProfileMatcherTest extends UnitTest {
 
   /** Helper to create disk resources with/without profile */
   def diskResource(profile: Option[String]): mesos.Protos.Resource = {
-    val source = mesos.Protos.Resource.DiskInfo.Source.newBuilder()
+    val source = mesos.Protos.Resource.DiskInfo.Source
+      .newBuilder()
       .setType(mesos.Protos.Resource.DiskInfo.Source.Type.PATH)
       .setPath(mesos.Protos.Resource.DiskInfo.Source.Path.newBuilder().setRoot("test"))
       .setId("pathDiskId")
@@ -34,11 +35,15 @@ class VolumeProfileMatcherTest extends UnitTest {
       source.setVendor("vendorId")
     }
 
-    mesos.Protos.Resource.newBuilder()
+    mesos.Protos.Resource
+      .newBuilder()
       .setType(mesos.Protos.Value.Type.SCALAR)
       .setName("disk")
-      .setDisk(mesos.Protos.Resource.DiskInfo.newBuilder()
-        .setSource(source))
+      .setDisk(
+        mesos.Protos.Resource.DiskInfo
+          .newBuilder()
+          .setSource(source)
+      )
       .build()
   }
 }

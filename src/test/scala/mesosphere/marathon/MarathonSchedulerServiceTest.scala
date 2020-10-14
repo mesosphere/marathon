@@ -198,7 +198,7 @@ class MarathonSchedulerServiceTest extends AkkaUnitTest {
       schedulerService.timer = mockTimer
 
       val thrown = the[StoreCommandFailedException] thrownBy schedulerService.startLeadership()
-      thrown.getMessage should equal ("Failed to sync")
+      thrown.getMessage should equal("Failed to sync")
     }
 
     "throw when the driver creation fails by some exception" in new Fixture {

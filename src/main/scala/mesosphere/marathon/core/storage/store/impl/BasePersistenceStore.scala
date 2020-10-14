@@ -33,10 +33,9 @@ case class CategorizedKey[C, K](category: C, key: K)
   * @tparam K The persistence store's primary key type
   * @tparam Serialized The serialized format for the persistence store.
   */
-abstract class BasePersistenceStore[K, Category, Serialized](
-    metrics: Metrics)(implicit
-    ctx: ExecutionContext,
-    mat: Materializer) extends PersistenceStore[K, Category, Serialized] with StrictLogging {
+abstract class BasePersistenceStore[K, Category, Serialized](metrics: Metrics)(implicit ctx: ExecutionContext, mat: Materializer)
+    extends PersistenceStore[K, Category, Serialized]
+    with StrictLogging {
   private val idsTimeMetric: Timer = metrics.timer("debug.persistence.operations.ids.duration")
   private val getTimeMetric: Timer = metrics.timer("debug.persistence.operations.get.duration")
   private val deleteTimeMetric: Timer =
@@ -91,89 +90,93 @@ abstract class BasePersistenceStore[K, Category, Serialized](
 
   protected[store] def rawGet(k: K): Future[Option[Serialized]]
 
-  override def get[Id, V](id: Id)(implicit
-    ir: IdResolver[Id, V, Category, K],
-    um: Unmarshaller[Serialized, V]): Future[Option[V]] = getTimeMetric {
-    async {
-      val storageId = ir.toStorageId(id, None)
-      await(rawGet(storageId)) match {
-        case Some(v) =>
-          Some(await(Unmarshal(v).to[V]))
-        case None =>
-          None
+  override def get[Id, V](id: Id)(implicit ir: IdResolver[Id, V, Category, K], um: Unmarshaller[Serialized, V]): Future[Option[V]] =
+    getTimeMetric {
+      async {
+        val storageId = ir.toStorageId(id, None)
+        await(rawGet(storageId)) match {
+          case Some(v) =>
+            Some(await(Unmarshal(v).to[V]))
+          case None =>
+            None
+        }
       }
     }
-  }
 
   override def get[Id, V](id: Id, version: OffsetDateTime)(implicit
-    ir: IdResolver[Id, V, Category, K],
-    um: Unmarshaller[Serialized, V]): Future[Option[V]] = getTimeMetric {
-    async {
-      val storageId = ir.toStorageId(id, Some(version))
-      await(rawGet(storageId)) match {
-        case Some(v) =>
-          Some(await(Unmarshal(v).to[V]))
-        case None =>
-          None
+      ir: IdResolver[Id, V, Category, K],
+      um: Unmarshaller[Serialized, V]
+  ): Future[Option[V]] =
+    getTimeMetric {
+      async {
+        val storageId = ir.toStorageId(id, Some(version))
+        await(rawGet(storageId)) match {
+          case Some(v) =>
+            Some(await(Unmarshal(v).to[V]))
+          case None =>
+            None
+        }
       }
     }
-  }
 
-  override def getVersions[Id, V](list: Seq[(Id, OffsetDateTime)])(implicit
-    ir: IdResolver[Id, V, Category, K],
-    um: Unmarshaller[Serialized, V]): Source[V, NotUsed] = {
+  override def getVersions[Id, V](
+      list: Seq[(Id, OffsetDateTime)]
+  )(implicit ir: IdResolver[Id, V, Category, K], um: Unmarshaller[Serialized, V]): Source[V, NotUsed] = {
 
-    Source(list).mapAsync[Option[Serialized]](RepositoryConstants.maxConcurrency) {
-      case (id, version) =>
-        val storageId = ir.toStorageId(id, Some(version))
-        rawGet(storageId)
-    }.collect {
-      case Some(marshaled) => marshaled
-    }.mapAsync(RepositoryConstants.maxConcurrency) { marshaled =>
-      Unmarshal(marshaled).to[V]
-    }
+    Source(list)
+      .mapAsync[Option[Serialized]](RepositoryConstants.maxConcurrency) {
+        case (id, version) =>
+          val storageId = ir.toStorageId(id, Some(version))
+          rawGet(storageId)
+      }
+      .collect {
+        case Some(marshaled) => marshaled
+      }
+      .mapAsync(RepositoryConstants.maxConcurrency) { marshaled =>
+        Unmarshal(marshaled).to[V]
+      }
   }
 
   protected def rawStore[V](k: K, v: Serialized): Future[Done]
 
-  override def store[Id, V](id: Id, v: V)(implicit
-    ir: IdResolver[Id, V, Category, K],
-    m: Marshaller[V, Serialized]): Future[Done] = storeTimeMetric {
-    val unversionedId = ir.toStorageId(id, None)
-    lock(id.toString) {
-      async {
-        val serialized = await(Marshal(v).to[Serialized])
-        val storeCurrent = rawStore(unversionedId, serialized)
-        val storeVersioned = if (ir.hasVersions) {
-          rawStore(ir.toStorageId(id, Some(ir.version(v))), serialized)
-        } else {
-          Future.successful(Done)
-        }
-        await(storeCurrent)
-        await(storeVersioned)
-        Done
-      }
-    }
-  }
-
-  override def store[Id, V](id: Id, v: V,
-    version: OffsetDateTime)(implicit
-    ir: IdResolver[Id, V, Category, K],
-    m: Marshaller[V, Serialized]): Future[Done] = storeTimeMetric {
-    if (ir.hasVersions) {
-      val storageId = ir.toStorageId(id, Some(version))
+  override def store[Id, V](id: Id, v: V)(implicit ir: IdResolver[Id, V, Category, K], m: Marshaller[V, Serialized]): Future[Done] =
+    storeTimeMetric {
+      val unversionedId = ir.toStorageId(id, None)
       lock(id.toString) {
         async {
           val serialized = await(Marshal(v).to[Serialized])
-          await(rawStore(storageId, serialized))
+          val storeCurrent = rawStore(unversionedId, serialized)
+          val storeVersioned = if (ir.hasVersions) {
+            rawStore(ir.toStorageId(id, Some(ir.version(v))), serialized)
+          } else {
+            Future.successful(Done)
+          }
+          await(storeCurrent)
+          await(storeVersioned)
           Done
         }
       }
-    } else {
-      logger.warn(s"Attempted to store a versioned value for $id which is not versioned.")
-      Future.successful(Done)
     }
-  }
+
+  override def store[Id, V](id: Id, v: V, version: OffsetDateTime)(implicit
+      ir: IdResolver[Id, V, Category, K],
+      m: Marshaller[V, Serialized]
+  ): Future[Done] =
+    storeTimeMetric {
+      if (ir.hasVersions) {
+        val storageId = ir.toStorageId(id, Some(version))
+        lock(id.toString) {
+          async {
+            val serialized = await(Marshal(v).to[Serialized])
+            await(rawStore(storageId, serialized))
+            Done
+          }
+        }
+      } else {
+        logger.warn(s"Attempted to store a versioned value for $id which is not versioned.")
+        Future.successful(Done)
+      }
+    }
 
   /**
     * @return A source of _all_ keys in the Persistence Store (which can be used by a

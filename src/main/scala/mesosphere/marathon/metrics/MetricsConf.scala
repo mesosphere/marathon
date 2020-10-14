@@ -50,7 +50,8 @@ trait MetricsConf extends ScallopConf {
 
   lazy val metricsHistogramReservoirResettingChunks = opt[Int](
     name = "metrics_histogram_reservoir_resetting_chunks",
-    descr = "Histogram reservoirs are divided into this number of chunks, and one chunk is cleared after each (resetting interval / number of chunks) elapsed",
+    descr =
+      "Histogram reservoirs are divided into this number of chunks, and one chunk is cleared after each (resetting interval / number of chunks) elapsed",
     default = Some(0),
     argName = "chunks",
     validate = v => v == 0 || v >= 2,

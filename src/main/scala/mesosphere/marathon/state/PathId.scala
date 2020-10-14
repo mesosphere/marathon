@@ -24,6 +24,7 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
   def isEmpty: Boolean = path.isEmpty
 
   def isTopLevel: Boolean = !isRoot && parent.isRoot
+
   /**
     * @return True if this path is "/"
     */
@@ -35,10 +36,12 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
     case head +: rest => PathId(path.init, absolute)
   }
 
-  def allParents: List[PathId] = if (isRoot) Nil else {
-    val p = parent
-    p :: p.allParents
-  }
+  def allParents: List[PathId] =
+    if (isRoot) Nil
+    else {
+      val p = parent
+      p :: p.allParents
+    }
 
   def child: PathId = PathId(tail)
 
@@ -64,12 +67,13 @@ sealed trait PathId extends Ordered[PathId] with plugin.PathId with Product {
    */
   def canonicalPath(base: AbsolutePathId = PathId.root): AbsolutePathId = {
     require(base.absolute, "Base path is not absolute, canonical path can not be computed!")
-    @tailrec def in(remaining: Seq[String], result: Seq[String] = Nil): Seq[String] = remaining match {
-      case head +: tail if head == "." => in(tail, result)
-      case head +: tail if head == ".." => in(tail, if (result.nonEmpty) result.tail else Nil)
-      case head +: tail => in(tail, head +: result)
-      case Nil => result.reverse
-    }
+    @tailrec def in(remaining: Seq[String], result: Seq[String] = Nil): Seq[String] =
+      remaining match {
+        case head +: tail if head == "." => in(tail, result)
+        case head +: tail if head == ".." => in(tail, if (result.nonEmpty) result.tail else Nil)
+        case head +: tail => in(tail, head +: result)
+        case Nil => result.reverse
+      }
     this match {
       case rootPath: AbsolutePathId =>
         AbsolutePathId(in(path))
@@ -122,10 +126,12 @@ case class AbsolutePathId(path: Seq[String]) extends PathId {
     case head +: rest => AbsolutePathId(path.init)
   }
 
-  override def allParents: List[AbsolutePathId] = if (isRoot) Nil else {
-    val p = parent
-    p :: p.allParents
-  }
+  override def allParents: List[AbsolutePathId] =
+    if (isRoot) Nil
+    else {
+      val p = parent
+      p :: p.allParents
+    }
 
   override def rootPath: AbsolutePathId = AbsolutePathId(path.headOption.map(_ :: Nil).getOrElse(Nil))
 
@@ -137,6 +143,7 @@ case class AbsolutePathId(path: Seq[String]) extends PathId {
 }
 
 object AbsolutePathId {
+
   /**
     * Parse the string as a path, but interpret it as relative to root, if it is relative.
     *
@@ -211,9 +218,10 @@ object PathId {
 
   private val reservedKeywords = Seq("restart", "tasks", "versions", ".", "..")
 
-  private val withoutReservedKeywords = isTrue[PathId](s"must not end with any of the following reserved keywords: ${reservedKeywords.mkString(", ")}") { id =>
-    id.path.lastOption.forall(last => !reservedKeywords.contains(id.path.last))
-  }
+  private val withoutReservedKeywords =
+    isTrue[PathId](s"must not end with any of the following reserved keywords: ${reservedKeywords.mkString(", ")}") { id =>
+      id.path.lastOption.forall(last => !reservedKeywords.contains(id.path.last))
+    }
 
   /**
     * For external usage. Needed to overwrite the whole description, e.g. id.path -> id.
@@ -228,10 +236,11 @@ object PathId {
     * Validate path with regards to some parent path.
     * @param base Path of parent.
     */
-  def validPathWithBase(base: PathId): Validator[PathId] = validator[PathId] { path =>
-    path is validPathChars
-    path is childOf(base)
-  }
+  def validPathWithBase(base: PathId): Validator[PathId] =
+    validator[PathId] { path =>
+      path is validPathChars
+      path is childOf(base)
+    }
 
   /**
     * Make sure that the given path is a child of the defined parent path.

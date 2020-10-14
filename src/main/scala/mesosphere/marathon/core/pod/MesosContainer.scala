@@ -21,4 +21,5 @@ case class MesosContainer(
     labels: Map[String, String] = Map.empty,
     lifecycle: Option[Lifecycle] = None,
     tty: Option[Boolean] = None,
-    linuxInfo: Option[LinuxInfo] = None) extends ContainerSpec
+    linuxInfo: Option[LinuxInfo] = None
+) extends ContainerSpec

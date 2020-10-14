@@ -21,7 +21,7 @@ class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
     name should {
       "return none if nothing has been stored" in {
         val repo = createRepo
-        repo.get().futureValue should be ('empty)
+        repo.get().futureValue should be('empty)
       }
       "delete should succeed if nothing has been stored" in {
         val repo = createRepo
@@ -38,7 +38,7 @@ class SingletonRepositoryTest extends AkkaUnitTest with ZookeeperServerTest {
         val id = FrameworkId(UUID.randomUUID().toString)
         repo.store(id).futureValue
         repo.delete().futureValue should be(Done)
-        repo.get().futureValue should be ('empty)
+        repo.get().futureValue should be('empty)
       }
     }
   }

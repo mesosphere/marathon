@@ -14,13 +14,11 @@ private[appinfo] class TaskForStatistics(
     val staging: Boolean,
     val healthy: Boolean,
     val unhealthy: Boolean,
-    val maybeLifeTime: Option[Double])
+    val maybeLifeTime: Option[Double]
+)
 
 private[appinfo] object TaskForStatistics {
-  def forInstances(
-    now: Timestamp,
-    instances: Seq[Instance],
-    statuses: Map[Instance.Id, Seq[Health]]): Seq[TaskForStatistics] = {
+  def forInstances(now: Timestamp, instances: Seq[Instance], statuses: Map[Instance.Id, Seq[Health]]): Seq[TaskForStatistics] = {
 
     val nowTs: Long = now.millis
 

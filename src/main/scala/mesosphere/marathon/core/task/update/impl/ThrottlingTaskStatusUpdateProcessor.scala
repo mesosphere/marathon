@@ -10,6 +10,7 @@ import org.apache.mesos.Protos.TaskStatus
 import scala.concurrent.{ExecutionContext, Future}
 
 object ThrottlingTaskStatusUpdateProcessor {
+
   /**
     * A tag used for dependency injection to disambiguate the dependencies of this processor from
     * other instances with the same type.
@@ -19,8 +20,8 @@ object ThrottlingTaskStatusUpdateProcessor {
 
 private[core] class ThrottlingTaskStatusUpdateProcessor @Inject() (
     @Named(ThrottlingTaskStatusUpdateProcessor.dependencyTag) serializePublish: WorkQueue,
-    @Named(ThrottlingTaskStatusUpdateProcessor.dependencyTag) wrapped: TaskStatusUpdateProcessor)
-  extends TaskStatusUpdateProcessor {
+    @Named(ThrottlingTaskStatusUpdateProcessor.dependencyTag) wrapped: TaskStatusUpdateProcessor
+) extends TaskStatusUpdateProcessor {
   override def publish(status: TaskStatus): Future[Unit] = {
     serializePublish(wrapped.publish(status))(ExecutionContext.Implicits.global)
   }

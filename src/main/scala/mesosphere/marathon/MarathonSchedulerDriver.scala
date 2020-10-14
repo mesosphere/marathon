@@ -17,12 +17,10 @@ object MarathonSchedulerDriver extends StrictLogging {
     * @param httpConfig
     * @return
     */
-  def newFrameworkInfo(
-    frameworkId: Option[FrameworkID],
-    config: MarathonConf,
-    httpConfig: HttpConf): FrameworkInfo = {
+  def newFrameworkInfo(frameworkId: Option[FrameworkID], config: MarathonConf, httpConfig: HttpConf): FrameworkInfo = {
 
-    val frameworkInfoBuilder = FrameworkInfo.newBuilder()
+    val frameworkInfoBuilder = FrameworkInfo
+      .newBuilder()
       .setName(config.frameworkName())
       .setFailoverTimeout(config.mesosFailoverTimeout().toDouble)
       .setUser(config.mesosUser())
@@ -49,15 +47,17 @@ object MarathonSchedulerDriver extends StrictLogging {
     config.mesosAuthenticationPrincipal.foreach(frameworkInfoBuilder.setPrincipal)
 
     val credential: Option[Credential] = {
-      def secretFileContent = config.mesosAuthenticationSecretFile.toOption.map { secretFile =>
-        ByteString.readFrom(new FileInputStream(secretFile)).toStringUtf8
-      }
-      def credentials = config.mesosAuthenticationPrincipal.toOption.map { principal =>
-        val credentials = Credential.newBuilder().setPrincipal(principal)
-        //secret is optional
-        config.mesosAuthenticationSecret.toOption.orElse(secretFileContent).foreach(credentials.setSecret)
-        credentials.build()
-      }
+      def secretFileContent =
+        config.mesosAuthenticationSecretFile.toOption.map { secretFile =>
+          ByteString.readFrom(new FileInputStream(secretFile)).toStringUtf8
+        }
+      def credentials =
+        config.mesosAuthenticationPrincipal.toOption.map { principal =>
+          val credentials = Credential.newBuilder().setPrincipal(principal)
+          //secret is optional
+          config.mesosAuthenticationSecret.toOption.orElse(secretFileContent).foreach(credentials.setSecret)
+          credentials.build()
+        }
       if (config.mesosAuthentication()) credentials else None
     }
     credential.foreach(c => logger.info(s"Authenticate with Mesos as ${c.getPrincipal}"))
@@ -94,24 +94,23 @@ object MarathonSchedulerDriver extends StrictLogging {
     frameworkInfoBuilder.build()
   }
 
-  def newDriver(
-    frameworkInfo: FrameworkInfo,
-    config: MarathonConf,
-    newScheduler: Scheduler): SchedulerDriver = {
+  def newDriver(frameworkInfo: FrameworkInfo, config: MarathonConf, newScheduler: Scheduler): SchedulerDriver = {
 
     val frameworkId = if (frameworkInfo.hasId) Some(frameworkInfo.getId) else None
     logger.info(s"Create new Scheduler Driver with frameworkId: $frameworkId and scheduler $newScheduler")
 
     val credential: Option[Credential] = {
-      def secretFileContent = config.mesosAuthenticationSecretFile.toOption.map { secretFile =>
-        ByteString.readFrom(new FileInputStream(secretFile)).toStringUtf8
-      }
-      def credentials = config.mesosAuthenticationPrincipal.toOption.map { principal =>
-        val credentials = Credential.newBuilder().setPrincipal(principal)
-        //secret is optional
-        config.mesosAuthenticationSecret.toOption.orElse(secretFileContent).foreach(credentials.setSecret)
-        credentials.build()
-      }
+      def secretFileContent =
+        config.mesosAuthenticationSecretFile.toOption.map { secretFile =>
+          ByteString.readFrom(new FileInputStream(secretFile)).toStringUtf8
+        }
+      def credentials =
+        config.mesosAuthenticationPrincipal.toOption.map { principal =>
+          val credentials = Credential.newBuilder().setPrincipal(principal)
+          //secret is optional
+          config.mesosAuthenticationSecret.toOption.orElse(secretFileContent).foreach(credentials.setSecret)
+          credentials.build()
+        }
       if (config.mesosAuthentication()) credentials else None
     }
     credential.foreach(c => logger.info(s"Authenticate with Mesos as ${c.getPrincipal}"))
@@ -120,7 +119,13 @@ object MarathonSchedulerDriver extends StrictLogging {
     val implicitAcknowledgements = false
     val newDriver: MesosSchedulerDriver = credential match {
       case Some(cred) =>
-        new MesosSchedulerDriver(newScheduler, frameworkInfo, config.mesosMaster().unredactedConnectionString, implicitAcknowledgements, cred)
+        new MesosSchedulerDriver(
+          newScheduler,
+          frameworkInfo,
+          config.mesosMaster().unredactedConnectionString,
+          implicitAcknowledgements,
+          cred
+        )
 
       case None =>
         new MesosSchedulerDriver(newScheduler, frameworkInfo, config.mesosMaster().unredactedConnectionString, implicitAcknowledgements)

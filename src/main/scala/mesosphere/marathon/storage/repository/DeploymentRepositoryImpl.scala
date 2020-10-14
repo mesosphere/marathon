@@ -23,11 +23,8 @@ import scala.async.Async.{async, await}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future, Promise}
 
-case class StoredPlan(
-    id: String,
-    originalVersion: OffsetDateTime,
-    targetVersion: OffsetDateTime,
-    version: OffsetDateTime) extends StrictLogging {
+case class StoredPlan(id: String, originalVersion: OffsetDateTime, targetVersion: OffsetDateTime, version: OffsetDateTime)
+    extends StrictLogging {
   def resolve(groupRepository: GroupRepository)(implicit ctx: ExecutionContext): Future[Option[DeploymentPlan]] =
     async { // linter:ignore UnnecessaryElseBranch
       val originalFuture = groupRepository.rootVersion(originalVersion)
@@ -37,8 +34,10 @@ case class StoredPlan(
         case (Some(o), Some(t)) =>
           Some(DeploymentPlan(o, t, version = Timestamp(version), id = Some(id)))
         case (_, None) | (None, _) =>
-          logger.error(s"While retrieving $id, either original ($original)"
-            + s" or target ($target) were no longer available")
+          logger.error(
+            s"While retrieving $id, either original ($original)"
+              + s" or target ($target) were no longer available"
+          )
           throw new IllegalStateException("Missing target or original")
         case _ =>
           None
@@ -59,8 +58,12 @@ object StoredPlan {
   val DateFormat = StoredGroup.DateFormat
 
   def apply(deploymentPlan: DeploymentPlan): StoredPlan = {
-    StoredPlan(deploymentPlan.id, deploymentPlan.original.version.toOffsetDateTime,
-      deploymentPlan.target.version.toOffsetDateTime, deploymentPlan.version.toOffsetDateTime)
+    StoredPlan(
+      deploymentPlan.id,
+      deploymentPlan.original.version.toOffsetDateTime,
+      deploymentPlan.target.version.toOffsetDateTime,
+      deploymentPlan.version.toOffsetDateTime
+    )
   }
 
   def apply(proto: Protos.DeploymentPlanDefinition): StoredPlan = {
@@ -73,7 +76,8 @@ object StoredPlan {
       proto.getId,
       OffsetDateTime.parse(proto.getOriginalRootVersion, DateFormat),
       OffsetDateTime.parse(proto.getTargetRootVersion, DateFormat),
-      version)
+      version
+    )
   }
 }
 
@@ -86,17 +90,27 @@ class DeploymentRepositoryImpl[K, C, S](
     podRepository: PodRepositoryImpl[K, C, S],
     maxVersions: Int,
     storageCompactionScanBatchSize: Int,
-    storageCompactionInterval: FiniteDuration)(implicit
+    storageCompactionInterval: FiniteDuration
+)(implicit
     ir: IdResolver[String, StoredPlan, C, K],
     marshaller: Marshaller[StoredPlan, S],
     unmarshaller: Unmarshaller[S, StoredPlan],
     ctx: ExecutionContext,
     actorRefFactory: ActorRefFactory,
-    mat: Materializer) extends DeploymentRepository {
+    mat: Materializer
+) extends DeploymentRepository {
 
   private val gcActor = GcActor(
-    s"PersistenceGarbageCollector-$hashCode", metrics,
-    this, groupRepository, appRepository, podRepository, maxVersions, storageCompactionScanBatchSize, storageCompactionInterval)
+    s"PersistenceGarbageCollector-$hashCode",
+    metrics,
+    this,
+    groupRepository,
+    appRepository,
+    podRepository,
+    maxVersions,
+    storageCompactionScanBatchSize,
+    storageCompactionInterval
+  )
 
   appRepository.beforeStore = Some((id, version) => {
     val promise = Promise[Done]()
@@ -124,33 +138,35 @@ class DeploymentRepositoryImpl[K, C, S](
 
   val repo = new PersistenceStoreRepository[String, StoredPlan, K, C, S](persistenceStore, _.id)
 
-  override def store(v: DeploymentPlan): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
-    await(beforeStore(v))
-    await(repo.store(StoredPlan(v)))
-  }
+  override def store(v: DeploymentPlan): Future[Done] =
+    async { // linter:ignore UnnecessaryElseBranch
+      await(beforeStore(v))
+      await(repo.store(StoredPlan(v)))
+    }
 
-  override def delete(id: String): Future[Done] = async { // linter:ignore UnnecessaryElseBranch
-    val plan = await(get(id))
-    val future = repo.delete(id)
-    plan.foreach(p => future.onComplete(_ => gcActor ! GcActor.RunGC))
-    await(future)
-  }
+  override def delete(id: String): Future[Done] =
+    async { // linter:ignore UnnecessaryElseBranch
+      val plan = await(get(id))
+      val future = repo.delete(id)
+      plan.foreach(p => future.onComplete(_ => gcActor ! GcActor.RunGC))
+      await(future)
+    }
 
   override def ids(): Source[String, NotUsed] = repo.ids()
 
   override def all(): Source[DeploymentPlan, NotUsed] =
     repo.ids().mapAsync(RepositoryConstants.maxConcurrency)(get).collect { case Some(g) => g }
 
-  override def get(id: String): Future[Option[DeploymentPlan]] = async { // linter:ignore UnnecessaryElseBranch
-    await(repo.get(id)) match {
-      case Some(storedPlan) =>
-        await(storedPlan.resolve(groupRepository))
-      case None =>
-        None
+  override def get(id: String): Future[Option[DeploymentPlan]] =
+    async { // linter:ignore UnnecessaryElseBranch
+      await(repo.get(id)) match {
+        case Some(storedPlan) =>
+          await(storedPlan.resolve(groupRepository))
+        case None =>
+          None
+      }
     }
-  }
 
   private[storage] def lazyAll(): Source[StoredPlan, NotUsed] =
     repo.ids().mapAsync(RepositoryConstants.maxConcurrency)(repo.get).collect { case Some(g) => g }
 }
-

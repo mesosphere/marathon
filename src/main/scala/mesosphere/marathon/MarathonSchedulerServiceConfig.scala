@@ -8,7 +8,8 @@ trait MarathonSchedulerServiceConfig extends ScallopConf {
     "max_actor_startup_time",
     descr = "Maximum time to wait for starting up actors when gaining leadership.",
     hidden = true,
-    default = Some(10000))
+    default = Some(10000)
+  )
 
   lazy val schedulerActionsExecutionContextSize = opt[Int](
     "scheduler_actions_execution_context_size",

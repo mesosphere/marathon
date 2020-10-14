@@ -32,6 +32,7 @@ object FindDeterioratedMetrics {
     //only compare last
     filterDeteriorated(readMetrics(before).last, readMetrics(after).last, deterioration)
   }
+
   /**
     * FindDeterioratedMetrics <file_base> <file_sample> <deterioration_factor>
     *  url_base: the file with the base metrics
@@ -60,8 +61,7 @@ object FindDeterioratedMetrics {
         throw new IllegalStateException(s"Sample is deteriorated according to deterioration factor")
       }
     } else {
-      println(
-        """Usage:
+      println("""Usage:
           | FindDeterioratedMetrics <file_base> <file_sample> <deterioration_factor>"
           | file_base: the file with the base metrics
           | file_sample: the file with the actual sampled metrics
@@ -71,4 +71,3 @@ object FindDeterioratedMetrics {
     }
   }
 }
-

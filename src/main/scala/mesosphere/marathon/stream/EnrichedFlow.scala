@@ -5,6 +5,7 @@ import akka.NotUsed
 import akka.stream.scaladsl.{Flow, Source}
 
 object EnrichedFlow {
+
   /**
     * Drops all elements and has an output type of Nothing.
     */

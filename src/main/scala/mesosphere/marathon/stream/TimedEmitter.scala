@@ -59,57 +59,64 @@ class TimedEmitter[U](clock: Clock = Clock.systemUTC()) extends GraphStage[FlowS
   val output = Outlet[EventState[U]]("timed-emitter-output")
 
   override val shape = FlowShape(input, output)
-  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic = new TimerGraphStageLogic(shape) with StageLogging {
+  override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
+    new TimerGraphStageLogic(shape) with StageLogging {
 
-    case class ElementTimerKey(element: U)
+      case class ElementTimerKey(element: U)
 
-    val queue = Queue.empty[EventState[U]]
+      val queue = Queue.empty[EventState[U]]
 
-    setHandler(input, new InHandler {
-      override def onPush(): Unit = {
-        val (element, maybeDeadline) = grab(input)
+      setHandler(
+        input,
+        new InHandler {
+          override def onPush(): Unit = {
+            val (element, maybeDeadline) = grab(input)
 
-        val maybeDuration = maybeDeadline.map { JavaDuration.between(clock.instant(), _) }.filterNot(_.isNegative)
+            val maybeDuration = maybeDeadline.map { JavaDuration.between(clock.instant(), _) }.filterNot(_.isNegative)
 
-        maybeDuration match {
-          case Some(duration) =>
-            queue.enqueue(Active(element))
-            scheduleOnce(ElementTimerKey(element), duration.toMillis.millis)
-          case None =>
-            cancelTimer(ElementTimerKey(element)) // This guarantees the timer will not be called if it hasn't already
-            queue.enqueue(Inactive(element))
+            maybeDuration match {
+              case Some(duration) =>
+                queue.enqueue(Active(element))
+                scheduleOnce(ElementTimerKey(element), duration.toMillis.millis)
+              case None =>
+                cancelTimer(ElementTimerKey(element)) // This guarantees the timer will not be called if it hasn't already
+                queue.enqueue(Inactive(element))
+            }
+            pushAndPullLogic()
+          }
         }
-        pushAndPullLogic()
+      )
+
+      setHandler(
+        output,
+        new OutHandler {
+          override def onPull(): Unit = {
+            pushAndPullLogic()
+          }
+        }
+      )
+
+      override def onTimer(timerKey: Any): Unit = {
+        timerKey match {
+          case ElementTimerKey(element) =>
+            queue.enqueue(Inactive(element))
+            pushAndPullLogic()
+          case other =>
+            log.error(s"Bug! We received a timer key ${other} that was not of type TimerKey")
+        }
       }
-    })
 
-    setHandler(output, new OutHandler {
-      override def onPull(): Unit = {
-        pushAndPullLogic()
-      }
-    })
-
-    override def onTimer(timerKey: Any): Unit = {
-      timerKey match {
-        case ElementTimerKey(element) =>
-          queue.enqueue(Inactive(element))
-          pushAndPullLogic()
-        case other =>
-          log.error(s"Bug! We received a timer key ${other} that was not of type TimerKey")
-      }
-    }
-
-    override def preStart(): Unit = {
-      pull(input)
-    }
-
-    private def pushAndPullLogic(): Unit = {
-      if (isAvailable(output) && queue.nonEmpty)
-        push(output, queue.dequeue())
-      if (queue.isEmpty && !hasBeenPulled(input))
+      override def preStart(): Unit = {
         pull(input)
+      }
+
+      private def pushAndPullLogic(): Unit = {
+        if (isAvailable(output) && queue.nonEmpty)
+          push(output, queue.dequeue())
+        if (queue.isEmpty && !hasBeenPulled(input))
+          pull(input)
+      }
     }
-  }
 }
 
 object TimedEmitter {

@@ -26,23 +26,26 @@ object LocalVolumeId {
     LocalVolumeId(runSpecId, name, uuidGenerator.generate().toString)
   }
 
-  def unapply(id: String): Option[(LocalVolumeId)] = id match {
-    case LocalVolumeEncoderRE(runSpec, name, uuid) => Some(LocalVolumeId(PathId.fromSafePath(runSpec), name, uuid))
-    case _ => None
-  }
+  def unapply(id: String): Option[(LocalVolumeId)] =
+    id match {
+      case LocalVolumeEncoderRE(runSpec, name, uuid) => Some(LocalVolumeId(PathId.fromSafePath(runSpec), name, uuid))
+      case _ => None
+    }
 
   implicit val localVolumeIdReader: Reads[LocalVolumeId] = (
     (__ \ "runSpecId").read[PathId] and
-    (__ \ "containerPath").read[String] and
-    (__ \ "uuid").read[String]
+      (__ \ "containerPath").read[String] and
+      (__ \ "uuid").read[String]
   )((id, path, uuid) => LocalVolumeId(id, path, uuid))
 
   implicit val localVolumeIdWriter: Writes[LocalVolumeId] = Writes[LocalVolumeId] { localVolumeId =>
-    JsObject(Seq(
-      "runSpecId" -> Json.toJson(localVolumeId.runSpecId),
-      "containerPath" -> Json.toJson(localVolumeId.name),
-      "uuid" -> Json.toJson(localVolumeId.uuid),
-      "persistenceId" -> Json.toJson(localVolumeId.idString)
-    ))
+    JsObject(
+      Seq(
+        "runSpecId" -> Json.toJson(localVolumeId.runSpecId),
+        "containerPath" -> Json.toJson(localVolumeId.name),
+        "uuid" -> Json.toJson(localVolumeId.uuid),
+        "persistenceId" -> Json.toJson(localVolumeId.idString)
+      )
+    )
   }
 }

@@ -1,4 +1,4 @@
-#!/usr/bin/env amm
+#!/ usr / bin / env amm
 
 import $ivy.`com.typesafe.play::play-json:2.8.1`
 import $ivy.`org.eclipse.jgit:org.eclipse.jgit:4.8.0.201706111038-r`
@@ -8,42 +8,41 @@ import ammonite.ops.ImplicitWd._
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.merge.MergeStrategy
 import org.eclipse.jgit.revwalk.RevCommit
-import org.eclipse.jgit.transport.{ CredentialsProvider, PushResult, RefSpec,
-  RemoteRefUpdate, URIish, UsernamePasswordCredentialsProvider }
+import org.eclipse.jgit.transport.{CredentialsProvider, PushResult, RefSpec, RemoteRefUpdate, URIish, UsernamePasswordCredentialsProvider}
 import play.api.libs.json.Json
 
 // BuildInfo Models and their Json formats.
-case class Source(kind:String, url: String, sha1: String)
+case class Source(kind: String, url: String, sha1: String)
 case class BuildInfo(
-  requires: List[String],
-  single_source: Source,
-  username: String
+    requires: List[String],
+    single_source: Source,
+    username: String
 )
 case class EeBuildInfo(
-  requires: List[String],
-  sources: Map[String, Source],
-  username: String
+    requires: List[String],
+    sources: Map[String, Source],
+    username: String
 )
 implicit val singleSourceFormat = Json.format[Source]
 implicit val buildInfoFormat = Json.format[BuildInfo]
 implicit val eeBuildInfoFormat = Json.format[EeBuildInfo]
 
-
 /**
- * Clones repository from uri repo and checksout branch. The local repository
- * is removed once f finished.
- *
+  * Clones repository from uri repo and checksout branch. The local repository
+  * is removed once f finished.
+  *
  * @param repo Repository address.
- * @param branch Branch that is checked out.
- * @param repoPath Local path of the checked out repository.
- * @param f The function that is applied to the repository.
- */
+  * @param branch Branch that is checked out.
+  * @param repoPath Local path of the checked out repository.
+  * @param f The function that is applied to the repository.
+  */
 def withRepository(repo: String, branch: String, repoPath: Path)(f: Git => Unit)(implicit creds: CredentialsProvider): Unit = {
   // Make sure the path is empty for cloning.
-  rm! repoPath
+  rm ! repoPath
 
   // Clone
-  val git = Git.cloneRepository()
+  val git = Git
+    .cloneRepository()
     .setURI(repo)
     .setRemote("mesosphere")
     .setBranch(branch)
@@ -63,19 +62,20 @@ def withRepository(repo: String, branch: String, repoPath: Path)(f: Git => Unit)
     f(git)
   } finally {
     // Leave a clean work directory.
-    rm! repoPath
+    rm ! repoPath
   }
 }
 
 /**
- * Pulls latest changes from dcos/dcos repository.
- *
+  * Pulls latest changes from dcos/dcos repository.
+  *
  * @param git The Git repository that will be updated.
- * @param remoteName The remote (uri or name) to be used for the pull operation.
- */
+  * @param remoteName The remote (uri or name) to be used for the pull operation.
+  */
 def upgradeDCOS(git: Git, remoteName: String)(implicit creds: CredentialsProvider): Unit = {
   // Update with latest master from the passed remote
-  git.pull()
+  git
+    .pull()
     .setCredentialsProvider(creds)
     .setRemote(remoteName)
     .setRemoteBranchName("master")
@@ -86,13 +86,13 @@ def upgradeDCOS(git: Git, remoteName: String)(implicit creds: CredentialsProvide
 }
 
 /**
- * Loads and changes the buildinfo in the Marathon packages.
- *
+  * Loads and changes the buildinfo in the Marathon packages.
+  *
  * @param url The URL to the new Marathon artifact.
- * @param sha1 The sha1 checksum of the Marathon artifact.
- * @param repoPath Local path of the checked out repository.
- * @param fileName Name of marathon's buildinfo file.
- */
+  * @param sha1 The sha1 checksum of the Marathon artifact.
+  * @param repoPath Local path of the checked out repository.
+  * @param fileName Name of marathon's buildinfo file.
+  */
 @main
 def updateBuildInfo(url: String, sha1: String, repoPath: Path, fileName: String, serviceName: String): Unit = {
   // Load
@@ -138,58 +138,57 @@ def updateEeBuildInfo(url: String, sha1: String, repoPath: Path, fileName: Strin
 }
 
 /**
- * Adds and commits changes to buildinfo.
- *
+  * Adds and commits changes to buildinfo.
+  *
  * @param git Reference to git repository.
- * @param message The commit message used.
- *
+  * @param message The commit message used.
+  *
  * @return Reference of the new commit.
- */
+  */
 def commit(git: Git, message: String): RevCommit = {
   println(s"Commit changes: $message.")
 
   git.add().addFilepattern("packages/marathon").call()
   git.add().addFilepattern("packages/metronome").call()
-  
+
   git.commit().setMessage(message).call()
 }
 
-
 /**
- * Exception thrown by `push(2)` if the update was not successful.
- */
+  * Exception thrown by `push(2)` if the update was not successful.
+  */
 case class PushException(val msg: String, private val cause: Throwable = None.orNull) extends Exception(msg, cause)
 
 /**
- * @return true if [status] is OK or UP_TO_DATE, false otherwise.
- */
+  * @return true if [status] is OK or UP_TO_DATE, false otherwise.
+  */
 def notOk(status: RemoteRefUpdate.Status): Boolean = {
   !(RemoteRefUpdate.Status.OK.equals(status) || RemoteRefUpdate.Status.UP_TO_DATE.equals(status))
 }
 
 /**
- * Throws a [PushException] is push result contains a RemoteRefUpdata.Status
- * other than OK and UP_TO_DATE.
- *
+  * Throws a [PushException] is push result contains a RemoteRefUpdata.Status
+  * other than OK and UP_TO_DATE.
+  *
  * @param result The result of a PushCommand call.
- * @param refRpec The ref spec that was pushed.
- */
+  * @param refRpec The ref spec that was pushed.
+  */
 def throwIfNotSuccessful(refSpec: RefSpec)(result: PushResult): Unit = {
   import scala.collection.JavaConverters._
 
   result.getRemoteUpdates().asScala.foreach { refUpdate =>
     val status = refUpdate.getStatus()
-    if(notOk(status)) throw new PushException(s"Could not push $refSpec: ${refUpdate.getMessage()}")
+    if (notOk(status)) throw new PushException(s"Could not push $refSpec: ${refUpdate.getMessage()}")
   }
 }
 
 /**
- * Pushes commit to "marathon/latest".
- *
+  * Pushes commit to "marathon/latest".
+  *
  * @param git Reference to git repository.
- * @param commitRev The reference of the commit which is pushed.
- * @param destination Branch reference to push to.
- */
+  * @param commitRev The reference of the commit which is pushed.
+  * @param destination Branch reference to push to.
+  */
 def push(git: Git, commitRev: RevCommit, destination: String)(implicit creds: CredentialsProvider): Unit = {
   import scala.collection.JavaConverters._
 
@@ -197,7 +196,8 @@ def push(git: Git, commitRev: RevCommit, destination: String)(implicit creds: Cr
     .setSource(commitRev.getId.getName)
     .setDestination(destination)
 
-  val result = git.push()
+  val result = git
+    .push()
     .setRemote("mesosphere")
     .setRefSpecs(refSpec)
     .setCredentialsProvider(creds)
@@ -268,13 +268,13 @@ def updateDcosService(url: String, sha1: String, message: String, serviceName: S
 }
 
 /**
- * Checks out a DC/OS repository and updates the Marathon package buildinfo.json
- * to the passed url and sha1.
- *
+  * Checks out a DC/OS repository and updates the Marathon package buildinfo.json
+  * to the passed url and sha1.
+  *
  * @param url The URL to the new Marathon artifact.
- * @param sha1 The sha1 checksum of the Marathon artifact.
- * @param message The commit message for the change.
- */
+  * @param sha1 The sha1 checksum of the Marathon artifact.
+  * @param message The commit message for the change.
+  */
 @main
 def updateMarathon(url: String, sha1: String, message: String): Unit = {
   updateDcosService(url, sha1, message, "Marathon", "marathon/latest")
@@ -308,7 +308,6 @@ def updateDcosServiceEE(url: String, sha1: String, message: String, serviceName:
     push(git, commitRev, destination = s"refs/heads/$branchName")
   }
 }
-
 
 /**
   * Checks out a DC/OS Enterprise repository and updates the Marathon package ee.buildinfo.json

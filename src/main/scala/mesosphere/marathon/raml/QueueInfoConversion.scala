@@ -22,20 +22,19 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
       def delay: QueueDelay = info.queueDelay(clock)
 
       /*
-        *  `rejectSummaryLastOffers` should be a triple of (reason, amount declined, amount processed)
-        * and should reflect the `NoOfferMatchReason.reasonFunnel` to store only first non matching reason.
-        *
+       *  `rejectSummaryLastOffers` should be a triple of (reason, amount declined, amount processed)
+       * and should reflect the `NoOfferMatchReason.reasonFunnel` to store only first non matching reason.
+       *
         * @param processedOffers the amount of last processed offers
-        * @param summary the summary about the last processed offers
-        * @return calculated Seq of `DeclinedOfferStep`
-        */
+       * @param summary the summary about the last processed offers
+       * @return calculated Seq of `DeclinedOfferStep`
+       */
       def declinedOfferSteps(processedOffers: Int, summary: Map[NoOfferMatchReason, Int]): Seq[DeclinedOfferStep] = {
-        val (_, rejectSummaryLastOffers) = NoOfferMatchReason.
-          reasonFunnel.foldLeft((processedOffers, Seq.empty[DeclinedOfferStep])) {
-            case ((processed: Int, seq: Seq[DeclinedOfferStep]), reason: NoOfferMatchReason) =>
-              val nextProcessed = processed - summary.getOrElse(reason, 0)
-              (nextProcessed, seq :+ DeclinedOfferStep(reason.toString, summary.getOrElse(reason, 0), processed))
-          }
+        val (_, rejectSummaryLastOffers) = NoOfferMatchReason.reasonFunnel.foldLeft((processedOffers, Seq.empty[DeclinedOfferStep])) {
+          case ((processed: Int, seq: Seq[DeclinedOfferStep]), reason: NoOfferMatchReason) =>
+            val nextProcessed = processed - summary.getOrElse(reason, 0)
+            (nextProcessed, seq :+ DeclinedOfferStep(reason.toString, summary.getOrElse(reason, 0), processed))
+        }
         rejectSummaryLastOffers
       }
 
@@ -61,7 +60,8 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
             info.startedAt.toOffsetDateTime,
             processedOffersSummary,
             lastUnusedOffers,
-            Raml.toRaml(app))
+            Raml.toRaml(app)
+          )
         case pod: PodDefinition =>
           QueuePod(
             info.instancesLeftToLaunch,
@@ -70,7 +70,8 @@ trait QueueInfoConversion extends DefaultConversions with OfferConversion {
             info.startedAt.toOffsetDateTime,
             processedOffersSummary,
             lastUnusedOffers,
-            Raml.toRaml(pod))
+            Raml.toRaml(pod)
+          )
       }
   }
 

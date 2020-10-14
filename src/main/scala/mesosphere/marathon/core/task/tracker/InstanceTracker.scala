@@ -102,6 +102,7 @@ trait InstanceTracker extends StrictLogging {
 
 object InstanceTracker {
   type InstanceUpdates = Source[(InstancesSnapshot, Source[InstanceChange, NotUsed]), NotUsed]
+
   /**
     * Contains all tasks grouped by app ID.
     */
@@ -115,10 +116,11 @@ object InstanceTracker {
       instancesMap.get(pathId).map(_.instances).getOrElse(Seq.empty)
     }
 
-    def instance(instanceId: Instance.Id): Option[Instance] = for {
-      runSpec <- instancesMap.get(instanceId.runSpecId)
-      instance <- runSpec.instanceMap.get(instanceId)
-    } yield instance
+    def instance(instanceId: Instance.Id): Option[Instance] =
+      for {
+        runSpec <- instancesMap.get(instanceId.runSpecId)
+        instance <- runSpec.instanceMap.get(instanceId)
+      } yield instance
 
     // TODO(PODS): the instanceTracker should not expose a def for tasks
     def task(id: Task.Id): Option[Task] = {
@@ -128,8 +130,9 @@ object InstanceTracker {
 
     def allInstances: Seq[Instance] = instancesMap.values.flatMap(_.instances)(collection.breakOut)
 
-    private[tracker] def updateApp(appId: AbsolutePathId)(
-      update: InstanceTracker.SpecInstances => InstanceTracker.SpecInstances): InstancesBySpec = {
+    private[tracker] def updateApp(
+        appId: AbsolutePathId
+    )(update: InstanceTracker.SpecInstances => InstanceTracker.SpecInstances): InstancesBySpec = {
       val updated = update(instancesMap(appId))
       if (updated.isEmpty) {
         logger.info(s"Removed app [$appId] from tracker")
@@ -148,18 +151,21 @@ object InstanceTracker {
     }
 
     def forInstances(instances: Seq[Instance]): InstancesBySpec = forInstances(instances: _*)
-    def forInstances(instances: Instance*): InstancesBySpec = of(
-      instances
-        .groupBy(_.runSpecId)
-        .map {
-          case (appId, appInstances) =>
-            val instancesById: Map[Instance.Id, Instance] = appInstances.map(instance => instance.instanceId -> instance)(collection.breakOut)
-            appId -> SpecInstances(instancesById)
-        }
-    )
+    def forInstances(instances: Instance*): InstancesBySpec =
+      of(
+        instances
+          .groupBy(_.runSpecId)
+          .map {
+            case (appId, appInstances) =>
+              val instancesById: Map[Instance.Id, Instance] =
+                appInstances.map(instance => instance.instanceId -> instance)(collection.breakOut)
+              appId -> SpecInstances(instancesById)
+          }
+      )
 
     def empty: InstancesBySpec = of(collection.immutable.Map.empty[AbsolutePathId, InstanceTracker.SpecInstances])
   }
+
   /**
     * Contains only the instances of a specific run spec.
     *

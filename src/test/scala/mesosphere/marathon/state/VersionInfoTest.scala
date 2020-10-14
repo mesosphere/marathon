@@ -118,4 +118,3 @@ class VersionInfoTest extends UnitTest {
     }
   }
 }
-

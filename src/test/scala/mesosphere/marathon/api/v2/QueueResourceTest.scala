@@ -31,7 +31,8 @@ class QueueResourceTest extends UnitTest with JerseyTest {
       queue: LaunchQueue = mock[LaunchQueue],
       stats: LaunchStats = mock[LaunchStats],
       instanceTracker: InstanceTracker = mock[InstanceTracker],
-      groupManager: GroupManager = mock[GroupManager]) {
+      groupManager: GroupManager = mock[GroupManager]
+  ) {
     val queueResource: QueueResource = new QueueResource(
       clock,
       queue,
@@ -58,20 +59,28 @@ class QueueResourceTest extends UnitTest with JerseyTest {
         app,
         MarathonTestHelper.makeBasicOffer().build(),
         Seq(NoOfferMatchReason.InsufficientCpus, NoOfferMatchReason.DeclinedScarceResources),
-        clock.now())
-      stats.getStatistics() returns Future.successful(Seq(
-        QueuedInstanceInfoWithStatistics(
-          app, "*", inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
-          backOffUntil = Some(clock.now() + 100.seconds), startedAt = clock.now(),
-          rejectSummaryLastOffers = Map(NoOfferMatchReason.InsufficientCpus -> 1, NoOfferMatchReason.DeclinedScarceResources -> 2),
-          rejectSummaryLaunchAttempt = Map(NoOfferMatchReason.InsufficientCpus -> 3, NoOfferMatchReason.DeclinedScarceResources -> 2),
-          processedOffersCount = 3,
-          unusedOffersCount = 1,
-          lastMatch = None,
-          lastNoMatch = None,
-          lastNoMatches = Seq(noMatch)
+        clock.now()
+      )
+      stats.getStatistics() returns Future.successful(
+        Seq(
+          QueuedInstanceInfoWithStatistics(
+            app,
+            "*",
+            inProgress = true,
+            instancesLeftToLaunch = 23,
+            finalInstanceCount = 23,
+            backOffUntil = Some(clock.now() + 100.seconds),
+            startedAt = clock.now(),
+            rejectSummaryLastOffers = Map(NoOfferMatchReason.InsufficientCpus -> 1, NoOfferMatchReason.DeclinedScarceResources -> 2),
+            rejectSummaryLaunchAttempt = Map(NoOfferMatchReason.InsufficientCpus -> 3, NoOfferMatchReason.DeclinedScarceResources -> 2),
+            processedOffersCount = 3,
+            unusedOffersCount = 1,
+            lastMatch = None,
+            lastNoMatch = None,
+            lastNoMatches = Seq(noMatch)
+          )
         )
-      ))
+      )
 
       //when
       val response = asyncRequest { r => queueResource.index(auth.request, Set("lastUnusedOffers").asJava, r) }
@@ -103,14 +112,26 @@ class QueueResourceTest extends UnitTest with JerseyTest {
     "the generated info from the queue contains 0 if there is no delay" in new Fixture {
       //given
       val app = AppDefinition(id = "app".toAbsolutePath, role = "*")
-      stats.getStatistics() returns Future.successful(Seq(
-        QueuedInstanceInfoWithStatistics(
-          app, "*", inProgress = true, instancesLeftToLaunch = 23, finalInstanceCount = 23,
-          backOffUntil = Some(clock.now() - 100.seconds), startedAt = clock.now(), rejectSummaryLastOffers = Map.empty,
-          rejectSummaryLaunchAttempt = Map.empty, processedOffersCount = 3, unusedOffersCount = 1, lastMatch = None,
-          lastNoMatch = None, lastNoMatches = Seq.empty
+      stats.getStatistics() returns Future.successful(
+        Seq(
+          QueuedInstanceInfoWithStatistics(
+            app,
+            "*",
+            inProgress = true,
+            instancesLeftToLaunch = 23,
+            finalInstanceCount = 23,
+            backOffUntil = Some(clock.now() - 100.seconds),
+            startedAt = clock.now(),
+            rejectSummaryLastOffers = Map.empty,
+            rejectSummaryLaunchAttempt = Map.empty,
+            processedOffersCount = 3,
+            unusedOffersCount = 1,
+            lastMatch = None,
+            lastNoMatch = None,
+            lastNoMatches = Seq.empty
+          )
         )
-      ))
+      )
       //when
       val response = asyncRequest { r => queueResource.index(auth.request, Set.empty[String].asJava, r) }
 

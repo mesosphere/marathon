@@ -18,10 +18,7 @@ class MesosCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMaratho
     "provide a command check result status of 0" in {
       Given("a new app with checks")
       val id = appId(Some("with-successful-checks"))
-      val app = App(
-        id.toString,
-        cmd = Some(appCommand),
-        check = Some(ramlCommandCheck("true")))
+      val app = App(id.toString, cmd = Some(appCommand), check = Some(ramlCommandCheck("true")))
 
       When("The app deploys")
       val result = marathon.createAppV2(app)
@@ -33,7 +30,7 @@ class MesosCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMaratho
       eventually {
         val currentTasks = marathon.tasks(id).value
         currentTasks should have size (1)
-        currentTasks.head.check.get.command.get.exitCode should be (0)
+        currentTasks.head.check.get.command.get.exitCode should be(0)
       }
       marathon.deleteApp(id)
     }
@@ -41,10 +38,7 @@ class MesosCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMaratho
     "provide a command check result status of 1" in {
       Given("a new app")
       val id = appId(Some("with-failing-checks"))
-      val app = App(
-        id.toString,
-        cmd = Some(appCommand),
-        check = Some(ramlCommandCheck("false")))
+      val app = App(id.toString, cmd = Some(appCommand), check = Some(ramlCommandCheck("false")))
 
       When("the app is created")
       val result = marathon.createAppV2(app)
@@ -57,15 +51,16 @@ class MesosCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMaratho
       eventually {
         val currentTasks = marathon.tasks(id).value
         currentTasks should have size (1)
-        currentTasks.head.check.get.command.get.exitCode should be (1)
+        currentTasks.head.check.get.command.get.exitCode should be(1)
       }
       marathon.deleteApp(id)
     }
   }
 
-  private def ramlCommandCheck(command: String) = AppCheck(
-    exec = Some(CommandCheck(ShellCommand(command))),
-    intervalSeconds = 1,
-    delaySeconds = 1
-  )
+  private def ramlCommandCheck(command: String) =
+    AppCheck(
+      exec = Some(CommandCheck(ShellCommand(command))),
+      intervalSeconds = 1,
+      delaySeconds = 1
+    )
 }
