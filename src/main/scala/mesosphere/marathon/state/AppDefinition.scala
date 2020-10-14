@@ -272,6 +272,12 @@ case class AppDefinition(
         )
       }
 
+    val resourceLimits: Option[ResourceLimits] =
+      if (proto.hasResourceLimits)
+        Some(ResourceLimits.resourceLimitsFromProto(proto.getResourceLimits))
+      else
+        None
+
     AppDefinition(
       id = AbsolutePathId(proto.getId),
       user = if (proto.getCmd.hasUser) Some(proto.getCmd.getUser) else None,
@@ -316,7 +322,8 @@ case class AppDefinition(
       unreachableStrategy = unreachableStrategy,
       killSelection = KillSelection.fromProto(proto.getKillSelection),
       tty = tty,
-      role = role
+      role = role,
+      resourceLimits = resourceLimits
     )
   }
 
