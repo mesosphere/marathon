@@ -22,6 +22,12 @@ import scala.collection.immutable.Seq
 import scala.concurrent.duration._
 
 class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTest with Inside {
+  // Offer constraints are disabled to test the rejected offers summary.
+  override def marathonArgs: Map[String, String] = Map(
+    "failover_timeout" -> "1",
+    "disable_use_offer_constraints" -> ""
+  )
+
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
   override lazy val agentConfig = MesosAgentConfig(
     launcher = "linux",
