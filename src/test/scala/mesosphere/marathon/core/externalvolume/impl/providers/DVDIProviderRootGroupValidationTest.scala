@@ -40,11 +40,11 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
         expectedViolations = Set(
           ConstraintViolation(
             constraint = "Volume name 'vol' in /nested/app1 conflicts with volume(s) of same name in app(s): /nested/app2",
-            path = "/groups(0)/apps(0)/externalVolumes(0)"
+            path = "/groups(0)/apps(0)/container"
           ),
           ConstraintViolation(
             constraint = "Volume name 'vol' in /nested/app2 conflicts with volume(s) of same name in app(s): /nested/app1",
-            path = "/groups(0)/apps(1)/externalVolumes(0)"
+            path = "/groups(0)/apps(1)/container"
           )
         )
       )
@@ -75,7 +75,7 @@ class DVDIProviderRootGroupValidationTest extends UnitTest with GroupCreation {
         expectedViolations = Set(
           ConstraintViolation(
             constraint = "Volume name 'vol' in /nested/app1 conflicts with volume(s) of same name in app(s): /nested/app2",
-            path = "/groups(0)/apps(0)/externalVolumes(0)"
+            path = "/groups(0)/apps(0)/container"
           )
         )
       )

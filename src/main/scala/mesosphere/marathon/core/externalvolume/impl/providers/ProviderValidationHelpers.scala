@@ -7,7 +7,7 @@ import mesosphere.marathon.core.externalvolume.ExternalVolumeRamlHelpers
 import mesosphere.marathon.raml.{App, AppExternalVolume}
 import mesosphere.marathon.state._
 
-private[impl] object ValidationHelpers {
+private[impl] object ProviderValidationHelpers {
 
   import mesosphere.marathon.api.v2.Validation._
 
@@ -32,8 +32,16 @@ private[impl] object ValidationHelpers {
           } { vol => conflictingApps(vol).isEmpty }
         }
 
+        def validContainerVolumes(appId: PathId): Validator[Container] = { container =>
+          container.volumes.iterator
+            .collect(externalVolumeWithMountPF(providerName))
+            .filterNot(readOnlyMultiReader)
+            .map { vwm => volumeNameUnique(appId)(vwm.volume) }
+            .foldLeft(Success: Result) { _ and _ }
+        }
+
         validator[AppDefinition] { app =>
-          app.externalVolumes is every(volumeNameUnique(app.id))
+          app.container is optional(validContainerVolumes(app.id))
         }
       }
 
@@ -48,6 +56,16 @@ private[impl] object ValidationHelpers {
       groupValid(rootGroup)
     }
 
+  def readOnlyMultiReader(vwm: VolumeWithMount[ExternalVolume]) = {
+    def isMulti =
+      vwm.volume.external match {
+        case csi: CSIExternalVolumeInfo =>
+          csi.accessMode == CSIExternalVolumeInfo.AccessMode.MULTI_NODE_SINGLE_WRITER
+        case _ => false
+      }
+    vwm.mount.readOnly && isMulti
+  }
+
   /**
     * @return true if volume has a provider name that matches ours exactly
     */
@@ -56,10 +74,13 @@ private[impl] object ValidationHelpers {
   def matchesProviderRaml(providerName: String, volume: AppExternalVolume): Boolean =
     ExternalVolumeRamlHelpers.getProvider(volume.external).contains(providerName)
 
-  def isForUniquenessCheck(volume: ExternalVolume): Boolean =
+  private def isSingleWriteable(am: CSIExternalVolumeInfo.AccessMode, isReadOnly: Boolean) =
+    (!isReadOnly) && (am == CSIExternalVolumeInfo.AccessMode.MULTI_NODE_SINGLE_WRITER)
+  private def isForUniquenessCheck(volume: ExternalVolume, mount: VolumeMount): Boolean =
     volume.external match {
       case csi: CSIExternalVolumeInfo =>
-        true
+        val am = csi.accessMode
+        !am.shareable || isSingleWriteable(am, mount.readOnly)
       case v: DVDIExternalVolumeInfo =>
         !v.shared
     }
@@ -69,14 +90,25 @@ private[impl] object ValidationHelpers {
       case external: raml.DVDIExternalVolumeInfo =>
         !external.shared
       case csi: raml.CSIExternalVolumeInfo =>
-        true
+        val am =
+          CSIExternalVolumeInfo.AccessMode.fromString(csi.options.capability.accessMode).getOrElse(CSIExternalVolumeInfo.AccessMode.UNKNOWN)
+        !am.shareable
     }
 
+  private def externalVolumeWithMountPF(providerName: String): PartialFunction[Any, VolumeWithMount[ExternalVolume]] = {
+    case v @ VolumeWithMount(vol: ExternalVolume, mount) if matchesProvider(providerName, vol) =>
+      v.asInstanceOf[VolumeWithMount[ExternalVolume]]
+  }
+
   def namesOfMatchingVolumes(providerName: String, app: AppDefinition): Seq[String] =
-    app.externalVolumes
-      .withFilter(matchesProvider(providerName, _))
-      .withFilter(isForUniquenessCheck)
-      .map(_.external.name)
+    app.container
+      .map(_.volumes)
+      .getOrElse(Nil)
+      .iterator
+      .collect(externalVolumeWithMountPF(providerName))
+      .filter { vwm => isForUniquenessCheck(vwm.volume, vwm.mount) }
+      .map(_.volume.external.name)
+      .toSeq
 
   def namesOfMatchingVolumes(providerName: String, app: App): Seq[String] =
     app.container

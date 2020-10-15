@@ -59,7 +59,7 @@ private[externalvolume] case object CSIProvider extends ExternalVolumeProvider {
 }
 
 object CSIProviderValidations extends ExternalVolumeValidations with Validation {
-  override def rootGroup: Validator[RootGroup] = ValidationHelpers.validateUniqueVolumes(CSIProvider.name)
+  override def rootGroup: Validator[RootGroup] = ProviderValidationHelpers.validateUniqueVolumes(CSIProvider.name)
 
   private def scalingNotAllowedForUnsharedVolumes: Validator[AppDefinition] =
     validator[AppDefinition] { appDef =>
