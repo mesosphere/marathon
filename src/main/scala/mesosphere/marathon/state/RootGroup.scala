@@ -492,30 +492,18 @@ object RootGroup {
     }
 
   trait NewGroupStrategy {
-    def enforceRoleValue(id: AbsolutePathId): Option[Boolean]
-
     def newGroup(id: AbsolutePathId): Group
   }
 
   object NewGroupStrategy {
 
     object Fail extends NewGroupStrategy {
-      override def enforceRoleValue(id: AbsolutePathId): Option[Boolean] = None
-
       override def newGroup(id: AbsolutePathId): Group = throw new RuntimeException(s"No such group: ${id}")
     }
 
     case class UsingConfig(newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior) extends NewGroupStrategy {
-      override def enforceRoleValue(id: AbsolutePathId): Option[Boolean] = {
-        if (id.isTopLevel) {
-          newGroupEnforceRoleBehavior.option
-        } else {
-          None
-        }
-      }
-
       override def newGroup(id: AbsolutePathId): Group =
-        Group.empty(id, enforceRole = enforceRoleValue(id))
+        Group.empty(id, enforceRole = if (id.isTopLevel) newGroupEnforceRoleBehavior.option else None)
     }
   }
 }
