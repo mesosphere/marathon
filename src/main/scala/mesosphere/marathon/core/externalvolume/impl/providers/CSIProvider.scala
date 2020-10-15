@@ -63,12 +63,12 @@ object CSIProviderValidations extends ExternalVolumeValidations with Validation 
 
   private def scalingNotAllowedForUnsharedVolumes: Validator[AppDefinition] =
     validator[AppDefinition] { appDef =>
-      appDef.instances should withHint(WhileNonShareableCSIVolumesExistMessage, be == 1)
+      appDef.instances should withHint(WhileNonShareableCSIVolumesExistMessage, be <= 1)
     }
 
   private def scalingNotAllowedForReadWriteSingleWriterVolumes: Validator[AppDefinition] =
     validator[AppDefinition] { appDef =>
-      appDef.instances should withHint(WhileWritableSingleWriterVolumesExistMessage, be == 1)
+      appDef.instances should withHint(WhileWritableSingleWriterVolumesExistMessage, be <= 1)
     }
 
   override def app: Validator[AppDefinition] = { appDefinition =>
