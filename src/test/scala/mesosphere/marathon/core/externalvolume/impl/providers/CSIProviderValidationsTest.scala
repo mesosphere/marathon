@@ -34,11 +34,17 @@ class CSIProviderValidationsTest extends UnitTest with ValidationTestLike {
 
   val validator = AppDefinition.validAppDefinition(Set(Features.EXTERNAL_VOLUMES), ValidationHelper.roleSettings())(PluginManager.None)
 
+  "allows app to have 0 instances for non-multi access modes" in {
+    val app = newCsiAppDef(instances = 0, accessMode = CSIExternalVolumeInfo.AccessMode.SINGLE_NODE_WRITER)
+
+    validator(app) shouldBe aSuccess
+  }
+
   "prevent app from scaling up for non-multi access modes" in {
     val app = newCsiAppDef(instances = 2, accessMode = CSIExternalVolumeInfo.AccessMode.SINGLE_NODE_WRITER)
 
     validator(app) should haveViolations(
-      "/instances" -> ("got 2, expected 1 " + CSIProviderValidations.WhileNonShareableCSIVolumesExistMessage)
+      "/instances" -> ("got 2, expected 1 or less " + CSIProviderValidations.WhileNonShareableCSIVolumesExistMessage)
     )
   }
 
@@ -75,7 +81,7 @@ class CSIProviderValidationsTest extends UnitTest with ValidationTestLike {
     validator(scaledAppReadOnly) shouldBe aSuccess
 
     validator(scaledAppReadWrite) should haveViolations(
-      "/instances" -> ("got 2, expected 1 " + CSIProviderValidations.WhileWritableSingleWriterVolumesExistMessage)
+      "/instances" -> ("got 2, expected 1 or less " + CSIProviderValidations.WhileWritableSingleWriterVolumesExistMessage)
     )
   }
 
