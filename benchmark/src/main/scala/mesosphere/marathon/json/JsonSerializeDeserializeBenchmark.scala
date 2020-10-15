@@ -40,7 +40,7 @@ class JsonSerializeDeserializeState {
     val value: JsValue = Json.parse(jsonMockContents)
     val groupUpdate: raml.GroupUpdate = Json.fromJson[raml.GroupUpdate](value).get
 
-    val group: RootGroup = RootGroup()
+    val group: RootGroup = RootGroup.empty()
     val appConversionFunc: (raml.App => AppDefinition) = Raml.fromRaml[raml.App, AppDefinition]
 
     GroupConversion(groupUpdate, group, Timestamp.zero).apply(appConversionFunc)

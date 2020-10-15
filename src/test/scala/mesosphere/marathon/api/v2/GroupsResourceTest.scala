@@ -12,6 +12,7 @@ import mesosphere.marathon.core.appinfo._
 import mesosphere.marathon.core.group.GroupManager
 import mesosphere.marathon.raml.{App, GroupUpdate}
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.RootGroup.NewGroupStrategy
 import mesosphere.marathon.state._
 import mesosphere.marathon.storage.repository.GroupRepository
 import mesosphere.marathon.test.{GroupCreation, JerseyTest}
@@ -43,10 +44,11 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
   case class FixtureWithRealGroupManager(
       initialRoot: Group = Group.empty("/".toAbsolutePath),
       groupInfo: GroupInfoService = mock[GroupInfoService],
-      auth: TestAuthFixture = new TestAuthFixture
+      auth: TestAuthFixture = new TestAuthFixture,
+      newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior = NewGroupEnforceRoleBehavior.Top
   ) {
-    val config = AllConf.withTestConfig("--zk_timeout", "3000")
-    val initialRootGroup = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.fromConfig(config.newGroupEnforceRole()))
+    val config = AllConf.withTestConfig("--zk_timeout", "3000", "--new_group_enforce_role", newGroupEnforceRoleBehavior.name)
+    val initialRootGroup = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.UsingConfig(config.newGroupEnforceRole()))
     val f = new TestGroupManagerFixture(config = config, initialRoot = initialRootGroup)
     val groupRepository: GroupRepository = f.groupRepository
     val groupManager: GroupManager = f.groupManager
@@ -56,7 +58,12 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     implicit val authorizer = auth.auth
 
     val groupsResource: GroupsResource =
-      new GroupsResource(groupManager, groupInfo, config, new GroupApiService(groupManager))(auth.auth, auth.auth, mat, ctx)
+      new GroupsResource(
+        groupManager,
+        groupInfo,
+        config,
+        new GroupApiService(groupManager)
+      )(auth.auth, auth.auth, mat, ctx)
   }
 
   "GroupsResource" should {
@@ -320,7 +327,7 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     def groupPaths(rootGroup: RootGroup): Set[String] = {
       rootGroup.transitiveGroups().map(_._1.toString).toSet + rootGroup.id.toString
     }
-    "Creation of a top-level relative group path creates the group in the root" in {
+    "Creation of a top-level relative group path creates the group in the root with the appropriate default enforceRole" in {
       new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup()) {
         f.service.deploy(any, any).returns(Future(Done))
         When("creating a group without an absolute path")
@@ -332,9 +339,9 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
         }
         response.getStatus shouldBe 201
         val rootGroup = groupManager.rootGroup()
-        println(rootGroup)
         // Before MARATHON-8017 was fixed, the above post would create the group as /relative/relative
         groupPaths(rootGroup) shouldBe Set("/", "/relative")
+        rootGroup.group("/relative".toAbsolutePath).get.enforceRole shouldBe Some(true)
       }
     }
 
@@ -439,6 +446,48 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
       }
     }
 
+    "Allows group updates on the root group and respects enforceRole setting and default" in {
+      new FixtureWithRealGroupManager(
+        initialRoot = Builders.newRootGroup(),
+        newGroupEnforceRoleBehavior = NewGroupEnforceRoleBehavior.Top
+      ) {
+        val body = """
+        {
+          "groups": [
+            {
+              "id": "dev"
+            },
+            {
+              "id": "prod",
+              "enforceRole": true
+            },
+            {
+              "id": "public",
+              "enforceRole": false
+            }
+          ]
+        }"""
+        f.service.deploy(any, any).returns(Future(Done))
+
+        val response = asyncRequest { r =>
+          groupsResource.update("", false, false, body.getBytes, auth.request, r)
+        }
+        response.getStatus shouldBe 200
+
+        val rootGroup = groupManager.rootGroup()
+        rootGroup.group("/dev".toAbsolutePath).get.enforceRole shouldBe Some(
+          true
+        ) withClue ("/dev should default to enforceRole: true with NewGroupEnforceRoleBehavior")
+        rootGroup.group("/prod".toAbsolutePath).get.enforceRole shouldBe Some(
+          true
+        ) withClue ("/prod should set to enforceRole: true per the JSON")
+        rootGroup.group("/public".toAbsolutePath).get.enforceRole shouldBe Some(
+          false
+        ) withClue ("/public should set to enforceRole: false per the JSON")
+      }
+
+    }
+
     "Allow batch creation of a top-level group with enforce role and apps" in {
       new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup()) {
         val body =
@@ -475,9 +524,9 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
 
     "Fail a batch update when apps are modified and enforceRole is changed for an unrelated group" in {
       new FixtureWithRealGroupManager(
-        initialRoot = Group(
+        initialRoot = Builders.newGroup.withoutParentAutocreation(
           "/".toAbsolutePath,
-          groupsById = Map("/dev".toAbsolutePath -> Group(id = AbsolutePathId("/dev"), enforceRole = Some(false)))
+          groups = Seq(Group.empty(id = AbsolutePathId("/dev"), enforceRole = Some(false)))
         )
       ) {
         val body =
@@ -512,8 +561,8 @@ class GroupsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest
     }
 
     "allow an update to enforceRole when id is not specified" in {
-      val group = Group("/dev".toAbsolutePath, enforceRole = Some(false))
-      new FixtureWithRealGroupManager(initialRoot = RootGroup(groupsById = Map(group.id -> group))) {
+      val group = Group.empty("/dev".toAbsolutePath, enforceRole = Some(false))
+      new FixtureWithRealGroupManager(initialRoot = Builders.newRootGroup(groups = Seq(group))) {
         val body = """{"enforceRole": true}"""
         f.service.deploy(any, any).returns(Future(Done))
 

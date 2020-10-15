@@ -180,7 +180,7 @@ class AppsResourceTest extends AkkaUnitTest with JerseyTest {
 
     val config: AllConf = AllConf.withTestConfig(configArgs: _*)
     val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(
-      initialRoot = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.fromConfig(config.newGroupEnforceRole()))
+      initialRoot = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.UsingConfig(config.newGroupEnforceRole()))
     )
     val groupManager: GroupManager = groupManagerFixture.groupManager
     val groupRepository: GroupRepository = groupManagerFixture.groupRepository
@@ -2449,8 +2449,8 @@ class AppsResourceTest extends AkkaUnitTest with JerseyTest {
 
     "Create a new app inside a top-level group with enforceRole disabled but --new_group_enforce_role=top" in new FixtureWithRealGroupManager(
       configArgs = Seq("--new_group_enforce_role", "top"),
-      initialRoot =
-        Group(id = "/".toAbsolutePath, groupsById = Map("/dev".toAbsolutePath -> Group("/dev".toAbsolutePath, enforceRole = Some(false))))
+      initialRoot = Builders.newGroup
+        .withoutParentAutocreation(id = "/".toAbsolutePath, groups = Seq(Group.empty("/dev".toAbsolutePath, enforceRole = Some(false))))
     ) {
 
       service.deploy(any, any) returns Future.successful(Done)
@@ -2483,8 +2483,8 @@ class AppsResourceTest extends AkkaUnitTest with JerseyTest {
     }
 
     "Create a new app inside a sub-group for which enforceRole is enabled applies the proper group-role default" in new FixtureWithRealGroupManager(
-      initialRoot =
-        Group("/".toAbsolutePath, groupsById = Map("/dev".toAbsolutePath -> Group("/dev".toAbsolutePath, enforceRole = Some(true))))
+      initialRoot = Builders.newGroup
+        .withoutParentAutocreation("/".toAbsolutePath, groups = Seq(Group.empty("/dev".toAbsolutePath, enforceRole = Some(true))))
     ) {
       service.deploy(any, any) returns Future.successful(Done)
 
@@ -2513,8 +2513,8 @@ class AppsResourceTest extends AkkaUnitTest with JerseyTest {
     }
 
     "Create a new app inside a top-level group with enforceRole applies the proper group-role default" in new FixtureWithRealGroupManager(
-      initialRoot =
-        Group("/".toAbsolutePath, groupsById = Map("/dev".toAbsolutePath -> Group("/dev".toAbsolutePath, enforceRole = Some(true))))
+      initialRoot = Builders.newGroup
+        .withoutParentAutocreation("/".toAbsolutePath, groups = Seq(Group.empty("/dev".toAbsolutePath, enforceRole = Some(true))))
     ) {
       service.deploy(any, any) returns Future.successful(Done)
 

@@ -28,7 +28,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
     "Task reconciliation sends known running and staged tasks and empty list" in {
       val f = new Fixture
       val app = AppDefinition(id = AbsolutePathId("/myapp"), role = "*")
-      val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
+      val rootGroup: RootGroup = Builders.newRootGroup(apps = Seq(app))
       val runningInstance = TestInstanceBuilder.newBuilder(app.id).addTaskRunning().getInstance()
       val stagedInstance = TestInstanceBuilder.newBuilder(app.id).addTaskStaged().getInstance()
 
@@ -60,7 +60,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val f = new Fixture
 
       f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.empty)
-      f.groupRepo.root() returns Future.successful(RootGroup())
+      f.groupRepo.root() returns Future.successful(RootGroup.empty())
 
       f.scheduler.reconcileTasks(f.driver).futureValue
 
@@ -75,7 +75,7 @@ class SchedulerActionsTest extends AkkaUnitTest {
       val orphanedInstance = TestInstanceBuilder.newBuilder(orphanedApp.id).addTaskRunning().getInstance()
 
       f.instanceTracker.instancesBySpec() returns Future.successful(InstancesBySpec.forInstances(Seq(instance, orphanedInstance)))
-      val rootGroup: RootGroup = RootGroup(apps = Map((app.id, app)))
+      val rootGroup: RootGroup = Builders.newRootGroup(apps = Seq(app))
       f.groupRepo.root() returns Future.successful(rootGroup)
 
       f.scheduler.reconcileTasks(f.driver).futureValue(5.seconds)
