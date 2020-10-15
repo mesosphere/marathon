@@ -28,7 +28,7 @@ class GroupValidationTest extends UnitTest with ValidationTestLike {
     }
 
     "disallows changes to enforceRole if other services are modified with the request" in {
-      val originalGroup = RootGroup.empty().putGroup(Group(AbsolutePathId("/dev"), enforceRole = Some(false)))
+      val originalGroup = RootGroup.empty().putGroup(Group.empty(AbsolutePathId("/dev"), enforceRole = Some(false)))
       val groupValidator = Group.validNestedGroupUpdateWithBase(AbsolutePathId("/"), originalGroup, servicesGloballyModified = true)
 
       val update = raml.GroupUpdate(id = Some("/dev"), enforceRole = Some(true))
@@ -39,7 +39,7 @@ class GroupValidationTest extends UnitTest with ValidationTestLike {
     }
 
     "allows changes to enforceRole if other services are not modified with the request" in {
-      val originalGroup = RootGroup.empty().putGroup(Group(AbsolutePathId("/dev"), enforceRole = Some(false)))
+      val originalGroup = RootGroup.empty().putGroup(Group.empty(AbsolutePathId("/dev"), enforceRole = Some(false)))
       val groupValidator = Group.validNestedGroupUpdateWithBase(AbsolutePathId("/"), originalGroup, servicesGloballyModified = false)
 
       val update = raml.GroupUpdate(id = Some("/dev"), enforceRole = Some(true))

@@ -216,7 +216,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
     "enforceRole property is propagated to task environment for pods" in {
       val f = new Fixture
-      f.rootGroup = f.rootGroup.putGroup(Group(AbsolutePathId("/dev"), enforceRole = Some(true)))
+      f.rootGroup = f.rootGroup.putGroup(Group.empty(AbsolutePathId("/dev"), enforceRole = Some(true)))
       val podId = AbsolutePathId("/dev/testing")
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(podId, f.clock.now()).getInstance()
@@ -245,7 +245,7 @@ class InstanceOpFactoryImplTest extends UnitTest with Inside {
 
     "enforceRole property is propagated to task environment for apps" in {
       val f = new Fixture
-      f.rootGroup = f.rootGroup.putGroup(Group(AbsolutePathId("/dev"), enforceRole = Some(true)))
+      f.rootGroup = f.rootGroup.putGroup(Group.empty(AbsolutePathId("/dev"), enforceRole = Some(true)))
       val appId = AbsolutePathId("/dev/testing")
       val offer = MarathonTestHelper.makeBasicOffer().build()
       val instance = TestInstanceBuilder.newBuilderWithLaunchedTask(appId, f.clock.now()).getInstance()

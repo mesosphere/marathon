@@ -11,6 +11,7 @@ import mesosphere.marathon.core.group.GroupManagerModule
 import mesosphere.marathon.core.storage.store.impl.memory.InMemoryPersistenceStore
 import mesosphere.marathon.metrics.dummy.DummyMetrics
 import mesosphere.marathon.state.RootGroup
+import mesosphere.marathon.state.RootGroup.NewGroupStrategy
 import mesosphere.marathon.storage.repository.{AppRepository, GroupRepository, InstanceRepository, PodRepository}
 import mesosphere.marathon.test.Mockito
 

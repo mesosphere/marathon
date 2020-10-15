@@ -11,6 +11,7 @@ import mesosphere.marathon.raml.{App, GroupUpdate, Network, NetworkMode}
 import mesosphere.marathon.state._
 import mesosphere.marathon.test.GroupCreation
 import mesosphere.marathon.state.PathId._
+import mesosphere.marathon.state.RootGroup.NewGroupStrategy
 import org.scalatest.Inside
 
 import scala.collection.immutable.Seq
