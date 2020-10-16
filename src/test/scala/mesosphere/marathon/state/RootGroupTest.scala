@@ -12,7 +12,7 @@ import mesosphere.marathon.test.GroupCreation
 
 class RootGroupTest extends UnitTest with GroupCreation {
   val emptyConfig = AllConf.withTestConfig()
-  val emptyRootGroup = RootGroup.empty(newGroupStrategy = RootGroup.NewGroupStrategy.fromConfig(NewGroupEnforceRoleBehavior.Off))
+  val emptyRootGroup = RootGroup.empty(newGroupStrategy = RootGroup.NewGroupStrategy.UsingConfig(NewGroupEnforceRoleBehavior.Off))
 
   "A Group" should {
 
@@ -20,17 +20,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("an existing group with two subgroups")
       val app1 = AppDefinition(AbsolutePathId("/test/group1/app1"), role = "*", cmd = Some("sleep"))
       val app2 = AppDefinition(AbsolutePathId("/test/group2/app2"), role = "*", cmd = Some("sleep"))
-      val current = createRootGroup(
-        groups = Set(
-          createGroup(
-            "/test".toAbsolutePath,
-            groups = Set(
-              createGroup("/test/group1".toAbsolutePath, Map(app1.id -> app1)),
-              createGroup("/test/group2".toAbsolutePath, Map(app2.id -> app2))
-            )
-          )
-        )
-      )
+      val current = Builders.newRootGroup(apps = Seq(app1, app2))
 
       When("an app with a specific path is requested")
       val path = AbsolutePathId("/test/group1/app1")
@@ -42,7 +32,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
     "find an app without a parent" in {
       Given("an existing root group with an app without a parent")
       val app = AppDefinition(AbsolutePathId("/app"), role = "*", cmd = Some("sleep"))
-      val current = createRootGroup(apps = Map(app.id -> app))
+      val current = Builders.newRootGroup(apps = Seq(app))
 
       When("an app with a specific path is requested")
       val path = AbsolutePathId("/app")
@@ -55,17 +45,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("an existing group with two subgroups")
       val app1 = AppDefinition(AbsolutePathId("/test/group1/app1"), role = "*", cmd = Some("sleep"))
       val app2 = AppDefinition(AbsolutePathId("/test/group2/app2"), role = "*", cmd = Some("sleep"))
-      val current = createRootGroup(
-        groups = Set(
-          createGroup(
-            "/test".toAbsolutePath,
-            groups = Set(
-              createGroup("/test/group1".toAbsolutePath, Map(app1.id -> app1)),
-              createGroup("/test/group2".toAbsolutePath, Map(app2.id -> app2))
-            )
-          )
-        )
-      )
+      val current = Builders.newRootGroup(apps = Seq(app1, app2))
 
       When("a group with a specific path is requested")
       val path = AbsolutePathId("/test/group1/unknown")
@@ -78,17 +58,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("an existing group with two subgroups")
       val app1 = AppDefinition(AbsolutePathId("/test/group1/app1"), role = "*", cmd = Some("sleep"))
       val app2 = AppDefinition(AbsolutePathId("/test/group2/app2"), role = "*", cmd = Some("sleep"))
-      val current = createRootGroup(
-        groups = Set(
-          createGroup(
-            "/test".toAbsolutePath,
-            groups = Set(
-              createGroup("/test/group1".toAbsolutePath, Map(app1.id -> app1)),
-              createGroup("/test/group2".toAbsolutePath, Map(app2.id -> app2))
-            )
-          )
-        )
-      )
+      val current = Builders.newRootGroup(apps = Seq(app1, app2))
 
       When("a group with a specific path is requested")
       val path = AbsolutePathId("/test/group1")
@@ -101,17 +71,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("an existing group with two subgroups")
       val app1 = AppDefinition(AbsolutePathId("/test/group1/app1"), role = "*", cmd = Some("sleep"))
       val app2 = AppDefinition(AbsolutePathId("/test/group2/app2"), role = "*", cmd = Some("sleep"))
-      val current = createRootGroup(
-        groups = Set(
-          createGroup(
-            "/test".toAbsolutePath,
-            groups = Set(
-              createGroup("/test/group1".toAbsolutePath, Map(app1.id -> app1)),
-              createGroup("/test/group2".toAbsolutePath, Map(app2.id -> app2))
-            )
-          )
-        )
-      )
+      val current = Builders.newRootGroup(apps = Seq(app1, app2))
 
       When("a group with a specific path is requested")
       val path = AbsolutePathId("/test/unknown")
@@ -122,7 +82,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
     "can delete a node based in the path" in {
       Given("an existing group with two subgroups")
-      val current = createRootGroup().makeGroup("/test/foo/one".toAbsolutePath).makeGroup("/test/bla/two".toAbsolutePath)
+      val current = Builders.newRootGroup(groupIds = Seq("/test/foo/one".toAbsolutePath, "/test/bla/two".toAbsolutePath))
 
       When("a node will be deleted based on path")
       val rootGroup = current.removeGroup("/test/foo".toAbsolutePath)
@@ -136,17 +96,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("a group with subgroups")
       val app1 = AppDefinition(AbsolutePathId("/test/group1/app1"), role = "*", cmd = Some("sleep"))
       val app2 = AppDefinition(AbsolutePathId("/test/group2/app2"), role = "*", cmd = Some("sleep"))
-      val current = createRootGroup(
-        groups = Set(
-          createGroup(
-            "/test".toAbsolutePath,
-            groups = Set(
-              createGroup("/test/group1".toAbsolutePath, Map(app1.id -> app1)),
-              createGroup("/test/group2".toAbsolutePath, Map(app2.id -> app2))
-            )
-          )
-        )
-      )
+      val current = Builders.newRootGroup(apps = Seq(app1, app2))
 
       When("a non existing path is requested")
       val path = AbsolutePathId("/test/group3/group4/group5")
@@ -177,9 +127,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
       Given("an existing group /some/nested which does not directly or indirectly contain apps")
       val current =
-        createRootGroup()
-          .makeGroup("/some/nested/path".toAbsolutePath)
-          .makeGroup("/some/nested/path2".toAbsolutePath)
+        Builders.newRootGroup(groupIds = Seq("/some/nested/path".toAbsolutePath, "/some/nested/path2".toAbsolutePath))
 
       current.transitiveGroupsById.keys.map(_.toString) should be(
         Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2")
@@ -203,14 +151,10 @@ class RootGroupTest extends UnitTest with GroupCreation {
     "cannot replace a group with apps by an app definition" in {
       Given("an existing group /some/nested which does contain an app")
       val current =
-        createRootGroup()
-          .makeGroup("/some/nested/path".toAbsolutePath)
-          .makeGroup("/some/nested/path2".toAbsolutePath)
-          .updateApp(
-            AbsolutePathId("/some/nested/path2/app"),
-            _ => AppDefinition(AbsolutePathId("/some/nested/path2/app"), role = "*", cmd = Some("true")),
-            Timestamp.now()
-          )
+        Builders.newRootGroup(
+          groupIds = Seq("/some/nested/path".toAbsolutePath, "/some/nested/path2".toAbsolutePath),
+          apps = Seq(AppDefinition(AbsolutePathId("/some/nested/path2/app"), role = "*", cmd = Some("true")))
+        )
 
       current.transitiveGroupsById.keys.map(_.toString) should be(
         Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2")
@@ -238,14 +182,10 @@ class RootGroupTest extends UnitTest with GroupCreation {
     "cannot replace a group with pods by an app definition" in {
       Given("an existing group /some/nested which does contain an pod")
       val current =
-        createRootGroup()
-          .makeGroup("/some/nested/path".toAbsolutePath)
-          .makeGroup("/some/nested/path2".toAbsolutePath)
-          .updatePod(
-            AbsolutePathId("/some/nested/path2/pod"),
-            _ => PodDefinition(id = AbsolutePathId("/some/nested/path2/pod"), role = "*"),
-            Timestamp.now()
-          )
+        Builders.newRootGroup(
+          groupIds = Seq("/some/nested/path".toAbsolutePath, "/some/nested/path2".toAbsolutePath),
+          pods = Seq(PodDefinition(id = AbsolutePathId("/some/nested/path2/pod"), role = "*"))
+        )
 
       current.transitiveGroupsById.keys.map(_.toString) should be(
         Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2")
@@ -274,14 +214,10 @@ class RootGroupTest extends UnitTest with GroupCreation {
     "cannot replace a group with pods by an pod definition" in {
       Given("an existing group /some/nested which does contain an pod")
       val current =
-        createRootGroup()
-          .makeGroup("/some/nested/path".toAbsolutePath)
-          .makeGroup("/some/nested/path2".toAbsolutePath)
-          .updatePod(
-            AbsolutePathId("/some/nested/path2/pod"),
-            _ => PodDefinition(id = AbsolutePathId("/some/nested/path2/pod"), role = "*"),
-            Timestamp.now()
-          )
+        Builders.newRootGroup(
+          groupIds = Seq("/some/nested/path".toAbsolutePath, "/some/nested/path2".toAbsolutePath),
+          pods = Seq(PodDefinition(id = AbsolutePathId("/some/nested/path2/pod"), role = "*"))
+        )
 
       current.transitiveGroupsById.keys.map(_.toString) should be(
         Set("/", "/some", "/some/nested", "/some/nested/path", "/some/nested/path2")
@@ -656,11 +592,10 @@ class RootGroupTest extends UnitTest with GroupCreation {
     "Group with app in wrong group is not valid" in {
       Given("Group with nested app of wrong path")
       val app = AppDefinition(AbsolutePathId("/root"), role = "*", cmd = Some("test"))
-      val invalid = createRootGroup(
-        groups = Set(
-          createGroup(AbsolutePathId("nested"), apps = Map(app.id -> app), validate = false)
-        ),
-        validate = false
+      val invalid = Builders.newRootGroup.withoutParentAutocreation(
+        groups = Seq(
+          Builders.newGroup.withoutParentAutocreation(AbsolutePathId("nested"), apps = Seq(app))
+        )
       )
 
       When("group is validated")
@@ -672,17 +607,13 @@ class RootGroupTest extends UnitTest with GroupCreation {
 
     "Group with group in wrong group is not valid" in {
       Given("Group with nested app of wrong path")
-      val invalid = createRootGroup(
-        groups = Set(
-          createGroup(
+      val invalid = Builders.newRootGroup.withoutParentAutocreation(
+        groups = Seq(
+          Builders.newGroup.withoutParentAutocreation(
             AbsolutePathId("nested"),
-            groups = Set(
-              createGroup(AbsolutePathId("/root"), validate = false)
-            ),
-            validate = false
+            groups = Seq(Builders.newGroup.withoutParentAutocreation(AbsolutePathId("/root")))
           )
-        ),
-        validate = false
+        )
       )
 
       When("group is validated")
@@ -695,7 +626,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
     "Root Group with app in wrong group is not valid (Regression for #4901)" in {
       Given("Group with nested app of wrong path")
       val app = AppDefinition(AbsolutePathId("/foo/bla"), role = "*", cmd = Some("test"))
-      val invalid = RootGroup(apps = Map(app.id -> app))
+      val invalid = Builders.newRootGroup.withoutParentAutocreation(apps = Seq(app))
 
       When("group is validated")
       val invalidResult = validate(invalid)(RootGroup.validRootGroup(emptyConfig))
@@ -708,7 +639,7 @@ class RootGroupTest extends UnitTest with GroupCreation {
       Given("Group with nested app of correct path")
       val app = AppDefinition(AbsolutePathId("/nested/foo"), role = "*", cmd = Some("test"))
       val valid =
-        RootGroup(groupsById = Map(AbsolutePathId("/nested") -> createGroup(AbsolutePathId("/nested"), apps = Map(app.id -> app))))
+        Builders.newRootGroup(groups = Seq(Builders.newGroup.withoutParentAutocreation(AbsolutePathId("/nested"), apps = Seq(app))))
 
       When("group is validated")
       val validResult = validate(valid)(RootGroup.validRootGroup(emptyConfig))

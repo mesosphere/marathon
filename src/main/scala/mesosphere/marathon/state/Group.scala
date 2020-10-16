@@ -10,11 +10,10 @@ import com.wix.accord.dsl._
 import mesosphere.marathon.api.v2.Validation._
 import mesosphere.marathon.api.v2.validation.AppValidation
 import mesosphere.marathon.core.pod.PodDefinition
-import mesosphere.marathon.state.Group.{defaultApps, defaultDependencies, defaultGroups, defaultPods, defaultVersion}
 import mesosphere.marathon.state.PathId.{StringPathId, validPathWithBase}
 import mesosphere.util.summarize
 
-class Group(
+class Group protected (
     val id: AbsolutePathId,
     val apps: Map[AbsolutePathId, AppDefinition],
     val pods: Map[AbsolutePathId, PodDefinition],
@@ -200,24 +199,20 @@ object Group extends StrictLogging {
 
   def apply(
       id: AbsolutePathId,
-      apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
-      pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
-      groupsById: Map[AbsolutePathId, Group] = Group.defaultGroups,
-      dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
-      version: Timestamp = Group.defaultVersion,
-      enforceRole: Option[Boolean] = None
+      apps: Map[AbsolutePathId, AppDefinition],
+      pods: Map[AbsolutePathId, PodDefinition],
+      groupsById: Map[AbsolutePathId, Group],
+      dependencies: Set[AbsolutePathId],
+      version: Timestamp,
+      enforceRole: Option[Boolean]
   ): Group = {
     val enforceRoleBehaviour = if (id.isTopLevel) enforceRole.orElse(Some(false)) else None
     new Group(id, apps, pods, groupsById, dependencies, version, enforceRoleBehaviour)
   }
 
   def empty(id: AbsolutePathId, enforceRole: Option[Boolean] = None, version: Timestamp = Timestamp(0)): Group =
-    Group(id = id, version = version, enforceRole = enforceRole)
+    Group(id, Map.empty, Map.empty, Map.empty, Set.empty, version = version, enforceRole = enforceRole)
 
-  val defaultApps = Map.empty[AbsolutePathId, AppDefinition]
-  val defaultPods = Map.empty[AbsolutePathId, PodDefinition]
-  val defaultGroups = Map.empty[AbsolutePathId, Group]
-  val defaultDependencies = Set.empty[AbsolutePathId]
   val defaultVersion = Timestamp.now()
 
   def validGroup(base: AbsolutePathId, config: MarathonConf): Validator[Group] =
