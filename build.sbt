@@ -1,10 +1,8 @@
 import com.amazonaws.auth.DefaultAWSCredentialsProviderChain
 import com.typesafe.sbt.SbtNativePackager.autoImport.NativePackagerHelper.directory
-import com.typesafe.sbt.SbtScalariform.ScalariformKeys
 import mesosphere.maven.MavenSettings.{loadM2Credentials, loadM2Resolvers}
 import mesosphere.raml.RamlGeneratorPlugin
 import sbtprotobuf.ProtobufPlugin
-import scalariform.formatter.preferences._
 
 credentials ++= loadM2Credentials(streams.value.log)
 resolvers ++= loadM2Resolvers(sLog.value)
@@ -17,15 +15,6 @@ addCompilerPlugin(scalafixSemanticdb)
 val silencerVersion = "1.1"
 addCompilerPlugin("com.github.ghik" %% "silencer-plugin" % silencerVersion)
 libraryDependencies += "com.github.ghik" %% "silencer-lib" % silencerVersion % Provided
-
-lazy val formatSettings = Seq(
-  ScalariformKeys.preferences := FormattingPreferences()
-    .setPreference(DanglingCloseParenthesis, Preserve)
-    .setPreference(DoubleIndentConstructorArguments, true)
-    .setPreference(PlaceScaladocAsterisksBeneathSecondAsterisk, true)
-    .setPreference(PreserveSpaceBeforeArguments, true)
-    .setPreference(SpacesAroundMultiImports, false)
-)
 
 // Pass arguments to Scalatest runner:
 // http://www.scalatest.org/user_guide/using_the_runner
@@ -179,7 +168,6 @@ lazy val `plugin-interface` = (project in file("plugin-interface"))
   .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
   .settings(testSettings: _*)
   .settings(commonSettings: _*)
-  .settings(formatSettings: _*)
   .settings(
     version := {
       import sys.process._
@@ -195,7 +183,6 @@ lazy val marathon = (project in file("."))
   .settings(pbSettings)
   .settings(testSettings: _*)
   .settings(commonSettings: _*)
-  .settings(formatSettings: _*)
   .settings(packagingSettings: _*)
   .settings(
     version := {
@@ -215,7 +202,6 @@ lazy val marathon = (project in file("."))
 
 lazy val ammonite = (project in file("./tools/repl-server"))
   .settings(commonSettings: _*)
-  .settings(formatSettings: _*)
   .settings(
     mainClass in Compile := Some("ammoniterepl.Main"),
     libraryDependencies += "com.lihaoyi" % "ammonite-sshd" % "2.2.0" cross CrossVersion.full
@@ -226,7 +212,6 @@ lazy val integration = (project in file("./tests/integration"))
   .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
   .settings(integrationTestSettings: _*)
   .settings(commonSettings: _*)
-  .settings(formatSettings: _*)
   .settings(
     cleanFiles += baseDirectory { base => base / "sandboxes" }.value
   )
@@ -236,7 +221,6 @@ lazy val `mesos-simulation` = (project in file("mesos-simulation"))
   .enablePlugins(GitBranchPrompt, BasicLintingPlugin)
   .settings(testSettings: _*)
   .settings(commonSettings: _*)
-  .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")
   .settings(
     name := "mesos-simulation"
@@ -247,7 +231,6 @@ lazy val benchmark = (project in file("benchmark"))
   .enablePlugins(JmhPlugin, GitBranchPrompt, BasicLintingPlugin)
   .settings(testSettings: _*)
   .settings(commonSettings: _*)
-  .settings(formatSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")
   .settings(
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit),
