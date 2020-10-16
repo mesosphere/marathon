@@ -94,16 +94,6 @@ class AppDefinitionTest extends UnitTest {
       read should be(app)
     }
 
-    "resourceLimits to proto and back again" in {
-      val app = Builders.newAppDefinition(
-        runSpecId,
-        resourceLimits = Some(ResourceLimits(cpus = Some(Double.PositiveInfinity), mem = Some(1024.0)))
-      )
-
-      val read = AppDefinition(id = runSpecId, role = "*").mergeFromProto(app.toProto)
-      read should be(app)
-    }
-
     "ARGS to proto and back again" in {
       val app = AppDefinition(
         id = AbsolutePathId("/play"),
