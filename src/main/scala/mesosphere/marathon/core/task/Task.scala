@@ -419,6 +419,12 @@ object Task {
       * @return the health status reported by mesos for this task
       */
     def healthy: Option[Boolean] = mesosStatus.withFilter(_.hasHealthy).map(_.getHealthy)
+
+    override def toString(): String = {
+      s"""Status(stagedAt: ${stagedAt}, startedAt: ${startedAt}, mesosStatus: ${mesosStatus
+        .map(Status.safeTaskStatusToString)
+        .getOrElse("")}, condition: ${condition}, networkInfo: ${networkInfo})"""
+    }
   }
 
   object Status {
@@ -434,6 +440,17 @@ object Task {
       }
     }
     implicit val statusFormat = Json.format[Status]
+
+    /**
+      * Mesos sends sensitive environment variable data in the TaskStatus.data field which can leak secrets if logged
+      * inappropriately. Use this method to safely log
+      *
+      * @param taskStatus
+      * @return
+      */
+    def safeTaskStatusToString(taskStatus: MesosProtos.TaskStatus): String = {
+      s"""TaskStatus(id: ${taskStatus.getTaskId.getValue}, healthy: ${taskStatus.getHealthy}, state: ${taskStatus.getState}, checkStatus: ${taskStatus.getCheckStatus})"""
+    }
   }
 
   object Terminated {
