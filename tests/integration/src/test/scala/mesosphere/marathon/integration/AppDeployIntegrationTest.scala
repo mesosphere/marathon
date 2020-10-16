@@ -8,7 +8,21 @@ import com.mesosphere.utils.http.RestResult
 import mesosphere.marathon.integration.facades.MarathonFacade._
 import mesosphere.marathon.integration.facades.{AppMockFacade, ITDeployment, ITEnrichedTask, ITQueueItem}
 import mesosphere.marathon.integration.setup._
-import mesosphere.marathon.raml.{App, AppCommandCheck, AppHealthCheck, AppHealthCheckProtocol, AppUpdate, Container, ContainerPortMapping, DockerContainer, EngineType, Network, NetworkMode, NetworkProtocol, UpgradeStrategy}
+import mesosphere.marathon.raml.{
+  App,
+  AppCommandCheck,
+  AppHealthCheck,
+  AppHealthCheckProtocol,
+  AppUpdate,
+  Container,
+  ContainerPortMapping,
+  DockerContainer,
+  EngineType,
+  Network,
+  NetworkMode,
+  NetworkProtocol,
+  UpgradeStrategy
+}
 import mesosphere.marathon.state.{AbsolutePathId, Timestamp}
 import mesosphere.{AkkaIntegrationTest, WaitTestSupport}
 
@@ -150,10 +164,11 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
     }
 
     def createAFailingApp(
-      id: AbsolutePathId,
-      failingCmd: Option[String],
-      backoffSeconds: FiniteDuration,
-      maxLaunchDelaySeconds: FiniteDuration): App = {
+        id: AbsolutePathId,
+        failingCmd: Option[String],
+        backoffSeconds: FiniteDuration,
+        maxLaunchDelaySeconds: FiniteDuration
+    ): App = {
       val app =
         appProxy(id, "v1", instances = 1, healthCheck = None)
           .copy(
@@ -201,8 +216,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with a Marathon HTTP health check" in {
       Given("a new app")
-      val app = appProxy(appId(Some("with-marathon-http-health-check")), "v1", instances = 1, healthCheck = None).
-        copy(healthChecks = Set(ramlHealthCheck))
+      val app = appProxy(appId(Some("with-marathon-http-health-check")), "v1", instances = 1, healthCheck = None)
+        .copy(healthChecks = Set(ramlHealthCheck))
       val check = registerAppProxyHealthCheck(AbsolutePathId(app.id), "v1", state = true)
 
       When("The app is deployed")
@@ -220,8 +235,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with a Mesos HTTP health check" in {
       Given("a new app")
-      val app = appProxy(appId(Some("with-mesos-http-health-check")), "v1", instances = 1, healthCheck = None).
-        copy(healthChecks = Set(ramlHealthCheck.copy(protocol = AppHealthCheckProtocol.MesosHttp)))
+      val app = appProxy(appId(Some("with-mesos-http-health-check")), "v1", instances = 1, healthCheck = None)
+        .copy(healthChecks = Set(ramlHealthCheck.copy(protocol = AppHealthCheckProtocol.MesosHttp)))
       val check = registerAppProxyHealthCheck(AbsolutePathId(app.id), "v1", state = true)
 
       When("The app is deployed")
@@ -243,12 +258,11 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       And("a new app")
       val port = mesosCluster.randomAgentPort()
-      val app = appProxy(appId(Some("with-marathon-http-health-check-using-port")), "v1", instances = 1, healthCheck = None).
-        copy(
-          portDefinitions = Option(raml.PortDefinitions(port)),
-          requirePorts = true,
-          healthChecks = Set(ramlHealthCheck.copy(port = Some(port), portIndex = None))
-        )
+      val app = appProxy(appId(Some("with-marathon-http-health-check-using-port")), "v1", instances = 1, healthCheck = None).copy(
+        portDefinitions = Option(raml.PortDefinitions(port)),
+        requirePorts = true,
+        healthChecks = Set(ramlHealthCheck.copy(port = Some(port), portIndex = None))
+      )
       val check = registerAppProxyHealthCheck(AbsolutePathId(app.id), "v1", state = true)
 
       When("The app is deployed")
@@ -266,8 +280,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with a Marathon TCP health check" in {
       Given("a new app")
-      val app = appProxy(appId(Some("with-marathon-tcp-health-check")), "v1", instances = 1, healthCheck = None).
-        copy(healthChecks = Set(ramlHealthCheck.copy(protocol = AppHealthCheckProtocol.Tcp)))
+      val app = appProxy(appId(Some("with-marathon-tcp-health-check")), "v1", instances = 1, healthCheck = None)
+        .copy(healthChecks = Set(ramlHealthCheck.copy(protocol = AppHealthCheckProtocol.Tcp)))
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -280,8 +294,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with a Mesos TCP health check" in {
       Given("a new app")
-      val app = appProxy(appId(Some("with-mesos-tcp-health-check")), "v1", instances = 1, healthCheck = None).
-        copy(healthChecks = Set(ramlHealthCheck.copy(protocol = AppHealthCheckProtocol.Tcp)))
+      val app = appProxy(appId(Some("with-mesos-tcp-health-check")), "v1", instances = 1, healthCheck = None)
+        .copy(healthChecks = Set(ramlHealthCheck.copy(protocol = AppHealthCheckProtocol.Tcp)))
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -294,10 +308,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with a COMMAND health check" in {
       Given("a new app")
-      val app = appProxy(appId(Some("with-command-health-check")), "v1", instances = 1, healthCheck = None).
-        copy(healthChecks = Set(AppHealthCheck(
-          protocol = AppHealthCheckProtocol.Command,
-          command = Some(AppCommandCheck("true")))))
+      val app = appProxy(appId(Some("with-command-health-check")), "v1", instances = 1, healthCheck = None)
+        .copy(healthChecks = Set(AppHealthCheck(protocol = AppHealthCheckProtocol.Command, command = Some(AppCommandCheck("true")))))
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -344,10 +356,11 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       And("a number of failed health events but the deployment does not succeed")
 
-      def interestingEvent() = waitForEventMatching("failed_health_check_event or deployment_success")(callbackEvent =>
-        callbackEvent.eventType == "deployment_success" ||
-          callbackEvent.eventType == "failed_health_check_event"
-      )
+      def interestingEvent() =
+        waitForEventMatching("failed_health_check_event or deployment_success")(callbackEvent =>
+          callbackEvent.eventType == "deployment_success" ||
+            callbackEvent.eventType == "failed_health_check_event"
+        )
 
       for (event <- Iterator.continually(interestingEvent()).take(10)) {
         event.eventType should be("failed_health_check_event")
@@ -375,10 +388,11 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       And("a number of failed health events but the deployment does not succeed")
 
-      def interestingEvent() = waitForEventMatching("failed_health_check_event or deployment_success")(callbackEvent =>
-        callbackEvent.eventType == "deployment_success" ||
-          callbackEvent.eventType == "failed_health_check_event"
-      )
+      def interestingEvent() =
+        waitForEventMatching("failed_health_check_event or deployment_success")(callbackEvent =>
+          callbackEvent.eventType == "deployment_success" ||
+            callbackEvent.eventType == "failed_health_check_event"
+        )
 
       for (event <- Iterator.continually(interestingEvent()).take(10)) {
         event.eventType should be("failed_health_check_event")
@@ -651,8 +665,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       eventually {
         val tasks = marathon.tasks(appIdPath).value
         tasks.size shouldBe 2
-        tasks.foreach {
-          et => AppMockFacade(et).ping()
+        tasks.foreach { et =>
+          AppMockFacade(et).ping()
         }
       }
     }
@@ -711,9 +725,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
       Then("old deployment should be canceled and rollback-deployment succeed")
       // Both deployment events may come out of order
-      val waitingFor = Map[String, CallbackEvent => Boolean](
-        "deployment_failed" -> (_.id == deploymentId),
-        "deployment_success" -> (_.id == rollbackId))
+      val waitingFor =
+        Map[String, CallbackEvent => Boolean]("deployment_failed" -> (_.id == deploymentId), "deployment_success" -> (_.id == rollbackId))
       waitForEventsWith(s"waiting for canceled $deploymentId and successful $rollbackId", waitingFor)
 
       Then("no more deployment in the queue")
@@ -861,15 +874,21 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       val app = App(
         id = id.toString,
         cmd = Some("cmd"),
-        container = Some(Container(
-          `type` = EngineType.Docker,
-          docker = Some(DockerContainer(
-            image = "jdef/helpme"
-          )),
-          portMappings = Option(Seq(
-            ContainerPortMapping(containerPort = 3000, protocol = NetworkProtocol.Tcp)
-          ))
-        )),
+        container = Some(
+          Container(
+            `type` = EngineType.Docker,
+            docker = Some(
+              DockerContainer(
+                image = "jdef/helpme"
+              )
+            ),
+            portMappings = Option(
+              Seq(
+                ContainerPortMapping(containerPort = 3000, protocol = NetworkProtocol.Tcp)
+              )
+            )
+          )
+        ),
         instances = 0,
         networks = Seq(Network(mode = NetworkMode.ContainerBridge))
       )
@@ -883,14 +902,23 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
       waitForDeployment(result)
 
       // change port from 3000 to 4000
-      val appUpdate = AppUpdate(container = Some(raml.Container(
-        EngineType.Docker,
-        docker = Some(raml.DockerContainer(
-          image = "jdef/helpme"
-        )), portMappings = Option(Seq(
-          ContainerPortMapping(containerPort = 4000, protocol = NetworkProtocol.Tcp)
-        ))
-      )))
+      val appUpdate = AppUpdate(container =
+        Some(
+          raml.Container(
+            EngineType.Docker,
+            docker = Some(
+              raml.DockerContainer(
+                image = "jdef/helpme"
+              )
+            ),
+            portMappings = Option(
+              Seq(
+                ContainerPortMapping(containerPort = 4000, protocol = NetworkProtocol.Tcp)
+              )
+            )
+          )
+        )
+      )
 
       val updateResult = marathon.updateApp(id, appUpdate, force = true)
 
@@ -906,7 +934,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with tty configured should succeed" in {
       Given("a new app")
-      val app = appProxy(appId(Some("with-tty-configured-should-succeed")), "v1", instances = 1, healthCheck = None).copy(tty = Some(true), cmd = Some("if [ -t 0 ] ; then sleep 100; else exit 1; fi"))
+      val app = appProxy(appId(Some("with-tty-configured-should-succeed")), "v1", instances = 1, healthCheck = None)
+        .copy(tty = Some(true), cmd = Some("if [ -t 0 ] ; then sleep 100; else exit 1; fi"))
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)
@@ -920,7 +949,8 @@ class AppDeployIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathon
 
     "create a simple app with tty configured should fail" in {
       Given("a new app")
-      val app = appProxy(appId(Some("with-tty-configured-should-fail")), "v1", instances = 1, healthCheck = None).copy(cmd = Some("if [ -t 0 ] ; then sleep 100; else exit 1; fi"))
+      val app = appProxy(appId(Some("with-tty-configured-should-fail")), "v1", instances = 1, healthCheck = None)
+        .copy(cmd = Some("if [ -t 0 ] ; then sleep 100; else exit 1; fi"))
 
       When("The app is deployed")
       val result = marathon.createAppV2(app)

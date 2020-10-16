@@ -15,13 +15,17 @@ class EventsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
   "Filter events" should {
     "receive only app deployment event" in {
       Given("a new event source without filter is connected")
-      val allEvents = marathon.events().futureValue
+      val allEvents = marathon
+        .events()
+        .futureValue
         .map(_.eventType)
         .takeWhile(_ != "deployment_success", inclusive = true)
         .runWith(Sink.seq)
 
       Given("a new event source with filter is connected")
-      val filteredEvent: Future[String] = marathon.events(Seq("deployment_success")).futureValue
+      val filteredEvent: Future[String] = marathon
+        .events(Seq("deployment_success"))
+        .futureValue
         .map(_.eventType)
         .runWith(Sink.head)
 
@@ -43,7 +47,9 @@ class EventsIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonTes
   "Subscribe to events" should {
     "always receive only small events" in {
       Given("a new event source is connected")
-      val events = marathon.events().futureValue
+      val events = marathon
+        .events()
+        .futureValue
         .takeWhile(_.eventType != "deployment_success", inclusive = true)
         .runWith(Sink.seq)
 

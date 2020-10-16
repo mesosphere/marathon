@@ -56,26 +56,28 @@ object JsonFormatBenchmark {
       role = Some("someRole"),
       env = 0.to(numEnvVars).map(i => ("KEY_" * 10) + i -> EnvVarValue(("VALUE_" * 10) + i)).toMap,
       labels = 0.to(numLabels).map(i => ("KEY_" * 10) + i -> (("VALUE_" * 10) + i)).toMap,
-      tasks = Some(Seq(
-        raml.Task(
-          appId.toString,
-          healthCheckResults = Seq.empty,
-          checkResult = None,
-          host = "mesos-slave-i-039b610609702bc8a.mesos-dev.us-east-1e.example.com",
-          id = "benchmark_app_definition.2e251a11-af74-11e7-8e35-12ebe3d150b4",
-          ipAddresses = Seq.empty,
-          ports = Seq(3000),
-          servicePorts = Seq(),
-          slaveId = None,
-          state = MesosTaskState.TaskRunning,
-          stagedAt = Some(Timestamp.now().toString),
-          startedAt = Some(Timestamp.now().toString),
-          version = Some(Timestamp.now().toString),
-          localVolumes = Seq.empty,
-          region = None,
-          role = "someRole"
+      tasks = Some(
+        Seq(
+          raml.Task(
+            appId.toString,
+            healthCheckResults = Seq.empty,
+            checkResult = None,
+            host = "mesos-slave-i-039b610609702bc8a.mesos-dev.us-east-1e.example.com",
+            id = "benchmark_app_definition.2e251a11-af74-11e7-8e35-12ebe3d150b4",
+            ipAddresses = Seq.empty,
+            ports = Seq(3000),
+            servicePorts = Seq(),
+            slaveId = None,
+            state = MesosTaskState.TaskRunning,
+            stagedAt = Some(Timestamp.now().toString),
+            startedAt = Some(Timestamp.now().toString),
+            version = Some(Timestamp.now().toString),
+            localVolumes = Seq.empty,
+            region = None,
+            role = "someRole"
+          )
         )
-      ))
+      )
     )
   }
 }
@@ -93,4 +95,3 @@ class JsonFormatBenchmark {
     hole.consume(json)
   }
 }
-

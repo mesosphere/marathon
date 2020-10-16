@@ -23,9 +23,14 @@ lazy val testSettings = Seq(
   testListeners := Nil, // TODO(MARATHON-8215): Remove this line
   testOptions in Test := Seq(
     Tests.Argument(
-      "-u", "target/test-reports", // TODO(MARATHON-8215): Remove this line
-      "-o", "-eDFG",
-      "-y", "org.scalatest.WordSpec")),
+      "-u",
+      "target/test-reports", // TODO(MARATHON-8215): Remove this line
+      "-o",
+      "-eDFG",
+      "-y",
+      "org.scalatest.WordSpec"
+    )
+  ),
   fork in Test := true
 )
 
@@ -33,13 +38,17 @@ lazy val testSettings = Seq(
 // http://www.scalatest.org/user_guide/using_the_runner
 lazy val integrationTestSettings = Seq(
   testListeners := Nil, // TODO(MARATHON-8215): Remove this line
-
   fork in Test := true,
   testOptions in Test := Seq(
     Tests.Argument(
-      "-u", "target/test-reports", // TODO(MARATHON-8215): Remove this line
-      "-o", "-eDFG",
-      "-y", "org.scalatest.WordSpec")),
+      "-u",
+      "target/test-reports", // TODO(MARATHON-8215): Remove this line
+      "-o",
+      "-eDFG",
+      "-y",
+      "org.scalatest.WordSpec"
+    )
+  ),
   parallelExecution in Test := true,
   testForkedParallel in Test := true,
   concurrentRestrictions in Test := Seq(Tags.limitAll(math.max(1, java.lang.Runtime.getRuntime.availableProcessors() / 2))),
@@ -70,7 +79,8 @@ lazy val commonSettings = Seq(
   scalaVersion := "2.13.1",
   crossScalaVersions := Seq(scalaVersion.value),
   scalacOptions in Compile ++= Seq(
-    "-encoding", "UTF-8",
+    "-encoding",
+    "UTF-8",
     "-target:jvm-1.8",
     "-deprecation",
     "-feature",
@@ -83,7 +93,14 @@ lazy val commonSettings = Seq(
   // Don't need any linting, etc for docs, so gain a small amount of build time there.
   scalacOptions in (Compile, doc) := Seq("-encoding", "UTF-8", "-deprecation", "-feature", "-Xfuture"),
   javacOptions in Compile ++= Seq(
-    "-encoding", "UTF-8", "-source", "1.8", "-target", "1.8", "-Xlint:unchecked", "-Xlint:deprecation"
+    "-encoding",
+    "UTF-8",
+    "-source",
+    "1.8",
+    "-target",
+    "1.8",
+    "-Xlint:unchecked",
+    "-Xlint:deprecation"
   ),
   resolvers := {
     Seq(
@@ -96,13 +113,14 @@ lazy val commonSettings = Seq(
     ) ++ resolvers.value
   },
   cancelable in Global := true,
-  publishTo := Some(s3resolver.value(
-    "Mesosphere Public Repo (S3)",
-    s3("downloads.mesosphere.io/maven")
-  )),
+  publishTo := Some(
+    s3resolver.value(
+      "Mesosphere Public Repo (S3)",
+      s3("downloads.mesosphere.io/maven")
+    )
+  ),
   s3credentials := DefaultAWSCredentialsProviderChain.getInstance(),
-  s3region :=  com.amazonaws.services.s3.model.Region.US_Standard,
-
+  s3region := com.amazonaws.services.s3.model.Region.US_Standard,
   fork in run := true
 )
 
@@ -117,16 +135,16 @@ lazy val commonSettings = Seq(
 lazy val packagingSettings = Seq(
   bashScriptExtraDefines += IO.read((baseDirectory.value / "project" / "NativePackagerSettings" / "extra-defines.bash")),
   mappings in (Compile, packageDoc) := Seq(),
-
   (packageName in Universal) := {
     import sys.process._
     val shortCommit = ("./version commit" !!).trim
     s"${packageName.value}-${version.value}-$shortCommit"
   },
-
   /* Universal packaging (docs) - http://sbt-native-packager.readthedocs.io/en/latest/formats/universal.html
    */
-  universalArchiveOptions in (UniversalDocs, packageZipTarball) := Seq("-pcvf"), // Remove this line once fix for https://github.com/sbt/sbt-native-packager/issues/1019 is released
+  universalArchiveOptions in (UniversalDocs, packageZipTarball) := Seq(
+    "-pcvf"
+  ), // Remove this line once fix for https://github.com/sbt/sbt-native-packager/issues/1019 is released
   (packageName in UniversalDocs) := {
     import sys.process._
     val shortCommit = ("./version commit" !!).trim
@@ -134,28 +152,27 @@ lazy val packagingSettings = Seq(
   },
   (topLevelDirectory in UniversalDocs) := { Some((packageName in UniversalDocs).value) },
   mappings in UniversalDocs ++= directory("docs/docs"),
-
-  maintainer := "Mesosphere Package Builder <support@mesosphere.io>")
+  maintainer := "Mesosphere Package Builder <support@mesosphere.io>"
+)
 
 lazy val `plugin-interface` = (project in file("plugin-interface"))
-    .enablePlugins(GitBranchPrompt)
-    .settings(testSettings : _*)
-    .settings(commonSettings : _*)
-    .settings(
-      version := {
-        import sys.process._
-        ("./version" !!).trim
-      },
-      name := "plugin-interface",
-      libraryDependencies ++= Dependencies.pluginInterface
-    )
+  .enablePlugins(GitBranchPrompt)
+  .settings(testSettings: _*)
+  .settings(commonSettings: _*)
+  .settings(
+    version := {
+      import sys.process._
+      ("./version" !!).trim
+    },
+    name := "plugin-interface",
+    libraryDependencies ++= Dependencies.pluginInterface
+  )
 
 lazy val marathon = (project in file("."))
-  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging,
-    RamlGeneratorPlugin, GitVersioning, ProtobufPlugin)
+  .enablePlugins(GitBranchPrompt, JavaServerAppPackaging, RamlGeneratorPlugin, GitVersioning, ProtobufPlugin)
   .dependsOn(`plugin-interface`)
   .settings(pbSettings)
-  .settings(testSettings : _*)
+  .settings(testSettings: _*)
   .settings(commonSettings: _*)
   .settings(packagingSettings: _*)
   .settings(
@@ -163,14 +180,14 @@ lazy val marathon = (project in file("."))
       import sys.process._
       ("./version" !!).trim
     },
-    unmanagedResourceDirectories in Compile += baseDirectory.value / "docs" / "docs" /  "rest-api",
+    unmanagedResourceDirectories in Compile += baseDirectory.value / "docs" / "docs" / "rest-api",
     libraryDependencies ++= Dependencies.marathon,
     sourceGenerators in Compile += (ramlGenerate in Compile).taskValue,
     mainClass in Compile := Some("mesosphere.marathon.Main"),
     packageOptions in (Compile, packageBin) ++= Seq(
-      Package.ManifestAttributes("Implementation-Version" -> version.value ),
-      Package.ManifestAttributes("Scala-Version" -> scalaVersion.value ),
-      Package.ManifestAttributes("Git-Commit" -> git.gitHeadCommit.value.getOrElse("unknown") )
+      Package.ManifestAttributes("Implementation-Version" -> version.value),
+      Package.ManifestAttributes("Scala-Version" -> scalaVersion.value),
+      Package.ManifestAttributes("Git-Commit" -> git.gitHeadCommit.value.getOrElse("unknown"))
     )
   )
 
@@ -184,7 +201,7 @@ lazy val ammonite = (project in file("./tools/repl-server"))
 
 lazy val integration = (project in file("./tests/integration"))
   .enablePlugins(GitBranchPrompt)
-  .settings(integrationTestSettings : _*)
+  .settings(integrationTestSettings: _*)
   .settings(commonSettings: _*)
   .settings(
     cleanFiles += baseDirectory { base => base / "sandboxes" }.value
@@ -193,7 +210,7 @@ lazy val integration = (project in file("./tests/integration"))
 
 lazy val `mesos-simulation` = (project in file("mesos-simulation"))
   .enablePlugins(GitBranchPrompt)
-  .settings(testSettings : _*)
+  .settings(testSettings: _*)
   .settings(commonSettings: _*)
   .dependsOn(marathon % "test->test")
   .dependsOn(marathon)
@@ -205,8 +222,8 @@ lazy val `mesos-simulation` = (project in file("mesos-simulation"))
 // see also, benchmark/README.md
 lazy val benchmark = (project in file("benchmark"))
   .enablePlugins(JmhPlugin, GitBranchPrompt)
-  .settings(testSettings : _*)
-  .settings(commonSettings : _*)
+  .settings(testSettings: _*)
+  .settings(commonSettings: _*)
   .dependsOn(marathon % "compile->compile; test->test")
   .settings(
     testOptions in Test += Tests.Argument(TestFrameworks.JUnit),

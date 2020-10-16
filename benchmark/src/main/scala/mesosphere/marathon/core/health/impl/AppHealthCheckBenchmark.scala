@@ -27,10 +27,13 @@ object AppHealthCheckBenchmark {
     MarathonHttpHealthCheck(portIndex = Some(PortReference(443))),
     MarathonHttpHealthCheck(portIndex = Some(PortReference(8080)))
   )
-  val applicationKeys = 0.to(NB_APPLICATIONS).flatMap(appId => {
-    0.to(NB_VERSIONS_PER_APPLICATION).map(version => Timestamp(version.toLong))
-      .map(version => ApplicationKey(AbsolutePathId(s"/$appId"), version))
-  })
+  val applicationKeys = 0
+    .to(NB_APPLICATIONS)
+    .flatMap(appId => {
+      0.to(NB_VERSIONS_PER_APPLICATION)
+        .map(version => Timestamp(version.toLong))
+        .map(version => ApplicationKey(AbsolutePathId(s"/$appId"), version))
+    })
 
   val shuffledApplicationKeys = scala.util.Random.shuffle(applicationKeys)
 
@@ -38,19 +41,21 @@ object AppHealthCheckBenchmark {
     0.to(NB_INSTANCES_PER_APPLICATION).map(instanceId => InstanceKey(appKey, Instance.Id.forRunSpec(appKey.appId)))
   })
 
-  val randomlySelectedInstanceKeysWithStatus = 0.to(NB_STATUS_UPDATES).map(idx => {
-    val instanceIdx = randomGenerator.nextInt(NB_INSTANCES)
-    val hcIdx = instanceIdx % 3
-    val healthSelector = instanceIdx % 2
-    val instanceKey = instanceKeys(instanceIdx)
-    val failingHealth = Health(instanceKey.instanceId, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(10)))
-    val successHealth = Health(instanceKey.instanceId, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0)))
-    val health = healthSelector match {
-      case 0 => successHealth
-      case _ => failingHealth
-    }
-    (instanceKey.applicationKey, healthChecks(hcIdx), health)
-  })
+  val randomlySelectedInstanceKeysWithStatus = 0
+    .to(NB_STATUS_UPDATES)
+    .map(idx => {
+      val instanceIdx = randomGenerator.nextInt(NB_INSTANCES)
+      val hcIdx = instanceIdx % 3
+      val healthSelector = instanceIdx % 2
+      val instanceKey = instanceKeys(instanceIdx)
+      val failingHealth = Health(instanceKey.instanceId, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(10)))
+      val successHealth = Health(instanceKey.instanceId, lastSuccess = Some(Timestamp(5)), lastFailure = Some(Timestamp(0)))
+      val health = healthSelector match {
+        case 0 => successHealth
+        case _ => failingHealth
+      }
+      (instanceKey.applicationKey, healthChecks(hcIdx), health)
+    })
   val doNothingNotifier = (h: Option[Boolean]) => {}
 
   val appHealthCheckProxy = new impl.AppHealthCheckActor.AppHealthCheckProxy
@@ -94,9 +99,7 @@ class AppHealthCheckBenchmark {
     */
   @Benchmark
   def updateHealthCheckStatuses(hole: Blackhole): Unit = {
-    for (
-      update <- randomlySelectedInstanceKeysWithStatus
-    ) {
+    for (update <- randomlySelectedInstanceKeysWithStatus) {
       appHealthCheckProxyWithAlreadyRegisteredHealthChecks
         .updateHealthCheckStatus(update._1, update._2, update._3, doNothingNotifier)
     }
