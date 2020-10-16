@@ -39,7 +39,7 @@ object StorageModule {
       actorSystem: ActorSystem
   ): StorageModule = {
     val currentConfig = StorageConfig(conf, curatorFramework)
-    apply(metrics, currentConfig, RootGroup.NewGroupStrategy.fromConfig(conf.newGroupEnforceRole()), conf.mesosRole())
+    apply(metrics, currentConfig, RootGroup.NewGroupStrategy.UsingConfig(conf.newGroupEnforceRole()), conf.mesosRole())
   }
 
   def apply(metrics: Metrics, config: StorageConfig, newGroupStrategy: RootGroup.NewGroupStrategy, defaultMesosRole: String)(implicit

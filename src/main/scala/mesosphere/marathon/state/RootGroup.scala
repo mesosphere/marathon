@@ -20,14 +20,14 @@ import scala.collection.JavaConverters._
   * Represents the root group for Marathon. It is a persistent data structure,
   * and all of the modifying operations are defined at this level.
   */
-class RootGroup(
-    apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
-    pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
-    groupsById: Map[AbsolutePathId, Group] = Group.defaultGroups,
-    dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
+class RootGroup protected (
+    apps: Map[AbsolutePathId, AppDefinition],
+    pods: Map[AbsolutePathId, PodDefinition],
+    groupsById: Map[AbsolutePathId, Group],
+    dependencies: Set[AbsolutePathId],
     val newGroupStrategy: RootGroup.NewGroupStrategy,
-    version: Timestamp = Group.defaultVersion
-) extends Group(PathId.root, apps, pods, groupsById, dependencies, version)
+    version: Timestamp
+) extends Group(PathId.root, apps, pods, groupsById, dependencies, version, None)
     with StrictLogging {
   require(
     groupsById.forall {
@@ -164,7 +164,8 @@ class RootGroup(
         pods = group.pods,
         groupsById = group.groupsById.map { case (subGroupId, subGroup) => subGroupId -> updateApps(subGroup) },
         dependencies = group.dependencies,
-        version = version
+        version = version,
+        enforceRole = group.enforceRole
       )
     }
 
@@ -200,7 +201,8 @@ class RootGroup(
       pods = oldGroup.pods,
       groupsById = oldGroup.groupsById,
       dependencies = oldGroup.dependencies,
-      version = version
+      version = version,
+      enforceRole = oldGroup.enforceRole
     )
     putGroup(newGroup, version)
   }
@@ -445,16 +447,16 @@ class RootGroup(
 
 object RootGroup {
   def apply(
-      apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
-      pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
-      groupsById: Map[AbsolutePathId, Group] = Group.defaultGroups,
-      dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
-      newGroupStrategy: NewGroupStrategy = NewGroupStrategy.Fail,
-      version: Timestamp = Group.defaultVersion
+      apps: Map[AbsolutePathId, AppDefinition],
+      pods: Map[AbsolutePathId, PodDefinition],
+      groupsById: Map[AbsolutePathId, Group],
+      dependencies: Set[AbsolutePathId],
+      newGroupStrategy: NewGroupStrategy,
+      version: Timestamp
   ): RootGroup = new RootGroup(apps, pods, groupsById, dependencies, newGroupStrategy, version)
 
-  def empty(newGroupStrategy: NewGroupStrategy = NewGroupStrategy.Fail) =
-    RootGroup(newGroupStrategy = newGroupStrategy, version = Timestamp(0))
+  def empty(newGroupStrategy: NewGroupStrategy = NewGroupStrategy.Fail, version: Timestamp = Timestamp(0)) =
+    RootGroup(Map.empty, Map.empty, Map.empty, Set.empty, newGroupStrategy = newGroupStrategy, version = version)
 
   def fromGroup(group: Group, newGroupStrategy: NewGroupStrategy): RootGroup = {
     require(group.id.isRoot)
@@ -499,17 +501,9 @@ object RootGroup {
       override def newGroup(id: AbsolutePathId): Group = throw new RuntimeException(s"No such group: ${id}")
     }
 
-    def fromConfig(newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior): NewGroupStrategy =
-      new NewGroupStrategy {
-        override def newGroup(id: AbsolutePathId): Group = {
-          newGroupEnforceRoleBehavior match {
-            case NewGroupEnforceRoleBehavior.Off =>
-              Group.empty(id, enforceRole = false)
-            case NewGroupEnforceRoleBehavior.Top =>
-              Group.empty(id, enforceRole = id.isTopLevel)
-          }
-        }
-      }
+    case class UsingConfig(newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior) extends NewGroupStrategy {
+      override def newGroup(id: AbsolutePathId): Group =
+        Group.empty(id, enforceRole = if (id.isTopLevel) newGroupEnforceRoleBehavior.option else None)
+    }
   }
-
 }

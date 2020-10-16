@@ -7,7 +7,6 @@ import mesosphere.marathon.core.deployment.DeploymentPlan
 import mesosphere.marathon.state._
 import org.openjdk.jmh.annotations.{Group => _, _}
 import org.openjdk.jmh.infra.Blackhole
-
 import scala.collection.breakOut
 import scala.util.Random
 
@@ -49,33 +48,33 @@ object DependencyGraphBenchmark {
         }(breakOut)
       }(breakOut)
 
-    val subGroups: Map[AbsolutePathId, Group] = groupIds.map { groupId =>
+    val subGroups = groupIds.map { groupId =>
       val id = AbsolutePathId(s"/supergroup-${superGroupId}/group-${groupId}")
-      id -> Group(id = id)
-    }(breakOut)
+      Group.empty(id = id)
+    }
 
     val id = AbsolutePathId(s"/supergroup-${superGroupId}")
-    id -> Group(
+    id -> Builders.newGroup.withoutParentAutocreation(
       id = id,
-      groupsById = subGroups
+      groups = subGroups
     )
   }(breakOut)
 
-  val rootGroup = RootGroup(groupsById = superGroups)
+  val rootGroup = Builders.newRootGroup.withoutParentAutocreation(groups = superGroups.values)
 
-  val upgraded = RootGroup(
-    groupsById = superGroups.map {
+  val upgraded = Builders.newRootGroup.withoutParentAutocreation(
+    groups = superGroups.map {
       case (superGroupId, superGroup) =>
         if (superGroupId == AbsolutePathId("/supergroup-0")) {
-          superGroupId -> Group(
+          Builders.newGroup.withoutParentAutocreation(
             id = superGroupId,
-            groupsById = superGroup.groupsById.map {
+            groups = superGroup.groupsById.map {
               case (id, subGroup) =>
-                id -> Group(id = id)
+                Group.empty(id = id)
             }
           )
         } else {
-          superGroupId -> superGroup
+          superGroup
         }
     }(breakOut)
   )

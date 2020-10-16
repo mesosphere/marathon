@@ -62,7 +62,7 @@ class GroupBenchmark {
 
   // Create apps and add them to their groups
   def fillRootGroup(): RootGroup = {
-    var tmpGroup = RootGroup()
+    var tmpGroup = RootGroup.empty()
     ids.foreach { appId =>
       val groupPath = childGroupPaths(appId % numberOfGroups)
       val path = groupPath / s"app-${appId}"

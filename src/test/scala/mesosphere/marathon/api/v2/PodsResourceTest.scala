@@ -1895,7 +1895,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       pod.role shouldBe "dev"
       And("the auto-created group has enforceRole enabled")
       val Some(group) = f.groupManager.group("/dev".toAbsolutePath)
-      group.enforceRole shouldBe true
+      group.enforceRole shouldBe Some(true)
     }
 
     "support versions" when {
@@ -2181,7 +2181,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       service: MarathonSchedulerService
   ) extends GroupCreation {
 
-    def prepareGroup(groupId: String, pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods): Unit = {
+    def prepareGroup(groupId: String, pods: Map[AbsolutePathId, PodDefinition] = Map.empty): Unit = {
       val groupPath = AbsolutePathId(groupId)
 
       val group = createGroup(groupPath, pods = pods)
@@ -2239,7 +2239,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
     }
 
     def withRealGroupManager(
-        initialRoot: Group = Group.empty("/".toAbsolutePath, enforceRole = false),
+        initialRoot: Group = Group.empty("/".toAbsolutePath),
         configArgs: Seq[String] = Seq.empty[String],
         auth: TestAuthFixture = new TestAuthFixture()
     ): Fixture = {
@@ -2250,7 +2250,7 @@ class PodsResourceTest extends AkkaUnitTest with Mockito with JerseyTest {
       val podStatusService = mock[PodStatusService]
 
       val groupManagerFixture: TestGroupManagerFixture = new TestGroupManagerFixture(
-        initialRoot = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.fromConfig(config.newGroupEnforceRole()))
+        initialRoot = RootGroup.fromGroup(initialRoot, RootGroup.NewGroupStrategy.UsingConfig(config.newGroupEnforceRole()))
       )
       val killService: TaskKiller = mock[TaskKiller]
       val podManager = new PodManagerImpl(groupManagerFixture.groupManager)

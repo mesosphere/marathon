@@ -13,6 +13,7 @@ import mesosphere.marathon.state.{
   AbsolutePathId,
   AppDefinition,
   BackoffStrategy,
+  Container,
   EnvVarValue,
   Group,
   KillSelection,
@@ -53,15 +54,19 @@ object Builders {
         pods: Seq[PodDefinition] = Nil,
         groupDependencies: Map[AbsolutePathId, Set[AbsolutePathId]] = Map.empty,
         groupIds: Seq[AbsolutePathId] = Nil,
+        groups: Iterable[Group] = Nil,
         newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior = NewGroupEnforceRoleBehavior.Top,
         version: Timestamp = Group.defaultVersion
     ): RootGroup = {
-      val newGroupStrategy = NewGroupStrategy.fromConfig(newGroupEnforceRoleBehavior)
-      val initialGroup = RootGroup(newGroupStrategy = newGroupStrategy, version = version)
+      val newGroupStrategy = NewGroupStrategy.UsingConfig(newGroupEnforceRoleBehavior)
+      val initialGroup = RootGroup.empty(newGroupStrategy = newGroupStrategy, version = version)
       val withEmptyGroups = groupIds.foldLeft(initialGroup) { (rootGroup, groupId) =>
         rootGroup.updateGroup(groupId, _.getOrElse { newGroupStrategy.newGroup(groupId) })
       }
-      val groupWithApps = apps.foldLeft(withEmptyGroups) { (rootGroup, app) =>
+      val withProvidedGroups = groups.foldLeft(withEmptyGroups) { (rootGroup, group) =>
+        rootGroup.updateGroup(group.id, { _ => group })
+      }
+      val groupWithApps = apps.foldLeft(withProvidedGroups) { (rootGroup, app) =>
         rootGroup.updateApp(app.id, _ => app, version = version)
       }
       val groupWithPods = pods.foldLeft(groupWithApps) { (rootGroup, pod) =>
@@ -78,10 +83,108 @@ object Builders {
           )
       }
     }
+
+    /** Instantiates a RootGroup directly, providing simple defaults. Does not auto-create parents. Allows creation of
+      * invalid groups */
+    def withoutParentAutocreation(
+        apps: Iterable[AppDefinition] = Nil,
+        pods: Iterable[PodDefinition] = Nil,
+        groups: Iterable[Group] = Nil,
+        dependencies: Iterable[AbsolutePathId] = Set.empty,
+        newGroupStrategy: NewGroupStrategy = NewGroupStrategy.UsingConfig(NewGroupEnforceRoleBehavior.Top),
+        version: Timestamp = Timestamp(0)
+    ): RootGroup =
+      RootGroup(
+        apps = apps.map { a => a.id -> a }.toMap,
+        pods = pods.map { p => p.id -> p }.toMap,
+        groupsById = groups.map { g => g.id -> g }.toMap,
+        dependencies = dependencies.toSet,
+        newGroupStrategy,
+        version
+      )
+  }
+
+  object newGroup {
+    def withoutParentAutocreation(
+        id: AbsolutePathId,
+        apps: Iterable[AppDefinition] = Nil,
+        pods: Iterable[PodDefinition] = Nil,
+        groups: Iterable[Group] = Nil,
+        dependencies: Iterable[AbsolutePathId] = Nil,
+        version: Timestamp = Timestamp(0),
+        enforceRole: Option[Boolean] = None
+    ) = {
+      val appsById = apps.iterator.map { app => app.id -> app }.toMap
+      val podsById = pods.iterator.map { pod => pod.id -> pod }.toMap
+      val groupsById = groups.iterator.map { group => group.id -> group }.toMap
+      val dependenciesSet = dependencies.toSet
+      Group(id, appsById, podsById, groupsById, dependenciesSet, version = version, enforceRole = enforceRole)
+    }
   }
 
   object newAppDefinition {
     val appIdIncrementor = new AtomicInteger()
+
+    /** Return a valid app definition */
+    def apply(
+        id: AbsolutePathId = AbsolutePathId(s"/app-${appIdIncrementor.incrementAndGet()}"),
+        cmd: Option[String] = Some("sleep 3600"),
+        args: Seq[String] = App.DefaultArgs,
+        user: Option[String] = App.DefaultUser,
+        env: Map[String, EnvVarValue] = AppDefinition.DefaultEnv,
+        instances: Int = 1,
+        resources: Resources = Apps.DefaultResources,
+        constraints: Set[Constraint] = AppDefinition.DefaultConstraints,
+        portDefinitions: Seq[PortDefinition] = AppDefinition.DefaultPortDefinitions,
+        requirePorts: Boolean = App.DefaultRequirePorts,
+        backoffStrategy: BackoffStrategy = AppDefinition.DefaultBackoffStrategy,
+        healthChecks: Set[HealthCheck] = AppDefinition.DefaultHealthChecks,
+        check: Option[Check] = AppDefinition.DefaultCheck,
+        readinessChecks: Seq[ReadinessCheck] = AppDefinition.DefaultReadinessChecks,
+        taskKillGracePeriod: Option[FiniteDuration] = AppDefinition.DefaultTaskKillGracePeriod,
+        upgradeStrategy: UpgradeStrategy = AppDefinition.DefaultUpgradeStrategy,
+        labels: Map[String, String] = AppDefinition.DefaultLabels,
+        acceptedResourceRoles: Set[String] = Set("*"),
+        networks: Seq[Network] = AppDefinition.DefaultNetworks,
+        versionInfo: VersionInfo = VersionInfo.OnlyVersion(Timestamp.now()),
+        secrets: Map[String, Secret] = AppDefinition.DefaultSecrets,
+        unreachableStrategy: UnreachableStrategy = AppDefinition.DefaultUnreachableStrategy,
+        killSelection: KillSelection = KillSelection.DefaultKillSelection,
+        tty: Option[Boolean] = AppDefinition.DefaultTTY,
+        container: Option[Container] = Some(Container.Mesos()),
+        role: Role = "*"
+    ) = {
+      AppDefinition(
+        id = id,
+        role = role,
+        cmd = cmd,
+        user = user,
+        env = env,
+        args = args,
+        container = container,
+        resources = resources,
+        instances = instances,
+        portDefinitions = portDefinitions,
+        executor = "//cmd",
+        acceptedResourceRoles = acceptedResourceRoles,
+        constraints = constraints,
+        requirePorts = requirePorts,
+        backoffStrategy = backoffStrategy,
+        healthChecks = healthChecks,
+        check = check,
+        readinessChecks = readinessChecks,
+        taskKillGracePeriod = taskKillGracePeriod,
+        upgradeStrategy = upgradeStrategy,
+        labels = labels,
+        networks = networks,
+        versionInfo = versionInfo,
+        secrets = secrets,
+        unreachableStrategy = unreachableStrategy,
+        killSelection = killSelection,
+        tty = tty
+      )
+
+    }
 
     /** Return a valid command app definition (using command executor, not using UCR or Docker). */
     def command(

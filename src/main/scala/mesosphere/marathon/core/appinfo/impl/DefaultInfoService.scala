@@ -165,7 +165,7 @@ private[appinfo] class DefaultInfoService(groupManager: GroupManager, newBaseDat
               groups = groups,
               dependencies = ref.dependencies.map(_.toString),
               version = Some(ref.version.toOffsetDateTime),
-              enforceRole = Some(ref.enforceRole)
+              enforceRole = ref.enforceRole
             )
           )
         } else None

@@ -56,21 +56,17 @@ object FlatDependencyBenchmark {
     AbsolutePathId(s"/app-${appId}")
   }(breakOut)
 
-  val appDefs: Map[AbsolutePathId, AppDefinition] = appPaths.map { path =>
-    path -> makeApp(path)
-  }(breakOut)
+  val appDefs: Seq[AppDefinition] = appPaths.map { path => makeApp(path) }(breakOut)
+  val podDefs: Seq[PodDefinition] = podPaths.map { path => makePod(path) }(breakOut)
 
-  val podDefs: Map[AbsolutePathId, PodDefinition] = podPaths.map { path =>
-    path -> makePod(path)
-  }(breakOut)
-
-  val rootGroup = RootGroup(apps = appDefs, pods = podDefs)
+  val rootGroup = Builders.newRootGroup(apps = appDefs, pods = podDefs)
   def upgraded = {
-    val pathId = AbsolutePathId("/app-901")
-    RootGroup(
-      apps = rootGroup.apps + (pathId -> makeApp(pathId)),
-      pods = rootGroup.pods + (pathId -> makePod(pathId))
-    )
+    val appPathId = AbsolutePathId("/app-901")
+    val podPathId = AbsolutePathId("/pod-901")
+
+    rootGroup
+      .updateApp(appPathId, _ => makeApp(appPathId))
+      .updatePod(podPathId, _ => makePod(podPathId))
   }
 }
 
