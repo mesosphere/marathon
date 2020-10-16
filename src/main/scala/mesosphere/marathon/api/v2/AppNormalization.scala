@@ -213,7 +213,9 @@ object AppNormalization {
       // case we not only filter out invalid roles, but also fallback to the default (*) one. Note that acceptedResourceRoles
       // is about reservations and NOT allocation, so the default one is (*) and not (--mesos_role)
       if (sanitized.isEmpty)
-        throw NormalizationException(s"acceptedResourceRoles is invalid. Valid values are ${validAcceptedResourceRoleValues(effectiveRole)}.")
+        throw NormalizationException(
+          s"acceptedResourceRoles is invalid. Valid values are ${validAcceptedResourceRoleValues(effectiveRole)}."
+        )
       else
         sanitized
     }

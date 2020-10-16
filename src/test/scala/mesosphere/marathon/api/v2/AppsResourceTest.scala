@@ -2616,10 +2616,7 @@ class AppsResourceTest extends AkkaUnitTest with GroupCreation with JerseyTest {
     ) {
 
       Given("An app with an unknown acceptedResourceRole")
-      val app = App(
-        id = "/app-with-accepted-unknown-mesos-role",
-        cmd = Some("cmd"),
-        acceptedResourceRoles = Some(Set("customMesosRole")))
+      val app = App(id = "/app-with-accepted-unknown-mesos-role", cmd = Some("cmd"), acceptedResourceRoles = Some(Set("*", "customMesosRole")))
 
       val (body, _) = prepareApp(app, groupManager, validate = false)
 
