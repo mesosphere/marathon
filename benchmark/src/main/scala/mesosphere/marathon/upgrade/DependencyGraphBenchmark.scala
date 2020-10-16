@@ -50,8 +50,8 @@ object DependencyGraphBenchmark {
 
     val subGroups = groupIds.map { groupId =>
       val id = AbsolutePathId(s"/supergroup-${superGroupId}/group-${groupId}")
-      id -> Group.empty(id = id)
-    }(breakOut)
+      Group.empty(id = id)
+    }
 
     val id = AbsolutePathId(s"/supergroup-${superGroupId}")
     id -> Builders.newGroup.withoutParentAutocreation(
