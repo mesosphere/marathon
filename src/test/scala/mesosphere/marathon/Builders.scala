@@ -54,6 +54,7 @@ object Builders {
         pods: Seq[PodDefinition] = Nil,
         groupDependencies: Map[AbsolutePathId, Set[AbsolutePathId]] = Map.empty,
         groupIds: Seq[AbsolutePathId] = Nil,
+        groups: Iterable[Group] = Nil,
         newGroupEnforceRoleBehavior: NewGroupEnforceRoleBehavior = NewGroupEnforceRoleBehavior.Top,
         version: Timestamp = Group.defaultVersion
     ): RootGroup = {
