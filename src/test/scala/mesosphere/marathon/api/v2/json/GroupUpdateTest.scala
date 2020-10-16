@@ -85,7 +85,9 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       When("The update is performed")
       val normalized = GroupNormalization(noEnabledFeatures, initialRootGroup).updateNormalization(PathId.root).normalized(update)
       val result: RootGroup =
-        initialRootGroup.updatedWith(GroupConversion(normalized, initialRootGroup, timestamp).apply(appConversionFunc))
+        initialRootGroup.updatedWith(
+          GroupConversion(normalized, initialRootGroup, timestamp).apply(appConversionFunc)
+        )
 
       validate(result)(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 
@@ -137,7 +139,7 @@ class GroupUpdateTest extends UnitTest with GroupCreation {
       val normalized =
         GroupNormalization(noEnabledFeatures, createRootGroup()).updateNormalization(AbsolutePathId("/test")).normalized(update)
       val next = GroupConversion(normalized, current, timestamp).apply(appConversionFunc)
-      val result = createRootGroup(groups = Set(next))
+      val result = Builders.newRootGroup(groups = Seq(next))
 
       validate(result)(RootGroup.validRootGroup(noEnabledFeatures)).isSuccess should be(true)
 

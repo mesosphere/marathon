@@ -8,10 +8,10 @@ import com.wix.accord
 trait GroupCreation {
   @deprecated("Prefer Builders.newRootGroup instead", since = "1.9")
   def createRootGroup(
-      apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
-      pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
+      apps: Map[AbsolutePathId, AppDefinition] = Map.empty,
+      pods: Map[AbsolutePathId, PodDefinition] = Map.empty,
       groups: Set[Group] = Set.empty,
-      dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
+      dependencies: Set[AbsolutePathId] = Set.empty,
       version: Timestamp = Group.defaultVersion,
       validate: Boolean = true,
       enabledFeatures: Set[String] = Set.empty,
@@ -22,7 +22,7 @@ trait GroupCreation {
       pods,
       groups.map(group => group.id -> group)(collection.breakOut),
       dependencies,
-      RootGroup.NewGroupStrategy.fromConfig(newGroupEnforceRole),
+      RootGroup.NewGroupStrategy.UsingConfig(newGroupEnforceRole),
       version
     )
 
@@ -40,10 +40,10 @@ trait GroupCreation {
 
   def createGroup(
       id: AbsolutePathId,
-      apps: Map[AbsolutePathId, AppDefinition] = Group.defaultApps,
-      pods: Map[AbsolutePathId, PodDefinition] = Group.defaultPods,
+      apps: Map[AbsolutePathId, AppDefinition] = Map.empty,
+      pods: Map[AbsolutePathId, PodDefinition] = Map.empty,
       groups: Set[Group] = Set.empty,
-      dependencies: Set[AbsolutePathId] = Group.defaultDependencies,
+      dependencies: Set[AbsolutePathId] = Set.empty,
       version: Timestamp = Group.defaultVersion,
       validate: Boolean = true,
       enabledFeatures: Set[String] = Set.empty,

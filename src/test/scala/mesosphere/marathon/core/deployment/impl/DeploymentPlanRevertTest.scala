@@ -346,7 +346,7 @@ class DeploymentPlanRevertTest extends UnitTest with GroupCreation {
             val id = "/withdeps".toAbsolutePath // withdeps still exists because of the subgroup
             createGroup(
               id,
-              apps = Group.defaultApps,
+              apps = Map.empty,
               groups = Set(createGroup(id / "some")),
               dependencies = Set() // dependencies were introduce with first deployment, should be gone now
             )
