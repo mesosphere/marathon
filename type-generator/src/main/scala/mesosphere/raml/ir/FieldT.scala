@@ -4,8 +4,17 @@ import mesosphere.raml.backend.{PlayReads, camelify, scalaFieldName, underscoreT
 import treehugger.forest._
 import treehuggerDSL._
 
-case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constraints: Seq[ConstraintT[_]], required: Boolean,
-                  default: Option[String], repeated: Boolean = false, forceOptional: Boolean = false, omitEmpty: Boolean = false) {
+case class FieldT(
+    rawName: String,
+    `type`: Type,
+    comments: Seq[String],
+    constraints: Seq[ConstraintT[_]],
+    required: Boolean,
+    default: Option[String],
+    repeated: Boolean = false,
+    forceOptional: Boolean = false,
+    omitEmpty: Boolean = false
+) {
 
   val name = scalaFieldName(rawName)
   override def toString: String = s"$name: ${`type`}"
@@ -13,7 +22,7 @@ case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constrai
   /**
     * Determine if this field should be wrapped in an Option or not
     */
-  lazy val isOptionType:Boolean = {
+  lazy val isOptionType: Boolean = {
     if ((required || default.isDefined) && !forceOptional) {
       false
     } else {
@@ -28,7 +37,7 @@ case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constrai
   /**
     * Determine if this field is a container type, i.e. a set or a map
     */
-  lazy val isContainerType:Boolean = {
+  lazy val isContainerType: Boolean = {
     if ((required || default.isDefined) && !forceOptional) {
       false
     } else {
@@ -99,10 +108,14 @@ case class FieldT(rawName: String, `type`: Type, comments: Seq[String], constrai
     if (required && !forceOptional) {
       TUPLE(REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type`
     } else if (repeated && !forceOptional) {
-      TUPLE(REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type` DOT "orElse" APPLY(REF(PlayReads) DOT "pure" APPLY(`type` APPLY()))
+      TUPLE(REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type` DOT "orElse" APPLY (REF(
+        PlayReads
+      ) DOT "pure" APPLY (`type` APPLY ()))
     } else {
       if (defaultValue.isDefined && !forceOptional) {
-        TUPLE((REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type`) DOT "orElse" APPLY (REF(PlayReads) DOT "pure" APPLY defaultValue.get)
+        TUPLE((REF("__") DOT "\\" APPLY LIT(rawName)) DOT "read" APPLYTYPE `type`) DOT "orElse" APPLY (REF(
+          PlayReads
+        ) DOT "pure" APPLY defaultValue.get)
       } else {
         TUPLE((REF("__") DOT "\\" APPLY LIT(rawName)) DOT "readNullable" APPLYTYPE `type`)
       }

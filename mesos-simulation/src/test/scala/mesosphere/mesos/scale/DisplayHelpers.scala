@@ -1,6 +1,7 @@
 package mesosphere.mesos.scale
 
 object DisplayHelpers {
+
   /** Formatting function. The first parameter is the input string and the second parameter the desired length. */
   type ColumnFormat = ((String, Int) => String)
 

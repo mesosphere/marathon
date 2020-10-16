@@ -16,14 +16,15 @@ object CSVExporter {
   case class Row(name: String, values: Seq[Option[Double]])
 
   def toRows(directory: File): Seq[Row] = {
-    val metrics = directory.listFiles().toSeq.filter(_.getName.endsWith("json")).sortBy(_.getName).map { f => MetricsFormat.readMetric(f.toURI.toURL) }
+    val metrics =
+      directory.listFiles().toSeq.filter(_.getName.endsWith("json")).sortBy(_.getName).map { f => MetricsFormat.readMetric(f.toURI.toURL) }
     val countr = metrics.flatMap(_.counters.map(_.name)).distinct.sorted
     val gauges = metrics.flatMap(_.gauges.map(_.name)).distinct.sorted
     val histos = metrics.flatMap(_.histograms.map(_.name)).distinct.sorted
     val meters = metrics.flatMap(_.meters.map(_.name)).distinct.sorted
     val timers = metrics.flatMap(_.timers.map(_.name)).distinct.sorted
 
-    Seq (
+    Seq(
       countr.map { name => Row(name + ".count", metrics.map(_.counters.find(_.name == name).map(_.count.toDouble))) },
       gauges.map { name => Row(name + ".value", metrics.map(_.gauges.find(_.name == name).map(_.value))) },
       histos.map { name => Row(name + ".count", metrics.map(_.histograms.find(_.name == name).map(_.count.toDouble))) },

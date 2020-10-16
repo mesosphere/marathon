@@ -45,10 +45,9 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
 
       When("The app is created")
       val result = marathon.createAppV2(app)
-      result should be (Created)
+      result should be(Created)
 
       (1 to 3).foreach { _ =>
-
         Then("The readiness check is called")
         readinessCheck.wasCalled.set(false)
         eventually {
@@ -74,7 +73,6 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
           healthChecks = Set(ramlHealthCheck),
           portDefinitions = Some(Seq(PortDefinition(name = Some("http")))),
           readinessChecks = Seq(ramlReadinessCheck)
-
         )
 
       And("The app is not ready and not healthy")
@@ -88,7 +86,6 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
       result should be(Created)
 
       (1 to 3).foreach { _ =>
-
         Then("The readiness check is called")
         readinessCheck.wasCalled.set(false)
         eventually {
@@ -114,7 +111,6 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
         .copy(
           portDefinitions = Some(Seq(PortDefinition(name = Some("http")))),
           readinessChecks = Seq(ramlReadinessCheck)
-
         )
       And("The app is not ready")
       val readinessCheckV1 = registerProxyReadinessCheck(AbsolutePathId(appV1.id), "v1")
@@ -122,7 +118,7 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
 
       When("The app is created")
       val result = marathon.createAppV2(appV1)
-      result should be (Created)
+      result should be(Created)
 
       And("There is one ongoing deployment")
       val deployments = marathon.listDeploymentsForBaseGroup().value
@@ -138,7 +134,6 @@ class ReadinessCheckIntegrationTest extends AkkaIntegrationTest with EmbeddedMar
       update.success should be(true) withClue (update.entityString)
 
       (1 to 3).foreach { _ =>
-
         Then("The readiness check is called")
         readinessCheckV2.wasCalled.set(false)
         eventually {

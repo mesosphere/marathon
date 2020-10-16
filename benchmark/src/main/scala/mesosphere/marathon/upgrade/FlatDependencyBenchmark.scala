@@ -24,8 +24,7 @@ object FlatDependencyBenchmark {
       labels = Map("ID" -> path.toString),
       versionInfo = version,
       networks = Seq(BridgeNetwork()),
-      container = Some(
-        Container.Docker(Nil, "alpine", List(Container.PortMapping(2015, Some(0), 10000, "tcp", Some("thing")))))
+      container = Some(Container.Docker(Nil, "alpine", List(Container.PortMapping(2015, Some(0), 10000, "tcp", Some("thing")))))
     )
 
   def makePod(path: AbsolutePathId) =
@@ -35,18 +34,15 @@ object FlatDependencyBenchmark {
       networks = Seq(BridgeNetwork()),
       labels = Map("ID" -> path.toString),
       versionInfo = version,
-
       containers = Seq(
         MesosContainer(
           "container-1",
           resources = Resources(1.0),
           image = Some(Image(ImageType.Docker, "alpine")),
-          endpoints = List(
-            Endpoint(
-              "service",
-              Some(2015),
-              Some(0),
-              Seq("tcp"))))))
+          endpoints = List(Endpoint("service", Some(2015), Some(0), Seq("tcp")))
+        )
+      )
+    )
 
   val ids = 0 to 900
 

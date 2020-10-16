@@ -24,13 +24,12 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
 
   override lazy val mesosConfig = MesosConfig(
     numAgents = 3,
-    mastersFaultDomains = Seq(
-      Some(FaultDomain(region = f.homeRegion, zone = f.homeZone))),
+    mastersFaultDomains = Seq(Some(FaultDomain(region = f.homeRegion, zone = f.homeZone))),
     agentsFaultDomains = Seq(
       Some(FaultDomain(region = f.remoteRegion, zone = f.remoteZone1)),
       Some(FaultDomain(region = f.remoteRegion, zone = f.remoteZone2)),
-      Some(FaultDomain(region = f.homeRegion, zone = f.homeZone)))
-
+      Some(FaultDomain(region = f.homeRegion, zone = f.homeZone))
+    )
   )
 
   // This hook is also defined in TaskUnreachableIntegrationTest. We should probably move it into MesosClusterTest.
@@ -66,8 +65,8 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
 
     "Launch an instance of the app in the specified region" in {
       val applicationId = appId("must-be-placed-in-remote-region")
-      val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints =
-        Set(Constraints.regionField :: "LIKE" :: f.remoteRegion.value :: Nil))
+      val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None)
+        .copy(constraints = Set(Constraints.regionField :: "LIKE" :: f.remoteRegion.value :: Nil))
 
       When("The app is deployed with specific region constraint")
       val result = marathon.createAppV2(app)
@@ -82,10 +81,12 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
 
     "Launch an instance of the app in the specified region and zone" in {
       val applicationId = appId("must-be-placed-in-remote-region-and-zone")
-      val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints = Set(
-        Constraints.regionField :: "LIKE" :: f.remoteRegion.value :: Nil,
-        Constraints.zoneField :: "LIKE" :: f.remoteZone2.value :: Nil
-      ))
+      val app = appProxy(applicationId, "v1", instances = 1, healthCheck = None).copy(constraints =
+        Set(
+          Constraints.regionField :: "LIKE" :: f.remoteRegion.value :: Nil,
+          Constraints.zoneField :: "LIKE" :: f.remoteZone2.value :: Nil
+        )
+      )
 
       When("The app is deployed with specific region and zone constraints")
       val result = marathon.createAppV2(app)
@@ -102,9 +103,12 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
     "Replace an unreachable instance in the same region" in {
       val applicationId = appId("unreachable-instance-is-placed-in-same-region")
       val strategy = raml.UnreachableEnabled(inactiveAfterSeconds = 0, expungeAfterSeconds = 0)
-      val app = appProxy(applicationId, "v1", instances = 4, healthCheck = None).copy(constraints = Set(
-        Constraints.regionField :: "GROUP_BY" :: "2" :: Nil
-      ), unreachableStrategy = Some(strategy))
+      val app = appProxy(applicationId, "v1", instances = 4, healthCheck = None).copy(
+        constraints = Set(
+          Constraints.regionField :: "GROUP_BY" :: "2" :: Nil
+        ),
+        unreachableStrategy = Some(strategy)
+      )
 
       Given("an app grouped by two regions")
       val result = marathon.createAppV2(app)
@@ -123,7 +127,7 @@ class RemoteRegionOffersIntegrationTest extends AkkaIntegrationTest with Embedde
       When("an agent in the remote region with running tasks becomes unreachable")
       val agent = mesosCluster.agents.filter { agent =>
         (originalAgentIds contains mesosCluster.agentIdFor(agent)) &&
-          agent.mesosFaultDomainAgentCmdOption.exists(_.contains("remote_region"))
+        agent.mesosFaultDomainAgentCmdOption.exists(_.contains("remote_region"))
       }.headOption.value
 
       agent.stop()

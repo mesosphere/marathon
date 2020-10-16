@@ -5,13 +5,15 @@ import akka.stream.Materializer
 import scala.collection.immutable.Seq
 
 object InternalHelpers {
+
   /**
     * get arguments from environment variable; we need to do this because
     * Ammonite is launched in repl mode, and as of Ammonite 1.0.1, repl mode
     * does not take additional program arguments.
     */
   def argsFromEnv: List[String] = {
-    "(?<!\\\\)( +)".r.split(sys.env.getOrElse("MARATHON_ARGS", "").trim)
+    "(?<!\\\\)( +)".r
+      .split(sys.env.getOrElse("MARATHON_ARGS", "").trim)
       .filterNot(_ == "")
       .map { arg =>
         /* This unescapes an argument by simply removing the leading backslashes

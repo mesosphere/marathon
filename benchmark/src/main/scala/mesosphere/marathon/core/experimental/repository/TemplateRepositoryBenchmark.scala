@@ -17,7 +17,20 @@ import mesosphere.marathon.state.{AbsolutePathId, AppDefinition}
 import org.apache.curator.framework.{CuratorFramework, CuratorFrameworkFactory}
 import org.apache.curator.retry.BoundedExponentialBackoffRetry
 import org.apache.curator.x.async.api.CreateOption
-import org.openjdk.jmh.annotations.{Benchmark, BenchmarkMode, Fork, Level, Measurement, Mode, OutputTimeUnit, Param, Scope, State, TearDown, Warmup}
+import org.openjdk.jmh.annotations.{
+  Benchmark,
+  BenchmarkMode,
+  Fork,
+  Level,
+  Measurement,
+  Mode,
+  OutputTimeUnit,
+  Param,
+  Scope,
+  State,
+  TearDown,
+  Warmup
+}
 import org.openjdk.jmh.infra.Blackhole
 
 import scala.concurrent.duration.Duration
@@ -74,18 +87,24 @@ object TemplateRepositoryBenchmark extends StrictLogging {
     Conf.zooKeeperUrl().hostsString,
     Conf.zooKeeperSessionTimeout().toInt,
     Conf.zooKeeperConnectionTimeout().toInt,
-    new BoundedExponentialBackoffRetry(Conf.zooKeeperOperationBaseRetrySleepMs(), Conf.zooKeeperTimeout().toInt, Conf.zooKeeperOperationMaxRetries())
+    new BoundedExponentialBackoffRetry(
+      Conf.zooKeeperOperationBaseRetrySleepMs(),
+      Conf.zooKeeperTimeout().toInt,
+      Conf.zooKeeperOperationMaxRetries()
+    )
   )
   curator.start()
 
-  lazy val settings: AsyncCuratorBuilderSettings = new AsyncCuratorBuilderSettings(createOptions = Set(CreateOption.createParentsIfNeeded), compressedData = false)
+  lazy val settings: AsyncCuratorBuilderSettings =
+    new AsyncCuratorBuilderSettings(createOptions = Set(CreateOption.createParentsIfNeeded), compressedData = false)
   lazy val factory: AsyncCuratorBuilderFactory = AsyncCuratorBuilderFactory(curator, settings)
   lazy val metrics: Metrics = DummyMetrics
   lazy val store: ZooKeeperPersistenceStore = new ZooKeeperPersistenceStore(metrics, factory, parallelism = 16)
 
   val APP_VERSION: String = "1"
 
-  class FixedVersionTemplateRepository(store: ZooKeeperPersistenceStore, base: String = "/benchmark") extends TemplateRepository(store, base) {
+  class FixedVersionTemplateRepository(store: ZooKeeperPersistenceStore, base: String = "/benchmark")
+      extends TemplateRepository(store, base) {
 
     /**
       * An extra black hole to prevent jit optimization of the unused template version (see below)
@@ -121,11 +140,12 @@ object TemplateRepositoryBenchmark extends StrictLogging {
     * @param labelSize
     * @return
     */
-  def appDef(pathId: AbsolutePathId, labelSize: Int = 1): AppDefinition = AppDefinition(
-    id = pathId,
-    role = "someRole",
-    labels = Map("a" -> random.alphanumeric.take(labelSize).mkString)
-  )
+  def appDef(pathId: AbsolutePathId, labelSize: Int = 1): AppDefinition =
+    AppDefinition(
+      id = pathId,
+      role = "someRole",
+      labels = Map("a" -> random.alphanumeric.take(labelSize).mkString)
+    )
 
   /**
     * A map of node size to number of nodes of that size. Used for read, update and delete benchmarks. Note that
@@ -154,11 +174,13 @@ object TemplateRepositoryBenchmark extends StrictLogging {
     }
 
     Await.result(
-      Source.fromIterator(() => params.iterator)
-        .map{ p => logger.info(s"Storing ${p._2} app definitions of ~${p._1} bytes size"); p }
-        .mapAsync(1){ case (size, num) => populate(size, num) }
+      Source
+        .fromIterator(() => params.iterator)
+        .map { p => logger.info(s"Storing ${p._2} app definitions of ~${p._1} bytes size"); p }
+        .mapAsync(1) { case (size, num) => populate(size, num) }
         .runWith(Sink.ignore),
-      Duration.Inf)
+      Duration.Inf
+    )
 
     logger.info("Zookeeper successfully populated with data")
     system.terminate()
@@ -181,9 +203,7 @@ class TemplateRepositoryBenchmark extends StrictLogging {
 
   @Benchmark
   def create(hole: Blackhole) = {
-    val res = Await.result(
-      repository.create(appDef(randomPathId(size.toString), labelSize = size)),
-      Duration.Inf)
+    val res = Await.result(repository.create(appDef(randomPathId(size.toString), labelSize = size)), Duration.Inf)
     hole.consume(res)
   }
 

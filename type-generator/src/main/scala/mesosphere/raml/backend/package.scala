@@ -79,9 +79,13 @@ package object backend {
 
   def camelify(name: String): String = name.toLowerCase.capitalize
 
-  def underscoreToCamel(name: String) = "(/|_|\\,)([a-z\\d])".r.replaceAllIn(name, { m =>
-    m.group(2).toUpperCase()
-  })
+  def underscoreToCamel(name: String) =
+    "(/|_|\\,)([a-z\\d])".r.replaceAllIn(
+      name,
+      { m =>
+        m.group(2).toUpperCase()
+      }
+    )
 
   def scalaFieldName(name: String): String = {
     if (name.contains("-")) s"`$name`"
