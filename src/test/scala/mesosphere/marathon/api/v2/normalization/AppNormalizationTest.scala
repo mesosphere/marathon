@@ -6,8 +6,11 @@ import mesosphere.marathon.api.v2.{AppNormalization, NetworkNormalizationMessage
 import mesosphere.marathon.raml._
 import mesosphere.marathon.state.ResourceRole
 import mesosphere.marathon.util.RoleSettings
+import org.scalatest.Inside
 
-class AppNormalizationTest extends UnitTest {
+import scala.util.{Failure, Try}
+
+class AppNormalizationTest extends UnitTest with Inside {
 
   import Normalization._
 
@@ -706,24 +709,55 @@ class AppNormalizationTest extends UnitTest {
         )
         raw.normalize(configuredNormalizer) should be(raw.copy(role = Some("someCustomRole")))
       }
-
     }
 
     "normalize accepted resource roles" when {
-      val raw = App(
-        id = "/foo",
+      val role = "foo"
+      val onlyWithInvalidRole = App(
+        id = "/foo/sleeper",
+        cmd = Option("sleep"),
+        acceptedResourceRoles = Some(Set("other"))
+      )
+
+      val anInvalidAndAValidRole = App(
+        id = "/foo/sleeper",
         cmd = Option("sleep"),
         acceptedResourceRoles = Some(Set("*", "other"))
       )
 
-      s"the ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} feature is enabled" in {
-        val configuredNormalizer = normalizer(role = Some("default_role"), sanitizeAcceptedResourceRoles = true)
-        raw.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*"))
+      val allRolesValid = App(
+        id = "/foo/sleeper",
+        cmd = Option("sleep"),
+        acceptedResourceRoles = Some(Set("*", "foo"))
+      )
+
+      "the sanitizeAcceptedResourceRoles feature is enabled" should {
+        "refuses to normalize when neither '*' nor the app role is contained" in {
+          val configuredNormalizer = normalizer(role = Some("foo"), sanitizeAcceptedResourceRoles = true)
+          inside(Try({
+            onlyWithInvalidRole.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*"))
+          })) {
+            case Failure(ex: NormalizationException) =>
+              ex.msg shouldBe """acceptedResourceRoles is invalid. Valid values are ["*"], ["foo"], or ["*", "foo"]."""
+          }
+        }
+
+        "remove invalid roles, leaving only valid roles" in {
+          val configuredNormalizer = normalizer(role = Some(role), sanitizeAcceptedResourceRoles = true)
+          anInvalidAndAValidRole.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*"))
+        }
+
+        "leave acceptedResourceRoles alone if all roles are valid" in {
+          val configuredNormalizer = normalizer(role = Some(role), sanitizeAcceptedResourceRoles = true)
+          allRolesValid.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*", "foo"))
+        }
       }
 
-      s"the ${DeprecatedFeatures.sanitizeAcceptedResourceRoles} feature is disabled" in {
-        val configuredNormalizer = normalizer(role = Some("default_role"), sanitizeAcceptedResourceRoles = false)
-        raw.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*", "other"))
+      "the sanitizeAcceptedResourceRoles feature is disabled" should {
+        "leave the acceptedResourceRoles field alone" in {
+          val configuredNormalizer = normalizer(role = Some(role), sanitizeAcceptedResourceRoles = false)
+          anInvalidAndAValidRole.normalize(configuredNormalizer).acceptedResourceRoles.value should be(Set("*", "other"))
+        }
       }
     }
   }
