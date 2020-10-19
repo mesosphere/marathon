@@ -1,33 +1,8 @@
-## Changes from to 1.10.17 to 1.10.xxx
+## Changes from 1.9.139 to 1.9.xxx
 
 ### Fixed issues
 
 * [MARATHON-8762](https://jira.d2iq.com/browse/MARATHON-8762) - Marathon allows migrations to be re-applied if they did not previously complete.
-
-## Changes from 1.9.139 to 1.10.17
-
-### Vertical container bursting support and shared cgroups
-
-Marathon 1.10 brings support for Mesos resource-limits, allowing containers to formally allocate and consume more CPU or memory than are consumed from an offer. For example, the following app definition would allow a Marathon app to consume as many CPU cycles are available, and also consume more than the 4gb of memory requested.
-
-```
-{
-  "id": "/dev/bigbusiness",
-  "cpus": 1,
-  "mem": 4096,
-  "resourceLimits": {
-    "cpus": "unlimited",
-    "mem": 8192
-  },
-  ...
-}
-```
-
-Also, newly created pods will no longer allow containers to steal resources from eachother. Previously, if a container in a pod was configured with less memory than it actually needs, the pod would still run successfully if the container could borrow steal the amount needed from another container. Pods created prior to upgrading Marathon to 1.10 will automatically have the flag `legacySharedCgroups` set to allow them to continue to run with the same configuration as they were initially launched. Pods cannot specify resource limits when `legacySharedCgroups` is enabled.
-
-For more information, see [resource-limits.md](https://github.com/mesosphere/marathon/blob/master/docs/docs/resource-limits.md)
-
-## Changes from 1.9.139 to 1.9.xxx
 
 ### Compatibility breaking changes
 
