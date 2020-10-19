@@ -12,7 +12,6 @@ import mesosphere.marathon.state.Role
 import mesosphere.marathon.state.{PathId, Timestamp, UnreachableDisabled, UnreachableEnabled, UnreachableStrategy, _}
 import scala.jdk.CollectionConverters._
 import mesosphere.marathon.tasks.OfferUtil
-import mesosphere.mesos.Placed
 import org.apache._
 import org.apache.mesos.Protos.Attribute
 import play.api.libs.functional.syntax._
@@ -44,7 +43,7 @@ case class Instance(
     runSpec: RunSpec,
     reservation: Option[Reservation],
     role: Role
-) extends Placed {
+) {
 
   def runSpecId: AbsolutePathId = runSpec.id
 
@@ -76,13 +75,13 @@ case class Instance(
 
   def hasReservation: Boolean = reservation.isDefined
 
-  override def hostname: Option[String] = agentInfo.map(_.host)
+  def hostname: Option[String] = agentInfo.map(_.host)
 
-  override def attributes: Seq[Attribute] = agentInfo.map(_.attributes).getOrElse(Seq.empty)
+  def attributes: Seq[Attribute] = agentInfo.map(_.attributes).getOrElse(Seq.empty)
 
-  override def zone: Option[String] = agentInfo.flatMap(_.zone)
+  def zone: Option[String] = agentInfo.flatMap(_.zone)
 
-  override def region: Option[String] = agentInfo.flatMap(_.region)
+  def region: Option[String] = agentInfo.flatMap(_.region)
 
   /**
     * Factory method for creating provisioned instance from Scheduled instance
