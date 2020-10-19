@@ -1,11 +1,10 @@
-## Changes from 1.9.100 to 1.9.xxx
 ## Changes from to 1.10.17 to 1.10.xxx
 
 ### Fixed issues
 
 * [MARATHON-8762](https://jira.d2iq.com/browse/MARATHON-8762) - Marathon allows migrations to be re-applied if they did not previously complete.
 
-## Changes from 1.9.136 to 1.10.17
+## Changes from 1.9.139 to 1.10.17
 
 ### Vertical container bursting support and shared cgroups
 
@@ -28,7 +27,6 @@ Also, newly created pods will no longer allow containers to steal resources from
 
 For more information, see [resource-limits.md](https://github.com/mesosphere/marathon/blob/master/docs/docs/resource-limits.md)
 
-## Changes from 1.9.100 to 1.9.136
 ## Changes from 1.9.139 to 1.9.xxx
 
 ### Compatibility breaking changes
