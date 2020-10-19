@@ -6,7 +6,7 @@
 
 ### Compatibility breaking changes
 
-* [MARATHON-8748] - Marathon now returns an error if a completely invalid `acceptedResourceRoles` is specified, rather than sanitizing it and using `["*"]`. This is intended to address a situation where users were attempting to deploy an app on a DC/OS public node, but weren't using the service role `slave_public`.
+* [MARATHON-8748] - Marathon now returns an error if a completely invalid `acceptedResourceRoles` is specified, rather than sanitizing it and using `["*"]`. This helps users remember to use the service role `slave_public` when deploying an app on a DC/OS public node.
 
 ## Changes from 1.9.100 to 1.9.139
 
