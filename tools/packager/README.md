@@ -5,6 +5,7 @@ Packaging utilities for Marathon.
 
 
 ## Set Up
+
 * Install Docker
 
 * Install [SBT](http://www.scala-sbt.org/release/tutorial/Installing-sbt-on-Linux.html) and an appropriate JDK to build Marathon.
@@ -41,3 +42,19 @@ For example, to build and upload the packages for v1.9.71, the following command
 ssh-add ~/.ssh/pkgmaintainer.pem
 PKG_SSH_USER=... PKG_SSH_HOST=... make REF=v1.9.71 upload
 ```
+
+## Building docker images
+
+The packager can also build docker images. The following command will build a Marathon artifact, from source, and then use that artifact to make a docker image:
+
+```
+make docker
+```
+
+You can also tell the Makefile to download a pre-built artifact, which skips any local JDK/sbt requirements.
+
+```
+make REF=origin/master docker
+```
+
+Note that in order to the latest `origin/master` docker image, you will need to run `git fetch` first to ensure your local repository is up-to-date.
