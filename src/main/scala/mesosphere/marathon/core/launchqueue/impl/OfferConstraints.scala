@@ -114,13 +114,13 @@ object OfferConstraints {
         .flatMap(identity)
         .to(Set)
 
-  case class Group(constraints: Set[AttributeConstraint]) {
+  case class ConstraintGroup(constraints: Set[AttributeConstraint]) {
     def buildProto(builder: MesosOfferConstraints.RoleConstraints.Group.Builder): Unit = {
       constraints.foreach { _.buildProto(builder.addAttributeConstraintsBuilder()) }
     }
   }
 
-  object Group { def empty = Group(Set.empty) }
+  object ConstraintGroup { def empty = ConstraintGroup(Set.empty) }
 
   case class RunSpecState(
       role: Role,
@@ -162,9 +162,9 @@ object OfferConstraints {
         copy(role, constraints, newInduced, newScheduledInstances, newInstancesToUnreserve)
     }
 
-    def toGroup(): Option[Group] =
+    def toGroup(): Option[ConstraintGroup] =
       if (!instancesToUnreserve.isEmpty)
-        Some(Group.empty)
+        Some(ConstraintGroup.empty)
       else if (scheduledInstances.isEmpty)
         None
       else {
@@ -179,7 +179,7 @@ object OfferConstraints {
           }
           .flatten
 
-        Some(Group((effectiveInducedConstraints ++ constraints.map(getAgnosticConstraint)).to(Set)))
+        Some(ConstraintGroup((effectiveInducedConstraints ++ constraints.map(getAgnosticConstraint)).to(Set)))
       }
   }
 
@@ -205,26 +205,27 @@ object OfferConstraints {
       )
   }
 
-  case class RoleState(groupsByRole: Map[Role, Set[Group]]) {
-    def toProto(susbcribedRoles: Set[Role]): MesosOfferConstraints = {
+  case class RoleConstraintState(groupsByRole: Map[Role, Set[ConstraintGroup]]) {
+    def filterRoles(roles: Set[String]): RoleConstraintState = {
+      RoleConstraintState(groupsByRole = groupsByRole.view.filterKeys(roles).toMap)
+    }
+
+    def toProto(): MesosOfferConstraints = {
       val builder = MesosOfferConstraints.newBuilder();
 
       groupsByRole.foreach {
         case (role, groups) =>
-          if (susbcribedRoles.contains(role)) {
-            val roleConstraintsBuilder =
-              MesosOfferConstraints.RoleConstraints.newBuilder()
+          val roleConstraintsBuilder = MesosOfferConstraints.RoleConstraints.newBuilder()
 
-            groups.foreach { _.buildProto(roleConstraintsBuilder.addGroupsBuilder()) }
-            builder.putRoleConstraints(role, roleConstraintsBuilder.build())
-          } else {}
+          groups.foreach { _.buildProto(roleConstraintsBuilder.addGroupsBuilder()) }
+          builder.putRoleConstraints(role, roleConstraintsBuilder.build())
       }
 
       builder.build()
     }
   }
 
-  object RoleState { val empty = RoleState(Map.empty) }
+  object RoleConstraintState { val empty = RoleConstraintState(Map.empty) }
 
   case class State(state: Map[RunSpecConfigRef, RunSpecState]) extends StrictLogging {
 
@@ -261,21 +262,20 @@ object OfferConstraints {
       )
     }
 
-    lazy val roleState = RoleState({
+    lazy val roleState = RoleConstraintState({
       val runSpecStatesByRole = state.values.groupBy(_.role)
 
       runSpecStatesByRole.flatMap {
-        case (role: Role, runSpecStates: Iterable[RunSpecState]) => {
-          val groups: Set[Group] = runSpecStates.flatMap(_.toGroup).toSet
+        case (role: Role, runSpecStates: Iterable[RunSpecState]) =>
+          val groups: Set[ConstraintGroup] = runSpecStates.flatMap(_.toGroup).toSet
           val roleShouldBeSuppressed = groups.isEmpty
-          val roleNeedsUnconstrainedOffers = groups.contains(Group.empty)
+          val roleNeedsUnconstrainedOffers = groups.contains(ConstraintGroup.empty)
 
           // NOTE: Decision to suppress a role is made independently by the ReviveOffersState.
           if (roleShouldBeSuppressed || roleNeedsUnconstrainedOffers)
             None
           else
             Some(role -> groups)
-        }
       }
     })
   }

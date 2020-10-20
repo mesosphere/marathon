@@ -89,7 +89,7 @@ class ReviveOffersActor(
             .via(offerConstraintsFlow(minOfferConstraintsUpdateInterval))
         )
       else
-        Flow[RoleDirective].map { (_, OfferConstraints.RoleState.empty) }
+        Flow[RoleDirective].map { (_, OfferConstraints.RoleConstraintState.empty) }
 
     val done: Future[Done] = initialFrameworkInfo.flatMap { frameworkInfo =>
       flattenedInstanceUpdates
@@ -103,7 +103,7 @@ class ReviveOffersActor(
             driverHolder.driver.foreach { d =>
               val newInfo = frameworkInfoWithRoles(frameworkInfo, roleState.keys)
               val suppressedRoles = roleState.iterator.collect { case (role, OffersNotWanted) => role }.toSeq
-              d.updateFramework(newInfo, suppressedRoles.asJava, constraints.toProto(roleState.keySet))
+              d.updateFramework(newInfo, suppressedRoles.asJava, constraints.filterRoles(roleState.keySet).toProto())
             }
 
           case (IssueRevive(roles), _) =>

@@ -17,7 +17,9 @@ import scala.concurrent.duration.FiniteDuration
 object OfferConstraintsStreamLogic extends StrictLogging {
 
   // Generates rate-limited offer constraint updates from instance updates.
-  def offerConstraintsFlow(minUpdateInterval: FiniteDuration): Flow[InstanceChangeOrSnapshot, OfferConstraints.RoleState, NotUsed] =
+  def offerConstraintsFlow(
+      minUpdateInterval: FiniteDuration
+  ): Flow[InstanceChangeOrSnapshot, OfferConstraints.RoleConstraintState, NotUsed] =
     Flow[InstanceChangeOrSnapshot]
       .scan(OfferConstraints.State.empty) {
         case (current, snapshot: InstancesSnapshot) => current.withSnapshot(snapshot)
@@ -27,15 +29,6 @@ object OfferConstraintsStreamLogic extends StrictLogging {
       .buffer(1, OverflowStrategy.dropHead) // While we are back-pressured, we drop older interim frames
       .via(RateLimiterFlow.apply(minUpdateInterval))
       .map(_.roleState)
-      .sliding(2)
-      .map {
-        case Seq(previous, current) =>
-          if (previous == current) None else Some(current)
-        case _ =>
-          logger.info(s"Offer constraints flow is terminating")
-          None
-      }
-      .collect { case Some(state) => state }
       .map { state => { logger.info(s"Changing offer constraints to: ${state}"); state } }
 
   /**
@@ -49,12 +42,16 @@ object OfferConstraintsStreamLogic extends StrictLogging {
    * @param minUpdateInterval - The maximum rate at which we allow offer constraint updates to be emitted.
     */
   def offerConstraintsInjectionFlow(
-      offerConstraintsSource: Source[OfferConstraints.RoleState, NotUsed]
-  ): Flow[RoleDirective, (RoleDirective, OfferConstraints.RoleState), NotUsed] = {
+      offerConstraintsSource: Source[OfferConstraints.RoleConstraintState, NotUsed]
+  ): Flow[RoleDirective, (RoleDirective, OfferConstraints.RoleConstraintState), NotUsed] = {
 
-    case class Latest(updateFramework: Option[UpdateFramework], constraints: OfferConstraints.RoleState, directive: Option[RoleDirective]) {
+    case class Latest(
+        updateFramework: Option[UpdateFramework],
+        constraints: OfferConstraints.RoleConstraintState,
+        directive: Option[RoleDirective]
+    ) {
 
-      def withDirectiveOrConstraints(directiveOrConstraints: Either[RoleDirective, OfferConstraints.RoleState]): Latest =
+      def withDirectiveOrConstraints(directiveOrConstraints: Either[RoleDirective, OfferConstraints.RoleConstraintState]): Latest =
         directiveOrConstraints match {
           case Left(issueRevive: IssueRevive) =>
             copy(directive = Some(issueRevive))
@@ -65,7 +62,7 @@ object OfferConstraintsStreamLogic extends StrictLogging {
         }
     }
 
-    object Latest { def empty = Latest(None, OfferConstraints.RoleState.empty, None) }
+    object Latest { def empty = Latest(None, OfferConstraints.RoleConstraintState.empty, None) }
 
     Flow[RoleDirective]
       .map(Left(_))
