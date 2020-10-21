@@ -12,7 +12,7 @@ class VersionInfoTest extends UnitTest {
       val versionOfNoVersion = versionInfo.version
 
       When("Applying a scaling change")
-      val newVersion = versionInfo.withScaleOrRestartChange(Timestamp(1))
+      val newVersion = versionInfo.withScaleChange(Timestamp(1))
 
       Then("The version info is promoted to a FullVersion")
       newVersion should be(
@@ -46,7 +46,7 @@ class VersionInfoTest extends UnitTest {
       val versionInfo = VersionInfo.OnlyVersion(Timestamp(1))
 
       When("Applying a scaling change")
-      val newVersion = versionInfo.withScaleOrRestartChange(Timestamp(2))
+      val newVersion = versionInfo.withScaleChange(Timestamp(2))
 
       Then("The version info is promoted to a FullVersion")
       newVersion should be(
@@ -84,7 +84,7 @@ class VersionInfoTest extends UnitTest {
       )
 
       When("Applying a scaling change")
-      val newVersion = versionInfo.withScaleOrRestartChange(Timestamp(3))
+      val newVersion = versionInfo.withScaleChange(Timestamp(3))
 
       Then("The version info is promoted to a FullVersion")
       newVersion should be(
