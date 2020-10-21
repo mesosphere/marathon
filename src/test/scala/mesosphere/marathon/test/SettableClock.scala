@@ -3,6 +3,7 @@ package test
 
 import java.time._
 
+import scala.compat.java8.DurationConverters
 import scala.concurrent.duration.FiniteDuration
 
 object SettableClock {
@@ -24,11 +25,17 @@ class SettableClock(private[this] var clock: Clock = SettableClock.defaultJavaCl
 
   override def withZone(zoneId: ZoneId): Clock = new SettableClock(clock.withZone(zoneId))
 
+  @deprecated("Use advanceBy instead")
   def +=(duration: FiniteDuration): Unit = plus(duration)
 
+  def advanceBy(duration: FiniteDuration): this.type =
+    plus(DurationConverters.toJava(duration))
+
+  @deprecated("Use advanceBy instead")
   def plus(duration: FiniteDuration): this.type =
     plus(Duration.ofMillis(duration.toMillis))
 
+  @deprecated("Use advanceBy instead")
   def plus(duration: Duration): this.type = {
     clock = Clock.offset(clock, duration)
     subscribers.foreach(_())

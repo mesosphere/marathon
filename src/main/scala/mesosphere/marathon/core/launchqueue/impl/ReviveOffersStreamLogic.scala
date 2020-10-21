@@ -7,7 +7,7 @@ import akka.stream.scaladsl.Flow
 import com.typesafe.scalalogging.StrictLogging
 import mesosphere.marathon.core.instance.update.{InstanceChangeOrSnapshot, InstanceDeleted, InstanceUpdated, InstancesSnapshot}
 import mesosphere.marathon.state.RunSpecConfigRef
-import mesosphere.marathon.stream.TimedEmitter
+import mesosphere.marathon.stream.{RateLimiterFlow, TimedEmitter}
 
 import scala.concurrent.duration._
 
@@ -143,6 +143,6 @@ object ReviveOffersStreamLogic extends StrictLogging {
       .via(suppressOrReviveFromDiff)
       .via(handleIgnoreSuppress(enableSuppress = enableSuppress))
       .via(deduplicateSuppress)
-      .throttle(1, minReviveOffersInterval)
+      .via(RateLimiterFlow.apply(minReviveOffersInterval))
   }
 }
