@@ -74,7 +74,7 @@ class CSIProviderValidationsTest extends UnitTest with ValidationTestLike {
     val validator = RootGroup.validRootGroup(conf)
 
     "access mode is single writer" should {
-      "prevent an app from being specified multiple times" in {
+      "prevent a volume from being specified multiple times" in {
         val rootGroup = Builders.newRootGroup(apps =
           Seq(
             newCsiAppDef(id = AbsolutePathId("/app-1"), accessMode = CSIExternalVolumeInfo.AccessMode.SINGLE_NODE_WRITER, name = "my-vol"),
