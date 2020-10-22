@@ -103,7 +103,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
   // group-level validation for DVDI volumes: the same volume name may only be referenced by a single
   // task instance across the entire cluster.
-  override lazy val rootGroup = ValidationHelpers.validateUniqueVolumes(name)
+  override lazy val rootGroup = ProviderValidationHelpers.validateUniqueVolumes(name)
 
   override lazy val ramlApp = {
     val haveOnlyOneInstance: Validator[App] =
@@ -123,7 +123,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       /** @return a count of volume references-by-name within an app spec */
       def volumeNameCounts(app: App): Map[String, Int] =
-        ValidationHelpers
+        ProviderValidationHelpers
           .namesOfMatchingVolumes(name, app)
           .groupBy(identity)
           .iterator
@@ -157,7 +157,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
       }
 
       def ifDVDIVolume(vtor: Validator[AppExternalVolume]): Validator[AppExternalVolume] =
-        conditional(ValidationHelpers.matchesProviderRaml(name, _))(vtor)
+        conditional(ProviderValidationHelpers.matchesProviderRaml(name, _))(vtor)
 
       def volumeValidator(container: EngineType): Validator[AppExternalVolume] =
         container match {
@@ -197,7 +197,7 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       /** @return a count of volume references-by-name within an app spec */
       def volumeNameCounts(app: AppDefinition): Map[String, Int] =
-        ValidationHelpers
+        ProviderValidationHelpers
           .namesOfMatchingVolumes(name, app)
           .groupBy(identity)
           .iterator
@@ -251,10 +251,10 @@ private[impl] object DVDIProviderValidations extends ExternalVolumeValidations {
 
       validator[Container] { ct =>
         ct.volumes.collect {
-          case VolumeWithMount(ev: ExternalVolume, _) if ValidationHelpers.matchesProvider(name, ev) => ev
+          case VolumeWithMount(ev: ExternalVolume, _) if ProviderValidationHelpers.matchesProvider(name, ev) => ev
         } as "volumes" is every(volumeValidator(ct))
         ct.volumes.collect {
-          case VolumeWithMount(ev: ExternalVolume, mount) if ValidationHelpers.matchesProvider(name, ev) => mount
+          case VolumeWithMount(ev: ExternalVolume, mount) if ProviderValidationHelpers.matchesProvider(name, ev) => mount
         } as "mounts" is every(volumeMountValidator(ct))
       }
     }
