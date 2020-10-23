@@ -3,6 +3,7 @@ package core.task
 
 import java.util.UUID
 
+import com.google.protobuf.ByteString
 import mesosphere.UnitTest
 import mesosphere.marathon.core.condition.Condition
 import mesosphere.marathon.core.instance.Instance.PrefixInstance
@@ -12,6 +13,7 @@ import mesosphere.marathon.core.task.bus.MesosTaskStatusTestHelper
 import mesosphere.marathon.core.task.state.{NetworkInfo, NetworkInfoPlaceholder}
 import mesosphere.marathon.core.task.update.TaskUpdateEffect
 import mesosphere.marathon.state.{AbsolutePathId, AppDefinition, PathId, PortDefinition}
+
 import scala.jdk.CollectionConverters._
 import mesosphere.marathon.test.{MarathonTestHelper, SettableClock}
 import org.apache.mesos.{Protos => MesosProtos}
@@ -235,6 +237,15 @@ class TaskTest extends UnitTest with Inside {
       m.get(taskId2) should not be 'defined
       m(taskId1) should be(1)
       an[NoSuchElementException] should be thrownBy m(taskId2)
+    }
+
+    "toString excludes Mesos taskStatus data" in {
+      val f = new Fixture
+      val task = f.taskWithoutIp
+      val taskWithData = task.copy(status = task.status.copy(mesosStatus = task.status.mesosStatus.map { mesosStatus =>
+        mesosStatus.toBuilder.setData(ByteString.copyFromUtf8("super-secret-data")).build()
+      }))
+      taskWithData.toString.shouldNot(include("super-secret-data"))
     }
   }
 
