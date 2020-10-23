@@ -19,7 +19,18 @@ object OfferConstraintsStreamLogic extends StrictLogging {
   // Generates rate-limited offer constraint updates from instance updates.
   def offerConstraintsFlow(
       minUpdateInterval: FiniteDuration
-  ): Flow[InstanceChangeOrSnapshot, OfferConstraints.RoleConstraintState, NotUsed] =
+  ): Flow[InstanceChangeOrSnapshot, OfferConstraints.RoleConstraintState, NotUsed] = {
+    val updateDeduplicationFlow = Flow[OfferConstraints.RoleConstraintState]
+      .sliding(2)
+      .map {
+        case Seq(previous, current) =>
+          if (previous == current) None else Some(current)
+        case _ =>
+          logger.info(s"Offer constraints flow is terminating")
+          None
+      }
+      .collect { case Some(state) => state }
+
     Flow[InstanceChangeOrSnapshot]
       .scan(OfferConstraints.State.empty) {
         case (current, snapshot: InstancesSnapshot) => current.withSnapshot(snapshot)
@@ -29,7 +40,9 @@ object OfferConstraintsStreamLogic extends StrictLogging {
       .buffer(1, OverflowStrategy.dropHead) // While we are back-pressured, we drop older interim frames
       .via(RateLimiterFlow.apply(minUpdateInterval))
       .map(_.roleState)
+      .via(updateDeduplicationFlow)
       .map { state => { logger.info(s"Changing offer constraints to: ${state}"); state } }
+  }
 
   /**
     * Emits each RoleDirective together with the latest offer constraints state.
