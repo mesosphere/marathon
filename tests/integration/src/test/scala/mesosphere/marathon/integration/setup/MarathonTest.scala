@@ -1020,8 +1020,8 @@ trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServer
 
   override def marathonArgs: Map[String, String] = Map(
     "failover_timeout" -> "1",
-    "use_offer_constraints" -> "",
-    "min_offer_constraints_update_interval" -> "500"
+    "mesos_offer_constraints" -> "",
+    "min_mesos_offer_constraints_update_interval" -> "500"
   )
 }
 
