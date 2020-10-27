@@ -23,7 +23,7 @@ class ConstraintsTest extends UnitTest {
   val rackIdField = "rackid"
   val jdkField = "jdk"
 
-  case class meetConstraint(field: String, operator: Operator, value: String, placed: Seq[Placed] = Nil) extends Matcher[Offer] {
+  case class meetConstraint(field: String, operator: Operator, value: String, placed: Seq[Instance] = Nil) extends Matcher[Offer] {
     override def apply(offer: Offer): MatchResult = {
       val constraint = makeConstraint(field, operator, value)
       val matched = Constraints.meetsConstraint(placed, offer, constraint)
@@ -36,7 +36,7 @@ class ConstraintsTest extends UnitTest {
       MatchResult(matched, s"Offer did not match constraint\n${description}", s"Offer matched constraint\n${description}")
     }
 
-    def withPlacements(newPlaced: Placed*): meetConstraint = copy(placed = newPlaced.toList)
+    def withPlacements(newPlaced: Instance*): meetConstraint = copy(placed = newPlaced.toList)
   }
 
   "Constraints" should {
@@ -177,153 +177,95 @@ class ConstraintsTest extends UnitTest {
       makeOffer("foohost") should meetConstraint(jdkField, UNLIKE, "7")
     }
 
-    "RackGroupedByConstraints" in {
+    "RackGroupedByConstraints" should {
       val appId = AbsolutePathId("/test")
-      val task1_rack1 = makeInstance(appId, attributes = s"${rackIdField}:rack-1")
-      val task2_rack1 = makeInstance(appId, attributes = s"${rackIdField}:rack-1")
-      val task3_rack2 = makeInstance(appId, attributes = s"${rackIdField}:rack-2")
+      val app = Builders.newAppDefinition.command(appId, instances = 5)
+      def instanceWithRack(n: Int) =
+        makeInstanceForRunSpec(app, attributes = s"${rackIdField}:rack-${n}")
 
-      val rack1Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-1")
-      val rack2Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-2")
+      def offerWithRack(n: Int) =
+        makeOffer("foohost", s"foo:bar;${rackIdField}:rack-${n}")
 
-      rack1Offer should meetConstraint(rackIdField, GROUP_BY, "2")
-        .withPlacements()
+      "allow initial placement when no placements yet" in {
+        offerWithRack(1) should meetConstraint(rackIdField, GROUP_BY, "2")
+          .withPlacements()
+      }
 
-      rack1Offer shouldNot meetConstraint(rackIdField, GROUP_BY, "2")
-        .withPlacements(task1_rack1)
+      "allow remainder to be allocated groups" in {
+        offerWithRack(1) should meetConstraint(rackIdField, GROUP_BY, "2")
+          .withPlacements(instanceWithRack(1), instanceWithRack(1))
 
-      rack2Offer should meetConstraint(rackIdField, GROUP_BY, "2")
-        .withPlacements(task1_rack1)
+        offerWithRack(1) should meetConstraint(rackIdField, GROUP_BY, "4")
+          .withPlacements(instanceWithRack(1))
+      }
 
-      rack1Offer should meetConstraint(rackIdField, GROUP_BY, "2")
-        .withPlacements(task1_rack1, task3_rack2)
+      "not allow more than 1 remainder to be assigned to a group" in {
+        offerWithRack(1) shouldNot meetConstraint(rackIdField, GROUP_BY, "2")
+          .withPlacements(instanceWithRack(1), instanceWithRack(1), instanceWithRack(1))
 
-      rack1Offer shouldNot meetConstraint(rackIdField, GROUP_BY, "2")
-        .withPlacements(task1_rack1, task2_rack1, task3_rack2)
+        offerWithRack(1) shouldNot meetConstraint(rackIdField, GROUP_BY, "4")
+          .withPlacements(instanceWithRack(1), instanceWithRack(1))
+      }
 
-      // Should not meet group-by-no-attribute constraints.
-      makeOffer("foohost") shouldNot meetConstraint(rackIdField, GROUP_BY, "2")
+      "allow second placement" in {
+        offerWithRack(2) should meetConstraint(rackIdField, GROUP_BY, "2")
+          .withPlacements(instanceWithRack(1))
+      }
+
+      "only allow remainder number of groups to get a 1 'extra' assignment" in {
+        offerWithRack(2) shouldNot meetConstraint(rackIdField, GROUP_BY, "4")
+          .withPlacements(instanceWithRack(1), instanceWithRack(1), instanceWithRack(2))
+      }
+
+      "allow final placement" in {
+        offerWithRack(2) should meetConstraint(rackIdField, GROUP_BY, "2")
+          .withPlacements(instanceWithRack(1), instanceWithRack(1), instanceWithRack(1), instanceWithRack(2))
+      }
+
+      "reject additional racks after group number racks are placed" in {
+        offerWithRack(3) shouldNot meetConstraint(rackIdField, GROUP_BY, "2")
+          .withPlacements(instanceWithRack(1), instanceWithRack(2))
+      }
+
+      "not accept an offer lacking the attribute being grouped by" in {
+        makeOffer("foohost") shouldNot meetConstraint(rackIdField, GROUP_BY, "2")
+      }
     }
 
-    "RackGroupedByConstraints2" in {
+    "groupBy works with scalar values" in {
       val appId = AbsolutePathId("/test")
-      val task1_rack1 = makeInstance(appId, attributes = s"${rackIdField}:rack-1")
-      val task2_rack2 = makeInstance(appId, attributes = s"${rackIdField}:rack-2")
-      val task3_rack3 = makeInstance(appId, attributes = s"${rackIdField}:rack-3")
-      val task4_rack1 = makeInstance(appId, attributes = s"${rackIdField}:rack-1")
-      val task5_rack2 = makeInstance(appId, attributes = s"${rackIdField}:rack-2")
-      val rack1Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-1")
-      val rack2Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-2")
-      val rack3Offer = makeOffer("foohost", s"foo:bar;${rackIdField}:rack-3")
+      val app = Builders.newAppDefinition.command(appId, instances = 5)
+      def instanceWithRack(n: Int) =
+        makeInstanceForRunSpec(app, attributes = s"${rackIdField}:rack-${n}.0")
 
-      rack1Offer should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements()
+      def offerWithRack(n: Int) =
+        makeOffer("foohost", s"foo:bar;${rackIdField}:rack-${n}")
 
-      rack2Offer should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements(task1_rack1)
+      offerWithRack(1) should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements()
 
-      rack3Offer should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements(task1_rack1, task2_rack2)
+      offerWithRack(2) should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements(instanceWithRack(1))
 
-      rack1Offer should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements(task1_rack1, task2_rack2, task3_rack3)
+      offerWithRack(3) should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements(instanceWithRack(1), instanceWithRack(2))
 
-      rack2Offer should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements(task1_rack1, task2_rack2, task3_rack3, task4_rack1)
-
-      rack2Offer shouldNot meetConstraint(rackIdField, GROUP_BY, "3").withPlacements(
-        task1_rack1,
-        task2_rack2,
-        task3_rack3,
-        task4_rack1,
-        task5_rack2
-      )
+      offerWithRack(1) should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements(instanceWithRack(1))
     }
 
-    "RackGroupedByConstraints3" in {
+    "GROUP_BY works for the host attribute" in {
       val appId = AbsolutePathId("/test")
-      val instance_rack1 = makeInstance(appId, attributes = s"${rackIdField}:1.0")
-      val instance_rack2 = makeInstance(appId, attributes = s"${rackIdField}:2.0")
-      val instance_rack3 = makeInstance(appId, attributes = s"${rackIdField}:3.0")
+      val app = Builders.newAppDefinition.command(appId, instances = 5)
+      def instanceWithHost(n: Int) =
+        makeInstanceForRunSpec(app, host = s"host-${n}")
 
-      val offer_rack1 = makeOffer("foohost", s"foo:bar;${rackIdField}:1")
-      val offer_rack2 = makeOffer("foohost", s"foo:bar;${rackIdField}:2")
-      val offer_rack3 = makeOffer("foohost", s"foo:bar;${rackIdField}:3")
+      def offerWithHost(n: Int) =
+        makeOffer(s"host-${n}", "")
 
-      offer_rack1 should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements()
+      offerWithHost(1) should meetConstraint(hostnameField, GROUP_BY, "3").withPlacements()
 
-      offer_rack2 should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements(instance_rack1)
+      offerWithHost(2) should meetConstraint(hostnameField, GROUP_BY, "3").withPlacements(instanceWithHost(1))
 
-      offer_rack3 should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements(instance_rack1, instance_rack2)
+      offerWithHost(3) should meetConstraint(hostnameField, GROUP_BY, "3").withPlacements(instanceWithHost(1), instanceWithHost(2))
 
-      offer_rack1 should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements(instance_rack1, instance_rack2, instance_rack3)
-
-      offer_rack2 should meetConstraint(rackIdField, GROUP_BY, "3").withPlacements(
-        instance_rack1,
-        instance_rack2,
-        instance_rack3,
-        instance_rack1
-      )
-
-      offer_rack2 shouldNot meetConstraint(rackIdField, GROUP_BY, "3").withPlacements(
-        instance_rack1,
-        instance_rack2,
-        instance_rack3,
-        instance_rack1,
-        instance_rack2
-      )
-    }
-
-    "HostnameGroupedByConstraints" in {
-      val appId = AbsolutePathId("/test")
-      val task1_host1 = makeInstance(appId, host = "host1")
-      val task2_host1 = makeInstance(appId, host = "host1")
-      val task3_host2 = makeInstance(appId, host = "host2")
-      val task4_host3 = makeInstance(appId, host = "host3")
-
-      var groupHost = Seq.empty[Instance]
-      val attributes = ""
-
-      val groupByHost = makeConstraint(hostnameField, GROUP_BY, "2")
-
-      val groupByFreshHostMet = Constraints.meetsConstraint(groupHost, makeOffer("host1", attributes), groupByHost)
-
-      assert(groupByFreshHostMet, "Should be able to schedule in fresh host.")
-
-      groupHost ++= Set(task1_host1)
-
-      val groupByHostMet = Constraints.meetsConstraint(groupHost, makeOffer("host1", attributes), groupByHost)
-
-      assert(!groupByHostMet, "Should not meet group-by-host constraint.")
-
-      val groupByHostMet2 = Constraints.meetsConstraint(groupHost, makeOffer("host2", attributes), groupByHost)
-
-      assert(groupByHostMet2, "Should meet group-by-host constraint.")
-
-      groupHost ++= Set(task3_host2)
-
-      val groupByHostMet3 = Constraints.meetsConstraint(groupHost, makeOffer("host1", attributes), groupByHost)
-
-      assert(groupByHostMet3, "Should meet group-by-host constraint.")
-
-      groupHost ++= Set(task2_host1)
-
-      val groupByHostNotMet = Constraints.meetsConstraint(groupHost, makeOffer("host1", attributes), groupByHost)
-
-      assert(!groupByHostNotMet, "Should not meet group-by-host constraint.")
-
-      val groupByHostMet4 = Constraints.meetsConstraint(groupHost, makeOffer("host3", attributes), groupByHost)
-
-      assert(groupByHostMet4, "Should meet group-by-host constraint.")
-
-      groupHost ++= Set(task4_host3)
-
-      val groupByHostNotMet2 = Constraints.meetsConstraint(groupHost, makeOffer("host1", attributes), groupByHost)
-
-      assert(!groupByHostNotMet2, "Should not meet group-by-host constraint.")
-
-      val groupByHostMet5 = Constraints.meetsConstraint(groupHost, makeOffer("host3", attributes), groupByHost)
-
-      assert(groupByHostMet5, "Should meet group-by-host constraint.")
-
-      val groupByHostMet6 = Constraints.meetsConstraint(groupHost, makeOffer("host2", attributes), groupByHost)
-
-      assert(groupByHostMet6, "Should meet group-by-host constraint.")
+      offerWithHost(1) should meetConstraint(hostnameField, GROUP_BY, "3").withPlacements(instanceWithHost(1))
     }
 
     "HostnameMaxPerConstraints" in {
@@ -679,6 +621,23 @@ class ConstraintsTest extends UnitTest {
     builder.build
   }
 
+  private def makeInstanceForRunSpec(
+      runSpec: state.RunSpec,
+      attributes: String = "",
+      host: String = "host",
+      region: Option[String] = None,
+      zone: Option[String] = None
+  ): Instance = {
+    TestInstanceBuilder
+      .newBuilderForRunSpec(runSpec)
+      .addTaskWithBuilder()
+      .taskRunning()
+      .withNetworkInfo(hostName = Some(host), hostPorts = Seq(999))
+      .build()
+      .withAgentInfo(hostName = Some(host), region = region, zone = zone, attributes = Some(parseAttrs(attributes)))
+      .getInstance()
+  }
+
   private def makeInstance(
       appId: AbsolutePathId,
       attributes: String = "",
@@ -686,8 +645,9 @@ class ConstraintsTest extends UnitTest {
       region: Option[String] = None,
       zone: Option[String] = None
   ): Instance = {
+    val runSpec = Builders.newAppDefinition.command(appId, instances = 1)
     TestInstanceBuilder
-      .newBuilder(appId)
+      .newBuilderForRunSpec(runSpec)
       .addTaskWithBuilder()
       .taskRunning()
       .withNetworkInfo(hostName = Some(host), hostPorts = Seq(999))
