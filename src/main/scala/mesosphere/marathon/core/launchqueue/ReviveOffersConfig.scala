@@ -26,7 +26,8 @@ trait ReviveOffersConfig extends ScallopConf {
     "mesos_offer_constraints",
     default = Some(false),
     noshort = true,
-    descrYes = "Specify offer constraints to Mesos to avoid receiving some of unneeded offers (experimental).",
+    descrYes =
+      "Send offer constraints to Mesos to reduce the number of offers Marathon needs to decline due to placement constraints (experimental).",
     descrNo = "(Default) Mesos will send unconstrained offers to Marathon.",
     prefix = "disable_"
   )
