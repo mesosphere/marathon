@@ -25,7 +25,7 @@ class MesosAppIntegrationTest extends AkkaIntegrationTest with EmbeddedMarathonT
   // Offer constraints are disabled to test the rejected offers summary.
   override def marathonArgs: Map[String, String] = Map(
     "failover_timeout" -> "1",
-    "disable_use_offer_constraints" -> ""
+    "disable_mesos_offer_constraints" -> ""
   )
 
   // Configure Mesos to provide the Mesos containerizer with Docker image support.
