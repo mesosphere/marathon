@@ -158,6 +158,8 @@ class ReviveOffersActorTest extends AkkaUnitTest {
         Future.successful(initialFrameworkInfo),
         defaultRole,
         minReviveOffersInterval = 500.millis,
+        useOfferConstraints = true,
+        minOfferConstraintsUpdateInterval = 500.millis,
         instanceUpdates = instanceUpdates,
         rateLimiterUpdates = delayUpdates,
         driverHolder = driverHolder,
@@ -167,11 +169,11 @@ class ReviveOffersActorTest extends AkkaUnitTest {
 
     def verifyUnsuppress(): Unit = {
       import org.mockito.Matchers.{eq => mEq}
-      Mockito.verify(driver, invocationTimeout).updateFramework(any, mEq(Nil.asJava))
+      Mockito.verify(driver, invocationTimeout).updateFramework(any, mEq(Nil.asJava), any)
     }
     def verifySuppress(): Unit = {
       import org.mockito.Matchers.{eq => mEq}
-      Mockito.verify(driver, invocationTimeout).updateFramework(any, mEq(Seq(defaultRole).asJava))
+      Mockito.verify(driver, invocationTimeout).updateFramework(any, mEq(Seq(defaultRole).asJava), any)
     }
     def verifyExplicitRevive(timeout: VerificationMode = invocationTimeout): Unit = {
       Mockito.verify(driver, timeout).reviveOffers(Set(defaultRole).asJava)

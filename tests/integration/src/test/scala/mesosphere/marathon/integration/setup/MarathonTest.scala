@@ -1070,9 +1070,19 @@ trait EmbeddedMarathonTest extends Suite with StrictLogging with ZookeeperServer
    * list of frameworks
    *
    * Until https://issues.apache.org/jira/browse/MESOS-8171 is resolved, we cannot set this value to 0.
+   *
+   * As soon as using Mesos offer constraints is switched on by default,
+   * the `*offer_constraints*` flags can be removed. Until that moment, offer
+   * constraints have to be switched on here (and not in the default options in
+   * `LocalMarathon`), because there are tests that use `LocalMarathon`
+   * for starting older versions of Marathon which do not support this flag.
    */
 
-  override def marathonArgs: Map[String, String] = Map("failover_timeout" -> "1")
+  override def marathonArgs: Map[String, String] = Map(
+    "failover_timeout" -> "1",
+    "mesos_offer_constraints" -> "",
+    "min_mesos_offer_constraints_update_interval" -> "500"
+  )
 }
 
 /**

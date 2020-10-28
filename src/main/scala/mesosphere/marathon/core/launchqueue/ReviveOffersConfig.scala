@@ -21,4 +21,20 @@ trait ReviveOffersConfig extends ScallopConf {
     descrNo = "(Default) Offers will be continually declined for declineOfferDuration.",
     prefix = "disable_"
   )
+
+  lazy val useOfferConstraints = toggle(
+    "mesos_offer_constraints",
+    default = Some(false),
+    noshort = true,
+    descrYes =
+      "Send offer constraints to Mesos to reduce the number of offers Marathon needs to decline due to placement constraints (experimental).",
+    descrNo = "(Default) Mesos will send unconstrained offers to Marathon.",
+    prefix = "disable_"
+  )
+
+  lazy val minOfferConstraintsUpdateInterval = opt[Long](
+    "min_mesos_offer_constraints_update_interval",
+    descr = "Avoid updating Mesos offer constraints more often than this interval (ms). Has no effect without `--mesos_offer_constraints`.",
+    default = Some(1000)
+  )
 }

@@ -89,6 +89,8 @@ class LaunchQueueModule(
       initialFrameworkInfo,
       reviveConfig.mesosRole(),
       reviveConfig.minReviveOffersInterval().millis,
+      reviveConfig.useOfferConstraints(),
+      reviveConfig.minOfferConstraintsUpdateInterval().millis,
       instanceTracker.instanceUpdates,
       rateLimiterUpdates,
       driverHolder,
