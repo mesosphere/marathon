@@ -36,10 +36,10 @@ object GroupVersioningUtil extends StrictLogging {
             oldApp.versionInfo.withConfigChange(newVersion = version)
           } else if (oldApp.isOnlyScaleChange(newApp)) {
             logger.info(s"${newApp.id}: scaling op detected for app (oldVersion ${oldApp.versionInfo})")
-            oldApp.versionInfo.withScaleOrRestartChange(newVersion = version)
+            oldApp.versionInfo.withScaleChange(newVersion = version)
           } else if (oldApp.versionInfo != newApp.versionInfo && newApp.versionInfo == VersionInfo.NoVersion) {
             logger.info(s"${newApp.id}: restart detected for app (oldVersion ${oldApp.versionInfo})")
-            oldApp.versionInfo.withScaleOrRestartChange(newVersion = version)
+            oldApp.versionInfo.withRestartChange(newVersion = version)
           } else {
             oldApp.versionInfo
           }
@@ -84,10 +84,10 @@ object GroupVersioningUtil extends StrictLogging {
             oldPod.versionInfo.withConfigChange(newVersion = version)
           } else if (oldPod.isOnlyScaleChange(newPod)) {
             logger.info(s"${newPod.id}: scaling op detected for Pod (oldVersion ${oldPod.versionInfo})")
-            oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
+            oldPod.versionInfo.withScaleChange(newVersion = version)
           } else if (oldPod.versionInfo != newPod.versionInfo && newPod.versionInfo == VersionInfo.NoVersion) {
             logger.info(s"${newPod.id}: restart detected for Pod (oldVersion ${oldPod.versionInfo})")
-            oldPod.versionInfo.withScaleOrRestartChange(newVersion = version)
+            oldPod.versionInfo.withRestartChange(newVersion = version)
           } else {
             oldPod.versionInfo
           }

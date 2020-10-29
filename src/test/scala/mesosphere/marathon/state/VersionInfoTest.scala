@@ -12,7 +12,7 @@ class VersionInfoTest extends UnitTest {
       val versionOfNoVersion = versionInfo.version
 
       When("Applying a scaling change")
-      val newVersion = versionInfo.withScaleOrRestartChange(Timestamp(1))
+      val newVersion = versionInfo.withScaleChange(Timestamp(1))
 
       Then("The version info is promoted to a FullVersion")
       newVersion should be(
@@ -46,7 +46,7 @@ class VersionInfoTest extends UnitTest {
       val versionInfo = VersionInfo.OnlyVersion(Timestamp(1))
 
       When("Applying a scaling change")
-      val newVersion = versionInfo.withScaleOrRestartChange(Timestamp(2))
+      val newVersion = versionInfo.withScaleChange(Timestamp(2))
 
       Then("The version info is promoted to a FullVersion")
       newVersion should be(
@@ -54,6 +54,23 @@ class VersionInfoTest extends UnitTest {
           version = Timestamp(2),
           lastScalingAt = Timestamp(2),
           lastConfigChangeAt = Timestamp(1)
+        )
+      )
+    }
+
+    "OnlyVersion upgrades to FullVersion on a restart change" in {
+      Given("An OnlyVersion info")
+      val versionInfo = VersionInfo.OnlyVersion(Timestamp(1))
+
+      When("Applying a restart change")
+      val newVersion = versionInfo.withRestartChange(Timestamp(2))
+
+      Then("The version info is promoted to a FullVersion")
+      newVersion should be(
+        FullVersionInfo(
+          version = Timestamp(2),
+          lastScalingAt = Timestamp(1),
+          lastConfigChangeAt = Timestamp(2)
         )
       )
     }
@@ -84,7 +101,7 @@ class VersionInfoTest extends UnitTest {
       )
 
       When("Applying a scaling change")
-      val newVersion = versionInfo.withScaleOrRestartChange(Timestamp(3))
+      val newVersion = versionInfo.withScaleChange(Timestamp(3))
 
       Then("The version info is promoted to a FullVersion")
       newVersion should be(
@@ -96,6 +113,28 @@ class VersionInfoTest extends UnitTest {
       )
     }
 
+    "A restart change on FullVersion only changes lastConfigChangeAt" in {
+      Given("A FullVersionInfo")
+      val versionInfo = VersionInfo.FullVersionInfo(
+        version = Timestamp(1),
+        lastScalingAt = Timestamp(1),
+        lastConfigChangeAt = Timestamp(1)
+      )
+
+      When("Applying a restart change")
+      val newVersion = versionInfo.withRestartChange(Timestamp(2))
+
+      Then("lastConfigChangeAt is updated while lastScalingAt is not")
+      newVersion should be(
+        FullVersionInfo(
+          version = Timestamp(2),
+          lastScalingAt = Timestamp(1),
+          lastConfigChangeAt = Timestamp(2)
+        )
+      )
+      newVersion.lastConfigChangeVersion should equal(Timestamp(2))
+    }
+
     "A config change on FullVersion changes scalingAt, lastConfigChangeAt" in {
       Given("A FullVersionInfo")
       val versionInfo = VersionInfo.FullVersionInfo(
@@ -104,7 +143,7 @@ class VersionInfoTest extends UnitTest {
         lastConfigChangeAt = Timestamp(1)
       )
 
-      When("Applying a scaling change")
+      When("Applying a config change")
       val newVersion = versionInfo.withConfigChange(Timestamp(3))
 
       Then("The version info is promoted to a FullVersion")
