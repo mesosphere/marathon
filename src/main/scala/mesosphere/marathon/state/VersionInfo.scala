@@ -5,8 +5,12 @@ sealed trait VersionInfo {
   def version: Timestamp
   def lastConfigChangeVersion: Timestamp
 
-  def withScaleOrRestartChange(newVersion: Timestamp): VersionInfo = {
-    VersionInfo.forNewConfig(version).withScaleOrRestartChange(newVersion)
+  def withScaleChange(newVersion: Timestamp): VersionInfo = {
+    VersionInfo.forNewConfig(version).withScaleChange(newVersion)
+  }
+
+  def withRestartChange(newVersion: Timestamp): VersionInfo = {
+    VersionInfo.forNewConfig(version).withRestartChange(newVersion)
   }
 
   def withConfigChange(newVersion: Timestamp): VersionInfo = {
@@ -35,17 +39,20 @@ object VersionInfo {
   }
 
   /**
-    * @param version The version timestamp (we are currently assuming that this is the same as lastChangeAt)
-    * @param lastScalingAt The time stamp of the last change including scaling or restart changes
-    * @param lastConfigChangeAt The time stamp of the last change that changed configuration
-    *                           besides scaling or restarting
+    * @param version The version timestamp
+    * @param lastScalingAt The timestamp of the last scaling change
+    * @param lastConfigChangeAt The timestamp of the restart change
     */
   case class FullVersionInfo(version: Timestamp, lastScalingAt: Timestamp, lastConfigChangeAt: Timestamp) extends VersionInfo {
 
     override def lastConfigChangeVersion: Timestamp = lastConfigChangeAt
 
-    override def withScaleOrRestartChange(newVersion: Timestamp): VersionInfo = {
+    override def withScaleChange(newVersion: Timestamp): VersionInfo = {
       copy(version = newVersion, lastScalingAt = newVersion)
+    }
+
+    override def withRestartChange(newVersion: Timestamp): VersionInfo = {
+      copy(version = newVersion, lastConfigChangeAt = newVersion)
     }
   }
 
