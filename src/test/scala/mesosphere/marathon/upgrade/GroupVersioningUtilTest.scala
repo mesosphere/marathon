@@ -83,7 +83,7 @@ class GroupVersioningUtilTest extends UnitTest with GroupCreation {
       val updated = GroupVersioningUtil.updateVersionInfoForChangedApps(Timestamp(10), nestedApp, nestedAppScaled)
       Then("The timestamp of the app and groups are updated appropriately")
       def update(maybeApp: Option[AppDefinition]): AppDefinition =
-        maybeApp.map(_.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(0)).withScaleOrRestartChange(Timestamp(10)))).get
+        maybeApp.map(_.copy(versionInfo = VersionInfo.forNewConfig(Timestamp(0)).withScaleChange(Timestamp(10)))).get
       updated should equal(
         nestedAppScaled.updateApp(
           PathId("/nested/app"),
