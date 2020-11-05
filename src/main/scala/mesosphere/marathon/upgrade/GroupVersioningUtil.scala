@@ -39,7 +39,7 @@ object GroupVersioningUtil extends StrictLogging {
             oldApp.versionInfo.withScaleChange(newVersion = version)
           } else if (oldApp.versionInfo != newApp.versionInfo && newApp.versionInfo == VersionInfo.NoVersion) {
             logger.info(s"${newApp.id}: restart detected for app (oldVersion ${oldApp.versionInfo})")
-            oldApp.versionInfo.withRestartChange(newVersion = version)
+            oldApp.versionInfo.withConfigChange(newVersion = version)
           } else {
             oldApp.versionInfo
           }
@@ -87,7 +87,7 @@ object GroupVersioningUtil extends StrictLogging {
             oldPod.versionInfo.withScaleChange(newVersion = version)
           } else if (oldPod.versionInfo != newPod.versionInfo && newPod.versionInfo == VersionInfo.NoVersion) {
             logger.info(s"${newPod.id}: restart detected for Pod (oldVersion ${oldPod.versionInfo})")
-            oldPod.versionInfo.withRestartChange(newVersion = version)
+            oldPod.versionInfo.withConfigChange(newVersion = version)
           } else {
             oldPod.versionInfo
           }

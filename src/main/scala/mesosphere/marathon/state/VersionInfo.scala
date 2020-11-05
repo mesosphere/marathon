@@ -9,10 +9,6 @@ sealed trait VersionInfo {
     VersionInfo.forNewConfig(version).withScaleChange(newVersion)
   }
 
-  def withRestartChange(newVersion: Timestamp): VersionInfo = {
-    VersionInfo.forNewConfig(version).withRestartChange(newVersion)
-  }
-
   def withConfigChange(newVersion: Timestamp): VersionInfo = {
     VersionInfo.forNewConfig(newVersion)
   }
@@ -51,8 +47,8 @@ object VersionInfo {
       copy(version = newVersion, lastScalingAt = newVersion)
     }
 
-    override def withRestartChange(newVersion: Timestamp): VersionInfo = {
-      copy(version = newVersion, lastConfigChangeAt = newVersion)
+    override def withConfigChange(newVersion: Timestamp): VersionInfo = {
+      copy(version = newVersion, lastScalingAt = newVersion, lastConfigChangeAt = newVersion)
     }
   }
 
