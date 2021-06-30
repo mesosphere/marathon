@@ -1,9 +1,5 @@
 # Project Status
 
-On October 20, 2020, D2iQ (formerly Mesosphere) announced its intent to discontinue the DC/OS platform.
-
-Based on the changing market needs and very clear feedback from our customers, D2iQ is making the decision to focus our resources on the future, that being our D2iQ Kubernetes Platform (DKP) portfolio of products. To accelerate the delivery of the innovation our customers have become accustomed to from D2iQ, it is necessary for us to align our business to support that objective. We are working closely with existing customers to migrate to the D2iQ Kubernetes Platform and provide them with the enhanced innovation and enterprise capabilities available from Kubernetes.
-
 Support for DC/OS ends on October 31, 2021. We will continue to provide support for our current DC/OS customers per their contracts, of course. However, we will no longer be investing in new features or capabilities or maintaining the related repositories. If a customer wishes to continue use of the DC/OS Enterprise platform or other non-free DC/OS components, the customer can purchase an End-of-Life License or Perpetual Use License, however support is not included in these licenses and continued use of DC/OS will be at your own discretion and risk.
 
 We want to thank all of our loyal customers, particularly those DC/OS users who were fellow pioneers in the growth of the cloud native landscape from the beginning.
