@@ -1,7 +1,7 @@
 #!/usr/bin/env groovy
 
 ansiColor('xterm') {
-  node('JenkinsMarathonCI-Debian9-2020-01-14') {
+  node('JenkinsMarathonCI-Debian9-2021-07-24') {
 
     stage("Run Pipeline") {
       checkout scm
