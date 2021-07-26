@@ -1095,7 +1095,7 @@ def test_metrics_endpoint(marathon_service_name):
         metric_name = 'marathon.apps.active.gauge'
 
     response_json = response.json()
-    logger.info('Found metric gauges: '.format(response_json['gauges']))
+    logger.info('Found metric gauges: {}'.format(response_json['gauges']))
     assert response_json['gauges'][metric_name] is not None, \
         "{} is absent".format(metric_name)
 
