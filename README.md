@@ -153,11 +153,13 @@ Instructions on how to install prepackaged releases are available [in the Marath
         ```
         export MESOS_NATIVE_JAVA_LIBRARY="/path/to/mesos/lib/libmesos.dylib"
         ```
-   
-1.  Run `sbt universal:packageZipTarball` to package Marathon as an txz file
-    containing bin/marathon fully packaged.
 
-1. Run `cd tools/packager; make tag-docker` for a local Marathon docker image.
+##### Packaging Marathon
+
+1.  Run `sbt universal:packageZipTarball` to package Marathon as an txz file
+    containing bin/marathon fully packaged. This is the packaging method used for Marathon in DC/OS. For DC/OS EE, additional plugins are required.
+
+1. Run `cd tools/packager; make tag-docker` for a local Marathon docker image. You can push this image to a Docker image repository and deploy it as a MoM (Marathon on Marathon). This image of Marathon will not contain any DC/OS EE specific plugins.
 
 ### Running in Development Mode
 

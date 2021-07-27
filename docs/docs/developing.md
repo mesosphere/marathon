@@ -2,6 +2,10 @@
 title: Developing Marathon
 ---
 
+# Building and Packaging
+
+Building and packaging are covered in the [main README](https://github.com/mesosphere/marathon/blob/master/README.md )file for Marathon.
+
 # Coding environment
 
 ## IntelliJ
