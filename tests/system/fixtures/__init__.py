@@ -88,12 +88,12 @@ def user_billy():
 @pytest.fixture(scope="function")
 def docker_ipv6_network_fixture():
     agents = get_agents()
-    network_cmd = f"sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ipv6-test"
+    network_cmd = "sudo docker network create --driver=bridge --ipv6 --subnet=fd01::/64 mesos-docker-ipv6-test"
     for agent in agents:
         run_command_on_agent(agent, network_cmd)
     yield
     for agent in agents:
-        run_command_on_agent(agent, f"sudo docker network rm mesos-docker-ipv6-test")
+        run_command_on_agent(agent, "sudo docker network rm mesos-docker-ipv6-test")
 
 
 @pytest.fixture(autouse=True, scope='session')
