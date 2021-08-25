@@ -44,6 +44,7 @@ object HealthCheckWorker extends StrictLogging {
         Success(
           Unhealthy(
             instance.instanceId,
+            instance.appTask.taskId,
             instance.runSpecVersion,
             s"${ex.getClass.getSimpleName}: ${ex.getMessage}"
           )
@@ -93,18 +94,18 @@ object HealthCheckWorker extends StrictLogging {
     singleRequest(RequestBuilding.Get(url), check.timeout).map { response =>
       response.discardEntityBytes() //forget about the body
       if (acceptableResponses.contains(response.status.intValue())) {
-        Healthy(instance.instanceId, instance.runSpecVersion)
+        Healthy(instance.instanceId, instance.appTask.taskId, instance.runSpecVersion)
       } else if (check.ignoreHttp1xx && (toIgnoreResponses.contains(response.status.intValue))) {
         logger.debug(s"Ignoring health check HTTP response ${response.status.intValue} for instance=${instance.instanceId}")
-        Ignored(instance.instanceId, instance.runSpecVersion)
+        Ignored(instance.instanceId, instance.appTask.taskId, instance.runSpecVersion)
       } else {
         logger.debug(s"Health check for instance=${instance.instanceId} responded with ${response.status}")
-        Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString())
+        Unhealthy(instance.instanceId, instance.appTask.taskId, instance.runSpecVersion, response.status.toString())
       }
     }.recover {
       case NonFatal(e) =>
         logger.debug(s"Health check for instance=${instance.instanceId} did not respond due to ${e.getMessage}.")
-        Unhealthy(instance.instanceId, instance.runSpecVersion, e.getMessage)
+        Unhealthy(instance.instanceId, instance.appTask.taskId, instance.runSpecVersion, e.getMessage)
     }
   }
 
@@ -121,7 +122,7 @@ object HealthCheckWorker extends StrictLogging {
         socket.connect(address, timeoutMillis)
         socket.close()
       }
-      Healthy(instance.instanceId, instance.runSpecVersion, Timestamp.now())
+      Healthy(instance.instanceId, instance.appTask.taskId, instance.runSpecVersion, Timestamp.now())
     }(ThreadPoolContext.ioContext)
   }
 
@@ -139,15 +140,15 @@ object HealthCheckWorker extends StrictLogging {
     singleRequestHttps(RequestBuilding.Get(url), check.timeout).map { response =>
       response.discardEntityBytes() // forget about the body
       if (acceptableResponses.contains(response.status.intValue())) {
-        Healthy(instance.instanceId, instance.runSpecVersion)
+        Healthy(instance.instanceId, instance.appTask.taskId, instance.runSpecVersion)
       } else {
         logger.debug(s"Health check for ${instance.instanceId} responded with ${response.status}")
-        Unhealthy(instance.instanceId, instance.runSpecVersion, response.status.toString())
+        Unhealthy(instance.instanceId, instance.appTask.taskId, instance.runSpecVersion, response.status.toString())
       }
     }.recover {
       case NonFatal(e) =>
         logger.debug(s"Health check for instance=${instance.instanceId} failed to respond due to ${e.getMessage}.")
-        Unhealthy(instance.instanceId, instance.runSpecVersion, e.getMessage)
+        Unhealthy(instance.instanceId, instance.appTask.taskId, instance.runSpecVersion, e.getMessage)
     }
   }
 
