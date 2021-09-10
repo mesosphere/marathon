@@ -452,7 +452,7 @@ class SchedulerActions(
 
       if (instancesToDecommission.nonEmpty) {
         logger.info(s"Adjusting goals for instances ${instancesToDecommission.map(_.instanceId)} (${GoalChangeReason.OverCapacity})")
-        val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instances).runWith(Sink.ignore)
+        val instancesAreTerminal = KillStreamWatcher.watchForKilledTasks(instanceTracker.instanceUpdates, instancesToDecommission).runWith(Sink.ignore)
 
         // Race condition with line 421. The instances we loaded might not exist anymore, e.g. the agent
         // might have been removed and the instance expunged.
